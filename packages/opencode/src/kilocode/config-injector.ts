@@ -84,7 +84,10 @@ export namespace KilocodeConfigInjector {
    * Merge permission configs, preserving order and handling duplicates.
    * Incoming rules take precedence (kilocode patterns override).
    */
-  function mergePermissions(existing: ConfigPermission.Info | undefined, incoming: ConfigPermission.Info): ConfigPermission.Info {
+  function mergePermissions(
+    existing: ConfigPermission.Info | undefined,
+    incoming: ConfigPermission.Info,
+  ): ConfigPermission.Info {
     if (!existing) return incoming
 
     const result: ConfigPermission.Info = { ...existing }

@@ -39,6 +39,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     vscode.postMessage({
       type: "openDiffVirtual",
       diff: { ...props.filediff, before, after },
+      initialDiffStyle: "unified",
     })
   }
 

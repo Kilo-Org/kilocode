@@ -8,14 +8,10 @@
 
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
-import { AiSdkProvider, Prompt } from "@/provider/models"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
-
-// Re-export for consumers that previously imported from provider.ts
-export { Prompt, AiSdkProvider }
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes

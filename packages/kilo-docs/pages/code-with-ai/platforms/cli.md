@@ -67,73 +67,73 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 
 ### Global Options
 
-| Flag              | Description                         |
-| ----------------- | ----------------------------------- |
-| `--help`, `-h`    | Show help                           |
-| `--version`, `-v` | Show version number                 |
-| `--print-logs`    | Print logs to stderr                |
-| `--log-level`     | Log level: DEBUG, INFO, WARN, ERROR |
+| Flag | Description |
+|---|---|
+| `--help`, `-h` | Show help |
+| `--version`, `-v` | Show version number |
+| `--print-logs` | Print logs to stderr |
+| `--log-level` | Log level: DEBUG, INFO, WARN, ERROR |
 
 ### Interactive Slash Commands
 
 #### Session Commands
 
-| Command       | Aliases                | Description               |
-| ------------- | ---------------------- | ------------------------- |
-| `/sessions`   | `/resume`, `/continue` | Switch session            |
-| `/new`        | `/clear`               | New session               |
-| `/share`      | -                      | Share session             |
-| `/unshare`    | -                      | Unshare session           |
-| `/rename`     | -                      | Rename session            |
-| `/timeline`   | -                      | Jump to message           |
-| `/fork`       | -                      | Fork from message         |
-| `/compact`    | `/summarize`           | Compact/summarize session |
-| `/undo`       | -                      | Undo previous message     |
-| `/redo`       | -                      | Redo message              |
-| `/copy`       | -                      | Copy session transcript   |
-| `/export`     | -                      | Export session transcript |
-| `/timestamps` | `/toggle-timestamps`   | Show/hide timestamps      |
-| `/thinking`   | `/toggle-thinking`     | Show/hide thinking blocks |
+| Command | Aliases | Description |
+|---|---|---|
+| `/sessions` | `/resume`, `/continue` | Switch session |
+| `/new` | `/clear` | New session |
+| `/share` | - | Share session |
+| `/unshare` | - | Unshare session |
+| `/rename` | - | Rename session |
+| `/timeline` | - | Jump to message |
+| `/fork` | - | Fork from message |
+| `/compact` | `/summarize` | Compact/summarize session |
+| `/undo` | - | Undo previous message |
+| `/redo` | - | Redo message |
+| `/copy` | - | Copy session transcript |
+| `/export` | - | Export session transcript |
+| `/timestamps` | `/toggle-timestamps` | Show/hide timestamps |
+| `/thinking` | `/toggle-thinking` | Show/hide thinking blocks |
 
 #### Agent & Model Commands
 
-| Command   | Description  |
-| --------- | ------------ |
+| Command | Description |
+|---|---|
 | `/models` | Switch model |
 | `/agents` | Switch agent |
-| `/mcps`   | Toggle MCPs  |
+| `/mcps` | Toggle MCPs |
 
 #### Provider Commands
 
-| Command    | Description                                                               |
-| ---------- | ------------------------------------------------------------------------- |
+| Command | Description |
+|---|---|
 | `/connect` | Connect/add a provider - entry point for new users to add API credentials |
 
 #### System Commands
 
-| Command   | Aliases       | Description          |
-| --------- | ------------- | -------------------- |
-| `/status` | -             | View status          |
-| `/themes` | -             | Switch theme         |
-| `/help`   | -             | Show help            |
-| `/editor` | -             | Open external editor |
-| `/exit`   | `/quit`, `/q` | Exit the app         |
+| Command | Aliases | Description |
+|---|---|---|
+| `/status` | - | View status |
+| `/themes` | - | Switch theme |
+| `/help` | - | Show help |
+| `/editor` | - | Open external editor |
+| `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
 
-| Command    | Aliases                  | Description                               |
-| ---------- | ------------------------ | ----------------------------------------- |
-| `/profile` | `/me`, `/whoami`         | View your Kilo Gateway profile            |
-| `/teams`   | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams         |
-| `/remote`  | -                        | Toggle remote mode for Cloud Agent access |
+| Command | Aliases | Description |
+|---|---|---|
+| `/profile` | `/me`, `/whoami` | View your Kilo Gateway profile |
+| `/teams` | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
+| `/remote` | - | Toggle remote mode for Cloud Agent access |
 
 #### Built-in Commands
 
-| Command                     | Description                                  |
-| --------------------------- | -------------------------------------------- |
-| `/init`                     | Create/update AGENTS.md file for the project |
-| `/local-review`             | Review code changes                          |
-| `/local-review-uncommitted` | Review uncommitted changes                   |
+| Command | Description |
+|---|---|
+| `/init` | Create/update AGENTS.md file for the project |
+| `/local-review` | Review code changes |
+| `/local-review-uncommitted` | Review uncommitted changes |
 
 ## Local Code Reviews
 
@@ -141,9 +141,9 @@ Review your code locally before pushing — catch issues early without waiting f
 
 ### Commands
 
-| Command                     | Description                                    |
-| --------------------------- | ---------------------------------------------- |
-| `/local-review`             | Review current branch changes vs base branch   |
+| Command | Description |
+|---|---|
+| `/local-review` | Review current branch changes vs base branch |
 | `/local-review-uncommitted` | Review uncommitted changes (staged + unstaged) |
 
 ## Config Reference
@@ -278,10 +278,10 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 ### Config File Location (Kilo CLI 1.0)
 
-| Scope       | Path                                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------- |
-| **Global**  | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
-| **Project** | `./opencode.json` or `./.opencode/` in project root                                               |
+| Scope | Path |
+|---|---|
+| **Global** | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
+| **Project** | `./opencode.json` or `./.opencode/` in project root |
 
 Project-level configuration takes precedence over global settings.
 

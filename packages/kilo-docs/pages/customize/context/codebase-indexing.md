@@ -17,7 +17,7 @@ When enabled, the indexing system:
 1. **Parses your code** using Tree-sitter to identify semantic blocks (functions, classes, methods)
 2. **Creates embeddings** of each code block using AI models
 3. **Stores vectors** in a Qdrant database for fast similarity search
-4. **Provides the [`codebase_search`](/docs/automate/tools/codebase-search) tool** to Kilo Code for intelligent code discovery
+4. **Provides the [`semantic_search`](/docs/automate/tools/semantic-search) tool** to Kilo Code for intelligent code discovery
 
 This enables natural language queries like "user authentication logic" or "database connection handling" to find relevant code across your entire project.
 
@@ -202,7 +202,7 @@ If your local embedding server is based on llama.cpp (including Ollama), indexin
 
 ## Using the Search Feature
 
-Once indexed, Kilo Code can use the [`codebase_search`](/docs/automate/tools/codebase-search) tool to find relevant code:
+Once indexed, Kilo Code can use the [`semantic_search`](/docs/automate/tools/semantic-search) tool to find relevant code:
 
 **Example Queries:**
 

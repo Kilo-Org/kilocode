@@ -62,12 +62,12 @@ If you're using the [Kilo AI Gateway](/docs/gateway/) outside of the Kilo Code e
 
 If you prefer to use your own API key or existing subscription, Kilo Code supports **over 30 providers**. Here are some popular options to get started:
 
-| Provider                                                       | Best For                            | API Key Required |
-| -------------------------------------------------------------- | ----------------------------------- | ---------------- |
-| [ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription      | No               |
-| [OpenRouter](/docs/ai-providers/openrouter)                    | Access multiple models with one key | Yes              |
-| [Anthropic](/docs/ai-providers/anthropic)                      | Direct access to Claude models      | Yes              |
-| [OpenAI](/docs/ai-providers/openai)                            | Access to GPT models                | Yes              |
+| Provider | Best For | API Key Required |
+|---|---|---|
+| [ChatGPT Plus/Pro](/docs/ai-providers/openai-chatgpt-plus-pro) | Use your existing subscription | No |
+| [OpenRouter](/docs/ai-providers/openrouter) | Access multiple models with one key | Yes |
+| [Anthropic](/docs/ai-providers/anthropic) | Direct access to Claude models | Yes |
+| [OpenAI](/docs/ai-providers/openai) | Access to GPT models | Yes |
 
 {% callout type="info" title="Many More Providers Available" %}
 These are just a few examples! Kilo Code supports many more providers including Google Gemini, DeepSeek, Mistral, Ollama (for local models), AWS Bedrock, Google Vertex, and more. See the complete list at [AI Providers](/docs/ai-providers/).

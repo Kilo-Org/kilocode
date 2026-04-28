@@ -172,6 +172,16 @@ export async function getCommitHash(ref: string): Promise<string> {
   return result.trim()
 }
 
+/**
+ * Check if `commit` is an ancestor of `ref` (i.e. reachable from `ref`).
+ * Uses `git merge-base --is-ancestor`, which exits 0 for yes, 1 for no.
+ * Any other exit code (e.g. unknown commit) is treated as "not an ancestor".
+ */
+export async function isAncestor(commit: string, ref = "HEAD"): Promise<boolean> {
+  const result = await $`git merge-base --is-ancestor ${commit} ${ref}`.quiet().nothrow()
+  return result.exitCode === 0
+}
+
 export async function getTagsForCommit(commit: string): Promise<string[]> {
   const result = await $`git tag --points-at ${commit}`.text()
   return result

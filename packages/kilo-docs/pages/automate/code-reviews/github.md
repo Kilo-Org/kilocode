@@ -21,12 +21,12 @@ Connect your GitHub account via the [Integrations page](/docs/automate/integrati
 
 The GitHub App requests the following permissions:
 
-| Permission          | Access       | Purpose                          |
-| ------------------- | ------------ | -------------------------------- |
-| Pull requests       | Read & Write | Post review comments             |
-| Repository contents | Read         | Analyze code                     |
-| Issues              | Read & Write | Post summary comments, reactions |
-| Metadata            | Read         | List repositories                |
+| Permission | Access | Purpose |
+|---|---|---|
+| Pull requests | Read & Write | Post review comments |
+| Repository contents | Read | Analyze code |
+| Issues | Read & Write | Post summary comments, reactions |
+| Metadata | Read | List repositories |
 
 ### Step 2: Configure the Review Agent
 
@@ -47,14 +47,14 @@ The GitHub App requests the following permissions:
 
 Once configured, the Review Agent automatically runs when:
 
-| PR Event                 | Triggers Review |
-| ------------------------ | --------------- |
-| PR opened                | ✅ Yes          |
-| New commits pushed to PR | ✅ Yes          |
-| PR reopened              | ✅ Yes          |
-| Draft PR marked ready    | ✅ Yes          |
-| Draft PR opened          | ❌ Skipped      |
-| PR closed                | ❌ No           |
+| PR Event | Triggers Review |
+|---|---|
+| PR opened | ✅ Yes |
+| New commits pushed to PR | ✅ Yes |
+| PR reopened | ✅ Yes |
+| Draft PR marked ready | ✅ Yes |
+| Draft PR opened | ❌ Skipped |
+| PR closed | ❌ No |
 
 ## What to Expect
 

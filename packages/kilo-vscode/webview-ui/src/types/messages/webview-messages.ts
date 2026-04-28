@@ -163,8 +163,43 @@ export interface OpenVSCodeSettingsRequest {
   query: string
 }
 
+export interface OpenConfigFileRequest {
+  type: "openConfigFile"
+  scope: "local" | "global"
+  labels: {
+    scope: string
+    statusLoaded: string
+    statusLoadedLegacy: string
+    statusNotLoaded: string
+    statusCreate: string
+    title: string
+    placeholder: string
+    noWorkspace: string
+    openFailed: string
+    sourceXdg: string
+    sourceHomeKilo: string
+    sourceHomeKilocode: string
+    sourceHomeOpencode: string
+    sourceEnvFile: string
+    sourceEnvDir: string
+    sourceEnvContent: string
+    sourceProjectKilo: string
+    sourceProjectRoot: string
+    sourceProjectKilocode: string
+    sourceProjectOpencode: string
+  }
+}
+
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
+}
+
+export interface OpenAgentManagerRequest {
+  type: "openAgentManager"
+}
+
+export interface OpenAdvancedWorktreeRequest {
+  type: "openAdvancedWorktree"
 }
 
 export interface RequestAgentsMessage {
@@ -270,8 +305,8 @@ export interface RequestAutocompleteSettingsMessage {
 
 export interface UpdateAutocompleteSettingMessage {
   type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete"
-  value: boolean
+  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
+  value: boolean | string
 }
 
 export interface RequestChatCompletionMessage {
@@ -328,6 +363,15 @@ export interface RequestConfigMessage {
 
 export interface RequestGlobalConfigMessage {
   type: "requestGlobalConfig"
+}
+
+export interface RequestIndexingStatusMessage {
+  type: "requestIndexingStatus"
+}
+
+export interface OpenSettingsTabRequest {
+  type: "openSettingsTab"
+  tab: string
 }
 
 export interface UpdateConfigMessage {
@@ -687,6 +731,7 @@ export interface OpenChangesRequest {
 export interface OpenDiffVirtualRequest {
   type: "openDiffVirtual"
   diff: PermissionFileDiff
+  initialDiffStyle: "unified" | "split"
 }
 
 export interface RetryConnectionRequest {
@@ -901,7 +946,10 @@ export type WebviewMessage =
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | OpenVSCodeSettingsRequest
+  | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
+  | OpenAgentManagerRequest
+  | OpenAdvancedWorktreeRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -938,7 +986,9 @@ export type WebviewMessage =
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
+  | RequestIndexingStatusMessage
   | UpdateConfigMessage
+  | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
   | SettingsTabChangedMessage

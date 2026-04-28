@@ -2,8 +2,10 @@ import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
 import { Identifier } from "../../id/id"
 import { SessionID } from "../../session/schema"
+import { ZodOverride } from "../../util/effect-zod"
 import { Log } from "../../util"
 import z from "zod"
+import { Schema } from "effect"
 import { KiloSessionPromptQueue } from "../session/prompt-queue"
 
 export namespace Suggestion {
@@ -19,6 +21,18 @@ export namespace Suggestion {
       ref: "SuggestionAction",
     })
   export type Action = z.infer<typeof Action>
+
+  export const ActionSchema = Schema.Struct({
+    label: Schema.String.annotate({ description: "Button or option label (1-5 words)" }),
+    description: Schema.optional(Schema.String).annotate({
+      description: "Brief explanation of what this action does",
+    }),
+    prompt: Schema.String.annotate({
+      description: "Synthetic user prompt to inject when this action is accepted",
+    }),
+  })
+
+  const SuggestionIDSchema = Schema.String.annotate({ [ZodOverride]: Identifier.schema("suggestion") })
 
   export const Info = z
     .object({
@@ -54,27 +68,41 @@ export namespace Suggestion {
     })
   export type Request = z.infer<typeof Request>
 
+  const RequestSchema = Schema.Struct({
+    id: SuggestionIDSchema,
+    sessionID: SessionID,
+    text: Schema.String,
+    actions: Schema.Array(ActionSchema).check(Schema.isMinLength(1), Schema.isMaxLength(2)),
+    blocking: Schema.optional(Schema.Boolean),
+    tool: Schema.optional(
+      Schema.Struct({
+        messageID: Schema.String,
+        callID: Schema.String,
+      }),
+    ),
+  })
+
   export const Accept = z.object({
     index: z.number().int().nonnegative().describe("Zero-based action index to accept"),
   })
   export type Accept = z.infer<typeof Accept>
 
   export const Event = {
-    Shown: BusEvent.define("suggestion.shown", Request),
+    Shown: BusEvent.define("suggestion.shown", RequestSchema),
     Accepted: BusEvent.define(
       "suggestion.accepted",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
-        index: z.number().int().nonnegative(),
-        action: Action,
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: SuggestionIDSchema,
+        index: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+        action: ActionSchema,
       }),
     ),
     Dismissed: BusEvent.define(
       "suggestion.dismissed",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: SuggestionIDSchema,
       }),
     ),
   }
@@ -124,7 +152,7 @@ export namespace Suggestion {
         resolve,
         reject,
       }
-      Bus.publish(Event.Shown, info)
+      Bus.publish(Event.Shown, { ...info, sessionID: SessionID.make(info.sessionID) })
     })
   }
 
@@ -149,7 +177,7 @@ export namespace Suggestion {
     log.info("accepted", { requestID: input.requestID, index: input.index, label: action.label })
 
     Bus.publish(Event.Accepted, {
-      sessionID: existing.info.sessionID,
+      sessionID: SessionID.make(existing.info.sessionID),
       requestID: existing.info.id,
       index: input.index,
       action,
@@ -171,7 +199,7 @@ export namespace Suggestion {
     log.info("dismissed", { requestID })
 
     Bus.publish(Event.Dismissed, {
-      sessionID: existing.info.sessionID,
+      sessionID: SessionID.make(existing.info.sessionID),
       requestID: existing.info.id,
     })
 
@@ -192,7 +220,7 @@ export namespace Suggestion {
       delete s.pending[id]
       log.info("dismissed", { requestID: id })
       Bus.publish(Event.Dismissed, {
-        sessionID: entry.info.sessionID,
+        sessionID: SessionID.make(entry.info.sessionID),
         requestID: entry.info.id,
       })
       entry.reject(new DismissedError())

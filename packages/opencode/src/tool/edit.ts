@@ -3,9 +3,8 @@
 // https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/utils/editCorrector.ts
 // https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-26-25.ts
 
-import z from "zod"
 import * as path from "path"
-import { Effect } from "effect"
+import { Effect, Schema, Semaphore } from "effect"
 import * as Tool from "./tool"
 import { LSP } from "../lsp"
 import { createTwoFilesPatch, diffLines } from "diff"
@@ -18,6 +17,7 @@ import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import * as Bom from "@/util/bom"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
@@ -57,11 +57,27 @@ function convertToLineEnding(text: string, ending: "\n" | "\r\n"): string {
   return text.replaceAll("\n", "\r\n")
 }
 
-const Parameters = z.object({
-  filePath: z.string().describe("The absolute path to the file to modify"),
-  oldString: z.string().describe("The text to replace"),
-  newString: z.string().describe("The text to replace it with (must be different from oldString)"),
-  replaceAll: z.boolean().optional().describe("Replace all occurrences of oldString (default false)"),
+const locks = new Map<string, Semaphore.Semaphore>()
+
+function lock(filePath: string) {
+  const resolvedFilePath = AppFileSystem.resolve(filePath)
+  const hit = locks.get(resolvedFilePath)
+  if (hit) return hit
+
+  const next = Semaphore.makeUnsafe(1)
+  locks.set(resolvedFilePath, next)
+  return next
+}
+
+export const Parameters = Schema.Struct({
+  filePath: Schema.String.annotate({ description: "The absolute path to the file to modify" }),
+  oldString: Schema.String.annotate({ description: "The text to replace" }),
+  newString: Schema.String.annotate({
+    description: "The text to replace it with (must be different from oldString)",
+  }),
+  replaceAll: Schema.optional(Schema.Boolean).annotate({
+    description: "Replace all occurrences of oldString (default false)",
+  }),
 })
 
 export const EditTool = Tool.define(
@@ -75,7 +91,7 @@ export const EditTool = Tool.define(
     return {
       description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           if (!params.filePath) {
             throw new Error("filePath is required")
@@ -94,16 +110,69 @@ export const EditTool = Tool.define(
           let contentOld = ""
           let contentNew = ""
           let cachedFilediff: Snapshot.FileDiff | undefined // kilocode_change
-          yield* Effect.gen(function* () {
-            if (params.oldString === "") {
-              const existed = yield* afs.existsSafe(filePath)
-              // kilocode_change start - preserve file encoding on write
-              const pre = existed ? yield* EncodedIO.read(filePath) : { text: "", encoding: "utf-8" }
-              contentOld = pre.text
-              const encoding = pre.encoding
+          yield* lock(filePath).withPermits(1)(
+            Effect.gen(function* () {
+              if (params.oldString === "") {
+                const existed = yield* afs.existsSafe(filePath)
+                // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
+                // derive the BOM flag from the detected encoding label instead of the decoded text.
+                const pre = existed ? yield* EncodedIO.read(filePath) : { text: "", encoding: "utf-8" }
+                const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
+                // kilocode_change end
+                const next = Bom.split(params.newString)
+                const desiredBom = source.bom || next.bom
+                contentOld = source.text
+                contentNew = next.text
+                diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
+                cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+                yield* ctx.ask({
+                  permission: "edit",
+                  patterns: [path.relative(Instance.worktree, filePath)],
+                  always: ["*"],
+                  metadata: {
+                    filepath: filePath,
+                    diff,
+                    filediff: cachedFilediff, // kilocode_change
+                  },
+                })
+                yield* EncodedIO.write(filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+                if (yield* format.file(filePath)) {
+                  contentNew = yield* Bom.syncFile(afs, filePath, desiredBom)
+                }
+                yield* bus.publish(File.Event.Edited, { file: filePath })
+                yield* bus.publish(FileWatcher.Event.Updated, {
+                  file: filePath,
+                  event: existed ? "change" : "add",
+                })
+                return
+              }
+
+              const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
+              if (!info) throw new Error(`File ${filePath} not found`)
+              if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
+              // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
+              // derive the BOM flag from the detected encoding label instead of the decoded text.
+              const pre = yield* EncodedIO.read(filePath)
+              const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
               // kilocode_change end
-              contentNew = params.newString
-              diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
+              contentOld = source.text
+
+              const ending = detectLineEnding(contentOld)
+              const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
+              const replacement = convertToLineEnding(normalizeLineEndings(params.newString), ending)
+
+              const next = Bom.split(replace(contentOld, old, replacement, params.replaceAll))
+              const desiredBom = source.bom || next.bom
+              contentNew = next.text
+
+              diff = trimDiff(
+                createTwoFilesPatch(
+                  filePath,
+                  filePath,
+                  normalizeLineEndings(contentOld),
+                  normalizeLineEndings(contentNew),
+                ),
+              )
               cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
               yield* ctx.ask({
                 permission: "edit",
@@ -115,68 +184,26 @@ export const EditTool = Tool.define(
                   filediff: cachedFilediff, // kilocode_change
                 },
               })
-              yield* EncodedIO.write(filePath, params.newString, encoding) // kilocode_change - preserve encoding; replaces afs.writeWithDirs
-              yield* format.file(filePath)
+
+              yield* EncodedIO.write(filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+              if (yield* format.file(filePath)) {
+                contentNew = yield* Bom.syncFile(afs, filePath, desiredBom)
+              }
               yield* bus.publish(File.Event.Edited, { file: filePath })
               yield* bus.publish(FileWatcher.Event.Updated, {
                 file: filePath,
-                event: existed ? "change" : "add",
+                event: "change",
               })
-              return
-            }
-
-            const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
-            if (!info) throw new Error(`File ${filePath} not found`)
-            if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
-            // kilocode_change start - preserve file encoding
-            const pre = yield* EncodedIO.read(filePath)
-            contentOld = pre.text
-            const encoding = pre.encoding
-            // kilocode_change end
-
-            const ending = detectLineEnding(contentOld)
-            const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
-            const next = convertToLineEnding(normalizeLineEndings(params.newString), ending)
-
-            contentNew = replace(contentOld, old, next, params.replaceAll)
-
-            diff = trimDiff(
-              createTwoFilesPatch(
-                filePath,
-                filePath,
-                normalizeLineEndings(contentOld),
-                normalizeLineEndings(contentNew),
-              ),
-            )
-            cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
-            yield* ctx.ask({
-              permission: "edit",
-              patterns: [path.relative(Instance.worktree, filePath)],
-              always: ["*"],
-              metadata: {
-                filepath: filePath,
-                diff,
-                filediff: cachedFilediff, // kilocode_change
-              },
-            })
-
-            yield* EncodedIO.write(filePath, contentNew, encoding) // kilocode_change - preserve encoding; replaces afs.writeWithDirs
-            yield* format.file(filePath)
-            yield* bus.publish(File.Event.Edited, { file: filePath })
-            yield* bus.publish(FileWatcher.Event.Updated, {
-              file: filePath,
-              event: "change",
-            })
-            contentNew = (yield* EncodedIO.read(filePath)).text // kilocode_change - re-read via encoding-aware helper; replaces afs.readFileString
-            diff = trimDiff(
-              createTwoFilesPatch(
-                filePath,
-                filePath,
-                normalizeLineEndings(contentOld),
-                normalizeLineEndings(contentNew),
-              ),
-            )
-          }).pipe(Effect.orDie)
+              diff = trimDiff(
+                createTwoFilesPatch(
+                  filePath,
+                  filePath,
+                  normalizeLineEndings(contentOld),
+                  normalizeLineEndings(contentNew),
+                ),
+              )
+            }).pipe(Effect.orDie),
+          )
 
           const filediff: Snapshot.FileDiff = cachedFilediff ?? buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
 
@@ -189,7 +216,7 @@ export const EditTool = Tool.define(
           })
 
           let output = "Edit applied successfully."
-          yield* lsp.touchFile(filePath, true)
+          yield* lsp.touchFile(filePath, "document")
           const diagnostics = yield* lsp.diagnostics()
           const normalizedFilePath = AppFileSystem.normalizePath(filePath)
           const block = LSP.Diagnostic.report(filePath, diagnostics[normalizedFilePath] ?? [])

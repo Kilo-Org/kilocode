@@ -155,4 +155,53 @@ describe("ConfigState", () => {
     expect(s.config.snapshot).toBe(true)
     expect(s.dirty).toBe(false)
   })
+
+  // -------------------------------------------------------------------------
+  // Issue #9527: clearing an agent model override must unset it, not repopulate
+  // -------------------------------------------------------------------------
+  describe("clearing an agent model override (issue #9527)", () => {
+    it("keeps null in the draft so the backend receives a delete sentinel", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { explore: { model: "anthropic/claude-sonnet-4-20250514" } } })
+
+      // User clears the Model Override field. ModeEditView now sends `null`
+      // instead of `undefined` (the fix). null is the delete sentinel that
+      // patchJsonc maps to jsonc-parser's remove operation.
+      s.updateConfig({ agent: { explore: { model: null } } })
+
+      // Optimistic UI: stripNulls removes the key so the field renders empty.
+      expect(s.config.agent?.explore?.model).toBeUndefined()
+      expect(s.dirty).toBe(true)
+
+      // Draft must retain the null so it survives JSON.stringify on the wire
+      // and reaches patchJsonc as an explicit delete.
+      expect(s.draft.agent?.explore?.model).toBeNull()
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { explore: { model: null } },
+      })
+    })
+
+    it("undefined (the old buggy behavior) is dropped by JSON.stringify", () => {
+      // Reproduction of the pre-fix bug: sending `undefined` results in an
+      // empty patch on the wire, so the backend never deletes the override
+      // and the next configUpdated pushes the stale model back into the UI.
+      const draft = { agent: { explore: { model: undefined } } }
+      expect(JSON.parse(JSON.stringify(draft))).toEqual({ agent: { explore: {} } })
+    })
+
+    it("confirms the save and drops the draft once the backend acks", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { explore: { model: "anthropic/claude-sonnet-4-20250514" } } })
+      s.updateConfig({ agent: { explore: { model: null } } })
+      s.saveConfig()
+
+      // Backend removed the override and pushes the stripped config back.
+      s.handleConfigUpdated({ agent: { explore: {} } })
+
+      expect(s.config.agent?.explore?.model).toBeUndefined()
+      expect(s.dirty).toBe(false)
+      expect(s.saving).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(0)
+    })
+  })
 })

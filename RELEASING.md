@@ -102,16 +102,16 @@ The workflow requires these GitHub token permissions:
 
 The following secrets must be configured in the repository:
 
-| Secret                       | Purpose                                                          |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `KILO_API_KEY`               | Kilo API key used during version computation                     |
-| `KILO_ORG_ID`                | Kilo organization ID                                             |
-| `KILO_MAINTAINER_APP_ID`     | GitHub App ID for the kilo-maintainer bot (used for git commits) |
-| `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot                    |
-| `NPM_TOKEN`                  | npm authentication token for publishing packages                 |
-| `VSCE_TOKEN`                 | VS Code Marketplace personal access token                        |
-| `OVSX_TOKEN`                 | Open VSX Registry token (currently unused but configured)        |
-| `AUR_KEY`                    | SSH private key for pushing to the AUR                           |
+| Secret | Purpose |
+|---|---|
+| `KILO_API_KEY` | Kilo API key used during version computation |
+| `KILO_ORG_ID` | Kilo organization ID |
+| `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
+| `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
+| `NPM_TOKEN` | npm authentication token for publishing packages |
+| `VSCE_TOKEN` | VS Code Marketplace personal access token |
+| `OVSX_TOKEN` | Open VSX Registry token (currently unused but configured) |
+| `AUR_KEY` | SSH private key for pushing to the AUR |
 
 ### Concurrency
 

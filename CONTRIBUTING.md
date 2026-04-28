@@ -48,6 +48,40 @@ To run Kilo CLI in the root of the repo itself:
 bun dev .
 ```
 
+### Running Kilo CLI from any folder
+
+`bin/kilodev` is a self-locating launcher that runs this checkout from wherever you invoke it. Running it with no arguments launches the TUI pointed at the caller's directory; any arguments are forwarded to the CLI unchanged.
+
+One-shot install (recommended). From the repo root:
+
+```bash
+./bin/kilodev dev-setup
+```
+
+This detects your shell, shows exactly what it will add, asks for confirmation, writes an idempotent block to your rc file, and saves a timestamped backup of the original. Re-running is safe — it only rewrites when the snippet has changed.
+
+Useful flags:
+
+- `--yes` — skip the confirmation prompt (good for CI/containers).
+- `--print` — just print the snippet, don't touch any file (pipe-friendly).
+- `--dry-run` — show what would change without writing.
+- `--shell <zsh|bash|fish|powershell>` — override shell detection.
+- `--rc <path>` — override the rc file.
+
+Manual alternatives (equivalent, no CLI invocation needed):
+
+- Unix: add `alias kilodev='/path/to/kilocode/bin/kilodev'` to `~/.zshrc` / `~/.bashrc`, or `fish_add_path /path/to/kilocode/bin`.
+- Windows: add `C:\path\to\kilocode\bin` to PATH (System Environment Variables), or add `function kilodev { & "C:\path\to\kilocode\bin\kilodev.cmd" @args }` to `$PROFILE`.
+
+Then from anywhere:
+
+```bash
+cd ~/some/project
+kilodev                      # opens TUI with project = ~/some/project
+kilodev dev-setup --print    # prints the alias line (scripting)
+kilodev run --dir "$PWD" "…" # subcommands pass through; use --dir for run/serve
+```
+
 ### Building a "local" binary
 
 To compile a standalone executable:
@@ -90,11 +124,11 @@ This redirects all gateway traffic (auth, model listing, provider routing, profi
 
 There are also optional overrides for other services:
 
-| Variable                  | Default                          | Purpose                                   |
-| ------------------------- | -------------------------------- | ----------------------------------------- |
-| `KILO_API_URL`            | `https://api.kilo.ai`            | Kilo API (gateway, auth, models, profile) |
-| `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync               |
-| `KILO_MODELS_URL`         | `https://models.dev`             | Model metadata                            |
+| Variable | Default | Purpose |
+|---|---|---|
+| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (gateway, auth, models, profile) |
+| `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync |
+| `KILO_MODELS_URL` | `https://models.dev` | Model metadata |
 
 > **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `KILO_API_URL=http://localhost:3000` automatically.
 

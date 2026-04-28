@@ -13,7 +13,7 @@ import { errorMessage } from "../util/error"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
 import { Git } from "@/git"
-import { Effect, Layer, Path, Scope, Context, Stream } from "effect"
+import { Effect, Layer, Path, Schema, Scope, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
@@ -26,15 +26,15 @@ const log = Log.create({ service: "worktree" })
 export const Event = {
   Ready: BusEvent.define(
     "worktree.ready",
-    z.object({
-      name: z.string(),
-      branch: z.string(),
+    Schema.Struct({
+      name: Schema.String,
+      branch: Schema.String,
     }),
   ),
   Failed: BusEvent.define(
     "worktree.failed",
-    z.object({
-      message: z.string(),
+    Schema.Struct({
+      message: Schema.String,
     }),
   ),
 }
@@ -354,9 +354,11 @@ export const layer: Layer.Layer<
     }
 
     function cleanDirectory(target: string) {
+      const retries = process.platform === "win32" ? 30 : 5 // kilocode_change - Windows may release git worktree handles slowly
+      const delay = process.platform === "win32" ? 250 : 100 // kilocode_change
       return Effect.promise(() =>
         import("fs/promises")
-          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
+          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: retries, retryDelay: delay })) // kilocode_change
           .catch((error) => {
             const message = errorMessage(error)
             throw new RemoveFailedError({ message: message || "Failed to remove git worktree directory" })

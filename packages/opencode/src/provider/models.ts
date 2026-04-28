@@ -1,7 +1,7 @@
 import { Global } from "../global"
 import { Log } from "../util"
 import path from "path"
-import z from "zod"
+import { Schema } from "effect"
 import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
@@ -32,10 +32,6 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
   return `${trimmed}/api/openrouter`
 }
-
-export const Prompt = z.enum(PROMPTS)
-
-export const AiSdkProvider = z.enum(AI_SDK_PROVIDERS)
 // kilocode_change end
 
 const log = Log.create({ service: "models.dev" })
@@ -46,99 +42,91 @@ const filepath = path.join(
 )
 const ttl = 5 * 60 * 1000
 
-type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[]
-
-const JsonValue: z.ZodType<JsonValue> = z.lazy(() =>
-  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(JsonValue), z.record(z.string(), JsonValue)]),
-)
-
-const Cost = z.object({
-  input: z.number(),
-  output: z.number(),
-  cache_read: z.number().optional(),
-  cache_write: z.number().optional(),
-  context_over_200k: z
-    .object({
-      input: z.number(),
-      output: z.number(),
-      cache_read: z.number().optional(),
-      cache_write: z.number().optional(),
-    })
-    .optional(),
+const Cost = Schema.Struct({
+  input: Schema.Number,
+  output: Schema.Number,
+  cache_read: Schema.optional(Schema.Number),
+  cache_write: Schema.optional(Schema.Number),
+  context_over_200k: Schema.optional(
+    Schema.Struct({
+      input: Schema.Number,
+      output: Schema.Number,
+      cache_read: Schema.optional(Schema.Number),
+      cache_write: Schema.optional(Schema.Number),
+    }),
+  ),
 })
 
-export const Model = z.object({
-  id: z.string(),
-  name: z.string(),
-  family: z.string().optional(),
-  release_date: z.string(),
-  attachment: z.boolean(),
-  reasoning: z.boolean(),
-  temperature: z.boolean(),
-  tool_call: z.boolean(),
-  interleaved: z
-    .union([
-      z.literal(true),
-      z
-        .object({
-          field: z.enum(["reasoning_content", "reasoning_details"]),
-        })
-        .strict(),
-    ])
-    .optional(),
-  cost: Cost.optional(),
-  limit: z.object({
-    context: z.number(),
-    input: z.number().optional(),
-    output: z.number(),
+export const Model = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  family: Schema.optional(Schema.String),
+  release_date: Schema.String,
+  attachment: Schema.Boolean,
+  reasoning: Schema.Boolean,
+  temperature: Schema.Boolean,
+  tool_call: Schema.Boolean,
+  interleaved: Schema.optional(
+    Schema.Union([
+      Schema.Literal(true),
+      Schema.Struct({
+        field: Schema.Literals(["reasoning_content", "reasoning_details"]),
+      }),
+    ]),
+  ),
+  cost: Schema.optional(Cost),
+  limit: Schema.Struct({
+    context: Schema.Number,
+    input: Schema.optional(Schema.Number),
+    output: Schema.Number,
   }),
-  modalities: z
-    .object({
-      input: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
-      output: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
-    })
-    .optional(),
-
+  modalities: Schema.optional(
+    Schema.Struct({
+      input: Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"])),
+      output: Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"])),
+    }),
+  ),
   // kilocode_change start
-  recommendedIndex: z.number().optional(),
-  prompt: Prompt.optional().catch(undefined),
-  isFree: z.boolean().optional(),
-  ai_sdk_provider: AiSdkProvider.optional().catch(undefined),
+  recommendedIndex: Schema.optional(Schema.Number),
+  prompt: Schema.optional(Schema.Literals(PROMPTS)),
+  isFree: Schema.optional(Schema.Boolean),
+  ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
   // kilocode_change end
-
-  experimental: z
-    .object({
-      modes: z
-        .record(
-          z.string(),
-          z.object({
-            cost: Cost.optional(),
-            provider: z
-              .object({
-                body: z.record(z.string(), JsonValue).optional(),
-                headers: z.record(z.string(), z.string()).optional(),
-              })
-              .optional(),
+  experimental: Schema.optional(
+    Schema.Struct({
+      modes: Schema.optional(
+        Schema.Record(
+          Schema.String,
+          Schema.Struct({
+            cost: Schema.optional(Cost),
+            provider: Schema.optional(
+              Schema.Struct({
+                body: Schema.optional(Schema.Record(Schema.String, Schema.MutableJson)),
+                headers: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+              }),
+            ),
           }),
-        )
-        .optional(),
-    })
-    .optional(),
-  status: z.enum(["alpha", "beta", "deprecated"]).optional(),
-  provider: z.object({ npm: z.string().optional(), api: z.string().optional() }).optional(),
+        ),
+      ),
+    }),
+  ),
+  status: Schema.optional(Schema.Literals(["alpha", "beta", "deprecated"])),
+  provider: Schema.optional(
+    Schema.Struct({ npm: Schema.optional(Schema.String), api: Schema.optional(Schema.String) }),
+  ),
 })
-export type Model = z.infer<typeof Model>
+export type Model = Schema.Schema.Type<typeof Model>
 
-export const Provider = z.object({
-  api: z.string().optional(),
-  name: z.string(),
-  env: z.array(z.string()),
-  id: z.string(),
-  npm: z.string().optional(),
-  models: z.record(z.string(), Model),
+export const Provider = Schema.Struct({
+  api: Schema.optional(Schema.String),
+  name: Schema.String,
+  env: Schema.Array(Schema.String),
+  id: Schema.String,
+  npm: Schema.optional(Schema.String),
+  models: Schema.Record(Schema.String, Model),
 })
 
-export type Provider = z.infer<typeof Provider>
+export type Provider = Schema.Schema.Type<typeof Provider>
 
 function url() {
   return Flag.KILO_MODELS_URL || "https://models.dev"

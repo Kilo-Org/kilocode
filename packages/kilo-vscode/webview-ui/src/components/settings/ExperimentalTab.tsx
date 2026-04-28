@@ -155,6 +155,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.semanticIndexing.title")}
+          description={language.t("settings.experimental.semanticIndexing.description")}
+        >
+          <Switch
+            checked={experimental().semantic_indexing ?? false}
+            onChange={(checked) => updateExperimental("semantic_indexing", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.semanticIndexing.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.codebaseSearch.title")}
           description={language.t("settings.experimental.codebaseSearch.description")}
         >
