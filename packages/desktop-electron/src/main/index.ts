@@ -16,7 +16,7 @@ try {
   process.chdir(homedir())
 } catch {}
 
-process.env.KILO_DISABLE_EMBEDDED_WEB_UI = "true"
+process.env.OPENCODE_DISABLE_EMBEDDED_WEB_UI = "true"
 
 const APP_NAMES: Record<string, string> = {
   dev: "OpenCode Dev",
@@ -179,7 +179,7 @@ async function initialize() {
     server = listener
     serverReady.resolve({
       url,
-      username: "kilo", // kilocode_change
+      username: "opencode",
       password,
     })
 
@@ -293,7 +293,7 @@ function ensureLoopbackNoProxy() {
 }
 
 async function getSidecarPort() {
-  const fromEnv = process.env.KILO_PORT
+  const fromEnv = process.env.OPENCODE_PORT
   if (fromEnv) {
     const parsed = Number.parseInt(fromEnv, 10)
     if (!Number.isNaN(parsed)) return parsed
@@ -318,7 +318,7 @@ async function getSidecarPort() {
 function sqliteFileExists() {
   const xdg = process.env.XDG_DATA_HOME
   const base = xdg && xdg.length > 0 ? xdg : join(homedir(), ".local", "share")
-  return existsSync(join(base, "opencode", "kilo.db"))
+  return existsSync(join(base, "opencode", "opencode.db"))
 }
 
 function setupAutoUpdater() {

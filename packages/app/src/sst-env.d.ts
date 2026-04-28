@@ -4,7 +4,9 @@
 /* biome-ignore-all lint: auto-generated */
 
 /// <reference types="vite/client" />
-interface ImportMetaEnv {}
+interface ImportMetaEnv {
+
+}
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }

@@ -5,7 +5,7 @@ import { Button } from "@opencode-ai/ui/button"
 import { DockPrompt } from "@opencode-ai/ui/dock-prompt"
 import { Icon } from "@opencode-ai/ui/icon"
 import { showToast } from "@opencode-ai/ui/toast"
-import type { QuestionAnswer, QuestionRequest } from "@kilocode/sdk/v2"
+import type { QuestionAnswer, QuestionRequest } from "@opencode-ai/sdk/v2"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 import { makeEventListener } from "@solid-primitives/event-listener"
@@ -106,10 +106,10 @@ export const SessionQuestionDock: Component<{ request: QuestionRequest; onSubmit
     if (!selected) return
 
     if (multi()) {
-      setStore("answers", store.tab, (current: QuestionAnswer = []) => {
-        const removed = prev ? current.filter((item: string) => item.trim() !== prev) : current
+      setStore("answers", store.tab, (current = []) => {
+        const removed = prev ? current.filter((item) => item.trim() !== prev) : current
         if (!next) return removed
-        if (removed.some((item: string) => item.trim() === next)) return removed
+        if (removed.some((item) => item.trim() === next)) return removed
         return [...removed, next]
       })
       return
@@ -240,7 +240,7 @@ export const SessionQuestionDock: Component<{ request: QuestionRequest; onSubmit
     await rejectMutation.mutateAsync()
   }
 
-  const submit = () => void reply(questions().map((_: unknown, i: number) => store.answers[i] ?? []))
+  const submit = () => void reply(questions().map((_, i) => store.answers[i] ?? []))
 
   const answered = (i: number) => {
     if ((store.answers[i]?.length ?? 0) > 0) return true
@@ -257,8 +257,8 @@ export const SessionQuestionDock: Component<{ request: QuestionRequest; onSubmit
   }
 
   const toggle = (answer: string) => {
-    setStore("answers", store.tab, (current: QuestionAnswer = []) => {
-      if (current.includes(answer)) return current.filter((item: string) => item !== answer)
+    setStore("answers", store.tab, (current = []) => {
+      if (current.includes(answer)) return current.filter((item) => item !== answer)
       return [...current, answer]
     })
   }
@@ -283,10 +283,7 @@ export const SessionQuestionDock: Component<{ request: QuestionRequest; onSubmit
     }
 
     const value = input().trim()
-    if (value)
-      setStore("answers", store.tab, (current: QuestionAnswer = []) =>
-        current.filter((item: string) => item.trim() !== value),
-      )
+    if (value) setStore("answers", store.tab, (current = []) => current.filter((item) => item.trim() !== value))
     setStore("editing", false)
     focus(options().length)
   }

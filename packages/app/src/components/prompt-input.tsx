@@ -1330,7 +1330,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           }}
         >
           <div
-            data-slot="prompt-input-scroll" // kilocode_change
             class="relative max-h-[240px] overflow-y-auto no-scrollbar"
             ref={(el) => (scrollRef = el)}
             style={{ "scroll-padding-bottom": space }}
@@ -1448,10 +1447,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </DockShellForm>
       <Show when={store.mode === "normal" || store.mode === "shell"}>
         <DockTray attach="top">
-          <div
-            class="px-1.75 pt-5.5 pb-2 flex items-center gap-2 min-w-0"
-            data-slot="prompt-input-toolbar" // kilocode_change
-          >
+          <div class="px-1.75 pt-5.5 pb-2 flex items-center gap-2 min-w-0">
             <div class="flex items-center gap-1.5 min-w-0 flex-1 relative">
               <div
                 class="h-7 flex items-center gap-1.5 min-w-0 absolute inset-0"
