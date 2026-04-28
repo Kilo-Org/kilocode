@@ -1,12 +1,8 @@
 # Marketplace (Installable Modes, MCP Servers, Skills)
 
 **Priority:** P2
-**Status:** ❌ Not started
 
-## What Exists
-
-- Toolbar button registered (`kilo-code.new.marketplaceButtonClicked`) with `$(extensions)` icon
-- Renders `<DummyView title="Marketplace" />` — a placeholder with no functionality
+Toolbar button exists but renders a stub.
 
 ## Remaining Work
 

@@ -2,6 +2,7 @@ import { useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "./helper"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { win32FlushInputBuffer } from "../win32"
+import { resetTerminalState } from "@tui/util/terminal" // kilocode_change
 type Exit = ((reason?: unknown) => Promise<void>) & {
   message: {
     set: (value?: string) => () => void
@@ -12,9 +13,10 @@ type Exit = ((reason?: unknown) => Promise<void>) & {
 
 export const { use: useExit, provider: ExitProvider } = createSimpleContext({
   name: "Exit",
-  init: (input: { onExit?: () => Promise<void> }) => {
+  init: (input: { onBeforeExit?: () => Promise<void>; onExit?: () => Promise<void> }) => {
     const renderer = useRenderer()
     let message: string | undefined
+    let task: Promise<void> | undefined
     const store = {
       set: (value?: string) => {
         const prev = message
@@ -29,25 +31,32 @@ export const { use: useExit, provider: ExitProvider } = createSimpleContext({
       get: () => message,
     }
     const exit: Exit = Object.assign(
-      async (reason?: unknown) => {
-        // Reset window title before destroying renderer
-        renderer.setTerminalTitle("")
-        renderer.destroy()
-        win32FlushInputBuffer()
-        if (reason) {
-          const formatted = FormatError(reason) ?? FormatUnknownError(reason)
-          if (formatted) {
-            process.stderr.write(formatted + "\n")
+      (reason?: unknown) => {
+        if (task) return task
+        task = (async () => {
+          await input.onBeforeExit?.()
+          // Reset window title before destroying renderer
+          renderer.setTerminalTitle("")
+          renderer.destroy()
+          win32FlushInputBuffer()
+          resetTerminalState() // kilocode_change
+          if (reason) {
+            const formatted = FormatError(reason) ?? FormatUnknownError(reason)
+            if (formatted) {
+              process.stderr.write(formatted + "\n")
+            }
           }
-        }
-        const text = store.get()
-        if (text) process.stdout.write(text + "\n")
-        await input.onExit?.()
+          const text = store.get()
+          if (text) process.stdout.write(text + "\n")
+          await input.onExit?.()
+        })()
+        return task
       },
       {
         message: store,
       },
     )
+    process.on("SIGHUP", () => exit())
     return exit
   },
 })

@@ -34,7 +34,7 @@ The `publish.yml` workflow runs four jobs sequentially:
 - Builds native binaries for **all supported platforms and architectures**:
   - Linux: x64, arm64 (glibc and musl), plus baseline (non-AVX2) variants
   - macOS: x64, arm64, plus baseline variants
-  - Windows: x64, plus baseline variant
+  - Windows: x64 (plus baseline variant), arm64
 - Patches ELF interpreters on Linux binaries for broad compatibility.
 - Creates platform archives (`.tar.gz` for Linux, `.zip` for macOS/Windows) and uploads them to the draft GitHub Release.
 - Uploads the `dist/` directory as a workflow artifact (`kilo-cli`) for subsequent jobs.
@@ -43,7 +43,7 @@ The `publish.yml` workflow runs four jobs sequentially:
 
 - Downloads the CLI artifacts from the previous job.
 - Runs `packages/kilo-vscode/script/build.ts` to build VSIX packages for all target platforms:
-  - `linux-x64`, `linux-arm64`, `alpine-x64`, `alpine-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`
+  - `linux-x64`, `linux-arm64`, `alpine-x64`, `alpine-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`, `win32-arm64`
 - Each VSIX bundles the platform-specific CLI binary.
 - Uploads the VSIX files as a workflow artifact (`kilo-vscode`).
 
@@ -102,16 +102,16 @@ The workflow requires these GitHub token permissions:
 
 The following secrets must be configured in the repository:
 
-| Secret                       | Purpose                                                          |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `KILO_API_KEY`               | Kilo API key used during version computation                     |
-| `KILO_ORG_ID`                | Kilo organization ID                                             |
-| `KILO_MAINTAINER_APP_ID`     | GitHub App ID for the kilo-maintainer bot (used for git commits) |
-| `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot                    |
-| `NPM_TOKEN`                  | npm authentication token for publishing packages                 |
-| `VSCE_TOKEN`                 | VS Code Marketplace personal access token                        |
-| `OVSX_TOKEN`                 | Open VSX Registry token (currently unused but configured)        |
-| `AUR_KEY`                    | SSH private key for pushing to the AUR                           |
+| Secret | Purpose |
+|---|---|
+| `KILO_API_KEY` | Kilo API key used during version computation |
+| `KILO_ORG_ID` | Kilo organization ID |
+| `KILO_MAINTAINER_APP_ID` | GitHub App ID for the kilo-maintainer bot (used for git commits) |
+| `KILO_MAINTAINER_APP_SECRET` | GitHub App secret for the kilo-maintainer bot |
+| `NPM_TOKEN` | npm authentication token for publishing packages |
+| `VSCE_TOKEN` | VS Code Marketplace personal access token |
+| `OVSX_TOKEN` | Open VSX Registry token (currently unused but configured) |
+| `AUR_KEY` | SSH private key for pushing to the AUR |
 
 ### Concurrency
 

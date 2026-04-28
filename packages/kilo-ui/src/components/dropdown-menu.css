@@ -1,4 +1,3 @@
-/* kilocode_change - new file */
 /* Kilo Dropdown Menu overrides – sized to match @vscode/webview-ui-toolkit */
 
 [data-component="dropdown-menu-content"],
@@ -21,12 +20,10 @@
       color: var(--text-on-interactive-base, var(--text-strong));
     }
 
-    /* kilocode_change start - preserve disabled state behavior from upstream */
     &[data-disabled] {
       cursor: default;
       pointer-events: none;
     }
-    /* kilocode_change end */
   }
 
   [data-slot="dropdown-menu-separator"] {

@@ -72,11 +72,75 @@ By default, API requests time out after 10 minutes. Local models can be slow, if
 
 ### Configure Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 - Open the Kilo Code panel ({% kiloCodeIcon size="1em" /%}).
 - Click the Settings gear icon ({% codicon name="gear" /%}).
 - Select "Ollama" as the API Provider.
 - Select the model configured in the previous step.
 - (Optional) You can configure the base URL if you're running Ollama on a different machine. The default is `http://localhost:11434`.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add Ollama. No API key is needed since Ollama runs locally. You can configure the base URL if Ollama is running on a different host.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Ollama runs locally, so no API key is needed. Configure the base URL if Ollama is running on a different host:
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "ollama": {
+      "baseURL": "http://localhost:11434/v1",
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "ollama/qwen3-coder:30b",
+}
+```
+
+{% /tab %}
+{% /tabs %}
+
+## Using Custom or Unlisted Models
+
+If your Ollama model doesn't appear in the Kilo model picker, register it as a custom model in your config file:
+
+```jsonc
+{
+  "model": "ollama/my-finetune:latest",
+  "provider": {
+    "ollama": {
+      "models": {
+        "my-finetune:latest": {
+          "name": "My Fine-tuned Model",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+See [Custom Models](/docs/code-with-ai/agents/custom-models) for the full list of configuration fields and more examples.
 
 ## Further Reading
 

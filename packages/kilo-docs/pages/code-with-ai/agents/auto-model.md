@@ -5,68 +5,63 @@ description: "Smart model routing that automatically selects the optimal AI mode
 
 # Auto Model
 
-Auto Model (`kilo/auto`) is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It balances cost and capability so you get the best results without manual model switching.
+Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
+
+| Tier | Best For | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
+| `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
+| `kilo-auto/free` | The best free models available | Free |
 
 ## How It Works
 
-1. Select `kilo/auto` as your model in the model dropdown
+1. Select an Auto Model tier (e.g. `kilo-auto/frontier`) in the model dropdown
 2. Start working in any mode (Code, Architect, Debug, etc.)
 3. The system automatically routes your requests to the best model for that task
 
 That's it. No configuration needed.
 
-## Mode-to-Model Mapping
+You can see which underlying models are used, as well as the cost, in the expanded model picker. Model mapping information is also available on the [Gateway Model page](/docs/gateway/models-and-providers#kilo-autofrontier).
 
-Auto Model routes to different models based on the task type:
+{% callout type="info" title="Models can change" %}
+The underlying models behind each Auto Model tier are updated server-side as better options become available or as providers change pricing and availability. The tier you select stays the same; the model it routes to may change over time.
+{% /callout %}
 
-| Mode           | Model Used        | Best For                     |
-| -------------- | ----------------- | ---------------------------- |
-| `architect`    | Claude Opus 4.6   | System design, planning      |
-| `orchestrator` | Claude Opus 4.6   | Multi-step task coordination |
-| `ask`          | Claude Opus 4.6   | Questions, explanations      |
-| `plan`         | Claude Opus 4.6   | Planning, reasoning          |
-| `general`      | Claude Opus 4.6   | General assistance           |
-| `code`         | Claude Sonnet 4.5 | Writing and editing code     |
-| `build`        | Claude Sonnet 4.5 | Implementation tasks         |
-| `debug`        | Claude Sonnet 4.5 | Debugging and fixing issues  |
-| `explore`      | Claude Sonnet 4.5 | Codebase exploration         |
+## Tiers
 
-**Planning and reasoning tasks** use Claude Opus 4.6, which excels at complex reasoning, architectural decisions, and breaking down problems.
-
-**Implementation tasks** use Claude Sonnet 4.5, which is optimized for fast, accurate code generation and editing.
+- **Frontier** — Routes to the latest and most capable paid models. Uses different models for reasoning-heavy tasks (planning, architecture, debugging) versus implementation tasks (coding, building, exploring), pairing the right capability to each type of work.
+- **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
+- **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
 
 ## Benefits
 
-### Simplified Setup
-
-No need to manually switch models when changing modes. Auto Model handles the routing transparently in the background.
-
 ### Cost Optimization
 
-Uses the more economical Sonnet for implementation tasks where speed matters, while reserving Opus for planning tasks that benefit from deeper reasoning. You get optimal cost-to-capability ratio without thinking about it.
+Automatically uses the best model for a given task, selecting the best balance of cost and capability for a given task. Uses the more economical models for more straight forward tasks, while reserving stronger reasoning models for planning tasks. You get optimal cost-to-capability ratio without thinking about it.
 
-### Best-in-Class Models
+### No Configuration Required
 
-Auto Model always routes to Claude's latest and most capable models:
+No need to manually switch models when changing modes. Auto Model handles routing transparently in the background.
 
-- **Claude Opus** for reasoning-intensive tasks
-- **Claude Sonnet** for implementation-focused tasks
+### Flexible Cost Control
+
+Pick the tier that fits your budget. Frontier gives you the best models for demanding work; Balanced offers capable models at a fraction of the cost; Free costs nothing.
 
 ## Requirements
 
 {% callout type="warning" title="Version Requirements" %}
-Auto Model requires **VS Code/JetBrains extension v5.2.3+** or **CLI v1.0.15+** for automatic mode-based switching. On older versions, `kilo/auto` will default to Claude Sonnet for all requests.
+Auto Model requires **VS Code/JetBrains extension v5.2.3+** or **CLI v1.0.15+** for automatic mode-based switching. On older versions, Auto Model tiers will default to a single model for all requests.
 {% /callout %}
 
 ## Getting Started
 
 {% callout type="tip" title="Quick Setup" %}
-Select `kilo/auto` from the model dropdown in the Kilo Code chat interface. That's all you need to do.
+Select an Auto Model tier from the model dropdown in the Kilo Code chat interface. That's all you need to do.
 {% /callout %}
 
 1. Open Kilo Code in VS Code or JetBrains
 2. Click the model selector dropdown
-3. Choose `kilo/auto`
+3. Choose an Auto Model such as `kilo-auto/frontier` or `kilo-auto/balanced`
 4. Start chatting - the right model is selected automatically based on your current mode
 
 ## When to Use Auto Model
@@ -90,11 +85,11 @@ You may want to select a specific model instead when:
 ## Feedback
 
 {% callout type="note" title="Help Us Improve" %}
-Auto Model is a new feature and we're actively improving it. We'd love to hear how it's working for you! Share feedback in our [Discord](https://discord.gg/kilocode) or [open an issue on GitHub](https://github.com/Kilo-Org/kilocode/issues).
+Auto Model is actively being improved. We'd love to hear how it's working for you! Share feedback in our [Discord](https://kilo.ai/discord) or [open an issue on GitHub](https://github.com/Kilo-Org/kilocode/issues).
 {% /callout %}
 
 ## Related
 
 - [Model Selection Guide](/docs/code-with-ai/agents/model-selection) - General guidance on choosing models
-- [Using Modes](/docs/code-with-ai/agents/using-modes) - Learn about different Kilo Code modes
-- [Free & Budget Models](/docs/code-with-ai/agents/free-and-budget-models) - Cost-effective alternatives
+- [Using Agents](/docs/code-with-ai/agents/using-agents) - Learn about different Kilo Code agents
+- [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) - Cost-effective alternatives

@@ -13,7 +13,7 @@ export function buildConnectSrc(port?: number): string {
 /**
  * Join an array of CSP directives into a policy string.
  */
-export function joinCspDirectives(directives: string[]): string {
+function joinCspDirectives(directives: string[]): string {
   return directives.join("; ")
 }
 

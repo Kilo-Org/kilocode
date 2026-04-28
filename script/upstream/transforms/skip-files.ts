@@ -90,11 +90,19 @@ async function fileExistsInRef(file: string, ref: string): Promise<boolean> {
 }
 
 /**
- * Remove a file from the merge (git rm)
+ * Remove a file from the merge (git rm). Retries once on failure since
+ * transient index contention (editor watchers, rerere passes) has been
+ * observed to make the first attempt fail sporadically.
  */
-async function removeFile(file: string): Promise<boolean> {
-  const result = await $`git rm -f ${file}`.quiet().nothrow()
-  return result.exitCode === 0
+async function removeFile(file: string): Promise<{ ok: boolean; err?: string }> {
+  const first = await $`git rm -f ${file}`.quiet().nothrow()
+  if (first.exitCode === 0) return { ok: true }
+
+  const retry = await $`git rm -f ${file}`.quiet().nothrow()
+  if (retry.exitCode === 0) return { ok: true }
+
+  const err = retry.stderr.toString().trim() || first.stderr.toString().trim()
+  return { ok: false, err }
 }
 
 /**
@@ -143,12 +151,12 @@ export async function skipFiles(options: SkipOptions = {}): Promise<SkipResult[]
       info(`[DRY-RUN] Would remove: ${file}`)
       results.push({ file, action: "removed", dryRun: true })
     } else {
-      const removed = await removeFile(file)
-      if (removed) {
+      const res = await removeFile(file)
+      if (res.ok) {
         success(`Removed: ${file}`)
         results.push({ file, action: "removed", dryRun: false })
       } else {
-        warn(`Failed to remove: ${file}`)
+        warn(`Failed to remove ${file}: ${res.err ?? "unknown error"}`)
         results.push({ file, action: "not-found", dryRun: false })
       }
     }
@@ -168,12 +176,12 @@ export async function skipSpecificFiles(files: string[], options: SkipOptions = 
       info(`[DRY-RUN] Would remove: ${file}`)
       results.push({ file, action: "removed", dryRun: true })
     } else {
-      const removed = await removeFile(file)
-      if (removed) {
+      const res = await removeFile(file)
+      if (res.ok) {
         success(`Removed: ${file}`)
         results.push({ file, action: "removed", dryRun: false })
       } else {
-        warn(`Failed to remove: ${file}`)
+        warn(`Failed to remove ${file}: ${res.err ?? "unknown error"}`)
         results.push({ file, action: "not-found", dryRun: false })
       }
     }

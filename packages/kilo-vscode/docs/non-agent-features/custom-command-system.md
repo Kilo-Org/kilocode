@@ -1,11 +1,6 @@
 # Custom Command System
 
 **Priority:** P2
-**Status:** ❌ Not started
-
-## What Exists
-
-- `CommandConfig` type in `types.ts` with `command` and `description` fields
 
 ## Remaining Work
 

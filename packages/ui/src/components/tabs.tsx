@@ -27,7 +27,7 @@ function TabsRoot(props: TabsProps) {
       data-variant={split.variant || "normal"}
       data-orientation={split.orientation || "horizontal"}
       classList={{
-        ...(split.classList ?? {}),
+        ...split.classList,
         [split.class ?? ""]: !!split.class,
       }}
     />
@@ -41,7 +41,7 @@ function TabsList(props: TabsListProps) {
       {...rest}
       data-slot="tabs-list"
       classList={{
-        ...(split.classList ?? {}),
+        ...split.classList,
         [split.class ?? ""]: !!split.class,
       }}
     />
@@ -61,8 +61,9 @@ function TabsTrigger(props: ParentProps<TabsTriggerProps>) {
   return (
     <div
       data-slot="tabs-trigger-wrapper"
+      data-value={props.value}
       classList={{
-        ...(split.classList ?? {}),
+        ...split.classList,
         [split.class ?? ""]: !!split.class,
       }}
       onMouseDown={(e) => {
@@ -80,6 +81,7 @@ function TabsTrigger(props: ParentProps<TabsTriggerProps>) {
       <Kobalte.Trigger
         {...rest}
         data-slot="tabs-trigger"
+        data-value={props.value}
         classList={{ [split.classes?.button ?? ""]: split.classes?.button }}
       >
         {split.children}
@@ -102,7 +104,7 @@ function TabsContent(props: ParentProps<TabsContentProps>) {
       {...rest}
       data-slot="tabs-content"
       classList={{
-        ...(split.classList ?? {}),
+        ...split.classList,
         [split.class ?? ""]: !!split.class,
       }}
     >

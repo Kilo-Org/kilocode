@@ -54,6 +54,7 @@ html[data-theme="kilo-vscode"] {
 
   --surface-interactive-base: var(--vscode-list-activeSelectionBackground);
   --surface-interactive-hover: var(--vscode-list-hoverBackground);
+  --surface-interactive-active: var(--vscode-list-activeSelectionBackground);
   --surface-interactive-weak: var(--vscode-list-inactiveSelectionBackground);
   --surface-interactive-weak-hover: var(--vscode-list-hoverBackground);
 
@@ -135,6 +136,10 @@ html[data-theme="kilo-vscode"] {
   --button-secondary-hover: var(--vscode-button-secondaryHoverBackground);
   --button-ghost-hover: var(--vscode-toolbar-hoverBackground);
   --button-ghost-hover2: var(--vscode-toolbar-activeBackground);
+
+  /* ===== Contrast (high contrast themes only) ===== */
+  --border-contrast: var(--vscode-contrastBorder, transparent);
+  --border-contrast-active: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
 
   /* ===== Borders ===== */
   --border-base: var(--vscode-panel-border, var(--vscode-widget-border));

@@ -61,6 +61,89 @@ interface MergeOptions {
   author?: string
 }
 
+async function hasMergiraf(): Promise<boolean> {
+  const result = await $`mergiraf --version`.quiet().nothrow()
+  return result.exitCode === 0
+}
+
+function abortMissingMergiraf(): never {
+  logger.error("mergiraf is required but not installed.")
+  logger.info("  It provides syntax-aware resolution for imports, JSON/YAML/TOML,")
+  logger.info("  and other structural conflicts during upstream merges.")
+  logger.info("  Install via one of:")
+  logger.info("    brew install mergiraf                 # macOS / Linuxbrew")
+  logger.info("    cargo install mergiraf                # any platform with rustup")
+  logger.info("    nix profile install nixpkgs#mergiraf  # nix")
+  logger.info("  See https://mergiraf.org/installation.html for more options.")
+  process.exit(1)
+}
+
+/**
+ * Attempt syntax-aware resolution of conflicted files via mergiraf.
+ * Assumes `git merge` was invoked with `merge.conflictStyle=zdiff3`, so the
+ * working tree already contains base-aware markers that mergiraf can feed
+ * into its structural heuristics.
+ *
+ * Only runs on files whose working-tree content actually contains text
+ * conflict markers. Delete/modify (UD/DU) and similar non-textual conflicts
+ * have no markers — running `mergiraf solve` + `git add` on them would
+ * silently stage the file with our side of the conflict, losing the signal
+ * that upstream deleted (or that we deleted what upstream modified). Those
+ * are left untouched for manual review.
+ *
+ * Only stages files mergiraf resolves completely (no conflict markers
+ * remain). Partial resolutions are left unstaged so the remaining markers
+ * show up for manual review — we never auto-commit a partially-resolved
+ * file. Per-file failures are logged at debug level and skipped so the
+ * overall merge continues to the next transform pass.
+ */
+async function runMergiraf(files: string[]): Promise<{ solved: number; partial: number; skipped: number }> {
+  let solved = 0
+  let partial = 0
+  let skipped = 0
+  for (const file of files) {
+    const before = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    if (!before) {
+      logger.debug(`skipping ${file}: file missing from working tree (likely delete/modify conflict)`)
+      skipped++
+      continue
+    }
+    if (!before.includes("<<<<<<< ")) {
+      // No text conflict markers — this is a non-textual conflict (UD/DU,
+      // add/add with identical content, submodule, binary, etc.). Running
+      // mergiraf + git add here would silently stage our side as resolved.
+      logger.debug(`skipping ${file}: no conflict markers (non-textual conflict, needs manual review)`)
+      skipped++
+      continue
+    }
+    const mg = await $`mergiraf solve --keep-backup=false ${file}`.quiet().nothrow()
+    const after = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    if (!after) {
+      logger.debug(`skipping ${file}: empty after mergiraf (exit ${mg.exitCode})`)
+      continue
+    }
+    if (after.includes("<<<<<<< ")) {
+      // exit 2 = mergiraf reduced but didn't fully resolve; exit 1 = no change.
+      // Either way the working tree still has markers, so leave it unstaged
+      // for manual review rather than silently staging a half-resolved file.
+      logger.debug(`${file}: mergiraf left conflict markers (exit ${mg.exitCode}) — unstaged for manual review`)
+      if (mg.exitCode === 2) partial++
+      continue
+    }
+    const add = await $`git add ${file}`.quiet().nothrow()
+    if (add.exitCode !== 0) {
+      logger.debug(`${file}: git add failed (exit ${add.exitCode}) — leaving for next transform pass`)
+      continue
+    }
+    solved++
+  }
+  return { solved, partial, skipped }
+}
+
 function parseArgs(): MergeOptions {
   const args = process.argv.slice(2)
 
@@ -115,6 +198,12 @@ async function createBackupBranch(baseBranch: string): Promise<string> {
 }
 
 async function main() {
+  // Ensure all relative paths resolve against the repo root, not whichever
+  // directory the user invoked the script from. Transforms feed git-reported
+  // paths (repo-relative) straight into Bun.file() and Glob.scan(), so running
+  // from script/upstream/ would silently break every file lookup.
+  process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
+
   const options = parseArgs()
   const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
@@ -133,6 +222,10 @@ async function main() {
     process.exit(1)
   }
 
+  if (!(await hasMergiraf())) {
+    abortMissingMergiraf()
+  }
+
   if (await git.hasUncommittedChanges()) {
     logger.error("Working directory has uncommitted changes. Please commit or stash them first.")
     process.exit(1)
@@ -140,6 +233,26 @@ async function main() {
 
   const currentBranch = await git.getCurrentBranch()
   logger.info(`Current branch: ${currentBranch}`)
+
+  // Enable git rerere so conflict resolutions are recorded and reused across merges
+  if (!options.dryRun) {
+    await git.ensureRerere()
+    logger.info("git rerere enabled (resolutions will be recorded and reused automatically)")
+
+    // Train rerere from past upstream merge commits so the cache is populated
+    // even on a fresh clone. This replays past merges to learn their resolutions.
+    // The grep covers both the current convention ("merge: upstream vX.Y.Z") and the
+    // historical convention used by older upstream merges ("[Rr]esolve merge conflicts").
+    // Without the lowercase alternative, ~70 past merges are dropped from training on
+    // this repo, since most older resolution commits use a lowercase "resolve".
+    logger.info("Training rerere cache from past merge history...")
+    const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
+    if (learned > 0) {
+      logger.success(`Learned ${learned} conflict resolution(s) from history`)
+    } else {
+      logger.info("No new resolutions to learn from history (cache already up to date)")
+    }
+  }
 
   // Step 2: Fetch upstream
   logger.step(2, 8, "Fetching upstream...")
@@ -253,6 +366,11 @@ async function main() {
 
   const author = options.author || (await getAuthor())
   const kiloVersion = await version.getCurrentKiloVersion()
+  const dirs = ["packages/ui/src/assets/icons/provider", "packages/ui/src/components/provider-icons"]
+
+  logger.info("Resetting generated provider icons before checkout...")
+  await git.restoreDirectories(dirs)
+  await git.cleanDirectories(dirs)
 
   // Create backup branch
   await git.checkout(config.baseBranch)
@@ -362,6 +480,13 @@ async function main() {
   const keepOursResults = await resetToOurs(config.keepOurs, { dryRun: false, verbose: options.verbose })
   logger.success(`Reset ${keepOursResults.length} files to Kilo's version`)
 
+  // Clean untracked build artifacts from Kilo-specific directories.
+  // These packages don't exist in upstream, so their .gitignore files are absent
+  // on the opencode branch. Artifacts like bin/, out/, .next/ etc. would otherwise
+  // be picked up by the git add -A below.
+  logger.info("Cleaning Kilo-specific directory artifacts...")
+  await git.cleanDirectories(config.kiloDirectories)
+
   // Commit all transformations
   await git.stageAll()
   await git.commit(`refactor: kilo compat for ${targetVersion.tag}`)
@@ -377,6 +502,14 @@ async function main() {
     logger.warn("Merge has conflicts (these should only be files with actual code differences)")
     logger.info("Conflicted files:")
     logger.list(mergeResult.conflicts)
+
+    // Check if git rerere already auto-resolved any conflicts from recorded history.
+    // rerere.autoupdate stages them automatically; we just log how many were handled.
+    const rerereResolved = await git.getRerereResolved()
+    if (rerereResolved.length > 0) {
+      logger.success(`git rerere auto-resolved ${rerereResolved.length} conflict(s) from recorded history:`)
+      logger.list(rerereResolved)
+    }
 
     // Since we applied all branding transforms pre-merge, remaining conflicts should be minimal.
     // These are likely files with kilocode_change markers or actual logic differences.
@@ -398,17 +531,47 @@ async function main() {
     }
 
     // Step 7c: Try to auto-resolve remaining conflicts with post-merge transforms
-    // These handle edge cases where pre-merge transforms might have missed something
+    // These handle edge cases where pre-merge transforms might have missed something.
+    // Files with kilocode_change markers are flagged for manual resolution instead.
     let conflictedFiles = await git.getConflictedFiles()
+    const flaggedFiles: string[] = []
 
     if (conflictedFiles.length > 0) {
       logger.info("Attempting to auto-resolve remaining conflicts...")
+
+      // Step 7c-pre: syntax-aware resolution via mergiraf.
+      // Handles the common pattern of neighbouring import additions around
+      // kilocode_change markers, plus JSON/YAML/TOML key merges and other
+      // structural conflicts. Presence is enforced at startup.
+      logger.info("Running mergiraf on remaining conflicts...")
+      const mgResult = await runMergiraf(conflictedFiles)
+      if (mgResult.solved > 0) {
+        logger.success(`mergiraf auto-resolved ${mgResult.solved} conflict(s)`)
+        conflictedFiles = await git.getConflictedFiles()
+      } else {
+        logger.info("mergiraf did not fully resolve any conflicts")
+      }
+      if (mgResult.partial > 0) {
+        logger.info(
+          `mergiraf partially resolved ${mgResult.partial} file(s) — remaining markers left unstaged for manual review`,
+        )
+      }
+      if (mgResult.skipped > 0) {
+        logger.info(
+          `mergiraf skipped ${mgResult.skipped} file(s) with non-textual conflicts (delete/modify, binary, etc.) — left for manual review`,
+        )
+      }
 
       // Transform i18n files
       const i18nResults = await transformConflictedI18n(conflictedFiles, { dryRun: false, verbose: options.verbose })
       const i18nTransformed = i18nResults.filter((r) => r.replacements > 0).length
       if (i18nTransformed > 0) {
         logger.success(`Auto-resolved ${i18nTransformed} i18n conflicts`)
+      }
+      const i18nFlagged = i18nResults.filter((r) => r.flagged).map((r) => r.file)
+      if (i18nFlagged.length > 0) {
+        logger.warn(`${i18nFlagged.length} i18n file(s) have kilocode_change markers — flagged for manual resolution`)
+        flaggedFiles.push(...i18nFlagged)
       }
 
       // Transform branding-only files
@@ -421,6 +584,13 @@ async function main() {
         const takeTheirsCount = takeTheirsResults.filter((r) => r.action === "transformed").length
         if (takeTheirsCount > 0) {
           logger.success(`Auto-resolved ${takeTheirsCount} branding conflicts`)
+        }
+        const takeFlagged = takeTheirsResults.filter((r) => r.action === "flagged").map((r) => r.file)
+        if (takeFlagged.length > 0) {
+          logger.warn(
+            `${takeFlagged.length} branding file(s) have kilocode_change markers — flagged for manual resolution`,
+          )
+          flaggedFiles.push(...takeFlagged)
         }
       }
 
@@ -435,6 +605,13 @@ async function main() {
         if (tauriCount > 0) {
           logger.success(`Auto-resolved ${tauriCount} Tauri conflicts`)
         }
+        const tauriFlagged = tauriResults.filter((r) => r.action === "flagged").map((r) => r.file)
+        if (tauriFlagged.length > 0) {
+          logger.warn(
+            `${tauriFlagged.length} Tauri file(s) have kilocode_change markers — flagged for manual resolution`,
+          )
+          flaggedFiles.push(...tauriFlagged)
+        }
       }
 
       // Transform package.json files
@@ -447,6 +624,13 @@ async function main() {
         const pkgCount = pkgResults.filter((r) => r.action === "transformed").length
         if (pkgCount > 0) {
           logger.success(`Auto-resolved ${pkgCount} package.json conflicts`)
+        }
+        const pkgFlagged = pkgResults.filter((r) => r.action === "flagged").map((r) => r.file)
+        if (pkgFlagged.length > 0) {
+          logger.warn(
+            `${pkgFlagged.length} package.json file(s) have kilocode_change markers — flagged for manual resolution`,
+          )
+          flaggedFiles.push(...pkgFlagged)
         }
       }
 
@@ -461,6 +645,13 @@ async function main() {
         if (scriptCount > 0) {
           logger.success(`Auto-resolved ${scriptCount} script conflicts`)
         }
+        const scriptFlagged = scriptResults.filter((r) => r.action === "flagged").map((r) => r.file)
+        if (scriptFlagged.length > 0) {
+          logger.warn(
+            `${scriptFlagged.length} script file(s) have kilocode_change markers — flagged for manual resolution`,
+          )
+          flaggedFiles.push(...scriptFlagged)
+        }
       }
 
       // Transform extension files
@@ -474,6 +665,13 @@ async function main() {
         if (extCount > 0) {
           logger.success(`Auto-resolved ${extCount} extension conflicts`)
         }
+        const extFlagged = extResults.filter((r) => r.action === "flagged").map((r) => r.file)
+        if (extFlagged.length > 0) {
+          logger.warn(
+            `${extFlagged.length} extension file(s) have kilocode_change markers — flagged for manual resolution`,
+          )
+          flaggedFiles.push(...extFlagged)
+        }
       }
 
       // Transform web/docs files
@@ -486,6 +684,13 @@ async function main() {
         const webCount = webResults.filter((r) => r.action === "transformed").length
         if (webCount > 0) {
           logger.success(`Auto-resolved ${webCount} web/docs conflicts`)
+        }
+        const webFlagged = webResults.filter((r) => r.action === "flagged").map((r) => r.file)
+        if (webFlagged.length > 0) {
+          logger.warn(
+            `${webFlagged.length} web/docs file(s) have kilocode_change markers — flagged for manual resolution`,
+          )
+          flaggedFiles.push(...webFlagged)
         }
       }
 
@@ -505,11 +710,21 @@ async function main() {
 
     // Check remaining conflicts
     const remaining = await git.getConflictedFiles()
-    if (remaining.length > 0) {
-      logger.warn(`${remaining.length} conflicts require manual resolution:`)
-      logger.list(remaining)
+    // Combine git-reported conflicts with files flagged due to kilocode_change markers
+    const allManual = [...new Set([...remaining, ...flaggedFiles])]
+    if (allManual.length > 0) {
+      if (flaggedFiles.length > 0) {
+        logger.warn(`${flaggedFiles.length} file(s) were flagged because they contain kilocode_change markers:`)
+        logger.list(flaggedFiles)
+        logger.info("  These files have intentional Kilo-specific changes. Keep our version or merge carefully.")
+        logger.info("")
+      }
+      if (remaining.length > 0) {
+        logger.warn(`${remaining.length} conflict(s) still require manual resolution:`)
+        logger.list(remaining)
+      }
       logger.info("")
-      logger.info("These conflicts likely contain kilocode_change markers or have actual code differences.")
+      logger.info("These conflicts contain kilocode_change markers or actual code differences.")
       logger.info("After resolving conflicts, run:")
       logger.info("  git add -A && git commit -m 'resolve merge conflicts'")
 
@@ -561,6 +776,22 @@ async function main() {
       await git.commit("chore: regenerate lock files after upstream merge")
       logger.success("Committed regenerated lock files")
     }
+  }
+
+  // Regenerate OpenAPI spec and SDK (keeps generated files in sync with merged code)
+  logger.info("Regenerating OpenAPI spec and SDK...")
+  const regenResult = await $`bun ./script/generate.ts`.quiet().nothrow()
+  if (regenResult.exitCode === 0) {
+    logger.success("Regenerated OpenAPI spec and SDK")
+    await git.stageAll()
+    const hasSpecChanges = await git.hasUncommittedChanges()
+    if (hasSpecChanges) {
+      await git.commit("chore: regenerate openapi spec and sdk after upstream merge")
+      logger.success("Committed regenerated OpenAPI spec and SDK")
+    }
+  } else {
+    logger.warn("OpenAPI spec regeneration failed — run ./script/generate.ts manually after resolving any issues")
+    logger.warn(regenResult.stderr.toString().trim())
   }
 
   if (options.push) {

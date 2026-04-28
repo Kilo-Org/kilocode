@@ -28,7 +28,11 @@ const mockVscode = {
   extensions: {
     getExtension: (id: string) => {
       if (id === "vscode.git") return undefined
-      return { packageJSON: { version: "test", contributes: { configuration: { properties: {} } } }, isActive: true, exports: undefined }
+      return {
+        packageJSON: { version: "test", contributes: { configuration: { properties: {} } } },
+        isActive: true,
+        exports: undefined,
+      }
     },
   },
   env: {
@@ -47,6 +51,18 @@ const mockVscode = {
       update: async () => {},
     }),
     asRelativePath: (pathOrUri: string) => pathOrUri,
+    fs: {
+      createDirectory: async () => {},
+      writeFile: async () => {},
+      readFile: async () => new Uint8Array(),
+      readDirectory: async () => [],
+      delete: async () => {},
+      stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
+    },
+  },
+  StatusBarAlignment: { Left: 1, Right: 2 },
+  ThemeColor: class {
+    constructor(public id: string) {}
   },
   window: {
     activeTextEditor: undefined,
@@ -55,6 +71,15 @@ const mockVscode = {
     showTextDocument: async () => {},
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
+    createStatusBarItem: () => ({
+      text: "",
+      tooltip: "",
+      color: undefined as unknown,
+      command: undefined as string | undefined,
+      show: noop,
+      hide: noop,
+      dispose: noop,
+    }),
   },
   commands: {
     registerCommand: () => ({ dispose: noop }),
@@ -63,7 +88,10 @@ const mockVscode = {
   CodeAction: class {
     command?: { command: string; title: string }
     isPreferred?: boolean
-    constructor(public title: string, public kind: { value: string }) {}
+    constructor(
+      public title: string,
+      public kind: { value: string },
+    ) {}
   },
   CodeActionKind: {
     QuickFix: kind("quickfix"),
@@ -78,10 +106,16 @@ const mockVscode = {
     constructor(public uri: { scheme: string; fsPath: string }) {}
   },
   Position: class {
-    constructor(public line: number, public character: number) {}
+    constructor(
+      public line: number,
+      public character: number,
+    ) {}
   },
   Range: class {
-    constructor(public start: { line: number; character: number }, public end: { line: number; character: number }) {}
+    constructor(
+      public start: { line: number; character: number },
+      public end: { line: number; character: number },
+    ) {}
   },
   Disposable: class {
     constructor(private callback: () => void = noop) {}

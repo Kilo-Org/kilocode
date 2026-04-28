@@ -1,52 +1,59 @@
-/* kilocode_change - new file */
-/* Kilo Select overrides – styled to match legacy SelectDropdown look */
+/* Kilo Select overrides – styled to match Figma design */
 
 /* Select trigger (renders as a Button, override the button sizing) */
 [data-component="select"] [data-slot="select-select-trigger"] {
-  height: auto !important;
-  min-height: 22px;
-  border-radius: 3px;
-  font-size: 12px;
-  line-height: normal;
-  padding: 1px 6px !important;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 2px;
+  font-size: 13px;
+  line-height: 16px;
+  padding: 6px 12px !important;
   cursor: pointer;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--background-weak);
+  border: 1px solid var(--border-base);
   box-shadow: none;
-  opacity: 0.9;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
-  transition: all 150ms;
-  color: var(--text-base, var(--vscode-foreground));
+  transition: border-color 150ms;
+  color: var(--icon-weak-base);
+  justify-content: space-between;
 
   &:hover:not(:disabled) {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--background-weak);
+    border-color: var(--border-hover);
   }
 
   &:focus-visible {
     outline: none;
+    border-color: var(--border-hover);
     box-shadow: 0 0 0 1px var(--border-focus);
   }
 
   &[data-expanded] {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--background-weak);
+    border-color: var(--border-hover);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 
   [data-slot="select-select-trigger-value"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 16px;
+    color: var(--text-base);
   }
 
   [data-slot="select-select-trigger-icon"] {
-    width: 12px;
-    height: 12px;
-    opacity: 0.8;
+    width: 10px;
+    height: 20px;
     flex-shrink: 0;
+    color: var(--icon-weak-base);
+    background-color: transparent;
   }
 }
 
@@ -83,7 +90,7 @@
     box-sizing: border-box;
     border-radius: 0;
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: 13px;
     line-height: 16px;
     cursor: pointer;
     gap: 8px;

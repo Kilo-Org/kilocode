@@ -15,23 +15,12 @@ export const AutomateNav: NavSection[] = [
           { href: "/automate/code-reviews/gitlab", children: "GitLab" },
         ],
       },
-      { href: "/automate/agent-manager", children: "Agent Manager" },
       {
-        href: "/automate/kiloclaw/overview",
-        children: "KiloClaw",
+        href: "/automate/agent-manager",
+        children: "Agent Manager",
         subLinks: [
-          { href: "/automate/kiloclaw/overview", children: "Overview" },
-          { href: "/automate/kiloclaw/dashboard", children: "Dashboard" },
-          { href: "/automate/kiloclaw/control-ui", children: "Control UI" },
-          {
-            href: "/automate/kiloclaw/chat-platforms",
-            children: "Chat Platforms",
-          },
-          {
-            href: "/automate/kiloclaw/troubleshooting",
-            children: "Troubleshooting",
-          },
-          { href: "/automate/kiloclaw/pricing", children: "Pricing" },
+          { href: "/automate/agent-manager", children: "Reference" },
+          { href: "/automate/agent-manager-workflows", children: "Workflows" },
         ],
       },
     ],
@@ -45,8 +34,14 @@ export const AutomateNav: NavSection[] = [
         children: "Shell Integration",
       },
       {
+        href: "/automate/extending/plugins",
+        children: "Plugins",
+        platform: "new",
+      },
+      {
         href: "/automate/extending/auto-launch",
         children: "Auto-launch Configuration",
+        platform: "legacy",
       },
       {
         href: "/automate/mcp/overview",
@@ -71,8 +66,8 @@ export const AutomateNav: NavSection[] = [
   {
     title: "Tools",
     links: [
-      { href: "/automate/how-tools-work", children: "How Tools Work" },
-      { href: "/automate/tools", children: "Tools Details" },
+      { href: "/automate/how-tools-work", children: "How Tools Work", platform: "legacy" },
+      { href: "/automate/tools", children: "Tools Details", platform: "legacy" },
     ],
   },
 ]

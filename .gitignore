@@ -1,10 +1,14 @@
+.husky/_
 .DS_Store
 $null
 node_modules
 .worktrees
 .sst
 .env
-.idea
+.idea/*
+!.idea/gradle.xml
+!.idea/.run
+.idea/*.iml
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json
@@ -25,7 +29,7 @@ storybook-static
 /result
 refs
 Session.vim
-opencode.json
+/opencode.json
 a.out
 target
 .scripts
@@ -33,6 +37,7 @@ target
 
 # Local dev files
 opencode-dev
+UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 
@@ -40,3 +45,9 @@ logs/
 telemetry-id
 tsconfig.tsbuildinfo
 
+# Kilo
+.kilo/plans/*upstream-merge-report-*.md
+
+# Test Artifacts
+packages/app/.artifacts/
+packages/opencode/.artifacts/

@@ -1,7 +1,6 @@
 # Speech-to-Text (Voice Input)
 
 **Priority:** P3
-**Status:** ❌ Not started
 
 ## Remaining Work
 

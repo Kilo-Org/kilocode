@@ -34,8 +34,8 @@ describe("SessionTerminalManager structure", () => {
     expect(ctor).toBeTruthy()
     const text = ctor!.getText()
     // Both listeners are required: close (cleanup) and active-change (context key)
-    expect(text).toContain("onDidCloseTerminal")
-    expect(text).toContain("onDidChangeActiveTerminal")
+    expect(text).toContain("onTerminalClosed")
+    expect(text).toContain("onActiveTerminalChanged")
   })
 
   it("dispose clears the context key, disposes terminals, and clears the map", () => {
@@ -46,11 +46,11 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("terminals.clear()")
   })
 
-  it("showTerminal resolves CWD from worktree with workspace fallback", () => {
+  it("showTerminal resolves CWD from worktree with repo fallback", () => {
     const text = body("showTerminal")
-    // The fallback chain must be worktreePath ?? workspacePath, not the reverse.
+    // The fallback chain must be worktreePath ?? repoPath, not the reverse.
     // Getting this wrong would run agents in the wrong directory.
-    expect(text).toContain("worktreePath ?? workspacePath")
+    expect(text).toContain("worktreePath ?? repoPath")
   })
 
   /**
