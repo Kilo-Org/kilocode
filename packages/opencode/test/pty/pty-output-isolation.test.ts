@@ -133,12 +133,14 @@ describe("pty", () => {
               ctx.connId = 2
 
               yield* pty.write(a.id, "AAA\n")
+              // kilocode_change start - wait for Windows PTY output instead of sleeping a fixed duration
               yield* Effect.promise(async () => {
                 for (const _ of Array.from({ length: 20 })) {
                   if (out.join("").includes("AAA")) return
                   await sleep(50)
                 }
               })
+              // kilocode_change end
 
               expect(out.join("")).toContain("AAA")
             } finally {
