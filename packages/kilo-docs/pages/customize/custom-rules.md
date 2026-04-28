@@ -105,11 +105,11 @@ The CLI is backward compatible with `.kilocode/rules/` directories. Existing rul
 
 ### Project Rules
 
-Custom rules are primarily loaded from the **`.kilocode/rules/` directory**. This is the recommended approach for organizing your project-specific rules. Each rule is typically placed in its own Markdown file with a descriptive name:
+Custom rules are primarily loaded from the **`.kilo/rules/` directory**. This is the recommended approach for organizing your project-specific rules. Each rule is typically placed in its own Markdown file with a descriptive name:
 
 ```
 project/
-├── .kilocode/
+├── .kilo/
 │   ├── rules/
 │   │   ├── formatting.md
 │   │   ├── restricted_files.md
@@ -123,7 +123,7 @@ project/
 Global rules are stored in your home directory and apply to all projects:
 
 ```
-~/.kilocode/
+~/.kilo/
 ├── rules/
 │   ├── coding_standards.md
 │   ├── security_guidelines.md
@@ -178,7 +178,7 @@ Rules are managed by editing the `instructions` array in your `kilo.jsonc` confi
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
+Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilo/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
 
 You can access the rules management UI to:
 
@@ -231,8 +231,8 @@ If `.kilocode/rules/` directories exist in your project, their contents are auto
 
 Rules are loaded in the following priority order:
 
-1. **Global rules** from `~/.kilocode/rules/` directory
-2. **Project rules** from `.kilocode/rules/` directory
+1. **Global rules** from `~/.kilo/rules/` directory
+2. **Project rules** from `.kilo/rules/` directory
 3. **Legacy fallback files** (for backward compatibility):
    - `.roorules`
    - `.clinerules`
@@ -241,14 +241,14 @@ Rules are loaded in the following priority order:
 When both global and project rules exist, they are combined with project rules taking precedence over global rules for conflicting directives.
 
 {% callout type="note" %}
-We strongly recommend keeping your rules in the `.kilocode/rules/` folder as it provides better organization and is the preferred approach for future versions. The legacy file-based approach is maintained for backward compatibility but may be subject to change in future releases.
+We strongly recommend keeping your rules in the `.kilo/rules/` folder as it provides better organization and is the preferred approach for future versions. The legacy file-based approach is maintained for backward compatibility but may be subject to change in future releases.
 {% /callout %}
 
 ### Mode-Specific Rules
 
 The system also supports mode-specific rules with their own priority order:
 
-1. First, it checks for `.kilocode/rules-${mode}/` directory
+1. First, it checks for `.kilo/rules-${mode}/` directory
 2. If that doesn't exist or is empty, it falls back to `.kilocoderules-${mode}` file (deprecated)
 
 Mode-specific rules are only supported at the project level. When both generic and mode-specific rules exist, mode-specific rules take priority.
@@ -316,14 +316,14 @@ To create rules manually:
 
 **For Project Rules:**
 
-1. Create the `.kilocode/rules/` directory if it doesn't already exist
+1. Create the `.kilo/rules/` directory if it doesn't already exist
 2. Create a new Markdown file with a descriptive name in this directory
 3. Write your rule using Markdown formatting
 4. Save the file
 
 **For Global Rules:**
 
-1. Create the `~/.kilocode/rules/` directory if it doesn't already exist
+1. Create the `~/.kilo/rules/` directory if it doesn't already exist
 2. Create a new Markdown file with a descriptive name in this directory
 3. Write your rule using Markdown formatting
 4. Save the file
@@ -430,8 +430,8 @@ If your custom rules aren't being properly followed:
 3. **Check rule locations**:
    - **Check rule status in the UI**: Use the rules management interface to verify that your rules are active and properly loaded
    - Ensure rules are in supported locations:
-     - Global rules: `~/.kilocode/rules/` directory
-     - Project rules: `.kilocode/rules/` directory
+     - Global rules: `~/.kilo/rules/` directory
+     - Project rules: `.kilo/rules/` directory
      - Legacy files: `.kilocoderules`, `.roorules`, or `.clinerules`
    - **Restart VS Code** to ensure the rules are properly loaded
 

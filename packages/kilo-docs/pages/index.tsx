@@ -50,7 +50,7 @@ const terminalContent = {
     <>
       <span className="terminal-comment"># Create a custom rules file in your project</span>
       {"\n"}
-      <span className="terminal-prompt">$</span> touch .kilocode/rules.md
+      <span className="terminal-prompt">$</span> touch .kilo/rules.md
       {"\n"}
       {"\n"}
       <span className="terminal-comment"># Or use the CLI to add rules</span>
