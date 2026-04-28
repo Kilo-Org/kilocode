@@ -16,6 +16,7 @@ export function createNewTaskDrafts(timeout = 30_000) {
     const timer = timers.get(task.id)
     if (timer) clearTimeout(timer)
     timers.delete(task.id)
+    window.dispatchEvent(new CustomEvent("agentManagerDiscardDraft", { detail: { id: task.id } }))
   }
 
   const create = (worktreeId: string) => {

@@ -303,6 +303,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
   onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
 
+  const onAgentManagerDiscardDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.delete(event.detail.id)
+  }
+  window.addEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft)
+  onCleanup(() => window.removeEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft))
+
   // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
   const onCompact = () => {
     if (session.status() === "busy") return
