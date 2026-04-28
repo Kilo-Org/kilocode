@@ -153,7 +153,7 @@ export namespace Ripgrep {
       // devilcode_change start
       const stat = await fs.stat(system).catch(() => undefined)
       if (stat?.isFile() && (await runnable(system))) return { filepath: system }
-      log.warn("bun.which returned unusable rg path", { filepath: system })
+      log.warn("which returned unusable rg path", { filepath: system })
       // devilcode_change end
     }
     const filepath = path.join(Global.Path.bin, "rg" + (process.platform === "win32" ? ".exe" : ""))
