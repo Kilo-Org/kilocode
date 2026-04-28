@@ -62,16 +62,16 @@ The CLI can run in several modes:
 
 Key subsystems inside the CLI:
 
-| Subsystem       | Purpose                                                                  |
-| --------------- | ------------------------------------------------------------------------ |
-| Agent Runtime   | Orchestrates AI conversations, tool calls, and multi-step task execution |
-| Tools Service   | Built-in tools for file editing, shell execution, search, and more       |
-| MCP Servers     | Model Context Protocol support for extending with external tools         |
-| LSP Client      | Language Server Protocol integration for code intelligence               |
-| Session Manager | Persistent session state, conversation history, and checkpoints          |
-| Provider Router | Connects to 500+ AI models via direct APIs or Kilo Gateway               |
-| HTTP Server     | REST API + SSE streaming for client communication                        |
-| Config System   | Project and global configuration, modes, and permissions                 |
+| Subsystem | Purpose |
+|---|---|
+| Agent Runtime | Orchestrates AI conversations, tool calls, and multi-step task execution |
+| Tools Service | Built-in tools for file editing, shell execution, search, and more |
+| MCP Servers | Model Context Protocol support for extending with external tools |
+| LSP Client | Language Server Protocol integration for code intelligence |
+| Session Manager | Persistent session state, conversation history, and checkpoints |
+| Provider Router | Connects to 500+ AI models via direct APIs or Kilo Gateway |
+| HTTP Server | REST API + SSE streaming for client communication |
+| Config System | Project and global configuration, modes, and permissions |
 
 ## Client Layer
 
@@ -144,23 +144,23 @@ Key concepts:
 
 Agents operate in a hierarchy:
 
-| Agent    | Role                                                                                        |
-| -------- | ------------------------------------------------------------------------------------------- |
-| Mayor    | Persistent conversational coordinator — decomposes tasks and delegates to worker agents     |
-| Polecat  | Worker agent — clones repo worktrees, writes code, commits, pushes, and creates PRs         |
+| Agent | Role |
+|---|---|
+| Mayor | Persistent conversational coordinator — decomposes tasks and delegates to worker agents |
+| Polecat | Worker agent — clones repo worktrees, writes code, commits, pushes, and creates PRs |
 | Refinery | Code review agent — reviews polecat branches, runs quality gates, merges or requests rework |
-| Triage   | Ephemeral agent that resolves ambiguous situations detected by automated patrol checks      |
+| Triage | Ephemeral agent that resolves ambiguous situations detected by automated patrol checks |
 
 A reconciler loop running every 5 seconds drives all state transitions: dispatching agents, transitioning beads, polling PR status, managing convoys, and recovering from failures.
 
 ### Supporting Services
 
-| Service              | Purpose                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------ |
+| Service | Purpose |
+|---|---|
 | Webhook Agent Ingest | Named webhook endpoints that capture HTTP requests and queue delivery to Cloud Agent |
-| AI Attribution       | Tracks line-level AI-generated code attribution when users accept or reject edits    |
-| Session Ingest       | Ingests and stores CLI session data for analytics                                    |
-| Observability        | Telemetry pipelines for monitoring cloud services                                    |
+| AI Attribution | Tracks line-level AI-generated code attribution when users accept or reject edits |
+| Session Ingest | Ingests and stores CLI session data for analytics |
+| Observability | Telemetry pipelines for monitoring cloud services |
 
 ## Key Concepts
 
@@ -255,10 +255,10 @@ The project uses:
 
 ## Repositories
 
-| Repository                                                | Contents                                                                                                                       |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                             |
-| Cloud (private)                                           | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, Gas Town, code review, auto triage, billing, and supporting Cloudflare Workers |
+| Repository | Contents |
+|---|---|
+| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components |
+| Cloud (private) | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, Gas Town, code review, auto triage, billing, and supporting Cloudflare Workers |
 
 ## Further Reading
 

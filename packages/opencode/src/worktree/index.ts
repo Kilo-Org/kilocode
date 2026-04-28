@@ -13,28 +13,29 @@ import { errorMessage } from "../util/error"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
 import { Git } from "@/git"
-import { Effect, Layer, Path, Scope, Context, Stream } from "effect"
+import { Effect, Layer, Path, Schema, Scope, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { BootstrapRuntime } from "@/effect/bootstrap-runtime"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 import { InstanceState } from "@/effect"
+import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
 
 const log = Log.create({ service: "worktree" })
 
 export const Event = {
   Ready: BusEvent.define(
     "worktree.ready",
-    z.object({
-      name: z.string(),
-      branch: z.string(),
+    Schema.Struct({
+      name: Schema.String,
+      branch: Schema.String,
     }),
   ),
   Failed: BusEvent.define(
     "worktree.failed",
-    z.object({
-      message: z.string(),
+    Schema.Struct({
+      message: Schema.String,
     }),
   ),
 }
@@ -353,16 +354,18 @@ export const layer: Layer.Layer<
       )
     }
 
+    // kilocode_change start - use Kilo cleanup helper for slow Windows handle release
     function cleanDirectory(target: string) {
-      return Effect.promise(() =>
-        import("fs/promises")
-          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
-          .catch((error) => {
+      return Effect.promise(() => WorktreeCleanup.removeDirectory(target)).pipe(
+        Effect.catch((error) =>
+          Effect.sync(() => {
             const message = errorMessage(error)
             throw new RemoveFailedError({ message: message || "Failed to remove git worktree directory" })
           }),
+        ),
       )
     }
+    // kilocode_change end
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {
       const ctx = yield* InstanceState.context
@@ -389,8 +392,7 @@ export const layer: Layer.Layer<
         return true
       }
 
-      yield* stopFsmonitor(entry.path)
-      const removed = yield* git(["worktree", "remove", "--force", entry.path], { cwd: ctx.worktree })
+      const removed = yield* WorktreeCleanup.remove({ root: ctx.worktree, target: entry.path, git, stop: stopFsmonitor }) // kilocode_change
       if (removed.code !== 0) {
         const next = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
         if (next.code !== 0) {

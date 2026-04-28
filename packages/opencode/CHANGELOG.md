@@ -1,5 +1,35 @@
 # @kilocode/cli
 
+## 7.2.26
+
+### Patch Changes
+
+- [#9549](https://github.com/Kilo-Org/kilocode/pull/9549) [`a5bca01`](https://github.com/Kilo-Org/kilocode/commit/a5bca011a16077d4394f9b5650a387f235cc77b2) - Prefer ChatGPT OAuth credentials over inherited OpenAI environment variables and make ChatGPT sign-in easier to find.
+
+- [#9448](https://github.com/Kilo-Org/kilocode/pull/9448) [`73ab363`](https://github.com/Kilo-Org/kilocode/commit/73ab363f9a1592721d4ce4b92d1a083b7bc8176b) - Fix session cost display missing subagent costs. The TUI footer, sidebar, web context panel, and ACP usage reports now include the cost of every subagent the session spawned, including nested ones.
+
+- [#9484](https://github.com/Kilo-Org/kilocode/pull/9484) [`dbf1135`](https://github.com/Kilo-Org/kilocode/commit/dbf113524ed27e2aaac9afc5441e70339edaa164) - Prompt before agents access files outside the active directory when a workspace boundary resolves to a filesystem root.
+
+## 7.2.25
+
+### Patch Changes
+
+- [#9526](https://github.com/Kilo-Org/kilocode/pull/9526) [`c8113f2`](https://github.com/Kilo-Org/kilocode/commit/c8113f27b190f5c08ce642da57d68646132e1828) - Fix multi-turn DeepSeek reasoning round-tripping on OpenRouter by bumping `@openrouter/ai-sdk-provider` to 2.8.1 in both the CLI and Kilo Gateway packages and letting the SDK handle reasoning details, plus pulling in upstream DeepSeek variant, reasoning-effort, and assistant-reasoning fixes. New DeepSeek conversations are fixed; existing sessions that already stored empty reasoning metadata may still need to be restarted.
+
+- Updated dependencies [[`c8113f2`](https://github.com/Kilo-Org/kilocode/commit/c8113f27b190f5c08ce642da57d68646132e1828)]:
+  - @kilocode/kilo-gateway@7.2.25
+  - @kilocode/kilo-telemetry@7.2.25
+
+## 7.2.23
+
+### Minor Changes
+
+- [#9418](https://github.com/Kilo-Org/kilocode/pull/9418) [`12c2d86`](https://github.com/Kilo-Org/kilocode/commit/12c2d86c84ecfce118ffb5b4db7ed4155bbca8fc) - Show the open GitHub PR for the current branch in the session sidebar.
+
+### Patch Changes
+
+- [#9470](https://github.com/Kilo-Org/kilocode/pull/9470) [`7fe4508`](https://github.com/Kilo-Org/kilocode/commit/7fe4508eecf7e7da8336f75c0884d1b310af6c6e) - Fix multi-turn tool calls with DeepSeek thinking mode by preserving empty `reasoning_content` in the interleaved transform.
+
 ## 7.2.22
 
 ### Patch Changes

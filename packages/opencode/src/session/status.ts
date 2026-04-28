@@ -2,50 +2,51 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { InstanceState } from "@/effect"
 import { SessionID } from "./schema"
+import { QuestionID } from "@/question/schema" // kilocode_change
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { Effect, Layer, Context } from "effect"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
+import { Effect, Layer, Context, Schema } from "effect"
 import z from "zod"
 
-export const Info = z
-  .union([
-    z.object({
-      type: z.literal("idle"),
-    }),
-    z.object({
-      type: z.literal("retry"),
-      attempt: z.number(),
-      message: z.string(),
-      next: z.number(),
-    }),
-    z.object({
-      type: z.literal("busy"),
-    }),
-    // kilocode_change start
-    z.object({
-      type: z.literal("offline"),
-      requestID: z.string(),
-      message: z.string(),
-    }),
-    // kilocode_change end
-  ])
-  .meta({
-    ref: "SessionStatus",
-  })
-export type Info = z.infer<typeof Info>
+export const Info = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("idle"),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("retry"),
+    attempt: Schema.Number,
+    message: Schema.String,
+    next: Schema.Number,
+  }),
+  Schema.Struct({
+    type: Schema.Literal("busy"),
+  }),
+  // kilocode_change start
+  Schema.Struct({
+    type: Schema.Literal("offline"),
+    requestID: QuestionID,
+    message: Schema.String,
+  }),
+  // kilocode_change end
+])
+  .annotate({ identifier: "SessionStatus" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Info = Schema.Schema.Type<typeof Info>
 
 export const Event = {
   Status: BusEvent.define(
     "session.status",
-    z.object({
-      sessionID: SessionID.zod,
+    Schema.Struct({
+      sessionID: SessionID,
       status: Info,
     }),
   ),
   // deprecated
   Idle: BusEvent.define(
     "session.idle",
-    z.object({
-      sessionID: SessionID.zod,
+    Schema.Struct({
+      sessionID: SessionID,
     }),
   ),
 }

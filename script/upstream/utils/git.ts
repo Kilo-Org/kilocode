@@ -122,7 +122,12 @@ export async function commit(message: string): Promise<void> {
 }
 
 export async function merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
-  const result = await $`git merge ${branch}`.nothrow()
+  // Use zdiff3 markers so conflicts carry the base version (|||||||) alongside
+  // ours/theirs. This gives mergiraf the base it needs for structural heuristics
+  // and makes any remaining manual resolution dramatically easier (you can see
+  // what both sides changed relative to the common ancestor instead of
+  // reverse-engineering it from a 2-way marker).
+  const result = await $`git -c merge.conflictStyle=zdiff3 merge ${branch}`.nothrow()
 
   if (result.exitCode === 0) {
     return { success: true, conflicts: [] }
@@ -170,6 +175,16 @@ export async function getCommitMessage(ref: string): Promise<string> {
 export async function getCommitHash(ref: string): Promise<string> {
   const result = await $`git rev-parse ${ref}`.text()
   return result.trim()
+}
+
+/**
+ * Check if `commit` is an ancestor of `ref` (i.e. reachable from `ref`).
+ * Uses `git merge-base --is-ancestor`, which exits 0 for yes, 1 for no.
+ * Any other exit code (e.g. unknown commit) is treated as "not an ancestor".
+ */
+export async function isAncestor(commit: string, ref = "HEAD"): Promise<boolean> {
+  const result = await $`git merge-base --is-ancestor ${commit} ${ref}`.quiet().nothrow()
+  return result.exitCode === 0
 }
 
 export async function getTagsForCommit(commit: string): Promise<string[]> {

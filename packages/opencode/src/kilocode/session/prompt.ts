@@ -91,6 +91,7 @@ export namespace KiloSessionPrompt {
           messageID: input.msgs[idx].info.id,
           type: "text",
           text: input.cache.block,
+          synthetic: true,
         } satisfies MessageV2.TextPart,
       ],
     }
@@ -197,5 +198,94 @@ export namespace KiloSessionPrompt {
       input.message.finish ??= "error"
     }
     return { exhausted: true as const, error }
+  }
+
+  /**
+   * Returns true when `msgs` contains at least one completed, error-free summary
+   * assistant.
+   */
+  export function hasCompletedSummary(msgs: MessageV2.WithParts[]): boolean {
+    return msgs.some((m) => m.info.role === "assistant" && m.info.summary === true && !!m.info.finish && !m.info.error)
+  }
+
+  /**
+   * Returns a possibly-trimmed copy of `msgs` where everything earlier than the
+   * newest completed summary's parent user message is dropped. Idempotent — a
+   * second call on the already-trimmed list is a no-op.
+   *
+   * Complements the shared `MessageV2.filterCompacted`, which only breaks when
+   * the summary's parent has a `compaction` part. Manual `/compact` and auto-
+   * compactions dispatched against a plain text user produce summaries whose
+   * parent is a text user; `filterCompacted` keeps the full pre-summary history
+   * in that case, which is how the reference session ended up re-shipping
+   * multi-MB base-64 images on every turn.
+   *
+   * If no completed summary is found, or the summary's parent is absent from
+   * `msgs`, `msgs` is returned unchanged.
+   */
+  export function trimBeforeLastSummary(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const info = msgs[i].info
+      if (info.role !== "assistant" || info.summary !== true || !info.finish || info.error) continue
+      const parentIdx = msgs.findIndex((m) => m.info.id === info.parentID)
+      if (parentIdx === -1) return msgs
+      return parentIdx === 0 ? msgs : msgs.slice(parentIdx)
+    }
+    return msgs
+  }
+
+  /**
+   * Returns a shallow-modified copy of `msgs` where every message before the
+   * last real user turn has its media stripped:
+   *   - `file` parts with an image/PDF MIME become placeholder `text` parts
+   *     (same placeholder shape as `toModelMessagesEffect({ stripMedia: true })`).
+   *   - Completed assistant `tool` parts keep their non-media attachments but
+   *     drop image/PDF attachments.
+   *
+   * The cutoff anchors on the newest user message that carries at least one
+   * non-synthetic part. Synthetic-only user turns — e.g. the `"Summarize the
+   * task tool output above…"` message emitted by `handleSubtask` when a task
+   * command continues a turn, or the auto-compaction continue prompt in
+   * `compaction.process` — do not count as the current turn, so attachments
+   * the user just sent before that handoff are preserved.
+   *
+   * Media in and after the cutoff is left alone so the model can still
+   * analyse attachments the user just sent. Shallow copies only — input is
+   * never mutated.
+   */
+  export function stripHistoricalMedia(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
+    const cutoff = msgs.findLastIndex(
+      (m) => m.info.role === "user" && m.parts.some((p) => p.type !== "text" || !p.synthetic),
+    )
+    if (cutoff <= 0) return msgs
+    return msgs.map((msg, idx) => {
+      if (idx >= cutoff) return msg
+      const parts = msg.parts.map((part) => {
+        if (part.type === "file" && MessageV2.isMedia(part.mime)) {
+          return {
+            id: part.id,
+            sessionID: part.sessionID,
+            messageID: part.messageID,
+            type: "text" as const,
+            text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
+          } satisfies MessageV2.TextPart
+        }
+        if (part.type === "tool" && part.state.status === "completed" && part.state.attachments?.length) {
+          const kept = part.state.attachments.filter((a) => !MessageV2.isMedia(a.mime))
+          if (kept.length === part.state.attachments.length) return part
+          return { ...part, state: { ...part.state, attachments: kept } }
+        }
+        return part
+      })
+      return { ...msg, parts }
+    })
+  }
+
+  /**
+   * Convenience wrapper: calls `stripHistoricalMedia` only when `msgs` contains
+   * a completed summary. Keeps the main-prompt call site to a single line.
+   */
+  export function maybeStripHistoricalMedia(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
+    return hasCompletedSummary(msgs) ? stripHistoricalMedia(msgs) : msgs
   }
 }

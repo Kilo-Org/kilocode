@@ -57,15 +57,15 @@ You can also import a PR directly from the advanced new worktree dialog: open th
 
 The badge color reflects the most important signal, evaluated in priority order:
 
-| State             | Color            | Condition                                                    |
-| ----------------- | ---------------- | ------------------------------------------------------------ |
-| Draft             | Gray             | PR is in draft state                                         |
-| Merged            | Purple           | PR has been merged                                           |
-| Closed            | Red              | PR was closed without merging                                |
-| Checks failing    | Red              | Any CI check has failed                                      |
-| Changes requested | Yellow           | A reviewer requested changes                                 |
-| Checks pending    | Yellow (pulsing) | CI checks are still running                                  |
-| Open (default)    | Green            | PR is open, no failing or pending checks, no blocking review |
+| State | Color | Condition |
+|---|---|---|
+| Draft | Gray | PR is in draft state |
+| Merged | Purple | PR has been merged |
+| Closed | Red | PR was closed without merging |
+| Checks failing | Red | Any CI check has failed |
+| Changes requested | Yellow | A reviewer requested changes |
+| Checks pending | Yellow (pulsing) | CI checks are still running |
+| Open (default) | Green | PR is open, no failing or pending checks, no blocking review |
 
 When checks are pending on an open PR, the badge pulses to indicate activity.
 
@@ -187,10 +187,10 @@ The run button lets you start your project (dev server, build, tests, etc.) dire
 
 Create a script file in `.kilo/` using the appropriate filename for your platform:
 
-| Platform      | Filename (checked in order)                                            |
-| ------------- | ---------------------------------------------------------------------- |
-| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh`                              |
-| Windows       | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
+| Platform | Filename (checked in order) |
+|---|---|
+| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh` |
+| Windows | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
 
 For example, on macOS / Linux create `.kilo/run-script`:
 
@@ -209,10 +209,10 @@ If no run script exists yet, clicking the run button opens a template file for y
 
 Two extra variables are injected into the script's environment:
 
-| Variable        | Value                                                                 |
-| --------------- | --------------------------------------------------------------------- |
+| Variable | Value |
+|---|---|
 | `WORKTREE_PATH` | Working directory of the selected worktree (or repo root for "local") |
-| `REPO_PATH`     | Repository root                                                       |
+| `REPO_PATH` | Repository root |
 
 ### Using the run button
 
@@ -226,22 +226,22 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 
 ## Keyboard Shortcuts (Agent Manager Panel)
 
-| Shortcut (macOS)         | Shortcut (Windows/Linux)  | Action                                           |
-| ------------------------ | ------------------------- | ------------------------------------------------ |
-| `Cmd+Shift+M`            | `Ctrl+Shift+M`            | Open / focus Agent Manager (works from anywhere) |
-| `Cmd+N`                  | `Ctrl+N`                  | New worktree                                     |
-| `Cmd+Shift+N`            | `Ctrl+Shift+N`            | New worktree (advanced options)                  |
-| `Cmd+Shift+O`            | `Ctrl+Shift+O`            | Import/open worktree                             |
-| `Cmd+Shift+W`            | `Ctrl+Shift+W`            | Close current worktree                           |
-| `Cmd+T`                  | `Ctrl+T`                  | New tab (session) in worktree                    |
-| `Cmd+W`                  | `Ctrl+W`                  | Close current tab                                |
-| `Cmd+Alt+Up` / `Down`    | `Ctrl+Alt+Up` / `Down`    | Previous / next worktree                         |
-| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree                  |
-| `Cmd+/`                  | `Ctrl+/`                  | Focus terminal for current session               |
-| `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                                |
-| `Cmd+E`                  | `Ctrl+E`                  | Run / stop run script                            |
-| `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts                          |
-| `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index                |
+| Shortcut (macOS) | Shortcut (Windows/Linux) | Action |
+|---|---|---|
+| `Cmd+Shift+M` | `Ctrl+Shift+M` | Open / focus Agent Manager (works from anywhere) |
+| `Cmd+N` | `Ctrl+N` | New worktree |
+| `Cmd+Shift+N` | `Ctrl+Shift+N` | New worktree (advanced options) |
+| `Cmd+Shift+O` | `Ctrl+Shift+O` | Import/open worktree |
+| `Cmd+Shift+W` | `Ctrl+Shift+W` | Close current worktree |
+| `Cmd+T` | `Ctrl+T` | New tab (session) in worktree |
+| `Cmd+W` | `Ctrl+W` | Close current tab |
+| `Cmd+Alt+Up` / `Down` | `Ctrl+Alt+Up` / `Down` | Previous / next worktree |
+| `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree |
+| `Cmd+/` | `Ctrl+/` | Focus terminal for current session |
+| `Cmd+D` | `Ctrl+D` | Toggle diff panel |
+| `Cmd+E` | `Ctrl+E` | Run / stop run script |
+| `Cmd+Shift+/` | `Ctrl+Shift+/` | Show keyboard shortcuts |
+| `Cmd+1` … `Cmd+9` | `Ctrl+1` … `Ctrl+9` | Jump to worktree/session by index |
 
 ## Troubleshooting
 

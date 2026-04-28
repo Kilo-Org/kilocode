@@ -14,9 +14,11 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useIndexing } from "../../context/indexing"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useConfig } from "../../context/config"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
@@ -63,6 +65,8 @@ interface PromptInputProps {
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const indexing = useIndexing()
+  const { features } = useConfig()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
@@ -115,6 +119,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (imgs.length > 0) imageDrafts.set(key, imgs)
     else imageDrafts.delete(key)
   }
+  const readDraft = () => ({
+    text: text().trim(),
+    comments: reviewComments(),
+    images: imageAttach.images(),
+  })
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
@@ -271,6 +280,35 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
+
+  const captured = new Map<string, ReturnType<typeof readDraft>>()
+  const onAgentManagerCaptureDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.set(event.detail.id, readDraft())
+  }
+  window.addEventListener("agentManagerCaptureDraft", onAgentManagerCaptureDraft)
+  onCleanup(() => window.removeEventListener("agentManagerCaptureDraft", onAgentManagerCaptureDraft))
+
+  const onAgentManagerApplyDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent)) return
+    const id = event.detail?.id
+    const sid = event.detail?.sessionId
+    const box = event.detail?.boxId
+    if (typeof id !== "string" || typeof sid !== "string" || typeof box !== "string") return
+    const draft = captured.get(id)
+    captured.delete(id)
+    if (!draft) return
+    saveDraft(scopeDraftKey(box, sessionDraftKey(sid)), draft.text, draft.comments, draft.images)
+  }
+  window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
+  onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
+
+  const onAgentManagerDiscardDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.delete(event.detail.id)
+  }
+  window.addEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft)
+  onCleanup(() => window.removeEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft))
 
   // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
   const onCompact = () => {
@@ -572,6 +610,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
+
+  const handleOpenIndexingSettings = () => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
+  }
 
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
@@ -923,6 +965,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <Show when={features().indexing}>
+            <Tooltip value={indexing.status().message || indexing.label()} placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleOpenIndexingSettings}
+                aria-label={language.t("prompt.action.indexing")}
+                class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <ellipse cx="8" cy="3.5" rx="4.5" ry="2" stroke="currentColor" stroke-width="1.2" />
+                  <path
+                    d="M3.5 3.5V12.5C3.5 13.6046 5.51472 14.5 8 14.5C10.4853 14.5 12.5 13.6046 12.5 12.5V3.5"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  />
+                  <path
+                    d="M3.5 8C3.5 9.10457 5.51472 10 8 10C10.4853 10 12.5 9.10457 12.5 8"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  />
+                  <circle cx="13" cy="3" r="2.5" fill="currentColor" />
+                </svg>
+              </Button>
+            </Tooltip>
+          </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"
@@ -945,7 +1013,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   variant="ghost"
                   size="small"
                   onClick={() => void handleSend()}
-                  disabled={!canSend()}
+                  aria-disabled={!canSend()}
                   aria-label={language.t("prompt.action.send")}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

@@ -73,13 +73,13 @@ Then set your default model:
 
 Kilo Code supports the following models through Groq:
 
-| Model ID                      | Provider    | Context Window | Notes                                 |
-| ----------------------------- | ----------- | -------------- | ------------------------------------- |
-| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens    | Optimized max_tokens limit configured |
-| `llama-3.3-70b-versatile`     | Meta        | 128K tokens    | High-performance Llama model          |
-| `llama-3.1-70b-versatile`     | Meta        | 128K tokens    | Versatile reasoning capabilities      |
-| `llama-3.1-8b-instant`        | Meta        | 128K tokens    | Fast inference for quick tasks        |
-| `mixtral-8x7b-32768`          | Mistral AI  | 32K tokens     | Mixture of experts architecture       |
+| Model ID | Provider | Context Window | Notes |
+|---|---|---|---|
+| `moonshotai/kimi-k2-instruct` | Moonshot AI | 128K tokens | Optimized max_tokens limit configured |
+| `llama-3.3-70b-versatile` | Meta | 128K tokens | High-performance Llama model |
+| `llama-3.1-70b-versatile` | Meta | 128K tokens | Versatile reasoning capabilities |
+| `llama-3.1-8b-instant` | Meta | 128K tokens | Fast inference for quick tasks |
+| `mixtral-8x7b-32768` | Mistral AI | 32K tokens | Mixture of experts architecture |
 
 **Note:** Model availability may change. Refer to the [Groq documentation](https://console.groq.com/docs/models) for the latest model list and specifications.
 

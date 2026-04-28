@@ -56,10 +56,10 @@ You can trigger compaction at any time:
 
 ## Defaults
 
-| Setting               | Default                                | Effect                                                                                 |
-| --------------------- | -------------------------------------- | -------------------------------------------------------------------------------------- |
-| `compaction.auto`     | `true`                                 | Automatically compact when the usable window is reached                                |
-| `compaction.prune`    | `true`                                 | Clear old tool outputs beyond the 40K recency window                                   |
+| Setting | Default | Effect |
+|---|---|---|
+| `compaction.auto` | `true` | Automatically compact when the usable window is reached |
+| `compaction.prune` | `true` | Clear old tool outputs beyond the 40K recency window |
 | `compaction.reserved` | `min(20,000, model_max_output_tokens)` | Token headroom kept free for the next turn — also defines the compaction trigger point |
 
 ## Configuration
@@ -76,11 +76,11 @@ Compaction is configured in your `kilo.jsonc` file:
 }
 ```
 
-| Option                | Type    | Default                        | Description                                                                                                                                                                                    |
-| --------------------- | ------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `compaction.auto`     | boolean | `true`                         | Enable or disable automatic compaction when the usable window is reached                                                                                                                       |
-| `compaction.prune`    | boolean | `true`                         | Enable pruning of old tool outputs outside the 40K token recency window                                                                                                                        |
-| `compaction.reserved` | number  | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `compaction.auto` | boolean | `true` | Enable or disable automatic compaction when the usable window is reached |
+| `compaction.prune` | boolean | `true` | Enable pruning of old tool outputs outside the 40K token recency window |
+| `compaction.reserved` | number | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
 
 ### Use a different model for compaction
 
@@ -100,10 +100,10 @@ If no compaction agent is set, the current session's model is used.
 
 ### Environment overrides
 
-| Variable                             | Effect                                            |
-| ------------------------------------ | ------------------------------------------------- |
-| `KILO_DISABLE_AUTOCOMPACT=1`         | Forces `compaction.auto = false`                  |
-| `KILO_DISABLE_PRUNE=1`               | Forces `compaction.prune = false`                 |
+| Variable | Effect |
+|---|---|
+| `KILO_DISABLE_AUTOCOMPACT=1` | Forces `compaction.auto = false` |
+| `KILO_DISABLE_PRUNE=1` | Forces `compaction.prune = false` |
 | `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | Overrides the 32,000 default output-token ceiling |
 
 {% /tab %}
@@ -144,10 +144,10 @@ You can trigger compaction at any time:
 
 ## Defaults
 
-| Setting               | Default                                | Effect                                                                                 |
-| --------------------- | -------------------------------------- | -------------------------------------------------------------------------------------- |
-| `compaction.auto`     | `true`                                 | Automatically compact when the usable window is reached                                |
-| `compaction.prune`    | `true`                                 | Clear old tool outputs beyond the 40K recency window                                   |
+| Setting | Default | Effect |
+|---|---|---|
+| `compaction.auto` | `true` | Automatically compact when the usable window is reached |
+| `compaction.prune` | `true` | Clear old tool outputs beyond the 40K recency window |
 | `compaction.reserved` | `min(20,000, model_max_output_tokens)` | Token headroom kept free for the next turn — also defines the compaction trigger point |
 
 ## Configuration
@@ -164,11 +164,11 @@ Compaction is configured in your `kilo.jsonc` file:
 }
 ```
 
-| Option                | Type    | Default                        | Description                                                                                                                                                                                    |
-| --------------------- | ------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `compaction.auto`     | boolean | `true`                         | Enable or disable automatic compaction when the usable window is reached                                                                                                                       |
-| `compaction.prune`    | boolean | `true`                         | Enable pruning of old tool outputs outside the 40K token recency window                                                                                                                        |
-| `compaction.reserved` | number  | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `compaction.auto` | boolean | `true` | Enable or disable automatic compaction when the usable window is reached |
+| `compaction.prune` | boolean | `true` | Enable pruning of old tool outputs outside the 40K token recency window |
+| `compaction.reserved` | number | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
 
 ### Use a different model for compaction
 
@@ -188,10 +188,10 @@ If no compaction agent is set, the current session's model is used.
 
 ### Environment overrides
 
-| Variable                             | Effect                                            |
-| ------------------------------------ | ------------------------------------------------- |
-| `KILO_DISABLE_AUTOCOMPACT=1`         | Forces `compaction.auto = false`                  |
-| `KILO_DISABLE_PRUNE=1`               | Forces `compaction.prune = false`                 |
+| Variable | Effect |
+|---|---|
+| `KILO_DISABLE_AUTOCOMPACT=1` | Forces `compaction.auto = false` |
+| `KILO_DISABLE_PRUNE=1` | Forces `compaction.prune = false` |
 | `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | Overrides the 32,000 default output-token ceiling |
 
 {% /tab %}

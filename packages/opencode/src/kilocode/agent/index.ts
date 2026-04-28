@@ -189,6 +189,7 @@ export function telemetryOptions(cfg: Config.Info) {
 // - Rename build → code
 // - Patch plan with readOnlyBash, mcpRules, .kilo paths
 // - Patch explore with codebase_search and conditional prompt
+// - Patch appropriate agents with semantic_search
 // - Add debug, orchestrator, ask agents
 export function patchAgents(
   agents: Record<
@@ -219,7 +220,11 @@ export function patchAgents(
 ) {
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
-    agents.code = { ...agents.build, name: "code" }
+    agents.code = {
+      ...agents.build,
+      name: "code",
+      permission: Permission.merge(defaults, Permission.fromConfig({ semantic_search: "allow" }), user),
+    }
     delete agents.build
   }
 
@@ -245,6 +250,7 @@ export function patchAgents(
             [path.join(".opencode", "plans", "*.md")]: "allow",
             [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
           },
+          semantic_search: "allow",
         }),
         user,
       ),
@@ -267,6 +273,7 @@ export function patchAgents(
           websearch: "allow",
           codesearch: "allow",
           codebase_search: "allow",
+          semantic_search: "allow",
           read: "allow",
           external_directory: {
             "*": "ask",
@@ -293,6 +300,7 @@ export function patchAgents(
         question: "allow",
         suggest: "allow", // kilocode_change
         plan_enter: "allow",
+        semantic_search: "allow",
       }),
       user,
     ),
@@ -364,6 +372,7 @@ export function patchAgents(
         websearch: "allow",
         codesearch: "allow",
         codebase_search: "allow",
+        semantic_search: "allow",
         external_directory: {
           [Truncate.GLOB]: "allow",
         },

@@ -1,11 +1,21 @@
-name: Check opencode annotations
+name: Check shared upstream annotations
 
 on:
   pull_request:
     paths:
+      - ".github/**"
+      - "github/**"
+      - "sdks/vscode/**"
+      - "packages/app/**"
+      - "packages/desktop/**"
+      - "packages/desktop-electron/**"
+      - "packages/extensions/**"
       - "packages/opencode/**"
-      - "script/check-opencode-annotations.ts"
-      - ".github/workflows/check-opencode-annotations.yml"
+      - "packages/script/**"
+      - "packages/shared/**"
+      - "packages/storybook/**"
+      - "packages/ui/**"
+      - "script/**"
   workflow_dispatch:
 
 jobs:
@@ -21,7 +31,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - name: Check kilocode_change annotations in shared opencode files
+      - name: Check kilocode_change annotations in shared upstream files
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |

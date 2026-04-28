@@ -139,14 +139,14 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("silently skips unknown request ID", () =>
+  it.live("returns false for unknown request ID", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
-        // saveAlwaysRules silently returns when the request ID is not in the pending map
-        yield* saveAlwaysRules({
+        const accepted = yield* saveAlwaysRules({
           requestID: PermissionID.make("permission_nonexistent"),
           approvedAlways: ["npm install"],
         })
+        expect(accepted).toBe(false)
       }),
     ),
   )

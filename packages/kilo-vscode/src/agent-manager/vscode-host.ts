@@ -110,6 +110,19 @@ export class VscodeHost implements Host {
       postMessage(msg) {
         void panel.webview.postMessage(msg)
       },
+      waitForReady() {
+        return provider.waitForReady()
+      },
+      waitForActive() {
+        if (panel.active) return Promise.resolve()
+        return new Promise((resolve) => {
+          const sub = panel.onDidChangeViewState((e) => {
+            if (!e.webviewPanel.active) return
+            sub.dispose()
+            resolve()
+          })
+        })
+      },
       reveal(preserveFocus) {
         panel.reveal(vscode.ViewColumn.One, preserveFocus ?? false)
       },

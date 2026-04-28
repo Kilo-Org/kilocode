@@ -23,12 +23,12 @@ When an issue arrives, Auto-Triage compares it against every previously-triaged 
 
 An AI model of your choice reads the full title and body and assigns one of four classifications:
 
-| Classification | Meaning                                                                                                                       |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **bug**        | Existing, documented functionality is broken. Includes issues with stack traces, error messages, or clear reproduction steps. |
-| **feature**    | A request for new functionality or an enhancement to existing behaviour.                                                      |
-| **question**   | The reporter is asking for help, clarification, or pointing to a gap in documentation.                                        |
-| **unclear**    | The issue does not contain enough information to determine intent.                                                            |
+| Classification | Meaning |
+|---|---|
+| **bug** | Existing, documented functionality is broken. Includes issues with stack traces, error messages, or clear reproduction steps. |
+| **feature** | A request for new functionality or an enhancement to existing behaviour. |
+| **question** | The reporter is asking for help, clarification, or pointing to a gap in documentation. |
+| **unclear** | The issue does not contain enough information to determine intent. |
 
 Along with the classification, the model produces a confidence score (0–1), a short summary of what the reporter wants, and its reasoning.
 
@@ -76,17 +76,17 @@ All settings are found under **Auto-Triage -> Config**.
 
 ### Repository scope
 
-| Setting                       | Description                                                                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Setting | Description |
+|---|---|
 | **Repository selection mode** | `all` — triage every accessible repository. `selected` — triage only the repositories you pick from the list. |
 
 ### Label filters
 
 These settings let you control which issues Auto-Triage processes, using labels already on the issue at the time it is opened.
 
-| Setting             | Description                                                                                                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Skip labels**     | If an issue carries **any** of these labels when it is opened, Auto-Triage will ignore it entirely. Useful for issues you handle manually, e.g. `wontfix` or `on-hold`.         |
+| Setting | Description |
+|---|---|
+| **Skip labels** | If an issue carries **any** of these labels when it is opened, Auto-Triage will ignore it entirely. Useful for issues you handle manually, e.g. `wontfix` or `on-hold`. |
 | **Required labels** | If set, Auto-Triage will only process issues that carry **all** of these labels. Useful for opt-in triage flows, e.g. requiring a `needs-triage` label before Auto-Triage runs. |
 
 > **Note:** Skip labels and required labels are also excluded from the set of labels the AI can apply. This keeps gating labels strictly under your control.
@@ -99,13 +99,13 @@ The model used for classification.
 
 ## Ticket statuses
 
-| Status        | Meaning                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------ |
-| **pending**   | Queued and waiting for a processing slot.                                                  |
-| **analyzing** | The AI is actively processing the issue.                                                   |
-| **actioned**  | Triage completed. Labels applied, duplicate comment posted if applicable.                  |
-| **failed**    | Something went wrong. The error is shown in the ticket. You can retry.                     |
-| **skipped**   | The issue did not meet the configured requirements (wrong repo, skip label present, etc.). |
+| Status | Meaning |
+|---|---|
+| **pending** | Queued and waiting for a processing slot. |
+| **analyzing** | The AI is actively processing the issue. |
+| **actioned** | Triage completed. Labels applied, duplicate comment posted if applicable. |
+| **failed** | Something went wrong. The error is shown in the ticket. You can retry. |
+| **skipped** | The issue did not meet the configured requirements (wrong repo, skip label present, etc.). |
 
 ---
 
@@ -113,9 +113,9 @@ The model used for classification.
 
 Auto-Triage uses two reserved labels for tracking. You should create these in your GitHub repositories before enabling the feature:
 
-| Label            | Meaning                                                                       |
-| ---------------- | ----------------------------------------------------------------------------- |
-| `kilo-triaged`   | Applied to every issue that completes triage successfully.                    |
+| Label | Meaning |
+|---|---|
+| `kilo-triaged` | Applied to every issue that completes triage successfully. |
 | `kilo-duplicate` | Applied alongside `kilo-triaged` when the issue is identified as a duplicate. |
 
 These labels are managed by Kilo and should not be added to your **skip labels** list.

@@ -32,7 +32,7 @@ export const GenerateCommand = {
       }
     }
     const raw = JSON.stringify(specs, null, 2)
-    // kilocode_change start - replace upstream product name in all descriptions
+      // kilocode_change start - replace upstream product name in all descriptions
       .replaceAll("OpenCode", "Kilo")
       .replaceAll("opencode.local", "kilo.local")
       .replaceAll("opencode serve", "kilo serve")

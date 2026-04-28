@@ -3,7 +3,7 @@
  * Stories for Settings and ProvidersTab components.
  */
 
-import { onMount } from "solid-js"
+import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
@@ -12,7 +12,8 @@ import ProvidersTab from "../components/settings/ProvidersTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, CommandConfig } from "../types/messages"
+import type { AgentConfig, CommandConfig, Config } from "../types/messages"
+import IndexingTab from "../components/settings/IndexingTab"
 
 const meta: Meta = {
   title: "Settings",
@@ -317,6 +318,36 @@ export const ModeEditExport: Story = {
           </div>
         </SessionContext.Provider>
       </StoryProviders>
+    )
+  },
+}
+
+export const IndexingProviderBlurRace: Story = {
+  name: "IndexingTab",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      experimental: {
+        semantic_indexing: true,
+      },
+      indexing: {
+        provider: "openai",
+        openai: { apiKey: "" },
+        gemini: { apiKey: "" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-provider-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
     )
   },
 }

@@ -30,9 +30,19 @@ export type NavigateToSessionFn = (sessionID: string) => void
 
 export type SessionHrefFn = (sessionID: string) => string
 
-export type OpenFileFn = (filePath: string, line?: number, column?: number) => void // kilocode_change
+// kilocode_change start
+export type OpenFileFn = (filePath: string, line?: number, column?: number) => void
 
-export type OpenUrlFn = (url: string) => void // kilocode_change
+export type OpenDiffFn = (diff: {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+}) => void
+
+export type OpenUrlFn = (url: string) => void
+// kilocode_change end
 
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
@@ -42,6 +52,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onNavigateToSession?: NavigateToSessionFn
     onSessionHref?: SessionHrefFn
     onOpenFile?: OpenFileFn // kilocode_change
+    onOpenDiff?: OpenDiffFn // kilocode_change
     onOpenUrl?: OpenUrlFn // kilocode_change
   }) => {
     return {
@@ -54,6 +65,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       navigateToSession: props.onNavigateToSession,
       sessionHref: props.onSessionHref,
       openFile: props.onOpenFile, // kilocode_change
+      openDiff: props.onOpenDiff, // kilocode_change
       openUrl: props.onOpenUrl, // kilocode_change
     }
   },

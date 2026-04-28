@@ -581,7 +581,7 @@ export const SessionProvider: ParentComponent = (props) => {
         handlePermissionResolved(message.permissionID)
         break
       case "permissionError":
-        handlePermissionError(message.permissionID)
+        handlePermissionError(message.permissionID, message.stale)
         break
     }
   })
@@ -1156,14 +1156,17 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function handlePermissionError(permissionID: string) {
-    // Remove from responding set so buttons re-enable (permission prompt is still visible)
+  function handlePermissionError(permissionID: string, stale?: boolean) {
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
       const next = new Set(prev)
       next.delete(permissionID)
       return next
     })
+    if (stale) {
+      setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
+      return
+    }
     showToast({
       variant: "error",
       title: language.t("settings.permissions.toast.updateFailed.title"),
