@@ -609,6 +609,7 @@ describe("tool.task cost propagation", () => {
         const ops: TaskPromptOps = {
           cancel() {},
           resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
+          background: () => Effect.void,
           prompt: (input) =>
             Effect.gen(function* () {
               const info: MessageV2.Assistant = {

@@ -268,6 +268,17 @@ export type EventSessionTurnClose = {
   }
 }
 
+export type EventSessionBackgroundSubagentClose = {
+  type: "session.background_subagent.close"
+  properties: {
+    parentID: string
+    sessionID: string
+    description: string
+    agent: string
+    reason: "completed" | "error" | "interrupted"
+  }
+}
+
 export type SnapshotFileDiff = {
   file: string
   patch: string
@@ -587,23 +598,6 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
-  }
-}
-
-export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
-
-export type IndexingStatus = {
-  state: IndexingStatusState
-  message: string
-  processedFiles: number
-  totalFiles: number
-  percent: number
-}
-
-export type EventIndexingStatus = {
-  type: "indexing.status"
-  properties: {
-    status: IndexingStatus
   }
 }
 
@@ -1170,6 +1164,23 @@ export type EventSessionDeleted = {
   }
 }
 
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
+export type EventIndexingStatus = {
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type SyncEventMessageUpdated = {
   type: "sync"
   name: "message.updated.1"
@@ -1318,6 +1329,7 @@ export type GlobalEvent = {
     | EventPermissionReplied
     | EventSessionTurnOpen
     | EventSessionTurnClose
+    | EventSessionBackgroundSubagentClose
     | EventSessionDiff
     | EventSessionError
     | EventQuestionAsked
@@ -1331,7 +1343,6 @@ export type GlobalEvent = {
     | EventSessionIdle
     | EventTodoUpdated
     | EventVcsBranchUpdated
-    | EventIndexingStatus
     | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
     | EventWorktreeReady
@@ -1351,6 +1362,7 @@ export type GlobalEvent = {
     | EventSessionCreated
     | EventSessionUpdated
     | EventSessionDeleted
+    | EventIndexingStatus
     | SyncEventMessageUpdated
     | SyncEventMessageRemoved
     | SyncEventMessagePartUpdated
@@ -2436,6 +2448,7 @@ export type Event =
   | EventPermissionReplied
   | EventSessionTurnOpen
   | EventSessionTurnClose
+  | EventSessionBackgroundSubagentClose
   | EventSessionDiff
   | EventSessionError
   | EventQuestionAsked
@@ -2449,7 +2462,6 @@ export type Event =
   | EventSessionIdle
   | EventTodoUpdated
   | EventVcsBranchUpdated
-  | EventIndexingStatus
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
   | EventWorktreeReady
@@ -2469,6 +2481,7 @@ export type Event =
   | EventSessionCreated
   | EventSessionUpdated
   | EventSessionDeleted
+  | EventIndexingStatus
 
 export type McpStatusConnected = {
   status: "connected"

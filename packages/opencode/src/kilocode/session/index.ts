@@ -42,12 +42,12 @@ export namespace KiloSession {
     ),
     BackgroundSubagentClose: BusEvent.define(
       "session.background_subagent.close",
-      z.object({
-        parentID: z.string(),
-        sessionID: z.string(),
-        description: z.string(),
-        agent: z.string(),
-        reason: z.enum(["completed", "error", "interrupted"]),
+      Schema.Struct({
+        parentID: Schema.String,
+        sessionID: Schema.String,
+        description: Schema.String,
+        agent: Schema.String,
+        reason: CloseReasonSchema,
       }),
     ),
   }

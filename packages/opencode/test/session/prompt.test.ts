@@ -846,9 +846,13 @@ it.live(
             yield* sessions.updateMessage(childAssistant)
             yield* ctx.metadata({
               title: "done",
-              metadata: { sessionId: child.id, model: ref, variant: undefined },
+              metadata: { sessionId: child.id, model: ref, variant: undefined, background: false },
             })
-            return { title: "done", metadata: { sessionId: child.id, model: ref, variant: undefined }, output: "done" }
+            return {
+              title: "done",
+              metadata: { sessionId: child.id, model: ref, variant: undefined, background: false },
+              output: "done",
+            }
           })
         yield* Effect.addFinalizer(() => Effect.sync(() => void (task.execute = original)))
 
@@ -1260,7 +1264,7 @@ it.live(
           expect(exit.value.info.role).toBe("assistant")
           expect(exit.value.parts.some((part) => part.type === "text" && part.text === "after-shell")).toBe(true)
         }
-        expect(yield* llm.calls).toBe(1)
+        expect(yield* llm.calls).toBe(1) // kilocode_change
       }),
       { git: true, config: providerCfg },
     ),
@@ -1300,7 +1304,7 @@ it.live(
           expect(ea.value.info.id).toBe(eb.value.info.id)
           expect(ea.value.info.role).toBe("assistant")
         }
-        expect(yield* llm.calls).toBe(1)
+        expect(yield* llm.calls).toBe(1) // kilocode_change
       }),
       { git: true, config: providerCfg },
     ),
