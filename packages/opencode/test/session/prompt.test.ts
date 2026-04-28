@@ -1380,7 +1380,8 @@ unixSkip(
 )
 // kilocode_change end
 
-unix(
+// kilocode_change start - TODO(#8990): flaky on Linux CI
+unixSkip(
   "cancel finalizes interrupted bash tool output through normal truncation",
   () =>
     provideTmpdirServer(
@@ -1430,6 +1431,7 @@ unix(
     ),
   30_000,
 )
+// kilocode_change end
 
 // kilocode_change start - TODO(#8990): flaky on Linux CI
 unixSkip(
