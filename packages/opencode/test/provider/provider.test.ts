@@ -56,6 +56,16 @@ async function defaultModel() {
   return run((provider) => provider.defaultModel())
 }
 
+// kilocode_change start - mirror upstream #24416 for @kilocode/plugin dependency readiness
+async function markPluginDependenciesReady(dir: string) {
+  await mkdir(path.join(dir, "node_modules"), { recursive: true })
+  await Bun.write(
+    path.join(dir, "package-lock.json"),
+    JSON.stringify({ packages: { "": { dependencies: { "@kilocode/plugin": "0.0.0" } } } }),
+  )
+}
+// kilocode_change end
+
 function paid(providers: Awaited<ReturnType<typeof list>>) {
   const item = providers[ProviderID.make("opencode")]
   if (!item) return 0 // kilocode_change - Kilo drops opencode provider without apiKey/auth
@@ -2484,8 +2494,13 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
 test("plugin config providers persist after instance dispose", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      const root = path.join(dir, ".opencode", "plugin")
+      // kilocode_change start - mirror upstream #24416 to avoid real plugin dependency installs
+      const cfg = path.join(dir, ".opencode")
+      const root = path.join(cfg, "plugin")
       await mkdir(root, { recursive: true })
+      await markPluginDependenciesReady(cfg)
+      await markPluginDependenciesReady(Global.Path.config)
+      // kilocode_change end
       await Bun.write(
         path.join(root, "demo-provider.ts"),
         [
@@ -2530,12 +2545,7 @@ test("plugin config providers persist after instance dispose", async () => {
   expect(first[ProviderID.make("demo")]).toBeDefined()
   expect(first[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
 
-  // kilocode_change start
-  await Instance.provide({
-    directory: tmp.path,
-    fn: () => Instance.dispose(),
-  })
-  // kilocode_change end
+  await Instance.disposeAll()
 
   const second = await Instance.provide({
     directory: tmp.path,

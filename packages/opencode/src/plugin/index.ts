@@ -92,21 +92,18 @@ function getLegacyPlugins(mod: Record<string, unknown>) {
   return result
 }
 
-// kilocode_change start - return hooks so local plugin initialization can be retried safely
-async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput) {
+async function applyPlugin(load: PluginLoader.Loaded, input: PluginInput, hooks: Hooks[]) {
   const plugin = readV1Plugin(load.mod, load.spec, "server", "detect")
   if (plugin) {
     await resolvePluginId(load.source, load.spec, load.target, readPluginId(plugin.id, load.spec), load.pkg)
-    return [await (plugin as PluginModule).server(input, load.options)]
+    hooks.push(await (plugin as PluginModule).server(input, load.options))
+    return
   }
 
-  const result: Hooks[] = []
   for (const server of getLegacyPlugins(load.mod)) {
-    result.push(await server(input, load.options))
+    hooks.push(await server(input, load.options))
   }
-  return result
 }
-// kilocode_change end
 
 export const layer = Layer.effect(
   Service,
@@ -164,18 +161,16 @@ export const layer = Layer.effect(
           if (init._tag === "Some") hooks.push(init.value)
         }
 
-        // kilocode_change start
         const plugins = Flag.KILO_PURE ? [] : (cfg.plugin_origins ?? [])
         if (Flag.KILO_PURE && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
-        const wait = () => bridge.promise(config.waitForDependencies())
+        if (plugins.length) yield* config.waitForDependencies()
 
         const loaded = yield* Effect.promise(() =>
           PluginLoader.loadExternal({
             items: plugins,
             kind: "server",
-            wait,
             report: {
               start(candidate) {
                 log.info("loading plugin", { path: candidate.plan.spec })
@@ -213,21 +208,13 @@ export const layer = Layer.effect(
             },
           }),
         )
-        // kilocode_change end
-        // kilocode_change start - retry local plugin initialization after dependency setup
         for (const load of loaded) {
           if (!load) continue
 
-          const init = yield* Effect.tryPromise({
-            try: async () => {
-              try {
-                return await applyPlugin(load, input)
-              } catch (err) {
-                if (load.source !== "file") throw err
-                await wait()
-                return applyPlugin(load, input)
-              }
-            },
+          // Keep plugin execution sequential so hook registration and execution
+          // order remains deterministic across plugin runs.
+          yield* Effect.tryPromise({
+            try: () => applyPlugin(load, input, hooks),
             catch: (err) => {
               const message = errorMessage(err)
               log.error("failed to load plugin", { path: load.spec, error: message })
@@ -241,12 +228,10 @@ export const layer = Layer.effect(
               //     message: `Failed to load plugin ${load.spec}: ${message}`,
               //   }).toObject(),
               // })
-              return Effect.succeed(undefined)
+              return Effect.void
             }),
           )
-          if (init) hooks.push(...init)
         }
-        // kilocode_change end
 
         // Notify plugins of current config
         for (const hook of hooks) {
