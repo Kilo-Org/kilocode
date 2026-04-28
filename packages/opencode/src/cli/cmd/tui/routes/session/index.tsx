@@ -2092,6 +2092,8 @@ function Task(props: ToolProps<typeof TaskTool>) {
   })
 
   const messages = createMemo(() => sync.data.message[props.metadata.sessionId ?? ""] ?? [])
+  const status = createMemo(() => sync.data.session_status[props.metadata.sessionId ?? ""])
+  const background = createMemo(() => props.metadata.background === true)
 
   const tools = createMemo(() => {
     return messages().flatMap((msg) =>
@@ -2105,7 +2107,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
     tools().findLast((x) => (x.state.status === "running" || x.state.status === "completed") && x.state.title),
   )
 
-  const isRunning = createMemo(() => props.part.state.status === "running")
+  const isRunning = createMemo(() => props.part.state.status === "running" || (background() && status()?.type === "busy"))
 
   const duration = createMemo(() => {
     const first = messages().find((x) => x.role === "user")?.time.created
@@ -2116,12 +2118,13 @@ function Task(props: ToolProps<typeof TaskTool>) {
 
   const content = createMemo(() => {
     if (!props.input.description) return ""
-    let content = [`${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`]
+    const prefix = background() ? "Background " : ""
+    let content = [`${prefix}${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`]
 
     // kilocode_change start
     if (isRunning()) {
       if (tools().length === 0) {
-        content.push(`↳ Starting...`)
+        content.push(background() && props.part.state.status === "completed" ? `↳ Running in background...` : `↳ Starting...`)
       } else if (current()) {
         const state = current()!.state
         const title = state.status === "running" || state.status === "completed" ? state.title : undefined
@@ -2132,7 +2135,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
     }
     // kilocode_change end
 
-    if (props.part.state.status === "completed") {
+    if (props.part.state.status === "completed" && !isRunning()) {
       content.push(`└ ${tools().length} toolcalls · ${Locale.duration(duration())}`)
     }
 

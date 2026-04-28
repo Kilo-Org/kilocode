@@ -64,7 +64,11 @@ const seed = Effect.fn("TaskToolTest.seed")(function* (title = "Pinned") {
   return { chat, assistant }
 })
 
-function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void; text?: string }): TaskPromptOps {
+function stubOps(opts?: {
+  onPrompt?: (input: SessionPrompt.PromptInput) => void
+  onBackground?: (input: Parameters<TaskPromptOps["background"]>[0]) => void
+  text?: string
+}): TaskPromptOps {
   return {
     cancel() {},
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
@@ -72,6 +76,10 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void;
       Effect.sync(() => {
         opts?.onPrompt?.(input)
         return reply(input, opts?.text ?? "done")
+      }),
+    background: (input) =>
+      Effect.sync(() => {
+        opts?.onBackground?.(input)
       }),
   }
 }
@@ -309,6 +317,50 @@ describe("tool.task", () => {
         expect(result.metadata.sessionId).not.toBe("ses_missing")
         expect(result.output).toContain(`task_id: ${result.metadata.sessionId}`)
         expect(seen?.sessionID).toBe(result.metadata.sessionId)
+      }),
+    ),
+  )
+
+  it.live("execute starts background task without awaiting child prompt", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        let seen: Parameters<TaskPromptOps["background"]>[0] | undefined
+        let called = false
+        const promptOps = stubOps({
+          onPrompt: () => (called = true),
+          onBackground: (input) => (seen = input),
+        })
+
+        const result = yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "general",
+            background: true,
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const kids = yield* sessions.children(chat.id)
+        expect(kids).toHaveLength(1)
+        expect(called).toBe(false)
+        expect(seen?.child.sessionID).toBe(result.metadata.sessionId)
+        expect(seen?.parent.sessionID).toBe(chat.id)
+        expect(result.metadata.background).toBe(true)
+        expect(result.output).toContain("background subagent running")
       }),
     ),
   )

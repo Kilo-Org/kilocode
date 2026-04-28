@@ -37,6 +37,16 @@ export namespace KiloSession {
         reason: z.enum(["completed", "error", "interrupted"]),
       }),
     ),
+    BackgroundSubagentClose: BusEvent.define(
+      "session.background_subagent.close",
+      z.object({
+        parentID: z.string(),
+        sessionID: z.string(),
+        description: z.string(),
+        agent: z.string(),
+        reason: z.enum(["completed", "error", "interrupted"]),
+      }),
+    ),
   }
 
   export type CloseReason = z.infer<typeof Event.TurnClose.properties>["reason"]

@@ -121,6 +121,12 @@ export const layer = Layer.effect(
         cancel: (sessionID: SessionID) => run.fork(cancel(sessionID)),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input),
+        // kilocode_change start - run subagents after the task tool returns and notify the parent when done
+        background: (input) =>
+          Effect.sync(() => {
+            run.fork(background(input))
+          }),
+        // kilocode_change end
       } satisfies TaskPromptOps
     })
 
@@ -1333,6 +1339,59 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       // kilocode_change end
       throw new Error("Impossible")
     })
+
+    // kilocode_change start - background subagent completion is both a UI event and parent-session context
+    const background = Effect.fn("SessionPrompt.background")(function* (input: {
+      parent: PromptInput
+      child: PromptInput
+      description: string
+      agent: string
+    }) {
+      yield* prompt(input.parent)
+      const exit = yield* prompt(input.child).pipe(Effect.exit)
+      const reason = Exit.isSuccess(exit)
+        ? "completed"
+        : Cause.hasInterruptsOnly(exit.cause)
+          ? "interrupted"
+          : "error"
+      const result = Exit.isSuccess(exit)
+        ? (exit.value.parts.findLast((item) => item.type === "text")?.text ?? "")
+        : String(Cause.squash(exit.cause))
+
+      yield* bus.publish(KiloSession.Event.BackgroundSubagentClose, {
+        parentID: input.parent.sessionID,
+        sessionID: input.child.sessionID,
+        description: input.description,
+        agent: input.agent,
+        reason,
+      })
+
+      yield* prompt({
+        sessionID: input.parent.sessionID,
+        agent: input.parent.agent,
+        model: input.parent.model,
+        parts: [
+          {
+            type: "text",
+            synthetic: true,
+            text: [
+              `A background subagent has ${reason === "completed" ? "completed" : reason}.`,
+              "",
+              `Description: ${input.description}`,
+              `Agent: ${input.agent}`,
+              `task_id: ${input.child.sessionID}`,
+              "",
+              reason === "completed" ? "<task_result>" : "<task_error>",
+              result,
+              reason === "completed" ? "</task_result>" : "</task_error>",
+              "",
+              "Use this result if it is relevant to your current task. Do not mention it if it is no longer relevant.",
+            ].join("\n"),
+          },
+        ],
+      })
+    })
+    // kilocode_change end
 
     // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
     const closeReasons = new Map<string, KiloSession.CloseReason>()

@@ -14,6 +14,12 @@ export interface TaskPromptOps {
   cancel(sessionID: SessionID): void
   resolvePromptParts(template: string): Effect.Effect<SessionPrompt.PromptInput["parts"]>
   prompt(input: SessionPrompt.PromptInput): Effect.Effect<MessageV2.WithParts>
+  background(input: {
+    parent: SessionPrompt.PromptInput
+    child: SessionPrompt.PromptInput
+    description: string
+    agent: string
+  }): Effect.Effect<void>
 }
 
 const id = "task"
@@ -29,6 +35,12 @@ const parameters = z.object({
     )
     .optional(),
   command: z.string().describe("The command that triggered this task").optional(),
+  background: z
+    .boolean()
+    .describe(
+      "Run this subagent in the background so the main agent can continue. The main agent and user will be notified when it completes.",
+    )
+    .optional(),
 })
 
 export const TaskTool = Tool.define(
@@ -111,6 +123,7 @@ export const TaskTool = Tool.define(
 
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
+      const info = msg.info
 
       // kilocode_change start — prefer user's CLI-saved pick for this subagent
       const saved = yield* KiloTask.resolveModel(next.name)
@@ -128,6 +141,7 @@ export const TaskTool = Tool.define(
           sessionId: nextSession.id,
           model,
           variant, // kilocode_change
+          background: params.background === true, // kilocode_change
         },
       })
 
@@ -147,7 +161,7 @@ export const TaskTool = Tool.define(
         () =>
           Effect.gen(function* () {
             const parts = yield* ops.resolvePromptParts(params.prompt)
-            const result = yield* ops.prompt({
+            const child = {
               messageID,
               sessionID: nextSession.id,
               model: {
@@ -162,15 +176,67 @@ export const TaskTool = Tool.define(
                 ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
               },
               parts,
-            })
+            }
+
+            const metadata = {
+              sessionId: nextSession.id,
+              model,
+              variant, // kilocode_change
+              background: params.background === true, // kilocode_change
+            }
+
+            // kilocode_change start - allow the parent agent to continue while the child session runs
+            if (params.background === true) {
+              const parentModel = {
+                modelID: info.modelID,
+                providerID: info.providerID,
+              }
+              yield* ops.background({
+                description: params.description,
+                agent: next.name,
+                child,
+                parent: {
+                  sessionID: ctx.sessionID,
+                  agent: ctx.agent,
+                  model: parentModel,
+                  parts: [
+                    {
+                      type: "text",
+                      synthetic: true,
+                      text: [
+                        `A background subagent has started.`,
+                        "",
+                        `Description: ${params.description}`,
+                        `Agent: ${next.name}`,
+                        `task_id: ${nextSession.id}`,
+                        "",
+                        "You will be notified when it completes. Continue with the user's task without waiting unless this result is required immediately.",
+                      ].join("\n"),
+                    },
+                  ],
+                  noReply: true,
+                },
+              })
+
+              return {
+                title: params.description,
+                metadata,
+                output: [
+                  `task_id: ${nextSession.id} (background subagent running)`,
+                  "",
+                  "<task_status>",
+                  "Background subagent started. You and the user will be notified when it completes.",
+                  "</task_status>",
+                ].join("\n"),
+              }
+            }
+            // kilocode_change end
+
+            const result = yield* ops.prompt(child)
 
             return {
               title: params.description,
-              metadata: {
-                sessionId: nextSession.id,
-                model,
-                variant, // kilocode_change
-              },
+              metadata,
               output: [
                 `task_id: ${nextSession.id} (for resuming to continue this task if needed)`,
                 "",

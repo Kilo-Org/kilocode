@@ -788,6 +788,23 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
   })
 
+  event.subscribe((event) => {
+    const evt = event as { type: string; properties?: unknown }
+    if (evt.type !== "session.background_subagent.close") return
+    const props = evt.properties as {
+      reason: "completed" | "error" | "interrupted"
+      agent: string
+      description: string
+    }
+    const reason = props.reason
+    toast.show({
+      title: reason === "completed" ? "Subagent complete" : "Subagent stopped",
+      message: `${props.agent} ${reason}: ${props.description}`,
+      variant: reason === "completed" ? "success" : reason === "error" ? "error" : "warning",
+      duration: 5000,
+    })
+  })
+
   event.on("session.deleted", (evt) => {
     if (route.data.type === "session" && route.data.sessionID === evt.properties.info.id) {
       route.navigate({ type: "home" })
