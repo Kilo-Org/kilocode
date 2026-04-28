@@ -15,7 +15,7 @@ function isSource(file: string) {
 const legacy = "kilo" + "code_change"
 const marker = `(?:devilcode_change|${legacy})`
 const comment = String.raw`(?:\/\/|\{?\s*\/\*)`
-const inline = String.raw`(?:^|\s)${comment}\s*${marker}`
+const inline = String.raw`(?:^|[^\w"'{])${comment}\s*${marker}`
 const anchored = String.raw`^\s*${comment}\s*${marker}`
 const MARKER_PREFIX = new RegExp(`${inline}\\b`)
 const NEW_FILE = new RegExp(`${anchored}\\s*-\\s*new\\s*file\\b`)
@@ -85,9 +85,10 @@ describe("hasMarker", () => {
     ["//   devilcode_change", true],
     ["// devilcode_change  ", true],
 
-    // JSX-style inline
+    // JSX-style inline (including adjacent-to-code patterns)
     ["{/* devilcode_change */}", true],
     ["  {/* devilcode_change */}", true],
+    ["){/* devilcode_change */}", true],
     ["{/* devilcode_change start */}", true],
     ["{/* devilcode_change end */}", true],
     ["{/* devilcode_change - new file */}", true],
