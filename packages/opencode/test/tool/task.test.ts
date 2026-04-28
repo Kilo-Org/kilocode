@@ -172,7 +172,7 @@ describe("tool.task", () => {
         Effect.gen(function* () {
           const agent = yield* Agent.Service
           const build = yield* agent.get("build")
-          build.permission.push({ permission: "task", pattern: "zebra", action: "deny" })
+          build.permission.push({ permission: "task", pattern: "zebra", action: "deny" }) // kilocode_change
           const registry = yield* ToolRegistry.Service
           const description =
             (yield* registry.tools({ ...ref, agent: build })).find((tool) => tool.id === TaskTool.id)?.description ?? ""
@@ -330,6 +330,7 @@ describe("tool.task", () => {
     ),
   )
 
+  // kilocode_change start - background subagent coverage
   it.live("execute starts background task without awaiting child prompt", () =>
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
@@ -373,6 +374,7 @@ describe("tool.task", () => {
       }),
     ),
   )
+  // kilocode_change end
 
   it.live("execute shapes child permissions for task, todowrite, and primary tools", () =>
     provideTmpdirInstance(
@@ -403,9 +405,9 @@ describe("tool.task", () => {
             },
           )
 
+          // kilocode_change start — use arrayContaining: Kilo appends inherited caller restrictions
           const child = yield* sessions.get(result.metadata.sessionId)
           expect(child.parentID).toBe(chat.id)
-          // kilocode_change start — use arrayContaining: Kilo appends inherited caller restrictions
           expect(child.permission).toContainEqual({
             permission: "bash",
             pattern: "*",
@@ -430,10 +432,12 @@ describe("tool.task", () => {
       {
         config: {
           agent: {
+            // kilocode_change start - custom subagent for permission shaping test
             reviewer: {
               mode: "subagent",
               permission: {},
             },
+            // kilocode_change end
           },
           experimental: {
             primary_tools: ["bash", "read"],

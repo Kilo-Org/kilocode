@@ -791,6 +791,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
   })
 
+  // kilocode_change start - show completion toast for background subagents
   event.subscribe((event) => {
     const evt = event as { type: string; properties?: unknown }
     if (evt.type !== "session.background_subagent.close") return
@@ -807,6 +808,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       duration: 5000,
     })
   })
+  // kilocode_change end
 
   event.on("session.deleted", (evt) => {
     if (route.data.type === "session" && route.data.sessionID === evt.properties.info.id) {

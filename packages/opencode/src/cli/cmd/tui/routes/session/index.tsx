@@ -2142,8 +2142,10 @@ function Task(props: ToolProps<typeof TaskTool>) {
   })
 
   const messages = createMemo(() => sync.data.message[props.metadata.sessionId ?? ""] ?? [])
+  // kilocode_change start - track background task state after tool completion
   const status = createMemo(() => sync.data.session_status[props.metadata.sessionId ?? ""])
   const background = createMemo(() => props.metadata.background === true)
+  // kilocode_change end
 
   const tools = createMemo(() => {
     return messages().flatMap((msg) =>
@@ -2153,28 +2155,42 @@ function Task(props: ToolProps<typeof TaskTool>) {
     )
   })
 
+  // kilocode_change start - surface latest child tool state for background tasks
   const current = createMemo(() =>
     tools().findLast((x) => (x.state.status === "running" || x.state.status === "completed") && x.state.title),
   )
+  // kilocode_change end
 
-  const isRunning = createMemo(() => props.part.state.status === "running" || (background() && status()?.type === "busy"))
+  // kilocode_change start - keep background task spinner active while child session runs
+  const isRunning = createMemo(
+    () => props.part.state.status === "running" || (background() && status()?.type === "busy"),
+  )
+  // kilocode_change end
 
+  // kilocode_change start - compute child task runtime from synced messages
   const duration = createMemo(() => {
     const first = messages().find((x) => x.role === "user")?.time.created
     const assistant = messages().findLast((x) => x.role === "assistant")?.time.completed
     if (!first || !assistant) return 0
     return assistant - first
   })
+  // kilocode_change end
 
   const content = createMemo(() => {
     if (!props.input.description) return ""
+    // kilocode_change start - label background tasks distinctly
     const prefix = background() ? "Background " : ""
-    let content = [`${prefix}${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`]
+    let content = [
+      `${prefix}${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`,
+    ]
+    // kilocode_change end
 
     // kilocode_change start
     if (isRunning()) {
       if (tools().length === 0) {
-        content.push(background() && props.part.state.status === "completed" ? `↳ Running in background...` : `↳ Starting...`)
+        content.push(
+          background() && props.part.state.status === "completed" ? `↳ Running in background...` : `↳ Starting...`,
+        )
       } else if (current()) {
         const state = current()!.state
         const title = state.status === "running" || state.status === "completed" ? state.title : undefined
@@ -2185,6 +2201,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
     }
     // kilocode_change end
 
+    // kilocode_change - suppress completed summary while a background child is still busy
     if (props.part.state.status === "completed" && !isRunning()) {
       content.push(`└ ${tools().length} toolcalls · ${Locale.duration(duration())}`)
     }
