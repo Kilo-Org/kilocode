@@ -52,12 +52,18 @@ function add(level: Level, message: string, file?: string) {
 function list(dir: string): string[] {
   const base = abs(dir)
   if (!existsSync(base)) return []
-  return readdirSync(base, { withFileTypes: true }).flatMap((entry) => {
-    const file = path.join(base, entry.name)
-    if (entry.isDirectory()) return list(rel(file))
-    if (entry.isFile()) return [rel(file)]
+  try {
+    return readdirSync(base, { withFileTypes: true }).flatMap((entry) => {
+      const file = path.join(base, entry.name)
+      if (entry.isDirectory()) return list(rel(file))
+      if (entry.isFile()) return [rel(file)]
+      return []
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    add("error", `Unable to list directory: ${msg}`, rel(base))
     return []
-  })
+  }
 }
 
 function line(text: string, value: string) {
@@ -176,7 +182,7 @@ function checkMarkers() {
 
 function checkWorkflows() {
   for (const file of list(".github/workflows").filter((item) => item.match(/\.ya?ml$/))) {
-    const text = read(file)
+    const text = load(file)
     if (text.match(/github\.repository\s*==\s*['"]Kilo-Org\/kilocode['"]/)) {
       add("error", "Active workflow repository guard should target Devil-Org/devilcode.", file)
     }

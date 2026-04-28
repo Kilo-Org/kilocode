@@ -157,7 +157,7 @@ describe("isExempt", () => {
     ["packages/opencode/src/tool/registry.ts", false],
     ["packages/opencode/src/config/config.ts", false],
     ["packages/opencode/src/indexing/search-service.ts", false],
-    // devilcode_change is not the same as kilocode
+    // path has no "devilcode" or "kilocode" segment — marker text in content doesn't exempt the path
     ["packages/opencode/src/check-opencode-annotations.ts", false],
   ]
 
