@@ -161,6 +161,7 @@
     "immer": "11.1.4",
     "jschardet": "3.1.4",
     "jsonc-parser": "3.3.1",
+    "mammoth": "1.11.0",
     "mime-types": "3.0.2",
     "minimatch": "10.2.5",
     "npm-package-arg": "13.0.2",
@@ -169,6 +170,7 @@
     "opencode-poe-auth": "0.0.1",
     "opentui-spinner": "0.0.6",
     "partial-json": "0.1.7",
+    "pdf-parse": "1.1.1",
     "remeda": "catalog:",
     "ripgrep": "0.3.1",
     "rotating-file-stream": "3.2.9",
@@ -187,6 +189,7 @@
     "web-tree-sitter": "0.25.10",
     "which": "6.0.1",
     "xdg-basedir": "5.1.0",
+    "xlsx": "0.18.5",
     "yargs": "18.0.0",
     "zod": "catalog:",
     "zod-to-json-schema": "3.24.5"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Watches packages/opencode/src/ for changes and rebuilds the CLI binary,
- * then copies it into packages/kilo-vscode/bin/kilo.
+ * then copies it into packages/kilo-vscode/bin/kilo or kilo.exe.
  *
  * Used during development so the VS Code extension always has an up-to-date
  * CLI backend without manual rebuild steps.
@@ -15,7 +15,8 @@ const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 const opencodeSrcDir = join(opencodeDir, "src")
 const targetBinDir = join(kiloVscodeDir, "bin")
-const targetBinPath = join(targetBinDir, "kilo")
+const bin = process.platform === "win32" ? "kilo.exe" : "kilo"
+const targetBinPath = join(targetBinDir, bin)
 
 let building = false
 let pending = false
@@ -26,7 +27,8 @@ function log(msg: string) {
 }
 
 function sourceBinaryPath(): string {
-  return join(opencodeDir, "dist", `@kilocode/cli-${process.platform}-${process.arch}`, "bin", "kilo")
+  const os = process.platform === "win32" ? "windows" : process.platform
+  return join(opencodeDir, "dist", "@kilocode", `cli-${os}-${process.arch}`, "bin", bin)
 }
 
 async function rebuild() {
@@ -57,10 +59,10 @@ async function rebuild() {
 
     await $`mkdir -p ${targetBinDir}`
     await $`cp ${source} ${targetBinPath}`
-    chmodSync(targetBinPath, 0o755)
+    if (process.platform !== "win32") chmodSync(targetBinPath, 0o755)
 
     const elapsed = ((performance.now() - start) / 1000).toFixed(1)
-    log(`Binary updated (${elapsed}s): ${relative(packagesDir, source)} -> bin/kilo`)
+    log(`Binary updated (${elapsed}s): ${relative(packagesDir, source)} -> bin/${bin}`)
   } catch (err) {
     log(`ERROR: ${err instanceof Error ? err.message : String(err)}`)
   } finally {

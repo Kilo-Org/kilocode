@@ -14,6 +14,7 @@ export interface ServerInstance {
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
+const HEALTH_TIMEOUT_MS = 3000
 
 export class ServerManager {
   private instance: ServerInstance | null = null
@@ -26,9 +27,18 @@ export class ServerManager {
    */
   async getServer(): Promise<ServerInstance> {
     console.log("[Kilo New] ServerManager: 🔍 getServer called")
-    if (this.instance) {
+    if (this.instance && (await this.isHealthy(this.instance))) {
       console.log("[Kilo New] ServerManager: ♻️ Returning existing instance:", { port: this.instance.port })
       return this.instance
+    }
+
+    if (this.instance) {
+      console.warn("[Kilo New] ServerManager: cached instance is unhealthy; restarting", {
+        port: this.instance.port,
+        pid: this.instance.process.pid,
+      })
+      ServerManager.killProcess(this.instance.process, "SIGKILL")
+      this.instance = null
     }
 
     if (this.startupPromise) {
@@ -44,6 +54,34 @@ export class ServerManager {
       return this.instance
     } finally {
       this.startupPromise = null
+    }
+  }
+
+  private async isHealthy(instance: ServerInstance): Promise<boolean> {
+    if (instance.process.killed || instance.process.exitCode !== null) {
+      return false
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS)
+    timer.unref?.()
+
+    try {
+      const auth = Buffer.from(`kilo:${instance.password}`).toString("base64")
+      const res = await fetch(`http://127.0.0.1:${instance.port}/global/health`, {
+        headers: { Authorization: `Basic ${auth}` },
+        signal: controller.signal,
+      })
+      return res.ok
+    } catch (error) {
+      console.warn("[Kilo New] ServerManager: cached instance health check failed", {
+        port: instance.port,
+        pid: instance.process.pid,
+        error,
+      })
+      return false
+    } finally {
+      clearTimeout(timer)
     }
   }
 

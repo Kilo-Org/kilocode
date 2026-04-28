@@ -14,6 +14,7 @@ import { Instruction } from "../session/instruction"
 import { isImageAttachment, isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
 import { Encoding } from "../kilocode/encoding"
+import { Document } from "../kilocode/document"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -257,6 +258,59 @@ export const ReadTool = Tool.define(
           },
         }
       }
+
+      // kilocode_change start
+      if (Document.isSupported(filepath)) {
+        const loaded = yield* instruction.resolve(ctx.messages, filepath, ctx.messageID)
+        const file = yield* Effect.promise(() =>
+          Document.read(filepath, {
+            limit: params.limit ?? DEFAULT_READ_LIMIT,
+            offset: params.offset ?? 1,
+            bytes: MAX_BYTES,
+            length: MAX_LINE_LENGTH,
+            suffix: MAX_LINE_SUFFIX,
+          }),
+        )
+        if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
+          return yield* Effect.fail(
+            new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
+          )
+        }
+
+        const last = file.offset + file.raw.length - 1
+        const next = last + 1
+        const truncated = file.more || file.cut
+        const notice = file.cut
+          ? `(Output capped at ${MAX_BYTES_LABEL}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)`
+          : file.more
+            ? `(Showing lines ${file.offset}-${last} of ${file.count}. Use offset=${next} to continue.)`
+            : `(End of file - total ${file.count} lines)`
+        const output = [
+          `<path>${filepath}</path>`,
+          `<type>file</type>`,
+          "<content>",
+          file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n"),
+          "",
+          notice,
+          "</content>",
+          loaded.length > 0
+            ? `\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
+            : "",
+        ].join("\n")
+
+        yield* warm(filepath)
+
+        return {
+          title,
+          output,
+          metadata: {
+            preview: file.raw.slice(0, 20).join("\n"),
+            truncated,
+            loaded: loaded.map((item) => item.filepath),
+          },
+        }
+      }
+      // kilocode_change end
 
       const loaded = yield* instruction.resolve(ctx.messages, filepath, ctx.messageID)
       const sample = yield* readSample(filepath, Number(stat.size), SAMPLE_BYTES)

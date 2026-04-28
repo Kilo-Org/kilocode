@@ -583,6 +583,13 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventVcsBranchUpdated = {
+  type: "vcs.branch.updated"
+  properties: {
+    branch?: string
+  }
+}
+
 export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
 
 export type IndexingStatus = {
@@ -597,13 +604,6 @@ export type EventIndexingStatus = {
   type: "indexing.status"
   properties: {
     status: IndexingStatus
-  }
-}
-
-export type EventVcsBranchUpdated = {
-  type: "vcs.branch.updated"
-  properties: {
-    branch?: string
   }
 }
 
@@ -1330,8 +1330,8 @@ export type GlobalEvent = {
     | EventSessionStatus
     | EventSessionIdle
     | EventTodoUpdated
-    | EventIndexingStatus
     | EventVcsBranchUpdated
+    | EventIndexingStatus
     | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
     | EventWorktreeReady
@@ -2435,8 +2435,8 @@ export type Event =
   | EventSessionStatus
   | EventSessionIdle
   | EventTodoUpdated
-  | EventIndexingStatus
   | EventVcsBranchUpdated
+  | EventIndexingStatus
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
   | EventWorktreeReady
