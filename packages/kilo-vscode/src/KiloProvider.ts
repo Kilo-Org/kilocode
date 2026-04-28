@@ -122,6 +122,7 @@ import { configFeatures } from "./features"
 type KiloProviderOptions = {
   projectDirectory?: string | null
   slimEditMetadata?: boolean
+  platform?: string
 }
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
@@ -222,6 +223,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
   private slimEditMetadata = true
+  private platform = "vscode"
 
   private pendingFollowup: Followup | null = null
   private followupListeners: Array<(session: Session, directory: string) => void> = []
@@ -255,6 +257,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
+    this.platform = options?.platform ?? "vscode"
 
     TelemetryProxy.getInstance().setProvider(this)
   }
@@ -1289,7 +1292,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getContextDirectory()
-      const { data: session } = await this.client.session.create({ directory: workspaceDir }, { throwOnError: true })
+      const { data: session } = await this.client.session.create(
+        { directory: workspaceDir, platform: this.platform },
+        { throwOnError: true },
+      )
       this.currentSession = session
       this.contextSessionID = session.id
       this.trackDirectory(session.id, workspaceDir)
@@ -2374,7 +2380,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const dir = sessionID ? this.getWorkspaceDirectory(sessionID) : this.getContextDirectory()
 
     if (!sessionID && !this.currentSession) {
-      const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
+      const { data: session } = await this.client.session.create(
+        { directory: dir, platform: this.platform },
+        { throwOnError: true },
+      )
       this.currentSession = session
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
@@ -2523,6 +2532,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? { providerID, modelID } : undefined,
               agent,
               variant,
+              platform: this.platform,
               editorContext,
             }),
           sid,
@@ -2598,6 +2608,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
               agent,
               variant,
+              platform: this.platform,
               parts,
             }),
           sid,

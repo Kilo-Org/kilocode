@@ -23,9 +23,10 @@ import { Auth } from "@/auth"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { getKiloProjectId } from "@/kilocode/project-id"
-import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
+import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID, HEADER_FEATURE } from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { makeRuntime } from "@/effect/run-service"
+import { KiloSession } from "@/kilocode/session"
 // kilocode_change end
 import { Installation } from "@/installation"
 import { InstallationVersion } from "@/installation/version"
@@ -36,6 +37,16 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer"
 const log = Log.create({ service: "llm" })
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 type Result = Awaited<ReturnType<typeof streamText>>
+
+// kilocode_change start - request-surface feature attribution for Kilo Gateway usage
+function feature(platform?: string) {
+  if (platform === "agent-manager") return "agent-manager"
+  if (platform === "vscode") return "vscode-extension"
+  if (platform === "jetbrains") return "jetbrains-extension"
+  if (platform === "cli") return "cli"
+  return undefined
+}
+// kilocode_change end
 
 export type StreamInput = {
   user: MessageV2.User
@@ -215,6 +226,9 @@ const live: Layer.Layer<
       const machineId = yield* isKilo
         ? Effect.promise(() => Identity.getMachineId().catch(() => undefined))
         : Effect.succeed(undefined)
+      const kiloFeature = isKilo
+        ? feature(input.user.platform ?? KiloSession.getPlatformOverride(input.sessionID))
+        : undefined
       // kilocode_change end
 
       const tools = resolveTools(input)
@@ -406,6 +420,7 @@ const live: Layer.Layer<
               }),
           // kilocode_change start - headers for kilo provider
           ...(isKilo && input.agent.name ? { "x-kilocode-mode": input.agent.name.toLowerCase() } : {}),
+          ...(isKilo && kiloFeature ? { [HEADER_FEATURE]: kiloFeature } : {}),
           ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
           ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
           ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),

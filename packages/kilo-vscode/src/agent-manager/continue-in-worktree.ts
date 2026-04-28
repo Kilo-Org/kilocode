@@ -81,7 +81,10 @@ export async function forkSession(ctx: ContinueContext, sessionId: string, dir: 
     return { ok: false, error: "Not connected to CLI backend" }
   }
   try {
-    const { data } = await client.session.fork({ sessionID: sessionId, directory: dir }, { throwOnError: true })
+    const { data } = await client.session.fork(
+      { sessionID: sessionId, directory: dir, platform: PLATFORM },
+      { throwOnError: true },
+    )
     return { ok: true, value: data }
   } catch (err) {
     return { ok: false, error: `Failed to fork session: ${getErrorMessage(err)}` }

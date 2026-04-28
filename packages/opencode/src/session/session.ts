@@ -194,6 +194,7 @@ export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInpu
 export const ForkInput = Schema.Struct({
   sessionID: SessionID,
   messageID: Schema.optional(MessageID),
+  platform: Schema.optional(Schema.String), // kilocode_change - per-session platform override for telemetry attribution
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export const GetInput = SessionID
 export const ChildrenInput = SessionID
@@ -398,7 +399,7 @@ export interface Interface {
     platform?: string // kilocode_change - per-session platform override for telemetry attribution
     workspaceID?: WorkspaceID
   }) => Effect.Effect<Info>
-  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info>
+  readonly fork: (input: { sessionID: SessionID; messageID?: MessageID; platform?: string }) => Effect.Effect<Info> // kilocode_change - fork platform attribution
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
   readonly get: (id: SessionID) => Effect.Effect<Info>
   readonly setTitle: (input: { sessionID: SessionID; title: string }) => Effect.Effect<void>
@@ -626,7 +627,11 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       return session
     })
 
-    const fork = Effect.fn("Session.fork")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
+    const fork = Effect.fn("Session.fork")(function* (input: {
+      sessionID: SessionID
+      messageID?: MessageID
+      platform?: string
+    }) {
       const directory = yield* InstanceState.directory
       const original = yield* get(input.sessionID)
       const title = getForkedTitle(original.title)
@@ -635,6 +640,10 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
         workspaceID: original.workspaceID,
         title,
       })
+      // kilocode_change start - preserve platform attribution for forked sessions
+      const platform = input.platform ?? KiloSession.getPlatformOverride(input.sessionID)
+      if (platform) KiloSession.setPlatformOverride(session.id, platform)
+      // kilocode_change end
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()
 

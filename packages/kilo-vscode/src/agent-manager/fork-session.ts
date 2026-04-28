@@ -43,7 +43,12 @@ export async function forkSession(
 
   let forked: Session
   try {
-    const input = { sessionID: sessionId, directory, ...(messageId ? { messageID: messageId } : {}) }
+    const input = {
+      sessionID: sessionId,
+      directory,
+      platform: PLATFORM,
+      ...(messageId ? { messageID: messageId } : {}),
+    }
     const { data } = await client.session.fork(input, { throwOnError: true })
     forked = data
   } catch (error) {

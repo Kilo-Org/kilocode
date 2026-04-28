@@ -747,6 +747,7 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
+  platform?: string
   editorContext?: {
     visibleFiles?: Array<string>
     openTabs?: Array<string>
@@ -4108,6 +4109,7 @@ export type SessionInitResponse = SessionInitResponses[keyof SessionInitResponse
 export type SessionForkData = {
   body?: {
     messageID?: string
+    platform?: string
   }
   path: {
     sessionID: string
@@ -4350,6 +4352,7 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    platform?: string
     editorContext?: {
       visibleFiles?: Array<string>
       openTabs?: Array<string>
@@ -4556,6 +4559,7 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    platform?: string
     editorContext?: {
       visibleFiles?: Array<string>
       openTabs?: Array<string>
@@ -4601,6 +4605,7 @@ export type SessionCommandData = {
     messageID?: string
     agent?: string
     model?: string
+    platform?: string
     arguments: string
     command: string
     variant?: string

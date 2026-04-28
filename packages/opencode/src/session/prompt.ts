@@ -983,6 +983,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         },
         system: input.system,
         format: input.format,
+        platform: input.platform, // kilocode_change - request surface for feature attribution
         editorContext: input.editorContext, // kilocode_change
       }
 
@@ -1311,6 +1312,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         const session = yield* sessions.get(input.sessionID)
         yield* revert.cleanup(session)
         // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
+        if (input.platform) KiloSession.setPlatformOverride(input.sessionID, input.platform)
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
@@ -1792,6 +1794,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         messageID: input.messageID,
         model: userModel,
         agent: userAgent,
+        platform: input.platform, // kilocode_change - request surface for feature attribution
         parts,
         variant: input.variant,
       })
@@ -1864,6 +1867,7 @@ export const PromptInput = Schema.Struct({
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
   // kilocode_change start - reuse shared editor context schema
+  platform: Schema.optional(Schema.String), // request surface for feature attribution
   editorContext: Schema.optional(MessageV2.EditorContext),
   // kilocode_change end
   parts: Schema.Array(
@@ -1909,6 +1913,7 @@ export const CommandInput = Schema.Struct({
   sessionID: SessionID,
   agent: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
+  platform: Schema.optional(Schema.String), // kilocode_change - request surface for feature attribution
   arguments: Schema.String,
   command: Schema.String,
   variant: Schema.optional(Schema.String),

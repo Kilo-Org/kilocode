@@ -392,7 +392,7 @@ export const SessionRoutes = lazy(() =>
       async (c) =>
         jsonRequest("SessionRoutes.fork", c, function* () {
           const sessionID = c.req.valid("param").sessionID
-          const body = c.req.valid("json") as { messageID?: MessageID }
+          const body = c.req.valid("json") as { messageID?: MessageID; platform?: string } // kilocode_change - fork platform attribution
           const svc = yield* Session.Service
           return yield* svc.fork({ ...body, sessionID })
         }),

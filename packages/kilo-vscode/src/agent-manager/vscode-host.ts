@@ -13,6 +13,7 @@ import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
+import { PLATFORM } from "./constants"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
@@ -80,6 +81,7 @@ export class VscodeHost implements Host {
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       slimEditMetadata: true,
+      platform: PLATFORM,
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)

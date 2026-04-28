@@ -53,9 +53,9 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
     const headers = new Headers(init?.headers)
 
-    // Add custom headers
+    // Add custom headers without overwriting explicit per-request headers.
     Object.entries(customHeaders).forEach(([key, value]) => {
-      headers.set(key, value)
+      if (!headers.has(key)) headers.set(key, value)
     })
 
     // Add authorization if API key exists

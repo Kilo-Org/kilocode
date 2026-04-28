@@ -65,6 +65,7 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
+  platform?: string
 }
 
 export type ProviderAuthError = {
@@ -2348,6 +2349,7 @@ export type SessionInitResponse = SessionInitResponses[keyof SessionInitResponse
 export type SessionForkData = {
   body?: {
     messageID?: string
+    platform?: string
   }
   path: {
     id: string
@@ -2592,6 +2594,7 @@ export type SessionPromptData = {
     agent?: string
     noReply?: boolean
     system?: string
+    platform?: string
     tools?: {
       [key: string]: boolean
     }
@@ -2687,6 +2690,7 @@ export type SessionPromptAsyncData = {
     agent?: string
     noReply?: boolean
     system?: string
+    platform?: string
     tools?: {
       [key: string]: boolean
     }
@@ -2731,6 +2735,7 @@ export type SessionCommandData = {
     messageID?: string
     agent?: string
     model?: string
+    platform?: string
     arguments: string
     command: string
   }

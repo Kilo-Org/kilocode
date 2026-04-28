@@ -2141,6 +2141,7 @@ export class Session2 extends HeyApiClient {
       directory?: string
       workspace?: string
       messageID?: string
+      platform?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -2153,6 +2154,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "messageID" },
+            { in: "body", key: "platform" },
           ],
         },
       ],
@@ -2401,6 +2403,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      platform?: string
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -2427,6 +2430,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "platform" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -2540,6 +2544,7 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
+      platform?: string
       editorContext?: {
         visibleFiles?: Array<string>
         openTabs?: Array<string>
@@ -2566,6 +2571,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
+            { in: "body", key: "platform" },
             { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
@@ -2597,6 +2603,7 @@ export class Session2 extends HeyApiClient {
       messageID?: string
       agent?: string
       model?: string
+      platform?: string
       arguments?: string
       command?: string
       variant?: string
@@ -2622,6 +2629,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "messageID" },
             { in: "body", key: "agent" },
             { in: "body", key: "model" },
+            { in: "body", key: "platform" },
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },

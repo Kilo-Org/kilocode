@@ -3233,6 +3233,9 @@
                   "messageID": {
                     "type": "string",
                     "pattern": "^msg.*"
+                  },
+                  "platform": {
+                    "type": "string"
                   }
                 }
               }
@@ -3829,6 +3832,9 @@
                   "variant": {
                     "type": "string"
                   },
+                  "platform": {
+                    "type": "string"
+                  },
                   "editorContext": {
                     "type": "object",
                     "properties": {
@@ -4336,6 +4342,9 @@
                   "variant": {
                     "type": "string"
                   },
+                  "platform": {
+                    "type": "string"
+                  },
                   "editorContext": {
                     "type": "object",
                     "properties": {
@@ -4480,6 +4489,9 @@
                     "type": "string"
                   },
                   "model": {
+                    "type": "string"
+                  },
+                  "platform": {
                     "type": "string"
                   },
                   "arguments": {
@@ -12681,6 +12693,9 @@
             "additionalProperties": {
               "type": "boolean"
             }
+          },
+          "platform": {
+            "type": "string"
           },
           "editorContext": {
             "type": "object",
