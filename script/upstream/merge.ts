@@ -61,6 +61,45 @@ interface MergeOptions {
   author?: string
 }
 
+async function hasMergiraf(): Promise<boolean> {
+  const result = await $`mergiraf --version`.quiet().nothrow()
+  return result.exitCode === 0
+}
+
+function abortMissingMergiraf(): never {
+  logger.error("mergiraf is required but not installed.")
+  logger.info("  It provides syntax-aware resolution for imports, JSON/YAML/TOML,")
+  logger.info("  and other structural conflicts during upstream merges.")
+  logger.info("  Install via one of:")
+  logger.info("    brew install mergiraf                 # macOS / Linuxbrew")
+  logger.info("    cargo install mergiraf                # any platform with rustup")
+  logger.info("    nix profile install nixpkgs#mergiraf  # nix")
+  logger.info("  See https://mergiraf.org/installation.html for more options.")
+  process.exit(1)
+}
+
+/**
+ * Attempt syntax-aware resolution of conflicted files via mergiraf.
+ * Re-materializes each file with diff3 markers first so mergiraf can
+ * reconstruct the base revision (needed for its structural heuristics).
+ * Returns the number of files fully resolved and staged.
+ */
+async function runMergiraf(files: string[]): Promise<number> {
+  let solved = 0
+  for (const file of files) {
+    const co = await $`git checkout --conflict=diff3 -- ${file}`.quiet().nothrow()
+    if (co.exitCode !== 0) continue
+    await $`mergiraf solve ${file}`.quiet().nothrow()
+    const content = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    if (content.includes("<<<<<<< ")) continue
+    await $`git add ${file}`.quiet()
+    solved++
+  }
+  return solved
+}
+
 function parseArgs(): MergeOptions {
   const args = process.argv.slice(2)
 
@@ -131,6 +170,10 @@ async function main() {
     logger.error("No 'upstream' remote found. Please add it:")
     logger.info("  git remote add upstream git@github.com:anomalyco/opencode.git")
     process.exit(1)
+  }
+
+  if (!(await hasMergiraf())) {
+    abortMissingMergiraf()
   }
 
   if (await git.hasUncommittedChanges()) {
@@ -445,6 +488,19 @@ async function main() {
 
     if (conflictedFiles.length > 0) {
       logger.info("Attempting to auto-resolve remaining conflicts...")
+
+      // Step 7c-pre: syntax-aware resolution via mergiraf.
+      // Handles the common pattern of neighbouring import additions around
+      // kilocode_change markers, plus JSON/YAML/TOML key merges and other
+      // structural conflicts. Presence is enforced at startup.
+      logger.info("Running mergiraf on remaining conflicts...")
+      const solved = await runMergiraf(conflictedFiles)
+      if (solved > 0) {
+        logger.success(`mergiraf auto-resolved ${solved} conflict(s)`)
+        conflictedFiles = await git.getConflictedFiles()
+      } else {
+        logger.info("mergiraf did not resolve any conflicts")
+      }
 
       // Transform i18n files
       const i18nResults = await transformConflictedI18n(conflictedFiles, { dryRun: false, verbose: options.verbose })
