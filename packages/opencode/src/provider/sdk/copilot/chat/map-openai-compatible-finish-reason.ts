@@ -14,6 +14,6 @@ export function mapOpenAICompatibleFinishReason(
     case "tool_calls":
       return "tool-calls"
     default:
-      return "unknown" // kilocode_change
+      return "unknown" as any // kilocode_change
   }
 }

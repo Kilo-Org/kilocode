@@ -1309,7 +1309,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
 
             // kilocode_change start
             if (!receivedFinishChunk && responseId !== null) {
-              finishReason = { unified: "unknown", raw: undefined }
+              finishReason = { unified: "unknown" as any, raw: undefined }
             }
             // kilocode_change end
 

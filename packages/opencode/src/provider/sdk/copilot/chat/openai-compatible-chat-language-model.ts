@@ -649,7 +649,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
           flush(controller) {
             // kilocode_change start
             if (!receivedFinishReason && !isFirstChunk) {
-              finishReason = { unified: "unknown", raw: undefined }
+              finishReason = { unified: "unknown" as any, raw: undefined }
             }
             // kilocode_change end
 
