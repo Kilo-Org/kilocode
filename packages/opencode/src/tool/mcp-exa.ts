@@ -1,6 +1,6 @@
 import { Duration, Effect, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
-import { wrap } from "../kilocode/tool/exa-proxy" // kilocode_change
+import { kiloExaCall } from "../kilocode/tool/exa-proxy" // kilocode_change
 
 const URL = process.env.EXA_API_KEY
   ? `https://mcp.exa.ai/mcp?exaApiKey=${encodeURIComponent(process.env.EXA_API_KEY)}`
@@ -52,7 +52,7 @@ const McpRequest = <F extends Schema.Struct.Fields>(args: Schema.Struct<F>) =>
     }),
   })
 
-const mcpCall = <F extends Schema.Struct.Fields>(
+export const call = <F extends Schema.Struct.Fields>(
   http: HttpClient.HttpClient,
   tool: string,
   args: Schema.Struct<F>,
@@ -60,6 +60,8 @@ const mcpCall = <F extends Schema.Struct.Fields>(
   timeout: Duration.Input,
 ) =>
   Effect.gen(function* () {
+    const kilo = yield* kiloExaCall(http, tool, value as Record<string, unknown>, timeout) // kilocode_change
+    if (kilo !== undefined) return kilo // kilocode_change
     const request = yield* HttpClientRequest.post(URL).pipe(
       HttpClientRequest.accept("application/json, text/event-stream"),
       HttpClientRequest.schemaBodyJson(McpRequest(args))({
@@ -77,5 +79,3 @@ const mcpCall = <F extends Schema.Struct.Fields>(
     const body = yield* response.text
     return yield* parseSse(body)
   })
-
-export const call = wrap(mcpCall) // kilocode_change

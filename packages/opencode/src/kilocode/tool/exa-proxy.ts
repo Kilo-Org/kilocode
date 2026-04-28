@@ -5,30 +5,20 @@
 // instead of the public mcp.exa.ai MCP endpoint. This gives Kilo users free
 // Exa credits with overage charged to Kilo Credits.
 
-import type { Duration, Schema } from "effect"
+import type { Duration } from "effect"
 import { Effect } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { Auth } from "@/auth"
 import { KILO_API_BASE, HEADER_ORGANIZATIONID } from "@kilocode/kilo-gateway"
 
-type ExaResponse = {
-  results?: {
-    title?: string
-    url?: string
-    publishedDate?: string
-    highlights?: string[]
-    text?: string
-    summary?: string
-  }[]
+type ExaResult = {
+  title?: string
+  url?: string
+  publishedDate?: string
+  highlights?: string[]
+  text?: string
+  summary?: string
 }
-
-type McpCall = <F extends Schema.Struct.Fields>(
-  http: HttpClient.HttpClient,
-  tool: string,
-  args: Schema.Struct<F>,
-  value: Schema.Struct.Type<F>,
-  timeout: Duration.Input,
-) => Effect.Effect<string | undefined>
 
 async function credentials(): Promise<{ token: string; org?: string } | undefined> {
   const auth = await Auth.get("kilo")
@@ -38,8 +28,8 @@ async function credentials(): Promise<{ token: string; org?: string } | undefine
   return undefined
 }
 
-function format(results: ExaResponse["results"]): string {
-  if (!results?.length) return "No results found."
+function format(results: ExaResult[]): string {
+  if (!results.length) return "No results found."
   return JSON.stringify(
     results.map((r) => ({
       title: r.title ?? "",
@@ -52,35 +42,6 @@ function format(results: ExaResponse["results"]): string {
     null,
     2,
   )
-}
-
-function proxy(
-  http: HttpClient.HttpClient,
-  auth: { token: string; org?: string },
-  body: Record<string, unknown>,
-  timeout: Duration.Input,
-) {
-  const h: Record<string, string> = {
-    Authorization: `Bearer ${auth.token}`,
-    "Content-Type": "application/json",
-  }
-  if (auth.org) h[HEADER_ORGANIZATIONID] = auth.org
-
-  return Effect.gen(function* () {
-    const request = yield* HttpClientRequest.post(`${KILO_API_BASE}/api/exa/search`).pipe(
-      HttpClientRequest.setHeaders(h),
-      HttpClientRequest.bodyJson(body),
-    )
-    const response = yield* HttpClient.filterStatusOk(http)
-      .execute(request)
-      .pipe(
-        Effect.timeoutOrElse({
-          duration: timeout,
-          orElse: () => Effect.die(new Error("Exa proxy request timed out")),
-        }),
-      )
-    return format(((yield* response.json) as ExaResponse).results)
-  })
 }
 
 function toBody(tool: string, value: Record<string, unknown>): Record<string, unknown> | undefined {
@@ -106,20 +67,42 @@ function toBody(tool: string, value: Record<string, unknown>): Record<string, un
 }
 
 /**
- * Wrap the upstream MCP call so Kilo-authenticated users hit
- * api.kilo.ai/api/exa instead of the public mcp.exa.ai endpoint.
- * Falls back to the original MCP call when not authenticated with Kilo
- * or for unrecognised tool names.
+ * If Kilo auth is available and the tool is a known Exa tool, call the
+ * Kilo proxy and return the formatted result. Returns undefined to signal
+ * the caller should fall back to the public MCP endpoint.
  */
-export function wrap(mcp: McpCall): McpCall {
-  return (http, tool, args, value, timeout) => {
-    const body = toBody(tool, value as Record<string, unknown>)
-    if (!body) return mcp(http, tool, args, value, timeout)
+export function kiloExaCall(
+  http: HttpClient.HttpClient,
+  tool: string,
+  value: Record<string, unknown>,
+  timeout: Duration.Input,
+): Effect.Effect<string | undefined> {
+  const body = toBody(tool, value)
+  if (!body) return Effect.succeed(undefined)
 
-    return Effect.gen(function* () {
-      const auth = yield* Effect.promise(credentials)
-      if (!auth) return yield* mcp(http, tool, args, value, timeout)
-      return yield* proxy(http, auth, body, timeout)
-    })
-  }
+  return Effect.gen(function* () {
+    const auth = yield* Effect.promise(credentials)
+    if (!auth) return undefined
+
+    const h: Record<string, string> = {
+      Authorization: `Bearer ${auth.token}`,
+      "Content-Type": "application/json",
+    }
+    if (auth.org) h[HEADER_ORGANIZATIONID] = auth.org
+
+    const request = yield* HttpClientRequest.post(`${KILO_API_BASE}/api/exa/search`).pipe(
+      HttpClientRequest.setHeaders(h),
+      HttpClientRequest.bodyJson(body),
+    )
+    const response = yield* HttpClient.filterStatusOk(http)
+      .execute(request)
+      .pipe(
+        Effect.timeoutOrElse({
+          duration: timeout,
+          orElse: () => Effect.die(new Error("Exa proxy request timed out")),
+        }),
+      )
+    const json = (yield* response.json) as { results?: ExaResult[] }
+    return format(json.results ?? [])
+  })
 }
