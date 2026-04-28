@@ -4,7 +4,7 @@ import z from "zod"
 import { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
 import { mapValues } from "remeda"
-import { errors, createNotFoundResponse, createErrorResponse } from "../error"
+import { errors, createNotFoundResponse, createErrorResponse } from "../error" // devilcode_change
 import { Log } from "../../util/log"
 import { lazy } from "../../util/lazy"
 // devilcode_change start
@@ -95,7 +95,7 @@ export const ConfigRoutes = lazy(() =>
       validator("json", z.unknown()),
       async (c) => {
         const payload = c.req.valid("json")
-        const result = CanonicalTeamConfig.safeParse(payload)
+        const result = CanonicalTeamConfig.safeParse(payload) // devilcode_change
         return c.json({
           valid: result.success,
           errors: result.success ? [] : result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
@@ -110,17 +110,17 @@ export const ConfigRoutes = lazy(() =>
         operationId: "config.team.presets",
         responses: {
           200: {
-            description: "Team quickstart templates",
+            description: "Team quickstart templates", // devilcode_change
             content: {
               "application/json": {
-                schema: resolver(z.array(z.unknown())),
+                schema: resolver(z.array(z.unknown())), // devilcode_change
               },
             },
           },
         },
       }),
       async (c) => {
-        return c.json(Object.values(loadQuickstartTemplates()))
+        return c.json(Object.values(loadQuickstartTemplates())) // devilcode_change
       },
     )
     // devilcode_change start — Phase 9: Team CRUD endpoints
@@ -274,7 +274,7 @@ export const ConfigRoutes = lazy(() =>
       },
     )
     // devilcode_change end
-    // kilocode_change start
+    // devilcode_change start
     .get(
       "/warnings",
       describeRoute({
@@ -296,7 +296,7 @@ export const ConfigRoutes = lazy(() =>
         return c.json(await Config.warnings())
       },
     )
-    // kilocode_change end
+    // devilcode_change end
     .get(
       "/providers",
       describeRoute({

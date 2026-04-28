@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   close-non-compliant:
-    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Devil-Org/devilcode' && false # devilcode_change - disabled: not needed in devilcode repo
     runs-on: ubuntu-latest
     steps:
       - name: Close non-compliant issues and PRs after 2 hours

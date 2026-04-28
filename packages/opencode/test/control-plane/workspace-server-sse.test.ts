@@ -18,6 +18,9 @@ describe("control-plane/workspace-server SSE", () => {
     const app = WorkspaceServer.App()
     const stop = new AbortController()
     const seen: unknown[] = []
+    // devilcode_change start
+    let stream: Promise<void> | undefined
+    // devilcode_change end
     try {
       const response = await app.request("/event", {
         signal: stop.signal,
@@ -35,7 +38,8 @@ describe("control-plane/workspace-server SSE", () => {
           reject(new Error("timed out waiting for workspace.test event"))
         }, 3000)
 
-        void parseSSE(response.body!, stop.signal, (event) => {
+        // devilcode_change start
+        stream = parseSSE(response.body!, stop.signal, (event) => {
           seen.push(event)
           const next = event as { type?: string }
           if (next.type === "server.connected") {
@@ -54,6 +58,7 @@ describe("control-plane/workspace-server SSE", () => {
           clearTimeout(timeout)
           reject(error)
         })
+        // devilcode_change end
       })
 
       await done
@@ -64,7 +69,11 @@ describe("control-plane/workspace-server SSE", () => {
         properties: { ok: true },
       })
     } finally {
+      // devilcode_change start
       stop.abort()
+      await stream?.catch(() => undefined)
+      await Bun.sleep(100)
+      // devilcode_change end
     }
   })
 })

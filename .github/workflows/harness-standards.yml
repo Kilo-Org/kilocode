@@ -1,0 +1,22 @@
+name: Harness Standards
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  standards:
+    name: Harness standards warnings
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Run standards check
+        run: bun run standards:check

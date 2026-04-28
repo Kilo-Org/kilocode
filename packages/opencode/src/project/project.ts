@@ -223,7 +223,13 @@ export namespace Project {
       return fresh
     })
 
-    if (Flag.DEVIL_EXPERIMENTAL_ICON_DISCOVERY) discover(existing)
+    // devilcode_change start
+    if (Flag.DEVIL_EXPERIMENTAL_ICON_DISCOVERY) {
+      void discover(existing).catch((err) => {
+        log.warn("icon discovery failed", { err })
+      })
+    }
+    // devilcode_change end
 
     const result: Info = {
       ...existing,

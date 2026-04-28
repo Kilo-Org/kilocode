@@ -230,13 +230,16 @@ function DomBranch(props: {
               >
                 {tab.label}
                 <Show when={tab.closeable && props.onClose}>
-                  <span
+                  <div
                     aria-hidden
-                    onClick={(e) => { e.stopPropagation(); props.onClose?.(tab.id) }}
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation()
+                      props.onClose?.(tab.id)
+                    }}
                     style={{ "font-size": "14px", opacity: "0.6", "line-height": "1" }}
                   >
                     x
-                  </span>
+                  </div>
                 </Show>
               </button>
             )

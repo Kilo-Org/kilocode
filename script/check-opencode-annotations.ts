@@ -1,25 +1,26 @@
 #!/usr/bin/env bun
 
 /**
- * Verifies that every Kilo-specific change in shared packages/opencode/ files
- * is annotated with a kilocode_change marker.
+ * Verifies that every Devil-specific change in shared packages/opencode/ files
+ * is annotated with a devilcode_change marker.
  *
  * Usage:
  *   bun run script/check-opencode-annotations.ts                  # diff against origin/main
  *   bun run script/check-opencode-annotations.ts --base <ref>     # diff against <ref>
  *
  * A line is "covered" if it:
- *   - contains a kilocode_change marker comment           (inline annotation)
- *   - falls inside a kilocode_change start/end block      (block annotation)
+ *   - contains a devilcode_change marker comment          (inline annotation)
+ *   - falls inside a devilcode_change start/end block     (block annotation)
  *   - is in a file whose first non-empty line is          (whole-file annotation)
- *     // kilocode_change - new file
+ *     // devilcode_change - new file
  *   - is empty / whitespace-only                          (skipped)
  *   - is itself a marker line                             (auto-covered)
  *
  * Both JS (//) and JSX ({/ * ... * /}) comment styles are recognized.
  *
- * Exempt paths (no markers needed — entirely Kilo-specific):
+ * Exempt paths (no markers needed — entirely Devil-specific or compatibility-owned):
  *   - packages/opencode/src/devilcode/**
+ *   - packages/opencode/test/devilcode/**
  *   - packages/opencode/test/kilocode/**
  *   - Any path containing "kilocode" or "devilcode" in directory or filename
  */
@@ -72,8 +73,8 @@ function addedLines(file: string): Set<number> {
   return out
 }
 
-// Matches the start of a kilocode_change marker in both JS (//) and JSX ({/* */}) comments
-const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*)\s*kilocode_change\b/
+// Matches the start of a devilcode_change marker in both JS (//) and JSX ({/* */}) comments
+const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*)\s*devilcode_change\b/
 
 function hasMarker(line: string) {
   return MARKER_PREFIX.test(line)
@@ -83,9 +84,9 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
   const lines = text.split(/\r?\n/)
   const covered = new Set<number>()
 
-  // Whole-file annotation: first non-empty line is "// kilocode_change - new file"
+  // Whole-file annotation: first non-empty line is "// devilcode_change - new file"
   const first = lines.find((x) => x.trim() !== "")
-  if (first?.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s*-\s*new\s*file\b/)) {
+  if (first?.match(/(?:\/\/|\{?\s*\/\*)\s*devilcode_change\s*-\s*new\s*file\b/)) {
     for (let i = 1; i <= lines.length; i++) covered.add(i)
     return { lines, covered }
   }
@@ -95,13 +96,13 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
     const n = i + 1
     const line = lines[i] ?? ""
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s+start\b/)) {
+    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*devilcode_change\s+start\b/)) {
       block = true
       covered.add(n)
       continue
     }
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s+end\b/)) {
+    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*devilcode_change\s+end\b/)) {
       covered.add(n)
       block = false
       continue
@@ -147,37 +148,38 @@ for (const file of files) {
 }
 
 if (violations.length === 0) {
-  console.log("All shared opencode changes are annotated with kilocode_change markers.")
+  console.log("All shared opencode changes are annotated with devilcode_change markers.")
   process.exit(0)
 }
 
 console.error(
   [
-    "Unannotated Kilo changes found in shared opencode files:",
+    "Unannotated Devil changes found in shared opencode files:",
     "",
     ...violations,
     "",
-    "Every Kilo-specific change in packages/opencode/ must be annotated.",
+    "Every Devil-specific change in packages/opencode/ must be annotated.",
     "",
     "Inline (single line):",
-    "  const url = Flag.KILO_MODELS_URL || 'https://models.dev' // kilocode_change",
+    "  const url = Flag.DEVIL_MODELS_URL || 'https://models.dev' // devilcode_change",
     "",
     "Block (multiple lines):",
-    "  // kilocode_change start",
+    "  // devilcode_change start",
     "  ...",
-    "  // kilocode_change end",
+    "  // devilcode_change end",
     "",
     "JSX/TSX (inside JSX templates):",
-    "  {/* kilocode_change */}",
-    "  {/* kilocode_change start */}",
+    "  {/* devilcode_change */}",
+    "  {/* devilcode_change start */}",
     "  ...",
-    "  {/* kilocode_change end */}",
+    "  {/* devilcode_change end */}",
     "",
     "New file:",
-    "  // kilocode_change - new file",
+    "  // devilcode_change - new file",
     "",
     "Exempt paths (no markers needed):",
     "  - packages/opencode/src/devilcode/**",
+    "  - packages/opencode/test/devilcode/**",
     "  - packages/opencode/test/kilocode/**",
     "  - Any path containing 'kilocode' or 'devilcode' in the directory or filename",
     "",

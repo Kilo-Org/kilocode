@@ -22,11 +22,19 @@ export function WorkspaceServerRoutes() {
       }, 10_000)
 
       await new Promise<void>((resolve) => {
-        stream.onAbort(() => {
+        // devilcode_change start
+        let closed = false
+        const done = () => {
+          if (closed) return
+          closed = true
           clearInterval(heartbeat)
           GlobalBus.off("event", handler)
           resolve()
-        })
+        }
+        stream.onAbort(done)
+        c.req.raw.signal.addEventListener("abort", done, { once: true })
+        if (c.req.raw.signal.aborted) done()
+        // devilcode_change end
       })
     })
   })

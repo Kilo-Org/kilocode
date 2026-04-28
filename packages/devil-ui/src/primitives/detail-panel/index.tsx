@@ -100,7 +100,7 @@ function DomBranch(props: DetailPanelProps): JSX.Element {
         overflow: "hidden",
         "min-width": "0",
       }}
-      onToggle={(e) => props.onToggle?.((e.target as HTMLDetailsElement).open)}
+      onToggle={(e: Event) => props.onToggle?.((e.target as HTMLDetailsElement).open)}
     >
       <summary
         style={{

@@ -48,7 +48,7 @@ function DomBranch(props: StagePositionBadgeProps): JSX.Element {
   const roleDisplay = () => props.info.roleLabel ?? props.info.position ?? "--"
 
   return (
-    <span
+    <div
       data-component="stage-position-badge"
       data-stage={props.info.stage}
       data-covered={covered() ? "true" : "false"}
@@ -67,12 +67,12 @@ function DomBranch(props: StagePositionBadgeProps): JSX.Element {
         border: `1px solid ${covered() ? "#3a7a5a" : "#7a3a3a"}`,
       }}
     >
-      <span aria-hidden style={{ "font-weight": "bold", "text-transform": "uppercase", "font-size": "10px" }}>
+      <div aria-hidden style={{ "font-weight": "bold", "text-transform": "uppercase", "font-size": "10px" }}>
         {props.info.stage}
-      </span>
-      <span aria-hidden>:</span>
-      <span>{roleDisplay()}</span>
-    </span>
+      </div>
+      <div aria-hidden>:</div>
+      <div>{roleDisplay()}</div>
+    </div>
   )
 }
 

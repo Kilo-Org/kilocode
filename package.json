@@ -12,8 +12,8 @@
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "typecheck": "bun turbo typecheck",
     "prepare": "husky",
-    "random": "echo 'Random script'",
-    "hello": "echo 'Hello World!'",
+    "standards:check": "bun run script/check-harness-standards.ts",
+    "standards:enforce": "bun run script/check-harness-standards.ts --enforce",
     "test": "bun turbo test",
     "extension": "bun --cwd packages/devil-vscode script/launch.ts"
   },
