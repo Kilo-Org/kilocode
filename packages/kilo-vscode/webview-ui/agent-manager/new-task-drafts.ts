@@ -8,7 +8,7 @@ export function createNewTaskDrafts(timeout = 30_000) {
   const tasks = new Map<string, string[]>()
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
-  const remove = (task: NewTaskDraft) => {
+  const remove = (task: NewTaskDraft, discard = false) => {
     const ids = tasks.get(task.worktreeId) ?? []
     const next = ids.filter((id) => id !== task.id)
     if (next.length === 0) tasks.delete(task.worktreeId)
@@ -16,6 +16,7 @@ export function createNewTaskDrafts(timeout = 30_000) {
     const timer = timers.get(task.id)
     if (timer) clearTimeout(timer)
     timers.delete(task.id)
+    if (!discard) return
     window.dispatchEvent(new CustomEvent("agentManagerDiscardDraft", { detail: { id: task.id } }))
   }
 
@@ -24,7 +25,7 @@ export function createNewTaskDrafts(timeout = 30_000) {
     tasks.set(worktreeId, [...(tasks.get(worktreeId) ?? []), task.id])
     timers.set(
       task.id,
-      setTimeout(() => remove(task), timeout),
+      setTimeout(() => remove(task, true), timeout),
     )
     return task
   }
@@ -38,6 +39,11 @@ export function createNewTaskDrafts(timeout = 30_000) {
   }
 
   const cleanup = () => {
+    for (const ids of tasks.values()) {
+      for (const id of ids) {
+        window.dispatchEvent(new CustomEvent("agentManagerDiscardDraft", { detail: { id } }))
+      }
+    }
     for (const timer of timers.values()) clearTimeout(timer)
     timers.clear()
     tasks.clear()
