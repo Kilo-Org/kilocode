@@ -520,6 +520,7 @@ export class WorktreeStateManager {
       this.loadFailed = false
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") this.loadFailed = false
       if (code !== "ENOENT") {
         this.log(`Failed to load state: ${error}`)
         this.loadFailed = true
