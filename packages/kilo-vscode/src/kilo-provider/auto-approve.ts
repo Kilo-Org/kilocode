@@ -4,8 +4,6 @@ export type { AutoApproveController }
 
 type Interceptor = (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
 
-export type AutoApproveBridge = ReturnType<typeof createAutoApproveBridge>
-
 export function createAutoApproveBridge(
   ctrl: AutoApproveController,
   post: (msg: unknown) => void,
