@@ -135,10 +135,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
 
           // Active suggestion tool parts render the interactive SuggestBar inline
           const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
-          const bash = createMemo(() => (part.type === "tool" && (part as unknown as ToolPart).tool === "bash" ? part : undefined))
+          const bash = createMemo(() =>
+            part.type === "tool" && (part as unknown as ToolPart).tool === "bash" ? part : undefined,
+          )
 
           return (
-            <Show when={isUpstreamSuppressed || activeQuestion() || activeSuggestion() || bash() || PART_MAPPING[part.type]}>
+            <Show
+              when={isUpstreamSuppressed || activeQuestion() || activeSuggestion() || bash() || PART_MAPPING[part.type]}
+            >
               <div data-component="tool-part-wrapper" data-part-type={part.type}>
                 <Show
                   when={activeQuestion()}
@@ -168,12 +172,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                             </Show>
                           }
                         >
-                          {(tool) => (
-                            <BashToolCard
-                              part={tool() as unknown as ToolPart}
-                              defaultOpen={open()}
-                            />
-                          )}
+                          {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
                         </Show>
                       }
                     >
