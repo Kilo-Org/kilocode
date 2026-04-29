@@ -1380,6 +1380,10 @@ export const dict = {
   "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Uitrekken",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",

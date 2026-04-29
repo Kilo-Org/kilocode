@@ -32,6 +32,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "commit_message",
   "tools",
   "layout",
+  "terminal_command_display",
   "indexing",
   "experimental",
 ]
