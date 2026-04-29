@@ -690,7 +690,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  10_000,
+  10_000, // kilocode_change
 )
 
 it.live(
@@ -724,7 +724,7 @@ it.live(
       // kilocode_change end
       { git: true, config: providerCfg },
     ),
-  10_000,
+  10_000, // kilocode_change
 )
 
 // Cancel semantics
@@ -973,7 +973,7 @@ it.live(
       // kilocode_change end
       { git: true, config: providerCfg },
     ),
-  10_000,
+  10_000, // kilocode_change
 )
 
 // kilocode_change start - #9492: the upstream fork-based shape of this test
