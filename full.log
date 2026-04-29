@@ -1,0 +1,821 @@
+build-vscode	Set up job	﻿2026-04-29T09:52:21.3004077Z Current runner version: '2.333.1'
+build-vscode	Set up job	2026-04-29T09:52:21.3008659Z Runner name: 'blacksmith-01kqcaefck4rtqwk3s2f5xjdvj-4vcpu'
+build-vscode	Set up job	2026-04-29T09:52:21.3009338Z Runner group name: 'blacksmith runners 01kgn0fsv6wjqhdjea5fred2v2'
+build-vscode	Set up job	2026-04-29T09:52:21.3010069Z Machine name: 'ip-172-31-64-123'
+build-vscode	Set up job	2026-04-29T09:52:21.3011572Z ##[group]GITHUB_TOKEN Permissions
+build-vscode	Set up job	2026-04-29T09:52:21.3012960Z Contents: write
+build-vscode	Set up job	2026-04-29T09:52:21.3013352Z Metadata: read
+build-vscode	Set up job	2026-04-29T09:52:21.3013637Z Packages: write
+build-vscode	Set up job	2026-04-29T09:52:21.3013966Z ##[endgroup]
+build-vscode	Set up job	2026-04-29T09:52:21.3015380Z Secret source: Actions
+build-vscode	Set up job	2026-04-29T09:52:21.3015854Z Prepare workflow directory
+build-vscode	Set up job	2026-04-29T09:52:21.3215986Z Prepare all required actions
+build-vscode	Set up job	2026-04-29T09:52:21.3239242Z Getting action download info
+build-vscode	Set up job	2026-04-29T09:52:21.8085723Z Download action repository 'actions/checkout@v3' (SHA:f43a0e5ff2bd294095638e18286ca9a3d1956744)
+build-vscode	Set up job	2026-04-29T09:52:21.8516616Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+build-vscode	Set up job	2026-04-29T09:52:21.8992931Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+build-vscode	Set up job	2026-04-29T09:52:22.7936702Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build-vscode	Set up job	2026-04-29T09:52:22.9204924Z Setting BLACKSMITH_ACTIONS_RESULTS_URL to https://results-receiver.actions.githubusercontent.com/
+build-vscode	Set up job	2026-04-29T09:52:22.9248809Z Complete job name: build-vscode
+build-vscode	Set up runner	﻿2026-04-29T09:52:22.9553174Z A job started hook has been configured by the self-hosted runner administrator
+build-vscode	Set up runner	2026-04-29T09:52:22.9623057Z ##[group]Run '/setup.sh'
+build-vscode	Set up runner	2026-04-29T09:52:22.9634918Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-vscode	Set up runner	2026-04-29T09:52:22.9635800Z ##[endgroup]
+build-vscode	Set up runner	2026-04-29T09:52:22.9832565Z Logging daemon started (blacksmithd for logs)
+build-vscode	Set up runner	2026-04-29T09:52:22.9945691Z Results daemon started (blacksmithd for results)
+build-vscode	Set up runner	2026-04-29T09:52:22.9950790Z Background adoption and SSH setup started (PID: 3390)
+build-vscode	Set up runner	2026-04-29T09:52:22.9951431Z 
+build-vscode	Set up runner	2026-04-29T09:52:22.9951703Z ----------------------------------------
+build-vscode	Set up runner	2026-04-29T09:52:22.9952642Z SSH Access (using your GitHub SSH key):
+build-vscode	Set up runner	2026-04-29T09:52:22.9953579Z   ssh -p 64004 runner@blacksmith-01kqcaefck4rtqwk3s2f5xjdvj-4vcpu.vm.blacksmith.sh
+build-vscode	Set up runner	2026-04-29T09:52:22.9954281Z 
+build-vscode	Set up runner	2026-04-29T09:52:22.9954521Z No GitHub SSH key? Add one at:
+build-vscode	Set up runner	2026-04-29T09:52:22.9955600Z https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account
+build-vscode	Set up runner	2026-04-29T09:52:22.9956572Z 
+build-vscode	Set up runner	2026-04-29T09:52:22.9956820Z ----------------------------------------
+build-vscode	Set up runner	2026-04-29T09:52:22.9957215Z 
+build-vscode	Set up runner	2026-04-29T09:52:22.9957520Z VM ID: blacksmith-01kqcaefck4rtqwk3s2f5xjdvj-4vcpu
+build-vscode	Set up runner	2026-04-29T09:52:22.9958191Z Host: production-125.253.82.63-x8664
+build-vscode	Set up runner	2026-04-29T09:52:22.9958753Z Host Agent PID: 3438707
+build-vscode	Set up runner	2026-04-29T09:52:22.9959249Z Agent Process Count: 1
+build-vscode	Set up runner	2026-04-29T09:52:22.9959740Z Host Agent Git SHA: 9d24834a
+build-vscode	Set up runner	2026-04-29T09:52:22.9960280Z Host CPU Manufacturer: AuthenticAMD
+build-vscode	Set up runner	2026-04-29T09:52:22.9960884Z Blacksmith Host Generation: gen 2
+build-vscode	Set up runner	2026-04-29T09:52:22.9961488Z Petname: production-working-lab-f71217a5
+build-vscode	Set up runner	2026-04-29T09:52:22.9962070Z Region: us-west
+build-vscode	Set up runner	2026-04-29T09:52:22.9962549Z Rootfs Version: ubuntu24-full-x64-012126
+build-vscode	Set up runner	2026-04-29T09:52:22.9984822Z OS Version: Ubuntu 24.04.3 LTS
+build-vscode	Set up runner	2026-04-29T09:52:23.0000556Z System Statistics:
+build-vscode	Set up runner	2026-04-29T09:52:23.0001199Z -----------------
+build-vscode	Set up runner	2026-04-29T09:52:23.0001664Z VM CPU Count: 4
+build-vscode	Set up runner	2026-04-29T09:52:23.0002016Z 
+build-vscode	Set up runner	2026-04-29T09:52:23.0002243Z Jobs by Process ID:
+build-vscode	Set up runner	2026-04-29T09:52:23.0002746Z -----------------
+build-vscode	Set up runner	2026-04-29T09:52:23.0003190Z PID 3438707: 7 jobs
+build-vscode	Set up runner	2026-04-29T09:52:23.0003692Z Total: 7 jobs across 1 process
+build-vscode	Set up runner	2026-04-29T09:52:23.0004294Z 
+build-vscode	Set up runner	2026-04-29T09:52:23.0004512Z Devices by Process ID:
+build-vscode	Set up runner	2026-04-29T09:52:23.0004981Z -----------------
+build-vscode	Set up runner	2026-04-29T09:52:23.0005413Z PID 3438707: 9 devices
+build-vscode	Set up runner	2026-04-29T09:52:23.0008250Z Total: 9 devices across 1 process
+build-vscode	Set up runner	2026-04-29T09:52:23.0011044Z Enabling Blacksmith transparent cache
+build-vscode	Run actions/checkout@v3	﻿2026-04-29T09:52:23.0274989Z ##[group]Run actions/checkout@v3
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0276281Z with:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0277097Z   repository: Kilo-Org/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0277975Z   token: ***
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0278356Z   ssh-strict: true
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0278781Z   persist-credentials: true
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0279238Z   clean: true
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0279650Z   sparse-checkout-cone-mode: true
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0280144Z   fetch-depth: 1
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0280531Z   fetch-tags: false
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0280922Z   lfs: false
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0281298Z   submodules: false
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0282176Z   set-safe-directory: true
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0282634Z env:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0283016Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0283553Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1333456Z Syncing repository: Kilo-Org/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1334830Z ##[group]Getting Git version info
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1335429Z Working directory is '/home/runner/_work/kilocode/kilocode'
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1336280Z [command]/usr/bin/git version
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1355454Z git version 2.52.0
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1369778Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1378484Z Temporarily overriding HOME='/home/runner/_work/_temp/b4c53dd2-bb2b-49d6-aa29-5786c4cab1f3' before making global git config changes
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1380099Z Adding repository directory to the temporary git global config as a safe directory
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1381090Z [command]/usr/bin/git config --global --add safe.directory /home/runner/_work/kilocode/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1401561Z Deleting the contents of '/home/runner/_work/kilocode/kilocode'
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1403231Z ##[group]Initializing the repository
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1405023Z [command]/usr/bin/git init /home/runner/_work/kilocode/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1433299Z hint: Using 'master' as the name for the initial branch. This default branch name
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1434313Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1435161Z hint: to use in all of your new repositories, which will suppress this warning,
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1435894Z hint: call:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1436241Z hint:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1436707Z hint: 	git config --global init.defaultBranch <name>
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1437243Z hint:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1437745Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1438575Z hint: 'development'. The just-created branch can be renamed via this command:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1439220Z hint:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1439568Z hint: 	git branch -m <name>
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1439972Z hint:
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1440519Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1444285Z Initialized empty Git repository in /home/runner/_work/kilocode/kilocode/.git/
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1448512Z [command]/usr/bin/git remote add origin https://github.com/Kilo-Org/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1470131Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1471300Z ##[group]Disabling automatic garbage collection
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1472401Z [command]/usr/bin/git config --local gc.auto 0
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1485796Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1486816Z ##[group]Setting up auth
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1489364Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1503921Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1650785Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1683386Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1797926Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1815541Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1816379Z ##[group]Fetching the repository
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.1820936Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +9da1542d14f4c3903bcbdbce399a89e2af20e51d:refs/remotes/origin/main
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5713206Z remote: Enumerating objects: 6358, done.        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5715158Z remote: Counting objects:   0% (1/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5715713Z remote: Counting objects:   1% (64/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5716260Z remote: Counting objects:   2% (128/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5716807Z remote: Counting objects:   3% (191/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5717359Z remote: Counting objects:   4% (255/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5718113Z remote: Counting objects:   5% (318/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5718724Z remote: Counting objects:   6% (382/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5719692Z remote: Counting objects:   7% (446/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5720393Z remote: Counting objects:   8% (509/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5720950Z remote: Counting objects:   9% (573/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5721550Z remote: Counting objects:  10% (636/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5722132Z remote: Counting objects:  11% (700/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5722730Z remote: Counting objects:  12% (763/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5723310Z remote: Counting objects:  13% (827/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5723840Z remote: Counting objects:  14% (891/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5724583Z remote: Counting objects:  15% (954/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5725113Z remote: Counting objects:  16% (1018/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5725764Z remote: Counting objects:  17% (1081/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5726302Z remote: Counting objects:  18% (1145/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5726834Z remote: Counting objects:  19% (1209/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5727369Z remote: Counting objects:  20% (1272/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5727910Z remote: Counting objects:  21% (1336/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5728457Z remote: Counting objects:  22% (1399/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5728997Z remote: Counting objects:  23% (1463/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5729531Z remote: Counting objects:  24% (1526/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5791543Z remote: Counting objects:  25% (1590/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5792212Z remote: Counting objects:  26% (1654/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5792771Z remote: Counting objects:  27% (1717/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5851723Z remote: Counting objects:  28% (1781/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5852486Z remote: Counting objects:  29% (1844/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5853084Z remote: Counting objects:  30% (1908/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5853639Z remote: Counting objects:  31% (1971/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5854210Z remote: Counting objects:  32% (2035/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5854788Z remote: Counting objects:  33% (2099/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5855366Z remote: Counting objects:  34% (2162/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5855920Z remote: Counting objects:  35% (2226/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5856458Z remote: Counting objects:  36% (2289/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5856995Z remote: Counting objects:  37% (2353/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5857532Z remote: Counting objects:  38% (2417/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5858067Z remote: Counting objects:  39% (2480/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5858599Z remote: Counting objects:  40% (2544/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5859133Z remote: Counting objects:  41% (2607/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5859670Z remote: Counting objects:  42% (2671/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5860204Z remote: Counting objects:  43% (2734/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5860747Z remote: Counting objects:  44% (2798/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5861280Z remote: Counting objects:  45% (2862/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5861814Z remote: Counting objects:  46% (2925/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5862786Z remote: Counting objects:  47% (2989/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5863452Z remote: Counting objects:  48% (3052/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5863981Z remote: Counting objects:  49% (3116/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5864525Z remote: Counting objects:  50% (3179/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5865073Z remote: Counting objects:  51% (3243/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5865605Z remote: Counting objects:  52% (3307/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5866207Z remote: Counting objects:  53% (3370/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5866738Z remote: Counting objects:  54% (3434/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5867273Z remote: Counting objects:  55% (3497/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5867803Z remote: Counting objects:  56% (3561/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5868338Z remote: Counting objects:  57% (3625/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5868872Z remote: Counting objects:  58% (3688/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5869406Z remote: Counting objects:  59% (3752/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5869948Z remote: Counting objects:  60% (3815/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5870471Z remote: Counting objects:  61% (3879/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5871001Z remote: Counting objects:  62% (3942/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5871533Z remote: Counting objects:  63% (4006/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5872301Z remote: Counting objects:  64% (4070/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5873051Z remote: Counting objects:  65% (4133/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5873589Z remote: Counting objects:  66% (4197/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5874121Z remote: Counting objects:  67% (4260/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5874710Z remote: Counting objects:  68% (4324/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5875246Z remote: Counting objects:  69% (4388/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5881674Z remote: Counting objects:  70% (4451/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5882236Z remote: Counting objects:  71% (4515/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5882798Z remote: Counting objects:  72% (4578/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5883339Z remote: Counting objects:  73% (4642/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5883870Z remote: Counting objects:  74% (4705/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5884403Z remote: Counting objects:  75% (4769/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5884983Z remote: Counting objects:  76% (4833/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5885521Z remote: Counting objects:  77% (4896/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5886056Z remote: Counting objects:  78% (4960/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5886644Z remote: Counting objects:  79% (5023/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5887388Z remote: Counting objects:  80% (5087/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5888154Z remote: Counting objects:  81% (5150/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5888922Z remote: Counting objects:  82% (5214/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5889709Z remote: Counting objects:  83% (5278/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5890494Z remote: Counting objects:  84% (5341/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5891307Z remote: Counting objects:  85% (5405/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5892075Z remote: Counting objects:  86% (5468/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5892889Z remote: Counting objects:  87% (5532/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5893740Z remote: Counting objects:  88% (5596/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5894632Z remote: Counting objects:  89% (5659/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5895480Z remote: Counting objects:  90% (5723/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5896907Z remote: Counting objects:  91% (5786/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5897797Z remote: Counting objects:  92% (5850/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5898412Z remote: Counting objects:  93% (5913/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5898946Z remote: Counting objects:  94% (5977/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5899484Z remote: Counting objects:  95% (6041/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5900020Z remote: Counting objects:  96% (6104/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5900552Z remote: Counting objects:  97% (6168/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5901419Z remote: Counting objects:  98% (6231/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5902064Z remote: Counting objects:  99% (6295/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5902691Z remote: Counting objects: 100% (6358/6358)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5903265Z remote: Counting objects: 100% (6358/6358), done.        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5910001Z remote: Compressing objects:   0% (1/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.5989829Z remote: Compressing objects:   1% (57/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6037613Z remote: Compressing objects:   2% (113/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6041952Z remote: Compressing objects:   3% (169/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6275547Z remote: Compressing objects:   4% (225/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6276200Z remote: Compressing objects:   5% (281/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6316948Z remote: Compressing objects:   6% (337/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6402870Z remote: Compressing objects:   7% (393/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6482427Z remote: Compressing objects:   8% (450/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6507361Z remote: Compressing objects:   9% (506/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6531705Z remote: Compressing objects:  10% (562/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6564064Z remote: Compressing objects:  11% (618/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6581631Z remote: Compressing objects:  12% (674/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6607167Z remote: Compressing objects:  13% (730/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6677929Z remote: Compressing objects:  14% (786/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6720390Z remote: Compressing objects:  15% (842/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6781745Z remote: Compressing objects:  16% (899/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6833888Z remote: Compressing objects:  17% (955/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6897205Z remote: Compressing objects:  18% (1011/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.6985710Z remote: Compressing objects:  19% (1067/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7135938Z remote: Compressing objects:  20% (1123/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7236327Z remote: Compressing objects:  21% (1179/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7309860Z remote: Compressing objects:  22% (1235/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7372514Z remote: Compressing objects:  23% (1291/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7439488Z remote: Compressing objects:  24% (1348/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7490969Z remote: Compressing objects:  25% (1404/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7546891Z remote: Compressing objects:  26% (1460/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7587360Z remote: Compressing objects:  27% (1516/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7649836Z remote: Compressing objects:  28% (1572/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7693190Z remote: Compressing objects:  29% (1628/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7740382Z remote: Compressing objects:  30% (1684/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7792497Z remote: Compressing objects:  31% (1741/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7902923Z remote: Compressing objects:  32% (1797/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.7964964Z remote: Compressing objects:  33% (1853/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8017736Z remote: Compressing objects:  34% (1909/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8055216Z remote: Compressing objects:  35% (1965/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8146834Z remote: Compressing objects:  36% (2021/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8224445Z remote: Compressing objects:  37% (2077/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8281262Z remote: Compressing objects:  38% (2133/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8331571Z remote: Compressing objects:  39% (2190/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8403931Z remote: Compressing objects:  40% (2246/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8428297Z remote: Compressing objects:  41% (2302/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8462534Z remote: Compressing objects:  42% (2358/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8509766Z remote: Compressing objects:  43% (2414/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8550232Z remote: Compressing objects:  44% (2470/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8601026Z remote: Compressing objects:  45% (2526/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8628685Z remote: Compressing objects:  46% (2582/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8683819Z remote: Compressing objects:  47% (2639/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8742494Z remote: Compressing objects:  48% (2695/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8791213Z remote: Compressing objects:  49% (2751/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8810093Z remote: Compressing objects:  50% (2807/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8811106Z remote: Compressing objects:  51% (2863/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8811700Z remote: Compressing objects:  52% (2919/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8812330Z remote: Compressing objects:  53% (2975/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8813804Z remote: Compressing objects:  54% (3032/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8814395Z remote: Compressing objects:  55% (3088/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8815047Z remote: Compressing objects:  56% (3144/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8815648Z remote: Compressing objects:  57% (3200/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8816303Z remote: Compressing objects:  58% (3256/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8816896Z remote: Compressing objects:  59% (3312/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8817492Z remote: Compressing objects:  60% (3368/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8818055Z remote: Compressing objects:  61% (3424/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8818618Z remote: Compressing objects:  62% (3481/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8819429Z remote: Compressing objects:  63% (3537/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8820074Z remote: Compressing objects:  64% (3593/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8820647Z remote: Compressing objects:  65% (3649/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8821218Z remote: Compressing objects:  66% (3705/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8821780Z remote: Compressing objects:  67% (3761/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8822337Z remote: Compressing objects:  68% (3817/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8822900Z remote: Compressing objects:  69% (3873/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8823487Z remote: Compressing objects:  70% (3930/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8824051Z remote: Compressing objects:  71% (3986/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8824614Z remote: Compressing objects:  72% (4042/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8825224Z remote: Compressing objects:  73% (4098/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8825783Z remote: Compressing objects:  74% (4154/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8826470Z remote: Compressing objects:  75% (4210/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8827032Z remote: Compressing objects:  76% (4266/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8827588Z remote: Compressing objects:  77% (4323/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8828144Z remote: Compressing objects:  78% (4379/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8828702Z remote: Compressing objects:  79% (4435/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8829273Z remote: Compressing objects:  80% (4491/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8844961Z remote: Compressing objects:  81% (4547/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8893094Z remote: Compressing objects:  82% (4603/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8939922Z remote: Compressing objects:  83% (4659/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.8991682Z remote: Compressing objects:  84% (4715/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9035462Z remote: Compressing objects:  85% (4772/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9100980Z remote: Compressing objects:  86% (4828/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9162523Z remote: Compressing objects:  87% (4884/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9163113Z remote: Compressing objects:  88% (4940/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9167549Z remote: Compressing objects:  89% (4996/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9170985Z remote: Compressing objects:  90% (5052/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9175341Z remote: Compressing objects:  91% (5108/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9179184Z remote: Compressing objects:  92% (5164/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9183767Z remote: Compressing objects:  93% (5221/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9189245Z remote: Compressing objects:  94% (5277/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9192660Z remote: Compressing objects:  95% (5333/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9196830Z remote: Compressing objects:  96% (5389/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9198417Z remote: Compressing objects:  97% (5445/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9203652Z remote: Compressing objects:  98% (5501/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9206773Z remote: Compressing objects:  99% (5557/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9207400Z remote: Compressing objects: 100% (5613/5613)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9208029Z remote: Compressing objects: 100% (5613/5613), done.        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9378272Z Receiving objects:   0% (1/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.9817804Z Receiving objects:   1% (64/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.0528035Z Receiving objects:   2% (128/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.1643483Z Receiving objects:   3% (191/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.1655701Z Receiving objects:   4% (255/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.1688923Z Receiving objects:   5% (318/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.1739841Z Receiving objects:   6% (382/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.1746531Z Receiving objects:   7% (446/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.2245695Z Receiving objects:   8% (509/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3184281Z Receiving objects:   9% (573/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3404044Z Receiving objects:  10% (636/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3415515Z Receiving objects:  11% (700/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3431236Z Receiving objects:  12% (763/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3438727Z Receiving objects:  13% (827/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3463247Z Receiving objects:  14% (891/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3752095Z Receiving objects:  15% (954/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3769133Z Receiving objects:  16% (1018/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.3783367Z Receiving objects:  17% (1081/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.4322604Z Receiving objects:  18% (1145/6358)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5028135Z Receiving objects:  19% (1209/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5059998Z Receiving objects:  20% (1272/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5060361Z Receiving objects:  21% (1336/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5061672Z Receiving objects:  22% (1399/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5062868Z Receiving objects:  23% (1463/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5065164Z Receiving objects:  24% (1526/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5065863Z Receiving objects:  25% (1590/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5602238Z Receiving objects:  26% (1654/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5608008Z Receiving objects:  27% (1717/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5623392Z Receiving objects:  28% (1781/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5635199Z Receiving objects:  29% (1844/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5649168Z Receiving objects:  30% (1908/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5657159Z Receiving objects:  31% (1971/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5666579Z Receiving objects:  32% (2035/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5673406Z Receiving objects:  33% (2099/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5679615Z Receiving objects:  34% (2162/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5686976Z Receiving objects:  35% (2226/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5690112Z Receiving objects:  36% (2289/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5715413Z Receiving objects:  37% (2353/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5721093Z Receiving objects:  38% (2417/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5745896Z Receiving objects:  39% (2480/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5757018Z Receiving objects:  40% (2544/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5774040Z Receiving objects:  41% (2607/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5782430Z Receiving objects:  42% (2671/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5826164Z Receiving objects:  43% (2734/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.5997984Z Receiving objects:  44% (2798/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6014412Z Receiving objects:  45% (2862/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6029541Z Receiving objects:  46% (2925/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6044755Z Receiving objects:  47% (2989/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6069166Z Receiving objects:  48% (3052/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6088781Z Receiving objects:  49% (3116/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6106868Z Receiving objects:  50% (3179/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6137270Z Receiving objects:  51% (3243/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6147682Z Receiving objects:  52% (3307/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6153979Z Receiving objects:  53% (3370/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6169616Z Receiving objects:  54% (3434/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6260782Z Receiving objects:  55% (3497/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6269565Z Receiving objects:  56% (3561/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6285490Z Receiving objects:  57% (3625/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6295985Z Receiving objects:  58% (3688/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6308202Z Receiving objects:  59% (3752/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6319263Z Receiving objects:  60% (3815/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6335525Z Receiving objects:  61% (3879/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6576651Z Receiving objects:  62% (3942/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6589112Z Receiving objects:  63% (4006/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6610160Z Receiving objects:  64% (4070/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6621392Z Receiving objects:  65% (4133/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6630805Z Receiving objects:  66% (4197/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6645044Z Receiving objects:  67% (4260/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6661022Z Receiving objects:  68% (4324/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6678465Z Receiving objects:  69% (4388/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.6705284Z Receiving objects:  70% (4451/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7258092Z Receiving objects:  71% (4515/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7268951Z Receiving objects:  72% (4578/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7287686Z Receiving objects:  73% (4642/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7300397Z Receiving objects:  74% (4705/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7311125Z Receiving objects:  75% (4769/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7315339Z Receiving objects:  76% (4833/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7319395Z Receiving objects:  77% (4896/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7322399Z Receiving objects:  78% (4960/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7327230Z Receiving objects:  79% (5023/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7329578Z Receiving objects:  80% (5087/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7333103Z Receiving objects:  81% (5150/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7336289Z Receiving objects:  82% (5214/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7338983Z Receiving objects:  83% (5278/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7342128Z Receiving objects:  84% (5341/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7346250Z Receiving objects:  85% (5405/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7351311Z Receiving objects:  86% (5468/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7355267Z Receiving objects:  87% (5532/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7359485Z Receiving objects:  88% (5596/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7364826Z Receiving objects:  89% (5659/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7369321Z Receiving objects:  90% (5723/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7374397Z Receiving objects:  91% (5786/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7380766Z Receiving objects:  92% (5850/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7397731Z Receiving objects:  93% (5913/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7446038Z Receiving objects:  94% (5977/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7471520Z Receiving objects:  95% (6041/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7485935Z Receiving objects:  96% (6104/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7499104Z Receiving objects:  97% (6168/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7507204Z Receiving objects:  98% (6231/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7513353Z Receiving objects:  99% (6295/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7513852Z remote: Total 6358 (delta 531), reused 5197 (delta 478), pack-reused 0 (from 0)        
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7522258Z Receiving objects: 100% (6358/6358), 13.32 MiB | 26.28 MiB/s
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7522492Z Receiving objects: 100% (6358/6358), 30.08 MiB | 36.33 MiB/s, done.
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7524970Z Resolving deltas:   0% (0/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7527596Z Resolving deltas:   1% (6/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7528580Z Resolving deltas:   2% (11/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7529540Z Resolving deltas:   3% (16/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7529809Z Resolving deltas:   4% (22/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7536168Z Resolving deltas:   5% (27/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7540575Z Resolving deltas:   6% (32/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7550709Z Resolving deltas:   7% (38/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7561246Z Resolving deltas:   8% (43/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7565039Z Resolving deltas:   9% (48/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7566097Z Resolving deltas:  10% (54/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7567074Z Resolving deltas:  11% (59/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7567824Z Resolving deltas:  12% (64/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7568499Z Resolving deltas:  13% (70/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7568768Z Resolving deltas:  14% (75/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7569216Z Resolving deltas:  15% (80/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7570640Z Resolving deltas:  16% (85/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7571897Z Resolving deltas:  17% (91/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7574722Z Resolving deltas:  18% (96/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7575440Z Resolving deltas:  19% (101/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7576015Z Resolving deltas:  20% (107/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7576369Z Resolving deltas:  21% (112/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7576992Z Resolving deltas:  22% (117/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7578268Z Resolving deltas:  23% (123/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7579055Z Resolving deltas:  24% (128/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7579520Z Resolving deltas:  25% (133/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7580135Z Resolving deltas:  26% (140/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7580385Z Resolving deltas:  27% (144/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7581539Z Resolving deltas:  28% (149/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7582630Z Resolving deltas:  29% (154/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7582824Z Resolving deltas:  30% (160/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7584824Z Resolving deltas:  31% (165/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7585162Z Resolving deltas:  32% (170/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7585507Z Resolving deltas:  33% (176/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7585951Z Resolving deltas:  34% (181/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7586800Z Resolving deltas:  35% (186/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7588247Z Resolving deltas:  36% (192/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7589290Z Resolving deltas:  37% (197/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7590433Z Resolving deltas:  38% (202/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7591077Z Resolving deltas:  39% (208/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7592325Z Resolving deltas:  40% (213/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7594441Z Resolving deltas:  41% (218/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7594588Z Resolving deltas:  42% (224/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7594918Z Resolving deltas:  43% (229/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7595136Z Resolving deltas:  44% (234/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7595641Z Resolving deltas:  45% (239/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7596750Z Resolving deltas:  46% (245/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7597409Z Resolving deltas:  47% (250/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7598893Z Resolving deltas:  48% (256/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7600295Z Resolving deltas:  49% (261/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7600658Z Resolving deltas:  50% (266/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7601629Z Resolving deltas:  51% (271/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7602140Z Resolving deltas:  52% (277/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7602495Z Resolving deltas:  53% (282/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7602833Z Resolving deltas:  54% (287/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7603112Z Resolving deltas:  55% (293/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7604206Z Resolving deltas:  56% (298/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7605567Z Resolving deltas:  57% (303/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7605958Z Resolving deltas:  58% (308/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7606124Z Resolving deltas:  59% (315/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7606493Z Resolving deltas:  60% (319/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7606741Z Resolving deltas:  61% (324/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7606965Z Resolving deltas:  62% (330/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7607103Z Resolving deltas:  63% (335/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7607478Z Resolving deltas:  64% (341/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7607850Z Resolving deltas:  65% (346/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7608050Z Resolving deltas:  66% (351/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7608331Z Resolving deltas:  67% (356/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7608974Z Resolving deltas:  68% (362/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7610663Z Resolving deltas:  69% (367/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7610943Z Resolving deltas:  70% (372/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611221Z Resolving deltas:  71% (378/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611365Z Resolving deltas:  72% (384/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611480Z Resolving deltas:  73% (388/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611595Z Resolving deltas:  74% (393/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611703Z Resolving deltas:  75% (400/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611820Z Resolving deltas:  76% (405/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7611925Z Resolving deltas:  77% (409/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7638637Z Resolving deltas:  78% (415/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7638841Z Resolving deltas:  79% (420/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7638985Z Resolving deltas:  80% (425/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639348Z Resolving deltas:  81% (431/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639450Z Resolving deltas:  82% (436/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639551Z Resolving deltas:  83% (441/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639655Z Resolving deltas:  84% (447/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639753Z Resolving deltas:  85% (453/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639856Z Resolving deltas:  86% (458/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7639954Z Resolving deltas:  87% (462/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640055Z Resolving deltas:  88% (469/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640152Z Resolving deltas:  89% (473/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640255Z Resolving deltas:  90% (478/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640358Z Resolving deltas:  91% (484/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640457Z Resolving deltas:  92% (489/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640557Z Resolving deltas:  93% (494/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640655Z Resolving deltas:  94% (500/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640762Z Resolving deltas:  95% (505/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640864Z Resolving deltas:  96% (511/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7640970Z Resolving deltas:  97% (516/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7641067Z Resolving deltas:  98% (522/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7641170Z Resolving deltas:  99% (527/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7641268Z Resolving deltas: 100% (531/531)
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7641377Z Resolving deltas: 100% (531/531), done.
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7804677Z From https://github.com/Kilo-Org/kilocode
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7804986Z  * [new ref]         9da1542d14f4c3903bcbdbce399a89e2af20e51d -> origin/main
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7829449Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7829665Z ##[group]Determining the checkout info
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7830546Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7830697Z ##[group]Checking out the ref
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:24.7833728Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0606259Z Switched to a new branch 'main'
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0606632Z branch 'main' set up to track 'origin/main'.
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0846300Z ##[endgroup]
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0865656Z [command]/usr/bin/git log -1 --format='%H'
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0875535Z '9da1542d14f4c3903bcbdbce399a89e2af20e51d'
+build-vscode	Run ./.github/actions/setup-bun	﻿2026-04-29T09:52:25.0997452Z Prepare all required actions
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:25.0997768Z Getting action download info
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:25.3897627Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.1826624Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2511439Z ##[group]Run ./.github/actions/setup-bun
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2511589Z with:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2511676Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2511771Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2511888Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2603616Z ##[group]Run if [ "$RUNNER_ARCH" = "X64" ]; then
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2603853Z ^[[36;1mif [ "$RUNNER_ARCH" = "X64" ]; then^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604056Z ^[[36;1m  V=$(node -p "require('./package.json').packageManager.split('@')[1]")^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604236Z ^[[36;1m  case "$RUNNER_OS" in^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604360Z ^[[36;1m    macOS)   OS=darwin ;;^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604479Z ^[[36;1m    Linux)   OS=linux ;;^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604616Z ^[[36;1m    Windows) OS=windows ;;^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604726Z ^[[36;1m  esac^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2604953Z ^[[36;1m  echo "url=https://github.com/oven-sh/bun/releases/download/bun-v${V}/bun-${OS}-x64-baseline.zip" >> "$GITHUB_OUTPUT"^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2605185Z ^[[36;1mfi^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2614102Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2614249Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2614344Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.2614458Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3242746Z ##[group]Run oven-sh/setup-bun@v2
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243018Z with:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243225Z   bun-download-url: https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64-baseline.zip
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243458Z   no-cache: false
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243605Z   token: ***
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243695Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243785Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.3243910Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.4610003Z Obtained version 1.3.13 from package.json
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.4616711Z Downloading a new version of Bun: https://github.com/oven-sh/bun/releases/download/bun-v1.3.13/bun-linux-x64-baseline.zip
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.8615114Z [command]/usr/bin/unzip -o -q /home/runner/_work/_temp/8e2268db-aa05-4321-b18a-3db5bb6754da.zip
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3430402Z [command]/home/runner/.bun/bin/bun --revision
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3447153Z 1.3.13+bf2e2cecf
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3498039Z ##[group]Run echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3498274Z ^[[36;1mecho "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3510135Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3510291Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3510392Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.3510514Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5339322Z ##[group]Run actions/cache@v4
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5339455Z with:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5339554Z   path: /home/runner/.bun/install/cache
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5339763Z   key: Linux-bun-2a464d22dc287ee874db15abe938c262e16ed55b7ef4bd0129b27bfc8321dcc4
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5339952Z   restore-keys: Linux-bun-
+build-vscode	Run ./.github/actions/setup-bun	
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340063Z   enableCrossOsArchive: false
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340170Z   fail-on-cache-miss: false
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340267Z   lookup-only: false
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340360Z   save-always: false
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340449Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340535Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.5340648Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:27.8613262Z Cache hit for: Linux-bun-2a464d22dc287ee874db15abe938c262e16ed55b7ef4bd0129b27bfc8321dcc4
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:28.8784489Z Received 394264576 of 1092876622 (36.1%), 375.6 MBs/sec
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:29.8832724Z Received 838860800 of 1092876622 (76.8%), 398.8 MBs/sec
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:30.4606083Z Received 1092876622 of 1092876622 (100.0%), 403.5 MBs/sec
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:30.4606994Z Cache Size: ~1042 MB (1092876622 B)
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:30.4627389Z [command]/usr/bin/tar -xf /home/runner/_work/_temp/c0389dff-a4fb-492d-9e19-a6aa6ba1fd79/cache.tzst -P -C /home/runner/_work/kilocode/kilocode --use-compress-program unzstd
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.0564238Z Cache restored successfully
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1473174Z Cache restored from key: Linux-bun-2a464d22dc287ee874db15abe938c262e16ed55b7ef4bd0129b27bfc8321dcc4
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1620319Z ##[group]Run python3 -m pip install setuptools || pip install setuptools || true
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1620796Z ^[[36;1mpython3 -m pip install setuptools || pip install setuptools || true^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1632770Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1632934Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1633037Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.1633170Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.5264179Z Defaulting to user installation because normal site-packages is not writeable
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.6521149Z Requirement already satisfied: setuptools in /usr/lib/python3/dist-packages (68.1.2)
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8473496Z ##[group]Run # Workaround for patched peer variants
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8473708Z ^[[36;1m# Workaround for patched peer variants^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8473853Z ^[[36;1m# e.g. ./patches/ for standard-openapi^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8474038Z ^[[36;1m# https://github.com/oven-sh/bun/issues/28147^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8474180Z ^[[36;1mif [ "$RUNNER_OS" = "Windows" ]; then^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8474311Z ^[[36;1m  bun install --linker hoisted ^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8474420Z ^[[36;1melse^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8474510Z ^[[36;1m  bun install ^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8474598Z ^[[36;1mfi^[[0m
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8483932Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8484075Z env:
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8484161Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8484275Z ##[endgroup]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8518147Z bun install v1.3.13 (bf2e2cec)
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:37.8756756Z Resolving dependencies
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:38.7562746Z Resolved, downloaded and extracted [99]
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.7406757Z Saved lockfile
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.7407321Z 
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.7407402Z $ bun run --cwd packages/opencode fix-node-pty
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.7426582Z $ bun run script/fix-node-pty.ts
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8771747Z $ husky
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8973309Z 
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8973760Z + @actions/artifact@5.0.1
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8973965Z + @changesets/changelog-github@0.5.2
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974089Z + @changesets/cli@2.31.0
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974189Z + @tsconfig/bun@1.0.9
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974285Z + @types/mime-types@3.0.1
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974405Z + @typescript/native-preview@7.0.0-dev.20260316.1
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974534Z + glob@13.0.5
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974615Z + husky@9.1.7
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974690Z + oxlint@1.60.0
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974781Z + oxlint-tsgolint@0.21.0
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974878Z + prettier@3.6.2
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8974958Z + semver@7.7.4
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975040Z + sst@3.18.10
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975115Z + turbo@2.8.13
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975206Z + @aws-sdk/client-s3@3.1025.0
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975310Z + @morphllm/morphsdk@0.2.166
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975448Z + heap-snapshot-toolkit@1.1.3
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975555Z + typescript@5.8.2 (v6.0.3 available)
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975636Z 
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975677Z 4500 packages installed [36.05s]
+build-vscode	Run actions/setup-node@v4	﻿2026-04-29T09:53:13.9091378Z ##[group]Run actions/setup-node@v4
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091511Z with:
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091597Z   node-version: 24
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091703Z   registry-url: https://registry.npmjs.org
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091828Z   always-auth: false
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091926Z   check-latest: false
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9092083Z   token: ***
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9092170Z env:
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9092303Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9092424Z ##[endgroup]
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9963714Z Found in cache @ /opt/hostedtoolcache/node/24.13.0/x64
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9966315Z ##[group]Environment details
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1736827Z node: v24.13.0
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1737100Z npm: 11.6.2
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1737217Z yarn: 1.22.22
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1737753Z ##[endgroup]
+build-vscode	Install @vscode/vsce	﻿2026-04-29T09:53:14.1791838Z ##[group]Run bun install -g @vscode/vsce
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1792094Z ^[[36;1mbun install -g @vscode/vsce^[[0m
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803433Z shell: /usr/bin/bash -e {0}
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803558Z env:
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803646Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803787Z   NPM_CONFIG_USERCONFIG: /home/runner/_work/_temp/.npmrc
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803937Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1804052Z ##[endgroup]
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1846283Z bun add v1.3.13 (bf2e2cec)
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1850728Z Resolving dependencies
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.1722388Z Resolved, downloaded and extracted [580]
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5368364Z Saved lockfile
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5368566Z 
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5368760Z installed @vscode/vsce@3.9.1 with binaries:
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5368918Z  - vsce
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5368968Z 
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5369112Z 293 packages installed [1353.00ms]
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5369195Z 
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5369356Z Blocked 1 postinstall. Run `bun pm -g untrusted` for details.
+build-vscode	Run actions/download-artifact@v4	﻿2026-04-29T09:53:15.5423044Z ##[group]Run actions/download-artifact@v4
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423225Z with:
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423324Z   name: kilo-cli
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423422Z   path: packages/opencode/dist
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423531Z   merge-multiple: false
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423636Z   repository: Kilo-Org/kilocode
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423738Z   run-id: 25101862100
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423826Z env:
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423912Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5424057Z   NPM_CONFIG_USERCONFIG: /home/runner/_work/_temp/.npmrc
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5424207Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5424331Z ##[endgroup]
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.6375847Z Downloading single artifact
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.8906772Z Preparing to download the following artifacts:
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.8907195Z - kilo-cli (ID: 6704245874, Size: 2920456316, Expected Digest: sha256:df82305da5bb243bbccbb9c3281e234632063845c1e802457760cef9be88af40)
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.3373456Z Redirecting to blob download url: https://productionresultssa8.blob.core.windows.net/actions-results/18882c09-22ee-4627-83fc-c217e7a6872f/workflow-job-run-36f32c90-c51b-57d6-8bf8-f4173829bff3/artifacts/deaa24f22847bcdf9e4677442c58d2fef95f5e686a8fbaf04187bec9270a2663.zip
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.3374470Z Starting download of artifact to: /home/runner/_work/kilocode/kilocode/packages/opencode/dist
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.6141863Z (node:4004) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.6142375Z (Use `node --trace-deprecation ...` to show where the warning was created)
+build-vscode	Build VSIX packages	﻿2026-04-29T10:29:59.7681702Z ##[group]Run bun script/build.ts
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7682308Z ^[[36;1mbun script/build.ts^[[0m
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7700369Z shell: /usr/bin/bash -e {0}
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7700525Z env:
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7700669Z   GITHUB_REPO_NAME: Kilo-Org/kilocode
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7700847Z   NPM_CONFIG_USERCONFIG: /home/runner/_work/_temp/.npmrc
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7701035Z   NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7701204Z   CLI_DIST_DIR: ../../packages/opencode/dist
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7701374Z   KILO_VERSION: 7.2.29
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7701503Z   KILO_PRE_RELEASE: true
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7701657Z   GH_REPO: Kilo-Org/kilocode
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7701806Z ##[endgroup]
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7864396Z Building VSCode extension version: 7.2.29 (pre-release)
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7864647Z Updating package.json version from 7.2.26 to 7.2.29
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7865749Z Using CLI dist directory: ../../packages/opencode/dist
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7866140Z 
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7867132Z 🧹 Cleaning up directories...
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7867314Z 
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7867523Z 🔄 Rebuilding SDK types (ensures dist/ is in sync with server API)...
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7884561Z $ bun ./script/build.ts
+build-vscode	Build VSIX packages	2026-04-29T10:30:00.2343009Z $ bun run --conditions=browser ./src/index.ts generate
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.1335014Z Performing one time database migration, may take a few minutes...
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.1396268Z sqlite-migration:done
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.1401871Z Database migration complete.
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.7997150Z ^[[95m[@hey-api/sdk] `instance` is deprecated. Use `operations: { strategy: "single", containerName: "KiloClient", methods: "instance" }` instead.^[[39m
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.7999364Z ^[[90m@hey-api/openapi-ts v0.90.10^[[39m
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.7999513Z 
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.8004293Z ^[[90m[Job 1] ^[[39m⏳ ^[[36mGenerating from 1 input:^[[39m
+build-vscode	Build VSIX packages	2026-04-29T10:30:02.8004541Z ^[[90m[Job 1] ^[[39m^[[36m  [1] ^[[39m./openapi.json
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.1244087Z ^[[90m[Job 1] ^[[39m^[[32m✅ Done!^[[39m Your output is in ^[[96m/home/runner/_work/kilocode/kilocode/packages/sdk/js/src/v2/gen^[[39m
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2159544Z ^[[90msrc/gen/client.gen.ts^[[39m 31ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2351851Z ^[[90msrc/gen/client/client.gen.ts^[[39m 18ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2375144Z ^[[90msrc/gen/client/index.ts^[[39m 1ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2472539Z ^[[90msrc/gen/client/types.gen.ts^[[39m 9ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2685657Z ^[[90msrc/gen/client/utils.gen.ts^[[39m 16ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2737300Z ^[[90msrc/gen/core/auth.gen.ts^[[39m 2ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2779172Z ^[[90msrc/gen/core/bodySerializer.gen.ts^[[39m 5ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2848962Z ^[[90msrc/gen/core/params.gen.ts^[[39m 5ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2944769Z ^[[90msrc/gen/core/pathSerializer.gen.ts^[[39m 9ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.2994726Z ^[[90msrc/gen/core/queryKeySerializer.gen.ts^[[39m 4ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.3091942Z ^[[90msrc/gen/core/serverSentEvents.gen.ts^[[39m 9ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.3133765Z ^[[90msrc/gen/core/types.gen.ts^[[39m 3ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.3193727Z ^[[90msrc/gen/core/utils.gen.ts^[[39m 5ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.3463977Z ^[[90msrc/gen/sdk.gen.ts^[[39m 26ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.3933567Z ^[[90msrc/gen/types.gen.ts^[[39m 44ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.4856890Z ^[[90msrc/v2/client.ts^[[39m 31ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.4909740Z ^[[90msrc/v2/data.ts^[[39m 4ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.4962491Z src/v2/gen/client.gen.ts 3ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5095291Z src/v2/gen/client/client.gen.ts 12ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5123050Z src/v2/gen/client/index.ts 1ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5213356Z src/v2/gen/client/types.gen.ts 6ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5370811Z src/v2/gen/client/utils.gen.ts 15ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5414286Z src/v2/gen/core/auth.gen.ts 2ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5478481Z src/v2/gen/core/bodySerializer.gen.ts 5ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5544261Z src/v2/gen/core/params.gen.ts 5ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5611841Z src/v2/gen/core/pathSerializer.gen.ts 6ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5670071Z src/v2/gen/core/queryKeySerializer.gen.ts 3ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5756725Z src/v2/gen/core/serverSentEvents.gen.ts 8ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5796415Z src/v2/gen/core/types.gen.ts 3ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.5843426Z src/v2/gen/core/utils.gen.ts 4ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.7046117Z src/v2/gen/sdk.gen.ts 118ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.7928506Z src/v2/gen/types.gen.ts 86ms
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.7955941Z ^[[90msrc/v2/index.ts^[[39m 1ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:03.8019284Z ^[[90msrc/v2/server.ts^[[39m 5ms (unchanged)
+build-vscode	Build VSIX packages	2026-04-29T10:30:04.9512863Z 
+build-vscode	Build VSIX packages	2026-04-29T10:30:04.9514146Z 📦 Compiling extension...
+build-vscode	Build VSIX packages	2026-04-29T10:30:04.9526622Z $ tsc --noEmit
+build-vscode	Build VSIX packages	2026-04-29T10:30:07.4617525Z $ eslint src webview-ui
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.4663638Z [watch] build started
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.4665217Z [watch] build started
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.4666125Z [watch] build started
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.4668349Z [watch] build started
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.4693250Z [watch] build started
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.4702362Z [watch] build started
+build-vscode	Build VSIX packages	2026-04-29T10:30:10.7790681Z [watch] build finished
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.5707053Z [watch] build finished
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.6296511Z [watch] build finished
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.6610510Z [watch] build finished
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.7926586Z [watch] build finished
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.8854676Z [watch] build finished
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9148196Z 
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9148763Z 🎯 Processing target: linux-x64
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9152561Z 67 | 
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9152942Z 68 |   const sourceBinary = join(cliDistDir, config.cliDir, "bin", config.binary)
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9153249Z 69 |   const targetBinary = join(binDir, config.binary)
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9153450Z 70 | 
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9153627Z 71 |   if (!existsSync(sourceBinary)) {
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9153875Z 72 |     throw new Error(`CLI binary not found at ${sourceBinary}`)
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9154111Z                    ^
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9154394Z error: CLI binary not found at ../../packages/opencode/dist/@kilocode/cli-linux-x64/bin/kilo
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9154743Z       at /home/runner/_work/kilocode/kilocode/packages/kilo-vscode/script/build.ts:72:15
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9154925Z 
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9155031Z Bun v1.3.13 (Linux x64 baseline)
+build-vscode	Build VSIX packages	2026-04-29T10:30:13.9170130Z ##[error]Process completed with exit code 1.
+build-vscode	Post Run ./.github/actions/setup-bun	﻿2026-04-29T10:30:13.9226227Z Post job cleanup.
+build-vscode	Post Run actions/checkout@v3	﻿2026-04-29T10:30:13.9262576Z Post job cleanup.
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9606978Z [command]/usr/bin/git version
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9623999Z git version 2.52.0
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9642183Z Temporarily overriding HOME='/home/runner/_work/_temp/83a3b96e-1b30-443f-a5ae-7af2feeaa029' before making global git config changes
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9642556Z Adding repository directory to the temporary git global config as a safe directory
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9644087Z [command]/usr/bin/git config --global --add safe.directory /home/runner/_work/kilocode/kilocode
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9658420Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9671328Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9766269Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9774691Z http.https://github.com/.extraheader
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9780101Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9792356Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build-vscode	Complete runner	﻿2026-04-29T10:30:13.9911108Z A job completed hook has been configured by the self-hosted runner administrator
+build-vscode	Complete runner	2026-04-29T10:30:13.9923978Z ##[group]Run '/job_completed.sh'
+build-vscode	Complete runner	2026-04-29T10:30:13.9929438Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build-vscode	Complete runner	2026-04-29T10:30:13.9929640Z ##[endgroup]
+build-vscode	Complete runner	2026-04-29T10:30:14.0047783Z Docker container caching not enabled, skipping hash computation.
+build-vscode	Complete runner	2026-04-29T10:30:14.0104549Z No active SSH sessions detected. Proceeding with shutdown immediately.
+build-vscode	Complete job	﻿2026-04-29T10:30:14.0139377Z Cleaning up orphan processes
+build-vscode	Complete job	2026-04-29T10:30:14.0336563Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v3, actions/download-artifact@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
