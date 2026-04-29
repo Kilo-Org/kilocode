@@ -263,6 +263,12 @@ export const dict = {
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Prompt verbeteren",
   "prompt.action.indexing": "Indexeringsinstellingen",
+  "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
+  "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
+  "prompt.action.autoApprove.enabled":
+    "Automatisch goedkeuren is ingeschakeld. Toestemmingsverzoeken worden automatisch goedgekeurd.",
+  "prompt.action.autoApprove.disabled":
+    "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",

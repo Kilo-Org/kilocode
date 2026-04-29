@@ -764,6 +764,14 @@ export interface AgentManagerOpenSessionsMessage {
   sessionIDs: string[]
 }
 
+export interface RequestAutoApproveStateMessage {
+  type: "requestAutoApproveState"
+}
+
+export interface ToggleAutoApproveMessage {
+  type: "toggleAutoApprove"
+}
+
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
@@ -1059,6 +1067,8 @@ export type WebviewMessage =
   | PreviewImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | RequestAutoApproveStateMessage
+  | ToggleAutoApproveMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

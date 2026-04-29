@@ -263,6 +263,10 @@ export const dict = {
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
+  "prompt.action.autoApprove.enable": "자동 승인 사용",
+  "prompt.action.autoApprove.disable": "자동 승인 사용 안 함",
+  "prompt.action.autoApprove.enabled": "자동 승인이 켜져 있습니다. 권한 요청이 자동으로 승인됩니다.",
+  "prompt.action.autoApprove.disabled": "자동 승인이 꺼져 있습니다. 클릭하면 권한 요청을 자동으로 승인합니다.",
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
