@@ -317,6 +317,8 @@ Decision kinds are `hybrid`, `take-ours`, `take-theirs`, `regenerated`,
 `removed`, `renamed`, and `other`. Mark decisions as `high` risk when they touch
 auth, billing, data deletion, public APIs, config schemas, migrations, provider
 routing, or security behavior.
+For `renamed` decisions, include `--target <new-path>` so the checker can
+verify the new file exists and record its resolution hash.
 
 ### Agent-Assisted Manual Resolution
 
