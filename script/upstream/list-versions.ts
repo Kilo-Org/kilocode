@@ -38,6 +38,7 @@ async function main() {
 
   // Check merge status in parallel — fast because is-ancestor short-circuits.
   const merged = await Promise.all(shown.map((v) => isAncestor(v.commit, "HEAD")))
+  const sample = shown.find((_, i) => !merged[i] && merged[i + 1]) ?? shown.find((_, i) => !merged[i])
 
   for (let i = 0; i < shown.length; i++) {
     const v = shown[i]
@@ -53,7 +54,7 @@ async function main() {
 
   console.log()
   info("To merge a specific version:")
-  info("  bun run script/upstream/merge.ts --version v1.1.49")
+  info(`  bun run script/upstream/merge.ts --version ${sample?.tag ?? "v1.1.49"}`)
   console.log()
   info("To merge the latest version:")
   info("  bun run script/upstream/merge.ts")
