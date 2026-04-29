@@ -381,7 +381,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "triggerTask") {
       if (isDisabled()) return
       const sel = session.selected()
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
 
     if (message.type === "sendMessageFailed") {
