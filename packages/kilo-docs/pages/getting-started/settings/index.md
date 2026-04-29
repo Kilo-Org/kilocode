@@ -45,6 +45,16 @@ There are two primary config files:
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
 
+### Reasoning Blocks
+
+Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+
+```json
+{
+  "auto_collapse_reasoning": true
+}
+```
+
 ### Export and Import
 
 You can export and import settings from the **About Kilo Code** tab in the Settings UI:

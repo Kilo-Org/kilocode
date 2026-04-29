@@ -1873,6 +1873,10 @@ export type Config = {
    */
   username?: string
   /**
+   * Automatically collapse reasoning blocks after the agent finishes writing them
+   */
+  auto_collapse_reasoning?: boolean
+  /**
    * @deprecated Use `agent` field instead.
    */
   mode?: {

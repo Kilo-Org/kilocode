@@ -116,6 +116,7 @@ export interface Config {
   commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
+  auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
   indexing?: IndexingConfig
 }

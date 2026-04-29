@@ -18,6 +18,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
+import { useDisplay } from "../../context/display"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -86,6 +87,7 @@ function TodoToolCard(props: { part: ToolPart }) {
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
+  const display = useDisplay()
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
@@ -124,6 +126,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                               part={part}
                               message={props.message as SDKMessage}
                               showAssistantCopyPartID={props.showAssistantCopyPartID}
+                              reasoningAutoCollapse={display.reasoningAutoCollapse()}
                               animate={
                                 part.type === "tool" &&
                                 ((part as unknown as ToolPart).state?.status === "pending" ||

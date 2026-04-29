@@ -1404,6 +1404,9 @@ export const dict = {
   "settings.display.layout.description": "Режим макета для интерфейса чата",
   "settings.display.layout.auto": "Авто",
   "settings.display.layout.stretch": "Растянуть",
+  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
+  "settings.display.reasoningAutoCollapse.description":
+    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",

@@ -1394,6 +1394,9 @@ export const dict = {
   "settings.display.layout.description": "チャットインターフェースのレイアウトモード",
   "settings.display.layout.auto": "自動",
   "settings.display.layout.stretch": "ストレッチ",
+  "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
+  "settings.display.reasoningAutoCollapse.description":
+    "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",

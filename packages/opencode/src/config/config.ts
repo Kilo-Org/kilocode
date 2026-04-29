@@ -186,6 +186,11 @@ export const Info = Schema.Struct({
   username: Schema.optional(Schema.String).annotate({
     description: "Custom username to display in conversations instead of system username",
   }),
+  // kilocode_change start
+  auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
+    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+  }),
+  // kilocode_change end
   mode: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({

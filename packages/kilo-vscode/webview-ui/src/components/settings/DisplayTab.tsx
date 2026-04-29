@@ -1,8 +1,10 @@
-import { Component } from "solid-js"
+import { type Component } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
+import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
 import SettingsRow from "./SettingsRow"
 
@@ -18,6 +20,7 @@ const LAYOUT_OPTIONS: LayoutOption[] = [
 
 const DisplayTab: Component = () => {
   const { config, updateConfig } = useConfig()
+  const display = useDisplay()
   const language = useLanguage()
 
   return (
@@ -39,7 +42,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.layout.title")}
           description={language.t("settings.display.layout.description")}
-          last
         >
           <Select
             options={LAYOUT_OPTIONS}
@@ -56,6 +58,22 @@ const DisplayTab: Component = () => {
             size="small"
             triggerVariant="settings"
           />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.reasoningAutoCollapse.title")}
+          description={language.t("settings.display.reasoningAutoCollapse.description")}
+          last
+        >
+          <Switch
+            checked={display.reasoningAutoCollapse()}
+            onChange={(checked: boolean) => {
+              display.setReasoningAutoCollapse(checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.display.reasoningAutoCollapse.title")}
+          </Switch>
         </SettingsRow>
       </Card>
     </div>
