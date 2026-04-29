@@ -81,4 +81,5 @@ Then set your default model:
 ## Tips and Notes
 
 - **Permissions:** Ensure your Google Cloud account has the necessary permissions to access Vertex AI and the specific models you want to use.
+- **Prompt caching:** Claude models served through Vertex AI support Kilo prompt caching. Kilo applies Anthropic cache controls and tracks cache write/read tokens when Vertex reports them. Native Vertex Gemini models use Google's implicit server-side caching; no extra Kilo configuration is required, and Gemini may not report cache write tokens.
 - **Pricing:** Refer to the [Vertex AI pricing](https://cloud.google.com/vertex-ai/pricing) page for details.

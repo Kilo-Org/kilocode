@@ -265,6 +265,12 @@ export const dict = {
   "prompt.action.send.blocked": "Beantworten oder verwerfen Sie zuerst die ausstehende Frage",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Prompt verbessern",
+  "prompt.action.autoApprove.enable": "Automatische Genehmigung aktivieren",
+  "prompt.action.autoApprove.disable": "Automatische Genehmigung deaktivieren",
+  "prompt.action.autoApprove.enabled":
+    "Automatische Genehmigung ist aktiviert. Berechtigungsanfragen werden automatisch genehmigt.",
+  "prompt.action.autoApprove.disabled":
+    "Automatische Genehmigung ist deaktiviert. Klicken, um Berechtigungsanfragen automatisch zu genehmigen.",
   "prompt.action.resetModel": "Modell auf Standard zurücksetzen",
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",

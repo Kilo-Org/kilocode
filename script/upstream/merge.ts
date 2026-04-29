@@ -405,6 +405,13 @@ async function main() {
   // This reduces conflicts by transforming upstream code to Kilo conventions BEFORE merging
   logger.step(6, 8, "Applying transformations to opencode branch (pre-merge)...")
 
+  logger.info("Removing files skipped in Kilo...")
+  const skips = await skipFiles({ dryRun: false, verbose: options.verbose, force: true })
+  const count = skips.filter((r) => r.action === "removed").length
+  if (count > 0) {
+    logger.success(`Removed ${count} skipped file(s) from opencode branch`)
+  }
+
   // 6a. Transform package names (opencode-ai -> @kilocode/cli)
   logger.info("Transforming package names...")
   const nameResults = await transformPackageNames({ dryRun: false, verbose: options.verbose })

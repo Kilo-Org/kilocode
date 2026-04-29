@@ -85,6 +85,17 @@ interface Diagnostic {
   severity?: number
 }
 
+type TodoView = {
+  mode?: "full" | "compact"
+  todos?: TodoItem[]
+  hiddenBefore?: number
+  hiddenAfter?: number
+}
+
+type TodoItem = Todo & {
+  changed?: boolean
+}
+
 function getDiagnostics(
   diagnosticsByFile: Record<string, Diagnostic[]> | undefined,
   filePath: string | undefined,
@@ -2403,6 +2414,7 @@ ToolRegistry.register({
   name: "todowrite",
   render(props) {
     const i18n = useI18n()
+    const view = createMemo(() => (isTodoView(props.metadata?.view) ? props.metadata.view : undefined))
     const todos = createMemo(() => {
       const meta = props.metadata?.todos
       if (Array.isArray(meta)) return meta
@@ -2412,6 +2424,7 @@ ToolRegistry.register({
 
       return []
     })
+    const shown = createMemo(() => view()?.todos ?? todos())
     const pending = createMemo(() => busy(props.status))
 
     const subtitle = createMemo(() => {
@@ -2434,26 +2447,44 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={todos().length}>
+        <Show when={shown().length}>
           <div data-component="todos">
-            <For each={todos()}>
-              {(todo: Todo) => (
+            <Show when={view()?.mode === "compact" && (view()?.hiddenBefore ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenText("earlier", view()?.hiddenBefore ?? 0)}</div>
+            </Show>
+            <For each={shown()}>
+              {(todo: TodoItem) => (
                 <Checkbox readOnly checked={todo.status === "completed"}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
+                    data-changed={todo.changed ? "changed" : undefined}
                   >
                     {todo.content}
                   </span>
                 </Checkbox>
               )}
             </For>
+            <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenText("later", view()?.hiddenAfter ?? 0)}</div>
+            </Show>
           </div>
         </Show>
       </BasicTool>
     )
   },
 })
+
+function isTodoView(value: unknown): value is TodoView {
+  if (!value || typeof value !== "object") return false
+  const view = value as TodoView
+  return Array.isArray(view.todos)
+}
+
+function hiddenText(dir: "earlier" | "later", count: number) {
+  const noun = count === 1 ? "to-do" : "to-dos"
+  return `${count} ${dir} ${noun} hidden`
+}
 
 ToolRegistry.register({
   name: "question",
