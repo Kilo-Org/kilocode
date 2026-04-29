@@ -46,6 +46,18 @@ Focus on the lower-level systems observability first, then build up to higher-le
 
 This phase focuses on systems metrics we can capture with minimal changes, providing immediate operational visibility.
 
+### CLI OTLP export
+
+The CLI/server process can export logs and traces to an OTLP HTTP collector when these environment variables are set before launch:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://collector.example.com"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer token,x-org=acme"
+kilo serve
+```
+
+`OTEL_EXPORTER_OTLP_ENDPOINT` enables export and is used as the base URL for `/v1/logs` and `/v1/traces`. Leave it unset to disable OTLP export. `OTEL_EXPORTER_OTLP_HEADERS` is optional and accepts comma-separated `key=value` pairs that are sent with both log and trace exports. These variables must be present in the environment of the `kilo`, `kilo run`, or `kilo serve` process you want to observe.
+
 ### Phase 1a: LLM observability and alerting
 
 #### Metrics to Capture

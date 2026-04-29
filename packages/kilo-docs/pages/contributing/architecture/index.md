@@ -210,6 +210,25 @@ const client = new KiloClient({ baseUrl: "http://localhost:3000" })
 const session = await client.session.create({ ... })
 ```
 
+#### SDK shape changes
+
+The SDK follows the local CLI server API and can change when the session data model changes. Recent versions use these shapes:
+
+- Snapshot and session diff objects expose a unified `patch` string. Do not read full `before` or `after` file contents from snapshot diff metadata.
+- Snapshot diff types are named `SnapshotFileDiff`; VCS diff responses use `VcsFileDiff`.
+- Model variants are nested on the model object as `userMessage.model.variant`, not `userMessage.variant`.
+
+```typescript
+// Before
+const variant = userMessage.variant
+const before = diff.before
+const after = diff.after
+
+// Current
+const variant = userMessage.model.variant
+const patch = diff.patch
+```
+
 ### Namespace Module Pattern
 
 The CLI uses a namespace module pattern for organizing related functionality:

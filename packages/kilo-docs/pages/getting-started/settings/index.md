@@ -87,6 +87,38 @@ Settings are resolved through an 8-level precedence system (lowest to highest pr
 
 Higher-priority levels override lower ones. This allows organizations to enforce settings at the enterprise level while still letting individual developers customize their local environment.
 
+### Managed Enterprise Configuration
+
+Managed configuration lets organization admins enforce Kilo CLI settings that local project and user configs cannot override. Managed config has the highest precedence in the CLI resolution order.
+
+Kilo loads managed `kilo.json` or `kilo.jsonc` files from these system locations:
+
+| Platform | Managed config directory |
+|---|---|
+| macOS | `/Library/Application Support/kilo/` |
+| Windows | `%ProgramData%\kilo\` |
+| Linux | `/etc/kilo/` |
+
+For example, an admin can deploy `/etc/kilo/kilo.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "share": "disabled",
+  "permission": {
+    "bash": "ask",
+    "edit": "ask"
+  }
+}
+```
+
+On macOS, Kilo also reads MDM-managed preferences installed by a `.mobileconfig` profile. The profile domain must be `ai.opencode.managed`, and the preference keys map directly to Kilo config fields. Kilo checks these files in order:
+
+1. `/Library/Managed Preferences/<user>/ai.opencode.managed.plist`
+2. `/Library/Managed Preferences/ai.opencode.managed.plist`
+
+Kilo strips standard MDM metadata keys such as `PayloadIdentifier`, `PayloadType`, and `PayloadUUID` before loading the managed preferences as config. Use `kilo debug config` to verify which managed source was loaded and which settings are active.
+
 ### Schema Auto-Injection
 
 When you create or open a `kilo.jsonc` file, the CLI automatically injects a `$schema` property pointing to the config JSON schema. This gives you **autocompletion and validation** in any editor that supports JSON Schema (VS Code, JetBrains, etc.).
