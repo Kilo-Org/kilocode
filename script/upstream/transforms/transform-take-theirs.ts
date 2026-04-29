@@ -15,6 +15,7 @@ import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
+import { applyRuntimeTokenTransforms } from "./runtime-tokens"
 
 export interface TakeTheirsResult {
   file: string
@@ -105,12 +106,6 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
     description: "Product name",
   },
 
-  // Environment variables (exclude OPENCODE_API_KEY)
-  {
-    pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g,
-    replacement: "KILO_$1",
-    description: "Environment variable",
-  },
   {
     pattern: /VITE_OPENCODE_/g,
     replacement: "VITE_KILO_",
@@ -198,7 +193,9 @@ export function applyBrandingTransforms(content: string, verbose = false): { res
       }
     }
 
-    transformed.push(result)
+    const runtime = applyRuntimeTokenTransforms(result, verbose)
+    transformed.push(runtime.result)
+    count += runtime.replacements
     total += count
   }
 

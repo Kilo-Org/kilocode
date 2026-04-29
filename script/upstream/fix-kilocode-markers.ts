@@ -22,6 +22,7 @@ import { applyTauriTransforms } from "./transforms/transform-tauri"
 import { applyExtensionTransforms } from "./transforms/transform-extensions"
 import { applyWebTransforms } from "./transforms/transform-web"
 import { applyPackageNameTransforms } from "./transforms/package-names"
+import { applyRuntimeTokenTransforms } from "./transforms/runtime-tokens"
 
 interface Args {
   file?: string
@@ -151,7 +152,8 @@ async function translate(file: string, text: string) {
   const i18n = transformI18nContent(branded).result
   const tauri = applyTauriTransforms(i18n, file).result
   const ext = applyExtensionTransforms(tauri, file).result
-  const web = applyWebTransforms(ext).result
+  const runtime = applyRuntimeTokenTransforms(ext).result
+  const web = applyWebTransforms(runtime).result
 
   return workflow(file, web)
 }

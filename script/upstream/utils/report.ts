@@ -79,6 +79,7 @@ function isWebFile(path: string): boolean {
  */
 function shouldTakeTheirsTransform(path: string): boolean {
   const patterns = [
+    /^packages\/opencode\/specs\/effect\/http-api\.md$/,
     /^packages\/app\/src\/components\/.*\.tsx$/,
     /^packages\/app\/src\/context\/.*\.tsx$/,
     /^packages\/app\/src\/pages\/.*\.tsx$/,

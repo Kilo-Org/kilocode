@@ -165,6 +165,8 @@ export const defaultConfig: MergeConfig = {
     // E2E and test fixtures
     "packages/app/e2e/**/*.ts",
     "packages/app/script/**/*.ts",
+    // Markdown specs where Kilo only changes runtime flag/header tokens
+    "packages/opencode/specs/effect/http-api.md",
   ],
 
   // Tauri/Desktop config files with predictable branding patterns

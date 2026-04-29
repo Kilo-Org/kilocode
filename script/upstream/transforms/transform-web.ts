@@ -10,6 +10,7 @@ import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { oursHasKilocodeChanges } from "../utils/git"
+import { applyRuntimeTokenTransforms } from "./runtime-tokens"
 
 export interface WebTransformResult {
   file: string
@@ -163,7 +164,9 @@ export function applyWebTransforms(content: string, verbose = false): { result: 
       }
     }
 
-    transformed.push(result)
+    const runtime = applyRuntimeTokenTransforms(result, verbose)
+    transformed.push(runtime.result)
+    count += runtime.replacements
     total += count
   }
 
