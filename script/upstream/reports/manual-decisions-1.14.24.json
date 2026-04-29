@@ -1,0 +1,236 @@
+{
+  "schema": 1,
+  "generated": "2026-04-29T19:02:33.558Z",
+  "updated": "2026-04-29T19:10:16.682Z",
+  "version": "1.14.24",
+  "upstreamCommit": "da6683fedcbb57a36c4ba54ba5ad00dd8bc2da65",
+  "baseBranch": "main",
+  "mergeBranch": "markijbema/kilo-opencode-v1.14.24",
+  "report": "upstream-merge-report-1.14.24.md",
+  "files": [
+    {
+      "file": "packages/opencode/script/publish.ts",
+      "status": "UU",
+      "type": "content",
+      "recommendation": "manual",
+      "reason": "Script file has kilocode_change markers — auto-transform skipped, needs manual review",
+      "base": {
+        "present": true,
+        "hash": "ac43c5e38eb3",
+        "preview": "#!/usr/bin/env bun\nimport { $ } from \"bun\"\nimport pkg from \"../package.json\"\nimport { Script } from \"@opencode-ai/script\"\nimport { fileURLToPath } from \"url\"\n\nconst dir = fileURLToPath(new URL(\"..\", import.meta.url))\nprocess.chdir(dir)\n\nasync function published(name: string, version: string) {\n  return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0\n}\n\nasync function publish(dir: string, name: string, version: string) {\n  // GitHub artifact downloads can drop the executable bit, and Docker uses the\n  // unpacked dist binaries directly rather than the published tarball.\n  if (process.platform !== \"win32\") await $`chmod -R 755 .`.cwd(dir)\n  if (await published(name, version)) {\n    console.log(`already published ${name}@${version}`)\n    return\n  }\n  await $`bun pm pack`.cwd(dir)\n  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)\n}\n\nconst binaries: Record<string, string> = {}\nfor (const filepath of new Bun.Glob(\"*/package.json\").scanSync({ cwd: \"./dist\" })) {\n  const pkg = await Bun.file(`./dist/${filepath}`).json()\n  binaries[pkg.name] = pkg.version\n}\nconsole.log(\"binaries\", binaries)\nconst version = Object.values(binaries)[0]\n\nawait $`mkdir -p ./dist/${pkg.name}`\nawait $`cp -r ./bin ./dist/${pkg.name}/bin`\nawait $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`\nawait Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file(\"../../LICENSE\").text())\n\nawait Bun.file(`./dist/${pkg.name}/package.json`).write(\n  JSON.stringify("
+      },
+      "ours": {
+        "present": true,
+        "hash": "283c6b916b3f",
+        "preview": "#!/usr/bin/env bun\nimport { $ } from \"bun\"\nimport pkg from \"../package.json\"\nimport { Script } from \"@opencode-ai/script\"\nimport { fileURLToPath } from \"url\"\n\nconst dir = fileURLToPath(new URL(\"..\", import.meta.url))\nprocess.chdir(dir)\n\nasync function published(name: string, version: string) {\n  return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0\n}\n\nasync function publish(dir: string, name: string, version: string) {\n  // GitHub artifact downloads can drop the executable bit, and Docker uses the\n  // unpacked dist binaries directly rather than the published tarball.\n  if (process.platform !== \"win32\") await $`chmod -R 755 .`.cwd(dir)\n  if (await published(name, version)) {\n    console.log(`already published ${name}@${version}`)\n    return\n  }\n  await $`bun pm pack`.cwd(dir)\n  await $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir) // kilocode_change\n}\n\nconst binaries: Record<string, string> = {}\n// kilocode_change start\nfor (const filepath of new Bun.Glob(\"*/*/package.json\").scanSync({ cwd: \"./dist\" })) {\n  // kilocode_change end\n  const pkg = await Bun.file(`./dist/${filepath}`).json()\n  binaries[pkg.name] = pkg.version\n}\nconsole.log(\"binaries\", binaries)\nconst version = Object.values(binaries)[0]\n\nawait $`mkdir -p ./dist/${pkg.name}`\nawait $`cp -r ./bin ./dist/${pkg.name}/bin`\nawait $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`\nawait Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file(\"../../LICENSE\").text())\nawait Bun.file(`./dist/${pkg.name}/README.md`).write(await Bun.file(\"./README.md\").text()) // kilocode_change"
+      },
+      "theirs": {
+        "present": true,
+        "hash": "68ec3c741823",
+        "preview": "#!/usr/bin/env bun\nimport { $ } from \"bun\"\nimport pkg from \"../package.json\"\nimport { Script } from \"@opencode-ai/script\"\nimport { fileURLToPath } from \"url\"\n\nconst dir = fileURLToPath(new URL(\"..\", import.meta.url))\nprocess.chdir(dir)\n\nasync function published(name: string, version: string) {\n  return (await $`npm view ${name}@${version} version`.nothrow()).exitCode === 0\n}\n\nasync function publish(dir: string, name: string, version: string) {\n  // GitHub artifact downloads can drop the executable bit, and Docker uses the\n  // unpacked dist binaries directly rather than the published tarball.\n  if (process.platform !== \"win32\") await $`chmod -R 755 .`.cwd(dir)\n  if (await published(name, version)) {\n    console.log(`already published ${name}@${version}`)\n    return\n  }\n  await $`bun pm pack`.cwd(dir)\n  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)\n}\n\nconst binaries: Record<string, string> = {}\nfor (const filepath of new Bun.Glob(\"*/package.json\").scanSync({ cwd: \"./dist\" })) {\n  const pkg = await Bun.file(`./dist/${filepath}`).json()\n  binaries[pkg.name] = pkg.version\n}\nconsole.log(\"binaries\", binaries)\nconst version = Object.values(binaries)[0]\n\nawait $`mkdir -p ./dist/${pkg.name}`\nawait $`cp -r ./bin ./dist/${pkg.name}/bin`\nawait $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`\nawait Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file(\"../../LICENSE\").text())\n\nawait Bun.file(`./dist/${pkg.name}/package.json`).write(\n  JSON.stringify("
+      }
+    },
+    {
+      "file": "packages/opencode/src/cli/cmd/tui/config/tui.ts",
+      "status": "UU",
+      "type": "content",
+      "recommendation": "manual",
+      "reason": "Code files need manual review for kilocode_change markers",
+      "base": {
+        "present": true,
+        "hash": "0bbbdc5888f2",
+        "preview": "export * as TuiConfig from \"./tui\"\n\nimport z from \"zod\"\nimport { mergeDeep, unique } from \"remeda\"\nimport { Context, Effect, Fiber, Layer } from \"effect\"\nimport { ConfigParse } from \"@/config/parse\"\nimport * as ConfigPaths from \"@/config/paths\"\nimport { migrateTuiConfig } from \"./tui-migrate\"\nimport { TuiInfo } from \"./tui-schema\"\nimport { Flag } from \"@/flag/flag\"\nimport { isRecord } from \"@/util/record\"\nimport { Global } from \"@/global\"\nimport { AppFileSystem } from \"@opencode-ai/shared/filesystem\"\nimport { CurrentWorkingDirectory } from \"./cwd\"\nimport { ConfigPlugin } from \"@/config/plugin\"\nimport { ConfigKeybinds } from \"@/config/keybinds\"\nimport { InstallationLocal, InstallationVersion } from \"@/installation/version\"\nimport { makeRuntime } from \"@/effect/runtime\"\nimport { Filesystem, Log } from \"@/util\"\nimport { ConfigVariable } from \"@/config/variable\"\nimport { Npm } from \"@/npm\"\n\nconst log = Log.create({ service: \"tui.config\" })\n\nexport const Info = TuiInfo\n\ntype Acc = {\n  result: Info\n}\n\ntype State = {\n  config: Info\n  deps: Array<Fiber.Fiber<void, AppFileSystem.Error>>\n}\n\nexport type Info = z.output<typeof Info> & {\n  // Internal resolved plugin list used by runtime loading.\n  plugin_origins?: ConfigPlugin.Origin[]\n}\n"
+      },
+      "ours": {
+        "present": true,
+        "hash": "11211b30cf84",
+        "preview": "export * as TuiConfig from \"./tui\"\n\nimport z from \"zod\"\nimport { mergeDeep, unique } from \"remeda\"\nimport { Context, Effect, Fiber, Layer } from \"effect\"\nimport { ConfigParse } from \"@/config/parse\"\nimport * as ConfigPaths from \"@/config/paths\"\nimport { migrateTuiConfig } from \"./tui-migrate\"\nimport { TuiInfo } from \"./tui-schema\"\nimport { Flag } from \"@/flag/flag\"\nimport { isRecord } from \"@/util/record\"\nimport { Global } from \"@/global\"\nimport { AppFileSystem } from \"@opencode-ai/shared/filesystem\"\nimport { CurrentWorkingDirectory } from \"./cwd\"\nimport { ConfigPlugin } from \"@/config/plugin\"\nimport { ConfigKeybinds } from \"@/config/keybinds\"\nimport { InstallationLocal, InstallationVersion } from \"@/installation/version\"\nimport { makeRuntime } from \"@/effect/runtime\"\nimport { Filesystem, Log } from \"@/util\"\nimport { ConfigVariable } from \"@/config/variable\"\nimport { Npm } from \"@/npm\"\nimport { KilocodeDefaultPlugins } from \"@/kilocode/config/default-plugins\" // kilocode_change\n\nconst log = Log.create({ service: \"tui.config\" })\n\nexport const Info = TuiInfo\n\ntype Acc = {\n  result: Info\n}\n\ntype State = {\n  config: Info\n  deps: Array<Fiber.Fiber<void, AppFileSystem.Error>>\n}\n\nexport type Info = z.output<typeof Info> & {\n  // Internal resolved plugin list used by runtime loading.\n  plugin_origins?: ConfigPlugin.Origin[]\n}"
+      },
+      "theirs": {
+        "present": true,
+        "hash": "bcb4b17f9afd",
+        "preview": "export * as TuiConfig from \"./tui\"\n\nimport z from \"zod\"\nimport { mergeDeep, unique } from \"remeda\"\nimport { Context, Effect, Fiber, Layer } from \"effect\"\nimport { ConfigParse } from \"@/config/parse\"\nimport * as ConfigPaths from \"@/config/paths\"\nimport { migrateTuiConfig } from \"./tui-migrate\"\nimport { TuiInfo } from \"./tui-schema\"\nimport { Flag } from \"@/flag/flag\"\nimport { isRecord } from \"@/util/record\"\nimport { Global } from \"@/global\"\nimport { AppFileSystem } from \"@opencode-ai/shared/filesystem\"\nimport { CurrentWorkingDirectory } from \"./cwd\"\nimport { ConfigPlugin } from \"@/config/plugin\"\nimport { ConfigKeybinds } from \"@/config/keybinds\"\nimport { InstallationLocal, InstallationVersion } from \"@/installation/version\"\nimport { makeRuntime } from \"@/effect/runtime\"\nimport { Filesystem, Log } from \"@/util\"\nimport { ConfigVariable } from \"@/config/variable\"\nimport { Npm } from \"@/npm\"\n\nconst log = Log.create({ service: \"tui.config\" })\n\nexport const Info = TuiInfo\n\ntype Acc = {\n  result: Info\n}\n\ntype State = {\n  config: Info\n  deps: Array<Fiber.Fiber<void, AppFileSystem.Error>>\n}\n\nexport type Info = z.output<typeof Info> & {\n  // Internal resolved plugin list used by runtime loading.\n  plugin_origins?: ConfigPlugin.Origin[]\n}\n"
+      }
+    },
+    {
+      "file": "packages/opencode/src/config/config.ts",
+      "status": "UU",
+      "type": "content",
+      "recommendation": "manual",
+      "reason": "Code files need manual review for kilocode_change markers",
+      "base": {
+        "present": true,
+        "hash": "976ae32a4d53",
+        "preview": "import { Log } from \"../util\"\nimport path from \"path\"\nimport { pathToFileURL } from \"url\"\nimport os from \"os\"\nimport z from \"zod\"\nimport { mergeDeep, pipe } from \"remeda\"\nimport { Global } from \"../global\"\nimport fsNode from \"fs/promises\"\nimport { NamedError } from \"@opencode-ai/shared/util/error\"\nimport { Flag } from \"../flag/flag\"\nimport { Auth } from \"../auth\"\nimport { Env } from \"../env\"\nimport { applyEdits, modify } from \"jsonc-parser\"\nimport { Instance, type InstanceContext } from \"../project/instance\"\nimport { InstallationLocal, InstallationVersion } from \"@/installation/version\"\nimport { existsSync } from \"fs\"\nimport { GlobalBus } from \"@/bus/global\"\nimport { Event } from \"../server/event\"\nimport { Account } from \"@/account/account\"\nimport { isRecord } from \"@/util/record\"\nimport type { ConsoleState } from \"./console-state\"\nimport { AppFileSystem } from \"@opencode-ai/shared/filesystem\"\nimport { InstanceState } from \"@/effect\"\nimport { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from \"effect\"\nimport { EffectFlock } from \"@opencode-ai/shared/util/effect-flock\"\nimport { InstanceRef } from \"@/effect/instance-ref\"\nimport { zod, ZodOverride } from \"@/util/effect-zod\"\nimport { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from \"@/util/schema\"\nimport { ConfigAgent } from \"./agent\"\nimport { ConfigCommand } from \"./command\"\nimport { ConfigFormatter } from \"./formatter\"\nimport { ConfigLayout } from \"./layout\"\nimport { ConfigLSP } from \"./lsp\"\nimport { ConfigManaged } from \"./managed\"\nimport { ConfigMCP } from \"./mcp\"\nimport { ConfigModelID } from \"./model-id\"\nimport { ConfigParse } from \"./parse\"\nimport { ConfigPaths } from \"./paths\"\nimport { ConfigPermission } from \"./permission\"\nimport { ConfigPlugin } from \"./plugin\""
+      },
+      "ours": {
+        "present": true,
+        "hash": "5af23b4b2848",
+        "preview": "import { Log } from \"../util\"\nimport path from \"path\"\nimport { pathToFileURL } from \"url\"\nimport os from \"os\"\nimport z from \"zod\"\nimport { mergeDeep, pipe } from \"remeda\"\nimport { Global } from \"../global\"\nimport fsNode from \"fs/promises\"\nimport { NamedError } from \"@opencode-ai/shared/util/error\"\nimport { Flag } from \"../flag/flag\"\nimport { Auth } from \"../auth\"\nimport { Env } from \"../env\"\nimport { applyEdits, findNodeAtLocation, modify, parseTree } from \"jsonc-parser\" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc\nimport { Instance, type InstanceContext } from \"../project/instance\"\nimport { InstallationLocal, InstallationVersion } from \"@/installation/version\"\nimport { existsSync } from \"fs\"\nimport { GlobalBus } from \"@/bus/global\"\nimport { Event } from \"../server/event\"\nimport { Account } from \"@/account/account\"\nimport { isRecord } from \"@/util/record\"\nimport type { ConsoleState } from \"./console-state\"\nimport { AppFileSystem } from \"@opencode-ai/shared/filesystem\"\nimport { InstanceState } from \"@/effect\"\nimport { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from \"effect\"\nimport { EffectFlock } from \"@opencode-ai/shared/util/effect-flock\"\nimport { InstanceRef } from \"@/effect/instance-ref\"\nimport { zod, ZodOverride } from \"@/util/effect-zod\"\nimport { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from \"@/util/schema\"\nimport { ConfigAgent } from \"./agent\"\nimport { ConfigCommand } from \"./command\"\nimport { ConfigFormatter } from \"./formatter\"\nimport { ConfigLayout } from \"./layout\"\nimport { ConfigLSP } from \"./lsp\"\nimport { ConfigManaged } from \"./managed\"\nimport { ConfigMCP } from \"./mcp\"\nimport { ConfigModelID } from \"./model-id\"\nimport { ConfigParse } from \"./parse\"\nimport { ConfigPaths } from \"./paths\"\nimport { ConfigPermission } from \"./permission\"\nimport { ConfigPlugin } from \"./plugin\""
+      },
+      "theirs": {
+        "present": true,
+        "hash": "742596c7a467",
+        "preview": "import { Log } from \"../util\"\nimport path from \"path\"\nimport { pathToFileURL } from \"url\"\nimport os from \"os\"\nimport z from \"zod\"\nimport { mergeDeep, pipe } from \"remeda\"\nimport { Global } from \"../global\"\nimport fsNode from \"fs/promises\"\nimport { NamedError } from \"@opencode-ai/shared/util/error\"\nimport { Flag } from \"../flag/flag\"\nimport { Auth } from \"../auth\"\nimport { Env } from \"../env\"\nimport { applyEdits, modify } from \"jsonc-parser\"\nimport { Instance, type InstanceContext } from \"../project/instance\"\nimport { InstallationLocal, InstallationVersion } from \"@/installation/version\"\nimport { existsSync } from \"fs\"\nimport { GlobalBus } from \"@/bus/global\"\nimport { Event } from \"../server/event\"\nimport { Account } from \"@/account/account\"\nimport { isRecord } from \"@/util/record\"\nimport type { ConsoleState } from \"./console-state\"\nimport { AppFileSystem } from \"@opencode-ai/shared/filesystem\"\nimport { InstanceState } from \"@/effect\"\nimport { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from \"effect\"\nimport { EffectFlock } from \"@opencode-ai/shared/util/effect-flock\"\nimport { InstanceRef } from \"@/effect/instance-ref\"\nimport { zod, ZodOverride } from \"@/util/effect-zod\"\nimport { NonNegativeInt, PositiveInt, withStatics, type DeepMutable } from \"@/util/schema\"\nimport { ConfigAgent } from \"./agent\"\nimport { ConfigCommand } from \"./command\"\nimport { ConfigFormatter } from \"./formatter\"\nimport { ConfigLayout } from \"./layout\"\nimport { ConfigLSP } from \"./lsp\"\nimport { ConfigManaged } from \"./managed\"\nimport { ConfigMCP } from \"./mcp\"\nimport { ConfigModelID } from \"./model-id\"\nimport { ConfigParse } from \"./parse\"\nimport { ConfigPaths } from \"./paths\"\nimport { ConfigPermission } from \"./permission\"\nimport { ConfigPlugin } from \"./plugin\""
+      }
+    },
+    {
+      "file": "packages/opencode/src/flag/flag.ts",
+      "status": "UU",
+      "type": "content",
+      "recommendation": "manual",
+      "reason": "Code files need manual review for kilocode_change markers",
+      "base": {
+        "present": true,
+        "hash": "c57d94cd1424",
+        "preview": "import { Config } from \"effect\"\n\nfunction truthy(key: string) {\n  const value = process.env[key]?.toLowerCase()\n  return value === \"true\" || value === \"1\"\n}\n\nfunction falsy(key: string) {\n  const value = process.env[key]?.toLowerCase()\n  return value === \"false\" || value === \"0\"\n}\n\nfunction number(key: string) {\n  const value = process.env[key]\n  if (!value) return undefined\n  const parsed = Number(value)\n  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined\n}\n\nconst OPENCODE_EXPERIMENTAL = truthy(\"OPENCODE_EXPERIMENTAL\")\nconst OPENCODE_DISABLE_CLAUDE_CODE = truthy(\"OPENCODE_DISABLE_CLAUDE_CODE\")\nconst OPENCODE_DISABLE_CLAUDE_CODE_SKILLS =\n  OPENCODE_DISABLE_CLAUDE_CODE || truthy(\"OPENCODE_DISABLE_CLAUDE_CODE_SKILLS\")\nconst copy = process.env[\"OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT\"]\n\nexport const Flag = {\n  OTEL_EXPORTER_OTLP_ENDPOINT: process.env[\"OTEL_EXPORTER_OTLP_ENDPOINT\"],\n  OTEL_EXPORTER_OTLP_HEADERS: process.env[\"OTEL_EXPORTER_OTLP_HEADERS\"],\n\n  OPENCODE_AUTO_SHARE: truthy(\"OPENCODE_AUTO_SHARE\"),\n  OPENCODE_AUTO_HEAP_SNAPSHOT: truthy(\"OPENCODE_AUTO_HEAP_SNAPSHOT\"),\n  OPENCODE_GIT_BASH_PATH: process.env[\"OPENCODE_GIT_BASH_PATH\"],\n  OPENCODE_CONFIG: process.env[\"OPENCODE_CONFIG\"],\n  OPENCODE_CONFIG_CONTENT: process.env[\"OPENCODE_CONFIG_CONTENT\"],\n  OPENCODE_DISABLE_AUTOUPDATE: truthy(\"OPENCODE_DISABLE_AUTOUPDATE\"),\n  OPENCODE_ALWAYS_NOTIFY_UPDATE: truthy(\"OPENCODE_ALWAYS_NOTIFY_UPDATE\"),\n  OPENCODE_DISABLE_PRUNE: truthy(\"OPENCODE_DISABLE_PRUNE\"),\n  OPENCODE_DISABLE_TERMINAL_TITLE: truthy(\"OPENCODE_DISABLE_TERMINAL_TITLE\"),\n  OPENCODE_SHOW_TTFD: truthy(\"OPENCODE_SHOW_TTFD\"),\n  OPENCODE_PERMISSION: process.env[\"OPENCODE_PERMISSION\"],"
+      },
+      "ours": {
+        "present": true,
+        "hash": "a9540c5d8642",
+        "preview": "import { Config } from \"effect\"\n\nfunction truthy(key: string) {\n  const value = process.env[key]?.toLowerCase()\n  return value === \"true\" || value === \"1\"\n}\n\nfunction falsy(key: string) {\n  const value = process.env[key]?.toLowerCase()\n  return value === \"false\" || value === \"0\"\n}\n\nfunction number(key: string) {\n  const value = process.env[key]\n  if (!value) return undefined\n  const parsed = Number(value)\n  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined\n}\n\nconst KILO_EXPERIMENTAL = truthy(\"KILO_EXPERIMENTAL\")\nconst KILO_DISABLE_CLAUDE_CODE = truthy(\"KILO_DISABLE_CLAUDE_CODE\")\nconst KILO_DISABLE_CLAUDE_CODE_SKILLS = KILO_DISABLE_CLAUDE_CODE || truthy(\"KILO_DISABLE_CLAUDE_CODE_SKILLS\")\nconst copy = process.env[\"KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT\"]\n\nexport const Flag = {\n  OTEL_EXPORTER_OTLP_ENDPOINT: process.env[\"OTEL_EXPORTER_OTLP_ENDPOINT\"],\n  OTEL_EXPORTER_OTLP_HEADERS: process.env[\"OTEL_EXPORTER_OTLP_HEADERS\"],\n\n  KILO_AUTO_SHARE: truthy(\"KILO_AUTO_SHARE\"),\n  KILO_AUTO_HEAP_SNAPSHOT: truthy(\"KILO_AUTO_HEAP_SNAPSHOT\"),\n  KILO_GIT_BASH_PATH: process.env[\"KILO_GIT_BASH_PATH\"],\n  KILO_CONFIG: process.env[\"KILO_CONFIG\"],\n  KILO_CONFIG_CONTENT: process.env[\"KILO_CONFIG_CONTENT\"],\n  KILO_DISABLE_AUTOUPDATE: truthy(\"KILO_DISABLE_AUTOUPDATE\"),\n  KILO_ALWAYS_NOTIFY_UPDATE: truthy(\"KILO_ALWAYS_NOTIFY_UPDATE\"),\n  KILO_DISABLE_PRUNE: truthy(\"KILO_DISABLE_PRUNE\"),\n  KILO_DISABLE_TERMINAL_TITLE: truthy(\"KILO_DISABLE_TERMINAL_TITLE\"),\n  KILO_SHOW_TTFD: truthy(\"KILO_SHOW_TTFD\"),\n  KILO_PERMISSION: process.env[\"KILO_PERMISSION\"],\n  KILO_DISABLE_DEFAULT_PLUGINS: truthy(\"KILO_DISABLE_DEFAULT_PLUGINS\"),"
+      },
+      "theirs": {
+        "present": true,
+        "hash": "70151b1f18e3",
+        "preview": "import { Config } from \"effect\"\n\nfunction truthy(key: string) {\n  const value = process.env[key]?.toLowerCase()\n  return value === \"true\" || value === \"1\"\n}\n\nfunction falsy(key: string) {\n  const value = process.env[key]?.toLowerCase()\n  return value === \"false\" || value === \"0\"\n}\n\nfunction number(key: string) {\n  const value = process.env[key]\n  if (!value) return undefined\n  const parsed = Number(value)\n  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined\n}\n\nconst KILO_EXPERIMENTAL = truthy(\"KILO_EXPERIMENTAL\")\nconst KILO_DISABLE_CLAUDE_CODE = truthy(\"KILO_DISABLE_CLAUDE_CODE\")\nconst KILO_DISABLE_CLAUDE_CODE_SKILLS =\n  KILO_DISABLE_CLAUDE_CODE || truthy(\"KILO_DISABLE_CLAUDE_CODE_SKILLS\")\nconst copy = process.env[\"KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT\"]\n\nexport const Flag = {\n  OTEL_EXPORTER_OTLP_ENDPOINT: process.env[\"OTEL_EXPORTER_OTLP_ENDPOINT\"],\n  OTEL_EXPORTER_OTLP_HEADERS: process.env[\"OTEL_EXPORTER_OTLP_HEADERS\"],\n\n  KILO_AUTO_SHARE: truthy(\"KILO_AUTO_SHARE\"),\n  KILO_AUTO_HEAP_SNAPSHOT: truthy(\"KILO_AUTO_HEAP_SNAPSHOT\"),\n  KILO_GIT_BASH_PATH: process.env[\"KILO_GIT_BASH_PATH\"],\n  KILO_CONFIG: process.env[\"KILO_CONFIG\"],\n  KILO_CONFIG_CONTENT: process.env[\"KILO_CONFIG_CONTENT\"],\n  KILO_DISABLE_AUTOUPDATE: truthy(\"KILO_DISABLE_AUTOUPDATE\"),\n  KILO_ALWAYS_NOTIFY_UPDATE: truthy(\"KILO_ALWAYS_NOTIFY_UPDATE\"),\n  KILO_DISABLE_PRUNE: truthy(\"KILO_DISABLE_PRUNE\"),\n  KILO_DISABLE_TERMINAL_TITLE: truthy(\"KILO_DISABLE_TERMINAL_TITLE\"),\n  KILO_SHOW_TTFD: truthy(\"KILO_SHOW_TTFD\"),\n  KILO_PERMISSION: process.env[\"KILO_PERMISSION\"],"
+      }
+    },
+    {
+      "file": "packages/opencode/src/provider/transform.ts",
+      "status": "UU",
+      "type": "content",
+      "recommendation": "manual",
+      "reason": "Code files need manual review for kilocode_change markers",
+      "base": {
+        "present": true,
+        "hash": "8a49dea1ae9c",
+        "preview": "import type { ModelMessage } from \"ai\"\nimport { mergeDeep, unique } from \"remeda\"\nimport type { JSONSchema7 } from \"@ai-sdk/provider\"\nimport type { JSONSchema } from \"zod/v4/core\"\nimport type * as Provider from \"./provider\"\nimport type * as ModelsDev from \"./models\"\nimport { iife } from \"@/util/iife\"\nimport { Flag } from \"@/flag/flag\"\n\ntype Modality = NonNullable<ModelsDev.Model[\"modalities\"]>[\"input\"][number]\n\nfunction mimeToModality(mime: string): Modality | undefined {\n  if (mime.startsWith(\"image/\")) return \"image\"\n  if (mime.startsWith(\"audio/\")) return \"audio\"\n  if (mime.startsWith(\"video/\")) return \"video\"\n  if (mime === \"application/pdf\") return \"pdf\"\n  return undefined\n}\n\nexport const OUTPUT_TOKEN_MAX = Flag.OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000\n\n// Maps npm package to the key the AI SDK expects for providerOptions\nfunction sdkKey(npm: string): string | undefined {\n  switch (npm) {\n    case \"@ai-sdk/github-copilot\":\n      return \"copilot\"\n    case \"@ai-sdk/azure\":\n      return \"azure\"\n    case \"@ai-sdk/openai\":\n      return \"openai\"\n    case \"@ai-sdk/amazon-bedrock\":\n      return \"bedrock\"\n    case \"@ai-sdk/anthropic\":\n    case \"@ai-sdk/google-vertex/anthropic\":\n      return \"anthropic\"\n    case \"@ai-sdk/google-vertex\":\n      return \"vertex\"\n    case \"@ai-sdk/google\":\n      return \"google\"\n    case \"@ai-sdk/gateway\":"
+      },
+      "ours": {
+        "present": true,
+        "hash": "e5f8eac948be",
+        "preview": "import type { ModelMessage } from \"ai\"\nimport { mergeDeep, unique } from \"remeda\"\nimport type { JSONSchema7 } from \"@ai-sdk/provider\"\nimport type { JSONSchema } from \"zod/v4/core\"\nimport type * as Provider from \"./provider\"\nimport type * as ModelsDev from \"./models\"\nimport { iife } from \"@/util/iife\"\nimport { Flag } from \"@/flag/flag\"\nimport { kiloProviderOptions } from \"@/kilocode/provider-options\"\nimport { isLing } from \"@/kilocode/model-match\" // kilocode_change\n\ntype Modality = NonNullable<ModelsDev.Model[\"modalities\"]>[\"input\"][number]\n\nfunction mimeToModality(mime: string): Modality | undefined {\n  if (mime.startsWith(\"image/\")) return \"image\"\n  if (mime.startsWith(\"audio/\")) return \"audio\"\n  if (mime.startsWith(\"video/\")) return \"video\"\n  if (mime === \"application/pdf\") return \"pdf\"\n  return undefined\n}\n\nexport const OUTPUT_TOKEN_MAX = Flag.KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000\n\n// Maps npm package to the key the AI SDK expects for providerOptions\nfunction sdkKey(npm: string): string | undefined {\n  switch (npm) {\n    case \"@ai-sdk/github-copilot\":\n      return \"copilot\"\n    case \"@ai-sdk/azure\":\n      return \"azure\"\n    case \"@ai-sdk/openai\":\n      return \"openai\"\n    case \"@ai-sdk/amazon-bedrock\":\n      return \"bedrock\"\n    case \"@ai-sdk/anthropic\":\n    case \"@ai-sdk/google-vertex/anthropic\":\n      return \"anthropic\"\n    case \"@ai-sdk/google-vertex\":\n      return \"vertex\"\n    case \"@ai-sdk/google\":"
+      },
+      "theirs": {
+        "present": true,
+        "hash": "24dc523f8f1b",
+        "preview": "import type { ModelMessage } from \"ai\"\nimport { mergeDeep, unique } from \"remeda\"\nimport type { JSONSchema7 } from \"@ai-sdk/provider\"\nimport type { JSONSchema } from \"zod/v4/core\"\nimport type * as Provider from \"./provider\"\nimport type * as ModelsDev from \"./models\"\nimport { iife } from \"@/util/iife\"\nimport { Flag } from \"@/flag/flag\"\n\ntype Modality = NonNullable<ModelsDev.Model[\"modalities\"]>[\"input\"][number]\n\nfunction mimeToModality(mime: string): Modality | undefined {\n  if (mime.startsWith(\"image/\")) return \"image\"\n  if (mime.startsWith(\"audio/\")) return \"audio\"\n  if (mime.startsWith(\"video/\")) return \"video\"\n  if (mime === \"application/pdf\") return \"pdf\"\n  return undefined\n}\n\nexport const OUTPUT_TOKEN_MAX = Flag.KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000\n\n// Maps npm package to the key the AI SDK expects for providerOptions\nfunction sdkKey(npm: string): string | undefined {\n  switch (npm) {\n    case \"@ai-sdk/github-copilot\":\n      return \"copilot\"\n    case \"@ai-sdk/azure\":\n      return \"azure\"\n    case \"@ai-sdk/openai\":\n      return \"openai\"\n    case \"@ai-sdk/amazon-bedrock\":\n      return \"bedrock\"\n    case \"@ai-sdk/anthropic\":\n    case \"@ai-sdk/google-vertex/anthropic\":\n      return \"anthropic\"\n    case \"@ai-sdk/google-vertex\":\n      return \"vertex\"\n    case \"@ai-sdk/google\":\n      return \"google\"\n    case \"@ai-sdk/gateway\":"
+      }
+    },
+    {
+      "file": "packages/opencode/src/session/session.ts",
+      "status": "UU",
+      "type": "content",
+      "recommendation": "manual",
+      "reason": "Code files need manual review for kilocode_change markers",
+      "base": {
+        "present": true,
+        "hash": "34d9179bda72",
+        "preview": "import { Slug } from \"@opencode-ai/shared/util/slug\"\nimport path from \"path\"\nimport { BusEvent } from \"@/bus/bus-event\"\nimport { Bus } from \"@/bus\"\nimport { Decimal } from \"decimal.js\"\nimport z from \"zod\"\nimport { type ProviderMetadata, type LanguageModelUsage } from \"ai\"\nimport { Flag } from \"../flag/flag\"\nimport { InstallationVersion } from \"../installation/version\"\n\nimport { Database, NotFoundError, eq, and, gte, isNull, desc, like, inArray, lt } from \"../storage\"\nimport { SyncEvent } from \"../sync\"\nimport type { SQL } from \"../storage\"\nimport { PartTable, SessionTable } from \"./session.sql\"\nimport { ProjectTable } from \"../project/project.sql\"\nimport { Storage } from \"@/storage\"\nimport { Log } from \"../util\"\nimport { MessageV2 } from \"./message-v2\"\nimport { Instance } from \"../project/instance\"\nimport { InstanceState } from \"@/effect\"\nimport { Snapshot } from \"@/snapshot\"\nimport { ProjectID } from \"../project/schema\"\nimport { WorkspaceID } from \"../control-plane/schema\"\nimport { SessionID, MessageID, PartID } from \"./schema\"\n\nimport type { Provider } from \"@/provider\"\nimport { Permission } from \"@/permission\"\nimport { Global } from \"@/global\"\nimport { Effect, Layer, Option, Context, Schema, Types } from \"effect\"\nimport { zod } from \"@/util/effect-zod\"\nimport { withStatics } from \"@/util/schema\"\n\nconst log = Log.create({ service: \"session\" })\n\nconst parentTitlePrefix = \"New session - \"\nconst childTitlePrefix = \"Child session - \"\n\nfunction createDefaultTitle(isChild = false) {\n  return (isChild ? childTitlePrefix : parentTitlePrefix) + new Date().toISOString()\n}"
+      },
+      "ours": {
+        "present": true,
+        "hash": "25a5436fb374",
+        "preview": "import { Slug } from \"@opencode-ai/shared/util/slug\"\nimport path from \"path\"\nimport { BusEvent } from \"@/bus/bus-event\"\nimport { Bus } from \"@/bus\"\nimport { Decimal } from \"decimal.js\"\nimport z from \"zod\"\nimport { type ProviderMetadata, type LanguageModelUsage } from \"ai\"\nimport { Flag } from \"../flag/flag\"\nimport { InstallationVersion } from \"../installation/version\"\n\nimport { Database, NotFoundError, eq, and, gte, isNull, desc, like } from \"../storage\" // kilocode_change - listGlobal delegated to KiloSession\nimport { SyncEvent } from \"../sync\"\nimport { PartTable, SessionTable } from \"./session.sql\"\nimport { Storage } from \"@/storage\"\nimport { Log } from \"../util\"\nimport { MessageV2 } from \"./message-v2\"\nimport { Instance } from \"../project/instance\"\nimport { InstanceState } from \"@/effect\"\nimport { Snapshot } from \"@/snapshot\"\nimport { ProjectID } from \"../project/schema\"\nimport { WorkspaceID } from \"../control-plane/schema\"\nimport { SessionID, MessageID, PartID } from \"./schema\"\n\nimport type { Provider } from \"@/provider\"\nimport { Permission } from \"@/permission\"\nimport { Global } from \"@/global\"\n// kilocode_change start - legacy promise helpers + kilocode extensions\nimport { makeRuntime } from \"@/effect/run-service\"\nimport { KiloSession, kiloSessionFork } from \"@/kilocode/session\"\nimport { fn } from \"@/util/fn\"\n// kilocode_change end\nimport { Effect, Layer, Option, Context, Schema, Types } from \"effect\"\nimport { zod } from \"@/util/effect-zod\"\nimport { withStatics } from \"@/util/schema\"\n\nconst log = Log.create({ service: \"session\" })\n\nconst parentTitlePrefix = \"New session - \"\nconst childTitlePrefix = \"Child session - \"\n"
+      },
+      "theirs": {
+        "present": true,
+        "hash": "e0608b16b0e5",
+        "preview": "import { Slug } from \"@opencode-ai/shared/util/slug\"\nimport path from \"path\"\nimport { BusEvent } from \"@/bus/bus-event\"\nimport { Bus } from \"@/bus\"\nimport { Decimal } from \"decimal.js\"\nimport z from \"zod\"\nimport { type ProviderMetadata, type LanguageModelUsage } from \"ai\"\nimport { Flag } from \"../flag/flag\"\nimport { InstallationVersion } from \"../installation/version\"\n\nimport { Database, NotFoundError, eq, and, gte, isNull, desc, like, inArray, lt } from \"../storage\"\nimport { SyncEvent } from \"../sync\"\nimport type { SQL } from \"../storage\"\nimport { PartTable, SessionTable } from \"./session.sql\"\nimport { ProjectTable } from \"../project/project.sql\"\nimport { Storage } from \"@/storage\"\nimport { Log } from \"../util\"\nimport { MessageV2 } from \"./message-v2\"\nimport { Instance } from \"../project/instance\"\nimport { InstanceState } from \"@/effect\"\nimport { Snapshot } from \"@/snapshot\"\nimport { ProjectID } from \"../project/schema\"\nimport { WorkspaceID } from \"../control-plane/schema\"\nimport { SessionID, MessageID, PartID } from \"./schema\"\n\nimport type { Provider } from \"@/provider\"\nimport { Permission } from \"@/permission\"\nimport { Global } from \"@/global\"\nimport { Effect, Layer, Option, Context, Schema, Types } from \"effect\"\nimport { zod } from \"@/util/effect-zod\"\nimport { withStatics } from \"@/util/schema\"\n\nconst log = Log.create({ service: \"session\" })\n\nconst parentTitlePrefix = \"New session - \"\nconst childTitlePrefix = \"Child session - \"\n\nfunction createDefaultTitle(isChild = false) {\n  return (isChild ? childTitlePrefix : parentTitlePrefix) + new Date().toISOString()\n}"
+      }
+    }
+  ],
+  "decisions": [
+    {
+      "file": "packages/opencode/script/publish.ts",
+      "alternatives": [
+        "Take upstream verbatim, which would publish OpenCode-branded Docker/Homebrew/AUR artifacts instead of Kilo artifacts."
+      ],
+      "verification": [
+        "git diff --check; bun script/upstream/decisions.ts check --version 1.14.24; bun run script/check-opencode-annotations.ts; bun run typecheck"
+      ],
+      "updated": "2026-04-29T19:10:10.832Z",
+      "kind": "hybrid",
+      "risk": "medium",
+      "summary": "Kept Kilo release publishing targets while accepting upstream 1.14.24 release script structure.",
+      "rationale": "The resolved script preserves Kilo npm/package names, Docker image, archive filenames, AUR/Homebrew formula, and repository/tap destinations while dropping only upstream OpenCode branding variants that would publish the wrong artifacts.",
+      "resolved": "283c6b916b3f"
+    },
+    {
+      "file": "packages/opencode/src/cli/cmd/tui/config/tui.ts",
+      "alternatives": [
+        "Take upstream directory filtering, which would skip .kilo/.kilocode TUI config files and regress Kilo configuration behavior."
+      ],
+      "verification": [
+        "git diff --check; bun script/upstream/decisions.ts check --version 1.14.24; bun run script/check-opencode-annotations.ts; bun run typecheck"
+      ],
+      "updated": "2026-04-29T19:10:10.858Z",
+      "kind": "hybrid",
+      "risk": "medium",
+      "summary": "Preserved Kilo TUI config discovery for .kilo/.kilocode and KILO_CONFIG_DIR.",
+      "rationale": "Kilo intentionally loads tui.json from Kilo config locations in addition to upstream .opencode locations, so the resolution keeps that broader directory filter and the KILO_CONFIG_DIR rename while retaining upstream dependency/config loading flow.",
+      "resolved": "11211b30cf84"
+    },
+    {
+      "file": "packages/opencode/src/config/config.ts",
+      "alternatives": [
+        "Take upstream config loading, which would remove Kilo-specific config locations and env variables; take ours wholesale, which would risk missing upstream 1.14.24 schema/runtime updates."
+      ],
+      "verification": [
+        "git diff --check; bun script/upstream/decisions.ts check --version 1.14.24; bun run script/check-opencode-annotations.ts; bun run typecheck"
+      ],
+      "updated": "2026-04-29T19:10:10.882Z",
+      "kind": "hybrid",
+      "risk": "high",
+      "summary": "Preserved Kilo config schema/loading behavior while integrating upstream config loader changes.",
+      "rationale": "The merge keeps Kilo warning accumulation, kilo.json discovery, Kilo config directory aliases, KILO_CONFIG/KILO_CONFIG_CONTENT env names, default plugins, indexing, and managed config behavior while retaining the upstream Effect-based config loading structure.",
+      "resolved": "5af23b4b2848"
+    },
+    {
+      "file": "packages/opencode/src/flag/flag.ts",
+      "alternatives": [
+        "Take upstream OPENCODE_* flags, which would silently ignore Kilo users' existing KILO_* env vars."
+      ],
+      "verification": [
+        "git diff --check; bun script/upstream/decisions.ts check --version 1.14.24; bun run script/check-opencode-annotations.ts; bun run typecheck"
+      ],
+      "updated": "2026-04-29T19:10:10.907Z",
+      "kind": "hybrid",
+      "risk": "low",
+      "summary": "Kept Kilo environment flag names for upstream filewatcher flags.",
+      "rationale": "Upstream introduced/ordered the filewatcher flags under OpenCode names; Kilo must expose the same behavior through KILO_EXPERIMENTAL_DISABLE_FILEWATCHER and KILO_EXPERIMENTAL_FILEWATCHER to match the fork's env naming contract.",
+      "resolved": "fdf4c5800a3d"
+    },
+    {
+      "file": "packages/opencode/src/provider/transform.ts",
+      "alternatives": [
+        "Take upstream interleaved handling verbatim, which would reintroduce invalid OpenRouter provider options for Kilo-supported routing."
+      ],
+      "verification": [
+        "git diff --check; bun script/upstream/decisions.ts check --version 1.14.24; bun run script/check-opencode-annotations.ts; bun run typecheck"
+      ],
+      "updated": "2026-04-29T19:10:10.932Z",
+      "kind": "hybrid",
+      "risk": "medium",
+      "summary": "Accepted upstream DeepSeek reasoning handling and kept Kilo OpenRouter interleaved exclusion.",
+      "rationale": "The DeepSeek transform is now upstream, so the cherry-pick marker was removed; Kilo's additional OpenRouter guard remains necessary because OpenRouter rejects the openaiCompatible interleaved provider option.",
+      "resolved": "1af399028502"
+    },
+    {
+      "file": "packages/opencode/src/session/session.ts",
+      "alternatives": [
+        "Take upstream KILO_EXPERIMENTAL_WORKSPACES directory condition, which would conflict with KiloSession.filters and risk hiding valid sessions across worktree directories."
+      ],
+      "verification": [
+        "git diff --check; bun script/upstream/decisions.ts check --version 1.14.24; bun run script/check-opencode-annotations.ts; bun run typecheck"
+      ],
+      "updated": "2026-04-29T19:10:10.967Z",
+      "kind": "hybrid",
+      "risk": "high",
+      "summary": "Preserved Kilo session filtering/listing behavior while accepting upstream session updates.",
+      "rationale": "Kilo delegates directory/worktree-family filtering to KiloSession.filters and listGlobal; reapplying upstream's direct directory condition would duplicate or narrow filtering and break Agent Manager/global session behavior.",
+      "resolved": "25a5436fb374"
+    }
+  ]
+}
