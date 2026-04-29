@@ -1,3 +1,5 @@
+// kilocode_change - new file
+
 import { Permission } from "@/permission";
 import { eq, desc, Database } from "@/storage/db";
 import type { MessageV2 } from "./message-v2";
