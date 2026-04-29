@@ -108,6 +108,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | Command | Description |
 |---|---|
 | `/connect` | Connect/add a provider - entry point for new users to add API credentials |
+| `/org`, `/orgs`, `/teams`, `/team` | Switch your active Kilo Gateway organization when multiple orgs are available |
 
 #### System Commands
 
@@ -126,6 +127,10 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/profile` | `/me`, `/whoami` | View your Kilo Gateway profile |
 | `/teams` | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
 | `/remote` | - | Toggle remote mode for Cloud Agent access |
+
+### Console-Managed Providers
+
+When your active Kilo organization supplies provider credentials or model access, those providers appear in the TUI provider picker as Console-managed. They are controlled from Kilo Console or organization policy, so local config edits are disabled for those entries. Use `/org`, `/orgs`, `/teams`, or `/team` to switch the active organization when your account belongs to more than one org.
 
 #### Built-in Commands
 
@@ -284,6 +289,37 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 | **Project** | `./opencode.json` or `./.opencode/` in project root |
 
 Project-level configuration takes precedence over global settings.
+
+### TUI Configuration
+
+Terminal UI preferences live in `tui.jsonc` files next to your normal Kilo config:
+
+| Scope | Path |
+|---|---|
+| **Global** | `~/.config/kilo/tui.jsonc` |
+| **Project** | `./.kilo/tui.jsonc` or `./.opencode/tui.jsonc` |
+
+Use TUI config for terminal-only settings such as keybinds, mouse capture, scrolling, themes, and diff rendering:
+
+```jsonc
+{
+  "mouse": false,
+  "scroll_speed": 1.5,
+  "scroll_acceleration": {
+    "enabled": true
+  },
+  "diff_style": "auto",
+  "keybinds": {
+    "variant_cycle": "ctrl+t",
+    "variant_list": "<leader>v"
+  }
+}
+```
+
+- **Disable mouse capture:** Set `"mouse": false` when you want your terminal to handle mouse selection and scrolling. For a one-off run, use `KILO_DISABLE_MOUSE=1 kilo`; the environment variable overrides config.
+- **Scrolling:** `scroll_speed` customizes fixed scroll speed, while `scroll_acceleration.enabled` enables accelerated scrolling and takes precedence when both are set. These settings apply consistently across session, sidebar, and dialog scroll views.
+- **Diff layout:** `diff_style` can be `"auto"` to adapt to terminal width or `"stacked"` to always use a single-column diff.
+- **Model variants:** `variant_cycle` cycles through variants for the current model and defaults to `ctrl+t`. `variant_list` opens the model variant picker and is unbound (`"none"`) by default.
 
 ### Key Configuration Options
 

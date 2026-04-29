@@ -98,7 +98,38 @@ Remote MCP servers are accessed over HTTP/HTTPS. Set `type` to `"remote"`.
 | `url` | String | Yes | URL of the remote MCP server. |
 | `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
 | `headers` | Object | No | HTTP headers to send with requests. |
+| `oauth` | Object or `false` | No | OAuth settings for the remote server. Set to `false` to disable OAuth auto-detection. |
 | `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
+
+#### OAuth Options
+
+Remote MCP servers that advertise OAuth can be authenticated with `kilo mcp auth`. Kilo attempts dynamic client registration by default, but you can provide a pre-registered client or override the local callback URL when the server requires an exact redirect URI.
+
+| Option | Type | Description |
+|---|---|---|
+| `oauth.clientId` | String | OAuth client ID. If omitted, Kilo attempts dynamic client registration. |
+| `oauth.clientSecret` | String | OAuth client secret when the authorization server requires one. |
+| `oauth.scope` | String | OAuth scopes to request during authorization. |
+| `oauth.redirectUri` | String | OAuth redirect URI. Defaults to `http://127.0.0.1:19876/mcp/oauth/callback`. |
+
+```json
+{
+  "mcp": {
+    "remote-oauth": {
+      "type": "remote",
+      "url": "https://mcp.example.com/mcp",
+      "oauth": {
+        "clientId": "your-client-id",
+        "clientSecret": "{env:MCP_CLIENT_SECRET}",
+        "scope": "read:resources write:resources",
+        "redirectUri": "http://127.0.0.1:19876/mcp/oauth/callback"
+      }
+    }
+  }
+}
+```
+
+Set `"oauth": false` for remote servers that should use headers or another auth mechanism even if the server advertises OAuth.
 
 ## Managing MCP Servers
 

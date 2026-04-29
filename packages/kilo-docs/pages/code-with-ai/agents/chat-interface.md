@@ -23,7 +23,7 @@ Click the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar to 
 {% /tab %}
 {% tab label="CLI" %}
 
-Open your terminal and run `kilo` to launch the interactive terminal interface (TUI). You'll see a prompt where you can start typing requests immediately. The TUI is fully keyboard-driven — no mouse required.
+Open your terminal and run `kilo` to launch the interactive terminal interface (TUI). You'll see a prompt where you can start typing requests immediately. The TUI is fully keyboard-driven — no mouse required. If you want your terminal to handle mouse selection and scrolling instead of Kilo, set `mouse: false` in `tui.jsonc` or launch with `KILO_DISABLE_MOUSE=1 kilo`.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -91,7 +91,7 @@ The extension automatically passes context from your editor, including your open
 
 **Providing context:**
 
-Type `@` in the TUI to get file autocomplete suggestions, or mention file paths directly in your message (e.g., "look at src/utils.ts") and the agent will read them. When using the non-interactive `kilo run` command, you can pass `-f path/to/file.ts` to explicitly include files. The agent can also discover files on its own using its built-in tools.
+Type `@` in the TUI to get file autocomplete suggestions, or mention file paths directly in your message (e.g., "look at src/utils.ts") and the agent will read them. You can also drag a PDF into the TUI prompt or paste a PDF file path; Kilo shows attachments as `[PDF 1]`, `[PDF 2]`, and sends them with your message when the selected provider supports PDF input. When using the non-interactive `kilo run` command, you can pass `-f path/to/file.ts` or `-f path/to/file.pdf` to explicitly include files. The agent can also discover files on its own using its built-in tools.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}

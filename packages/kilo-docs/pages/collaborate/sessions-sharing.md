@@ -37,6 +37,8 @@ You can share a session with anyone via a link. A shared page:
 
 Note: Sharing creates a read‑only copy for the public link so your private session remains in your account.
 
+In the CLI/TUI, the first time you run `/share`, Kilo asks you to confirm because anyone with the generated URL can view the shared copy. After you confirm once on that machine/config, future shares do not show the extra prompt.
+
 ## Fork a shared session (make it yours)
 
 If someone shares a session with you, you can fork it to create your own copy:

@@ -55,6 +55,8 @@ While the specifics change constantly, some principles stay consistent:
 
 **For local/private work**: Ollama and LM Studio let you run models locally. The tradeoff is usually speed and capability for privacy and zero API costs.
 
+**Fast model variants**: Some providers expose `-fast` variants as separate model IDs, such as priority-processing versions of Claude or GPT models. Choose them like any other model in the picker or with `kilo run --model provider/model-fast`. They can reduce latency but may have different or higher pricing, so check [kilo.ai/models](https://kilo.ai/models) for current availability and cost.
+
 **Using an unlisted model?** You can register any model — including fine-tunes, newly released models, or custom local models — by adding it to your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for details.
 
 ## Context Windows Matter
