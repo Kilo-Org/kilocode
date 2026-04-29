@@ -183,8 +183,6 @@ function normalizeMessages(
     return result
   }
 
-  // kilocode_change start - cherry-picked from anomalyco/opencode#24180;
-  // will be reverted on the next wholesale upstream merge.
   // Deepseek requires all assistant messages to have reasoning on them
   if (model.api.id.includes("deepseek")) {
     msgs = msgs.map((msg) => {
@@ -202,9 +200,8 @@ function normalizeMessages(
       }
     })
   }
-  // kilocode_change end
 
-  // kilocode_change start - cherry-picked from anomalyco/opencode#24435
+  // kilocode_change start - OpenRouter does not accept the openaiCompatible interleaved field.
   if (
     typeof model.capabilities.interleaved === "object" &&
     model.capabilities.interleaved.field &&
