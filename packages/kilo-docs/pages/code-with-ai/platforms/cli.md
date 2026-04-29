@@ -108,7 +108,6 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | Command | Description |
 |---|---|
 | `/connect` | Connect/add a provider - entry point for new users to add API credentials |
-| `/org`, `/orgs`, `/teams`, `/team` | Switch your active Kilo Gateway organization when multiple orgs are available |
 
 #### System Commands
 
