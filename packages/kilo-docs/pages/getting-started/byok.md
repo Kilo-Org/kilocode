@@ -69,7 +69,3 @@ Your IAM user or role must have the following permissions:
 - BYOK works with the Kilo Gateway provider. Users should ensure that is set as the active [provider](/docs/ai-providers).
 - Select a model from a provider configured for BYOK, for example Claude Sonnet 4.5 if you configured BYOK for Anthropic.
 - (Optional) Validate with the provider that traffic is being served by that key.
-
-## Use with Agent Manager
-
-Agent Manager supports the same BYOK and custom provider configurations as the extension sidebar.
