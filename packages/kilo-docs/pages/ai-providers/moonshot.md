@@ -70,5 +70,6 @@ Then set your default model:
 
 - **Ultra-Long Context:** Kimi models excel at handling large codebases and complex projects with their extended context windows.
 - **Reasoning Capabilities:** The K2-Thinking variant provides enhanced problem-solving through extended reasoning chains.
+- **Kimi-specific prompting:** Kilo automatically uses a Kimi-tuned system prompt for model IDs containing `kimi`; no extra configuration is required.
 - **Language Support:** Kimi models have strong support for both English and Chinese languages.
 - **Pricing:** Refer to the Moonshot.ai platform for current pricing information on different models.

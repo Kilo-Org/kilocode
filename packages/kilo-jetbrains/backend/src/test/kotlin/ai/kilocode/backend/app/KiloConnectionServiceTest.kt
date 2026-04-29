@@ -117,7 +117,7 @@ class KiloConnectionServiceTest {
         val failing = object : CliServer {
             override var forceExtract = false
             override fun process(): Process? = null
-            override suspend fun init() = CliServer.State.Error("binary not found")
+            override suspend fun init() = CliServer.State.Error("binary not found", "stderr line 1\nstderr line 2")
             override fun exited(proc: Process) {}
             override fun stop() {}
             override fun dispose() {}
@@ -131,6 +131,7 @@ class KiloConnectionServiceTest {
         }
         val err = svc.state.value as ConnectionState.Error
         assertEquals("binary not found", err.message)
+        assertEquals("stderr line 1\nstderr line 2", err.details)
     }
 
     @Test

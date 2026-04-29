@@ -221,6 +221,20 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
+[data-component="todos"] {
+  [data-slot="message-part-todo-hidden"] {
+    padding: 2px 0 2px 28px;
+    color: var(--text-weaker);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-normal);
+  }
+
+  [data-slot="message-part-todo-content"][data-changed="changed"] {
+    color: var(--text-base);
+    font-weight: var(--font-weight-medium);
+  }
+}
+
 /* User message copy button: collapse wrapper when idle, show on hover.
  * The wrapper must be tall enough to fully contain the button (20px)
  * so that hovering the button keeps [data-component="user-message"]

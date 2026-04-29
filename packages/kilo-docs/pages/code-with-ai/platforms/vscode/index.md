@@ -5,7 +5,7 @@ description: "Using Kilo Code in Visual Studio Code"
 
 # VS Code Extension
 
-Kilo Code is available as two VS Code extensions: the **VSCode (Legacy)** extension and the current **VSCode** version built on the Kilo CLI core.
+Kilo Code is available as two VS Code extensions: the **VSCode (Legacy)** extension and the current **VSCode** version built on Kilo's shared agent runtime.
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -17,7 +17,7 @@ Kilo Code is available as two VS Code extensions: the **VSCode (Legacy)** extens
 3. Search for "Kilo Code"
 4. Click the dropdown arrow next to **Install** and select **Install Pre-Release Version**
 
-The extension bundles its own CLI binary and spawns `kilo serve` as a background process. All communication happens over HTTP + SSE.
+The extension includes its own embedded runtime. No separate Kilo CLI installation is required.
 
 ## Key Features
 
@@ -38,7 +38,7 @@ Key features include:
 
 ## Shared Settings
 
-The extension shares its configuration with the CLI. Settings in `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) apply to both the CLI and the extension.
+Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
