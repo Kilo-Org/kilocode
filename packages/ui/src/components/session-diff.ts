@@ -14,6 +14,7 @@ type LegacyDiff = {
 
 type ReviewDiff = SnapshotFileDiff | VcsFileDiff | LegacyDiff
 
+// kilocode_change start - expose patch text extraction without building FileDiffMetadata on the UI thread
 export type DiffText = {
   before: string
   after: string
@@ -23,8 +24,8 @@ export type DiffText = {
 export type ViewDiff = {
   file: string
   patch: string
-  before: string
-  after: string
+  before: string // kilocode_change
+  after: string // kilocode_change
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -72,6 +73,7 @@ export function contents(diff: ReviewDiff): DiffText {
     ),
   }
 }
+// kilocode_change end
 
 function file(file: string, patch: string, before: string, after: string) {
   const hit = cache.get(patch)
@@ -85,10 +87,10 @@ function file(file: string, patch: string, before: string, after: string) {
 export function normalize(diff: ReviewDiff): ViewDiff {
   const next = contents(diff)
   return {
-    file: diff.file,
-    patch: next.patch,
-    before: next.before,
-    after: next.after,
+    file: diff.file, // kilocode_change
+    patch: next.patch, // kilocode_change
+    before: next.before, // kilocode_change
+    after: next.after, // kilocode_change
     additions: diff.additions,
     deletions: diff.deletions,
     status: diff.status,
