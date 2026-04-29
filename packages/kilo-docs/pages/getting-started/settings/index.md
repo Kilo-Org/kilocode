@@ -99,19 +99,6 @@ Kilo loads managed `kilo.json` or `kilo.jsonc` files from these system locations
 | Windows | `%ProgramData%\kilo\` |
 | Linux | `/etc/kilo/` |
 
-For example, an admin can deploy `/etc/kilo/kilo.jsonc`:
-
-```jsonc
-{
-  "$schema": "https://app.kilo.ai/config.json",
-  "share": "disabled",
-  "permission": {
-    "bash": "ask",
-    "edit": "ask"
-  }
-}
-```
-
 On macOS, Kilo also reads MDM-managed preferences installed by a `.mobileconfig` profile. The profile domain must be `ai.opencode.managed`, and the preference keys map directly to Kilo config fields. Kilo checks these files in order:
 
 1. `/Library/Managed Preferences/<user>/ai.opencode.managed.plist`
