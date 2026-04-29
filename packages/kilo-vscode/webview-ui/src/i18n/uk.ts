@@ -263,6 +263,11 @@ export const dict = {
   "prompt.action.stop": "Зупинити",
   "prompt.action.enhance": "Покращити запит",
   "prompt.action.indexing": "Налаштування індексування",
+  "prompt.action.autoApprove.enable": "Увімкнути автоматичне схвалення",
+  "prompt.action.autoApprove.disable": "Вимкнути автоматичне схвалення",
+  "prompt.action.autoApprove.enabled": "Автоматичне схвалення увімкнено. Запити дозволів схвалюватимуться автоматично.",
+  "prompt.action.autoApprove.disabled":
+    "Автоматичне схвалення вимкнено. Натисніть, щоб автоматично схвалювати запити дозволів.",
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",

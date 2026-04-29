@@ -82,7 +82,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
   const git = useGitChangesContext(vscode, ctx, hasGit)
-  const slash = useSlashCommand(vscode)
+  const slash = useSlashCommand(vscode, () => (session.variantList().length > 0 ? new Set() : new Set(["variant"])))
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -128,6 +128,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
+  const [autoApprove, setAutoApprove] = createSignal(false)
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -344,6 +345,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
   }
 
+  const unsubAutoApprove = vscode.onMessage((message) => {
+    if (message.type === "autoApproveState") {
+      setAutoApprove(message.active)
+    }
+  })
+
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
@@ -381,7 +388,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "triggerTask") {
       if (isDisabled()) return
       const sel = session.selected()
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
 
     if (message.type === "sendMessageFailed") {
@@ -457,10 +464,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
   })
+  vscode.postMessage({ type: "requestAutoApproveState" })
 
   onCleanup(() => {
     // Persist current draft before unmounting
     saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
+    unsubAutoApprove()
     unsubscribe()
   })
 
@@ -699,9 +708,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     }
 
     history.append(draft)
@@ -991,6 +1000,28 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               </Button>
             </Tooltip>
           </Show>
+          <Tooltip
+            value={
+              autoApprove()
+                ? language.t("prompt.action.autoApprove.enabled")
+                : language.t("prompt.action.autoApprove.disabled")
+            }
+            placement="top"
+          >
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
+              aria-label={
+                autoApprove()
+                  ? language.t("prompt.action.autoApprove.disable")
+                  : language.t("prompt.action.autoApprove.enable")
+              }
+              class={`prompt-auto-approve-button ${autoApprove() ? "prompt-auto-approve-button--active" : ""}`}
+            >
+              <Icon name="shield" size="small" />
+            </Button>
+          </Tooltip>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"

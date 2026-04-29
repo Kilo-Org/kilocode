@@ -262,11 +262,10 @@ async function load(opts: Pick<InitOptions, "version" | "output" | "ledger">) {
 }
 
 async function resolved(entry: Choice) {
-  const file = entry.kind === "renamed" && entry.target ? entry.target : entry.file
-  const ok = await Bun.file(file).exists()
+  const ok = await Bun.file(path(entry)).exists()
   if (!ok && entry.kind === "removed") return "deleted"
   if (!ok) return undefined
-  return sha(await Bun.file(file).text())
+  return sha(await Bun.file(path(entry)).text())
 }
 
 async function addDecision(opts: CliOptions) {
@@ -312,6 +311,11 @@ function missing(entry: Choice) {
   return gaps
 }
 
+function path(entry: Choice) {
+  if (entry.kind === "renamed" && entry.target) return entry.target
+  return entry.file
+}
+
 async function markers(file: string) {
   const ok = await Bun.file(file).exists()
   if (!ok) return false
@@ -345,7 +349,7 @@ export async function checkLedger(opts: InitOptions & { write?: boolean }) {
     const gaps = missing(item)
     if (gaps.length > 0) issues.push(`${entry.file}: missing ${gaps.join(", ")}`)
     if (open.includes(entry.file)) issues.push(`${entry.file}: still has an unresolved git conflict`)
-    if (await markers(entry.file)) issues.push(`${entry.file}: still has conflict markers`)
+    if (await markers(path(item))) issues.push(`${path(item)}: still has conflict markers`)
     if (await stale(item)) issues.push(`${entry.file}: original path still exists after renamed decision`)
     if (!item.resolved && item.kind !== "removed") issues.push(`${entry.file}: resolved file is missing`)
   }
