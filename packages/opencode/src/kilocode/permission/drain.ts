@@ -6,6 +6,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths"
 interface PendingEntry {
   info: Permission.Request
   ruleset: Permission.Ruleset
+  hardRuleset?: Permission.Ruleset
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
 
@@ -25,9 +26,12 @@ export function drainCovered(
       if (id === exclude) continue
       // Never auto-resolve config file edit permissions
       if (ConfigProtection.isRequest(entry.info)) continue
-      const actions = entry.info.patterns.map((pattern: string) =>
-        Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved),
-      )
+      const actions = entry.info.patterns.map((pattern: string) => {
+        const rule = Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved)
+        const hard = entry.hardRuleset ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset) : undefined
+        if (hard?.action === "deny") return hard
+        return rule
+      })
       const denied = actions.some((r: Permission.Rule) => r.action === "deny")
       const allowed = !denied && actions.every((r: Permission.Rule) => r.action === "allow")
       if (!denied && !allowed) continue

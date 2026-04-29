@@ -203,7 +203,14 @@ interface SessionContextValue {
   // Actions
   revertSession: (messageID: string) => void
   unrevertSession: () => void
-  sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[], draftID?: string) => void
+  sendMessage: (
+    text: string,
+    providerID?: string,
+    modelID?: string,
+    files?: FileAttachment[],
+    draftID?: string,
+    context?: string,
+  ) => void
   sendCommand: (
     command: string,
     args: string,
@@ -211,6 +218,7 @@ interface SessionContextValue {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    context?: string,
   ) => void
   abort: () => void
   compact: () => void
@@ -1663,6 +1671,7 @@ export const SessionProvider: ParentComponent = (props) => {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    context?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -1709,6 +1718,7 @@ export const SessionProvider: ParentComponent = (props) => {
       agent,
       variant: currentVariant(),
       files,
+      agentManagerContext: context,
     })
   }
 
@@ -1719,6 +1729,7 @@ export const SessionProvider: ParentComponent = (props) => {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    context?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
@@ -1769,6 +1780,7 @@ export const SessionProvider: ParentComponent = (props) => {
       agent,
       variant: currentVariant(),
       files,
+      agentManagerContext: context,
     })
   }
 
