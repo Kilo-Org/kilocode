@@ -338,6 +338,37 @@ const todoWriteDocsOverview: ToolPart = {
   },
 }
 
+const compactTodos = docsTodos.map((todo, index) =>
+  index < 5 ? { ...todo, status: "completed" } : { ...todo, status: index === 5 ? "pending" : todo.status },
+)
+const compactViewTodos = compactTodos.slice(3, 6).map((todo, index) => ({ ...todo, changed: index === 1 }))
+
+const todoWriteCompactUpdate: ToolPart = {
+  id: "part-todo-compact-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-compact-001",
+  tool: "todowrite",
+  state: {
+    status: "completed",
+    input: { todos: compactTodos },
+    output: "Updated 10 todos",
+    title: "Todo List Updated",
+    metadata: {
+      todos: compactTodos,
+      view: {
+        mode: "compact",
+        todos: compactViewTodos,
+        hiddenBefore: 3,
+        hiddenAfter: 4,
+        changed: 1,
+      },
+    },
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
 const todoWritePermission: PermissionRequest = {
   id: "perm-todo-001",
   sessionID: SESSION_ID,
@@ -659,6 +690,18 @@ export const TodoWriteDocsOverview: Story = {
   name: "TodoWrite — docs overview",
   render: () => {
     const data = dataWith([todoWriteDocsOverview])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const TodoWriteCompactUpdate: Story = {
+  name: "TodoWrite - Compact update",
+  render: () => {
+    const data = dataWith([todoWriteCompactUpdate])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />
