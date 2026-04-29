@@ -1,5 +1,42 @@
 # kilo-code
 
+## 7.2.30
+
+### Patch Changes
+
+- [#9435](https://github.com/Kilo-Org/kilocode/pull/9435) [`9186cb4`](https://github.com/Kilo-Org/kilocode/commit/9186cb440afd37c43bae6c99f9b95b23db698e5c) - Fix unreadable section titles on the Auto-Approve settings page when using a light VS Code color theme. Tool headers (External Directory, Bash, Read, Edit, etc.) now follow the active VS Code theme foreground color instead of always rendering in white.
+
+- [#9662](https://github.com/Kilo-Org/kilocode/pull/9662) [`bf60cde`](https://github.com/Kilo-Org/kilocode/commit/bf60cdedd6fc4af2918d514ca513f03e18a3133d) - Show auto-approve status in the session prompt controls and keep it synced across extension sessions.
+
+- [#9575](https://github.com/Kilo-Org/kilocode/pull/9575) [`5b26cfe`](https://github.com/Kilo-Org/kilocode/commit/5b26cfe5facb8e6227cddadb259715185a82cded) - Fix switching autocomplete model back to Codestral not persisting.
+
+- [#9481](https://github.com/Kilo-Org/kilocode/pull/9481) [`a76ab95`](https://github.com/Kilo-Org/kilocode/commit/a76ab9510361ed1ac40cc40d51817006ed6eac8e) - Improve the sidebar chat toolbar so the changes button collapses cleanly and keeps diff stats visible in its tooltip.
+
+- [#9576](https://github.com/Kilo-Org/kilocode/pull/9576) [`11f2e2a`](https://github.com/Kilo-Org/kilocode/commit/11f2e2afbe0ba1691bbaadcb4a3ceec0e009c9a5) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Open edit-tool diffs in side-by-side (split) mode by default; permission-dock expand stays unified.
+
+- [#9450](https://github.com/Kilo-Org/kilocode/pull/9450) [`2032fe4`](https://github.com/Kilo-Org/kilocode/commit/2032fe4c4e574aa0664a1ab91e34633ce5b261f9) - Fix a session hang that could occur when multiple Kilo panels showed the same permission prompt, or when a subagent's permission was replied to from the wrong worktree. Replies are now routed to the exact CLI instance that holds the pending permission, and stale/unknown permissions surface a clear error so the UI doesn't leave buttons permanently disabled.
+
+- [#9667](https://github.com/Kilo-Org/kilocode/pull/9667) [`7eaf059`](https://github.com/Kilo-Org/kilocode/commit/7eaf059789d74c3fd57c88929a0846f18d9f5294) - Keep Agent Manager local tab sessions scoped to the main workspace after switching from a worktree.
+
+- [#9679](https://github.com/Kilo-Org/kilocode/pull/9679) [`867be23`](https://github.com/Kilo-Org/kilocode/commit/867be234549459ca47741e998aa54af23a09d8bc) - Restore prompt focus when the model selector is dismissed with Escape.
+
+- [#9670](https://github.com/Kilo-Org/kilocode/pull/9670) [`7575dce`](https://github.com/Kilo-Org/kilocode/commit/7575dce378bd136ac5eef46321a311454c786832) - Keep checkpoint revert actions available when switching models clears a stale provider error.
+
+- [#9633](https://github.com/Kilo-Org/kilocode/pull/9633) [`0918bb4`](https://github.com/Kilo-Org/kilocode/commit/0918bb4216aef60fcefb3025a105cf6d250de52b) - Preserve "Free" when it is part of a model's name (such as "Kilo Auto Free"). The parenthesized "(free)" suffix is still stripped so the separate Free label can be shown instead.
+
+- [#9672](https://github.com/Kilo-Org/kilocode/pull/9672) [`c923625`](https://github.com/Kilo-Org/kilocode/commit/c923625ea629d4f963d80baf81862d984ae55785) - Protect Agent Manager sessions and worktrees from being reset when persisted state fails to load after IDE restart.
+
+- [#9628](https://github.com/Kilo-Org/kilocode/pull/9628) [`6130a3e`](https://github.com/Kilo-Org/kilocode/commit/6130a3ea66c6a323710fdc2d325fac87011f6b85) - Show paid Kilo models to signed-out users so selecting one prompts them to log in.
+
+- [#9481](https://github.com/Kilo-Org/kilocode/pull/9481) [`18468b8`](https://github.com/Kilo-Org/kilocode/commit/18468b8e26577087834ace8b7aaee72d3176f25b) - Expose sidebar session, worktree, and agent manager actions above the prompt, including quick and advanced worktree creation.
+
+- [#9680](https://github.com/Kilo-Org/kilocode/pull/9680) [`b99dcee`](https://github.com/Kilo-Org/kilocode/commit/b99dcee596ace9021af041629881b7e7f0e45cda) - Support opening the reasoning effort selector from `/variant` when the selected model has variants.
+
+- [#9614](https://github.com/Kilo-Org/kilocode/pull/9614) [`6908f8a`](https://github.com/Kilo-Org/kilocode/commit/6908f8ae6df201233ad75df6c000b109ecaea637) - Start Agent Manager new tasks in the selected worktree instead of the workspace root.
+
+- Updated dependencies [[`28a0eae`](https://github.com/Kilo-Org/kilocode/commit/28a0eae4b0b940482222f6671a6885b575b2ad9c)]:
+  - @kilocode/kilo-indexing@7.1.4
+
 ## 7.2.26
 
 ### Minor Changes
