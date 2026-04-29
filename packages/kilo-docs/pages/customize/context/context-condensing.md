@@ -22,15 +22,15 @@ Every AI model has a maximum context window — a limit on how much text it can 
 
 ## The Solution: Auto-Compaction
 
-Kilo Code uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
+Kilo Code uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces an anchored summary that captures:
 
 - The overall goal of the session
-- Instructions given along the way
-- Key discoveries made
-- What has been accomplished so far
+- Constraints and preferences you gave along the way
+- Progress, key decisions, and next steps
+- Critical context needed to continue
 - Relevant files and directories
 
-This summary replaces the earlier conversation history, freeing up context window space while maintaining continuity in your work.
+This summary replaces older conversation history while Kilo keeps the most recent turns verbatim when they fit. If a session has already been compacted, Kilo updates the previous summary instead of starting over, preserving still-relevant details and removing stale ones.
 
 ## How Compaction Triggers
 
@@ -60,6 +60,8 @@ You can trigger compaction at any time:
 |---|---|---|
 | `compaction.auto` | `true` | Automatically compact when the usable window is reached |
 | `compaction.prune` | `true` | Clear old tool outputs beyond the 40K recency window |
+| `compaction.tail_turns` | `2` | Keep the most recent user turns and their responses verbatim when possible |
+| `compaction.preserve_recent_tokens` | 25% of usable context, clamped between 2,000 and 8,000 tokens | Token budget for the verbatim recent tail |
 | `compaction.reserved` | `min(20,000, model_max_output_tokens)` | Token headroom kept free for the next turn — also defines the compaction trigger point |
 
 ## Configuration
@@ -71,6 +73,8 @@ Compaction is configured in your `kilo.jsonc` file:
   "compaction": {
     "auto": true, // Enable or disable automatic compaction
     "prune": true, // Enable pruning of old tool outputs beyond the recency window
+    "tail_turns": 2, // Recent user turns to keep verbatim during compaction
+    "preserve_recent_tokens": 8000, // Maximum token budget for the recent tail
     "reserved": 20000, // Token buffer kept free; smaller = later trigger, larger = earlier trigger
   },
 }
@@ -80,6 +84,8 @@ Compaction is configured in your `kilo.jsonc` file:
 |---|---|---|---|
 | `compaction.auto` | boolean | `true` | Enable or disable automatic compaction when the usable window is reached |
 | `compaction.prune` | boolean | `true` | Enable pruning of old tool outputs outside the 40K token recency window |
+| `compaction.tail_turns` | number | `2` | Number of recent user turns, including following assistant and tool responses, to keep verbatim during compaction |
+| `compaction.preserve_recent_tokens` | number | 25% of usable context, clamped between 2,000 and 8,000 tokens | Maximum token budget for recent turns kept verbatim after compaction |
 | `compaction.reserved` | number | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
 
 ### Use a different model for compaction
@@ -111,15 +117,15 @@ If no compaction agent is set, the current session's model is used.
 
 ## The Solution: Auto-Compaction
 
-Kilo CLI uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
+Kilo CLI uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces an anchored summary that captures:
 
 - The overall goal of the session
-- Instructions given along the way
-- Key discoveries made
-- What has been accomplished so far
+- Constraints and preferences you gave along the way
+- Progress, key decisions, and next steps
+- Critical context needed to continue
 - Relevant files and directories
 
-This summary replaces the earlier conversation history, freeing up context window space while maintaining continuity in your work.
+This summary replaces older conversation history while Kilo keeps the most recent turns verbatim when they fit. If a session has already been compacted, Kilo updates the previous summary instead of starting over, preserving still-relevant details and removing stale ones.
 
 ## How Compaction Triggers
 
@@ -148,6 +154,8 @@ You can trigger compaction at any time:
 |---|---|---|
 | `compaction.auto` | `true` | Automatically compact when the usable window is reached |
 | `compaction.prune` | `true` | Clear old tool outputs beyond the 40K recency window |
+| `compaction.tail_turns` | `2` | Keep the most recent user turns and their responses verbatim when possible |
+| `compaction.preserve_recent_tokens` | 25% of usable context, clamped between 2,000 and 8,000 tokens | Token budget for the verbatim recent tail |
 | `compaction.reserved` | `min(20,000, model_max_output_tokens)` | Token headroom kept free for the next turn — also defines the compaction trigger point |
 
 ## Configuration
@@ -159,6 +167,8 @@ Compaction is configured in your `kilo.jsonc` file:
   "compaction": {
     "auto": true, // Enable or disable automatic compaction
     "prune": true, // Enable pruning of old tool outputs beyond the recency window
+    "tail_turns": 2, // Recent user turns to keep verbatim during compaction
+    "preserve_recent_tokens": 8000, // Maximum token budget for the recent tail
     "reserved": 20000, // Token buffer kept free; smaller = later trigger, larger = earlier trigger
   },
 }
@@ -168,6 +178,8 @@ Compaction is configured in your `kilo.jsonc` file:
 |---|---|---|---|
 | `compaction.auto` | boolean | `true` | Enable or disable automatic compaction when the usable window is reached |
 | `compaction.prune` | boolean | `true` | Enable pruning of old tool outputs outside the 40K token recency window |
+| `compaction.tail_turns` | number | `2` | Number of recent user turns, including following assistant and tool responses, to keep verbatim during compaction |
+| `compaction.preserve_recent_tokens` | number | 25% of usable context, clamped between 2,000 and 8,000 tokens | Maximum token budget for recent turns kept verbatim after compaction |
 | `compaction.reserved` | number | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
 
 ### Use a different model for compaction

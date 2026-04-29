@@ -329,7 +329,7 @@ You can also set options that apply to all models from a provider:
       "options": {
         "apiKey": "{env:OPENAI_API_KEY}",
         "baseURL": "https://my-proxy.example.com/v1",
-        "timeout": 120000,
+        "timeout": 300000,
       },
     },
   },
@@ -340,7 +340,7 @@ You can also set options that apply to all models from a provider:
 |---|---|---|
 | `apiKey` | `string` | API key (supports `{env:VAR}` syntax) |
 | `baseURL` | `string` | Override the provider's base API URL |
-| `timeout` | `number \| false` | Request timeout in milliseconds, or `false` to disable |
+| `timeout` | `number \| false` | Request timeout in milliseconds. Defaults to `300000` (5 minutes); set to `false` to disable |
 
 ## Filtering Available Models
 

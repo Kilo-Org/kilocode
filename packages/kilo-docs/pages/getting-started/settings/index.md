@@ -171,6 +171,7 @@ Available experimental toggles include:
 - **LSP integration** — expose language server diagnostics to the agent
 - **Paste summary** — summarize large clipboard pastes before including them
 - **Batch tool** — allow the agent to batch multiple tool calls in one step
+- **OpenTelemetry** — enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 
@@ -179,6 +180,7 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
   "experimental": {
     "codebase_search": true,
     "batch_tool": false,
+    "openTelemetry": true,
     "disable_paste_summary": false,
     "mcp_timeout": 30000
   }
@@ -190,7 +192,9 @@ Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of 
 {% /tab %}
 {% tab label="CLI" %}
 
-The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, telemetry, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+
+Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in `kilo.jsonc` to opt out. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the environment, the CLI also exports OpenTelemetry traces and logs to that OTLP HTTP endpoint.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
