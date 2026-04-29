@@ -531,6 +531,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete overrides[sid]
         }),
       )
+      hideErrors(sid)
     }
   }
 
