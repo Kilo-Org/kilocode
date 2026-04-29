@@ -15579,6 +15579,10 @@
             "description": "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
             "type": "boolean"
           },
+          "auto_collapse_reasoning": {
+            "description": "Automatically collapse reasoning blocks after the agent finishes writing them",
+            "type": "boolean"
+          },
           "indexing": {
             "$ref": "#/components/schemas/IndexingConfig"
           },

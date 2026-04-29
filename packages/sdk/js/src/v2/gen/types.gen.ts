@@ -1855,6 +1855,10 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  /**
+   * Automatically collapse reasoning blocks after the agent finishes writing them
+   */
+  auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
@@ -1872,10 +1876,6 @@ export type Config = {
    * Custom username to display in conversations instead of system username
    */
   username?: string
-  /**
-   * Automatically collapse reasoning blocks after the agent finishes writing them
-   */
-  auto_collapse_reasoning?: boolean
   /**
    * @deprecated Use `agent` field instead.
    */

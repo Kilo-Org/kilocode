@@ -167,6 +167,9 @@ export const Info = Schema.Struct({
   remote_control: Schema.optional(Schema.Boolean).annotate({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
+  auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
+    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+  }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }), // kilocode_change
   // kilocode_change end
   // kilocode_change start - nullable for delete sentinel
@@ -186,11 +189,6 @@ export const Info = Schema.Struct({
   username: Schema.optional(Schema.String).annotate({
     description: "Custom username to display in conversations instead of system username",
   }),
-  // kilocode_change start
-  auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
-    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
-  }),
-  // kilocode_change end
   mode: Schema.optional(
     Schema.StructWithRest(
       Schema.Struct({
