@@ -7,6 +7,10 @@ description: "Index your codebase for improved AI understanding"
 
 Codebase Indexing enables semantic code search across your entire project using AI embeddings. Instead of searching for exact text matches, it understands the _meaning_ of your queries, helping Kilo Code find relevant code even when you don't know specific function names or file locations.
 
+{% callout type="warning" title="Experimental" %}
+Codebase Indexing is currently **experimental** in the CLI and the new VS Code extension. You must explicitly opt in before the feature becomes available — see [Enabling the feature](#enabling-the-feature) below. Behavior, configuration, and defaults may change in future releases.
+{% /callout %}
+
 ## What It Does
 
 When enabled, the indexing system:
@@ -27,7 +31,10 @@ This enables natural language queries like "user authentication logic" or "datab
 
 ## Embedding Providers
 
-Indexing needs an embedding provider to turn code into vectors. Pick one of:
+Indexing needs an embedding provider to turn code into vectors.
+
+{% tabs %}
+{% tab label="CLI & VSCode (new)" %}
 
 | Provider | How to use | Notes |
 |---|---|---|
@@ -35,8 +42,8 @@ Indexing needs an embedding provider to turn code into vectors. Pick one of:
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
 | **OpenAI-Compatible** | Base URL + API key | For self-hosted or third-party OpenAI-compatible endpoints. |
 | **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
-| **Mistral** | API key | Mistral embedding models. |
-| **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://ai-gateway.vercel.sh/v1). |
+| **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
+| **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
 | **AWS Bedrock** | AWS region + profile | Uses the AWS SDK credential chain. |
 | **OpenRouter** | API key (optional specific provider) | Routes through [OpenRouter](https://openrouter.ai/). |
 | **Voyage** | API key | Voyage `voyage-code-3` is tuned for code. |
@@ -45,12 +52,79 @@ Indexing needs an embedding provider to turn code into vectors. Pick one of:
 For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).
 {% /callout %}
 
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+The legacy extension supports a smaller set of providers:
+
+| Provider | How to use | Notes |
+|---|---|---|
+| **OpenAI** | API key | Default: `text-embedding-3-small`. |
+| **Gemini** | Google AI API key | Supports Gemini embedding models including `gemini-embedding-001`. |
+| **Ollama (local)** | Local base URL | No API costs. |
+
+{% /tab %}
+{% /tabs %}
+
 ## Vector Stores
 
-Two vector store backends are supported:
+{% tabs %}
+{% tab label="CLI & VSCode (new)" %}
 
 - **Qdrant** (default) — external server. Recommended for team deployments and larger codebases.
 - **LanceDB** — embedded, file-based. No server to run. Stores data under your Kilo data directory by default.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+The legacy extension only supports **Qdrant**.
+
+{% /tab %}
+{% /tabs %}
+
+## Enabling the feature
+
+On the CLI and the new VS Code extension, codebase indexing is gated behind an experimental flag. Until the flag is turned on, the Indexing UI and the `/indexing` command are hidden and `semantic_search` is unavailable — even if you already have `indexing` settings in your config.
+
+{% tabs %}
+{% tab label="CLI" %}
+
+Set the experimental flag in your `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "semantic_indexing": true
+  }
+}
+```
+
+Restart the CLI for the change to take effect. The `/indexing` command (and aliases `/index`, `/embedding`) will appear in the command palette once the flag is active.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+1. Open Kilo Code **Settings** → **Experimental**.
+2. Toggle **Semantic Indexing** on.
+3. The **Indexing** tab will appear in Settings and the indexing status indicator will appear at the bottom of the prompt input panel.
+
+Alternatively, set `experimental.semantic_indexing` to `true` in your `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "semantic_indexing": true
+  }
+}
+```
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+The legacy extension does not require an experimental flag. Configure Codebase Indexing directly in Settings — see the **Configuration → VSCode (Legacy)** section below.
+
+{% /tab %}
+{% /tabs %}
 
 ## Configuration
 
@@ -58,6 +132,10 @@ Two vector store backends are supported:
 {% tab label="CLI" %}
 
 ### Configure via `/indexing`
+
+{% callout type="info" %}
+The `/indexing` command is only registered after `experimental.semantic_indexing` is set to `true`. See [Enabling the feature](#enabling-the-feature) above.
+{% /callout %}
 
 Open a Kilo TUI session and run:
 
@@ -130,6 +208,10 @@ When indexing is enabled, the CLI shows an indexing status badge at the bottom o
 {% tab label="VSCode" %}
 
 ### Open the Indexing settings
+
+{% callout type="info" %}
+The **Indexing** tab only shows up after you enable **Semantic Indexing** under Settings → Experimental. See [Enabling the feature](#enabling-the-feature) above.
+{% /callout %}
 
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
 2. Toggle **Enable Indexing** on.
