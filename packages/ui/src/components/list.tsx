@@ -340,7 +340,9 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
                             data-slot="list-item"
                             data-key={props.key(item)}
                             data-active={props.key(item) === active()}
+                            /* kilocode_change start */
                             data-selected={props.current !== undefined && props.key(item) === props.key(props.current)}
+                            /* kilocode_change end */
                             onClick={() => handleSelect(item, i())}
                             onKeyDown={handleKey}
                             type="button"
@@ -355,7 +357,9 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
                             }}
                           >
                             {props.children(item)}
+                            {/* kilocode_change start */}
                             <Show when={props.current !== undefined && props.key(item) === props.key(props.current)}>
+                            {/* kilocode_change end */}
                               <span data-slot="list-item-selected-icon">
                                 <Icon name="check-small" />
                               </span>

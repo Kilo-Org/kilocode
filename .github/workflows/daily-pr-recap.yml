@@ -24,7 +24,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: Install opencode
-        run: curl -fsSL https://opencode.ai/install | bash
+        run: curl -fsSL https://opencode.ai/install | bash # kilocode_change
 
       - name: Generate daily PR recap
         id: recap
@@ -45,7 +45,7 @@ jobs:
         run: |
           TODAY=$(date -u +%Y-%m-%d)
 
-          opencode run -m kilo/anthropic/claude-sonnet-4.5 "Generate a daily PR activity recap for the OpenCode repository.
+          opencode run -m kilo/anthropic/claude-sonnet-4.5 "Generate a daily PR activity recap for the OpenCode repository. # kilocode_change
 
           TODAY'S DATE: ${TODAY}
 

@@ -7,7 +7,7 @@ on:
 jobs:
   # kilocode_change start
   check-author:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Kilo-Org/kilocode' && false
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -17,9 +17,9 @@ jobs:
 
   check-standards:
     needs: check-author
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    # kilocode_change end
+    if: github.repository == 'Kilo-Org/kilocode' && false
     runs-on: blacksmith-4vcpu-ubuntu-2404
+  # kilocode_change end
     permissions:
       pull-requests: write
     steps:
@@ -88,9 +88,9 @@ jobs:
             - \`refactor:\` or \`refactor(scope):\` code refactoring
             - \`test:\` or \`test(scope):\` adding or updating tests
 
-            Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`kilo\`).
+            Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`kilo\`). # kilocode_change
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`);
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`); # kilocode_change
               return;
             }
 
@@ -133,7 +133,7 @@ jobs:
             1. Open an issue describing the bug/feature (if one doesn't exist)
             2. Add \`Fixes #<number>\` or \`Closes #<number>\` to this PR description
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`);
+            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`); # kilocode_change
               return;
             }
 

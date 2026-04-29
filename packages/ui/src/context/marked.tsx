@@ -1,10 +1,11 @@
 import { marked } from "marked"
-// kilocode_change: marked-shiki highlighted code blocks synchronously during
+// kilocode_change start
 // parse, freezing the main thread on session switches with many code blocks
 // (issue #6221 / PR #7102). We render plain <pre><code data-lang="..."> here
 // and hand off to deferredHighlight() in markdown.tsx for progressive Shiki.
 // This import was re-added by an upstream merge; removing it restores the
 // two-pass rendering design.
+// kilocode_change end
 import katex from "katex"
 // kilocode_change start: import types for double-dollar math extension
 import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
@@ -405,9 +406,10 @@ function renderMathInText(text: string): string {
     }
   })
 
-  // kilocode_change: removed single-dollar inline math ($...$) rendering.
+  // kilocode_change start
   // Single $ is far more common as a currency symbol in agent responses
   // (e.g. $93K, $307K) than as a LaTeX delimiter. Only $$...$$ is supported.
+  // kilocode_change end
 
   return result
 }
@@ -427,8 +429,10 @@ function renderMathExpressions(html: string): string {
     .join("")
 }
 
+// kilocode_change start
 // Used only by the native parser path (props.nativeParser) — not the JS parser.
 // The JS parser uses deferredHighlight() instead for non-blocking rendering.
+// kilocode_change end
 async function highlightCodeBlocks(html: string): Promise<string> {
   const codeBlockRegex = /<pre><code(?:\s+class="language-([^"]*)")?>([\s\S]*?)<\/code><\/pre>/g
   const matches = [...html.matchAll(codeBlockRegex)]
@@ -471,7 +475,6 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
 
-// kilocode_change: parseFilePath imported from ../file-path
 
 // kilocode_change start: highlight cache for deferred highlighting
 
@@ -636,7 +639,6 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             const titleAttr = title ? ` title="${title}"` : ""
             return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           },
-          // kilocode_change start
           codespan({ text }) {
             const file = parseFilePath(text)
             const escaped = text
@@ -666,10 +668,8 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             const attr = safe ? ` class="language-${safe}" data-lang="${safe}"` : ' data-lang="text"'
             return `<pre><code${attr}>${escaped}</code></pre>`
           },
-          // kilocode_change end
         },
       },
-      // kilocode_change start: enable only double-dollar math.
       // Single $ is far more common as a currency symbol in agent responses
       // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
       // marked-katex-extension inline tokenizer because Marked falls through
@@ -717,8 +717,6 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
           } satisfies TokenizerAndRendererExtension,
         ],
       } satisfies MarkedExtension,
-      // kilocode_change end
-      // kilocode_change: markedShiki removed — the custom `code` renderer
       // above returns plain <pre><code data-lang="..."> and markdown.tsx
       // calls deferredHighlight() after paint. Running Shiki inside parse
       // blocks the main thread on session switches (issue #6221).
@@ -736,6 +734,6 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       }
     }
 
-    return parser
+    return parser // kilocode_change
   },
 })

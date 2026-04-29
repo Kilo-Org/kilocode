@@ -21,7 +21,9 @@
   align-self: stretch;
   width: 100%;
   max-width: 100%;
-  gap: 8px; /* kilocode_change */
+  /* kilocode_change start */
+  gap: 8px;
+  /* kilocode_change end */
 
   [data-slot="user-message-attachments"] {
     display: flex;
@@ -43,7 +45,9 @@
     overflow: hidden;
     background: var(--surface-weak);
     border: 1px solid var(--border-weak-base);
-    cursor: pointer; /* kilocode_change */
+    /* kilocode_change start */
+    cursor: pointer;
+    /* kilocode_change end */
     transition:
       border-color 0.15s ease,
       opacity 0.3s ease;
@@ -182,7 +186,9 @@
     align-items: center;
     justify-content: flex-end;
     overflow: hidden;
-    gap: 6px; /* kilocode_change */
+    /* kilocode_change start */
+    gap: 6px;
+    /* kilocode_change end */
   }
 
   [data-slot="user-message-meta-tail"] {
@@ -249,11 +255,12 @@
     pointer-events: auto;
   }
 
-  /* kilocode_change: always show copy button for the final turn response */
+  /* kilocode_change start */
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
     opacity: 1;
     pointer-events: auto;
   }
+  /* kilocode_change end */
 }
 
 [data-component="compaction-part"] {
@@ -365,7 +372,9 @@
   width: 100%;
   border: 1px solid var(--border-weak-base);
   border-radius: 6px;
+  /* kilocode_change start */
   background: var(--background-stronger);
+  /* kilocode_change end */
   position: relative;
   overflow: hidden;
 
@@ -417,7 +426,9 @@
     line-height: var(--line-height-large);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    /* kilocode_change start */
     background: transparent;
+    /* kilocode_change end */
   }
 }
 
@@ -520,7 +531,6 @@
         color: var(--text-base);
       }
     }
-    /* kilocode_change end */
   }
 
   [data-slot="message-part-filename"] {
@@ -533,6 +543,7 @@
     gap: 16px;
     align-items: center;
     justify-content: flex-end;
+  /* kilocode_change end */
   }
 
   [data-slot="message-part-filename"] {
@@ -646,6 +657,7 @@
   padding: 10px 0 24px 0;
   display: flex;
   flex-direction: column;
+  /* kilocode_change start */
   gap: 2px;
 
   [data-component="checkbox"] {
@@ -655,6 +667,7 @@
       display: contents;
     }
   }
+    /* kilocode_change end */
 
   [data-component="checkbox"] {
     --checkbox-align: flex-start;
@@ -1279,6 +1292,7 @@
     font-weight: var(--font-weight-medium);
   }
 
+  /* kilocode_change start */
   [data-slot="apply-patch-file-path"] {
     font-family: var(--font-family-mono);
     font-size: var(--font-size-small);
@@ -1288,7 +1302,6 @@
     white-space: nowrap;
     flex-grow: 1;
 
-    /* kilocode_change start */
     &.clickable {
       cursor: pointer;
       transition: color 0.15s ease;
@@ -1301,8 +1314,10 @@
     /* kilocode_change end */
   }
 
+  /* kilocode_change start */
   [data-slot="apply-patch-change"][data-type="added"] {
     color: var(--icon-diff-add-base);
+  /* kilocode_change end */
   }
 
   [data-slot="apply-patch-change"][data-type="modified"] {

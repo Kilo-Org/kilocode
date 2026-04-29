@@ -1,4 +1,4 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked, deferredHighlight, fnv1a } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -292,9 +292,7 @@ export function Markdown(
   // The abort signal cancels the previous in-flight highlight pass so rapid
   // streaming tokens don't spawn concurrent passes racing on the same DOM nodes.
   const highlightState = { gen: 0, signal: { aborted: false } }
-  // kilocode_change end
 
-  // kilocode_change start: rAF-coalesced morphdom render.
   // During LLM token streaming, content updates arrive at 60–200Hz. Each
   // token reparses the full accumulated HTML (temp.innerHTML = content) and
   // diffs it via morphdom. CPU profile of a 7s streaming window showed 2,940
@@ -346,9 +344,7 @@ export function Markdown(
       kickHighlight(container, labels)
       return
     }
-    // kilocode_change end
 
-    // kilocode_change start: queue the latest content for a single rAF tick.
     // Further updates before the frame runs simply overwrite pendingContent,
     // so K rapid updates collapse to 1 parse instead of K.
     pendingContent = content
@@ -367,7 +363,6 @@ export function Markdown(
       temp.innerHTML = next
       decorate(temp, nextLabels)
 
-      // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
       // During streaming, morphdom re-runs on every token. Without this guard,
       // it would revert already-highlighted <pre> blocks back to plain code.
       morphdom(container, temp, {
@@ -409,7 +404,6 @@ export function Markdown(
           return true
         },
       })
-      // kilocode_change end
 
       kickHighlight(container, nextLabels)
     })
@@ -440,11 +434,10 @@ export function Markdown(
   // kilocode_change end
 
   onCleanup(() => {
-    // kilocode_change: cancel any in-flight deferredHighlight pass so its
+    // kilocode_change start
     // completion callback doesn't touch the unmounted DOM.
     highlightState.signal.aborted = true
     highlightState.gen++
-    // kilocode_change: cancel any queued rAF parse so it doesn't touch the
     // unmounted DOM after dispose.
     if (pendingFrame !== undefined) {
       cancelAnimationFrame(pendingFrame)
@@ -452,6 +445,7 @@ export function Markdown(
       pendingContent = undefined
       pendingLabels = undefined
     }
+    // kilocode_change end
     if (copyCleanup) copyCleanup()
   })
 

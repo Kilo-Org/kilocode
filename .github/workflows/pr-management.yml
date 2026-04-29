@@ -7,7 +7,7 @@ on:
 jobs:
   # kilocode_change start
   check-author:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Kilo-Org/kilocode' && false
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -17,7 +17,7 @@ jobs:
 
   check-duplicates:
     needs: check-author
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Kilo-Org/kilocode' && false
     # kilocode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
@@ -89,8 +89,10 @@ jobs:
           fi
 
   add-contributor-label:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
+    # kilocode_change start
+    if: github.repository == 'Kilo-Org/kilocode' && false
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    # kilocode_change end
     permissions:
       pull-requests: write
       issues: write

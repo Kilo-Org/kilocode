@@ -2,8 +2,10 @@ name: typecheck
 
 on:
   push:
+    # kilocode_change start
     branches:
       - main
+    # kilocode_change end
   pull_request:
   workflow_dispatch:
 

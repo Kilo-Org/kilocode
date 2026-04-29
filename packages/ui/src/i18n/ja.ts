@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "セッションの変更",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git の変更",
   "ui.sessionReview.title.branch": "ブランチの変更",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "前回ターンの変更",
   "ui.sessionReview.diffStyle.unified": "Unified",
   "ui.sessionReview.diffStyle.split": "Split",
@@ -38,10 +40,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "ステップを隠す",
   "ui.sessionTurn.summary.response": "応答",
   "ui.sessionTurn.diff.showMore": "さらに変更を表示 ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "変更あり",
   "ui.sessionTurn.diffs.showAll": "すべて表示",
   "ui.sessionTurn.diffs.showLess": "表示を減らす",
   "ui.sessionTurn.diffs.more": "ほか +{{count}} 件のファイル",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "再試行中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}秒後",
@@ -52,8 +56,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "クレジットを追加",
 
   "ui.sessionTurn.status.delegating": "作業を委任中",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "次のステップを計画中",
   "ui.sessionTurn.status.gatheringContext": "探索中",
   "ui.sessionTurn.status.gatheredContext": "探索済み",
@@ -75,8 +81,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 件のリスト",
   "ui.messagePart.context.list.other": "{{count}} 件のリスト",
   "ui.messagePart.diagnostic.error": "エラー",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "入力",
   "ui.messagePart.mcp.output": "出力",
+  // kilocode_change end
   "ui.messagePart.title.edit": "編集",
   "ui.messagePart.title.write": "作成",
   "ui.messagePart.option.typeOwnAnswer": "自分の回答を入力",
@@ -139,7 +147,7 @@ export const dict = {
   "ui.message.revertMessage": "この時点までリセット",
   "ui.message.copyResponse": "応答をコピー",
   "ui.message.copied": "コピーしました！",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "中断",
   "ui.message.queued": "待機中",
   "ui.message.attachment.alt": "添付ファイル",

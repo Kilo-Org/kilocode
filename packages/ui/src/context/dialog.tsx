@@ -31,7 +31,7 @@ function init() {
   const [active, setActive] = createSignal<Active | undefined>()
   const timer = { current: undefined as ReturnType<typeof setTimeout> | undefined }
   const lock = { value: false }
-  const hasPopover = () => !!document.querySelector('[data-component="popover-content"]')
+  const hasPopover = () => !!document.querySelector('[data-component="popover-content"]') // kilocode_change
 
   onCleanup(() => {
     if (timer.current === undefined) return
@@ -65,7 +65,7 @@ function init() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
-      if (hasPopover()) return
+      if (hasPopover()) return // kilocode_change
       close()
       event.preventDefault()
       event.stopPropagation()

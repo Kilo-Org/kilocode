@@ -6,7 +6,7 @@ on:
 
 jobs:
   triage:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -20,19 +20,23 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
       - name: Setup Kilo
         uses: ./.github/actions/setup-kilo
+      # kilocode_change end
 
       - name: Triage issue
         env:
+          # kilocode_change start
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          # kilocode_change end
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          kilo run --agent triage "The following issue was just opened, triage it:
+          kilo run --agent triage "The following issue was just opened, triage it: # kilocode_change
 
           Title: $ISSUE_TITLE
 

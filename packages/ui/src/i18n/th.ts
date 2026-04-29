@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "การเปลี่ยนแปลงเซสชัน",
+  // kilocode_change start
   "ui.sessionReview.title.git": "การเปลี่ยนแปลง Git",
   "ui.sessionReview.title.branch": "การเปลี่ยนแปลงสาขา",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "การเปลี่ยนแปลงของเทิร์นล่าสุด",
   "ui.sessionReview.diffStyle.unified": "แบบรวม",
   "ui.sessionReview.diffStyle.split": "แบบแยก",
@@ -40,10 +42,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "ซ่อนขั้นตอน",
   "ui.sessionTurn.summary.response": "การตอบสนอง",
   "ui.sessionTurn.diff.showMore": "แสดงการเปลี่ยนแปลงเพิ่มเติม ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "เปลี่ยนแปลงแล้ว",
   "ui.sessionTurn.diffs.showAll": "แสดงทั้งหมด",
   "ui.sessionTurn.diffs.showLess": "แสดงน้อยลง",
   "ui.sessionTurn.diffs.more": "อีก +{{count}} ไฟล์",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "กำลังลองใหม่",
   "ui.sessionTurn.retry.inSeconds": "ใน {{seconds}}วิ",
@@ -54,8 +58,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "เพิ่มเครดิต",
 
   "ui.sessionTurn.status.delegating": "มอบหมายงาน",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "วางแผนขั้นตอนถัดไป",
   "ui.sessionTurn.status.gatheringContext": "กำลังสำรวจ",
   "ui.sessionTurn.status.gatheredContext": "สำรวจแล้ว",
@@ -77,8 +83,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "รายการ {{count}} รายการ",
   "ui.messagePart.context.list.other": "รายการ {{count}} รายการ",
   "ui.messagePart.diagnostic.error": "ข้อผิดพลาด",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "อินพุต",
   "ui.messagePart.mcp.output": "เอาต์พุต",
+  // kilocode_change end
   "ui.messagePart.title.edit": "แก้ไข",
   "ui.messagePart.title.write": "เขียน",
   "ui.messagePart.option.typeOwnAnswer": "พิมพ์คำตอบของคุณเอง",
@@ -141,7 +149,7 @@ export const dict = {
   "ui.message.revertMessage": "รีเซ็ตไปยังจุดนี้",
   "ui.message.copyResponse": "คัดลอกคำตอบ",
   "ui.message.copied": "คัดลอกแล้ว!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "ถูกขัดจังหวะ",
   "ui.message.queued": "อยู่ในคิว",
   "ui.message.attachment.alt": "ไฟล์แนบ",

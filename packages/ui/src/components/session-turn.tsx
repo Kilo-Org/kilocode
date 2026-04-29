@@ -498,7 +498,9 @@ export function SessionTurn(
                                     <span data-slot="session-turn-diff-path">
                                       <Show when={diff.file.includes("/")}>
                                         <span data-slot="session-turn-diff-directory">
+                                          {/* kilocode_change start */}
                                           {`\u2066${getDirectory(diff.file)}\u2069`}
+                                          {/* kilocode_change end */}
                                         </span>
                                       </Show>
                                       <span data-slot="session-turn-diff-filename">{getFilename(diff.file)}</span>

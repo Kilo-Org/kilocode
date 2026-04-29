@@ -511,7 +511,9 @@ export const SessionReview = (props: SessionReviewProps) => {
                                 <FileIcon node={{ path: file, type: "file" }} />
                                 <div data-slot="session-review-file-name-container">
                                   <Show when={file.includes("/")}>
+                                    {/* kilocode_change start */}
                                     <span data-slot="session-review-directory">{`\u2066${getDirectory(file)}\u2069`}</span>
+                                    {/* kilocode_change end */}
                                   </Show>
                                   <span data-slot="session-review-filename">{getFilename(file)}</span>
                                   <Show when={props.onViewFile && diffCanRender()}>

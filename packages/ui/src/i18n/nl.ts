@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const dict: Record<string, string> = {
   "ui.sessionReview.title": "Sessiewijzigingen",
   "ui.sessionReview.title.git": "Git-wijzigingen",

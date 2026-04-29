@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main] # kilocode_change
     paths:
       - "bun.lock"
       - "package.json"
@@ -25,7 +25,7 @@ jobs:
   # Native runners required: bun install cross-compilation flags (--os/--cpu)
   # do not produce byte-identical node_modules as native installs.
   compute-hash:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     strategy:
       fail-fast: false
       matrix:
@@ -81,7 +81,7 @@ jobs:
 
   update-hashes:
     needs: compute-hash
-    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
@@ -92,8 +92,10 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
+      # kilocode_change start
       - name: Setup Git Committer
         id: committer
+      # kilocode_change end
         uses: ./.github/actions/setup-git-committer
         with:
           # kilocode_change start

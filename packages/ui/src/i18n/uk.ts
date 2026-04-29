@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { dict as en } from "./en"
 
 type Keys = keyof typeof en

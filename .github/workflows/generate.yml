@@ -7,7 +7,7 @@ on:
 
 jobs:
   generate:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Setup Git Committer
+      - name: Setup Git Committer # kilocode_change
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:

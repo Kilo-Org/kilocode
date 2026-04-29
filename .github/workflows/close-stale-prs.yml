@@ -1,4 +1,4 @@
-name: close-stale-prs # kilocode_change
+name: close-stale-prs
 
 on:
   workflow_dispatch:
@@ -17,8 +17,10 @@ permissions:
 
 jobs:
   close-stale-prs:
+    # kilocode_change start
     if: github.repository == 'Kilo-Org/kilocode'
-    runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    # kilocode_change end
     timeout-minutes: 15
     steps:
       - name: Close inactive PRs

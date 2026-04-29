@@ -4,8 +4,10 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Oturum değişiklikleri",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git değişiklikleri",
   "ui.sessionReview.title.branch": "Dal değişiklikleri",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "Son tur değişiklikleri",
   "ui.sessionReview.diffStyle.unified": "Birleşik",
   "ui.sessionReview.diffStyle.split": "Bölünmüş",
@@ -45,10 +47,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Adımları gizle",
   "ui.sessionTurn.summary.response": "Yanıt",
   "ui.sessionTurn.diff.showMore": "Daha fazla değişiklik göster ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "Değiştirildi",
   "ui.sessionTurn.diffs.showAll": "Tümünü göster",
   "ui.sessionTurn.diffs.showLess": "Daha az göster",
   "ui.sessionTurn.diffs.more": "+{{count}} dosya daha",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "yeniden deneniyor",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}sn içinde",
@@ -59,8 +63,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Kredi ekle",
 
   "ui.sessionTurn.status.delegating": "Görev devrediliyor",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "Sonraki adımlar planlanıyor",
   "ui.sessionTurn.status.gatheringContext": "Keşfediliyor",
   "ui.sessionTurn.status.gatheredContext": "Keşfedildi",
@@ -82,8 +88,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Hata",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "Giriş",
   "ui.messagePart.mcp.output": "Çıkış",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Düzenle",
   "ui.messagePart.title.write": "Yaz",
   "ui.messagePart.option.typeOwnAnswer": "Kendi cevabınızı yazın",
@@ -144,7 +152,7 @@ export const dict = {
   "ui.message.copyMessage": "Mesajı kopyala",
   "ui.message.forkMessage": "Yeni oturuma dallandır",
   "ui.message.revertMessage": "Bu noktaya sıfırla",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.copyResponse": "Yanıtı kopyala",
   "ui.message.copied": "Kopyalandı",
   "ui.message.interrupted": "Kesildi",

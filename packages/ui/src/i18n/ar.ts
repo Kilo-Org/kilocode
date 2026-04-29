@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "تغييرات الجلسة",
+  // kilocode_change start
   "ui.sessionReview.title.git": "تغييرات Git",
   "ui.sessionReview.title.branch": "تغييرات الفرع",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "تغييرات آخر دور",
   "ui.sessionReview.diffStyle.unified": "موحد",
   "ui.sessionReview.diffStyle.split": "منقسم",
@@ -39,10 +41,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "إخفاء الخطوات",
   "ui.sessionTurn.summary.response": "استجابة",
   "ui.sessionTurn.diff.showMore": "إظهار المزيد من التغييرات ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "تم التغيير",
   "ui.sessionTurn.diffs.showAll": "إظهار الكل",
   "ui.sessionTurn.diffs.showLess": "إظهار أقل",
   "ui.sessionTurn.diffs.more": "+{{count}} ملفات أخرى",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "إعادة المحاولة",
   "ui.sessionTurn.retry.inSeconds": "خلال {{seconds}} ثواني",
@@ -53,8 +57,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "إضافة رصيد",
 
   "ui.sessionTurn.status.delegating": "تفويض العمل",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "تخطيط الخطوات التالية",
   "ui.sessionTurn.status.gatheringContext": "استكشاف",
   "ui.sessionTurn.status.gatheredContext": "تم الاستكشاف",
@@ -76,8 +82,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} قائمة",
   "ui.messagePart.context.list.other": "{{count}} قوائم",
   "ui.messagePart.diagnostic.error": "خطأ",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "الإدخال",
   "ui.messagePart.mcp.output": "الإخراج",
+  // kilocode_change end
   "ui.messagePart.title.edit": "تحرير",
   "ui.messagePart.title.write": "كتابة",
   "ui.messagePart.option.typeOwnAnswer": "اكتب إجابتك الخاصة",
@@ -140,7 +148,7 @@ export const dict = {
   "ui.message.revertMessage": "إعادة التعيين إلى هذه النقطة",
   "ui.message.copyResponse": "نسخ الرد",
   "ui.message.copied": "تم النسخ!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "تمت المقاطعة",
   "ui.message.queued": "في الانتظار",
   "ui.message.attachment.alt": "مرفق",

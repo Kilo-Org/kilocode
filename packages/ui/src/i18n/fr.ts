@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "Modifications de la session",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Modifications Git",
   "ui.sessionReview.title.branch": "Modifications de branche",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "Modifications du dernier tour",
   "ui.sessionReview.diffStyle.unified": "Unifié",
   "ui.sessionReview.diffStyle.split": "Divisé",
@@ -39,10 +41,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Masquer les étapes",
   "ui.sessionTurn.summary.response": "Réponse",
   "ui.sessionTurn.diff.showMore": "Afficher plus de modifications ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "Modifié",
   "ui.sessionTurn.diffs.showAll": "Tout afficher",
   "ui.sessionTurn.diffs.showLess": "Afficher moins",
   "ui.sessionTurn.diffs.more": "+{{count}} fichiers supplémentaires",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "nouvelle tentative",
   "ui.sessionTurn.retry.inSeconds": "dans {{seconds}}s",
@@ -53,8 +57,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Ajouter des crédits",
 
   "ui.sessionTurn.status.delegating": "Délégation du travail",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "Planification des prochaines étapes",
   "ui.sessionTurn.status.gatheringContext": "Exploration",
   "ui.sessionTurn.status.gatheredContext": "Exploré",
@@ -76,8 +82,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} listes",
   "ui.messagePart.diagnostic.error": "Erreur",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "Entrée",
   "ui.messagePart.mcp.output": "Sortie",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Modifier",
   "ui.messagePart.title.write": "Écrire",
   "ui.messagePart.option.typeOwnAnswer": "Tapez votre propre réponse",
@@ -140,7 +148,7 @@ export const dict = {
   "ui.message.revertMessage": "Réinitialiser à ce point",
   "ui.message.copyResponse": "Copier la réponse",
   "ui.message.copied": "Copié !",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "Interrompu",
   "ui.message.queued": "En file",
   "ui.message.attachment.alt": "pièce jointe",

@@ -51,9 +51,11 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     directory: string
     onNavigateToSession?: NavigateToSessionFn
     onSessionHref?: SessionHrefFn
-    onOpenFile?: OpenFileFn // kilocode_change
-    onOpenDiff?: OpenDiffFn // kilocode_change
-    onOpenUrl?: OpenUrlFn // kilocode_change
+    // kilocode_change start
+    onOpenFile?: OpenFileFn
+    onOpenDiff?: OpenDiffFn
+    onOpenUrl?: OpenUrlFn
+    // kilocode_change end
   }) => {
     return {
       get store() {
@@ -64,9 +66,11 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       },
       navigateToSession: props.onNavigateToSession,
       sessionHref: props.onSessionHref,
-      openFile: props.onOpenFile, // kilocode_change
-      openDiff: props.onOpenDiff, // kilocode_change
-      openUrl: props.onOpenUrl, // kilocode_change
+      // kilocode_change start
+      openFile: props.onOpenFile,
+      openDiff: props.onOpenDiff,
+      openUrl: props.onOpenUrl,
+      // kilocode_change end
     }
   },
 })

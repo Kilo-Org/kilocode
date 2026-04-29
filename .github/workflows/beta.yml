@@ -7,7 +7,7 @@ on:
 
 jobs:
   sync:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -22,7 +22,7 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Setup Git Committer
-        id: committer
+        id: committer # kilocode_change
         uses: ./.github/actions/setup-git-committer
         with:
           # kilocode_change start
@@ -32,5 +32,5 @@ jobs:
 
       - name: Sync beta branch
         env:
-          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }} # kilocode_change
         run: bun script/beta.ts

@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "세션 변경 사항",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git 변경 사항",
   "ui.sessionReview.title.branch": "브랜치 변경 사항",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "마지막 턴 변경 사항",
   "ui.sessionReview.diffStyle.unified": "통합 보기",
   "ui.sessionReview.diffStyle.split": "분할 보기",
@@ -39,10 +41,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "단계 숨기기",
   "ui.sessionTurn.summary.response": "응답",
   "ui.sessionTurn.diff.showMore": "변경 사항 더 보기 ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "변경됨",
   "ui.sessionTurn.diffs.showAll": "모두 보기",
   "ui.sessionTurn.diffs.showLess": "간략히 보기",
   "ui.sessionTurn.diffs.more": "+{{count}}개 파일 더 보기",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "재시도 중",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}초 후",
@@ -53,8 +57,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "크레딧 추가",
 
   "ui.sessionTurn.status.delegating": "작업 위임 중",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "다음 단계 계획 중",
   "ui.sessionTurn.status.gatheringContext": "탐색 중",
   "ui.sessionTurn.status.gatheredContext": "탐색됨",
@@ -76,8 +82,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}}개 목록",
   "ui.messagePart.context.list.other": "{{count}}개 목록",
   "ui.messagePart.diagnostic.error": "오류",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "입력",
   "ui.messagePart.mcp.output": "출력",
+  // kilocode_change end
   "ui.messagePart.title.edit": "편집",
   "ui.messagePart.title.write": "작성",
   "ui.messagePart.option.typeOwnAnswer": "직접 답변 입력",
@@ -140,7 +148,7 @@ export const dict = {
   "ui.message.revertMessage": "이 시점으로 초기화",
   "ui.message.copyResponse": "응답 복사",
   "ui.message.copied": "복사됨!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "중단됨",
   "ui.message.queued": "대기 중",
   "ui.message.attachment.alt": "첨부 파일",

@@ -3,14 +3,14 @@ name: test
 on:
   push:
     branches:
-      - main
+      - main # kilocode_change
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  # Keep every run on main so cancelled checks do not pollute the default branch
+  # Keep every run on main so cancelled checks do not pollute the default branch # kilocode_change
   # commit history. PRs and other branches still share a group and cancel stale runs.
-  group: ${{ case(github.ref == 'refs/heads/main', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }}
+  group: ${{ case(github.ref == 'refs/heads/main', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }} # kilocode_change
   cancel-in-progress: true
 
 permissions:
@@ -28,9 +28,9 @@ jobs:
       matrix:
         settings:
           - name: linux
-            host: blacksmith-8vcpu-ubuntu-2404
+            host: blacksmith-8vcpu-ubuntu-2404 # kilocode_change
           - name: windows
-            host: blacksmith-8vcpu-windows-2025
+            host: blacksmith-8vcpu-windows-2025 # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
@@ -51,8 +51,10 @@ jobs:
 
       - name: Configure git identity
         run: |
+          # kilocode_change start
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
+          # kilocode_change end
 
       - name: Cache Turbo
         uses: actions/cache@v4
@@ -89,8 +91,7 @@ jobs:
           path: packages/*/.artifacts/unit/junit.xml
 
   e2e:
-    # kilocode_change - disabled: packages/app is not actively maintained
-    if: false
+    if: false # kilocode_change
     name: e2e (${{ matrix.settings.name }})
     strategy:
       fail-fast: false
@@ -169,6 +170,7 @@ jobs:
             packages/app/e2e/test-results
             packages/app/e2e/playwright-report
 
+  # kilocode_change start
   required:
     name: test (linux)
     runs-on: blacksmith-4vcpu-ubuntu-2404
@@ -180,3 +182,4 @@ jobs:
         run: |
           echo "unit=${{ needs.unit.result }}"
           test "${{ needs.unit.result }}" = "success"
+  # kilocode_change end

@@ -4,8 +4,10 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "工作階段變更",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git 變更",
   "ui.sessionReview.title.branch": "分支變更",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "上一輪變更",
   "ui.sessionReview.diffStyle.unified": "整合",
   "ui.sessionReview.diffStyle.split": "拆分",
@@ -43,10 +45,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "隱藏步驟",
   "ui.sessionTurn.summary.response": "回覆",
   "ui.sessionTurn.diff.showMore": "顯示更多變更 ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "已變更",
   "ui.sessionTurn.diffs.showAll": "顯示全部",
   "ui.sessionTurn.diffs.showLess": "顯示更少",
   "ui.sessionTurn.diffs.more": "還有 +{{count}} 個檔案",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "重試中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}} 秒後",
@@ -57,8 +61,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "新增點數",
 
   "ui.sessionTurn.status.delegating": "正在委派工作",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "正在規劃下一步",
   "ui.sessionTurn.status.gatheringContext": "正在探索",
   "ui.sessionTurn.status.gatheredContext": "已探索",
@@ -80,8 +86,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 個清單",
   "ui.messagePart.context.list.other": "{{count}} 個清單",
   "ui.messagePart.diagnostic.error": "錯誤",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "輸入",
   "ui.messagePart.mcp.output": "輸出",
+  // kilocode_change end
   "ui.messagePart.title.edit": "編輯",
   "ui.messagePart.title.write": "寫入",
   "ui.messagePart.option.typeOwnAnswer": "輸入自己的答案",
@@ -144,7 +152,7 @@ export const dict = {
   "ui.message.revertMessage": "重設至此點",
   "ui.message.copyResponse": "複製回覆",
   "ui.message.copied": "已複製！",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "已中斷",
   "ui.message.queued": "排隊中",
   "ui.message.attachment.alt": "附件",

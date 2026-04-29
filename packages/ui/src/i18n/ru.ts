@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "Изменения сессии",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Изменения Git",
   "ui.sessionReview.title.branch": "Изменения ветки",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "Изменения последнего хода",
   "ui.sessionReview.diffStyle.unified": "Объединённый",
   "ui.sessionReview.diffStyle.split": "Разделённый",
@@ -38,10 +40,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Скрыть шаги",
   "ui.sessionTurn.summary.response": "Ответ",
   "ui.sessionTurn.diff.showMore": "Показать ещё изменений ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "Изменено",
   "ui.sessionTurn.diffs.showAll": "Показать все",
   "ui.sessionTurn.diffs.showLess": "Показать меньше",
   "ui.sessionTurn.diffs.more": "Еще +{{count}} файлов",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "повтор",
   "ui.sessionTurn.retry.inSeconds": "через {{seconds}}с",
@@ -52,8 +56,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Добавить кредиты",
 
   "ui.sessionTurn.status.delegating": "Делегирование работы",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "Планирование следующих шагов",
   "ui.sessionTurn.status.gatheringContext": "Исследование",
   "ui.sessionTurn.status.gatheredContext": "Исследовано",
@@ -75,8 +81,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} список",
   "ui.messagePart.context.list.other": "{{count}} списков",
   "ui.messagePart.diagnostic.error": "Ошибка",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "Ввод",
   "ui.messagePart.mcp.output": "Вывод",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Редактировать",
   "ui.messagePart.title.write": "Написать",
   "ui.messagePart.option.typeOwnAnswer": "Введите свой ответ",
@@ -139,7 +147,7 @@ export const dict = {
   "ui.message.revertMessage": "Сбросить до этого момента",
   "ui.message.copyResponse": "Копировать ответ",
   "ui.message.copied": "Скопировано!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "Прервано",
   "ui.message.queued": "В очереди",
   "ui.message.attachment.alt": "вложение",

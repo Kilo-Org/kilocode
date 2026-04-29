@@ -3,8 +3,10 @@ type Keys = keyof typeof en
 
 export const dict: Record<Keys, string> = {
   "ui.sessionReview.title": "Sesjonsendringer",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git-endringer",
   "ui.sessionReview.title.branch": "Branch-endringer",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "Endringer i siste tur",
   "ui.sessionReview.diffStyle.unified": "Samlet",
   "ui.sessionReview.diffStyle.split": "Delt",
@@ -42,10 +44,12 @@ export const dict: Record<Keys, string> = {
   "ui.sessionTurn.steps.hide": "Skjul trinn",
   "ui.sessionTurn.summary.response": "Svar",
   "ui.sessionTurn.diff.showMore": "Vis flere endringer ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "Endret",
   "ui.sessionTurn.diffs.showAll": "Vis alle",
   "ui.sessionTurn.diffs.showLess": "Vis færre",
   "ui.sessionTurn.diffs.more": "+{{count}} flere filer",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "Prøver igjen",
   "ui.sessionTurn.retry.inSeconds": "om {{seconds}}s",
@@ -56,8 +60,10 @@ export const dict: Record<Keys, string> = {
   "ui.sessionTurn.error.addCredits": "Legg til kreditt",
 
   "ui.sessionTurn.status.delegating": "Delegerer arbeid",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "Planlegger neste trinn",
   "ui.sessionTurn.status.gatheringContext": "Utforsker",
   "ui.sessionTurn.status.gatheredContext": "Utforsket",
@@ -79,8 +85,10 @@ export const dict: Record<Keys, string> = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} lister",
   "ui.messagePart.diagnostic.error": "Feil",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "Inndata",
   "ui.messagePart.mcp.output": "Utdata",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv ditt eget svar",
@@ -143,7 +151,7 @@ export const dict: Record<Keys, string> = {
   "ui.message.revertMessage": "Tilbakestill til dette punktet",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopiert!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "Avbrutt",
   "ui.message.queued": "I kø",
   "ui.message.attachment.alt": "vedlegg",

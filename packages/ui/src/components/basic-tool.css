@@ -138,7 +138,9 @@
     }
 
     &.subagent-link {
+      /* kilocode_change start */
       cursor: pointer;
+      /* kilocode_change end */
       color: var(--text-interactive-base);
       text-decoration: none;
       text-underline-offset: 2px;

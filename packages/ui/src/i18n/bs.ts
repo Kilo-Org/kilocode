@@ -4,8 +4,10 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Promjene sesije",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git promjene",
   "ui.sessionReview.title.branch": "Promjene grane",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "Promjene u posljednjem potezu",
   "ui.sessionReview.diffStyle.unified": "Ujedinjeno",
   "ui.sessionReview.diffStyle.split": "Podijeljeno",
@@ -43,10 +45,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Sakrij korake",
   "ui.sessionTurn.summary.response": "Odgovor",
   "ui.sessionTurn.diff.showMore": "Prikaži još izmjena ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "Izmijenjeno",
   "ui.sessionTurn.diffs.showAll": "Prikaži sve",
   "ui.sessionTurn.diffs.showLess": "Prikaži manje",
   "ui.sessionTurn.diffs.more": "Još +{{count}} datoteka",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "ponovni pokušaj",
   "ui.sessionTurn.retry.inSeconds": "za {{seconds}}s",
@@ -57,8 +61,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Dodaj kredite",
 
   "ui.sessionTurn.status.delegating": "Delegiranje posla",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "Planiranje sljedećih koraka",
   "ui.sessionTurn.status.gatheringContext": "Istraživanje",
   "ui.sessionTurn.status.gatheredContext": "Istraženo",
@@ -80,8 +86,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Greška",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "Ulaz",
   "ui.messagePart.mcp.output": "Izlaz",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Uredi",
   "ui.messagePart.title.write": "Napiši",
   "ui.messagePart.option.typeOwnAnswer": "Unesi svoj odgovor",
@@ -144,7 +152,7 @@ export const dict = {
   "ui.message.revertMessage": "Resetuj na ovu tačku",
   "ui.message.copyResponse": "Kopiraj odgovor",
   "ui.message.copied": "Kopirano!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "Prekinuto",
   "ui.message.queued": "U redu",
   "ui.message.attachment.alt": "prilog",

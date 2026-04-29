@@ -16,7 +16,7 @@ export const iconNames = [
   "v0",
   "upstage",
   "togetherai",
-  "tencent-coding-plan",
+  "tencent-coding-plan", // kilocode_change
   "synthetic",
   "submodel",
   "stepfun",
@@ -31,7 +31,7 @@ export const iconNames = [
   "privatemode-ai",
   "poe",
   "perplexity",
-  "perplexity-agent",
+  "perplexity-agent", // kilocode_change
   "ovhcloud",
   "openrouter",
   "llmgateway",
@@ -80,8 +80,10 @@ export const iconNames = [
   "fireworks-ai",
   "fastrouter",
   "evroc",
+  // kilocode_change start
   "drun",
   "dinference",
+  // kilocode_change end
   "deepseek",
   "deepinfra",
   "cortecs",
@@ -89,7 +91,7 @@ export const iconNames = [
   "cloudflare-workers-ai",
   "cloudflare-ai-gateway",
   "cloudferro-sherlock",
-  "clarifai",
+  "clarifai", // kilocode_change
   "chutes",
   "cerebras",
   "berget",
@@ -100,8 +102,10 @@ export const iconNames = [
   "anthropic",
   "amazon-bedrock",
   "alibaba",
+  // kilocode_change start
   "alibaba-coding-plan",
   "alibaba-coding-plan-cn",
+  // kilocode_change end
   "alibaba-cn",
   "aihubmix",
   "abacus",

@@ -1,7 +1,9 @@
 export const dict = {
   "ui.sessionReview.title": "Sessionsændringer",
+  // kilocode_change start
   "ui.sessionReview.title.git": "Git-ændringer",
   "ui.sessionReview.title.branch": "Branch-ændringer",
+  // kilocode_change end
   "ui.sessionReview.title.lastTurn": "Ændringer fra sidste tur",
   "ui.sessionReview.diffStyle.unified": "Samlet",
   "ui.sessionReview.diffStyle.split": "Opdelt",
@@ -38,10 +40,12 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Skjul trin",
   "ui.sessionTurn.summary.response": "Svar",
   "ui.sessionTurn.diff.showMore": "Vis flere ændringer ({{count}})",
+  // kilocode_change start
   "ui.sessionTurn.diffs.changed": "Ændret",
   "ui.sessionTurn.diffs.showAll": "Vis alle",
   "ui.sessionTurn.diffs.showLess": "Vis færre",
   "ui.sessionTurn.diffs.more": "+{{count}} flere filer",
+  // kilocode_change end
 
   "ui.sessionTurn.retry.retrying": "prøver igen",
   "ui.sessionTurn.retry.inSeconds": "om {{seconds}}s",
@@ -52,8 +56,10 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Tilføj kreditter",
 
   "ui.sessionTurn.status.delegating": "Delegerer arbejde",
+  // kilocode_change start
   "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
   "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
+  // kilocode_change end
   "ui.sessionTurn.status.planning": "Planlægger næste trin",
   "ui.sessionTurn.status.gatheringContext": "Udforsker",
   "ui.sessionTurn.status.gatheredContext": "Udforsket",
@@ -75,8 +81,10 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} lister",
   "ui.messagePart.diagnostic.error": "Fejl",
+  // kilocode_change start
   "ui.messagePart.mcp.input": "Input",
   "ui.messagePart.mcp.output": "Output",
+  // kilocode_change end
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv dit eget svar",
@@ -139,7 +147,7 @@ export const dict = {
   "ui.message.revertMessage": "Nulstil til dette punkt",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopieret!",
-  "ui.message.revert": "Revert to here",
+  "ui.message.revert": "Revert to here", // kilocode_change
   "ui.message.interrupted": "Afbrudt",
   "ui.message.queued": "I kø",
   "ui.message.attachment.alt": "vedhæftning",

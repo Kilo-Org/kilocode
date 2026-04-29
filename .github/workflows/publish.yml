@@ -1,13 +1,15 @@
 name: publish
-run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}"
+run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}" # kilocode_change
 
 on:
+  # kilocode_change start
   # push:
   #   branches:
   #     - ci
   #     - dev
   #     - beta
   #     - snapshot-*
+  # kilocode_change end
   workflow_dispatch:
     inputs:
       bump:
@@ -16,17 +18,21 @@ on:
         type: choice
         options:
           - patch
+          # kilocode_change start
           - minor
           - major
+          # kilocode_change end
       version:
         description: "Override version (optional)"
         required: false
         type: string
+      # kilocode_change start
       pre_release:
         description: "Publish as pre-release (VS Code marketplace + npm rc channel)"
         required: false
         type: boolean
         default: false
+      # kilocode_change end
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
 
@@ -59,13 +65,17 @@ jobs:
         run: |
           ./script/version.ts
         env:
+          # kilocode_change start
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          # kilocode_change end
           KILO_BUMP: ${{ inputs.bump }}
           KILO_VERSION: ${{ inputs.version }}
+          # kilocode_change start
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          # kilocode_change end
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
@@ -89,21 +99,25 @@ jobs:
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          # kilocode_change start
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          # kilocode_change end
 
       - uses: actions/upload-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          path: packages/opencode/dist # kilocode_change
 
     outputs:
       version: ${{ needs.version.outputs.version }}
 
+  # kilocode_change start
   build-vscode:
     needs: build-cli
     runs-on: blacksmith-4vcpu-ubuntu-2404
+  # kilocode_change end
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
       - uses: actions/checkout@v3
@@ -113,27 +127,34 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
+          registry-url: "https://registry.npmjs.org" # kilocode_change
 
+      # kilocode_change start
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
+      # kilocode_change end
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4 # kilocode_change
         with:
+          # kilocode_change start
           name: kilo-cli
           path: packages/opencode/dist
 
       - name: Build VSIX packages
         run: bun script/build.ts
         working-directory: ./packages/kilo-vscode
+      # kilocode_change end
         env:
+          # kilocode_change start
           CLI_DIST_DIR: ../../packages/opencode/dist
           KILO_VERSION: ${{ needs.build-cli.outputs.version }}
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
+          # kilocode_change end
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4 # kilocode_change
         with:
+          # kilocode_change start
           name: kilo-vscode
           path: packages/kilo-vscode/out
 
@@ -181,9 +202,11 @@ jobs:
   #       if: ${{ runner.os == 'macOS' }}
   #       run: |
   #         echo "${{ secrets.APPLE_API_KEY_PATH }}" > $RUNNER_TEMP/apple-api-key.p8
+  # kilocode_change end
 
-  #     - uses: ./.github/actions/setup-bun
+  #     - uses: ./.github/actions/setup-bun # kilocode_change
 
+  # kilocode_change start
   #     - name: Cache apt packages
   #       if: contains(matrix.settings.host, 'ubuntu')
   #       uses: actions/cache@v4
@@ -253,7 +276,6 @@ jobs:
   #         APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
   #         APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.p8
 
-  # kilocode_change start
   # Run smoke tests against CLI assets uploaded to the draft GitHub release
   # before publishing the release and package artifacts.
   smoke-test:
@@ -271,10 +293,12 @@ jobs:
     needs:
       - version
       - build-cli
+      # kilocode_change start
       - build-vscode
       - smoke-test
       # - build-tauri
     runs-on: ubuntu-24.04
+      # kilocode_change end
     steps:
       - uses: actions/checkout@v3
 
@@ -298,10 +322,12 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
+      # kilocode_change start
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
+      # kilocode_change end
 
-      - name: Setup Git Committer
+      - name: Setup Git Committer # kilocode_change
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
@@ -317,8 +343,10 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
+          # kilocode_change start
           name: kilo-vscode
           path: packages/kilo-vscode/out
+          # kilocode_change end
 
       - name: Cache apt packages (AUR)
         uses: actions/cache@v4
@@ -335,19 +363,25 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          # kilocode_change start
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
+          # kilocode_change end
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
       - run: ./script/publish.ts
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          # kilocode_change start
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
+          # kilocode_change end
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
+          # kilocode_change start
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
           OPENVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+          # kilocode_change end

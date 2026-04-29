@@ -803,12 +803,14 @@ export function Message(props: MessageProps) {
     <Switch>
       <Match when={props.message.role === "user" && props.message}>
         {(userMessage) => (
+          // kilocode_change start
           <UserMessageDisplay
             message={userMessage() as UserMessage}
             parts={props.parts}
             actions={props.actions}
-            queued={props.queued} // kilocode_change
+            queued={props.queued}
           />
+          // kilocode_change end
         )}
       </Match>
       <Match when={props.message.role === "assistant" && props.message}>
@@ -999,12 +1001,14 @@ function ContextToolGroup(props: { parts: ToolPart[]; busy?: boolean }) {
   )
 }
 
+// kilocode_change start
 export function UserMessageDisplay(props: {
   message: UserMessage
   parts: PartType[]
   actions?: UserActions
-  queued?: boolean // kilocode_change
+  queued?: boolean
 }) {
+// kilocode_change end
   const data = useData()
   const dialog = useDialog()
   const i18n = useI18n()
@@ -1092,7 +1096,9 @@ export function UserMessageDisplay(props: {
                   data-slot="user-message-attachment"
                   data-type={type}
                   data-clickable={type === "image" ? "true" : undefined}
-                  data-queued={props.queued ? "" : undefined} // kilocode_change
+                  /* kilocode_change start */
+                  data-queued={props.queued ? "" : undefined}
+                  /* kilocode_change end */
                   title={type === "file" ? name : undefined}
                   onClick={() => {
                     if (type === "image") openImagePreview(file.url, name)
@@ -1118,8 +1124,9 @@ export function UserMessageDisplay(props: {
       <Show when={text()}>
         <>
           <div data-slot="user-message-body">
+            {/* kilocode_change start */}
             <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-              {/* kilocode_change */}
+            {/* kilocode_change end */}
               <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
             </div>
             {/* kilocode_change start */}
@@ -1300,7 +1307,9 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
+                    {/* kilocode_change start */}
                     <span data-slot="apply-patch-directory">{`\u2066${getDirectory(props.path)}\u2069`}</span>
+                    {/* kilocode_change end */}
                   </Show>
                   <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
                 </div>
@@ -1595,7 +1604,9 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="bullet-list"
+        /* kilocode_change start */
         defer
+        /* kilocode_change end */
         trigger={{ title: i18n.t("ui.tool.list"), subtitle: getDirectory(props.input.path || "/") }}
       >
         <Show when={props.output}>
@@ -1616,7 +1627,9 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
+        /* kilocode_change start */
         defer
+        /* kilocode_change end */
         trigger={{
           title: i18n.t("ui.tool.glob"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1644,7 +1657,9 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
+        /* kilocode_change start */
         defer
+        /* kilocode_change end */
         trigger={{
           title: i18n.t("ui.tool.grep"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1865,7 +1880,9 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
+        /* kilocode_change start */
         defer
+        /* kilocode_change end */
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
@@ -2115,7 +2132,9 @@ ToolRegistry.register({
                                   <FileIcon node={{ path: file.relativePath, type: "file" }} />
                                   <div data-slot="apply-patch-file-name-container">
                                     <Show when={file.relativePath.includes("/")}>
+                                      {/* kilocode_change start */}
                                       <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
+                                      {/* kilocode_change end */}
                                     </Show>
                                     <span data-slot="apply-patch-filename">{getFilename(file.relativePath)}</span>
                                   </div>

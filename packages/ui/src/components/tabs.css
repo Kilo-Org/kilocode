@@ -524,7 +524,9 @@
           min-width: 200px;
         }
         padding: 12px;
+        /* kilocode_change start */
         gap: 2px;
+        /* kilocode_change end */
         background-color: var(--background-base);
         border-right: 1px solid var(--border-weak-base);
 

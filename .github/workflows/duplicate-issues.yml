@@ -26,8 +26,10 @@ jobs:
 
       - name: Check duplicates and compliance
         env:
+          # kilocode_change start
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          # kilocode_change end
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {
@@ -38,7 +40,7 @@ jobs:
               "webfetch": "deny"
             }
         run: |
-          kilo run -m "kilo/anthropic/claude-haiku-4.5" "A new issue has been created:
+          kilo run -m "kilo/anthropic/claude-haiku-4.5" "A new issue has been created: # kilocode_change
 
           Issue number: ${{ github.event.issue.number }}
 
@@ -155,7 +157,7 @@ jobs:
               "webfetch": "deny"
             }
         run: |
-          kilo run -m "kilo/anthropic/claude-haiku-4.5" "Issue #${{ github.event.issue.number }} was previously flagged as non-compliant and has been edited.
+          kilo run -m "kilo/anthropic/claude-haiku-4.5" "Issue #${{ github.event.issue.number }} was previously flagged as non-compliant and has been edited. # kilocode_change
 
           Lookup this issue with gh issue view ${{ github.event.issue.number }}.
 
