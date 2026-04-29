@@ -43,12 +43,12 @@ Route requests through unified APIs with additional features:
 
 ## Choosing a Provider
 
-| Priority        | Recommended Provider                                |
-| --------------- | --------------------------------------------------- |
-| Ease of use     | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
-| Best value      | Zhipu AI or Mistral                                 |
-| Privacy/Offline | Ollama or LM Studio                                 |
-| Enterprise      | AWS Bedrock or Google Vertex                        |
+| Priority | Recommended Provider |
+|---|---|
+| Ease of use | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
+| Best value | Zhipu AI or Mistral |
+| Privacy/Offline | Ollama or LM Studio |
+| Enterprise | AWS Bedrock or Google Vertex |
 
 ## Why Use Multiple Providers?
 

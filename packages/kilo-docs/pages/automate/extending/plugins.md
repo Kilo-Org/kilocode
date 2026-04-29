@@ -44,11 +44,11 @@ Add an array of plugin specifiers to your config file:
 
 Each entry can be:
 
-| Form                                   | Loaded from                                                      |
-| -------------------------------------- | ---------------------------------------------------------------- |
-| `"package-name"`                       | Latest version from npm                                          |
-| `"package-name@1.2.3"`                 | Pinned version from npm                                          |
-| `["package-name", { options }]`        | npm package with options passed to the plugin function           |
+| Form | Loaded from |
+|---|---|
+| `"package-name"` | Latest version from npm |
+| `"package-name@1.2.3"` | Pinned version from npm |
+| `["package-name", { options }]` | npm package with options passed to the plugin function |
 | `"./path/plugin.ts"` / `"file:///..."` | Local file (relative to the config file or absolute `file:` URL) |
 
 Config files live in the same locations as the rest of your CLI configuration — see the [CLI configuration reference](/docs/code-with-ai/platforms/cli#configuration).
@@ -136,15 +136,15 @@ export default { id: "hello", server: hello }
 
 The plugin function receives a context object:
 
-| Field                    | Description                                                       |
-| ------------------------ | ----------------------------------------------------------------- |
-| `project`                | Current project metadata.                                         |
-| `directory`              | Current working directory for this session.                       |
-| `worktree`               | Git worktree root for this session.                               |
-| `client`                 | A Kilo SDK client (`@kilocode/sdk`) for calling the local server. |
-| `$`                      | [Bun's shell API](https://bun.com/docs/runtime/shell).            |
-| `serverUrl`              | URL of the local Kilo server.                                     |
-| `experimental_workspace` | Register workspace adaptors (used by Agent Manager).              |
+| Field | Description |
+|---|---|
+| `project` | Current project metadata. |
+| `directory` | Current working directory for this session. |
+| `worktree` | Git worktree root for this session. |
+| `client` | A Kilo SDK client (`@kilocode/sdk`) for calling the local server. |
+| `$` | [Bun's shell API](https://bun.com/docs/runtime/shell). |
+| `serverUrl` | URL of the local Kilo server. |
+| `experimental_workspace` | Register workspace adaptors (used by Agent Manager). |
 
 The function returns a `Hooks` object. Any second argument is the options object passed via config (e.g. the `{ apiKey: "..." }` from `["my-plugin", { apiKey: "..." }]`).
 
@@ -234,49 +234,49 @@ Every hook is optional. Return only the ones you care about.
 
 ### Lifecycle
 
-| Hook     | Description                                                                       |
-| -------- | --------------------------------------------------------------------------------- |
+| Hook | Description |
+|---|---|
 | `config` | Receives the fully-resolved config at startup. Read-only — useful for inspection. |
-| `event`  | Called for **every** event on the internal bus (see [Events](#events)).           |
+| `event` | Called for **every** event on the internal bus (see [Events](#events)). |
 
 ### Tools
 
-| Hook                  | Description                                                                                     |
-| --------------------- | ----------------------------------------------------------------------------------------------- |
-| `tool`                | Map of tool name → [tool definition](#custom-tools). Added tools are callable by the model.     |
-| `tool.execute.before` | Fires before a tool runs; you can mutate `output.args`.                                         |
-| `tool.execute.after`  | Fires after a tool returns; you can rewrite `output.title`, `output.output`, `output.metadata`. |
-| `tool.definition`     | Mutate a tool's `description` and `parameters` before they are sent to the model.               |
+| Hook | Description |
+|---|---|
+| `tool` | Map of tool name → [tool definition](#custom-tools). Added tools are callable by the model. |
+| `tool.execute.before` | Fires before a tool runs; you can mutate `output.args`. |
+| `tool.execute.after` | Fires after a tool returns; you can rewrite `output.title`, `output.output`, `output.metadata`. |
+| `tool.definition` | Mutate a tool's `description` and `parameters` before they are sent to the model. |
 
 ### Chat
 
-| Hook                     | Description                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| `chat.message`           | Fires when a new user message arrives. Inspect or modify `parts`.            |
-| `chat.params`            | Mutate `temperature`, `topP`, `topK`, `maxOutputTokens`, provider `options`. |
-| `chat.headers`           | Add or replace HTTP headers on the LLM API call.                             |
-| `permission.ask`         | Auto-allow or auto-deny permission prompts.                                  |
-| `command.execute.before` | Intercept slash command execution; mutate the resulting `parts`.             |
-| `shell.env`              | Inject environment variables into every shell command Kilo runs.             |
+| Hook | Description |
+|---|---|
+| `chat.message` | Fires when a new user message arrives. Inspect or modify `parts`. |
+| `chat.params` | Mutate `temperature`, `topP`, `topK`, `maxOutputTokens`, provider `options`. |
+| `chat.headers` | Add or replace HTTP headers on the LLM API call. |
+| `permission.ask` | Auto-allow or auto-deny permission prompts. |
+| `command.execute.before` | Intercept slash command execution; mutate the resulting `parts`. |
+| `shell.env` | Inject environment variables into every shell command Kilo runs. |
 
 ### Providers & auth
 
-| Hook       | Description                                                                          |
-| ---------- | ------------------------------------------------------------------------------------ |
-| `auth`     | Register an auth method (OAuth or API key) for a provider, with interactive prompts. |
-| `provider` | Dynamically supply a model catalog for a provider (useful for BYO-model gateways).   |
+| Hook | Description |
+|---|---|
+| `auth` | Register an auth method (OAuth or API key) for a provider, with interactive prompts. |
+| `provider` | Dynamically supply a model catalog for a provider (useful for BYO-model gateways). |
 
 ### Experimental
 
 These hooks live behind the `experimental.` prefix and may change between releases.
 
-| Hook                                   | Description                                                                                          |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `experimental.chat.messages.transform` | Rewrite the full message history before it is sent to the model.                                     |
-| `experimental.chat.system.transform`   | Modify the system prompt array.                                                                      |
-| `experimental.session.compacting`      | Inject extra context (`output.context`) or replace the compaction prompt entirely (`output.prompt`). |
-| `experimental.compaction.autocontinue` | Disable the synthetic "continue" turn that follows compaction.                                       |
-| `experimental.text.complete`           | Post-process final text parts (e.g. append signatures, redact secrets).                              |
+| Hook | Description |
+|---|---|
+| `experimental.chat.messages.transform` | Rewrite the full message history before it is sent to the model. |
+| `experimental.chat.system.transform` | Modify the system prompt array. |
+| `experimental.session.compacting` | Inject extra context (`output.context`) or replace the compaction prompt entirely (`output.prompt`). |
+| `experimental.compaction.autocontinue` | Disable the synthetic "continue" turn that follows compaction. |
+| `experimental.text.complete` | Post-process final text parts (e.g. append signatures, redact secrets). |
 
 ### Events
 

@@ -9,6 +9,9 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
 import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js"
 import { Global } from "@/global"
+import { indexingEnabled } from "../indexing-feature"
+import { formatIndexingLabel } from "../indexing-label"
+import { useSync } from "@/cli/cmd/tui/context/sync"
 
 const id = "internal:kilo-home-footer"
 
@@ -102,6 +105,18 @@ function Version(props: { api: TuiPluginApi }) {
 
 function View(props: { api: TuiPluginApi }) {
   const kilo = createMemo(() => props.api.state.provider.some((p) => p.id === "kilo"))
+  const theme = () => props.api.theme.current
+  const sync = useSync()
+  const indexingOn = createMemo(() => indexingEnabled(sync.data.config))
+  const indexing = createMemo(() => sync.data.indexing)
+  const indexingLabel = createMemo(() => formatIndexingLabel(indexing()))
+  const indexingColor = createMemo(() => {
+    if (indexing().state === "Complete") return theme().success
+    if (indexing().state === "Error") return theme().error
+    if (indexing().state === "In Progress") return theme().warning
+    if (indexing().state === "Standby") return theme().textMuted
+    return theme().textMuted
+  })
 
   return (
     <box
@@ -118,6 +133,9 @@ function View(props: { api: TuiPluginApi }) {
       <box gap={1} flexDirection="row" flexShrink={0}>
         <RemoteIndicator api={props.api} kilo={kilo()} />
         <Mcp api={props.api} />
+        <Show when={indexingOn()}>
+          <text fg={indexingColor()}>{indexingLabel().slice(0, 48)}</text>
+        </Show>
       </box>
       <box flexGrow={1} />
       <Version api={props.api} />
@@ -131,7 +149,7 @@ function View(props: { api: TuiPluginApi }) {
 
 const tui: TuiPlugin = async (api) => {
   api.slots.register({
-    order: 101,
+    order: 99,
     slots: {
       home_footer() {
         return <View api={api} />

@@ -587,7 +587,7 @@ Options:
       --path         directory path to generate the agent file  [string]
       --description  what the agent should do  [string]
       --mode         agent mode  [string] [choices: "all", "primary", "subagent"]
-      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, list, glob, grep, webfetch, task, todowrite"  [string]
+      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, glob, grep, webfetch, task, todowrite"  [string]
   -m, --model        model to use in the format of provider/model  [string]
 ```
 

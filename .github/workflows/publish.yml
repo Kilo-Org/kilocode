@@ -22,11 +22,13 @@ on:
         description: "Override version (optional)"
         required: false
         type: string
+      # kilocode_change start
       pre_release:
         description: "Publish as pre-release (VS Code marketplace + npm rc channel)"
         required: false
         type: boolean
-        default: false
+        default: true
+      # kilocode_change end
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
 
@@ -96,7 +98,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          # kilocode_change start - exclude sourcemaps + skip zstd to keep the artifact under the v4 download flaky threshold
+          path: |
+            packages/opencode/dist
+            !packages/opencode/dist/**/*.map
+          compression-level: 0
+          # kilocode_change end
 
     outputs:
       version: ${{ needs.version.outputs.version }}

@@ -10,35 +10,35 @@ This document tracks remaining work needed for feature parity with the old exten
 
 ## Chat UI Feature Parity
 
-| Feature                                                                        | Remaining Work                                                                             | Backend                                                | Priority |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------ | -------- |
-| [Browser Session Controls](chat-ui-features/browser-session-controls.md)       | In-chat browser controls, action replay, screenshot viewing                                | CLI-side (if browser tool exists) + webview            | P3       |
-| [Checkpoint & Task Management](chat-ui-features/checkpoint-task-management.md) | Checkpoint restore UI, navigation, diff viewing, "See New Changes" buttons                 | CLI session undo/redo/fork + extension git integration | P1       |
-| [Mermaid Diagram Features](chat-ui-features/mermaid-diagram-features.md)       | Mermaid rendering, "Fix with AI" button, copy, open-as-PNG                                 | Webview-only (rendering); CLI for "Fix with AI"        | P2       |
-| [Message Editing & Management](chat-ui-features/message-editing-management.md) | Inline editing, deletion, timestamp display, redo-previous-message (up-arrow)              | CLI session fork/undo for edit semantics               | P1       |
-| [Special Content Types](chat-ui-features/special-content-types.md)             | Copy button on error cards, dedicated MCP tool/resource rows, open-markdown-preview button | Mixed: CLI for MCP data; webview for rendering         | P1       |
+| Feature | Remaining Work | Backend | Priority |
+|---|---|---|---|
+| [Browser Session Controls](chat-ui-features/browser-session-controls.md) | In-chat browser controls, action replay, screenshot viewing | CLI-side (if browser tool exists) + webview | P3 |
+| [Checkpoint & Task Management](chat-ui-features/checkpoint-task-management.md) | Checkpoint restore UI, navigation, diff viewing, "See New Changes" buttons | CLI session undo/redo/fork + extension git integration | P1 |
+| [Mermaid Diagram Features](chat-ui-features/mermaid-diagram-features.md) | Mermaid rendering, "Fix with AI" button, copy, open-as-PNG | Webview-only (rendering); CLI for "Fix with AI" | P2 |
+| [Message Editing & Management](chat-ui-features/message-editing-management.md) | Inline editing, deletion, timestamp display, redo-previous-message (up-arrow) | CLI session fork/undo for edit semantics | P1 |
+| [Special Content Types](chat-ui-features/special-content-types.md) | Copy button on error cards, dedicated MCP tool/resource rows, open-markdown-preview button | Mixed: CLI for MCP data; webview for rendering | P1 |
 
 ---
 
 ## Non-Agent Feature Parity
 
-| Feature                                                                                                 | Remaining Work                                                                   | Backend                                                              | Priority |
-| ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------- |
-| [Authentication & Enterprise](non-agent-features/authentication-organization-enterprise-enforcement.md) | Org feature flags, MDM policy enforcement                                        | CLI handles its auth; extension handles org/MDM                      | P1       |
-| [Auto-Purge](non-agent-features/auto-purge.md)                                                          | Scheduled cleanup of old session/task storage                                    | Extension-side (storage ownership TBD)                               | P3       |
-| [Cloud Task Support](non-agent-features/cloud-task-support.md)                                          | Upload local sessions to cloud, real-time sync, conflict resolution              | Kilo cloud API + CLI; extension provides UI                          | P2       |
-| [Code Reviews](non-agent-features/code-reviews.md)                                                      | Local review mode, automated AI review of uncommitted/branch changes             | CLI (partial); extension for VS Code review UX                       | P2       |
-| [Codebase Indexing & Semantic Search](non-agent-features/codebase-indexing-semantic-search.md)          | Vector indexing, semantic search, embeddings infrastructure                      | CLI has grep/glob endpoints; semantic indexing is extension or cloud | P2       |
-| [Contribution Tracking](non-agent-features/contribution-tracking.md)                                    | AI attribution tracking, line fingerprinting, reporting                          | Extension-side                                                       | P3       |
-| [Custom Commands](non-agent-features/custom-command-system.md)                                          | Slash command system, project-level command discovery, YAML frontmatter support  | CLI has custom commands; extension provides UI entry points          | P2       |
-| [Marketplace](non-agent-features/marketplace.md)                                                        | Catalog, install, update capabilities (toolbar button exists but renders a stub) | Extension-side                                                       | P2       |
-| [MCP & MCP Hub](non-agent-features/mcp-and-mcp-hub.md)                                                  | MCP configuration UI (add/edit/delete servers), tool allowlisting                | CLI owns MCP lifecycle; extension provides config UI                 | P1       |
-| [Repository Initialization](non-agent-features/repository-initialization.md)                            | /init command support for setting up agentic engineering                         | CLI /init endpoint; extension provides UI trigger                    | P3       |
-| [Rules & Workflows](non-agent-features/rules-and-workflows.md)                                          | Workflow management UI (rules subtab exists, workflows subtab is a stub)         | CLI owns rules runtime; extension provides management UI             | P3       |
-| [Settings Sync](non-agent-features/settings-sync-integration.md)                                        | VS Code Settings Sync allowlist registration                                     | Extension-side (VS Code API)                                         | P3       |
-| [Settings UI](non-agent-features/settings-ui.md)                                                        | Terminal and Prompts tabs (show "Not implemented"), Workflows subtab stub        | CLI exposes config; extension provides settings forms                | P1       |
-| [Skills System](non-agent-features/skills-system.md)                                                    | Skill execution, discovery, hot-reload (config UI for paths/URLs exists)         | CLI has skills runtime; extension provides packaging/UI              | P2       |
-| [Speech-to-Text](non-agent-features/speech-to-text.md)                                                  | Voice input, streaming STT                                                       | Webview (mic capture); CLI-compatible STT optional                   | P3       |
+| Feature | Remaining Work | Backend | Priority |
+|---|---|---|---|
+| [Authentication & Enterprise](non-agent-features/authentication-organization-enterprise-enforcement.md) | Org feature flags, MDM policy enforcement | CLI handles its auth; extension handles org/MDM | P1 |
+| [Auto-Purge](non-agent-features/auto-purge.md) | Scheduled cleanup of old session/task storage | Extension-side (storage ownership TBD) | P3 |
+| [Cloud Task Support](non-agent-features/cloud-task-support.md) | Upload local sessions to cloud, real-time sync, conflict resolution | Kilo cloud API + CLI; extension provides UI | P2 |
+| [Code Reviews](non-agent-features/code-reviews.md) | Local review mode, automated AI review of uncommitted/branch changes | CLI (partial); extension for VS Code review UX | P2 |
+| [Codebase Indexing & Semantic Search](non-agent-features/codebase-indexing-semantic-search.md) | Vector indexing, semantic search, embeddings infrastructure | CLI has grep/glob endpoints; semantic indexing is extension or cloud | P2 |
+| [Contribution Tracking](non-agent-features/contribution-tracking.md) | AI attribution tracking, line fingerprinting, reporting | Extension-side | P3 |
+| [Custom Commands](non-agent-features/custom-command-system.md) | Slash command system, project-level command discovery, YAML frontmatter support | CLI has custom commands; extension provides UI entry points | P2 |
+| [Marketplace](non-agent-features/marketplace.md) | Catalog, install, update capabilities (toolbar button exists but renders a stub) | Extension-side | P2 |
+| [MCP & MCP Hub](non-agent-features/mcp-and-mcp-hub.md) | MCP configuration UI (add/edit/delete servers), tool allowlisting | CLI owns MCP lifecycle; extension provides config UI | P1 |
+| [Repository Initialization](non-agent-features/repository-initialization.md) | /init command support for setting up agentic engineering | CLI /init endpoint; extension provides UI trigger | P3 |
+| [Rules & Workflows](non-agent-features/rules-and-workflows.md) | Workflow management UI (rules subtab exists, workflows subtab is a stub) | CLI owns rules runtime; extension provides management UI | P3 |
+| [Settings Sync](non-agent-features/settings-sync-integration.md) | VS Code Settings Sync allowlist registration | Extension-side (VS Code API) | P3 |
+| [Settings UI](non-agent-features/settings-ui.md) | Terminal and Prompts tabs (show "Not implemented"), Workflows subtab stub | CLI exposes config; extension provides settings forms | P1 |
+| [Skills System](non-agent-features/skills-system.md) | Skill execution, discovery, hot-reload (config UI for paths/URLs exists) | CLI has skills runtime; extension provides packaging/UI | P2 |
+| [Speech-to-Text](non-agent-features/speech-to-text.md) | Voice input, streaming STT | Webview (mic capture); CLI-compatible STT optional | P3 |
 
 ---
 
@@ -46,12 +46,12 @@ This document tracks remaining work needed for feature parity with the old exten
 
 The "Agent Behaviour" settings tab contains 5 sub-tabs in both the legacy and new extensions. The legacy tab was a combined 2800+ lines of UI; the new tab is ~820 lines. Each sub-tab has its own parity doc.
 
-| Sub-Tab                                                               | Remaining Work                                                                                                                                 | Priority |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| [Modes / Agents](agent-behaviour/modes-subtab-parity.md)              | Core CRUD done (PR #7225). Remaining: when-to-use, system prompt preview, import/export, default variant, hidden/disable, org features         | P2       |
-| [MCP Servers](agent-behaviour/mcp-server-creation.md)                 | Add/edit servers, restart, per-server timeout, expandable detail (tools/resources/logs/auth)                                                   | P2       |
-| [Rules & Workflows](agent-behaviour/rules-workflows-subtab-parity.md) | Rules: description text, global/workspace separation, per-rule toggles, new file creation, auto-discovery. Workflows: entire sub-tab is a stub | P2/P3    |
-| Skills                                                                | Minor gaps: project/global separation, mode badge per skill. Covered by [Skills System](non-agent-features/skills-system.md)                   | P2       |
+| Sub-Tab | Remaining Work | Priority |
+|---|---|---|
+| [Modes / Agents](agent-behaviour/modes-subtab-parity.md) | Core CRUD done (PR #7225). Remaining: when-to-use, system prompt preview, import/export, default variant, hidden/disable, org features | P2 |
+| [MCP Servers](agent-behaviour/mcp-server-creation.md) | Add/edit servers, restart, per-server timeout, expandable detail (tools/resources/logs/auth) | P2 |
+| [Rules & Workflows](agent-behaviour/rules-workflows-subtab-parity.md) | Rules: description text, global/workspace separation, per-rule toggles, new file creation, auto-discovery. Workflows: entire sub-tab is a stub | P2/P3 |
+| Skills | Minor gaps: project/global separation, mode badge per skill. Covered by [Skills System](non-agent-features/skills-system.md) | P2 |
 
 ---
 
@@ -61,50 +61,50 @@ Open issues from the [GitHub project board](https://github.com/orgs/Kilo-Org/pro
 
 ### UI Polish & Bugs
 
-| Feature                                                                                  | Remaining Work                                                                        | Priority |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- |
-| [Markdown Rendering Improvements](ui-polish/markdown-rendering-improvements.md)          | Add CSS for heading sizes, weights, spacing so headings look different from body text | P1       |
-| [Approval Box Missing Full Path](ui-polish/approval-box-full-path.md)                    | Always show full absolute path for out-of-workspace permission requests               | P1       |
-| [Profile View Missing Back Button](ui-polish/profile-view-back-button.md)                | Add back button to Profile view header matching Settings view pattern                 | P2       |
-| [Chat Input Overflow on Narrow Sidebar](ui-polish/chat-input-narrow-sidebar-overflow.md) | Make chat input toolbar wrap when sidebar is too narrow                               | P2       |
+| Feature | Remaining Work | Priority |
+|---|---|---|
+| [Markdown Rendering Improvements](ui-polish/markdown-rendering-improvements.md) | Add CSS for heading sizes, weights, spacing so headings look different from body text | P1 |
+| [Approval Box Missing Full Path](ui-polish/approval-box-full-path.md) | Always show full absolute path for out-of-workspace permission requests | P1 |
+| [Profile View Missing Back Button](ui-polish/profile-view-back-button.md) | Add back button to Profile view header matching Settings view pattern | P2 |
+| [Chat Input Overflow on Narrow Sidebar](ui-polish/chat-input-narrow-sidebar-overflow.md) | Make chat input toolbar wrap when sidebar is too narrow | P2 |
 
 ### Features
 
-| Feature                                                                  | Remaining Work                                                          | Priority |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------------- | -------- |
-| [File Attachments](features/file-attachments.md)                         | Add non-image file attachment via button, drag-and-drop, or file picker | P2       |
-| [Task Completion Notification](features/task-completion-notification.md) | VS Code toast when task completes or awaits input while panel is hidden | P2       |
-| [Remember Last Model Choice](features/remember-last-model.md)            | Persist last-used model and pre-select it for new sessions              | P2       |
-| [Expandable MCP Tools](features/expandable-mcp-tools.md)                 | Make MCP tool rows expandable to show inputs/outputs like regular tools | P2       |
-| [Session Preview Improvements](features/session-preview-improvements.md) | Evaluate showing first message snippet or improving title generation    | P2       |
+| Feature | Remaining Work | Priority |
+|---|---|---|
+| [File Attachments](features/file-attachments.md) | Add non-image file attachment via button, drag-and-drop, or file picker | P2 |
+| [Task Completion Notification](features/task-completion-notification.md) | VS Code toast when task completes or awaits input while panel is hidden | P2 |
+| [Remember Last Model Choice](features/remember-last-model.md) | Persist last-used model and pre-select it for new sessions | P2 |
+| [Expandable MCP Tools](features/expandable-mcp-tools.md) | Make MCP tool rows expandable to show inputs/outputs like regular tools | P2 |
+| [Session Preview Improvements](features/session-preview-improvements.md) | Evaluate showing first message snippet or improving title generation | P2 |
 
 ### Error Handling & Reliability
 
-| Feature                                                                                   | Remaining Work                                                               | Priority |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------- |
-| [Pre-Release Switch CPU Spike](error-handling/pre-release-switch-crash.md)                | Fix race condition / process conflict when switching release ↔ pre-release  | P0       |
-| [Extension View Doesn't Refresh on Update](error-handling/extension-refresh-on-update.md) | Force webview reload when extension version changes                          | P1       |
-| [Propagate CLI Errors to UI](error-handling/propagate-cli-errors-to-ui.md)                | Surface CLI stderr errors in chat or as VS Code notifications                | P1       |
-| [CLI Startup Errors](error-handling/cli-startup-errors.md)                                | Detect CLI process exit before connection; show error with details and retry | P1       |
-| [Autocomplete Settings Link Broken](error-handling/autocomplete-settings-link.md)         | Fix "settings" link in autocomplete broken notice; fix missing default model | P1       |
+| Feature | Remaining Work | Priority |
+|---|---|---|
+| [Pre-Release Switch CPU Spike](error-handling/pre-release-switch-crash.md) | Fix race condition / process conflict when switching release ↔ pre-release | P0 |
+| [Extension View Doesn't Refresh on Update](error-handling/extension-refresh-on-update.md) | Force webview reload when extension version changes | P1 |
+| [Propagate CLI Errors to UI](error-handling/propagate-cli-errors-to-ui.md) | Surface CLI stderr errors in chat or as VS Code notifications | P1 |
+| [CLI Startup Errors](error-handling/cli-startup-errors.md) | Detect CLI process exit before connection; show error with details and retry | P1 |
+| [Autocomplete Settings Link Broken](error-handling/autocomplete-settings-link.md) | Fix "settings" link in autocomplete broken notice; fix missing default model | P1 |
 
 ### Infrastructure / Refactoring
 
-| Feature                                                                    | Remaining Work                                                              | Priority |
-| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------- |
-| [Show Changelog on Update](infrastructure/changelog-on-update.md)          | Detect version change on activation and offer "What's New" notification     | P3       |
-| [Publish to OpenVSX](infrastructure/openvsx-publish.md)                    | Add `ovsx publish` step to CI/CD pipeline after VS Code Marketplace publish | P3       |
-| [HTTP Request Timeouts](infrastructure/http-request-timeouts.md)           | Add timeouts to SDK calls (only health check has timeout currently)         | P1       |
-| [VSCode Error Notifications](infrastructure/vscode-error-notifications.md) | Error notifications for CLI start failure, SSE disconnect                   | P1       |
-| [Dedicated Output Channel](infrastructure/dedicated-output-channel.md)     | General "Kilo Code" output channel and centralized logging utility          | P2       |
+| Feature | Remaining Work | Priority |
+|---|---|---|
+| [Show Changelog on Update](infrastructure/changelog-on-update.md) | Detect version change on activation and offer "What's New" notification | P3 |
+| [Publish to OpenVSX](infrastructure/openvsx-publish.md) | Add `ovsx publish` step to CI/CD pipeline after VS Code Marketplace publish | P3 |
+| [HTTP Request Timeouts](infrastructure/http-request-timeouts.md) | Add timeouts to SDK calls (only health check has timeout currently) | P1 |
+| [VSCode Error Notifications](infrastructure/vscode-error-notifications.md) | Error notifications for CLI start failure, SSE disconnect | P1 |
+| [Dedicated Output Channel](infrastructure/dedicated-output-channel.md) | General "Kilo Code" output channel and centralized logging utility | P2 |
 
 ### CLI-Side (tracked here for awareness)
 
-| Feature                                                              | Remaining Work                                                            | Priority |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------- |
-| [/init Pre-Commit Secret Check](cli-side/init-secret-check.md)       | Check for secret scanning hooks in `/init`; suggest adding one if missing | P2       |
-| [Plan Mode Over-Prompting](cli-side/plan-mode-over-prompting.md)     | Fix Plan mode system prompt so agent stops repeatedly asking to implement | P1       |
-| [Architect Mode / Plan Files](cli-side/architect-mode-plan-files.md) | Export plan as `.md` to `/plans/` directory from Plan mode                | P2       |
+| Feature | Remaining Work | Priority |
+|---|---|---|
+| [/init Pre-Commit Secret Check](cli-side/init-secret-check.md) | Check for secret scanning hooks in `/init`; suggest adding one if missing | P2 |
+| [Plan Mode Over-Prompting](cli-side/plan-mode-over-prompting.md) | Fix Plan mode system prompt so agent stops repeatedly asking to implement | P1 |
+| [Architect Mode / Plan Files](cli-side/architect-mode-plan-files.md) | Export plan as `.md` to `/plans/` directory from Plan mode | P2 |
 
 ---
 

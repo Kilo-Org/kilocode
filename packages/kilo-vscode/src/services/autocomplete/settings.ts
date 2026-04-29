@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { AUTOCOMPLETE_MODELS, DEFAULT_AUTOCOMPLETE_MODEL } from "../../shared/autocomplete-models"
+import { AUTOCOMPLETE_MODELS, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const keys = new Set(["enableAutoTrigger", "enableSmartInlineTaskKeybinding", "enableChatAutocomplete", "model"])
 
@@ -35,7 +35,7 @@ export function buildAutocompleteSettingsMessage() {
       enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
       enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
       enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
-      model: config.get<string>("model", DEFAULT_AUTOCOMPLETE_MODEL.id),
+      model: getAutocompleteModel(config.get<string>("model") ?? "").id,
     },
   }
 }

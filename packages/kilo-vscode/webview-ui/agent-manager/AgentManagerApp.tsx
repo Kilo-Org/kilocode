@@ -1,7 +1,6 @@
-// Agent Manager root component
+/** @jsxImportSource solid-js */
 
 import {
-  Component,
   For,
   Show,
   createSignal,
@@ -11,6 +10,7 @@ import {
   onMount,
   onCleanup,
   type Accessor,
+  type Component,
 } from "solid-js"
 import type {
   ExtensionMessage,
@@ -41,6 +41,7 @@ import type {
   SessionInfo,
   BranchInfo,
 } from "../src/types/messages"
+import { IndexingProvider } from "../src/context/indexing"
 import {
   DragDropProvider,
   DragDropSensors,
@@ -99,6 +100,7 @@ import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import SectionHeader from "./SectionHeader"
 import { randomColor } from "./section-colors"
+import { createNewTaskDrafts } from "./new-task-drafts"
 import {
   buildTopLevelItems,
   buildSidebarOrder,
@@ -136,14 +138,10 @@ interface ApplyState {
   message: string
   conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
-
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
-
 type SidePanel = "diff" | "pr" | null
-
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
 
@@ -178,7 +176,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
   const [ref, setRef] = createSignal<HTMLDivElement | undefined>()
   const [showLeft, setShowLeft] = createSignal(false)
   const [showRight, setShowRight] = createSignal(false)
-
   let scrollFrame: number | undefined
   const update = () => {
     if (scrollFrame !== undefined) return
@@ -190,7 +187,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
       setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
     })
   }
-
   // Wheel → horizontal scroll conversion
   const onWheel = (e: WheelEvent) => {
     const el = ref()
@@ -199,7 +195,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
     e.preventDefault()
     el.scrollLeft += e.deltaY > 0 ? 60 : -60
   }
-
   // Recalculate on scroll, resize, or tab changes
   createEffect(() => {
     const el = ref()
@@ -217,7 +212,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
       mo.disconnect()
     })
   })
-
   createEffect(() => {
     const id = activeId()
     const el = ref()
@@ -236,7 +230,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
       }
     })
   })
-
   return { setRef, showLeft, showRight }
 }
 
@@ -1172,6 +1165,18 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
+    const drafts = createNewTaskDrafts()
+    const newTaskHandler = (e: Event) => {
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      e.stopImmediatePropagation()
+      const draft = drafts.create(sel)
+      window.dispatchEvent(new CustomEvent("agentManagerCaptureDraft", { detail: { id: draft.id } }))
+      terms.setActiveId(undefined)
+      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    }
+    window.addEventListener("newTaskRequest", newTaskHandler, true)
+
     // Add created sessions as local tabs (both direct from the prompt and
     // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
@@ -1267,6 +1272,7 @@ const AgentManagerContent: Component = () => {
         saveTabMemory()
         appendToTabOrder(ev.worktreeId, ev.sessionId)
         setSelection(ev.worktreeId)
+        drafts.apply(ev.worktreeId, ev.sessionId)
         session.selectSession(ev.sessionId)
       }
 
@@ -1510,6 +1516,8 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
+      window.removeEventListener("newTaskRequest", newTaskHandler, true)
+      drafts.cleanup()
       unsubCreate()
       unsubSessions()
       unsubRun()
@@ -2275,17 +2283,23 @@ const AgentManagerContent: Component = () => {
                     <DropdownMenu.Portal>
                       <DropdownMenu.Content class="am-split-menu">
                         <DropdownMenu.Item onSelect={handleCreateWorktree}>
-                          <DropdownMenu.ItemLabel>{t("agentManager.worktree.new")}</DropdownMenu.ItemLabel>
+                          <span class="am-worktree-menu-gap" aria-hidden="true" />
+                          <DropdownMenu.ItemLabel class="am-worktree-menu-label">
+                            <span>{t("sidebar.session.newWorktree.from")}</span>
+                            <span class="am-worktree-menu-branch">
+                              <Icon name="branch" size="small" />
+                              <strong>{repoDefaultBranch()}</strong>
+                            </span>
+                          </DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().newWorktree ?? "").map((token) => (
                               <kbd class="am-menu-key">{token}</kbd>
                             ))}
                           </span>
                         </DropdownMenu.Item>
-                        <DropdownMenu.Separator />
                         <DropdownMenu.Item onSelect={showAdvancedWorktreeDialog}>
                           <Icon name="settings-gear" size="small" />
-                          <DropdownMenu.ItemLabel>{t("agentManager.dialog.advanced")}</DropdownMenu.ItemLabel>
+                          <DropdownMenu.ItemLabel>{t("agentManager.dialog.configureWorktree")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().advancedWorktree ?? "").map((token) => (
                               <kbd class="am-menu-key">{token}</kbd>
@@ -3152,11 +3166,13 @@ export const AgentManagerApp: Component = () => {
                         <ConfigProvider>
                           <NotificationsProvider>
                             <SessionProvider>
-                              <WorktreeModeProvider>
-                                <DataBridge>
-                                  <AgentManagerContent />
-                                </DataBridge>
-                              </WorktreeModeProvider>
+                              <IndexingProvider>
+                                <WorktreeModeProvider>
+                                  <DataBridge>
+                                    <AgentManagerContent />
+                                  </DataBridge>
+                                </WorktreeModeProvider>
+                              </IndexingProvider>
                             </SessionProvider>
                           </NotificationsProvider>
                         </ConfigProvider>

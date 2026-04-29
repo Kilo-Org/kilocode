@@ -28,6 +28,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface AbortRequest {
@@ -194,6 +195,14 @@ export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
 }
 
+export interface OpenAgentManagerRequest {
+  type: "openAgentManager"
+}
+
+export interface OpenAdvancedWorktreeRequest {
+  type: "openAdvancedWorktree"
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -218,6 +227,7 @@ export interface SendCommandRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface RemoveSkillMessage {
@@ -355,6 +365,15 @@ export interface RequestConfigMessage {
 
 export interface RequestGlobalConfigMessage {
   type: "requestGlobalConfig"
+}
+
+export interface RequestIndexingStatusMessage {
+  type: "requestIndexingStatus"
+}
+
+export interface OpenSettingsTabRequest {
+  type: "openSettingsTab"
+  tab: string
 }
 
 export interface UpdateConfigMessage {
@@ -714,6 +733,7 @@ export interface OpenChangesRequest {
 export interface OpenDiffVirtualRequest {
   type: "openDiffVirtual"
   diff: PermissionFileDiff
+  initialDiffStyle: "unified" | "split"
 }
 
 export interface RetryConnectionRequest {
@@ -744,6 +764,14 @@ export interface SetDefaultBaseBranchRequest {
 export interface AgentManagerOpenSessionsMessage {
   type: "agentManager.openSessions"
   sessionIDs: string[]
+}
+
+export interface RequestAutoApproveStateMessage {
+  type: "requestAutoApproveState"
+}
+
+export interface ToggleAutoApproveMessage {
+  type: "toggleAutoApprove"
 }
 
 export interface ToggleRemoteMessage {
@@ -935,6 +963,8 @@ export type WebviewMessage =
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
+  | OpenAgentManagerRequest
+  | OpenAdvancedWorktreeRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -971,7 +1001,9 @@ export type WebviewMessage =
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
+  | RequestIndexingStatusMessage
   | UpdateConfigMessage
+  | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
   | SettingsTabChangedMessage
@@ -1042,6 +1074,8 @@ export type WebviewMessage =
   | PreviewImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | RequestAutoApproveStateMessage
+  | ToggleAutoApproveMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

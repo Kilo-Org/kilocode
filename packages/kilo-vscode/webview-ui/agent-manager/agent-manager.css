@@ -2029,15 +2029,36 @@ body.am-wt-dragging-active * {
 }
 
 .am-split-menu {
-  min-width: 210px;
+  min-width: 250px;
 }
 
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
 }
 
-.am-split-menu [data-slot="dropdown-menu-separator"] {
-  margin: 4px 0;
+.am-worktree-menu-gap {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.am-worktree-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.am-worktree-menu-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.am-worktree-menu-branch strong {
+  font-weight: 600;
 }
 
 /* New Versioned Session Dialog */

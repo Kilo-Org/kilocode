@@ -76,30 +76,51 @@ The `model` key uses the format `provider_id/model_id`, where:
 
 All fields are optional. When a model ID matches one already in the built-in catalog, your values are merged on top of the defaults — you only need to specify what you want to override.
 
-| Field         | Type      | Description                                                                   |
-| ------------- | --------- | ----------------------------------------------------------------------------- |
-| `name`        | `string`  | Display name shown in the model picker                                        |
-| `id`          | `string`  | API-facing model ID sent to the provider. Defaults to the config key          |
-| `tool_call`   | `boolean` | Whether the model supports tool/function calling                              |
-| `reasoning`   | `boolean` | Whether the model supports extended thinking                                  |
-| `temperature` | `boolean` | Whether the model supports the temperature parameter                          |
-| `attachment`  | `boolean` | Whether the model supports file attachments                                   |
-| `limit`       | `object`  | Token limits: `{ context, output, input? }`                                   |
-| `cost`        | `object`  | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }`    |
-| `options`     | `object`  | Arbitrary provider-specific model options                                     |
-| `headers`     | `object`  | Custom HTTP headers to include in requests                                    |
-| `provider`    | `object`  | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
-| `variants`    | `object`  | Named variant configurations (e.g., different reasoning efforts)              |
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Display name shown in the model picker |
+| `id` | `string` | API-facing model ID sent to the provider. Defaults to the config key |
+| `tool_call` | `boolean` | Whether the model supports tool/function calling |
+| `reasoning` | `boolean` | Whether the model supports extended thinking |
+| `temperature` | `boolean` | Whether the model supports the temperature parameter |
+| `attachment` | `boolean` | Whether the model supports file attachments |
+| `modalities` | `object` | Optional. Supported input and output types: `{ input, output }` |
+| `limit` | `object` | Token limits: `{ context, output, input? }` |
+| `cost` | `object` | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }` |
+| `options` | `object` | Arbitrary provider-specific model options |
+| `headers` | `object` | Custom HTTP headers to include in requests |
+| `provider` | `object` | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
+| `variants` | `object` | Named variant configurations (e.g., different reasoning efforts) |
+
+### Modalities (modalities)
+
+The `modalities` object declares which content types the model can receive and produce. It is optional — omit it to use defaults from the catalog or fallback to text-only. When `modalities` is provided, both `input` and `output` arrays are required. Each array can include `text`, `image`, `audio`, `video`, or `pdf`.
+
+| Sub-field | Type | Required | Description |
+|---|---|---|---|
+| `input` | `array` | Yes (if present) | Content types the model accepts from the user |
+| `output` | `array` | Yes (if present) | Content types the model can generate in response |
+
+For a standard text model that can also inspect images, use:
+
+```jsonc
+"modalities": {
+  "input": ["text", "image"],
+  "output": ["text"]
+}
+```
+
+If `modalities` is omitted and the model ID matches a models.dev catalog entry for that provider, Kilo uses the catalog's modalities. For completely custom models with no catalog match, Kilo defaults to text input and text output only. Set `attachment: true` alongside image, audio, video, or PDF input modalities when the provider supports sending those files as attachments.
 
 ### Token Limits (limit)
 
 The `limit` object controls how Kilo manages the model's context window and output length. These values are specified in **tokens**.
 
-| Sub-field | Type     | Required | Description                                                                                                                                                                                        |
-| --------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `context` | `number` | No       | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window.                                |
-| `output`  | `number` | No       | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default.                                         |
-| `input`   | `number` | No       | An optional stricter input limit. Some providers enforce an input token ceiling that is lower than the full context window. When set, compaction triggers against this value instead of `context`. |
+| Sub-field | Type | Required | Description |
+|---|---|---|---|
+| `context` | `number` | No | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window. |
+| `output` | `number` | No | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default. |
+| `input` | `number` | No | An optional stricter input limit. Some providers enforce an input token ceiling that is lower than the full context window. When set, compaction triggers against this value instead of `context`. |
 
 ```jsonc
 "limit": {
@@ -315,10 +336,10 @@ You can also set options that apply to all models from a provider:
 }
 ```
 
-| Option    | Type              | Description                                            |
-| --------- | ----------------- | ------------------------------------------------------ |
-| `apiKey`  | `string`          | API key (supports `{env:VAR}` syntax)                  |
-| `baseURL` | `string`          | Override the provider's base API URL                   |
+| Option | Type | Description |
+|---|---|---|
+| `apiKey` | `string` | API key (supports `{env:VAR}` syntax) |
+| `baseURL` | `string` | Override the provider's base API URL |
 | `timeout` | `number \| false` | Request timeout in milliseconds, or `false` to disable |
 
 ## Filtering Available Models

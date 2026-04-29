@@ -66,24 +66,20 @@ describe("sanitizeName", () => {
     expect(sanitizeName("Llama 3 (free)")).toBe("Llama 3")
   })
 
-  it("strips trailing free suffix", () => {
-    expect(sanitizeName("Mixtral free")).toBe("Mixtral")
-  })
-
-  it("strips trailing :free suffix", () => {
-    expect(sanitizeName("Mistral:free")).toBe("Mistral")
-  })
-
-  it("strips trailing -free suffix", () => {
-    expect(sanitizeName("Gemma-free")).toBe("Gemma")
-  })
-
-  it("is case-insensitive", () => {
+  it("is case-insensitive for parenthesized suffix", () => {
     expect(sanitizeName("Model (Free)")).toBe("Model")
-    expect(sanitizeName("Model FREE")).toBe("Model")
+    expect(sanitizeName("Model (FREE)")).toBe("Model")
   })
 
-  it("leaves names without free suffix unchanged", () => {
+  it("preserves bare trailing Free in names like 'Kilo Auto Free'", () => {
+    expect(sanitizeName("Kilo Auto Free")).toBe("Kilo Auto Free")
+    expect(sanitizeName("Mixtral free")).toBe("Mixtral free")
+    expect(sanitizeName("Mistral:free")).toBe("Mistral:free")
+    expect(sanitizeName("Gemma-free")).toBe("Gemma-free")
+    expect(sanitizeName("Model FREE")).toBe("Model FREE")
+  })
+
+  it("leaves names without (free) suffix unchanged", () => {
     expect(sanitizeName("GPT-4o")).toBe("GPT-4o")
     expect(sanitizeName("Claude Sonnet")).toBe("Claude Sonnet")
   })
@@ -92,9 +88,9 @@ describe("sanitizeName", () => {
     expect(sanitizeName("FreeAgent Pro")).toBe("FreeAgent Pro")
   })
 
-  it("handles extra whitespace around suffix", () => {
+  it("handles extra whitespace around (free) suffix", () => {
     expect(sanitizeName("Llama 3 (free)  ")).toBe("Llama 3")
-    expect(sanitizeName("Model  free  ")).toBe("Model")
+    expect(sanitizeName("Model  (free)  ")).toBe("Model")
   })
 })
 

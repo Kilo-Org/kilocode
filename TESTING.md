@@ -87,7 +87,7 @@ BASE="http://127.0.0.1:$PORT"
 | `--port` | `0` (OS-assigned) | Must be passed literally when overriding `opencode.json`'s `server.port`. |
 | `--hostname` | `127.0.0.1` | Becomes `0.0.0.0` when `--mdns` is set without an override. |
 | `--mdns` | `false` | Publishes an mDNS SRV record. |
-| `--mdns-domain` | `kilo.local` | |
+| `--mdns-domain` | `kilo.local` |  |
 | `--cors` | `[]` | Extra allowed origins. |
 
 ## 4. The two mandatory request knobs
@@ -209,9 +209,7 @@ import { createKiloClient } from "@kilocode/sdk/v2"
 
 const port = process.env.PORT!
 const pass = process.env.KILO_SERVER_PASSWORD
-const headers = pass
-  ? { Authorization: "Basic " + Buffer.from("kilo:" + pass).toString("base64") }
-  : undefined
+const headers = pass ? { Authorization: "Basic " + Buffer.from("kilo:" + pass).toString("base64") } : undefined
 
 const client = createKiloClient({
   baseUrl: `http://127.0.0.1:${port}`,

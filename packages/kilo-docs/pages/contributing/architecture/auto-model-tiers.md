@@ -11,12 +11,12 @@ Kilo Auto is a model routing system that automatically selects the optimal AI mo
 
 Three tiers are user-facing, and one is internal:
 
-| Tier ID              | Audience                       | Pricing |
-| -------------------- | ------------------------------ | ------- |
-| `kilo-auto/frontier` | Best paid models               | Paid    |
-| `kilo-auto/balanced` | Strong performance, lower cost | Paid    |
-| `kilo-auto/free`     | Best available free models     | Free    |
-| `kilo-auto/small`    | Internal — background tasks    | Varies  |
+| Tier ID | Audience | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Best paid models | Paid |
+| `kilo-auto/balanced` | Strong performance, lower cost | Paid |
+| `kilo-auto/free` | Best available free models | Free |
+| `kilo-auto/small` | Internal — background tasks | Varies |
 
 ## Problem
 
@@ -84,11 +84,11 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 The three user-facing tiers appear in the model selector:
 
-| Display Name   | Description shown to user                            |
-| -------------- | ---------------------------------------------------- |
+| Display Name | Description shown to user |
+|---|---|
 | Auto: Frontier | Best paid models, automatically matched to your task |
-| Auto: Balanced | Strong performance at lower cost                     |
-| Auto: Free     | Best free models, no credits required                |
+| Auto: Balanced | Strong performance at lower cost |
+| Auto: Free | Best free models, no credits required |
 
 Auto: Small does not appear in the model picker. It is filtered out by the UI (see `KILO_AUTO_SMALL_IDS` in the VS Code extension).
 
@@ -140,16 +140,16 @@ The client-side chain works as follows:
 
 ### Key files
 
-| File                                            | Role                                                                                  |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `packages/kilo-gateway/src/api/constants.ts`    | Default model constants (`DEFAULT_MODEL`, `DEFAULT_FREE_MODEL`)                       |
-| `packages/kilo-gateway/src/api/models.ts`       | Fetches models from Kilo API, parses `opencode.variants`                              |
-| `packages/opencode/src/provider/model-cache.ts` | Caches Kilo Gateway models with 5-min TTL                                             |
-| `packages/opencode/src/provider/provider.ts`    | Preserves variants for kilo provider; `getSmallModel()` prioritizes `kilo-auto/small` |
-| `packages/opencode/src/provider/transform.ts`   | Passes through server-defined variants for Kilo Gateway models                        |
-| `packages/opencode/src/session/prompt.ts`       | Resolves variant from agent config, attaches to user messages                         |
-| `packages/opencode/src/session/llm.ts`          | Merges variant options into LLM call parameters                                       |
-| `packages/opencode/src/config/config.ts`        | Agent config schema includes `variant` field                                          |
+| File | Role |
+|---|---|
+| `packages/kilo-gateway/src/api/constants.ts` | Default model constants (`DEFAULT_MODEL`, `DEFAULT_FREE_MODEL`) |
+| `packages/kilo-gateway/src/api/models.ts` | Fetches models from Kilo API, parses `opencode.variants` |
+| `packages/opencode/src/provider/model-cache.ts` | Caches Kilo Gateway models with 5-min TTL |
+| `packages/opencode/src/provider/provider.ts` | Preserves variants for kilo provider; `getSmallModel()` prioritizes `kilo-auto/small` |
+| `packages/opencode/src/provider/transform.ts` | Passes through server-defined variants for Kilo Gateway models |
+| `packages/opencode/src/session/prompt.ts` | Resolves variant from agent config, attaches to user messages |
+| `packages/opencode/src/session/llm.ts` | Merges variant options into LLM call parameters |
+| `packages/opencode/src/config/config.ts` | Agent config schema includes `variant` field |
 
 ## Requirements
 
@@ -160,12 +160,12 @@ The client-side chain works as follows:
 
 ## Risks
 
-| Risk                                              | User impact                                            | Mitigation                                                                                                                                                                    |
-| ------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Free model disappears mid-session                 | User's next message fails                              | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted.                                                                      |
-| Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier           | Set clear expectations in UI. Curate model lists, don't just pick the cheapest.                                                                                               |
-| Cross-family model switching breaks context       | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free tier (which may switch models). |
-| Users don't understand the tier differences       | Wrong tier selected, poor experience                   | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose.                                       |
+| Risk | User impact | Mitigation |
+|---|---|---|
+| Free model disappears mid-session | User's next message fails | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted. |
+| Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier | Set clear expectations in UI. Curate model lists, don't just pick the cheapest. |
+| Cross-family model switching breaks context | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free tier (which may switch models). |
+| Users don't understand the tier differences | Wrong tier selected, poor experience | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose. |
 
 ## Data and compliance
 

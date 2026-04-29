@@ -174,18 +174,18 @@ Merge the most foundational one first. Then, in each remaining worktree, ask the
 
 ## Cheatsheet
 
-| Situation                                              | Where                         |
-| ------------------------------------------------------ | ----------------------------- |
-| Small, interactive task                                | Sidebar                       |
-| Long task, want to do something else meanwhile         | New worktree (`Cmd+N`)        |
-| Two or three approaches, pick the winner               | Multi-version (`Cmd+Shift+N`) |
-| Sidebar task outgrew the sidebar                       | Continue in Worktree          |
-| Separate conversation on the same branch               | New tab (`Cmd+T`)             |
-| Long conversation, want a fresh context on same branch | New tab, summarize            |
-| Run the app to verify                                  | Run script (`Cmd+E`)          |
-| One-off git or shell commands                          | Terminal (`Cmd+/`)            |
-| Team review                                            | Push + `gh pr create`         |
-| Ship without ceremony                                  | Apply to local                |
+| Situation | Where |
+|---|---|
+| Small, interactive task | Sidebar |
+| Long task, want to do something else meanwhile | New worktree (`Cmd+N`) |
+| Two or three approaches, pick the winner | Multi-version (`Cmd+Shift+N`) |
+| Sidebar task outgrew the sidebar | Continue in Worktree |
+| Separate conversation on the same branch | New tab (`Cmd+T`) |
+| Long conversation, want a fresh context on same branch | New tab, summarize |
+| Run the app to verify | Run script (`Cmd+E`) |
+| One-off git or shell commands | Terminal (`Cmd+/`) |
+| Team review | Push + `gh pr create` |
+| Ship without ceremony | Apply to local |
 
 ## Related
 

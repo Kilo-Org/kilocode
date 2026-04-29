@@ -39,6 +39,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/tauri\.localhost/,
   // Example/placeholder URLs
   /^https?:\/\/example\.com/,
+  /^https?:\/\/api\.example\.com/,
   /^https?:\/\/api\.myprovider\.com/,
   /^https?:\/\/synthetic\.new/,
   // API endpoints (not user-facing)

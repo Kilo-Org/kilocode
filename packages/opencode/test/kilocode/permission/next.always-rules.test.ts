@@ -139,14 +139,14 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
-  it.live("silently skips unknown request ID", () =>
+  it.live("returns false for unknown request ID", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
-        // saveAlwaysRules silently returns when the request ID is not in the pending map
-        yield* saveAlwaysRules({
+        const accepted = yield* saveAlwaysRules({
           requestID: PermissionID.make("permission_nonexistent"),
           approvedAlways: ["npm install"],
         })
+        expect(accepted).toBe(false)
       }),
     ),
   )
@@ -233,6 +233,76 @@ describe("saveAlwaysRules", () => {
           metadata: {},
           always: [],
           ruleset: [],
+        })
+        expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
+  it.live("saved always approval does not override hard deny ruleset", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionID.make("permission_hard_deny_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["printf seed"],
+          metadata: {},
+          always: ["printf *"],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* reply({ requestID: PermissionID.make("permission_hard_deny_seed"), reply: "always" })
+        yield* Fiber.join(asking)
+
+        const exit = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["printf bypass > ask-saved-bypass.txt"],
+          metadata: {},
+          always: [],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+          hardRuleset: [
+            { permission: "bash", pattern: "*", action: "deny" },
+            { permission: "bash", pattern: "printf *", action: "allow" },
+            { permission: "bash", pattern: "*>*", action: "deny" },
+            { permission: "bash", pattern: "* > *", action: "deny" },
+          ],
+        }).pipe(Effect.exit)
+        expectFailure(exit, Permission.DeniedError)
+      }),
+    ),
+  )
+
+  it.live("saved always approval still works when hard ruleset does not deny", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionID.make("permission_hard_ask_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["gh issue list"],
+          metadata: {},
+          always: ["gh *"],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* reply({ requestID: PermissionID.make("permission_hard_ask_seed"), reply: "always" })
+        yield* Fiber.join(asking)
+
+        const result = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["gh pr list"],
+          metadata: {},
+          always: [],
+          ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
+          hardRuleset: [
+            { permission: "bash", pattern: "*", action: "deny" },
+            { permission: "bash", pattern: "gh *", action: "ask" },
+          ],
         })
         expect(result).toBeUndefined()
       }),

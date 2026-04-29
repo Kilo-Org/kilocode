@@ -1,12 +1,5 @@
 import { NodeFileSystem } from "@effect/platform-node"
-import {
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve as pathResolve,
-  sep,
-} from "path" // kilocode_change - harden containment checks
+import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep } from "path" // kilocode_change - harden containment checks
 import { realpathSync } from "fs"
 import * as NFS from "fs/promises"
 import { lookup } from "mime-types"

@@ -12,6 +12,45 @@ export interface TelemetryProperties {
   vscodeVersion?: string
 }
 
+export interface IndexingTelemetryProperties extends Record<string, unknown> {
+  source: "scan" | "watcher"
+  provider: string
+  vectorStore: "lancedb" | "qdrant"
+  modelId?: string
+  trigger?: "background" | "manual"
+  mode?: "full" | "incremental"
+}
+
+export interface IndexingCompletedTelemetryProperties extends IndexingTelemetryProperties {
+  trigger: "background" | "manual"
+  mode: "full" | "incremental"
+  filesIndexed: number
+  filesDiscovered: number
+  totalBlocks: number
+  batchErrors: number
+}
+
+export interface IndexingFileCountTelemetryProperties extends IndexingTelemetryProperties {
+  mode: "full" | "incremental"
+  discovered: number
+  candidate: number
+}
+
+export interface IndexingRetryTelemetryProperties extends IndexingTelemetryProperties {
+  mode: "full" | "incremental"
+  attempt: number
+  maxRetries: number
+  batchSize: number
+  error: string
+}
+
+export interface IndexingErrorTelemetryProperties extends IndexingTelemetryProperties {
+  location: string
+  error: string
+  retryCount?: number
+  maxRetries?: number
+}
+
 export namespace Telemetry {
   let initialized = false
   let startTime = 0
@@ -164,6 +203,26 @@ export namespace Telemetry {
 
   export function trackPlanFollowup(sessionId: string, choice: "new_session" | "continue" | "custom" | "dismissed") {
     track(TelemetryEvent.PLAN_FOLLOWUP, { sessionId, choice })
+  }
+
+  export function trackIndexingStarted(properties: IndexingTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_STARTED, properties)
+  }
+
+  export function trackIndexingCompleted(properties: IndexingCompletedTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_COMPLETED, properties)
+  }
+
+  export function trackIndexingFileCount(properties: IndexingFileCountTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_FILE_COUNT, properties)
+  }
+
+  export function trackIndexingBatchRetry(properties: IndexingRetryTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_BATCH_RETRY, properties)
+  }
+
+  export function trackIndexingError(properties: IndexingErrorTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_ERROR, properties)
   }
 
   // Share

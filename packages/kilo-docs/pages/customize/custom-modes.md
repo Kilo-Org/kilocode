@@ -25,20 +25,20 @@ In the VSCode extension and CLI, custom behavioral profiles are called **agents*
 
 ## What's Included in a Custom Agent?
 
-| Property                    | Description                                                                                                           |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **name** (filename)         | The agent's identifier, derived from the `.md` filename (e.g., `docs-writer.md` creates an agent named `docs-writer`) |
-| **description**             | A short summary displayed in the agent picker and used by the orchestrator for delegation                             |
-| **model**                   | Pin a specific model in `provider/model` format (e.g., `anthropic/claude-sonnet-4-20250514`)                          |
-| **prompt** (markdown body)  | The system prompt text — the markdown body of the file, injected into the agent's system prompt                       |
-| **mode**                    | Role classification: `primary` (user-selectable), `subagent` (only invoked by other agents), or `all` (both)          |
-| **permission**              | Per-agent permission overrides controlling which tools the agent can use (e.g., deny `edit`, `bash`)                  |
-| **color**                   | Hex color (`#FF5733`) or theme keyword (`primary`, `accent`, `warning`, etc.) for the agent picker UI                 |
-| **steps**                   | Maximum agentic iterations before forcing a text-only response                                                        |
-| **temperature** / **top_p** | Sampling parameters for the agent's model                                                                             |
-| **variant**                 | Default model variant                                                                                                 |
-| **hidden**                  | If `true`, the agent is hidden from the UI (only meaningful for subagents)                                            |
-| **disable**                 | If `true`, removes the agent entirely                                                                                 |
+| Property | Description |
+|---|---|
+| **name** (filename) | The agent's identifier, derived from the `.md` filename (e.g., `docs-writer.md` creates an agent named `docs-writer`) |
+| **description** | A short summary displayed in the agent picker and used by the orchestrator for delegation |
+| **model** | Pin a specific model in `provider/model` format (e.g., `anthropic/claude-sonnet-4-20250514`) |
+| **prompt** (markdown body) | The system prompt text — the markdown body of the file, injected into the agent's system prompt |
+| **mode** | Role classification: `primary` (user-selectable), `subagent` (only invoked by other agents), or `all` (both) |
+| **permission** | Per-agent permission overrides controlling which tools the agent can use (e.g., deny `edit`, `bash`) |
+| **color** | Hex color (`#FF5733`) or theme keyword (`primary`, `accent`, `warning`, etc.) for the agent picker UI |
+| **steps** | Maximum agentic iterations before forcing a text-only response |
+| **temperature** / **top_p** | Sampling parameters for the agent's model |
+| **variant** | Default model variant |
+| **hidden** | If `true`, the agent is hidden from the UI (only meaningful for subagents) |
+| **disable** | If `true`, removes the agent entirely |
 
 ## Methods for Creating and Configuring Agents
 
@@ -132,11 +132,11 @@ Define agents under the `agent` key in your project's `kilo.jsonc`:
 
 Controls where the agent appears:
 
-| Value      | Behavior                                                                               |
-| ---------- | -------------------------------------------------------------------------------------- |
-| `primary`  | Shown in the agent picker — the user can select it directly                            |
-| `subagent` | Only invokable by other agents via the `task` tool                                     |
-| `all`      | Available both as a top-level pick and as a subagent (default for user-defined agents) |
+| Value | Behavior |
+|---|---|
+| `primary` | Shown in the agent picker — the user can select it directly |
+| `subagent` | Only invokable by other agents via the `task` tool |
+| `all` | Available both as a top-level pick and as a subagent (default for user-defined agents) |
 
 ### `permission`
 
@@ -236,11 +236,11 @@ Default legacy mode slugs (`code`, `build`, `architect`, `ask`, `debug`, `orches
 
 The current VSCode extension reads the legacy `custom_modes.yaml` file from its own global storage directory. Helpful for inspecting or fixing the file before the one-time migration runs:
 
-| OS      | Path                                                                                                  |
-| ------- | ----------------------------------------------------------------------------------------------------- |
-| macOS   | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
-| Linux   | `~/.config/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml`                     |
-| Windows | `%APPDATA%\Code\User\globalStorage\kilocode.kilo-code\settings\custom_modes.yaml`                     |
+| OS | Path |
+|---|---|
+| macOS | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
+| Linux | `~/.config/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
+| Windows | `%APPDATA%\Code\User\globalStorage\kilocode.kilo-code\settings\custom_modes.yaml` |
 
 Project-level `.kilocodemodes` and workspace-scoped files are handled by the CLI backend that the extension delegates to — see the [CLI tab](#cli) for the full load-order table. After the extension migrates on startup, the legacy file is no longer consulted; remove new modes through the extension UI instead of editing `custom_modes.yaml` directly.
 
@@ -255,20 +255,20 @@ In the CLI, custom behavioral profiles are called **agents** instead of modes. A
 
 ## What's Included in a Custom Agent?
 
-| Property                    | Description                                                                                                           |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **name** (filename)         | The agent's identifier, derived from the `.md` filename (e.g., `docs-writer.md` creates an agent named `docs-writer`) |
-| **description**             | A short summary displayed in the agent picker and used by the orchestrator for delegation                             |
-| **model**                   | Pin a specific model in `provider/model` format (e.g., `anthropic/claude-sonnet-4-20250514`)                          |
-| **prompt** (markdown body)  | The system prompt text — the markdown body of the file, injected into the agent's system prompt                       |
-| **mode**                    | Role classification: `primary` (user-selectable), `subagent` (only invoked by other agents), or `all` (both)          |
-| **permission**              | Per-agent permission overrides controlling which tools the agent can use (e.g., deny `edit`, `bash`)                  |
-| **color**                   | Hex color (`#FF5733`) or theme keyword (`primary`, `accent`, `warning`, etc.) for the agent picker UI                 |
-| **steps**                   | Maximum agentic iterations before forcing a text-only response                                                        |
-| **temperature** / **top_p** | Sampling parameters for the agent's model                                                                             |
-| **variant**                 | Default model variant                                                                                                 |
-| **hidden**                  | If `true`, the agent is hidden from the UI (only meaningful for subagents)                                            |
-| **disable**                 | If `true`, removes the agent entirely                                                                                 |
+| Property | Description |
+|---|---|
+| **name** (filename) | The agent's identifier, derived from the `.md` filename (e.g., `docs-writer.md` creates an agent named `docs-writer`) |
+| **description** | A short summary displayed in the agent picker and used by the orchestrator for delegation |
+| **model** | Pin a specific model in `provider/model` format (e.g., `anthropic/claude-sonnet-4-20250514`) |
+| **prompt** (markdown body) | The system prompt text — the markdown body of the file, injected into the agent's system prompt |
+| **mode** | Role classification: `primary` (user-selectable), `subagent` (only invoked by other agents), or `all` (both) |
+| **permission** | Per-agent permission overrides controlling which tools the agent can use (e.g., deny `edit`, `bash`) |
+| **color** | Hex color (`#FF5733`) or theme keyword (`primary`, `accent`, `warning`, etc.) for the agent picker UI |
+| **steps** | Maximum agentic iterations before forcing a text-only response |
+| **temperature** / **top_p** | Sampling parameters for the agent's model |
+| **variant** | Default model variant |
+| **hidden** | If `true`, the agent is hidden from the UI (only meaningful for subagents) |
+| **disable** | If `true`, removes the agent entirely |
 
 ## Methods for Creating and Configuring Agents
 
@@ -368,11 +368,11 @@ Define agents under the `agent` key in your project's `kilo.jsonc`:
 
 Controls where the agent appears:
 
-| Value      | Behavior                                                                               |
-| ---------- | -------------------------------------------------------------------------------------- |
-| `primary`  | Shown in the agent picker — the user can select it directly                            |
-| `subagent` | Only invokable by other agents via the `task` tool                                     |
-| `all`      | Available both as a top-level pick and as a subagent (default for user-defined agents) |
+| Value | Behavior |
+|---|---|
+| `primary` | Shown in the agent picker — the user can select it directly |
+| `subagent` | Only invokable by other agents via the `task` tool |
+| `all` | Available both as a top-level pick and as a subagent (default for user-defined agents) |
 
 ### `permission`
 
@@ -473,7 +473,7 @@ Default legacy mode slugs (`code`, `build`, `architect`, `ask`, `debug`, `orches
 The CLI reads legacy mode files from the following locations (in load order). When the same slug appears in multiple sources, the **last loaded source wins**:
 
 | Load Order | Path | Format | Scope |
-|------------|------|--------|-------|
+|---|---|---|---|
 | 1 | VSCode extension global storage `/settings/custom_modes.yaml` | YAML | Global |
 | 2 | `~/.kilocode/cli/global/settings/custom_modes.yaml` | YAML | Global |
 | 3 | `~/.kilocodemodes` | YAML | Global |
@@ -502,15 +502,15 @@ _Kilo Code's interface for creating and managing custom modes._
 
 Custom modes are defined by several key properties. Understanding these concepts will help you tailor Kilo's behavior effectively.
 
-| UI Field / YAML Property                       | Conceptual Description                                                                                                                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Slug** (`slug`)                              | A unique internal identifier for the mode. Used by Kilo Code to reference the mode, especially for associating mode-specific instruction files.                                      |
-| **Name** (`name`)                              | The display name for the mode as it appears in the Kilo Code user interface. Should be human-readable and descriptive.                                                               |
-| **Description** (`description`)                | A short, user-friendly summary of the mode's purpose displayed in the mode selector UI. Keep this concise and focused on what the mode does for the user.                            |
-| **Role Definition** (`roleDefinition`)         | Defines the core identity and expertise of the mode. This text is placed at the beginning of the system prompt and defines Kilo's personality and behavior when this mode is active. |
-| **Available Tools** (`groups`)                 | Defines the allowed toolsets and file access permissions for the mode. Corresponds to selecting which general categories of tools the mode can use.                                  |
-| **When to Use** (`whenToUse`)                  | _(Optional)_ Provides guidance for Kilo's automated decision-making, particularly for mode selection and task orchestration. Used by the Orchestrator mode for task coordination.    |
-| **Custom Instructions** (`customInstructions`) | _(Optional)_ Specific behavioral guidelines or rules for the mode. Added near the end of the system prompt to further refine Kilo's behavior.                                        |
+| UI Field / YAML Property | Conceptual Description |
+|---|---|
+| **Slug** (`slug`) | A unique internal identifier for the mode. Used by Kilo Code to reference the mode, especially for associating mode-specific instruction files. |
+| **Name** (`name`) | The display name for the mode as it appears in the Kilo Code user interface. Should be human-readable and descriptive. |
+| **Description** (`description`) | A short, user-friendly summary of the mode's purpose displayed in the mode selector UI. Keep this concise and focused on what the mode does for the user. |
+| **Role Definition** (`roleDefinition`) | Defines the core identity and expertise of the mode. This text is placed at the beginning of the system prompt and defines Kilo's personality and behavior when this mode is active. |
+| **Available Tools** (`groups`) | Defines the allowed toolsets and file access permissions for the mode. Corresponds to selecting which general categories of tools the mode can use. |
+| **When to Use** (`whenToUse`) | _(Optional)_ Provides guidance for Kilo's automated decision-making, particularly for mode selection and task orchestration. Used by the Orchestrator mode for task coordination. |
+| **Custom Instructions** (`customInstructions`) | _(Optional)_ Specific behavioral guidelines or rules for the mode. Added near the end of the system prompt to further refine Kilo's behavior. |
 
 {% callout type="tip" %}
 **Power Steering for Better Mode Adherence**
@@ -584,14 +584,14 @@ Focus on clarity, completeness, and consistent formatting.
 
 **YAML frontmatter fields:**
 
-| Field         | Description                                                                   |
-| ------------- | ----------------------------------------------------------------------------- |
-| `model`       | Override the default model for this agent                                     |
-| `description` | Short description shown in the agent selector                                 |
-| `mode`        | `"primary"` (user-selectable), `"subagent"` (invoked by AI only), or `"all"`  |
-| `permission`  | Tool permission overrides (same format as the global `permission` config key) |
-| `temperature` | Model temperature override                                                    |
-| `top_p`       | Model top_p override                                                          |
+| Field | Description |
+|---|---|
+| `model` | Override the default model for this agent |
+| `description` | Short description shown in the agent selector |
+| `mode` | `"primary"` (user-selectable), `"subagent"` (invoked by AI only), or `"all"` |
+| `permission` | Tool permission overrides (same format as the global `permission` config key) |
+| `temperature` | Model temperature override |
+| `top_p` | Model top_p override |
 
 The filename (without `.md`) becomes the agent's slug and display name.
 
@@ -974,13 +974,13 @@ Kilo will generate the pattern. Remember to adapt it for YAML (usually single ba
 
 ### Common Pattern Examples
 
-| Pattern (YAML-like)              | JSON fileRegex Value                | Matches                                   | Doesn't Match                      |
-| -------------------------------- | ----------------------------------- | ----------------------------------------- | ---------------------------------- |
-| `\.md$`                          | `"\\.md$"`                          | `readme.md`, `docs/guide.md`              | `script.js`, `readme.md.bak`       |
-| `^src/.*`                        | `"^src/.*"`                         | `src/app.js`, `src/components/button.tsx` | `lib/utils.js`, `test/src/mock.js` |
-| `\.(css\|scss)$`                 | `"\\.(css\|scss)$"`                 | `styles.css`, `theme.scss`                | `styles.less`, `styles.css.map`    |
-| `docs/.*\.md$`                   | `"docs/.*\\.md$"`                   | `docs/guide.md`, `docs/api/reference.md`  | `guide.md`, `src/docs/notes.md`    |
-| `^(?!.*(test\|spec))\.(js\|ts)$` | `"^(?!.*(test\|spec))\\.(js\|ts)$"` | `app.js`, `utils.ts`                      | `app.test.js`, `utils.spec.js`     |
+| Pattern (YAML-like) | JSON fileRegex Value | Matches | Doesn't Match |
+|---|---|---|---|
+| `\.md$` | `"\\.md$"` | `readme.md`, `docs/guide.md` | `script.js`, `readme.md.bak` |
+| `^src/.*` | `"^src/.*"` | `src/app.js`, `src/components/button.tsx` | `lib/utils.js`, `test/src/mock.js` |
+| `\.(css\|scss)$` | `"\\.(css\|scss)$"` | `styles.css`, `theme.scss` | `styles.less`, `styles.css.map` |
+| `docs/.*\.md$` | `"docs/.*\\.md$"` | `docs/guide.md`, `docs/api/reference.md` | `guide.md`, `src/docs/notes.md` |
+| `^(?!.*(test\|spec))\.(js\|ts)$` | `"^(?!.*(test\|spec))\\.(js\|ts)$"` | `app.js`, `utils.ts` | `app.test.js`, `utils.spec.js` |
 
 ### Key Regex Building Blocks
 

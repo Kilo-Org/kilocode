@@ -17,6 +17,13 @@ export enum TelemetryEvent {
   AGENT_USED = "Agent Used",
   PLAN_FOLLOWUP = "Plan Followup",
 
+  // Code Indexing
+  INDEXING_STARTED = "Indexing Started",
+  INDEXING_COMPLETED = "Indexing Completed",
+  INDEXING_FILE_COUNT = "Indexing File Count",
+  INDEXING_BATCH_RETRY = "Indexing Batch Retry",
+  INDEXING_ERROR = "Indexing Error",
+
   // Share Events
   SHARE_CREATED = "Share Created",
   SHARE_DELETED = "Share Deleted",

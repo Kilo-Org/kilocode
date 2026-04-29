@@ -8,6 +8,7 @@ export interface DiffVirtualFile {
   after: string
   additions: number
   deletions: number
+  initialDiffStyle: "unified" | "split"
 }
 
 /**
@@ -83,7 +84,7 @@ export class DiffVirtualProvider implements vscode.Disposable {
 
   private pushData(): void {
     if (!this.pending) return
-    this.post({ type: "diffVirtual.data", diff: this.pending })
+    this.post({ type: "diffVirtual.data", diff: this.pending, initialDiffStyle: this.pending.initialDiffStyle })
   }
 
   private post(message: Record<string, unknown>): void {

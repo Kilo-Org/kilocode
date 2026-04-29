@@ -1,37 +1,280 @@
 /* New Task Button */
 .new-task-button-wrapper {
-  padding: 8px 12px 0;
+  padding: 6px 12px;
   container-type: inline-size;
+}
+
+.new-task-button-wrapper--empty {
+  width: 100%;
+}
+
+.chat-input > .new-task-button-wrapper + .prompt-input-container {
+  margin-top: 0;
+}
+
+:root {
+  --session-action-radius: 6px;
 }
 
 .session-actions-row {
   display: flex;
   gap: 4px;
   align-items: center;
+  flex-wrap: nowrap;
+  min-height: 22px;
+  justify-content: flex-start;
 }
 
-/* All direct children share extra space equally, but start from their content size */
 .session-actions-row > * {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-width: 0;
   overflow: hidden;
 }
 
-/* Tooltip wrappers fill their flex slot, buttons fill the tooltip wrapper */
 .session-actions-row > [data-component="tooltip-trigger"] {
   display: flex;
+  flex: 0 0 auto;
+}
+
+.session-actions-row > .session-move-changes-trigger {
+  margin-left: auto;
 }
 
 .session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
-  flex: 1;
+  flex: 0 0 auto;
+  border-radius: var(--session-action-radius);
+  min-height: 22px;
+  height: auto;
+  padding: 4px 6px !important;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-family: var(--font-family-sans);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: var(--font-weight-medium);
+  line-height: normal;
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--vscode-descriptionForeground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
-/* Diff wrapper also stretches evenly (same flex as buttons) */
-.session-diff-wrapper {
-  display: flex !important;
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"]:hover:not(:disabled),
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"]:focus-visible:not(:disabled),
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"]:active:not(:disabled) {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  color: var(--vscode-foreground);
 }
 
-/* Diff stats badge — fills its flex slot, content centered */
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"].session-new-button:disabled {
+  cursor: default;
+}
+
+.session-worktree-split {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: var(--session-action-radius);
+  box-shadow: none;
+  overflow: hidden;
+  color: var(--vscode-descriptionForeground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-worktree-split:hover,
+.session-worktree-split:has(.session-worktree-main:focus-visible),
+.session-worktree-split:has(.session-worktree-split-arrow:focus-visible),
+.session-worktree-split:has(.session-worktree-split-arrow[data-expanded]) {
+  color: var(--vscode-foreground);
+}
+
+.session-worktree-split:hover > [data-component="tooltip-trigger"] > .session-worktree-main,
+.session-worktree-split:hover .session-worktree-split-arrow,
+.session-worktree-split:has(.session-worktree-main:focus-visible)
+  > [data-component="tooltip-trigger"]
+  > .session-worktree-main,
+.session-worktree-split:has(.session-worktree-main:focus-visible) .session-worktree-split-arrow,
+.session-worktree-split:has(.session-worktree-split-arrow:focus-visible)
+  > [data-component="tooltip-trigger"]
+  > .session-worktree-main,
+.session-worktree-split:has(.session-worktree-split-arrow:focus-visible) .session-worktree-split-arrow,
+.session-worktree-split:has(.session-worktree-split-arrow[data-expanded])
+  > [data-component="tooltip-trigger"]
+  > .session-worktree-main,
+.session-worktree-split:has(.session-worktree-split-arrow[data-expanded]) .session-worktree-split-arrow {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"] {
+  flex: 0 0 auto;
+  border-radius: var(--session-action-radius) 0 0 var(--session-action-radius);
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  padding: 4px 6px !important;
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"]:hover:not(:disabled),
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"]:focus-visible:not(:disabled),
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"]:active:not(:disabled) {
+  background: var(--surface-base-hover);
+  box-shadow: none;
+}
+
+.session-worktree-split-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 12px;
+  padding: 0 3px;
+  border: none;
+  border-radius: 0 var(--session-action-radius) var(--session-action-radius) 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.session-worktree-split-arrow:focus-visible {
+  outline: none;
+  background: inherit;
+}
+
+.session-worktree-split > [data-component="tooltip-trigger"] > [data-component="button"],
+.session-worktree-split-arrow {
+  height: 24px;
+}
+
+.session-worktree-main {
+  padding-right: 6px !important;
+}
+
+.session-worktree-split-menu {
+  min-width: 250px;
+}
+
+.session-worktree-split-menu [data-slot="dropdown-menu-item"] {
+  padding: 6px 10px;
+}
+
+.session-worktree-menu-gap {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.session-worktree-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.session-worktree-menu-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.session-worktree-menu-branch strong {
+  font-weight: 600;
+}
+
+.session-move-action {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: var(--session-action-radius);
+  color: var(--vscode-descriptionForeground);
+  padding: 4px 6px !important;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-move-action:hover:not(:disabled),
+.session-move-action:focus-visible:not(:disabled),
+.session-move-action:active:not(:disabled) {
+  color: var(--vscode-foreground);
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  box-shadow: none;
+}
+
+.session-move-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-move-action [data-component="icon"],
+.session-move-changes [data-component="icon"] {
+  opacity: 0.7;
+}
+
+.session-move-changes {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  position: relative;
+  border-radius: var(--session-action-radius);
+  color: var(--vscode-descriptionForeground);
+  padding: 4px 6px !important;
+  background: transparent;
+  box-shadow: none;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.session-move-changes:hover:not(:disabled),
+.session-move-changes:focus-visible:not(:disabled),
+.session-move-changes:active:not(:disabled) {
+  color: var(--vscode-foreground);
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  box-shadow: none;
+}
+
+.session-move-changes {
+  font-family: var(--font-family-sans);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-move-changes--empty {
+  opacity: 0.7;
+}
+
+.session-move-dot {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #34d399;
+  opacity: 0;
+}
+
+/* Diff stats badge styles retained for the inline move button stats */
 .session-diff-badge {
   display: flex;
   flex: 1;
@@ -73,27 +316,56 @@
   color: #f87171;
 }
 
-/* Collapse diff stats to icon-only when truly narrow */
-@container (max-width: 300px) {
-  .session-diff-add,
-  .session-diff-del {
-    display: none;
+.session-changes-tooltip {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 4px;
+  row-gap: 2px;
+}
+
+.session-changes-tooltip-separator {
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Collapse diff stats to icon-only before the row wraps. */
+@container (max-width: 420px) {
+  .session-actions-row {
+    gap: 4px;
+    flex-wrap: wrap;
   }
 
-  .session-diff-badge {
-    padding: 4px 6px;
+  .session-actions-row > *,
+  .session-worktree-split {
+    flex-basis: auto;
+  }
+
+  .session-move-action {
+    padding-right: 5px !important;
+  }
+
+  .session-move-changes {
+    gap: 0;
+    width: 26px;
+    min-width: 26px;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+
+  .session-diff-add,
+  .session-diff-del {
+    width: 0;
+    opacity: 0;
     overflow: hidden;
   }
 
-  /* Dot indicator on the icon when collapsed and there are changes */
-  .session-diff-badge--has-changes [data-component="icon"]::after {
-    content: "";
-    position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #34d399;
+  .session-move-dot {
+    opacity: 1;
+  }
+}
+
+@container (max-width: 420px) {
+  .session-actions-row > .session-move-changes-trigger {
+    margin-left: 0;
   }
 }
