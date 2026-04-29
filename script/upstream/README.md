@@ -34,6 +34,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `merge.ts` | Main orchestration script for upstream merges |
 | `list-versions.ts` | List available upstream versions |
 | `analyze.ts` | Analyze changes without merging |
+| `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
 
 ### Transform Scripts
 
@@ -76,6 +77,7 @@ The merge automation follows this process, applying **all transformations BEFORE
    - `<author>/opencode-<version>` - Transformed upstream branch
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
+   - Remove files that should not exist in Kilo (`skipFiles`)
    - Transform package names (opencode-ai -> @kilocode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
@@ -161,15 +163,16 @@ Configuration is defined in `utils/config.ts`:
 
 The following transforms are applied to the opencode branch before merging:
 
-1. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
-2. **Versions** - Preserve Kilo's version numbers
-3. **i18n files** - OpenCode -> Kilo in user-visible strings
-4. **Branding files** - UI components, configs with branding only
-5. **Tauri configs** - Desktop app identifiers, names
-6. **package.json** - Names, dependencies, Kilo injections
-7. **Scripts** - GitHub API references
-8. **Extensions** - Zed, etc.
-9. **Web/docs** - Documentation files
+1. **Skip files** - Remove upstream-only packages/files that should not exist in Kilo
+2. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
+3. **Versions** - Preserve Kilo's version numbers
+4. **i18n files** - OpenCode -> Kilo in user-visible strings
+5. **Branding files** - UI components, configs with branding only
+6. **Tauri configs** - Desktop app identifiers, names
+7. **package.json** - Names, dependencies, Kilo injections
+8. **Scripts** - GitHub API references
+9. **Extensions** - Zed, etc.
+10. **Web/docs** - Documentation files
 
 ### Post-Merge Strategies
 
@@ -229,6 +232,18 @@ Options:
   --base-branch <name>   Base branch to analyze from (default: main)
   --output <file>        Output file for report
 ```
+
+### fix-kilocode-markers.ts
+
+```
+Usage:
+  bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
 
 ## Using Custom Base Branches
 

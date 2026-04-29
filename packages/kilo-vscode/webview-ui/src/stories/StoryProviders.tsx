@@ -182,6 +182,7 @@ export function mockSessionValue(overrides?: {
     allParts: () => ({}),
     allStatusMap: () => ({}),
     getParts: () => [],
+    isErrorHidden: () => false,
     hydrateParts: noop,
     todos: () => [],
     permissions: () => permissions,

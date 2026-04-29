@@ -12,7 +12,7 @@ import {
   isUnauthorizedPromotionLimitError,
 } from "../../utils/errorUtils"
 
-interface ErrorDisplayProps {
+export interface ErrorDisplayProps {
   error: NonNullable<AssistantMessage["error"]>
   onLogin?: () => void
 }

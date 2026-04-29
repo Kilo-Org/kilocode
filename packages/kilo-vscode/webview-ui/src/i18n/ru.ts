@@ -260,6 +260,11 @@ export const dict = {
   "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.stop": "Остановить",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.autoApprove.enable": "Включить автоодобрение",
+  "prompt.action.autoApprove.disable": "Отключить автоодобрение",
+  "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
+  "prompt.action.autoApprove.disabled":
+    "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
   "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":

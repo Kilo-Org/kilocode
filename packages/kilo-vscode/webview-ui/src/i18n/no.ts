@@ -264,6 +264,12 @@ export const dict = {
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
+  "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
+  "prompt.action.autoApprove.disable": "Deaktiver automatisk godkjenning",
+  "prompt.action.autoApprove.enabled":
+    "Automatisk godkjenning er aktivert. Tillatelsesforespørsler godkjennes automatisk.",
+  "prompt.action.autoApprove.disabled":
+    "Automatisk godkjenning er deaktivert. Klikk for å godkjenne tillatelsesforespørsler automatisk.",
   "prompt.action.resetModel": "Tilbakestill modell til standard",
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
