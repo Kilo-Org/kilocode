@@ -34,6 +34,7 @@ Workflow:
 5. After resolving each file, record the decision before staging it:
    - `bun script/upstream/decisions.ts add --version <version> --file <path> --kind <kind> --risk <risk> --summary "..." --rationale "..." --alternative "..." --verification "..."`
    - include at least one rejected alternative for non-trivial `hybrid`, `take-ours`, or `take-theirs` choices
+   - include `--target <new-path>` for `renamed` decisions
    - use the rationale to explain why this preserves Kilo behavior while accepting the appropriate upstream change
 6. Run the appropriate checks:
    - stage resolved files with `git add -A` before the ledger check so git no longer reports unmerged paths

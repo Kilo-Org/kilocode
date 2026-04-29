@@ -44,6 +44,7 @@ interface Choice {
   alternatives: string[]
   verification: string[]
   notes?: string
+  target?: string
   resolved?: string
   updated: string
 }
@@ -85,6 +86,7 @@ interface CliOptions extends InitOptions {
   summary?: string
   rationale?: string
   notes?: string
+  target?: string
   alternatives: string[]
   verification: string[]
   write: boolean
@@ -260,9 +262,11 @@ async function load(opts: Pick<InitOptions, "version" | "output" | "ledger">) {
 }
 
 async function resolved(entry: Choice) {
-  const ok = await Bun.file(entry.file).exists()
-  if (!ok) return entry.kind === "removed" ? "deleted" : undefined
-  return sha(await Bun.file(entry.file).text())
+  const file = entry.kind === "renamed" && entry.target ? entry.target : entry.file
+  const ok = await Bun.file(file).exists()
+  if (!ok && entry.kind === "removed") return "deleted"
+  if (!ok) return undefined
+  return sha(await Bun.file(file).text())
 }
 
 async function addDecision(opts: CliOptions) {
@@ -283,6 +287,7 @@ async function addDecision(opts: CliOptions) {
     alternatives: opts.alternatives,
     verification: opts.verification,
     notes: opts.notes ?? prev?.notes,
+    target: opts.target ?? prev?.target,
     updated: new Date().toISOString(),
   })
   map.set(opts.file, next)
@@ -299,8 +304,10 @@ async function addDecision(opts: CliOptions) {
 function missing(entry: Choice) {
   const gaps = []
   if (!entry.kind) gaps.push("kind")
+  if (!entry.risk) gaps.push("risk")
   if (!entry.summary) gaps.push("summary")
   if (!entry.rationale) gaps.push("rationale")
+  if (entry.kind === "renamed" && !entry.target) gaps.push("target")
   if (entry.verification.length === 0) gaps.push("verification")
   return gaps
 }
@@ -310,6 +317,11 @@ async function markers(file: string) {
   if (!ok) return false
   const text = await Bun.file(file).text()
   return /^<<<<<<< |^\|\|\|\|\|\|\| |^=======$|^>>>>>>> /m.test(text)
+}
+
+async function stale(entry: Choice) {
+  if (entry.kind !== "renamed") return false
+  return Bun.file(entry.file).exists()
 }
 
 export async function checkLedger(opts: InitOptions & { write?: boolean }) {
@@ -334,6 +346,7 @@ export async function checkLedger(opts: InitOptions & { write?: boolean }) {
     if (gaps.length > 0) issues.push(`${entry.file}: missing ${gaps.join(", ")}`)
     if (open.includes(entry.file)) issues.push(`${entry.file}: still has an unresolved git conflict`)
     if (await markers(entry.file)) issues.push(`${entry.file}: still has conflict markers`)
+    if (await stale(item)) issues.push(`${entry.file}: original path still exists after renamed decision`)
     if (!item.resolved && item.kind !== "removed") issues.push(`${entry.file}: resolved file is missing`)
   }
   const ledger = { ...data.ledger, updated: new Date().toISOString(), decisions }
@@ -408,6 +421,7 @@ function markdown(ledger: Ledger) {
     bullet(lines, "Risk", pick.risk)
     bullet(lines, "Summary", pick.summary)
     bullet(lines, "Rationale", pick.rationale)
+    bullet(lines, "Target", pick.target)
     list(lines, "Alternatives", pick.alternatives)
     list(lines, "Verification", pick.verification)
     bullet(lines, "Notes", pick.notes)
@@ -440,6 +454,7 @@ function body(ledger: Ledger) {
       lines.push(`- \`${entry.file}\`: ${entry.kind ?? "missing-kind"}${entry.risk ? `, ${entry.risk} risk` : ""}`)
       if (entry.summary) lines.push(`  - Summary: ${entry.summary}`)
       if (entry.rationale) lines.push(`  - Rationale: ${entry.rationale}`)
+      if (entry.target) lines.push(`  - Target: ${entry.target}`)
       if (entry.alternatives.length > 0) lines.push(`  - Alternatives: ${entry.alternatives.join("; ")}`)
       if (entry.verification.length > 0) lines.push(`  - Verification: ${entry.verification.join("; ")}`)
     }
@@ -489,6 +504,7 @@ function parse(args: string[]): { command: string; opts: CliOptions } {
       summary: value(args, "summary"),
       rationale: value(args, "rationale"),
       notes: value(args, "notes"),
+      target: value(args, "target"),
       alternatives: values(args, "alternative"),
       verification: values(args, "verification"),
       write: !flag(args, "no-write"),
@@ -504,7 +520,7 @@ function need(opts: CliOptions) {
 function usage() {
   console.log(`Usage:
   bun script/upstream/decisions.ts init --version v1.2.3
-  bun script/upstream/decisions.ts add --version v1.2.3 --file path --kind hybrid --summary "..." --rationale "..." --verification "bun turbo typecheck"
+  bun script/upstream/decisions.ts add --version v1.2.3 --file path --kind hybrid --risk low --summary "..." --rationale "..." --verification "bun turbo typecheck"
   bun script/upstream/decisions.ts check --version v1.2.3
   bun script/upstream/decisions.ts render --version v1.2.3
   bun script/upstream/decisions.ts pr-body --version v1.2.3
@@ -514,6 +530,7 @@ Options:
   --output <dir>           Output directory (default: script/upstream/reports)
   --force                  Rebuild init snapshot and drop existing decisions
   --alternative <text>     Repeatable alternative considered for add
+  --target <path>          New path for renamed decisions
   --verification <text>    Repeatable verification command/result for add
   --no-write               Do not update hashes/report during check
 `)
