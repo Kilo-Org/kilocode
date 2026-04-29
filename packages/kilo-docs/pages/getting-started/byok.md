@@ -47,11 +47,11 @@ AWS Bedrock requires credentials in a different format than other providers. Ins
 }
 ```
 
-| Field             | Description                                                              |
-| ----------------- | ------------------------------------------------------------------------ |
-| `accessKeyId`     | Your AWS access key ID                                                   |
-| `secretAccessKey` | Your AWS secret access key                                               |
-| `region`          | The AWS region where Bedrock is enabled (e.g., `us-east-1`, `eu-west-1`) |
+| Field | Description |
+|---|---|
+| `accessKeyId` | Your AWS access key ID |
+| `secretAccessKey` | Your AWS secret access key |
+| `region` | The AWS region where Bedrock is enabled (e.g., `us-east-1`, `eu-west-1`) |
 
 Your IAM user or role must have the following permissions:
 

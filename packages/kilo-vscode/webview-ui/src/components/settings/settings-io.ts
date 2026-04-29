@@ -22,14 +22,17 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "instructions",
   "skills",
   "snapshot",
+  "remote_control",
   "share",
   "username",
   "watcher",
   "formatter",
   "lsp",
   "compaction",
+  "commit_message",
   "tools",
   "layout",
+  "indexing",
   "experimental",
 ]
 

@@ -1,39 +1,64 @@
-import { createStore } from "solid-js/store"
+import { createStore, reconcile, unwrap } from "solid-js/store" // kilocode_change
 import { createSimpleContext } from "./helper"
 import type { PromptInfo } from "../component/prompt/history"
 
 export type HomeRoute = {
   type: "home"
-  initialPrompt?: PromptInfo
+  prompt?: PromptInfo
 }
 
 export type SessionRoute = {
   type: "session"
   sessionID: string
-  initialPrompt?: PromptInfo
+  prompt?: PromptInfo
 }
 
-export type Route = HomeRoute | SessionRoute
+// kilocode_change start
+export type KiloClawRoute = {
+  type: "kiloclaw"
+}
+// kilocode_change end
+
+export type PluginRoute = {
+  type: "plugin"
+  id: string
+  data?: Record<string, unknown>
+}
+
+export type Route = HomeRoute | SessionRoute | PluginRoute | KiloClawRoute // kilocode_change
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",
-  init: () => {
+  init: (props: { initialRoute?: Route }) => {
     const [store, setStore] = createStore<Route>(
-      process.env["KILO_ROUTE"]
-        ? JSON.parse(process.env["KILO_ROUTE"])
-        : {
-            type: "home",
-          },
+      props.initialRoute ??
+        (process.env["KILO_ROUTE"]
+          ? JSON.parse(process.env["KILO_ROUTE"])
+          : {
+              type: "home",
+            }),
     )
+
+    // kilocode_change start
+    let previous: Route | undefined
+    // kilocode_change end
 
     return {
       get data() {
         return store
       },
       navigate(route: Route) {
-        console.log("navigate", route)
-        setStore(route)
+        previous = structuredClone(unwrap(store)) // kilocode_change
+        setStore(reconcile(route))
       },
+      // kilocode_change start
+      back() {
+        const target = previous ?? ({ type: "home" } as const)
+        previous = undefined
+        console.log("navigate", target)
+        setStore(target)
+      },
+      // kilocode_change end
     }
   },
 })

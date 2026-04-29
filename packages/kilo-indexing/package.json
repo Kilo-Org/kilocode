@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@kilocode/kilo-indexing",
+  "version": "7.2.30",
+  "type": "module",
+  "license": "MIT",
+  "description": "Standalone indexing engine and host helpers for Kilo Code",
+  "keywords": [
+    "kilo",
+    "kilocode",
+    "indexing",
+    "plugin",
+    "search",
+    "embeddings"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts",
+    "./detect": "./src/detect.ts",
+    "./engine": "./src/indexing/index.ts",
+    "./server": "./src/server/routes.ts",
+    "./status": "./src/status.ts"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "build": "tsc",
+    "test": "bun test --timeout 30000"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "3.1005.0",
+    "@aws-sdk/credential-provider-ini": "3.972.31",
+    "@kilocode/kilo-gateway": "workspace:*",
+    "@kilocode/plugin": "workspace:*",
+    "@lancedb/lancedb": "0.26.2",
+    "@qdrant/js-client-rest": "1.17.0",
+    "async-mutex": "0.5.0",
+    "chokidar": "4.0.3",
+    "glob": "13.0.6",
+    "hono": "catalog:",
+    "hono-openapi": "catalog:",
+    "ignore": "7.0.5",
+    "minimatch": "10.2.5",
+    "openai": "6.27.0",
+    "p-limit": "7.3.0",
+    "tree-sitter-wasms": "0.1.13",
+    "uuid": "14.0.0",
+    "web-tree-sitter": "0.25.10",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  }
+}

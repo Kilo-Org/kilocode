@@ -1,5 +1,7 @@
 import React, { useState, useEffect, Children, isValidElement, ReactNode, ReactElement } from "react"
 
+const TAB_SYNC_EVENT = "kilo-tab-select"
+
 interface TabProps {
   label: string
   children: ReactNode
@@ -39,13 +41,26 @@ export function Tabs({ children }: TabsProps) {
     setActiveIndex(indexFromHash())
     const onHashChange = () => setActiveIndex(indexFromHash())
     window.addEventListener("hashchange", onHashChange)
-    return () => window.removeEventListener("hashchange", onHashChange)
+
+    const onSync = (e: Event) => {
+      const label = (e as CustomEvent<string>).detail
+      const found = tabs.findIndex((tab) => tab.props.label === label)
+      if (found >= 0) setActiveIndex(found)
+    }
+    window.addEventListener(TAB_SYNC_EVENT, onSync)
+
+    return () => {
+      window.removeEventListener("hashchange", onHashChange)
+      window.removeEventListener(TAB_SYNC_EVENT, onSync)
+    }
   }, [])
 
   const selectTab = (index: number) => {
     setActiveIndex(index)
-    const slug = slugify(tabs[index].props.label)
+    const label = tabs[index].props.label
+    const slug = slugify(label)
     history.replaceState(null, "", `#${slug}`)
+    window.dispatchEvent(new CustomEvent(TAB_SYNC_EVENT, { detail: label }))
   }
 
   return (

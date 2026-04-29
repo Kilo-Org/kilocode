@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test"
-import { getGitContext } from "../../src/commit-message/git-context"
+import { getGitContext } from "../../src/kilocode/commit-message/git-context"
 
 describe("commit-message git context", () => {
   test("hides Windows console windows for git subprocesses", async () => {

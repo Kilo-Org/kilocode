@@ -13,6 +13,7 @@ describe("legacy migration session", () => {
         mode: "code",
       },
       "project-1",
+      "/workspace/testing",
     )
 
     expect(session.projectID).toBe("project-1")
@@ -24,15 +25,15 @@ describe("legacy migration session", () => {
   })
 
   it("creates a deterministic session id from the legacy task id", () => {
-    const a = createSession("legacy-task-1", undefined, "project-1")
-    const b = createSession("legacy-task-1", undefined, "project-1")
+    const a = createSession("legacy-task-1", undefined, "project-1", "")
+    const b = createSession("legacy-task-1", undefined, "project-1", "")
 
     expect(a.id).toBe(b.id)
     expect(a.id.startsWith("ses_migrated_")).toBe(true)
   })
 
   it("falls back to the legacy id as title when task metadata is missing", () => {
-    const session = createSession("legacy-task-1", undefined, "project-1")
+    const session = createSession("legacy-task-1", undefined, "project-1", "")
 
     expect(session.slug).toBe("legacy-task-1")
     expect(session.title).toBe("legacy-task-1")

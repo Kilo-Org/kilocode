@@ -1,20 +1,30 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { AutocompleteModel } from "../AutocompleteModel"
 import type { KiloConnectionService } from "../../cli-backend"
+
+const mockClient = {
+  kilo: {
+    fim: vi.fn(),
+  },
+}
 
 function createMockConnectionService(state: "connecting" | "connected" | "disconnected" | "error" = "connected") {
   return {
     getConnectionState: vi.fn().mockReturnValue(state),
-    getClient: vi.fn().mockReturnValue({
-      kilo: {
-        fim: vi.fn(),
-      },
-    }),
+    getClient: vi.fn().mockReturnValue(mockClient),
+    getClientAsync:
+      state === "connected"
+        ? vi.fn().mockResolvedValue(mockClient)
+        : vi.fn().mockRejectedValue(new Error(`CLI backend is not connected (state: ${state})`)),
     onStateChange: vi.fn().mockReturnValue(() => {}),
   } as unknown as KiloConnectionService
 }
 
 describe("AutocompleteModel", () => {
+  beforeEach(() => {
+    mockClient.kilo.fim.mockReset()
+  })
+
   describe("constructor", () => {
     it("defaults profileName and profileType to null", () => {
       const model = new AutocompleteModel()
@@ -65,13 +75,6 @@ describe("AutocompleteModel", () => {
     })
   })
 
-  describe("supportsFim", () => {
-    it("always returns true", () => {
-      const model = new AutocompleteModel()
-      expect(model.supportsFim()).toBe(true)
-    })
-  })
-
   describe("getModelName", () => {
     it("returns the default model", () => {
       const model = new AutocompleteModel()
@@ -80,9 +83,16 @@ describe("AutocompleteModel", () => {
   })
 
   describe("getProviderDisplayName", () => {
-    it("returns Kilo Gateway", () => {
+    it("returns the default provider", () => {
       const model = new AutocompleteModel()
-      expect(model.getProviderDisplayName()).toBe("Kilo Gateway")
+      expect(model.getProviderDisplayName()).toBe("Mistral AI")
+    })
+
+    it("returns the selected provider", () => {
+      const model = new AutocompleteModel()
+      model.setModel("inception/mercury-edit")
+
+      expect(model.getProviderDisplayName()).toBe("Inception")
     })
   })
 
@@ -98,7 +108,7 @@ describe("AutocompleteModel", () => {
       const connection = createMockConnectionService("disconnected")
       const model = new AutocompleteModel(connection)
       await expect(model.generateFimResponse("prefix", "suffix", vi.fn())).rejects.toThrow(
-        "CLI backend is not connected (state: disconnected)",
+        "CLI backend is not connected",
       )
     })
 
@@ -113,8 +123,7 @@ describe("AutocompleteModel", () => {
       ]
 
       const connection = createMockConnectionService("connected")
-      const client = (connection as any).getClient()
-      client.kilo.fim.mockResolvedValue({
+      mockClient.kilo.fim.mockResolvedValue({
         stream: (async function* () {
           for (const chunk of chunks) yield chunk
         })(),
@@ -134,10 +143,26 @@ describe("AutocompleteModel", () => {
       })
     })
 
+    it("streams text-completion chunks", async () => {
+      const chunks = [{ choices: [{ text: "hello" }] }, { choices: [{ text: " world" }] }]
+
+      const connection = createMockConnectionService("connected")
+      mockClient.kilo.fim.mockResolvedValue({
+        stream: (async function* () {
+          for (const chunk of chunks) yield chunk
+        })(),
+      })
+
+      const model = new AutocompleteModel(connection)
+      const received: string[] = []
+      await model.generateFimResponse("prefix", "suffix", (text) => received.push(text))
+
+      expect(received).toEqual(["hello", " world"])
+    })
+
     it("passes model parameters to fim call", async () => {
       const connection = createMockConnectionService("connected")
-      const client = (connection as any).getClient()
-      client.kilo.fim.mockResolvedValue({
+      mockClient.kilo.fim.mockResolvedValue({
         stream: (async function* () {})(),
       })
 
@@ -145,7 +170,7 @@ describe("AutocompleteModel", () => {
       const signal = new AbortController().signal
       await model.generateFimResponse("pre", "suf", vi.fn(), signal)
 
-      expect(client.kilo.fim).toHaveBeenCalledWith(
+      expect(mockClient.kilo.fim).toHaveBeenCalledWith(
         {
           prefix: "pre",
           suffix: "suf",
@@ -153,16 +178,26 @@ describe("AutocompleteModel", () => {
           maxTokens: 256,
           temperature: 0.2,
         },
-        { signal },
+        expect.objectContaining({ signal }),
       )
     })
-  })
 
-  describe("generateResponse", () => {
-    it("throws because FIM is the primary strategy", async () => {
-      const model = new AutocompleteModel()
-      await expect(model.generateResponse("system", "user", vi.fn())).rejects.toThrow(
-        "Chat-based completions are not supported via CLI backend",
+    it("passes selected model parameters to fim call", async () => {
+      const connection = createMockConnectionService("connected")
+      mockClient.kilo.fim.mockResolvedValue({
+        stream: (async function* () {})(),
+      })
+
+      const model = new AutocompleteModel(connection)
+      model.setModel("inception/mercury-edit")
+      await model.generateFimResponse("pre", "suf", vi.fn())
+
+      expect(mockClient.kilo.fim).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: "inception/mercury-edit",
+          temperature: 0,
+        }),
+        expect.any(Object),
       )
     })
   })

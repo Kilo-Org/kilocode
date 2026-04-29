@@ -31,7 +31,7 @@
 import { $ } from "bun"
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import { delimiter, join, resolve } from "node:path"
 import { spawn } from "node:child_process"
 
@@ -215,8 +215,17 @@ async function compile() {
   }
 
   console.log("[launch] Building extension...")
-  await $`bun run package`.cwd(root)
+  await $`bun run package`.cwd(root).env(cleanEnv(process.env))
   console.log("[launch] Build complete")
+}
+
+function cleanEnv(input: NodeJS.ProcessEnv) {
+  const env = { ...input, HOME: homedir().trim() }
+  for (const key of ["XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "KILO_TEST_HOME"]) {
+    const value = env[key]
+    if (value !== undefined) env[key] = value.trim()
+  }
+  return env
 }
 
 // ---------------------------------------------------------------------------
@@ -311,6 +320,12 @@ async function launch() {
   }
 
   const env = devDataDirs ? { ...process.env, KILO_DEV: "1" } : process.env
+  // Strip Electron/VS Code env vars so the spawned instance doesn't attach
+  // to the current Electron process (e.g. when launched from a VS Code task).
+  const env = cleanEnv(process.env)
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
+  }
 
   console.log(`[launch] Starting VS Code (${mode} mode)`)
   console.log(`[launch] Executable: ${app}`)

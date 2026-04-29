@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
-import { DEFAULT_HEADERS } from "../headers.js"
+import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
 import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 /**
@@ -88,7 +88,8 @@ export async function fetchKiloModels(options?: {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
       headers: {
-        ...DEFAULT_HEADERS,
+        ...getDefaultHeaders(),
+        ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
@@ -114,6 +115,11 @@ export async function fetchKiloModels(options?: {
     for (const model of result.data.data) {
       // Skip image generation models
       if (model.architecture?.output_modalities?.includes("image")) {
+        continue
+      }
+
+      // Skip models that don't support tools — Kilo requires tool calling
+      if (!model.supported_parameters?.includes("tools")) {
         continue
       }
 

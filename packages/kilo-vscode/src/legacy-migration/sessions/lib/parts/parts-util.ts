@@ -55,17 +55,17 @@ export function isCompletionResult(
 ): input is { type?: string; name?: string; input: { result: string } } {
   return Boolean(
     input &&
-    typeof input === "object" &&
-    "type" in input &&
-    input.type === "tool_use" &&
-    "name" in input &&
-    input.name === "attempt_completion" &&
-    "input" in input &&
-    input.input &&
-    typeof input.input === "object" &&
-    "result" in input.input &&
-    typeof input.input.result === "string" &&
-    input.input.result,
+      typeof input === "object" &&
+      "type" in input &&
+      input.type === "tool_use" &&
+      "name" in input &&
+      input.name === "attempt_completion" &&
+      "input" in input &&
+      input.input &&
+      typeof input.input === "object" &&
+      "result" in input.input &&
+      typeof input.input.result === "string" &&
+      input.input.result,
   )
 }
 

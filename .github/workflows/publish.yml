@@ -1,5 +1,5 @@
 name: publish
-run-name: "${{ format('release {0}', inputs.bump) }}"
+run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}"
 
 on:
   # push:
@@ -22,6 +22,13 @@ on:
         description: "Override version (optional)"
         required: false
         type: string
+      # kilocode_change start
+      pre_release:
+        description: "Publish as pre-release (VS Code marketplace + npm rc channel)"
+        required: false
+        type: boolean
+        default: true
+      # kilocode_change end
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
 
@@ -41,9 +48,14 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
+      # kilocode_change start - install deps for version script workspace resolution
+      - name: Install dependencies
+        run: bun install
+
       - name: Install Kilo
         if: inputs.bump || inputs.version
         run: bun i -g @kilocode/cli
+      # kilocode_change end
 
       - id: version
         run: |
@@ -53,6 +65,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           KILO_BUMP: ${{ inputs.bump }}
           KILO_VERSION: ${{ inputs.version }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     outputs:
@@ -78,13 +91,28 @@ jobs:
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+
+      # kilocode_change start - pack dist tree into a single zstd-compressed tar before upload.
+      # download-artifact@v4's streaming unzip is CPU-bound and processes entries one by one;
+      # collapsing ~480 files into one tar cuts build-vscode download from >30m to seconds.
+      # zstd compresses the wasms (~4x) and leaves the already-compact binaries alone, for
+      # ~1 GB artifact. compression-level: 0 on the outer zip avoids double-compression.
+      # zstd + GNU tar are preinstalled on both github-hosted and blacksmith ubuntu-2404.
+      # See actions/upload-artifact#36, actions/toolkit#1533.
+      - name: Pack CLI dist into tar.zst
+        run: |
+          find packages/opencode/dist -name '*.map' -delete
+          tar --zstd -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
 
       - uses: actions/upload-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          path: /tmp/kilo-cli.tar.zst
+          compression-level: 0
+      # kilocode_change end
 
     outputs:
       version: ${{ needs.version.outputs.version }}
@@ -106,17 +134,24 @@ jobs:
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
 
+      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          path: /tmp
 
+      - name: Unpack CLI dist
+        run: |
+          mkdir -p packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+      # kilocode_change end
       - name: Build VSIX packages
         run: bun script/build.ts
         working-directory: ./packages/kilo-vscode
         env:
           CLI_DIST_DIR: ../../packages/opencode/dist
           KILO_VERSION: ${{ needs.build-cli.outputs.version }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
 
       - uses: actions/upload-artifact@v4
@@ -241,89 +276,25 @@ jobs:
   #         APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.p8
 
   # kilocode_change start
-  # Smoke test disabled as a release gate due to infrastructure issues.
-  # The job is skipped via `if: false` so it no longer blocks publishing.
-  # Re-enable by restoring the original `if:` condition and uncommenting
-  # `- smoke-test` in the publish job's `needs` list below.
+  # Run smoke tests against CLI assets uploaded to the draft GitHub release
+  # before publishing the release and package artifacts.
   smoke-test:
-    name: Smoke Test (pre-publish gate) [DISABLED]
+    name: Smoke Test (pre-publish gate)
     needs:
       - version
       - build-cli
-    if: false # was: github.repository == 'Kilo-Org/kilocode'
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Trigger kilo-bench smoke test
-        id: trigger
-        env:
-          GH_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
-        run: |
-          BEFORE=$(date -u -d '60 seconds ago' +%Y-%m-%dT%H:%M:%SZ)
-
-          gh api repos/Kilo-Org/kilo-bench/dispatches \
-            --method POST \
-            -f event_type=smoke-test \
-            -f 'client_payload[release_tag]=${{ needs.version.outputs.tag }}' \
-            -f 'client_payload[source_run_id]=${{ github.run_id }}'
-
-          # Poll for the run created after our dispatch timestamp.
-          # The dispatch API returns no run ID, so we query by created time
-          # and pick the oldest match to avoid grabbing an unrelated run.
-          echo "Waiting for smoke-test run to appear (dispatched after $BEFORE)..."
-          for attempt in $(seq 1 30); do
-            RUN_ID=$(gh api \
-              "repos/Kilo-Org/kilo-bench/actions/workflows/smoke-test.yml/runs?event=repository_dispatch&created=>=$BEFORE" \
-              --jq '.workflow_runs | sort_by(.created_at) | .[0].id // empty')
-
-            if [[ -n "$RUN_ID" && "$RUN_ID" != "null" ]]; then
-              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-              echo "::notice::Smoke test run: https://github.com/Kilo-Org/kilo-bench/actions/runs/$RUN_ID"
-              exit 0
-            fi
-
-            echo "  attempt $attempt: run not yet registered, retrying in 10s..."
-            sleep 10
-          done
-
-          echo "::error::Smoke test run did not appear within 5 minutes after dispatch."
-          exit 1
-
-      - name: Wait for smoke test to complete
-        env:
-          GH_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
-        run: |
-          RUN_ID="${{ steps.trigger.outputs.run_id }}"
-          echo "Waiting for run $RUN_ID..."
-
-          for i in $(seq 1 60); do
-            CONCLUSION=$(gh run view "$RUN_ID" \
-              --repo Kilo-Org/kilo-bench \
-              --json conclusion \
-              --jq '.conclusion')
-
-            echo "  attempt $i: $CONCLUSION"
-
-            if [[ "$CONCLUSION" == "success" ]]; then
-              echo "::notice::Smoke test passed."
-              exit 0
-            elif [[ "$CONCLUSION" != "null" && "$CONCLUSION" != "" ]]; then
-              echo "::error::Smoke test failed with conclusion: $CONCLUSION"
-              echo "See: https://github.com/Kilo-Org/kilo-bench/actions/runs/$RUN_ID"
-              exit 1
-            fi
-
-            sleep 30
-          done
-
-          echo "::error::Smoke test did not complete within 30 minutes."
-          exit 1
+    if: github.repository == 'Kilo-Org/kilocode'
+    uses: ./.github/workflows/smoke-test.yml
+    with:
+      cli_version: ${{ needs.version.outputs.version }}
+    secrets: inherit
   # kilocode_change end
   publish:
     needs:
       - version
       - build-cli
       - build-vscode
-      # - smoke-test  # disabled: infrastructure issues (see smoke-test job comment)
+      - smoke-test
       # - build-tauri
     runs-on: ubuntu-24.04
     steps:
@@ -361,11 +332,17 @@ jobs:
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
           # kilocode_change end
 
+      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          path: /tmp
 
+      - name: Unpack CLI dist
+        run: |
+          mkdir -p packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+      # kilocode_change end
       - uses: actions/download-artifact@v4
         with:
           name: kilo-vscode
@@ -394,6 +371,7 @@ jobs:
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}

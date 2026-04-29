@@ -145,7 +145,7 @@ function main() {
 }
 
 try {
-  main()
+  void main()
 } catch (error) {
   console.error("Failed to setup kilo binary:", error.message)
   process.exit(1)

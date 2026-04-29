@@ -12,7 +12,12 @@ Kilo Code's autocomplete feature provides intelligent code suggestions and compl
 
 ## How Autocomplete Works
 
-The extension uses **Fill-in-the-Middle (FIM)** completion powered by Codestral (`mistralai/codestral-2508`). It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
+The extension uses **Fill-in-the-Middle (FIM)** completion routed through the **Kilo Gateway**. It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
+
+You can choose between two FIM models:
+
+- **Codestral** (`mistralai/codestral-2508`) by Mistral AI — the default, billed through your Kilo account.
+- **Mercury Edit** (`inception/mercury-edit`) by Inception — temporarily available via **BYOK** (Bring Your Own Key) only; Kilo Gateway support is coming soon.
 
 ## Triggering Options
 
@@ -26,6 +31,17 @@ Press `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux) to manually request a completion
 
 {% callout type="note" %}
 This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` to be enabled in VS Code settings. It is **disabled by default**.
+{% /callout %}
+
+## Provider and Model
+
+Autocomplete requests are routed through the **Kilo Gateway**. You can pick the FIM model under **Settings → Models → Autocomplete model**:
+
+- **Codestral** (`mistralai/codestral-2508`) — the default. Billed through your Kilo account, or free when you add your own Mistral Codestral key via BYOK. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
+- **Mercury Edit** (`inception/mercury-edit`) — a fast diffusion-based FIM model by Inception. Temporarily requires an **Inception BYOK key** until Kilo Gateway support lands. Add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
+
+{% callout type="note" %}
+Mercury Edit is only available through BYOK for now — Kilo Gateway support is coming soon. If you select Mercury Edit without a valid Inception BYOK key configured, autocomplete requests will fail — switch back to Codestral or add an Inception key to continue.
 {% /callout %}
 
 ## Status Bar
@@ -130,11 +146,24 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 
 ## Best Practices
 
-1. **Balance speed and quality**: Faster models provide quicker suggestions but may be less accurate
-2. **Adjust trigger delay**: Find the sweet spot between responsiveness and avoiding too many API calls
-3. **Use Quick Task for complex changes**: It's designed for more substantial code modifications
-4. **Use Manual Autocomplete for precision**: When you need suggestions at specific moments
-5. **Configure providers wisely**: Consider using faster, cheaper models for autocomplete while keeping more powerful models for chat
+1. **Use Manual Autocomplete for precision**: When you need suggestions at specific moments, use the keyboard shortcut rather than relying on auto-trigger
+2. **Use chat for complex changes**: Chat is better suited for multi-file changes and substantial code modifications
+3. **Steer autocomplete with comments**: Write a comment describing what you want before triggering autocomplete, or type a function signature — autocomplete will fill in the implementation
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+4. **Check the status bar tooltip**: Hover the status bar item to see autocomplete state and cost tracking
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+4. **Balance speed and quality**: Faster models provide quicker suggestions but may be less accurate
+5. **Adjust trigger delay**: Find the sweet spot between responsiveness and avoiding too many API calls
+6. **Configure providers wisely**: Consider using faster, cheaper models for autocomplete while keeping more powerful models for chat
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips
 
@@ -143,16 +172,12 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 {% /callout %}
 
 {% callout type="tip" %}
-**Steer autocomplete with comments:** Write a comment describing what you want before triggering autocomplete, or type a function signature—autocomplete will fill in the implementation.
-{% /callout %}
-
-{% callout type="tip" %}
 **Treat suggestions as drafts:** Accept autocomplete suggestions quickly, then refine. It's often faster to fix a 90% correct suggestion than to craft the perfect prompt.
 {% /callout %}
 
 - Autocomplete works best with clear, well-structured code
 - Comments above functions help autocomplete understand intent
-- Variable and function names matter - descriptive names lead to better suggestions
+- Variable and function names matter — descriptive names lead to better suggestions
 
 ## Related Features
 
