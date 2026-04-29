@@ -196,10 +196,11 @@ export function BasicTool(props: BasicToolProps) {
           </Switch>
         </div>
       </div>
-      {/* kilocode_change */}
+      {/* kilocode_change start */}
       <Show when={props.children && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
         <Collapsible.Arrow />
       </Show>
+      {/* kilocode_change end */}
     </div>
   )
 
