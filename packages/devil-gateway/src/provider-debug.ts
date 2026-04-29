@@ -1,6 +1,8 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import type { Provider as SDK } from "ai"
-import type { DevilProviderOptions } from "./types.js"
+import { createAnthropic } from "@ai-sdk/anthropic"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import type { DevilProvider, DevilProviderOptions } from "./types.js"
 import { getDevilUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildDevilHeaders, getDefaultHeaders } from "./headers.js"
 import { DEVIL_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
@@ -8,7 +10,7 @@ import { DEVIL_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
 /**
  * Debug version of createDevil with extensive logging
  */
-export function createDevilDebug(options: DevilProviderOptions = {}): SDK {
+export function createDevilDebug(options: DevilProviderOptions = {}): DevilProvider {
   console.log("\n🔍 [KILO DEBUG] Creating Devil Provider")
   console.log("📋 [KILO DEBUG] Options received:", JSON.stringify(options, null, 2))
 
@@ -97,13 +99,44 @@ export function createDevilDebug(options: DevilProviderOptions = {}): SDK {
     return response
   }
 
-  console.log("✅ [KILO DEBUG] Creating OpenRouter provider with configuration\n")
+  console.log("✅ [KILO DEBUG] Creating provider with configuration\n")
 
-  // Create OpenRouter provider with DevilCode configuration
-  return createOpenRouter({
+  const sdkOptions = {
     baseURL: openRouterUrl,
     apiKey: apiKey ?? ANONYMOUS_API_KEY,
     headers: customHeaders,
     fetch: wrappedFetch as typeof fetch,
-  })
+  }
+
+  const openrouter = createOpenRouter(sdkOptions)
+  const anthropic = createAnthropic(sdkOptions)
+  const openai = createOpenAI(sdkOptions)
+  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
+
+  return {
+    languageModel(modelId: string) {
+      return openrouter(modelId)
+    },
+    embeddingModel(modelId: string) {
+      return openrouter.textEmbeddingModel(modelId)
+    },
+    textEmbeddingModel(modelId: string) {
+      return openrouter.textEmbeddingModel(modelId)
+    },
+    rerankingModel(modelId: string): never {
+      throw new Error(`Reranking model not supported: ${modelId}`)
+    },
+    imageModel(modelId: string) {
+      return openrouter.imageModel(modelId)
+    },
+    anthropic(modelId: string) {
+      return anthropic(modelId)
+    },
+    openai(modelId: string) {
+      return openai(modelId)
+    },
+    openaiCompatible(modelId: string) {
+      return openaiCompatible(modelId)
+    },
+  }
 }

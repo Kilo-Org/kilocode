@@ -81,22 +81,28 @@ export function createDevil(options: DevilProviderOptions = {}): DevilProvider {
   const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
 
   return {
-    languageModel(modelId) {
+    languageModel(modelId: string) {
       return openrouter(modelId)
     },
-    textEmbeddingModel(modelId) {
+    embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
     },
-    imageModel(modelId) {
+    textEmbeddingModel(modelId: string) {
+      return openrouter.textEmbeddingModel(modelId)
+    },
+    rerankingModel(modelId: string): never {
+      throw new Error(`Reranking model not supported: ${modelId}`)
+    },
+    imageModel(modelId: string) {
       return openrouter.imageModel(modelId)
     },
-    anthropic(modelId) {
+    anthropic(modelId: string) {
       return anthropic(modelId)
     },
-    openai(modelId) {
+    openai(modelId: string) {
       return openai(modelId)
     },
-    openaiCompatible(modelId) {
+    openaiCompatible(modelId: string) {
       return openaiCompatible(modelId)
     },
   }
