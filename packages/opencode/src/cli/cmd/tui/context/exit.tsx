@@ -2,7 +2,7 @@ import { useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "./helper"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { win32FlushInputBuffer } from "../win32"
-import { resetTerminalState } from "@tui/util/terminal" // kilocode_change
+import { resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
 type Exit = ((reason?: unknown) => Promise<void>) & {
   message: {
     set: (value?: string) => () => void

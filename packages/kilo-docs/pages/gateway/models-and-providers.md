@@ -97,8 +97,8 @@ Great balance of price and capability. The resolved model depends on the API int
 | API interface | Resolved Model | Reasoning effort |
 |---|---|---|
 | Completions (default) | `qwen/qwen3.6-plus` | enabled |
-| Responses API | `openai/gpt-5.3-codex` | low |
-| Messages API | `anthropic/claude-haiku-4.5` | medium |
+| Responses API | `openai/gpt-5.5` | low |
+| Messages API | `anthropic/claude-sonnet-4.6` | low |
 
 ### `kilo-auto/free`
 

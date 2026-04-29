@@ -260,6 +260,10 @@ export const dict = {
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
+  "prompt.action.autoApprove.enable": "啟用自動核准",
+  "prompt.action.autoApprove.disable": "停用自動核准",
+  "prompt.action.autoApprove.enabled": "自動核准已啟用。權限請求將自動獲准。",
+  "prompt.action.autoApprove.disabled": "自動核准已停用。點擊以自動核准權限請求。",
   "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",

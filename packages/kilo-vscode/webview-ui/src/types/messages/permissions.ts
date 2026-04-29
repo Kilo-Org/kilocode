@@ -22,6 +22,16 @@ export interface PermissionFileDiff {
   deletions: number
 }
 
+export interface PermissionPatchFile {
+  filePath?: string
+  relativePath?: string
+  type?: "add" | "update" | "delete" | "move"
+  patch?: string
+  additions?: number
+  deletions?: number
+  movePath?: string
+}
+
 export interface PermissionRequest {
   id: string
   sessionID: string
@@ -33,6 +43,7 @@ export interface PermissionRequest {
     diff?: string
     filepath?: string
     filediff?: PermissionFileDiff
+    files?: PermissionPatchFile[]
   }
   message?: string
   tool?: { messageID: string; callID: string }

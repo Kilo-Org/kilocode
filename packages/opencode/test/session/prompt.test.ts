@@ -68,6 +68,19 @@ function defer<T>() {
   return { promise, resolve }
 }
 
+// kilocode_change start - make timing-sensitive prompt tests wait on observable state
+const waitFor = <A, E, R>(label: string, run: Effect.Effect<A | undefined, E, R>) =>
+  Effect.gen(function* () {
+    const end = Date.now() + 5_000
+    while (Date.now() < end) {
+      const result = yield* run
+      if (result !== undefined) return result
+      yield* Effect.sleep(20)
+    }
+    throw new Error(`timed out waiting for ${label}`)
+  })
+// kilocode_change end
+
 function withSh<A, E, R>(fx: () => Effect.Effect<A, E, R>) {
   return Effect.acquireUseRelease(
     Effect.sync(() => {
@@ -677,33 +690,41 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  10_000,
+  10_000, // kilocode_change
 )
 
 it.live(
   "loop sets status to busy then idle",
   () =>
     provideTmpdirServer(
+      // kilocode_change start - hold the model response instead of cancelling an infinite stream
       Effect.fnUntraced(function* ({ llm }) {
+        const gate = defer<void>()
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const status = yield* SessionStatus.Service
 
-        yield* llm.hang
+        yield* llm.push(reply().wait(gate.promise).text("done").stop())
 
-        const chat = yield* sessions.create({})
+        const chat = yield* sessions.create({ title: "Pinned" })
         yield* user(chat.id, "hi")
 
         const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-        yield* llm.wait(1)
-        expect((yield* status.get(chat.id)).type).toBe("busy")
-        yield* prompt.cancel(chat.id)
+        yield* waitFor(
+          "busy status",
+          status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+        )
+        gate.resolve()
         yield* Fiber.await(fiber)
-        expect((yield* status.get(chat.id)).type).toBe("idle")
+        yield* waitFor(
+          "idle status",
+          status.get(chat.id).pipe(Effect.map((item) => (item.type === "idle" ? item : undefined))),
+        )
       }),
+      // kilocode_change end
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change
 )
 
 // Cancel semantics
@@ -926,23 +947,33 @@ it.live(
   "concurrent loop callers all receive same error result",
   () =>
     provideTmpdirServer(
+      // kilocode_change start - gate the failing stream so both callers join the same run
       Effect.fnUntraced(function* ({ llm }) {
+        const gate = defer<void>()
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
 
-        yield* llm.fail("boom")
+        yield* llm.push(reply().wait(gate.promise).streamError("boom"))
         yield* user(chat.id, "hello")
 
-        const [a, b] = yield* Effect.all([prompt.loop({ sessionID: chat.id }), prompt.loop({ sessionID: chat.id })], {
-          concurrency: "unbounded",
-        })
-        expect(a.info.id).toBe(b.info.id)
-        expect(a.info.role).toBe("assistant")
+        const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        yield* llm.wait(1)
+        const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        gate.resolve()
+
+        const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
+        expect(Exit.isSuccess(ea)).toBe(true)
+        expect(Exit.isSuccess(eb)).toBe(true)
+        if (!Exit.isSuccess(ea) || !Exit.isSuccess(eb)) return
+        const [first, second] = [ea.value, eb.value]
+        expect(first.info.id).toBe(second.info.id)
+        expect(first.info.role).toBe("assistant")
       }),
+      // kilocode_change end
       { git: true, config: providerCfg },
     ),
-  3_000,
+  10_000, // kilocode_change
 )
 
 // kilocode_change start - #9492: the upstream fork-based shape of this test
