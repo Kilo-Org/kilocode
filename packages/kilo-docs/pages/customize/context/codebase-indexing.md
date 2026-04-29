@@ -87,21 +87,6 @@ The legacy extension only supports **Qdrant**.
 On the CLI and the new VS Code extension, codebase indexing is gated behind an experimental flag. Until the flag is turned on, the Indexing UI and the `/indexing` command are hidden and `semantic_search` is unavailable — even if you already have `indexing` settings in your config.
 
 {% tabs %}
-{% tab label="CLI" %}
-
-Set the experimental flag in your `kilo.jsonc`:
-
-```json
-{
-  "experimental": {
-    "semantic_indexing": true
-  }
-}
-```
-
-Restart the CLI for the change to take effect. The `/indexing` command (and aliases `/index`, `/embedding`) will appear in the command palette once the flag is active.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 1. Open Kilo Code **Settings** → **Experimental**.
@@ -119,6 +104,21 @@ Alternatively, set `experimental.semantic_indexing` to `true` in your `kilo.json
 ```
 
 {% /tab %}
+{% tab label="CLI" %}
+
+Set the experimental flag in your `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "semantic_indexing": true
+  }
+}
+```
+
+Restart the CLI for the change to take effect. The `/indexing` command (and aliases `/index`, `/embedding`) will appear in the command palette once the flag is active.
+
+{% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 The legacy extension does not require an experimental flag. Configure Codebase Indexing directly in Settings — see the **Configuration → VSCode (Legacy)** section below.
@@ -129,6 +129,45 @@ The legacy extension does not require an experimental flag. Configure Codebase I
 ## Configuration
 
 {% tabs %}
+{% tab label="VSCode" %}
+
+### Open the Indexing settings
+
+{% callout type="info" %}
+The **Indexing** tab only shows up after you enable **Semantic Indexing** under Settings → Experimental. See [Enabling the feature](#enabling-the-feature) above.
+{% /callout %}
+
+1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
+2. Toggle **Enable Indexing** on.
+3. Pick an **Embedding Provider** and fill in its required fields.
+4. Pick a **Vector Store** (`Qdrant` or `LanceDB`) and configure it.
+5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
+6. Save to start the initial scan.
+
+### Configure via `kilo.jsonc`
+
+The VS Code extension reads the same `indexing` section as the CLI:
+
+```json
+{
+  "indexing": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "text-embedding-3-small",
+    "vectorStore": "lancedb",
+    "openai": { "apiKey": "sk-..." },
+    "lancedb": {}
+  }
+}
+```
+
+See the **CLI** tab for the full list of provider keys and tuning parameters — the schema is shared.
+
+### Status indicator
+
+The prompt input panel shows a compact indexing status indicator that reflects the current state (Standby / In Progress / Complete / Error) along with progress when scanning or embedding.
+
+{% /tab %}
 {% tab label="CLI" %}
 
 ### Configure via `/indexing`
@@ -203,45 +242,6 @@ Supported vector store blocks:
 ### Status indicator
 
 When indexing is enabled, the CLI shows an indexing status badge at the bottom of the TUI in the form `IDX <state>` (for example `IDX In Progress 40% 120/300`, `IDX Complete`, `IDX Standby`, or `IDX Error <message>`).
-
-{% /tab %}
-{% tab label="VSCode" %}
-
-### Open the Indexing settings
-
-{% callout type="info" %}
-The **Indexing** tab only shows up after you enable **Semantic Indexing** under Settings → Experimental. See [Enabling the feature](#enabling-the-feature) above.
-{% /callout %}
-
-1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
-2. Toggle **Enable Indexing** on.
-3. Pick an **Embedding Provider** and fill in its required fields.
-4. Pick a **Vector Store** (`Qdrant` or `LanceDB`) and configure it.
-5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
-6. Save to start the initial scan.
-
-### Configure via `kilo.jsonc`
-
-The VS Code extension reads the same `indexing` section as the CLI:
-
-```json
-{
-  "indexing": {
-    "enabled": true,
-    "provider": "openai",
-    "model": "text-embedding-3-small",
-    "vectorStore": "lancedb",
-    "openai": { "apiKey": "sk-..." },
-    "lancedb": {}
-  }
-}
-```
-
-See the **CLI** tab for the full list of provider keys and tuning parameters — the schema is shared.
-
-### Status indicator
-
-The prompt input panel shows a compact indexing status indicator that reflects the current state (Standby / In Progress / Complete / Error) along with progress when scanning or embedding.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
