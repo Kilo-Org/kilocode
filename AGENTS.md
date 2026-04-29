@@ -50,6 +50,8 @@ All products are clients of the **CLI** (`packages/opencode/`), which contains t
 
 **Agent Manager** refers to a feature inside `packages/kilo-vscode/` (extension code in `src/agent-manager/`, webview in `webview-ui/agent-manager/`). It is not a standalone product. See the extension's `AGENTS.md` for details.
 
+Extension-specific settings should live in the Kilo extension settings, not default VS Code settings, unless they are intentionally VS Code-wide.
+
 ## Monorepo Structure
 
 Turborepo + Bun workspaces. The packages you'll work with most:
