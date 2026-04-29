@@ -29,34 +29,35 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 
 ### Main Scripts
 
-| Script             | Description                                   |
-| ------------------ | --------------------------------------------- |
-| `merge.ts`         | Main orchestration script for upstream merges |
-| `list-versions.ts` | List available upstream versions              |
-| `analyze.ts`       | Analyze changes without merging               |
+| Script | Description |
+|---|---|
+| `merge.ts` | Main orchestration script for upstream merges |
+| `list-versions.ts` | List available upstream versions |
+| `analyze.ts` | Analyze changes without merging |
+| `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
 
 ### Transform Scripts
 
-| Script                                 | Description                                                 |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `transforms/package-names.ts`          | Transform opencode package names to kilo                    |
-| `transforms/preserve-versions.ts`      | Preserve Kilo's package versions                            |
-| `transforms/keep-ours.ts`              | Keep Kilo's version of specific files                       |
-| `transforms/skip-files.ts`             | Skip/remove files that shouldn't exist in Kilo              |
-| `transforms/transform-i18n.ts`         | Transform i18n files with Kilo branding                     |
-| `transforms/transform-take-theirs.ts`  | Take upstream + apply Kilo branding for branding-only files |
-| `transforms/transform-tauri.ts`        | Transform Tauri/Desktop config files                        |
-| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection        |
-| `transforms/transform-scripts.ts`      | Transform script files with GitHub API references           |
-| `transforms/transform-extensions.ts`   | Transform extension files (Zed, etc.)                       |
-| `transforms/transform-web.ts`          | Transform web/docs files (.mdx)                             |
+| Script | Description |
+|---|---|
+| `transforms/package-names.ts` | Transform opencode package names to kilo |
+| `transforms/preserve-versions.ts` | Preserve Kilo's package versions |
+| `transforms/keep-ours.ts` | Keep Kilo's version of specific files |
+| `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
+| `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
+| `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
+| `transforms/transform-tauri.ts` | Transform Tauri/Desktop config files |
+| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection |
+| `transforms/transform-scripts.ts` | Transform script files with GitHub API references |
+| `transforms/transform-extensions.ts` | Transform extension files (Zed, etc.) |
+| `transforms/transform-web.ts` | Transform web/docs files (.mdx) |
 
 ### Codemods (AST-based)
 
-| Script                          | Description                                |
-| ------------------------------- | ------------------------------------------ |
+| Script | Description |
+|---|---|
 | `codemods/transform-imports.ts` | Transform import statements using ts-morph |
-| `codemods/transform-strings.ts` | Transform string literals                  |
+| `codemods/transform-strings.ts` | Transform string literals |
 
 ## Merge Process
 
@@ -76,6 +77,7 @@ The merge automation follows this process, applying **all transformations BEFORE
    - `<author>/opencode-<version>` - Transformed upstream branch
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
+   - Remove files that should not exist in Kilo (`skipFiles`)
    - Transform package names (opencode-ai -> @kilocode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
@@ -161,32 +163,33 @@ Configuration is defined in `utils/config.ts`:
 
 The following transforms are applied to the opencode branch before merging:
 
-1. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
-2. **Versions** - Preserve Kilo's version numbers
-3. **i18n files** - OpenCode -> Kilo in user-visible strings
-4. **Branding files** - UI components, configs with branding only
-5. **Tauri configs** - Desktop app identifiers, names
-6. **package.json** - Names, dependencies, Kilo injections
-7. **Scripts** - GitHub API references
-8. **Extensions** - Zed, etc.
-9. **Web/docs** - Documentation files
+1. **Skip files** - Remove upstream-only packages/files that should not exist in Kilo
+2. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
+3. **Versions** - Preserve Kilo's version numbers
+4. **i18n files** - OpenCode -> Kilo in user-visible strings
+5. **Branding files** - UI components, configs with branding only
+6. **Tauri configs** - Desktop app identifiers, names
+7. **package.json** - Names, dependencies, Kilo injections
+8. **Scripts** - GitHub API references
+9. **Extensions** - Zed, etc.
+10. **Web/docs** - Documentation files
 
 ### Post-Merge Strategies
 
 After merging, any remaining conflicts are handled based on file type:
 
-| File Type         | Strategy                | Description                                      |
-| ----------------- | ----------------------- | ------------------------------------------------ |
-| i18n files        | `i18n-transform`        | Take upstream, apply Kilo branding               |
-| App components    | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
-| Tauri configs     | `tauri-transform`       | Take upstream, transform identifiers/names       |
-| package.json      | `package-transform`     | Take upstream, transform names, inject Kilo deps |
-| Script files      | `script-transform`      | Take upstream, transform GitHub references       |
-| Extensions        | `extension-transform`   | Take upstream, apply branding                    |
-| Web/docs          | `web-transform`         | Take upstream, apply branding                    |
-| README/docs       | `keep-ours`             | Keep Kilo's version                              |
-| GitHub workflows  | `keep-ours`             | Keep Kilo's version (manual review)              |
-| Code with markers | `manual`                | Has `kilocode_change` markers, needs review      |
+| File Type | Strategy | Description |
+|---|---|---|
+| i18n files | `i18n-transform` | Take upstream, apply Kilo branding |
+| App components | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
+| Tauri configs | `tauri-transform` | Take upstream, transform identifiers/names |
+| package.json | `package-transform` | Take upstream, transform names, inject Kilo deps |
+| Script files | `script-transform` | Take upstream, transform GitHub references |
+| Extensions | `extension-transform` | Take upstream, apply branding |
+| Web/docs | `web-transform` | Take upstream, apply branding |
+| README/docs | `keep-ours` | Keep Kilo's version |
+| GitHub workflows | `keep-ours` | Keep Kilo's version (manual review) |
+| Code with markers | `manual` | Has `kilocode_change` markers, needs review |
 
 ### Why This Reduces Conflicts
 
@@ -229,6 +232,18 @@ Options:
   --base-branch <name>   Base branch to analyze from (default: main)
   --output <file>        Output file for report
 ```
+
+### fix-kilocode-markers.ts
+
+```
+Usage:
+  bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
 
 ## Using Custom Base Branches
 

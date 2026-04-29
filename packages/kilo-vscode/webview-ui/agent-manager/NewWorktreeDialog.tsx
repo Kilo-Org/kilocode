@@ -1,6 +1,8 @@
 // New Worktree dialog — prompt, versions, model, mode, import tab
 
-import { Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
+/** @jsxImportSource solid-js */
+
+import { type Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
 import type { AgentManagerBranchesMessage, AgentManagerImportResultMessage, BranchInfo } from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -171,6 +173,17 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     vscode.postMessage({ type: "agentManager.requestBranches" })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
+    const focus = () => {
+      textareaRef?.focus({ preventScroll: true })
+      const end = textareaRef?.value.length ?? 0
+      textareaRef?.setSelectionRange(end, end)
+    }
+    requestAnimationFrame(() => {
+      focus()
+      requestAnimationFrame(focus)
+      setTimeout(focus, 0)
+      setTimeout(focus, 50)
+    })
   })
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()

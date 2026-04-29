@@ -145,7 +145,7 @@ const ModeEditView: Component<Props> = (props) => {
           <TextField
             value={cfg().model ?? ""}
             placeholder="e.g. anthropic/claude-sonnet-4-20250514"
-            onChange={(val) => update({ model: val || undefined })}
+            onChange={(val) => update({ model: val || null })}
           />
         </SettingsRow>
 

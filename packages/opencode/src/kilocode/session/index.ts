@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
+import { Schema } from "effect"
 import { BusEvent } from "@/bus/bus-event"
 import { Session } from "@/session"
 import { MessageID, SessionID } from "@/session/schema"
@@ -23,23 +24,25 @@ export namespace KiloSession {
   // Events
   // ---------------------------------------------------------------------------
 
+  const CloseReasonSchema = Schema.Literals(["completed", "error", "interrupted"])
+
   export const Event = {
     TurnOpen: BusEvent.define(
       "session.turn.open",
-      z.object({
-        sessionID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
       }),
     ),
     TurnClose: BusEvent.define(
       "session.turn.close",
-      z.object({
-        sessionID: z.string(),
-        reason: z.enum(["completed", "error", "interrupted"]),
+      Schema.Struct({
+        sessionID: SessionID,
+        reason: CloseReasonSchema,
       }),
     ),
   }
 
-  export type CloseReason = z.infer<typeof Event.TurnClose.properties>["reason"]
+  export type CloseReason = Schema.Schema.Type<typeof CloseReasonSchema>
 
   // ---------------------------------------------------------------------------
   // Per-session platform override (telemetry attribution)

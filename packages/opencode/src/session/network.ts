@@ -1,13 +1,16 @@
 // kilocode_change - new file
-import { Context, Effect, Layer } from "effect"
+import { Context, Effect, Layer, Schema, Types } from "effect"
 import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
-import { Identifier } from "../id/id"
+import { QuestionID } from "../question/schema"
+import { SessionID } from "../session/schema"
 import { InstanceState } from "@/effect"
 import { makeRuntime } from "@/effect/run-service"
 import { Log } from "../util"
 import { fn } from "../util/fn"
 import { MCP } from "../mcp"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 import z from "zod"
 
 export namespace SessionNetwork {
@@ -39,51 +42,49 @@ export namespace SessionNetwork {
     })
   }
 
-  export const Wait = z
-    .object({
-      id: Identifier.schema("question"),
-      sessionID: Identifier.schema("session"),
-      message: z.string(),
-      restored: z.boolean(),
-      time: z.object({
-        created: z.number(),
-      }),
-    })
-    .meta({
-      ref: "SessionNetworkWait",
-    })
-  export type Wait = z.infer<typeof Wait>
+  export const Wait = Schema.Struct({
+    id: QuestionID,
+    sessionID: SessionID,
+    message: Schema.String,
+    restored: Schema.Boolean,
+    time: Schema.Struct({
+      created: Schema.Number,
+    }),
+  })
+    .annotate({ identifier: "SessionNetworkWait" })
+    .pipe(withStatics((s) => ({ zod: zod(s) })))
+  export type Wait = Schema.Schema.Type<typeof Wait>
 
   export const Event = {
     Asked: BusEvent.define("session.network.asked", Wait),
     Replied: BusEvent.define(
       "session.network.replied",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: QuestionID,
       }),
     ),
     Rejected: BusEvent.define(
       "session.network.rejected",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: QuestionID,
       }),
     ),
     Restored: BusEvent.define(
       "session.network.restored",
-      z.object({
-        sessionID: z.string(),
-        requestID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
+        requestID: QuestionID,
       }),
     ),
   }
 
   interface StateShape {
-    pending: Record<
-      string,
+    pending: Map<
+      QuestionID,
       {
-        info: Wait
+        info: Types.Mutable<Wait>
         resolve: () => void
         reject: (e: unknown) => void
       }
@@ -99,7 +100,7 @@ export namespace SessionNetwork {
     Effect.gen(function* () {
       const is = yield* InstanceState.make(
         Effect.fn("SessionNetwork.state")(function* () {
-          return { pending: {} } as StateShape
+          return { pending: new Map() } as StateShape
         }),
       )
       return StateService.of({
@@ -161,12 +162,12 @@ export namespace SessionNetwork {
     return info.length > 0
   }
 
-  async function watch(input: { requestID: string; abort: AbortSignal }) {
+  async function watch(input: { requestID: QuestionID; abort: AbortSignal }) {
     while (!input.abort.aborted) {
       await Bun.sleep(POLL_MS)
       if (input.abort.aborted) return
       const s = await state()
-      const req = s.pending[input.requestID]
+      const req = s.pending.get(input.requestID)
       if (!req || req.info.restored) return
       const ok = await probe().catch(() => false)
       if (!ok) continue
@@ -175,9 +176,9 @@ export namespace SessionNetwork {
     }
   }
 
-  export async function ask(input: { sessionID: string; message: string; abort: AbortSignal }) {
+  export async function ask(input: { sessionID: SessionID; message: string; abort: AbortSignal }) {
     const s = await state()
-    const id = Identifier.ascending("question")
+    const id = QuestionID.ascending()
     const info: Wait = {
       id,
       sessionID: input.sessionID,
@@ -190,16 +191,16 @@ export namespace SessionNetwork {
 
     const promise = new Promise<void>((resolve, reject) => {
       const onAbort = () => {
-        if (!s.pending[id]) return
+        if (!s.pending.has(id)) return
         input.abort.removeEventListener("abort", onAbort)
-        delete s.pending[id]
+        s.pending.delete(id)
         Bus.publish(Event.Rejected, {
           sessionID: input.sessionID,
           requestID: id,
         })
         reject(new DOMException("Aborted", "AbortError"))
       }
-      s.pending[id] = {
+      s.pending.set(id, {
         info,
         resolve: () => {
           input.abort.removeEventListener("abort", onAbort)
@@ -209,7 +210,7 @@ export namespace SessionNetwork {
           input.abort.removeEventListener("abort", onAbort)
           reject(err)
         },
-      }
+      })
       input.abort.addEventListener("abort", onAbort, { once: true })
       if (input.abort.aborted) {
         onAbort()
@@ -226,14 +227,15 @@ export namespace SessionNetwork {
 
   export const restore = fn(
     z.object({
-      requestID: z.string(),
+      requestID: QuestionID.zod,
     }),
     async (input) => {
       const s = await state()
-      const req = s.pending[input.requestID]
+      const requestID = input.requestID as QuestionID
+      const req = s.pending.get(requestID)
       if (!req || req.info.restored) return
       req.info.restored = true
-      log.info("network restored", { sessionID: req.info.sessionID, requestID: input.requestID })
+      log.info("network restored", { sessionID: req.info.sessionID, requestID })
       Bus.publish(Event.Restored, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
@@ -243,16 +245,17 @@ export namespace SessionNetwork {
 
   export const reply = fn(
     z.object({
-      requestID: z.string(),
+      requestID: QuestionID.zod,
     }),
     async (input) => {
       const s = await state()
-      const req = s.pending[input.requestID]
+      const requestID = input.requestID as QuestionID
+      const req = s.pending.get(requestID)
       if (!req) {
-        log.warn("reply for unknown request", { requestID: input.requestID })
+        log.warn("reply for unknown request", { requestID })
         return
       }
-      delete s.pending[input.requestID]
+      s.pending.delete(requestID)
       // kilocode_change start — reconnect failed remote MCP servers after network recovery
       void MCP.status()
         .then((statuses) => {
@@ -278,16 +281,17 @@ export namespace SessionNetwork {
 
   export const reject = fn(
     z.object({
-      requestID: z.string(),
+      requestID: QuestionID.zod,
     }),
     async (input) => {
       const s = await state()
-      const req = s.pending[input.requestID]
+      const requestID = input.requestID as QuestionID
+      const req = s.pending.get(requestID)
       if (!req) {
-        log.warn("reject for unknown request", { requestID: input.requestID })
+        log.warn("reject for unknown request", { requestID })
         return
       }
-      delete s.pending[input.requestID]
+      s.pending.delete(requestID)
       Bus.publish(Event.Rejected, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
@@ -297,7 +301,7 @@ export namespace SessionNetwork {
   )
 
   export async function list() {
-    return state().then((s) => Object.values(s.pending).map((item) => item.info))
+    return state().then((s) => Array.from(s.pending.values()).map((item) => item.info))
   }
 
   export class RejectedError extends Error {

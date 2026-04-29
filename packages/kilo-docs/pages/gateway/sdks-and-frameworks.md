@@ -285,12 +285,12 @@ puts result['choices'][0]['message']['content']
 
 The Kilo AI Gateway works with any framework that supports OpenAI-compatible APIs:
 
-| Framework                                                             | Integration                               |
-| --------------------------------------------------------------------- | ----------------------------------------- |
-| [Vercel AI SDK](https://ai-sdk.dev)                                   | Use `createOpenAI` with Kilo base URL     |
-| [LangChain](https://langchain.com)                                    | Use `ChatOpenAI` with custom base URL     |
-| [LlamaIndex](https://www.llamaindex.ai)                               | Use OpenAI-compatible configuration       |
-| [Haystack](https://haystack.deepset.ai)                               | Use OpenAI generator with custom URL      |
+| Framework | Integration |
+|---|---|
+| [Vercel AI SDK](https://ai-sdk.dev) | Use `createOpenAI` with Kilo base URL |
+| [LangChain](https://langchain.com) | Use `ChatOpenAI` with custom base URL |
+| [LlamaIndex](https://www.llamaindex.ai) | Use OpenAI-compatible configuration |
+| [Haystack](https://haystack.deepset.ai) | Use OpenAI generator with custom URL |
 | [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) | Use OpenAI connector with custom endpoint |
 
 ### LangChain example

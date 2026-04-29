@@ -34,6 +34,8 @@ import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kiloco
 import { useToast } from "@tui/ui/toast" // kilocode_change
 import { Log } from "@/util"
 import { emptyConsoleState, type ConsoleState } from "@/config/console-state"
+import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode_change
+import { KiloIndexing } from "@/kilocode/indexing" // kilocode_change
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -87,6 +89,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       }
       formatter: FormatterStatus[]
       vcs: VcsInfo | undefined
+      indexing: IndexingStatus // kilocode_change
     }>({
       provider_next: {
         all: [],
@@ -118,6 +121,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       mcp_resource: {},
       formatter: [],
       vcs: undefined,
+      indexing: { state: "Disabled", message: "Indexing disabled.", processedFiles: 0, totalFiles: 0, percent: 0 }, // kilocode_change
     })
 
     const event = useEvent()
@@ -469,6 +473,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           })
           break
         }
+        case "indexing.status": {
+          setStore("indexing", reconcile(event.properties.status))
+          break
+        }
         // kilocode_change end
       }
     })
@@ -587,6 +595,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
                 })
               })
               .catch(() => {}),
+            KiloIndexing.current().then((x) => setStore("indexing", reconcile(x))),
             // kilocode_change end
           ]).then(() => {
             setStore("status", "complete")

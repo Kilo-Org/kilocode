@@ -123,8 +123,10 @@ export const defaultConfig: MergeConfig = {
     ".github/workflows/deploy.yml",
     ".github/workflows/docs-update.yml",
     ".github/workflows/docs-locale-sync.yml",
-    // Vouch files (Kilo doesn't use Vouch)
-    ".github/VOUCHED.md",
+    // Vouch files (Kilo doesn't use Vouch).
+    // Upstream currently ships VOUCHED.td (typo extension). The glob covers both
+    // the current .td file and any future .md rename without another merge breaking.
+    ".github/VOUCHED.*",
     ".github/workflows/vouch-check-issue.yml",
     ".github/workflows/vouch-check-pr.yml",
     ".github/workflows/vouch-manage-by-issue.yml",

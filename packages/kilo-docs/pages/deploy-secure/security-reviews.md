@@ -52,11 +52,11 @@ The Security Agent processes each vulnerability alert through four stages.
 
 You control how much analysis the agent performs via three modes:
 
-| Mode        | What happens                                                          |
-| ----------- | --------------------------------------------------------------------- |
-| **Auto**    | Triage first, then deep analysis only when triage recommends it       |
-| **Shallow** | Triage only — no deep analysis                                        |
-| **Deep**    | Full codebase analysis for every finding, regardless of triage result |
+| Mode | What happens |
+|---|---|
+| **Auto** | Triage first, then deep analysis only when triage recommends it |
+| **Shallow** | Triage only — no deep analysis |
+| **Deep** | Full codebase analysis for every finding, regardless of triage result |
 
 **Auto** is the default. It gives you the best balance between thoroughness and credit usage — deep analysis only runs where triage says it's needed.
 
@@ -110,24 +110,24 @@ Every finding has a **primary status** and an **outcome label**. The status trac
 
 **Primary status:**
 
-| Status    | Meaning                                             |
-| --------- | --------------------------------------------------- |
-| Open      | Active vulnerability that needs attention           |
-| Fixed     | Resolved — detected from the Dependabot alert state |
-| Dismissed | Closed by a user or by auto-dismiss                 |
+| Status | Meaning |
+|---|---|
+| Open | Active vulnerability that needs attention |
+| Fixed | Resolved — detected from the Dependabot alert state |
+| Dismissed | Closed by a user or by auto-dismiss |
 
 **Outcome labels:**
 
-| Outcome         | Meaning                                    |
-| --------------- | ------------------------------------------ |
-| Not Analyzed    | No analysis has run yet                    |
-| Analyzing       | Analysis is currently in progress          |
-| Analysis Failed | Something went wrong during analysis       |
-| Exploitable     | Deep analysis confirmed it's exploitable   |
+| Outcome | Meaning |
+|---|---|
+| Not Analyzed | No analysis has run yet |
+| Analyzing | Analysis is currently in progress |
+| Analysis Failed | Something went wrong during analysis |
+| Exploitable | Deep analysis confirmed it's exploitable |
 | Not Exploitable | Deep analysis confirmed it's not reachable |
-| Safe to Dismiss | Triage recommends dismissing this finding  |
-| Needs Review    | Triage recommends manual review            |
-| Triage Complete | Triage is done, no deep analysis needed    |
+| Safe to Dismiss | Triage recommends dismissing this finding |
+| Needs Review | Triage recommends manual review |
+| Triage Complete | Triage is done, no deep analysis needed |
 
 ---
 
@@ -158,11 +158,11 @@ All settings are on the Security Agent configuration page.
 **SLA deadlines** set how many days your team has to remediate findings at each severity level:
 
 | Severity | Default |
-| -------- | ------- |
+|---|---|
 | Critical | 15 days |
-| High     | 30 days |
-| Medium   | 45 days |
-| Low      | 90 days |
+| High | 30 days |
+| Medium | 45 days |
+| Low | 90 days |
 
 You can adjust these per your organization's policies and reset to defaults at any time.
 

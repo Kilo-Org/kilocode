@@ -69,7 +69,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "รายการถัดไป",
   "agentManager.shortcuts.newWorktree": "Worktree ใหม่",
   "agentManager.shortcuts.openWorktree": "เปิด Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Worktree ขั้นสูง",
+  "agentManager.shortcuts.advancedWorktree": "กำหนดค่า worktree ใหม่",
   "agentManager.shortcuts.deleteWorktree": "ลบ Worktree",
   "agentManager.shortcuts.previousTab": "แท็บก่อนหน้า",
   "agentManager.shortcuts.nextTab": "แท็บถัดไป",
@@ -91,6 +91,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "ลบ Worktree ที่ล้าสมัย",
 
   "agentManager.dialog.openWorktree": "Worktree ใหม่",
+  "agentManager.dialog.configureWorktree": "กำหนดค่า Worktree ใหม่...",
   "agentManager.dialog.tab.new": "ใหม่",
   "agentManager.dialog.tab.import": "นำเข้า",
   "agentManager.dialog.namePlaceholder": "ชื่อ Worktree (ไม่บังคับ)",

@@ -72,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "次の項目",
   "agentManager.shortcuts.newWorktree": "新しいWorktree",
   "agentManager.shortcuts.openWorktree": "Worktreeを開く",
-  "agentManager.shortcuts.advancedWorktree": "詳細Worktree",
+  "agentManager.shortcuts.advancedWorktree": "新規 worktree の構成",
   "agentManager.shortcuts.deleteWorktree": "Worktreeを削除",
   "agentManager.shortcuts.previousTab": "前のタブ",
   "agentManager.shortcuts.nextTab": "次のタブ",
@@ -94,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
 
   "agentManager.dialog.openWorktree": "新規ワークツリー",
+  "agentManager.dialog.configureWorktree": "新規 Worktree の構成...",
   "agentManager.dialog.tab.new": "新規",
   "agentManager.dialog.tab.import": "インポート",
   "agentManager.dialog.namePlaceholder": "Worktree名（任意）",

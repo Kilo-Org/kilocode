@@ -17,6 +17,24 @@ const SRC_DIR = path.join(ROOT, "src")
 const EXTENSION_FILE = path.join(ROOT, "src/extension.ts")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 
+function sliceBlock(source: string, start: number): string {
+  const open = source.indexOf("{", start)
+  expect(open, "block opening brace must exist").toBeGreaterThan(-1)
+
+  const state = { depth: 0, end: -1 }
+  Array.from(source.slice(open)).some((ch, i) => {
+    if (ch === "{") state.depth++
+    if (ch === "}") state.depth--
+    if (state.depth !== 0) return false
+    state.end = open + i
+    return true
+  })
+
+  if (state.end > -1) return source.slice(start, state.end + 1)
+
+  throw new Error("block closing brace not found")
+}
+
 function readSrcFiles(dir: string): string {
   const parts: string[] = []
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -141,7 +159,7 @@ describe("Extension — KiloProvider handler wiring", () => {
   it("openKiloInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
     const fn = ext.indexOf("function openKiloInNewTab")
     expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
-    const body = ext.slice(fn, fn + 1500)
+    const body = sliceBlock(ext, fn)
     const handler = body.indexOf("setContinueInWorktreeHandler")
     const resolve = body.indexOf("resolveWebviewPanel")
     expect(handler, "setContinueInWorktreeHandler must be called").toBeGreaterThan(-1)
@@ -152,7 +170,7 @@ describe("Extension — KiloProvider handler wiring", () => {
   it("TabPanel deserializer wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
     const serializer = ext.indexOf('"kilo-code.new.TabPanel"')
     expect(serializer, "TabPanel serializer must exist").toBeGreaterThan(-1)
-    const body = ext.slice(serializer, serializer + 800)
+    const body = sliceBlock(ext, serializer)
     const handler = body.indexOf("setContinueInWorktreeHandler")
     const resolve = body.indexOf("resolveWebviewPanel")
     expect(handler, "setContinueInWorktreeHandler must be called in deserializer").toBeGreaterThan(-1)

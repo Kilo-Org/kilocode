@@ -137,12 +137,12 @@ Reference files and other context directly in your message using `@`:
 
 ## Common Mistakes to Avoid
 
-| Instead of this...                | Try this                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------- |
-| "Fix the code"                    | "Fix the bug in `calculateTotal` that returns incorrect results"                    |
-| Assuming Kilo knows context       | Use `@` to reference specific files                                                 |
-| Multiple unrelated tasks          | Submit one focused request at a time                                                |
-| Technical jargon overload         | Clear, straightforward language works best                                          |
+| Instead of this... | Try this |
+|---|---|
+| "Fix the code" | "Fix the bug in `calculateTotal` that returns incorrect results" |
+| Assuming Kilo knows context | Use `@` to reference specific files |
+| Multiple unrelated tasks | Submit one focused request at a time |
+| Technical jargon overload | Clear, straightforward language works best |
 | Using chat for tiny code changes. | Use [autocomplete](/docs/code-with-ai/features/autocomplete) for inline completions |
 
 **Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.

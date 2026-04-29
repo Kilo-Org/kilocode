@@ -1,8 +1,9 @@
-import z from "zod"
-import { Effect, Layer, Context } from "effect"
+import { Effect, Layer, Context, Schema } from "effect"
 import { Bus } from "@/bus"
 import { Snapshot } from "@/snapshot"
 import { Storage } from "@/storage"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 import * as Session from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID } from "./schema"
@@ -164,10 +165,11 @@ export const defaultLayer = Layer.suspend(() =>
   ),
 )
 
-export const DiffInput = z.object({
-  sessionID: SessionID.zod,
-  messageID: MessageID.zod.optional(),
-})
+export const DiffInput = Schema.Struct({
+  sessionID: SessionID,
+  messageID: Schema.optional(MessageID),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export type DiffInput = Schema.Schema.Type<typeof DiffInput>
 
 // kilocode_change start - legacy promise helpers for Kilo callsites
 const { runPromise } = makeRuntime(Service, defaultLayer)

@@ -5,6 +5,7 @@ import z from "zod"
 import { lazy } from "@/util/lazy"
 import { errors } from "../../error"
 import { SessionNetwork } from "@/session/network"
+import { QuestionID } from "@/question/schema"
 
 export const NetworkRoutes = lazy(() =>
   new Hono()
@@ -19,7 +20,7 @@ export const NetworkRoutes = lazy(() =>
             description: "List of pending network reconnect requests",
             content: {
               "application/json": {
-                schema: resolver(SessionNetwork.Wait.array()),
+                schema: resolver(SessionNetwork.Wait.zod.array()),
               },
             },
           },
@@ -51,7 +52,7 @@ export const NetworkRoutes = lazy(() =>
       validator(
         "param",
         z.object({
-          requestID: z.string(),
+          requestID: QuestionID.zod,
         }),
       ),
       async (c) => {
@@ -81,7 +82,7 @@ export const NetworkRoutes = lazy(() =>
       validator(
         "param",
         z.object({
-          requestID: z.string(),
+          requestID: QuestionID.zod,
         }),
       ),
       async (c) => {

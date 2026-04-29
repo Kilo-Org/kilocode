@@ -217,28 +217,21 @@ export class KiloClawProvider implements vscode.Disposable {
 
   /**
    * Fetch and validate instance status + chat credentials.
-   * Returns credentials on success, null when stale or after posting an error/state.
+   * Returns credentials on success, null when stale or after posting a state.
+   *
+   * Matches the TUI flow in packages/opencode/src/kilocode/kilo-commands.tsx:67,75 —
+   * any failure of status() (SDK error, non-2xx from the gateway, missing data, or
+   * missing userId) funnels to noInstance (SetupView). Any failure of
+   * chatCredentials() funnels to needsUpgrade (UpgradeView). The upstream Kilo API
+   * returns a non-2xx when no instance is provisioned, which the gateway mirrors
+   * and the SDK surfaces as res.error — not a thrown exception.
    */
   private async fetchCreds(client: KiloClient, gen: number): Promise<ChatCredentials | null> {
     const res = await client.kilo.claw.status().catch(() => null)
     if (this.stale(gen)) return null
 
-    // Distinguish SDK/network errors from business states
-    if (!res || (res as Record<string, unknown>).error) {
-      this.post({
-        type: "kiloclaw.state",
-        state: { phase: "error", locale: this.locale, error: "Failed to connect to Kilo service" },
-      })
-      return null
-    }
-
-    if (!res.data || (res.data as Record<string, unknown>).error) {
-      this.post({ type: "kiloclaw.state", state: { phase: "noInstance", locale: this.locale } })
-      return null
-    }
-
-    const data = res.data as ClawStatus & { userId?: string }
-    if (!data.userId) {
+    const data = res?.data as (ClawStatus & { userId?: string }) | undefined
+    if (!res || (res as Record<string, unknown>).error || !data || !data.userId) {
       this.post({ type: "kiloclaw.state", state: { phase: "noInstance", locale: this.locale } })
       return null
     }
@@ -248,16 +241,7 @@ export class KiloClawProvider implements vscode.Disposable {
     const creds = await client.kilo.claw.chatCredentials().catch(() => null)
     if (this.stale(gen)) return null
 
-    // Distinguish SDK/network errors from business states
-    if (!creds || (creds as Record<string, unknown>).error) {
-      this.post({
-        type: "kiloclaw.state",
-        state: { phase: "error", locale: this.locale, error: "Failed to fetch chat credentials" },
-      })
-      return null
-    }
-
-    if (!creds.data) {
+    if (!creds || (creds as Record<string, unknown>).error || !creds.data) {
       this.post({ type: "kiloclaw.state", state: { phase: "needsUpgrade", locale: this.locale } })
       return null
     }
