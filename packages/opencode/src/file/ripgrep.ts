@@ -127,12 +127,34 @@ export namespace Ripgrep {
     }),
   )
 
+  // devilcode_change start
+  async function runnable(filepath: string) {
+    const abort = new AbortController()
+    const timer = setTimeout(() => abort.abort(), 1_000)
+    try {
+      const result = await Process.run([filepath, "--version"], {
+        abort: abort.signal,
+        nothrow: true,
+        timeout: 500,
+      }).catch((err) => {
+        log.warn("rg path is not executable", { filepath, err: err instanceof Error ? err.message : String(err) })
+        return undefined
+      })
+      return result?.code === 0
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  // devilcode_change end
+
   const state = lazy(async () => {
     const system = which("rg")
     if (system) {
+      // devilcode_change start
       const stat = await fs.stat(system).catch(() => undefined)
-      if (stat?.isFile()) return { filepath: system }
-      log.warn("bun.which returned invalid rg path", { filepath: system })
+      if (stat?.isFile() && (await runnable(system))) return { filepath: system }
+      log.warn("which returned unusable rg path", { filepath: system })
+      // devilcode_change end
     }
     const filepath = path.join(Global.Path.bin, "rg" + (process.platform === "win32" ? ".exe" : ""))
 

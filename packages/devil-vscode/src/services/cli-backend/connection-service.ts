@@ -396,6 +396,8 @@ export class DevilConnectionService {
     previousModel?: string
     newProvider?: string
     newModel?: string
+    slotsRebalanced?: number
+    code?: string
     error?: string
   }> {
     const data = await this.teamFetch("POST", "/devilcode/workflow/team/swap", { position, provider, model })
@@ -406,6 +408,8 @@ export class DevilConnectionService {
       previousModel?: string
       newProvider?: string
       newModel?: string
+      slotsRebalanced?: number
+      code?: string
       error?: string
     }
   }

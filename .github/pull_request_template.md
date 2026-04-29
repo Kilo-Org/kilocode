@@ -1,6 +1,6 @@
 ## Context
 
-<!-- Brief description of WHAT you’re doing and WHY. -->
+<!-- Briefly describe WHAT changed and WHY. Link the issue, plan, or engineering doc that supplies context. -->
 
 ## Implementation
 
@@ -10,7 +10,21 @@ Some description of HOW you achieved it. Perhaps give a high level description o
 
 -->
 
+## Standards
+
+<!--
+
+Confirm any relevant repo-level standards:
+
+- Shared OpenCode changes are marked with `devilcode_change` or are in an exempt path.
+- New durable rules or decisions are documented under `docs/engineering/` or the relevant package docs.
+- Kilo naming is used only for compatibility surfaces.
+
+-->
+
 ## Screenshots
+
+<!-- Required for user-visible UI changes. Use "N/A" when not relevant. -->
 
 | before | after |
 | ------ | ----- |
@@ -20,7 +34,7 @@ Some description of HOW you achieved it. Perhaps give a high level description o
 
 <!--
 
-A straightforward scenario of how to test your changes will help reviewers that are not familiar with the part of the code that you are changing but want to see it in action. This section can include a description or step-by-step instructions of how to get to the state of v2 that your change affects.
+A straightforward scenario helps reviewers validate changes without already knowing this part of the codebase.
 
 A "How To Test" section can look something like this:
 
@@ -30,6 +44,17 @@ A "How To Test" section can look something like this:
 
 -->
 
+## Verification
+
+<!-- List commands run and their result, for example:
+
+- `bun run standards:check`
+- `bun turbo typecheck`
+- `cd packages/opencode && bun test`
+
+Call out pre-existing failures instead of omitting them.
+-->
+
 ## Get in Touch
 
-<!-- We'd love to have a way to chat with you about your changes if necessary. If you're in the [Kilo Code Discord](https://kilo.ai/discord), please share your handle here. -->
+<!-- Share the best way to reach you if reviewers need clarification. -->

@@ -135,7 +135,8 @@
   },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsgo --noEmit",
+    "typecheck": "tsgo --noEmit && bun run typecheck:test",
+    "typecheck:test": "tsgo --noEmit -p tsconfig.test.json",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:visual": "playwright test",

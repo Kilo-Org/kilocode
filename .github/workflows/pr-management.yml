@@ -7,7 +7,7 @@ on:
 jobs:
   # devilcode_change start
   check-author:
-    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
+    if: (github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode') && vars.ENABLE_PR_MANAGEMENT == 'true' # devilcode_change - feature-flagged
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -17,7 +17,7 @@ jobs:
 
   check-duplicates:
     needs: check-author
-    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
+    if: (github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode') && vars.ENABLE_PR_MANAGEMENT == 'true' # devilcode_change - feature-flagged
     # devilcode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
@@ -50,6 +50,7 @@ jobs:
 
       # devilcode_change start
       - name: Setup Kilo
+        if: steps.team-check.outputs.is_team != 'true'
         uses: ./.github/actions/setup-kilo
       # devilcode_change end
 
@@ -89,7 +90,7 @@ jobs:
           fi
 
   add-contributor-label:
-    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
+    if: (github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode') && vars.ENABLE_PR_LABELS == 'true' # devilcode_change - feature-flagged
     runs-on: blacksmith-2vcpu-ubuntu-2404 # devilcode_change
     permissions:
       pull-requests: write

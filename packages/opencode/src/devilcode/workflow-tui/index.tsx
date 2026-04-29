@@ -18,6 +18,7 @@ import { TeamBuilderProvider, useTeamBuilder } from "./views/team-builder-contex
 import { TeamBuilderView } from "./views/team-builder-view"
 import { registerTeamBuilderCommands } from "./views/team-builder-commands"
 import { registerTeamRegistryCommands } from "./commands/team-registry"
+import { registerTeamSwapCommand } from "./commands/team-swap"
 import { createFileSystemTeamRepository } from "../team/repository"
 import {
   createLayeredTeamRepository,
@@ -118,6 +119,18 @@ function WorkflowViewInner() {
     },
   })
   onCleanup(cleanupRegistryCmds)
+
+  // Phase 10 — register team swap command (palette entry, actual execution in command-input.tsx)
+  const cleanupSwapCmd = registerTeamSwapCommand(registry.register.bind(registry), {
+    getActiveTeam: () => undefined,
+    onSwapped: async () => {},
+    toast: {
+      success: (msg) => toast.show({ message: msg, variant: "info", duration: 3000 }),
+      error: (msg) => toast.show({ message: msg, variant: "error", duration: 6000 }),
+      warning: (msg) => toast.show({ message: msg, variant: "warning", duration: 4000 }),
+    },
+  })
+  onCleanup(cleanupSwapCmd)
 
   // Build quickstart entries for the onboarding wizard picker
   function buildQuickstartEntries(): QuickstartEntry[] {

@@ -19,6 +19,7 @@ function mockRepo(
         name: `${name}:${id}`,
         path: `<mock:${name}:${id}>`,
         updatedAt: "1970-01-01T00:00:00.000Z",
+        isQuickstart: name === "quickstart",
       }))
     },
     async loadTeam(id: string): Promise<CanonicalTeamConfig> {
@@ -34,6 +35,7 @@ function mockRepo(
         name: `${name}:${id}`,
         path: `<mock:${name}:${id}>`,
         updatedAt: new Date().toISOString(),
+        isQuickstart: name === "quickstart",
       }
     },
     async deleteTeam(id: string): Promise<void> {

@@ -39,7 +39,7 @@ jobs:
           if [[ "$USERNAME" == "kilo-maintainer[bot]" || "$USERNAME" == "kiloconnect[bot]" || "$USERNAME" == "kiloconnect-lite[bot]" ]]; then
             echo "is-member=true" >> "$GITHUB_OUTPUT"
             echo "User is a kilo bot"
-          elif gh api orgs/Kilo-Org/members/"$USERNAME" --silent 2>/dev/null; then
+          elif gh api orgs/Devil-Org/members/"$USERNAME" --silent 2>/dev/null; then
             echo "is-member=true" >> "$GITHUB_OUTPUT"
             echo "User is an org member"
           else

@@ -395,15 +395,28 @@ export namespace File {
       cache = result
       fetching = false
     }
-    fn(cache)
+    // devilcode_change start
+    const scan = (result: Entry) => {
+      void fn(result).catch((err) => {
+        fetching = false
+        log.warn("file index failed", { err })
+      })
+    }
+    scan({
+      files: [],
+      dirs: [],
+    })
+    // devilcode_change end
 
     return {
       async files() {
         if (!fetching) {
-          fn({
+          // devilcode_change start
+          scan({
             files: [],
             dirs: [],
           })
+          // devilcode_change end
         }
         return cache
       },

@@ -13,7 +13,7 @@ jobs:
       is_fork: ${{ steps.fork-check.outputs.is_fork }}
     steps:
       - uses: actions/checkout@v4
-      - uses: Devil-Org/paths-filter@master
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |

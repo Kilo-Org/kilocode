@@ -10,8 +10,8 @@ on:
 
 jobs:
   check-annotations:
-    name: Check kilocode_change annotations
-    if: github.repository == 'Kilo-Org/kilocode'
+    name: Check devilcode_change annotations
+    if: github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
 
-      - name: Check kilocode_change annotations in shared opencode files
+      - name: Check devilcode_change annotations in shared opencode files
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
