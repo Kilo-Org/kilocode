@@ -155,6 +155,27 @@
       "problemMatcher": []
     },
     {
+      "label": "VSCode - Run Extension (Dev Data Dirs)",
+      "type": "shell",
+      "command": "bun",
+      "args": ["run", "extension:dev-data-dirs"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/packages/kilo-vscode",
+        "env": {
+          "VSCODE_EXEC_PATH": "${execPath}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "VSCode - Clear Kilo Dev Dirs",
       "type": "shell",
       "command": "bash",

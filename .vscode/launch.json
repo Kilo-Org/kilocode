@@ -25,7 +25,7 @@
       }
     },
     {
-      "name": "VSCode - Run Extension (Dev CLI Data Dirs)",
+      "name": "VSCode - Run Extension (Dev Data Dirs)",
       "type": "extensionHost",
       "request": "launch",
       "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"],

@@ -17,10 +17,10 @@ const app = process.env.KILO_DEV ? "kilo-dev" : "kilo" // kilocode_change
 // regen that runs during `bun run extension`). A trim is cheap and
 // trailing whitespace is never legitimate in a filesystem path.
 const clean = (p: string | undefined) => p?.trim()
-const data = path.join(clean(xdgData)!, app)
-const cache = path.join(clean(xdgCache)!, app)
-const config = path.join(clean(xdgConfig)!, app)
-const state = path.join(clean(xdgState)!, app)
+const data = clean(process.env.KILO_DATA_DIR) ?? path.join(clean(xdgData)!, app)
+const cache = clean(process.env.KILO_CACHE_DIR) ?? path.join(clean(xdgCache)!, app)
+const config = clean(process.env.KILO_GLOBAL_CONFIG_DIR) ?? path.join(clean(xdgConfig)!, app)
+const state = clean(process.env.KILO_STATE_DIR) ?? path.join(clean(xdgState)!, app)
 // kilocode_change end
 
 export const Path = {

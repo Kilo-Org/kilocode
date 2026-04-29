@@ -12,13 +12,19 @@
  *   --app-path PATH   Explicit path to the VS Code executable (auto-detected if omitted)
  *   --insiders        Prefer VS Code Insiders over stable
  *   --wait            Block until the VS Code window is closed
- *   --clean           Wipe the user-data and extensions dirs before launching
- *   --dev-data-dirs   Use dev-specific CLI data dirs (separate auth, sessions, config from your main install)
+ *   --clean           Wipe the VS Code user-data and extensions dirs before launching
+ *   --dev-data-dirs   Shortcut for stable, isolated VS Code dirs plus dev-specific CLI dirs
  *                    Sets KILO_DEV=1 which makes the CLI use "kilo-dev" as the app name:
  *                    e.g. ~/.local/share/kilo-dev/  (data: auth, sessions)
  *                         ~/.config/kilo-dev/        (config)
  *                         ~/.local/state/kilo-dev/   (state)
  *                         ~/.cache/kilo-dev/          (cache)
+ *   --vscode-user-data-dir PATH    Exact VS Code user-data dir
+ *   --vscode-extensions-dir PATH   Exact VS Code extensions dir
+ *   --cli-data-dir PATH            Exact CLI data dir
+ *   --cli-config-dir PATH          Exact CLI global config dir
+ *   --cli-state-dir PATH           Exact CLI state dir
+ *   --cli-cache-dir PATH           Exact CLI cache dir
  *
  * Environment:
  *   VSCODE_EXEC_PATH  Path to VS Code executable (same as --app-path)
@@ -38,12 +44,6 @@ import { spawn } from "node:child_process"
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
 const repo = resolve(root, "..", "..")
-
-// Stable per-repo directory under OS temp — no accumulation
-const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
-const base = join(tmpdir(), `kilo-vscode-dev-${hash}`)
-const userDir = join(base, "user-data")
-const extDir = join(base, "extensions")
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -91,6 +91,25 @@ const explicit = opts["app-path"] as string | undefined
 const blocking = opts["wait"] === true
 const clean = opts["clean"] === true
 const devDataDirs = opts["dev-data-dirs"] === true
+
+function dir(name: string) {
+  const value = opts[name]
+  if (typeof value === "string") return resolve(value)
+  return undefined
+}
+
+// Stable per-repo directory under OS temp — no accumulation
+const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
+const base = join(tmpdir(), `kilo-vscode-dev-${hash}`)
+const userDir = dir("vscode-user-data-dir") ?? join(base, "user-data")
+const extDir = dir("vscode-extensions-dir") ?? join(base, "extensions")
+const cli = {
+  ...(devDataDirs ? { KILO_DEV: "1" } : {}),
+  ...(dir("cli-data-dir") ? { KILO_DATA_DIR: dir("cli-data-dir") } : {}),
+  ...(dir("cli-config-dir") ? { KILO_GLOBAL_CONFIG_DIR: dir("cli-config-dir") } : {}),
+  ...(dir("cli-state-dir") ? { KILO_STATE_DIR: dir("cli-state-dir") } : {}),
+  ...(dir("cli-cache-dir") ? { KILO_CACHE_DIR: dir("cli-cache-dir") } : {}),
+}
 
 // ---------------------------------------------------------------------------
 // VS Code executable detection
@@ -221,7 +240,17 @@ async function compile() {
 
 function cleanEnv(input: NodeJS.ProcessEnv) {
   const env = { ...input, HOME: homedir().trim() }
-  for (const key of ["XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "KILO_TEST_HOME"]) {
+  for (const key of [
+    "XDG_DATA_HOME",
+    "XDG_CACHE_HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_STATE_HOME",
+    "KILO_TEST_HOME",
+    "KILO_DATA_DIR",
+    "KILO_GLOBAL_CONFIG_DIR",
+    "KILO_STATE_DIR",
+    "KILO_CACHE_DIR",
+  ]) {
     const value = env[key]
     if (value !== undefined) env[key] = value.trim()
   }
@@ -290,7 +319,8 @@ async function launch() {
 
   if (clean) {
     console.log("[launch] Cleaning previous state...")
-    rmSync(base, { recursive: true, force: true })
+    rmSync(userDir, { recursive: true, force: true })
+    rmSync(extDir, { recursive: true, force: true })
   }
 
   mkdirSync(userDir, { recursive: true })
@@ -319,10 +349,10 @@ async function launch() {
     args.push("--wait")
   }
 
-  const env = devDataDirs ? { ...process.env, KILO_DEV: "1" } : process.env
+  const source = { ...process.env, ...cli }
   // Strip Electron/VS Code env vars so the spawned instance doesn't attach
   // to the current Electron process (e.g. when launched from a VS Code task).
-  const env = cleanEnv(process.env)
+  const env = cleanEnv(source)
   for (const key of Object.keys(env)) {
     if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
   }
@@ -331,7 +361,13 @@ async function launch() {
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)
   console.log(`[launch] State:      ${base}`)
+  console.log(`[launch] User data:  ${userDir}`)
+  console.log(`[launch] Extensions: ${extDir}`)
   if (devDataDirs) console.log(`[launch] Dev data:   using kilo-dev dirs (KILO_DEV=1)`)
+  if (cli.KILO_DATA_DIR) console.log(`[launch] CLI data:   ${cli.KILO_DATA_DIR}`)
+  if (cli.KILO_GLOBAL_CONFIG_DIR) console.log(`[launch] CLI config: ${cli.KILO_GLOBAL_CONFIG_DIR}`)
+  if (cli.KILO_STATE_DIR) console.log(`[launch] CLI state:  ${cli.KILO_STATE_DIR}`)
+  if (cli.KILO_CACHE_DIR) console.log(`[launch] CLI cache:  ${cli.KILO_CACHE_DIR}`)
 
   if (blocking) {
     const result = Bun.spawnSync([app, ...args], {
