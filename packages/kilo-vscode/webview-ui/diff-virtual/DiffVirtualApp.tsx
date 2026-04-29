@@ -10,7 +10,7 @@ import { File } from "@kilocode/kilo-ui/file"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { normalize, text } from "@kilocode/kilo-ui/session-diff"
+import { contents } from "@kilocode/kilo-ui/session-diff"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { VSCodeProvider } from "../src/context/vscode"
@@ -58,8 +58,8 @@ const DiffVirtualContent: Component = () => {
     if (!d) return { before: "", after: "" }
     if (d.before !== undefined || d.after !== undefined) return { before: d.before ?? "", after: d.after ?? "" }
     if (d.patch) {
-      const view = normalize(d as { file: string; patch: string; additions: number; deletions: number })
-      return { before: text(view, "deletions"), after: text(view, "additions") }
+      const view = contents(d as { file: string; patch: string; additions: number; deletions: number })
+      return { before: view.before, after: view.after }
     }
     return { before: "", after: "" }
   })

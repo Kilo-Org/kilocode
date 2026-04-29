@@ -3,7 +3,7 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { normalize, text } from "@kilocode/kilo-ui/session-diff"
+import { contents } from "@kilocode/kilo-ui/session-diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
 
@@ -28,8 +28,8 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     const fd = props.filediff
     if (fd.before !== undefined || fd.after !== undefined) return { before: fd.before ?? "", after: fd.after ?? "" }
     if (fd.patch) {
-      const view = normalize(fd)
-      return { before: text(view, "deletions"), after: text(view, "additions") }
+      const view = contents(fd)
+      return { before: view.before, after: view.after }
     }
     return { before: "", after: "" }
   })

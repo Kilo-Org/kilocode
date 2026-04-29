@@ -54,6 +54,7 @@ import { TextShimmer } from "./text-shimmer"
 import { AnimatedCountList } from "./tool-count-summary"
 import { ToolStatusTitle } from "./tool-status-title"
 import { patchFiles } from "./apply-patch-file"
+import { contents } from "./session-diff"
 import { animate } from "motion"
 import { useLocation } from "@solidjs/router"
 import { attached, inline, kind } from "./message-file"
@@ -1914,6 +1915,11 @@ ToolRegistry.register({
     const fileComponent = useFileComponent()
     const diagnostics = createMemo(() => getDiagnostics(props.metadata.diagnostics, props.input.filePath))
     const path = createMemo(() => props.metadata?.filediff?.file || props.input.filePath || "")
+    const view = createMemo(() => {
+      const diff = props.metadata?.filediff
+      if (!diff?.patch) return
+      return contents(diff)
+    })
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => props.status === "pending" || props.status === "running"
     return (
@@ -1957,18 +1963,32 @@ ToolRegistry.register({
               }
             >
               <div data-component="edit-content">
-                <Dynamic
-                  component={fileComponent}
-                  mode="diff"
-                  before={{
-                    name: props.metadata?.filediff?.file || props.input.filePath,
-                    contents: props.metadata?.filediff?.before || props.input.oldString,
-                  }}
-                  after={{
-                    name: props.metadata?.filediff?.file || props.input.filePath,
-                    contents: props.metadata?.filediff?.after || props.input.newString,
-                  }}
-                />
+                <Show
+                  when={view()}
+                  fallback={
+                    <Dynamic
+                      component={fileComponent}
+                      mode="diff"
+                      before={{
+                        name: props.metadata?.filediff?.file || props.input.filePath,
+                        contents: props.metadata?.filediff?.before || props.input.oldString,
+                      }}
+                      after={{
+                        name: props.metadata?.filediff?.file || props.input.filePath,
+                        contents: props.metadata?.filediff?.after || props.input.newString,
+                      }}
+                    />
+                  }
+                >
+                  {(diff) => (
+                    <Dynamic
+                      component={fileComponent}
+                      mode="diff"
+                      before={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().before }}
+                      after={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().after }}
+                    />
+                  )}
+                </Show>
               </div>
             </ToolFileAccordion>
           </Show>
@@ -1986,6 +2006,11 @@ ToolRegistry.register({
     const fileComponent = useFileComponent()
     const diagnostics = createMemo(() => getDiagnostics(props.metadata.diagnostics, props.input.filePath))
     const path = createMemo(() => props.input.filePath || "")
+    const view = createMemo(() => {
+      const diff = props.metadata?.filediff
+      if (!diff?.patch) return
+      return contents(diff)
+    })
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => props.status === "pending" || props.status === "running"
     return (
@@ -2011,23 +2036,48 @@ ToolRegistry.register({
                   </div>
                 </Show>
               </div>
-              <div data-slot="message-part-actions">{/* <DiffChanges diff={diff} /> */}</div>
+              <div data-slot="message-part-actions">
+                <Show when={!pending() && props.metadata.filediff}>
+                  <DiffChanges changes={props.metadata.filediff} />
+                </Show>
+              </div>
             </div>
           }
         >
-          <Show when={props.input.content && path()}>
-            <ToolFileAccordion path={path()}>
+          <Show when={(props.input.content || view()) && path()}>
+            <ToolFileAccordion
+              path={path()}
+              actions={
+                <Show when={!pending() && props.metadata.filediff}>
+                  <DiffChanges changes={props.metadata.filediff!} />
+                </Show>
+              }
+            >
               <div data-component="write-content">
-                <Dynamic
-                  component={fileComponent}
-                  mode="text"
-                  file={{
-                    name: props.input.filePath,
-                    contents: props.input.content,
-                    cacheKey: checksum(props.input.content),
-                  }}
-                  overflow="scroll"
-                />
+                <Show
+                  when={view()}
+                  fallback={
+                    <Dynamic
+                      component={fileComponent}
+                      mode="text"
+                      file={{
+                        name: props.input.filePath,
+                        contents: props.input.content,
+                        cacheKey: checksum(props.input.content),
+                      }}
+                      overflow="scroll"
+                    />
+                  }
+                >
+                  {(diff) => (
+                    <Dynamic
+                      component={fileComponent}
+                      mode="diff"
+                      before={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().before }}
+                      after={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().after }}
+                    />
+                  )}
+                </Show>
               </div>
             </ToolFileAccordion>
           </Show>
@@ -2149,7 +2199,12 @@ ToolRegistry.register({
                           <Accordion.Content>
                             <Show when={visible()}>
                               <div data-component="apply-patch-file-diff">
-                                <Dynamic component={fileComponent} mode="diff" fileDiff={file.view.fileDiff} />
+                                <Dynamic
+                                  component={fileComponent}
+                                  mode="diff"
+                                  before={{ name: file.view.file, contents: file.view.before }}
+                                  after={{ name: file.view.file, contents: file.view.after }}
+                                />
                               </div>
                             </Show>
                           </Accordion.Content>
@@ -2219,7 +2274,12 @@ ToolRegistry.register({
               }
             >
               <div data-component="apply-patch-file-diff">
-                <Dynamic component={fileComponent} mode="diff" fileDiff={single()!.view.fileDiff} />
+                <Dynamic
+                  component={fileComponent}
+                  mode="diff"
+                  before={{ name: single()!.view.file, contents: single()!.view.before }}
+                  after={{ name: single()!.view.file, contents: single()!.view.after }}
+                />
               </div>
             </ToolFileAccordion>
           </BasicTool>
