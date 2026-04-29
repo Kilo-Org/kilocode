@@ -1,4 +1,6 @@
 ---
+title: Run Local LLMs with LM Studio in Kilo Code
+description: Use LM Studio to run local AI models offline on your own machine with Kilo Code — no API key, no cloud.
 sidebar_label: LM Studio
 ---
 

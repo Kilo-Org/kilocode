@@ -1,4 +1,6 @@
 ---
+title: Use MiniMax Models with Kilo Code
+description: Configure MiniMax's M1 and other models in Kilo Code with your MiniMax API key.
 sidebar_label: MiniMax
 ---
 

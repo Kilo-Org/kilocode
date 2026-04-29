@@ -1,4 +1,6 @@
 ---
+title: Use xAI Grok Models with Kilo Code
+description: Configure xAI's Grok models (Grok-4, Grok Code) in Kilo Code with your xAI API key.
 sidebar_label: xAI (Grok)
 ---
 

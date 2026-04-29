@@ -1,4 +1,6 @@
 ---
+title: Use SAP AI Core with Kilo Code
+description: Configure SAP AI Core for enterprise model access in Kilo Code with your SAP credentials.
 sidebar_label: SAP AI Core
 ---
 

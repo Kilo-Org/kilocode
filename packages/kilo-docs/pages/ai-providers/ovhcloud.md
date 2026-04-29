@@ -1,4 +1,6 @@
 ---
+title: Use OVHcloud AI Endpoints with Kilo Code
+description: Connect Kilo Code to OVHcloud's sovereign AI Endpoints for European-hosted model inference.
 sidebar_label: OVHcloud AI Endpoints
 ---
 

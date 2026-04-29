@@ -1,4 +1,6 @@
 ---
+title: Use OpenRouter with Kilo Code
+description: Access 300+ AI models through OpenRouter's unified API directly from Kilo Code with a single key.
 sidebar_label: OpenRouter
 ---
 

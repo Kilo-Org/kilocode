@@ -1,4 +1,6 @@
 ---
+title: Use Claude Code Subscription with Kilo Code
+description: Use your existing Claude Code (Pro/Max) subscription inside Kilo Code instead of paying per-token API pricing.
 sidebar_label: Claude Code
 ---
 

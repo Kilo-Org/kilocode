@@ -1,5 +1,6 @@
 ---
-title: ZenMux
+title: Use ZenMux with Kilo Code
+description: Access multiple AI models through ZenMux's unified API directly from Kilo Code.
 ---
 
 import Codicon from "@site/src/components/Codicon";

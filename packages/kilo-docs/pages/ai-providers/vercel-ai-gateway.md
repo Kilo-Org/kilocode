@@ -1,5 +1,6 @@
 ---
-description: Configure the Vercel AI Gateway in Kilo Code to robustly access 100+ language models from various providers through a centralized interface.
+title: Use Vercel AI Gateway with Kilo Code
+description: Configure the Vercel AI Gateway in Kilo Code to access 100+ language models from multiple providers through a centralized interface.
 keywords:
   - kilo code
   - vercel ai gateway

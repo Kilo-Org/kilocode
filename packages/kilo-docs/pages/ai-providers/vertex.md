@@ -1,4 +1,6 @@
 ---
+title: Use Google Cloud Vertex AI with Kilo Code
+description: Set up GCP Vertex AI (Claude, Gemini) in Kilo Code with your Google Cloud credentials.
 sidebar_label: GCP Vertex AI
 ---
 

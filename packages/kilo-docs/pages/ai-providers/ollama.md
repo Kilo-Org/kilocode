@@ -1,4 +1,6 @@
 ---
+title: Run Local LLMs with Ollama in Kilo Code
+description: Use Ollama to run local AI models (Llama, Qwen, DeepSeek) completely offline with Kilo Code.
 sidebar_label: Ollama
 ---
 

@@ -1,4 +1,6 @@
 ---
+title: Use OpenAI-Compatible Providers with Kilo Code
+description: Connect any OpenAI-API-compatible endpoint — self-hosted or third-party — to Kilo Code.
 sidebar_label: OpenAI Compatible
 ---
 

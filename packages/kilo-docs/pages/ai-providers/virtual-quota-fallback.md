@@ -1,4 +1,6 @@
 ---
+title: Virtual Quota Fallback Provider in Kilo Code
+description: Automatically fall back between AI providers when hitting quota or rate limits in Kilo Code.
 sidebar_label: Virtual Quota Fallback
 ---
 

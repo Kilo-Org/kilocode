@@ -1,4 +1,6 @@
 ---
+title: Use Chutes AI with Kilo Code
+description: Connect Kilo Code to Chutes AI for access to open-source models through a unified API with pay-per-use pricing.
 sidebar_label: Chutes AI
 ---
 

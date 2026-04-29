@@ -1,4 +1,6 @@
 ---
+title: Use OpenAI GPT Models with Kilo Code
+description: Configure OpenAI's GPT models in Kilo Code using your OpenAI API key for coding and agentic tasks.
 sidebar_label: OpenAI
 ---
 

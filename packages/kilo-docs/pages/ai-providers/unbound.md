@@ -1,4 +1,6 @@
 ---
+title: Use Unbound with Kilo Code
+description: Configure Unbound's AI model gateway in Kilo Code for access to multiple providers with one API key.
 sidebar_label: Unbound
 ---
 

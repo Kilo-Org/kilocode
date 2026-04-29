@@ -1,4 +1,6 @@
 ---
+title: Use AWS Bedrock Models with Kilo Code
+description: Configure Kilo Code to use AWS Bedrock for access to Claude, Llama, and other foundation models through your AWS account.
 sidebar_label: AWS Bedrock
 ---
 

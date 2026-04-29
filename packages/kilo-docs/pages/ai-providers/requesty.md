@@ -1,4 +1,6 @@
 ---
+title: Use Requesty with Kilo Code
+description: Route Kilo Code requests through Requesty for 150+ models with a single API key and unified billing.
 sidebar_label: Requesty
 ---
 

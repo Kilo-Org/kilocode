@@ -1,5 +1,6 @@
 ---
-title: Fireworks AI with Kilo Code
+title: Use Fireworks AI with Kilo Code
+description: Run open-source models on Fireworks AI's fast inference platform directly from Kilo Code.
 ---
 
 # Using Fireworks AI With Kilo Code

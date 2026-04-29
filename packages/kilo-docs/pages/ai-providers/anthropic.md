@@ -1,4 +1,6 @@
 ---
+title: Use Anthropic Claude with Kilo Code
+description: Connect Kilo Code to Anthropic's Claude models (Opus, Sonnet, Haiku) with your API key for coding, refactoring, and agentic tasks.
 sidebar_label: Anthropic
 ---
 

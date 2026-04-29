@@ -1,4 +1,6 @@
 ---
+title: Use Google Gemini with Kilo Code
+description: Set up Google Gemini Pro and Gemini Flash models in Kilo Code using your Google AI Studio API key.
 sidebar_label: Google Gemini
 ---
 

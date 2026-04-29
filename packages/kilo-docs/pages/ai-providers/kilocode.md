@@ -1,4 +1,6 @@
 ---
+title: Use the Kilo Code Built-in Provider
+description: Use Kilo Code's built-in provider for instant access to 500+ AI models with transparent pay-as-you-go pricing.
 sidebar_label: Kilo Code Provider
 ---
 

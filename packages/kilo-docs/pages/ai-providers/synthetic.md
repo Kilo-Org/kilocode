@@ -1,4 +1,6 @@
 ---
+title: Use Synthetic with Kilo Code
+description: Connect Kilo Code to Synthetic for access to open-source AI models through a unified API.
 sidebar_label: Synthetic
 ---
 

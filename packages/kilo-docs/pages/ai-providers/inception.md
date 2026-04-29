@@ -1,4 +1,6 @@
 ---
+title: Use Inception Labs Models with Kilo Code
+description: Connect Kilo Code to Inception Labs' Mercury diffusion LLM with your Inception API key.
 sidebar_label: Inception
 ---
 

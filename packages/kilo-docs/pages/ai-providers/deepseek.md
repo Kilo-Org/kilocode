@@ -1,4 +1,6 @@
 ---
+title: Use DeepSeek (V3, R1) with Kilo Code
+description: Configure DeepSeek Coder and DeepSeek Reasoner models in Kilo Code with your DeepSeek API key.
 sidebar_label: DeepSeek
 ---
 

@@ -1,4 +1,6 @@
 ---
+title: Use ChatGPT Plus/Pro Subscription in Kilo Code
+description: Use your existing ChatGPT Plus or Pro subscription inside Kilo Code instead of paying for separate API credits.
 sidebar_label: ChatGPT Plus/Pro
 ---
 

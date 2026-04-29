@@ -1,4 +1,6 @@
 ---
+title: Use Cerebras Fast Inference with Kilo Code
+description: Run coding tasks on Cerebras' ultra-fast inference platform directly from Kilo Code with your Cerebras API key.
 sidebar_label: Cerebras
 ---
 

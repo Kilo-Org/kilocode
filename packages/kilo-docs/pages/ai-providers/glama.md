@@ -1,4 +1,6 @@
 ---
+title: Use Glama with Kilo Code
+description: Access a wide catalog of AI models through Glama's unified gateway directly from Kilo Code.
 sidebar_label: Glama
 ---
 

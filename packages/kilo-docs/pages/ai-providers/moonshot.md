@@ -1,4 +1,6 @@
 ---
+title: Use Moonshot Kimi Models with Kilo Code
+description: Configure Moonshot.ai's Kimi models in Kilo Code with your Moonshot API key.
 sidebar_label: Moonshot.ai
 ---
 

@@ -1,4 +1,6 @@
 ---
+title: Use Groq LPU Inference with Kilo Code
+description: Configure Groq's ultra-low-latency LPU inference for Llama and other models in Kilo Code.
 sidebar_label: Groq
 ---
 
