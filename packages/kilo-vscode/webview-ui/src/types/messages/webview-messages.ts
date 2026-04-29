@@ -28,6 +28,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface AbortRequest {
@@ -226,6 +227,7 @@ export interface SendCommandRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface RemoveSkillMessage {
