@@ -19,7 +19,8 @@
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
-    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
+    "extension:dev-data-dirs": "bun --cwd packages/kilo-vscode script/launch.ts --dev-data-dirs"
   },
   "workspaces": {
     "packages": [

@@ -31,7 +31,9 @@ export namespace KilocodePaths {
 
   /** Global Kilo directories in user home: ~/.kilocode and ~/.kilo (legacy first, .kilo wins later) */
   export function globalDirs(): string[] {
-    return [path.join(home(), ".kilocode"), path.join(home(), ".kilo")]
+    if (process.env.KILO_GLOBAL_CONFIG_DIR) return [process.env.KILO_GLOBAL_CONFIG_DIR.trim()]
+    const dir = process.env.KILO_DEV ? ".kilo-dev" : ".kilo"
+    return [path.join(home(), ".kilocode"), path.join(home(), dir)]
   }
 
   /**
