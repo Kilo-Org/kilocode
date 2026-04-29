@@ -35,6 +35,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `list-versions.ts` | List available upstream versions |
 | `analyze.ts` | Analyze changes without merging |
 | `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
+| `decisions.ts` | Record manual merge decisions and reviewer rationale |
 
 ### Transform Scripts
 
@@ -304,12 +305,51 @@ After running the merge script, you may have remaining conflicts. To resolve:
 
 1. Open each conflicted file
 2. Look for `kilocode_change` markers to identify Kilo-specific code
-3. Resolve conflicts, keeping Kilo-specific changes
-4. Stage and commit:
+3. Review `script/upstream/reports/manual-decisions-<version>.md`
+4. Resolve conflicts, keeping Kilo-specific changes
+5. Record each manual decision with rationale:
+   ```bash
+   bun script/upstream/decisions.ts add --version v1.1.50 \
+     --file packages/opencode/src/config/config.ts \
+     --kind hybrid \
+     --risk medium \
+     --summary "Kept Kilo config fields and adopted upstream validation changes" \
+     --rationale "Taking upstream would drop Kilo config support; keeping ours would miss upstream parser updates" \
+     --alternative "take upstream: rejected because Kilo config fields would be removed" \
+     --alternative "keep ours: rejected because upstream validation changes would be lost" \
+     --verification "bun turbo typecheck"
+   ```
+6. Check the ledger is complete:
    ```bash
    git add -A
+   bun script/upstream/decisions.ts check --version v1.1.50
+   ```
+7. Commit:
+   ```bash
    git commit -m "resolve merge conflicts"
    ```
+
+The merge script initializes the decision ledger automatically when it stops for
+manual conflicts. The ledger stores a local JSON source of truth and markdown
+report under `script/upstream/reports/`; these reports are gitignored so merge
+PRs do not accumulate process artifacts. Paste the PR-ready per-file summary
+from:
+
+```bash
+bun script/upstream/decisions.ts pr-body --version v1.1.50
+```
+
+Decision kinds are `hybrid`, `take-ours`, `take-theirs`, `regenerated`,
+`removed`, `renamed`, and `other`. Mark decisions as `high` risk when they touch
+auth, billing, data deletion, public APIs, config schemas, migrations, provider
+routing, or security behavior.
+
+### Agent-Assisted Manual Resolution
+
+Use `/upstream-manual-merge v1.1.50` after `merge.ts` stops. The command asks
+the agent to inspect the generated ledger, plan the remaining resolutions,
+resolve each conflict, record the rationale with `decisions.ts add`, and finish
+with `decisions.ts check`.
 
 ## Rollback
 
