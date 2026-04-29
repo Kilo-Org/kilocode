@@ -1367,6 +1367,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         const envCache: KiloSessionPrompt.EnvCache = {}
         closeReasons.delete(sessionID) // kilocode_change
         let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
+        let emptyStopCount = 0 // kilocode_change - cap consecutive empty-stop turns to avoid infinite token burn
         const ctx = yield* InstanceState.context
         const slog = elog.with({ sessionID })
         let structured: unknown | undefined
@@ -1410,6 +1411,18 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           // kilocode_change start
           const hasContent =
             hasToolCalls || (lastAssistantMsg?.parts.some((p) => p.type === "text" && p.text.trim()) ?? false)
+
+          const MAX_EMPTY_STOP = 3
+          if (!hasContent && lastAssistant?.finish === "stop") {
+            emptyStopCount++
+            if (emptyStopCount >= MAX_EMPTY_STOP) {
+              throw new Error(
+                `Agent received ${MAX_EMPTY_STOP} consecutive empty stop responses — aborting to prevent infinite token burn`,
+              )
+            }
+          } else {
+            emptyStopCount = 0
+          }
           // kilocode_change end
 
           if (
