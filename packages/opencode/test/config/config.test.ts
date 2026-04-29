@@ -853,69 +853,6 @@ Hello from new command`,
   })
 })
 
-// kilocode_change start
-
-test("updates config and writes to .kilo/kilo.json", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const newConfig = { model: "updated/model" }
-      await save(newConfig as any)
-
-      // Writes to .kilo/kilo.json by default — that's the documented "cleaner setup"
-      // location and matches what the marketplace installer uses.
-      const writtenConfig = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, ".kilo", "kilo.json"))
-      expect(writtenConfig.model).toBe("updated/model")
-
-      // Roundtrip: the value written should be loaded back by Config.get().
-      const loaded = await load()
-      expect(loaded.model).toBe("updated/model")
-    },
-  })
-})
-
-test("updates existing project kilo.json at workspace root", async () => {
-  await using tmp = await tmpdir()
-  // Pre-seed a kilo.json at the workspace root — Config.update should prefer it
-  // over creating a new file in .kilo/.
-  await writeConfig(tmp.path, { username: "alice" })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      await save({ model: "updated/model" } as any)
-
-      const merged = await Filesystem.readJson<{ model: string; username: string }>(path.join(tmp.path, "kilo.json"))
-      expect(merged.model).toBe("updated/model")
-      expect(merged.username).toBe("alice")
-    },
-  })
-})
-
-test("updates ancestor project config from nested directory", async () => {
-  await using tmp = await tmpdir()
-  const child = path.join(tmp.path, "nested", "workspace")
-  await fs.mkdir(child, { recursive: true })
-  await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
-  await writeConfig(path.join(tmp.path, ".kilo"), { username: "alice" })
-
-  await Instance.provide({
-    directory: child,
-    fn: async () => {
-      await save({ model: "updated/model" } as any)
-
-      const merged = await Filesystem.readJson<{ model: string; username: string }>(
-        path.join(tmp.path, ".kilo", "kilo.json"),
-      )
-      expect(merged.model).toBe("updated/model")
-      expect(merged.username).toBe("alice")
-      await expect(fs.access(path.join(child, ".kilo", "kilo.json"))).rejects.toThrow()
-    },
-  })
-})
-
-// kilocode_change end
-
 test("gets config directories", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({

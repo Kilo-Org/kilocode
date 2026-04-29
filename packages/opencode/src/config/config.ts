@@ -893,32 +893,18 @@ export const layer = Layer.effect(
     // kilocode_change end
 
     const update = Effect.fn("Config.update")(function* (config: Info) {
-      // kilocode_change start - target a project config file that is actually loaded.
-      const dir = yield* InstanceState.directory
-      // Prefer .kilo/ subdir (docs' recommended "cleaner setup", and matches the
-      // marketplace installer's convention), then fall back to workspace root, and
-      // finally create .kilo/kilo.json. Previously wrote to config.json, which is
-      // not in the project-level load chain.
+      // kilocode_change start - delegate Kilo project config update behavior.
       const ctx = yield* InstanceState.context
-      const dirs = yield* fs
-        .up({ targets: [".kilo", ".kilocode", ".opencode"], start: ctx.directory, stop: ctx.worktree })
-        .pipe(Effect.orDie)
-      const roots = yield* fs
-        .up({ targets: [...KilocodeConfig.ALL_CONFIG_FILES], start: ctx.directory, stop: ctx.worktree })
-        .pipe(Effect.orDie)
-      const candidates = [...dirs.flatMap((d) => KilocodeConfig.ALL_CONFIG_FILES.map((f) => path.join(d, f))), ...roots]
-      const file = candidates.find((f) => existsSync(f)) ?? path.join(dir, ".kilo", "kilo.json")
-      const before = (yield* readConfigFile(file)) ?? "{}"
-      const input = writable(config)
-
-      if (file.endsWith(".jsonc")) {
-        const updated = patchJsonc(before, input)
-        yield* fs.writeWithDirs(file, updated).pipe(Effect.orDie)
-      } else {
-        const existing = ConfigParse.schema(Info, ConfigParse.jsonc(before, file), file)
-        const merged = KilocodeConfig.mergeConfig(writable(existing), input)
-        yield* fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
-      }
+      yield* KilocodeConfig.updateProjectConfig({
+        fs,
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+        config,
+        read: readConfigFile,
+        parse: (input, file) => ConfigParse.schema(Info, ConfigParse.jsonc(input, file), file),
+        patch: (input, patch) => patchJsonc(input, patch),
+        writable,
+      })
       // kilocode_change end
       yield* Effect.promise(() => Instance.dispose())
     })
