@@ -1,4 +1,6 @@
 ---
+title: Use OpenAI-Compatible Providers with Kilo Code
+description: Connect any OpenAI-compatible API endpoint to Kilo Code to use models from Perplexity, Together AI, local servers, and more.
 sidebar_label: OpenAI Compatible
 ---
 

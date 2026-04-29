@@ -1,4 +1,6 @@
 ---
+title: Use Ollama with Kilo Code
+description: Run language models locally with Ollama in Kilo Code for private, offline AI coding with no cloud costs.
 sidebar_label: Ollama
 ---
 

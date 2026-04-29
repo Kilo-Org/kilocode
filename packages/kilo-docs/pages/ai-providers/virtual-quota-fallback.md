@@ -1,4 +1,6 @@
 ---
+title: Use the Virtual Quota Fallback Provider in Kilo Code
+description: Configure a meta-provider in Kilo Code that automatically switches between AI providers based on quota limits and availability.
 sidebar_label: Virtual Quota Fallback
 ---
 

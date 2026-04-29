@@ -1,4 +1,6 @@
 ---
+title: Use Groq with Kilo Code
+description: Configure the Groq API in Kilo Code for ultra-fast inference on Llama, Mixtral, and other LPU-accelerated models.
 sidebar_label: Groq
 ---
 

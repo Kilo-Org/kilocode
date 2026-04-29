@@ -1,4 +1,6 @@
 ---
+title: Use DeepSeek with Kilo Code
+description: Configure the DeepSeek API in Kilo Code to run deepseek-chat and deepseek-reasoner models for coding and reasoning tasks.
 sidebar_label: DeepSeek
 ---
 

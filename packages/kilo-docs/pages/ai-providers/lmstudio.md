@@ -1,4 +1,6 @@
 ---
+title: Use LM Studio with Kilo Code
+description: Run local language models in Kilo Code using LM Studio's OpenAI-compatible inference server for private, offline AI coding.
 sidebar_label: LM Studio
 ---
 

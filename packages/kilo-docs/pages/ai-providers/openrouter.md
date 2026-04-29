@@ -1,4 +1,6 @@
 ---
+title: Use OpenRouter with Kilo Code
+description: Configure OpenRouter in Kilo Code to access hundreds of language models from different providers through a single unified API.
 sidebar_label: OpenRouter
 ---
 

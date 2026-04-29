@@ -1,4 +1,6 @@
 ---
+title: Use xAI Grok with Kilo Code
+description: Configure the xAI API in Kilo Code to use Grok models with large context windows and conversational reasoning.
 sidebar_label: xAI (Grok)
 ---
 

@@ -1,4 +1,6 @@
 ---
+title: Use OVHcloud AI Endpoints with Kilo Code
+description: Configure OVHcloud AI Endpoints in Kilo Code to run language models on European, privacy-first cloud infrastructure.
 sidebar_label: OVHcloud AI Endpoints
 ---
 

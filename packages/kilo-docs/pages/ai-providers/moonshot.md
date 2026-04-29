@@ -1,4 +1,6 @@
 ---
+title: Use Moonshot Kimi with Kilo Code
+description: Configure Moonshot.ai in Kilo Code to use Kimi models with long-context windows and advanced reasoning capabilities.
 sidebar_label: Moonshot.ai
 ---
 

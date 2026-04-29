@@ -1,4 +1,6 @@
 ---
+title: Use OpenAI with Kilo Code
+description: Connect the official OpenAI API to Kilo Code to use GPT-4, GPT-5, o-series reasoning, and other OpenAI models.
 sidebar_label: OpenAI
 ---
 

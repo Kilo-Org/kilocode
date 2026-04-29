@@ -1,4 +1,6 @@
 ---
+title: Use Google Gemini with Kilo Code
+description: Set up the Google AI Gemini API in Kilo Code to use Gemini models for coding, reasoning, and multimodal tasks.
 sidebar_label: Google Gemini
 ---
 

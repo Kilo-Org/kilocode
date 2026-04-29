@@ -1,4 +1,6 @@
 ---
+title: Use SAP AI Core with Kilo Code
+description: Connect Kilo Code to SAP AI Core on the SAP Business Technology Platform to run enterprise AI scenarios at scale.
 sidebar_label: SAP AI Core
 ---
 

@@ -1,4 +1,6 @@
 ---
+title: Use Google Vertex AI with Kilo Code
+description: Connect Kilo Code to Google Cloud Vertex AI to use Anthropic Claude, Gemini, and other foundation models.
 sidebar_label: GCP Vertex AI
 ---
 

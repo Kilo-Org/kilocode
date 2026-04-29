@@ -1,4 +1,6 @@
 ---
+title: Use Unbound with Kilo Code
+description: Set up Unbound in Kilo Code as a secure gateway to Anthropic, OpenAI, and other language models for enterprise use.
 sidebar_label: Unbound
 ---
 

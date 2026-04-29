@@ -1,4 +1,6 @@
 ---
+title: Use Mistral AI with Kilo Code
+description: Set up the Mistral AI API in Kilo Code to access Mistral models and the code-specialized Codestral model.
 sidebar_label: Mistral AI
 ---
 

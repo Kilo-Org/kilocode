@@ -1,4 +1,6 @@
 ---
+title: Use the VS Code Language Model API with Kilo Code
+description: Use GitHub Copilot and other VS Code Language Model API providers in Kilo Code through this experimental integration.
 sidebar_label: VS Code Language Model API
 ---
 

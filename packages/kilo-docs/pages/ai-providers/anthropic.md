@@ -1,4 +1,6 @@
 ---
+title: Use Anthropic Claude with Kilo Code
+description: Set up the Anthropic API in Kilo Code to use Claude models for reasoning, coding, and agentic workflows.
 sidebar_label: Anthropic
 ---
 

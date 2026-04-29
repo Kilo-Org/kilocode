@@ -1,3 +1,9 @@
+---
+title: Use the Human Relay Provider with Kilo Code
+description: Use Kilo Code with web-based AI models like ChatGPT or Claude without an API key by manually relaying messages.
+sidebar_label: Human Relay
+---
+
 # Human Relay Provider
 
 The Human Relay provider allows you to use Kilo Code with web-based AI models like ChatGPT or Claude without needing an API key. Instead, it relies on you to manually relay messages between Kilo Code and the AI's web interface.

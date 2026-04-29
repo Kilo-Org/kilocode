@@ -1,4 +1,6 @@
 ---
+title: Claude Code Provider in Kilo Code
+description: Learn about the Claude Code provider status in Kilo Code and how to use Anthropic models with an API key instead.
 sidebar_label: Claude Code
 ---
 

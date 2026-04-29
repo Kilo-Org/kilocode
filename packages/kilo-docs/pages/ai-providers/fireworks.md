@@ -1,5 +1,7 @@
 ---
-title: Fireworks AI with Kilo Code
+title: Use Fireworks AI with Kilo Code
+description: Configure Fireworks AI in Kilo Code for high-performance inference on open-source and proprietary language models.
+sidebar_label: Fireworks AI
 ---
 
 # Using Fireworks AI With Kilo Code

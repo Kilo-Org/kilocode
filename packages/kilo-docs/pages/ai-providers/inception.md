@@ -1,4 +1,6 @@
 ---
+title: Use Inception with Kilo Code
+description: Set up the Inception AI provider in Kilo Code to access enterprise-grade large language models through a reliable API.
 sidebar_label: Inception
 ---
 

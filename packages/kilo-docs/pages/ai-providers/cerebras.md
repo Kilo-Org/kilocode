@@ -1,4 +1,6 @@
 ---
+title: Use Cerebras with Kilo Code
+description: Configure the Cerebras AI provider in Kilo Code for ultra-fast inference on Llama, Qwen, and other models.
 sidebar_label: Cerebras
 ---
 

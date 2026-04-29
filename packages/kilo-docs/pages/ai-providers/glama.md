@@ -1,4 +1,6 @@
 ---
+title: Use Glama with Kilo Code
+description: Connect Kilo Code to Glama's unified AI gateway to access Anthropic, OpenAI, and other models with prompt caching and cost tracking.
 sidebar_label: Glama
 ---
 

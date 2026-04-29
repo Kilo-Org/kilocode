@@ -1,4 +1,6 @@
 ---
+title: Use Chutes AI with Kilo Code
+description: Set up Chutes AI as your Kilo Code provider to access free and open-source language models through a single API.
 sidebar_label: Chutes AI
 ---
 

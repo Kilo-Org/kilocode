@@ -1,4 +1,6 @@
 ---
+title: Use MiniMax with Kilo Code
+description: Configure the MiniMax API in Kilo Code to use M2.1 and other MiniMax models for coding, tool use, and agentic workflows.
 sidebar_label: MiniMax
 ---
 

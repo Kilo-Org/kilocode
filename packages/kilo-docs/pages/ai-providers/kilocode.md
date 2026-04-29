@@ -1,4 +1,6 @@
 ---
+title: Use the Kilo Code Built-in Provider
+description: Sign up for the Kilo Code built-in provider to access frontier coding models without managing multiple API keys.
 sidebar_label: Kilo Code Provider
 ---
 

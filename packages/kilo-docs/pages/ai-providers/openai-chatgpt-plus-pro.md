@@ -1,4 +1,6 @@
 ---
+title: Use ChatGPT Plus and Pro Subscriptions with Kilo Code
+description: Sign in with your ChatGPT Plus or Pro subscription to use OpenAI models in Kilo Code without a separate API key.
 sidebar_label: ChatGPT Plus/Pro
 ---
 

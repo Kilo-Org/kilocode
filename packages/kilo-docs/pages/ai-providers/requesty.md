@@ -1,4 +1,6 @@
 ---
+title: Use Requesty with Kilo Code
+description: Set up Requesty in Kilo Code to access 150+ language models through an optimized, unified AI platform API.
 sidebar_label: Requesty
 ---
 

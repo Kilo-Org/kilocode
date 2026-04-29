@@ -1,4 +1,6 @@
 ---
+title: Use Synthetic with Kilo Code
+description: Configure Synthetic in Kilo Code to run open-source AI models on secure US and EU infrastructure with strong privacy guarantees.
 sidebar_label: Synthetic
 ---
 
