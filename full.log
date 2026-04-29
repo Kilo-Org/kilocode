@@ -1,4 +1,4 @@
-build-vscode	Set up job	﻿2026-04-29T09:52:21.3004077Z Current runner version: '2.333.1'
+build-vscode	Set up job	2026-04-29T09:52:21.3004077Z Current runner version: '2.333.1'
 build-vscode	Set up job	2026-04-29T09:52:21.3008659Z Runner name: 'blacksmith-01kqcaefck4rtqwk3s2f5xjdvj-4vcpu'
 build-vscode	Set up job	2026-04-29T09:52:21.3009338Z Runner group name: 'blacksmith runners 01kgn0fsv6wjqhdjea5fred2v2'
 build-vscode	Set up job	2026-04-29T09:52:21.3010069Z Machine name: 'ip-172-31-64-123'
@@ -17,7 +17,7 @@ build-vscode	Set up job	2026-04-29T09:52:21.8992931Z Download action repository 
 build-vscode	Set up job	2026-04-29T09:52:22.7936702Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
 build-vscode	Set up job	2026-04-29T09:52:22.9204924Z Setting BLACKSMITH_ACTIONS_RESULTS_URL to https://results-receiver.actions.githubusercontent.com/
 build-vscode	Set up job	2026-04-29T09:52:22.9248809Z Complete job name: build-vscode
-build-vscode	Set up runner	﻿2026-04-29T09:52:22.9553174Z A job started hook has been configured by the self-hosted runner administrator
+build-vscode	Set up runner	2026-04-29T09:52:22.9553174Z A job started hook has been configured by the self-hosted runner administrator
 build-vscode	Set up runner	2026-04-29T09:52:22.9623057Z ##[group]Run '/setup.sh'
 build-vscode	Set up runner	2026-04-29T09:52:22.9634918Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
 build-vscode	Set up runner	2026-04-29T09:52:22.9635800Z ##[endgroup]
@@ -59,7 +59,7 @@ build-vscode	Set up runner	2026-04-29T09:52:23.0004981Z -----------------
 build-vscode	Set up runner	2026-04-29T09:52:23.0005413Z PID 3438707: 9 devices
 build-vscode	Set up runner	2026-04-29T09:52:23.0008250Z Total: 9 devices across 1 process
 build-vscode	Set up runner	2026-04-29T09:52:23.0011044Z Enabling Blacksmith transparent cache
-build-vscode	Run actions/checkout@v3	﻿2026-04-29T09:52:23.0274989Z ##[group]Run actions/checkout@v3
+build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0274989Z ##[group]Run actions/checkout@v3
 build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0276281Z with:
 build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0277097Z   repository: Kilo-Org/kilocode
 build-vscode	Run actions/checkout@v3	2026-04-29T09:52:23.0277975Z   token: ***
@@ -537,7 +537,7 @@ build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0606632Z branch 'main' 
 build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0846300Z ##[endgroup]
 build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0865656Z [command]/usr/bin/git log -1 --format='%H'
 build-vscode	Run actions/checkout@v3	2026-04-29T09:52:25.0875535Z '9da1542d14f4c3903bcbdbce399a89e2af20e51d'
-build-vscode	Run ./.github/actions/setup-bun	﻿2026-04-29T09:52:25.0997452Z Prepare all required actions
+build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:25.0997452Z Prepare all required actions
 build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:25.0997768Z Getting action download info
 build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:25.3897627Z Download action repository 'oven-sh/setup-bun@v2' (SHA:0c5077e51419868618aeaa5fe8019c62421857d6)
 build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:52:26.1826624Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
@@ -650,7 +650,7 @@ build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975448Z + heap
 build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975555Z + typescript@5.8.2 (v6.0.3 available)
 build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975636Z 
 build-vscode	Run ./.github/actions/setup-bun	2026-04-29T09:53:13.8975677Z 4500 packages installed [36.05s]
-build-vscode	Run actions/setup-node@v4	﻿2026-04-29T09:53:13.9091378Z ##[group]Run actions/setup-node@v4
+build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091378Z ##[group]Run actions/setup-node@v4
 build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091511Z with:
 build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091597Z   node-version: 24
 build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:13.9091703Z   registry-url: https://registry.npmjs.org
@@ -666,7 +666,7 @@ build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1736827Z node: v24.13
 build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1737100Z npm: 11.6.2
 build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1737217Z yarn: 1.22.22
 build-vscode	Run actions/setup-node@v4	2026-04-29T09:53:14.1737753Z ##[endgroup]
-build-vscode	Install @vscode/vsce	﻿2026-04-29T09:53:14.1791838Z ##[group]Run bun install -g @vscode/vsce
+build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1791838Z ##[group]Run bun install -g @vscode/vsce
 build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1792094Z ^[[36;1mbun install -g @vscode/vsce^[[0m
 build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803433Z shell: /usr/bin/bash -e {0}
 build-vscode	Install @vscode/vsce	2026-04-29T09:53:14.1803558Z env:
@@ -685,7 +685,7 @@ build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5368968Z
 build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5369112Z 293 packages installed [1353.00ms]
 build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5369195Z 
 build-vscode	Install @vscode/vsce	2026-04-29T09:53:15.5369356Z Blocked 1 postinstall. Run `bun pm -g untrusted` for details.
-build-vscode	Run actions/download-artifact@v4	﻿2026-04-29T09:53:15.5423044Z ##[group]Run actions/download-artifact@v4
+build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423044Z ##[group]Run actions/download-artifact@v4
 build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423225Z with:
 build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423324Z   name: kilo-cli
 build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:15.5423422Z   path: packages/opencode/dist
@@ -704,7 +704,7 @@ build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.3373456Z Redir
 build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.3374470Z Starting download of artifact to: /home/runner/_work/kilocode/kilocode/packages/opencode/dist
 build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.6141863Z (node:4004) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
 build-vscode	Run actions/download-artifact@v4	2026-04-29T09:53:16.6142375Z (Use `node --trace-deprecation ...` to show where the warning was created)
-build-vscode	Build VSIX packages	﻿2026-04-29T10:29:59.7681702Z ##[group]Run bun script/build.ts
+build-vscode	Build VSIX packages	2026-04-29T10:29:59.7681702Z ##[group]Run bun script/build.ts
 build-vscode	Build VSIX packages	2026-04-29T10:29:59.7682308Z ^[[36;1mbun script/build.ts^[[0m
 build-vscode	Build VSIX packages	2026-04-29T10:29:59.7700369Z shell: /usr/bin/bash -e {0}
 build-vscode	Build VSIX packages	2026-04-29T10:29:59.7700525Z env:
@@ -798,8 +798,8 @@ build-vscode	Build VSIX packages	2026-04-29T10:30:13.9154743Z       at /home/run
 build-vscode	Build VSIX packages	2026-04-29T10:30:13.9154925Z 
 build-vscode	Build VSIX packages	2026-04-29T10:30:13.9155031Z Bun v1.3.13 (Linux x64 baseline)
 build-vscode	Build VSIX packages	2026-04-29T10:30:13.9170130Z ##[error]Process completed with exit code 1.
-build-vscode	Post Run ./.github/actions/setup-bun	﻿2026-04-29T10:30:13.9226227Z Post job cleanup.
-build-vscode	Post Run actions/checkout@v3	﻿2026-04-29T10:30:13.9262576Z Post job cleanup.
+build-vscode	Post Run ./.github/actions/setup-bun	2026-04-29T10:30:13.9226227Z Post job cleanup.
+build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9262576Z Post job cleanup.
 build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9606978Z [command]/usr/bin/git version
 build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9623999Z git version 2.52.0
 build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9642183Z Temporarily overriding HOME='/home/runner/_work/_temp/83a3b96e-1b30-443f-a5ae-7af2feeaa029' before making global git config changes
@@ -811,11 +811,11 @@ build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9766269Z [command]
 build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9774691Z http.https://github.com/.extraheader
 build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9780101Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
 build-vscode	Post Run actions/checkout@v3	2026-04-29T10:30:13.9792356Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-build-vscode	Complete runner	﻿2026-04-29T10:30:13.9911108Z A job completed hook has been configured by the self-hosted runner administrator
+build-vscode	Complete runner	2026-04-29T10:30:13.9911108Z A job completed hook has been configured by the self-hosted runner administrator
 build-vscode	Complete runner	2026-04-29T10:30:13.9923978Z ##[group]Run '/job_completed.sh'
 build-vscode	Complete runner	2026-04-29T10:30:13.9929438Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
 build-vscode	Complete runner	2026-04-29T10:30:13.9929640Z ##[endgroup]
 build-vscode	Complete runner	2026-04-29T10:30:14.0047783Z Docker container caching not enabled, skipping hash computation.
 build-vscode	Complete runner	2026-04-29T10:30:14.0104549Z No active SSH sessions detected. Proceeding with shutdown immediately.
-build-vscode	Complete job	﻿2026-04-29T10:30:14.0139377Z Cleaning up orphan processes
+build-vscode	Complete job	2026-04-29T10:30:14.0139377Z Cleaning up orphan processes
 build-vscode	Complete job	2026-04-29T10:30:14.0336563Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/cache@v4, actions/checkout@v3, actions/download-artifact@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
