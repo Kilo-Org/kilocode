@@ -23,6 +23,7 @@ import * as git from "./utils/git"
 import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
+import { initLedger } from "./decisions"
 import { defaultConfig, loadConfig, type MergeConfig } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
@@ -734,12 +735,24 @@ async function main() {
       await report.saveReport(conflictReport, reportPath)
       logger.success(`Report saved to ${reportPath}`)
 
+      const ledger = await initLedger({
+        version: targetVersion.version,
+        upstreamCommit: targetVersion.commit,
+        baseBranch: config.baseBranch,
+        mergeBranch: kiloBranch,
+        report: reportPath,
+        files: allManual,
+      })
+      logger.success(`Manual decision ledger initialized: ${ledger.md}`)
+
       logger.divider()
       logger.info("Next steps:")
-      logger.info("  1. Resolve remaining conflicts manually")
-      logger.info("  2. git add -A && git commit -m 'resolve merge conflicts'")
-      logger.info(`  3. git push ${config.originRemote} ${kiloBranch}`)
-      logger.info("  4. Create PR from " + kiloBranch + " to " + config.baseBranch)
+      logger.info("  1. Resolve remaining conflicts manually or with /upstream-manual-merge")
+      logger.info("  2. git add -A")
+      logger.info(`  3. bun script/upstream/decisions.ts check --version ${targetVersion.version}`)
+      logger.info("  4. git commit -m 'resolve merge conflicts'")
+      logger.info(`  5. git push ${config.originRemote} ${kiloBranch}`)
+      logger.info("  6. Create PR from " + kiloBranch + " to " + config.baseBranch)
       logger.info("")
       logger.info("To rollback:")
       logger.info(`  git checkout ${config.baseBranch}`)

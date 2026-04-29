@@ -13,7 +13,8 @@
     "transform:strings": "bun run codemods/transform-strings.ts",
     "transform:all": "bun run transforms/package-names.ts && bun run codemods/transform-imports.ts && bun run codemods/transform-strings.ts",
     "versions": "bun run transforms/preserve-versions.ts",
-    "keep-ours": "bun run transforms/keep-ours.ts"
+    "keep-ours": "bun run transforms/keep-ours.ts",
+    "decisions": "bun run decisions.ts"
   },
   "dependencies": {
     "ts-morph": "^24.0.0"

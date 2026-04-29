@@ -46,6 +46,8 @@ tsconfig.tsbuildinfo
 
 # Kilo
 .kilo/plans/*upstream-merge-report-*.md
+script/upstream/reports/manual-decisions-*.json
+script/upstream/reports/manual-decisions-*.md
 
 # Test Artifacts
 packages/app/.artifacts/
