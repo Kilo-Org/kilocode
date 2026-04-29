@@ -117,14 +117,8 @@ export function createDevilDebug(options: DevilProviderOptions = {}): DevilProvi
     languageModel(modelId: string) {
       return openrouter(modelId)
     },
-    embeddingModel(modelId: string) {
-      return openrouter.textEmbeddingModel(modelId)
-    },
     textEmbeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
-    },
-    rerankingModel(modelId: string): never {
-      throw new Error(`Reranking model not supported: ${modelId}`)
     },
     imageModel(modelId: string) {
       return openrouter.imageModel(modelId)

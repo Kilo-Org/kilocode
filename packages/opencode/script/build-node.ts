@@ -11,7 +11,7 @@ const dir = path.resolve(__dirname, "..")
 
 process.chdir(dir)
 
-await import("./generate.ts")
+await import("../../../script/generate.ts")
 
 // Load migrations from migration directories
 const migrationDirs = (

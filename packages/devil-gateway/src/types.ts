@@ -160,7 +160,7 @@ export interface ProviderInfo {
 }
 
 export type DevilProvider = Provider & {
-  textEmbeddingModel(modelId: string): ReturnType<Provider["embeddingModel"]>
+  textEmbeddingModel(modelId: string): ReturnType<Provider["textEmbeddingModel"]>
   anthropic(modelId: string): LanguageModel
   openai(modelId: string): LanguageModel
   openaiCompatible(modelId: string): LanguageModel

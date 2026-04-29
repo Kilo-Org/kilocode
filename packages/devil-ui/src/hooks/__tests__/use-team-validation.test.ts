@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import { createSignal } from "solid-js"
 import { withRoot } from "./test-harness"
 import { useTeamValidation } from "../use-team-validation"
-import { loadQuickstartTemplates } from "@devilcode/cli/devilcode/team/index"
+import { loadQuickstartTemplates } from "../../../../opencode/src/devilcode/team/index"
 
 describe("useTeamValidation", () => {
   it("returns isValid=true for a known-good quickstart", () => {
