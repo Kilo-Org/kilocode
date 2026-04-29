@@ -443,7 +443,7 @@ const live: Layer.Layer<
         },
         // kilocode_change end
       })
-      return { ...result, error: () => error } // kilocode_change
+      return Object.assign(result, { error: () => error }) // kilocode_change
     })
 
     const stream: Interface["stream"] = (input) =>

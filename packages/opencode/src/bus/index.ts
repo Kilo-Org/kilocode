@@ -139,9 +139,8 @@ export const layer = Layer.effect(
                   log.error("subscriber failed", { type, cause })
                   return cause
                 },
-              }),
+              }).pipe(Effect.retry(Schedule.exponential(Duration.seconds(1)))),
             ),
-            Effect.retry(Schedule.exponential(Duration.seconds(1))),
             Effect.forkScoped,
           ),
         )
