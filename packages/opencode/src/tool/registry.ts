@@ -14,7 +14,7 @@ import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import * as Tool from "./tool"
 import { Config } from "../config"
-import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
 import { Schema } from "effect"
 import z from "zod"
 import { ZodOverride } from "@/util/effect-zod"
@@ -184,7 +184,7 @@ export const layer: Layer.Layer<
 
         yield* config.get()
         const questionEnabled =
-          ["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) || Flag.OPENCODE_ENABLE_QUESTION_TOOL
+          ["app", "cli", "desktop"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
@@ -224,8 +224,8 @@ export const layer: Layer.Layer<
             tool.code,
             tool.skill,
             tool.patch,
-            ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-            ...(Flag.OPENCODE_EXPERIMENTAL_PLAN_MODE && Flag.OPENCODE_CLIENT === "cli" ? [tool.plan] : []),
+            ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+            ...(Flag.KILO_EXPERIMENTAL_PLAN_MODE && Flag.KILO_CLIENT === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,
           read: tool.read,
@@ -279,7 +279,7 @@ export const layer: Layer.Layer<
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
         if (tool.id === CodeSearchTool.id || tool.id === WebSearchTool.id) {
-          return input.providerID === ProviderID.opencode || Flag.OPENCODE_ENABLE_EXA
+          return input.providerID === ProviderID.opencode || Flag.KILO_ENABLE_EXA
         }
 
         const usePatch =

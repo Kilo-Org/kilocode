@@ -1,6 +1,6 @@
 import type {
   Config,
-  OpencodeClient,
+  KiloClient,
   Path,
   PermissionRequest,
   Project,
@@ -9,7 +9,7 @@ import type {
   QuestionRequest,
   Session,
   Todo,
-} from "@opencode-ai/sdk/v2/client"
+} from "@kilocode/sdk/v2/client"
 import { showToast } from "@opencode-ai/ui/toast"
 import { getFilename } from "@opencode-ai/shared/util/path"
 import { retry } from "@opencode-ai/shared/util/retry"
@@ -67,7 +67,7 @@ function runAll(list: Array<() => Promise<unknown>>) {
 }
 
 export async function bootstrapGlobal(input: {
-  globalSDK: OpencodeClient
+  globalSDK: KiloClient
   requestFailedTitle: string
   translate: (key: string, vars?: Record<string, string | number>) => string
   formatMoreCount: (count: number) => string
@@ -163,7 +163,7 @@ function warmSessions(input: {
   ids: string[]
   store: Store<State>
   setStore: SetStoreFunction<State>
-  sdk: OpencodeClient
+  sdk: KiloClient
 }) {
   const known = new Set(input.store.session.map((item) => item.id))
   const ids = [...new Set(input.ids)].filter((id) => !!id && !known.has(id))
@@ -184,8 +184,8 @@ export const loadProvidersQuery = (directory: string | null) =>
 
 export const loadAgentsQuery = (
   directory: string | null,
-  sdk?: OpencodeClient,
-  transform?: (x: Awaited<ReturnType<OpencodeClient["app"]["agents"]>>) => void,
+  sdk?: KiloClient,
+  transform?: (x: Awaited<ReturnType<KiloClient["app"]["agents"]>>) => void,
 ) =>
   queryOptions<null>({
     queryKey: [directory, "agents"],
@@ -203,8 +203,8 @@ export const loadAgentsQuery = (
 
 export const loadPathQuery = (
   directory: string | null,
-  sdk?: OpencodeClient,
-  transform?: (x: Awaited<ReturnType<OpencodeClient["path"]["get"]>>) => void,
+  sdk?: KiloClient,
+  transform?: (x: Awaited<ReturnType<KiloClient["path"]["get"]>>) => void,
 ) =>
   queryOptions<Path>({
     queryKey: [directory, "path"],
@@ -222,7 +222,7 @@ export const loadPathQuery = (
 
 export async function bootstrapDirectory(input: {
   directory: string
-  sdk: OpencodeClient
+  sdk: KiloClient
   store: Store<State>
   setStore: SetStoreFunction<State>
   vcsCache: VcsCache

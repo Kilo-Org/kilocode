@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@opencode-ai/plugin",
-  "version": "1.14.24",
+  "name": "@kilocode/plugin",
+  "version": "7.2.30",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -17,13 +17,13 @@
     "dist"
   ],
   "dependencies": {
-    "@opencode-ai/sdk": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   },
   "peerDependencies": {
-    "@opentui/core": ">=0.1.99",
-    "@opentui/solid": ">=0.1.99"
+    "@opentui/core": ">=0.1.100",
+    "@opentui/solid": ">=0.1.100"
   },
   "peerDependenciesMeta": {
     "@opentui/core": {
@@ -40,5 +40,10 @@
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "@typescript/native-preview": "catalog:"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilocode",
+    "directory": "packages/plugin"
   }
 }

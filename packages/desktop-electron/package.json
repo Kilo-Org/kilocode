@@ -1,7 +1,7 @@
 {
   "name": "@opencode-ai/desktop-electron",
   "private": true,
-  "version": "1.14.24",
+  "version": "7.2.30",
   "type": "module",
   "license": "MIT",
   "homepage": "https://opencode.ai",
@@ -31,7 +31,15 @@
     "electron-updater": "^6",
     "electron-window-state": "^5.0.3",
     "drizzle-orm": "catalog:",
-    "marked": "^15"
+    "marked": "^15",
+    "@opencode-ai/app": "workspace:*",
+    "@opencode-ai/ui": "workspace:*",
+    "@solid-primitives/i18n": "2.2.1",
+    "@solid-primitives/storage": "catalog:",
+    "@solidjs/meta": "catalog:",
+    "@solidjs/router": "0.15.4",
+    "solid-js": "catalog:",
+    "tree-kill": "^1.2.2"
   },
   "devDependencies": {
     "@actions/artifact": "4.0.0",
@@ -62,5 +70,6 @@
     "@lydell/node-pty-linux-x64": "1.2.0-beta.10",
     "@lydell/node-pty-win32-arm64": "1.2.0-beta.10",
     "@lydell/node-pty-win32-x64": "1.2.0-beta.10"
-  }
+  },
+  "peerDependencies": {}
 }

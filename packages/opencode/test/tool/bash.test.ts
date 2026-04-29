@@ -485,7 +485,7 @@ describe("tool.bash permissions", () => {
       test(
         `asks for external_directory permission for missing PowerShell env paths [${item.label}]`,
         withShell(item, async () => {
-          const key = "OPENCODE_TEST_MISSING"
+          const key = "KILO_TEST_MISSING"
           const prev = process.env[key]
           delete process.env[key]
           try {

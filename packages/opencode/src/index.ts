@@ -89,7 +89,7 @@ const cli = yargs(args)
   })
   .middleware(async (opts) => {
     if (opts.pure) {
-      process.env.OPENCODE_PURE = "1"
+      process.env.KILO_PURE = "1"
     }
 
     await Log.init({
@@ -106,7 +106,7 @@ const cli = yargs(args)
 
     process.env.AGENT = "1"
     process.env.OPENCODE = "1"
-    process.env.OPENCODE_PID = String(process.pid)
+    process.env.KILO_PID = String(process.pid)
 
     Log.Default.info("opencode", {
       version: InstallationVersion,
@@ -115,7 +115,7 @@ const cli = yargs(args)
       run_id: processMetadata.runID,
     })
 
-    const marker = path.join(Global.Path.data, "opencode.db")
+    const marker = path.join(Global.Path.data, "kilo.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
       process.stderr.write("Performing one time database migration, may take a few minutes..." + EOL)

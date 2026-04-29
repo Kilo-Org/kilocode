@@ -15,7 +15,7 @@ function request(route: string, directory: string) {
   return ExperimentalHttpApiServer.webHandler().handler(
     new Request(`http://localhost${route}`, {
       headers: {
-        "x-opencode-directory": directory,
+        "x-kilo-directory": directory,
       },
     }),
     context,

@@ -20,7 +20,7 @@ export namespace Global {
     Service,
     Effect.gen(function* () {
       const app = "opencode"
-      const home = process.env.OPENCODE_TEST_HOME ?? os.homedir()
+      const home = process.env.KILO_TEST_HOME ?? os.homedir()
       const data = path.join(xdgData!, app)
       const cache = path.join(xdgCache!, app)
       const cfg = path.join(xdgConfig!, app)

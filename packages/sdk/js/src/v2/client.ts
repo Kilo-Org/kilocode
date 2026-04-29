@@ -2,8 +2,8 @@ export * from "./gen/types.gen.js"
 
 import { createClient } from "./gen/client/client.gen.js"
 import { type Config } from "./gen/client/types.gen.js"
-import { OpencodeClient } from "./gen/sdk.gen.js"
-export { type Config as OpencodeClientConfig, OpencodeClient }
+import { KiloClient } from "./gen/sdk.gen.js"
+export { type Config as KiloClientConfig, KiloClient }
 
 function pick(value: string | null, fallback?: string, encode?: (value: string) => string) {
   if (!value) return
@@ -20,8 +20,8 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
   let changed = false
 
   for (const [name, key] of [
-    ["x-opencode-directory", "directory"],
-    ["x-opencode-workspace", "workspace"],
+    ["x-kilo-directory", "directory"],
+    ["x-kilo-workspace", "workspace"],
   ] as const) {
     const value = pick(
       request.headers.get(name),
@@ -38,12 +38,12 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
   if (!changed) return request
 
   const next = new Request(url, request)
-  next.headers.delete("x-opencode-directory")
-  next.headers.delete("x-opencode-workspace")
+  next.headers.delete("x-kilo-directory")
+  next.headers.delete("x-kilo-workspace")
   return next
 }
 
-export function createOpencodeClient(config?: Config & { directory?: string; experimental_workspaceID?: string }) {
+export function createKiloClient(config?: Config & { directory?: string; experimental_workspaceID?: string }) {
   if (!config?.fetch) {
     const customFetch: any = (req: any) => {
       // @ts-ignore
@@ -59,14 +59,14 @@ export function createOpencodeClient(config?: Config & { directory?: string; exp
   if (config?.directory) {
     config.headers = {
       ...config.headers,
-      "x-opencode-directory": encodeURIComponent(config.directory),
+      "x-kilo-directory": encodeURIComponent(config.directory),
     }
   }
 
   if (config?.experimental_workspaceID) {
     config.headers = {
       ...config.headers,
-      "x-opencode-workspace": config.experimental_workspaceID,
+      "x-kilo-workspace": config.experimental_workspaceID,
     }
   }
 
@@ -84,5 +84,5 @@ export function createOpencodeClient(config?: Config & { directory?: string; exp
 
     return response
   })
-  return new OpencodeClient({ client })
+  return new KiloClient({ client })
 }

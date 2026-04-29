@@ -80,7 +80,7 @@ export function Titlebar() {
   const canBack = createMemo(() => history.index > 0)
   const canForward = createMemo(() => history.index < history.stack.length - 1)
   const hasProjects = createMemo(() => layout.projects.list().length > 0)
-  const nav = createMemo(() => import.meta.env.VITE_OPENCODE_CHANNEL !== "beta" || settings.general.showNavigation())
+  const nav = createMemo(() => import.meta.env.VITE_KILO_CHANNEL !== "beta" || settings.general.showNavigation())
 
   const back = () => {
     const next = backPath(history)
@@ -288,9 +288,9 @@ export function Titlebar() {
                 </div>
               </Show>
               <div id="opencode-titlebar-left" class="flex items-center gap-3 min-w-0 px-2" />
-              {["beta", "dev"].includes(import.meta.env.VITE_OPENCODE_CHANNEL) && (
+              {["beta", "dev"].includes(import.meta.env.VITE_KILO_CHANNEL) && (
                 <div class="bg-icon-interactive-base text-[#FFF] font-medium px-2 rounded-sm uppercase font-mono">
-                  {import.meta.env.VITE_OPENCODE_CHANNEL.toUpperCase()}
+                  {import.meta.env.VITE_KILO_CHANNEL.toUpperCase()}
                 </div>
               )}
             </div>

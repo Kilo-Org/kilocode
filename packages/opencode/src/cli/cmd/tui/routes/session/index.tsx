@@ -31,7 +31,7 @@ import type {
   UserMessage,
   TextPart,
   ReasoningPart,
-} from "@opencode-ai/sdk/v2"
+} from "@kilocode/sdk/v2"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util"
 import type { Tool } from "@/tool"
@@ -1484,7 +1484,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
         <Switch>
-          <Match when={Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
+          <Match when={Flag.KILO_EXPERIMENTAL_MARKDOWN}>
             <markdown
               syntaxStyle={syntax()}
               streaming={true}
@@ -1494,7 +1494,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               bg={theme.background}
             />
           </Match>
-          <Match when={!Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
+          <Match when={!Flag.KILO_EXPERIMENTAL_MARKDOWN}>
             <code
               filetype="markdown"
               drawUnstyledText={false}

@@ -1,5 +1,5 @@
-import { createOpencodeClient } from "@opencode-ai/sdk/v2"
-import type { GlobalEvent } from "@opencode-ai/sdk/v2"
+import { createKiloClient } from "@kilocode/sdk/v2"
+import type { GlobalEvent } from "@kilocode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { Flag } from "@/flag/flag"
@@ -22,7 +22,7 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
     let sse: AbortController | undefined
 
     function createSDK() {
-      return createOpencodeClient({
+      return createKiloClient({
         baseUrl: props.url,
         signal: abort.signal,
         directory: props.directory,
@@ -85,7 +85,7 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
             sseMaxRetryAttempts: 0,
           })
 
-          if (Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+          if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
             // Start syncing workspaces, it's important to do this after
             // we've started listening to events
             await sdk.sync.start().catch(() => {})
@@ -113,7 +113,7 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
         const unsub = await props.events.subscribe(handleEvent)
         onCleanup(unsub)
 
-        if (Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+        if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
           // Start syncing workspaces, it's important to do this after
           // we've started listening to events
           await sdk.sync.start().catch(() => {})

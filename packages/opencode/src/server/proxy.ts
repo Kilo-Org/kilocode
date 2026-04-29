@@ -24,8 +24,8 @@ function headers(req: Request, extra?: HeadersInit) {
   const out = new Headers(req.headers)
   for (const key of hop) out.delete(key)
   out.delete("accept-encoding")
-  out.delete("x-opencode-directory")
-  out.delete("x-opencode-workspace")
+  out.delete("x-kilo-directory")
+  out.delete("x-kilo-workspace")
   if (!extra) return out
   for (const [key, value] of new Headers(extra).entries()) {
     out.set(key, value)
@@ -60,7 +60,7 @@ const app = (upgrade: UpgradeWebSocket) =>
   new Hono().get(
     "/__workspace_ws",
     upgrade((c) => {
-      const url = c.req.header("x-opencode-proxy-url")
+      const url = c.req.header("x-kilo-proxy-url")
       const queue: Msg[] = []
       let remote: WebSocket | undefined
       return {
@@ -150,7 +150,7 @@ export function websocket(
   proxy.pathname = "/__workspace_ws"
   proxy.search = ""
   const next = new Headers(req.headers)
-  next.set("x-opencode-proxy-url", socket(target))
+  next.set("x-kilo-proxy-url", socket(target))
   for (const [key, value] of new Headers(extra).entries()) {
     next.set(key, value)
   }

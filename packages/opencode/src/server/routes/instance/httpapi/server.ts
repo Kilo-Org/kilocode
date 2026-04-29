@@ -27,7 +27,7 @@ const Query = Schema.Struct({
 
 const Headers = Schema.Struct({
   authorization: Schema.optional(Schema.String),
-  "x-opencode-directory": Schema.optional(Schema.String),
+  "x-kilo-directory": Schema.optional(Schema.String),
 })
 
 function decode(input: string) {
@@ -74,13 +74,13 @@ const auth = Layer.succeed(
   Authorization.of({
     basic: (effect, { credential }) =>
       Effect.gen(function* () {
-        if (!Flag.OPENCODE_SERVER_PASSWORD) return yield* effect
+        if (!Flag.KILO_SERVER_PASSWORD) return yield* effect
 
-        const user = Flag.OPENCODE_SERVER_USERNAME ?? "opencode"
+        const user = Flag.KILO_SERVER_USERNAME ?? "opencode"
         if (credential.username !== user) {
           return yield* new Unauthorized({ message: "Unauthorized" })
         }
-        if (Redacted.value(credential.password) !== Flag.OPENCODE_SERVER_PASSWORD) {
+        if (Redacted.value(credential.password) !== Flag.KILO_SERVER_PASSWORD) {
           return yield* new Unauthorized({ message: "Unauthorized" })
         }
         return yield* effect
@@ -94,7 +94,7 @@ const instance = HttpRouter.middleware()(
       Effect.gen(function* () {
         const query = yield* HttpServerRequest.schemaSearchParams(Query)
         const headers = yield* HttpServerRequest.schemaHeaders(Headers)
-        const raw = query.directory || headers["x-opencode-directory"] || process.cwd()
+        const raw = query.directory || headers["x-kilo-directory"] || process.cwd()
         const workspace = query.workspace || undefined
         const ctx = yield* Effect.promise(() =>
           Instance.provide({

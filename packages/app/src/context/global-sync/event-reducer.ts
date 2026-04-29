@@ -10,7 +10,7 @@ import type {
   SessionStatus,
   SnapshotFileDiff,
   Todo,
-} from "@opencode-ai/sdk/v2/client"
+} from "@kilocode/sdk/v2/client"
 import type { State, VcsCache } from "./types"
 import { trimSessions } from "./session-trim"
 import { dropSessionCaches } from "./session-cache"

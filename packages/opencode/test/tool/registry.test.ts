@@ -85,7 +85,7 @@ describe("tool.registry", () => {
             JSON.stringify({
               name: "custom-tools",
               dependencies: {
-                "@opencode-ai/plugin": "^0.0.0",
+                "@kilocode/plugin": "^0.0.0",
                 cowsay: "^1.6.0",
               },
             }),
@@ -100,7 +100,7 @@ describe("tool.registry", () => {
               packages: {
                 "": {
                   dependencies: {
-                    "@opencode-ai/plugin": "^0.0.0",
+                    "@kilocode/plugin": "^0.0.0",
                     cowsay: "^1.6.0",
                   },
                 },

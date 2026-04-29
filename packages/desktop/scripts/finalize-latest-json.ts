@@ -17,11 +17,11 @@ import { parseArgs } from "node:util"
 const repo = process.env.GH_REPO
 if (!repo) throw new Error("GH_REPO is required")
 
-const releaseId = process.env.OPENCODE_RELEASE
-if (!releaseId) throw new Error("OPENCODE_RELEASE is required")
+const releaseId = process.env.KILO_RELEASE
+if (!releaseId) throw new Error("KILO_RELEASE is required")
 
-const version = process.env.OPENCODE_VERSION
-if (!version) throw new Error("OPENCODE_VERSION is required")
+const version = process.env.KILO_VERSION
+if (!version) throw new Error("KILO_VERSION is required")
 
 const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN
 if (!token) throw new Error("GH_TOKEN or GITHUB_TOKEN is required")
