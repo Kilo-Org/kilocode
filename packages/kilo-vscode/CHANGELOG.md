@@ -1,5 +1,13 @@
 # kilo-code
 
+## 7.2.31
+
+### Patch Changes
+
+- [#9687](https://github.com/Kilo-Org/kilocode/pull/9687) [`9028174`](https://github.com/Kilo-Org/kilocode/commit/9028174cfd5fdd0cf2f3dd87d5ace7cfa780cc4d) - Show compact todo update cards when checking off items in long todo lists.
+
+- [#9691](https://github.com/Kilo-Org/kilocode/pull/9691) [`ae726cd`](https://github.com/Kilo-Org/kilocode/commit/ae726cdc45317a6bc6d2a77066c191dd674d0aa2) - Show apply_patch diffs in the permission prompt before approval.
+
 ## 7.2.30
 
 ### Patch Changes
