@@ -247,7 +247,7 @@ Two extra variables are injected into the script's environment:
 
 Agent Manager state is persisted in `.kilo/agent-manager.json`. It stores worktrees, sections, session tabs, ordering, collapsed state, diff preferences, and cached PR metadata. Git branches and worktree directories remain on disk separately.
 
-Closing a worktree removes it from the Agent Manager workspace and preserves the branch.
+Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/worktrees/` directory, and deletes the local branch. Closing an imported external worktree removes the Agent Manager entry but leaves the external directory and branch untouched.
 
 ## Keyboard Shortcuts (Agent Manager Panel)
 
