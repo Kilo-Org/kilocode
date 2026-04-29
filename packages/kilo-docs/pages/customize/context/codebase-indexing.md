@@ -34,7 +34,7 @@ This enables natural language queries like "user authentication logic" or "datab
 Indexing needs an embedding provider to turn code into vectors.
 
 {% tabs %}
-{% tab label="CLI & VSCode (new)" %}
+{% tab label="VSCode & CLI" %}
 
 | Provider | How to use | Notes |
 |---|---|---|
@@ -69,7 +69,7 @@ The legacy extension supports a smaller set of providers:
 ## Vector Stores
 
 {% tabs %}
-{% tab label="CLI & VSCode (new)" %}
+{% tab label="VSCode & CLI" %}
 
 - **Qdrant** (default) — external server. Recommended for team deployments and larger codebases.
 - **LanceDB** — embedded, file-based. No server to run. Stores data under your Kilo data directory by default.
