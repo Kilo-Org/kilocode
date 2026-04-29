@@ -70,6 +70,6 @@ Your IAM user or role must have the following permissions:
 - Select a model from a provider configured for BYOK, for example Claude Sonnet 4.5 if you configured BYOK for Anthropic.
 - (Optional) Validate with the provider that traffic is being served by that key.
 
-## Limitations
+## Use with Agent Manager
 
-- BYOK is not fully supported by Agent Manager. See [Agent Manager](/docs/automate/agent-manager) for details.
+Agent Manager supports the same BYOK and custom provider configurations as the extension sidebar.
