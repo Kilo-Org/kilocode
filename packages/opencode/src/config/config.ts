@@ -926,7 +926,7 @@ export const layer = Layer.effect(
         worktree: ctx.worktree,
         config,
         read: readConfigFile,
-        parse: (input, file) => ConfigParse.schema(Info, ConfigParse.jsonc(input, file), file),
+        parse: (input, file) => ConfigParse.schema(Info.zod, ConfigParse.jsonc(input, file), file),
         patch: (input, patch) => patchJsonc(input, patch),
         writable,
       })
