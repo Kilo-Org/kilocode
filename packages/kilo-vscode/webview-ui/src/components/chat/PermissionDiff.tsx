@@ -1,4 +1,4 @@
-import { type Component, createMemo } from "solid-js"
+import { Show, type Component, createMemo } from "solid-js"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -32,6 +32,11 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
       return { before: text(view, "deletions"), after: text(view, "additions") }
     }
     return { before: "", after: "" }
+  })
+
+  const empty = createMemo(() => {
+    const diff = resolved()
+    return diff.before === "" && diff.after === ""
   })
 
   const openInTab = () => {
@@ -77,11 +82,16 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
         </div>
       </div>
       <div data-slot="permission-diff-content">
-        <Diff
-          before={{ name: props.filediff.file, contents: resolved().before }}
-          after={{ name: props.filediff.file, contents: resolved().after }}
-          diffStyle="unified"
-        />
+        <Show
+          when={!empty()}
+          fallback={<div data-slot="permission-diff-empty">Diff preview unavailable for this file.</div>}
+        >
+          <Diff
+            before={{ name: props.filediff.file, contents: resolved().before }}
+            after={{ name: props.filediff.file, contents: resolved().after }}
+            diffStyle="unified"
+          />
+        </Show>
       </div>
     </div>
   )
