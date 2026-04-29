@@ -82,7 +82,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
   const git = useGitChangesContext(vscode, ctx, hasGit)
-  const slash = useSlashCommand(vscode)
+  const slash = useSlashCommand(vscode, () => (session.variantList().length > 0 ? new Set() : new Set(["variant"])))
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
