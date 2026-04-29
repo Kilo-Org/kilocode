@@ -30,6 +30,7 @@ import { EOL } from "os"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { RemoteCommand } from "./cli/cmd/remote" // devilcode_change
+import { SymphonyCommand } from "./devilcode/symphony/cli" // devilcode_change
 // devilcode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@devilcode/kilo-telemetry"
 import { Instance } from "./project/instance" // devilcode_change
@@ -196,6 +197,7 @@ let cli = yargs(hideBin(process.argv))
   .command(PrCommand)
   .command(SessionCommand)
   .command(RemoteCommand) // devilcode_change
+  .command(SymphonyCommand) // devilcode_change
   .command(DbCommand)
   .command(ConfigCLICommand) // kilocode_change
 

@@ -4,6 +4,7 @@ import { CanonicalPosition } from "./library"
 // devilcode_change start
 import { DAGOverride } from "./dag/schema"
 import { validateDAG, formatDAGError } from "./dag/validator"
+import { SymphonyConfig } from "../symphony/config/schema"
 // devilcode_change end
 
 export const EffortLevel = z.enum(["max", "xhigh", "high", "medium", "low", "default"]).default("default")
@@ -61,6 +62,9 @@ export const CanonicalTeamConfig = z
     reactions: z.array(ReactionRule).default([]).optional(),
     // devilcode_change start — Phase 7: optional DAG override (additive, backwards-compatible)
     workflowOverride: DAGOverride.optional(),
+    // devilcode_change end
+    // devilcode_change start — Symphony autonomous daemon config (alternative to WORKFLOW.md)
+    symphony: SymphonyConfig.optional(),
     // devilcode_change end
   })
   .refine(

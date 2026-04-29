@@ -19,6 +19,7 @@ import PROMPT_TITLE from "./prompt/title.txt"
 
 import { PermissionNext } from "@/permission/next"
 import { NamedError } from "@opencode-ai/util/error" // devilcode_change
+import { createSymphonyAgent } from "@/devilcode/symphony/agent/definition" // devilcode_change
 import { Glob } from "../util/glob" // devilcode_change
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
@@ -339,6 +340,9 @@ export namespace Agent {
         mode: "primary",
         native: true,
       },
+      // devilcode_change end
+      // devilcode_change start - symphony autonomous daemon agent
+      symphony: createSymphonyAgent(defaults, user),
       // devilcode_change end
       general: {
         name: "general",

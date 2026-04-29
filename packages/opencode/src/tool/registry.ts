@@ -30,6 +30,7 @@ import { Truncate } from "./truncation"
 
 import { ApplyPatchTool } from "./apply_patch"
 import { RecallTool } from "./recall" // kilocode_change
+import { LinearGraphqlTool } from "@/devilcode/symphony/agent/tools/linear-graphql" // devilcode_change
 import { Glob } from "../util/glob"
 import { pathToFileURL } from "url"
 
@@ -130,6 +131,7 @@ export namespace ToolRegistry {
       ...(Flag.DEVIL_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       PlanExitTool, // devilcode_change - always registered; gated by agent permission instead
+      LinearGraphqlTool, // devilcode_change - symphony daemon Linear API tool
       ...custom,
     ]
   }
