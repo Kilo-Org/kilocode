@@ -28,6 +28,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface AbortRequest {
@@ -226,6 +227,7 @@ export interface SendCommandRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface RemoveSkillMessage {
@@ -764,6 +766,14 @@ export interface AgentManagerOpenSessionsMessage {
   sessionIDs: string[]
 }
 
+export interface RequestAutoApproveStateMessage {
+  type: "requestAutoApproveState"
+}
+
+export interface ToggleAutoApproveMessage {
+  type: "toggleAutoApprove"
+}
+
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
@@ -1059,6 +1069,8 @@ export type WebviewMessage =
   | PreviewImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | RequestAutoApproveStateMessage
+  | ToggleAutoApproveMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

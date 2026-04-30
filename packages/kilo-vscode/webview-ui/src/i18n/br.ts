@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.stop": "Parar",
   "prompt.action.enhance": "Melhorar prompt",
+  "prompt.action.autoApprove.enable": "Ativar aprovação automática",
+  "prompt.action.autoApprove.disable": "Desativar aprovação automática",
+  "prompt.action.autoApprove.enabled":
+    "A aprovação automática está ativada. Solicitações de permissão serão aprovadas automaticamente.",
+  "prompt.action.autoApprove.disabled":
+    "A aprovação automática está desativada. Clique para aprovar solicitações de permissão automaticamente.",
   "prompt.action.resetModel": "Redefinir modelo para o padrão",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
@@ -1405,6 +1411,10 @@ export const dict = {
   "settings.display.layout.description": "Modo de layout para a interface de chat",
   "settings.display.layout.auto": "Automático",
   "settings.display.layout.stretch": "Esticar",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",

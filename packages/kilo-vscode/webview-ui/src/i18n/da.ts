@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.action.autoApprove.enable": "Aktiver automatisk godkendelse",
+  "prompt.action.autoApprove.disable": "Deaktiver automatisk godkendelse",
+  "prompt.action.autoApprove.enabled":
+    "Automatisk godkendelse er aktiveret. Tilladelsesanmodninger godkendes automatisk.",
+  "prompt.action.autoApprove.disabled":
+    "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
   "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
@@ -1390,6 +1396,10 @@ export const dict = {
   "settings.display.layout.description": "Layouttilstand for chatgrænsefladen",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Stræk",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodel",
   "settings.providers.defaultModel.description": "Primær model til samtaler",
   "settings.providers.smallModel.title": "Lille model",

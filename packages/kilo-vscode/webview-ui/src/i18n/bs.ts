@@ -262,6 +262,12 @@ export const dict = {
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
+  "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
+  "prompt.action.autoApprove.disable": "Isključi automatsko odobravanje",
+  "prompt.action.autoApprove.enabled":
+    "Automatsko odobravanje je uključeno. Zahtjevi za dozvole bit će automatski odobreni.",
+  "prompt.action.autoApprove.disabled":
+    "Automatsko odobravanje je isključeno. Kliknite za automatsko odobravanje zahtjeva za dozvole.",
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
@@ -1402,6 +1408,10 @@ export const dict = {
   "settings.display.layout.description": "Način rasporeda za sučelje chata",
   "settings.display.layout.auto": "Automatski",
   "settings.display.layout.stretch": "Rastegni",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",

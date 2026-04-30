@@ -241,11 +241,11 @@ export function Prompt(props: PromptProps) {
     syncedKey = key
 
     // Only set agent if it's a primary agent (not a subagent)
-    const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
-    if (msg.agent && isPrimaryAgent) {
+    const primary = local.agent.list().find((x) => x.name === msg.agent)
+    if (msg.agent && primary) {
       // Keep command line --agent if specified.
       if (!args.agent) local.agent.set(msg.agent)
-      if (msg.model) {
+      if (msg.model && !primary.model && !args.agent) {
         local.model.set(msg.model)
         local.model.variant.set(msg.model.variant)
       }

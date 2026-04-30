@@ -16,7 +16,7 @@ If you already use the sidebar chat and want to start running multiple agents in
 Rule of thumb: if you would stash or switch branches to do the work, create a worktree instead.
 
 {% callout type="info" %}
-All Agent Manager sessions share a single `kilo serve` process. What each worktree isolates is the filesystem and git state — the branch, the directory, the terminal. API keys, models, and configuration are shared.
+All Agent Manager sessions use the extension's embedded runtime. What each worktree isolates is the filesystem and git state: the branch, the directory, and the terminal. Providers, BYOK keys, custom providers, models, and extension settings are shared with the sidebar.
 {% /callout %}
 
 ## What parallelizes well

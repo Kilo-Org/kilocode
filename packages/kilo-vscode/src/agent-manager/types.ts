@@ -587,6 +587,7 @@ interface SendMessageIn {
   agent?: string
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
+  agentManagerContext?: string
 }
 
 interface SendCommandIn {
@@ -601,6 +602,7 @@ interface SendCommandIn {
   agent?: string
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
+  agentManagerContext?: string
 }
 
 interface RequestTerminalContextIn {

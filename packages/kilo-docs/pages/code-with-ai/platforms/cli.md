@@ -241,7 +241,7 @@ You can use `~` or `$HOME` at the start of a pattern to reference your home dire
 
 ### External Directories
 
-Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `list`, `glob`, `grep`, and many bash commands).
+Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `glob`, `grep`, and many bash commands).
 
 ```json
 {
@@ -308,12 +308,55 @@ Common configuration options include:
 - **`mcp`** - MCP server configuration
 - **`permission`** - Tool permission settings (`allow` or `ask`)
 - **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
-- **`formatter`** - Code formatter configuration
+- **`formatter`** - Code formatter configuration (`true`, `false`, or formatter-specific entries)
+- **`lsp`** - Language server configuration (`true`, `false`, or server-specific entries)
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
 
 {% callout type="tip" %}
 **Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.
 {% /callout %}
+
+### Formatter and LSP Toggles
+
+Set `formatter` or `lsp` to `true` to use built-in defaults, or `false` to disable the feature completely:
+
+```jsonc
+{
+  "formatter": true,
+  "lsp": false,
+}
+```
+
+Both keys also accept object configuration for specific tools or language servers. Custom LSP server entries must include an `extensions` array unless the entry disables a built-in server:
+
+```jsonc
+{
+  "lsp": {
+    "my-language-server": {
+      "command": ["my-lsp", "--stdio"],
+      "extensions": [".foo"],
+    },
+  },
+}
+```
+
+### TUI Keybindings on Windows
+
+The TUI gives `Ctrl+Z` to input undo on Windows because native Windows terminals do not support POSIX terminal suspend. On Windows, `input_undo` defaults to `ctrl+z,ctrl+-,super+z` and `terminal_suspend` is disabled. On macOS and Linux, `terminal_suspend` defaults to `ctrl+z`.
+
+### OpenTelemetry Export
+
+Kilo telemetry is enabled by default and can be disabled with `experimental.openTelemetry = false`:
+
+```jsonc
+{
+  "experimental": {
+    "openTelemetry": false,
+  },
+}
+```
+
+If `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the CLI exports OpenTelemetry traces and logs to that OTLP HTTP endpoint. You can also pass `OTEL_EXPORTER_OTLP_HEADERS` as comma-separated `key=value` pairs and `OTEL_RESOURCE_ATTRIBUTES` as comma-separated resource attributes. Request spans include `http.method`, `http.path`, route params such as `session.id` and `message.id`, and internal params under the `opencode.*` namespace.
 
 ### Environment Variables
 

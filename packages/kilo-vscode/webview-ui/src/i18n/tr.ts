@@ -262,6 +262,10 @@ export const dict = {
   "prompt.action.stop": "Durdur",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.action.indexing": "İndeksleme ayarları",
+  "prompt.action.autoApprove.enable": "Otomatik onayı etkinleştir",
+  "prompt.action.autoApprove.disable": "Otomatik onayı devre dışı bırak",
+  "prompt.action.autoApprove.enabled": "Otomatik onay etkin. İzin istekleri otomatik olarak onaylanacak.",
+  "prompt.action.autoApprove.disabled": "Otomatik onay devre dışı. İzin isteklerini otomatik onaylamak için tıklayın.",
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
@@ -1365,6 +1369,10 @@ export const dict = {
   "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",

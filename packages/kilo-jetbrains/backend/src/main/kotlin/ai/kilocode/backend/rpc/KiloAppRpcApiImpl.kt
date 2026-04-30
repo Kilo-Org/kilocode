@@ -4,10 +4,12 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -36,6 +38,8 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun health(): HealthDto = app.health()
 
+    override suspend fun retry() = app.retry()
+
     override suspend fun restart() = app.restart()
 
     override suspend fun reinstall() = app.reinstall()
@@ -56,6 +60,7 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
                     profile = if (state.data.profile != null) ProfileStatusDto.LOADED
                         else ProfileStatusDto.NOT_LOGGED_IN,
                 ),
+                warnings = state.data.warnings.map(::warning),
             )
             is KiloAppState.Error -> KiloAppStateDto(
                 status = KiloAppStatusDto.ERROR,
@@ -78,5 +83,11 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
         resource = e.resource,
         status = e.status,
         detail = e.detail,
+    )
+
+    private fun warning(w: ConfigWarning) = ConfigWarningDto(
+        path = w.path,
+        message = w.message,
+        detail = w.detail,
     )
 }

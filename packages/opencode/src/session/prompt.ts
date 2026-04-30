@@ -404,7 +404,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               ...req,
               sessionID: input.session.id,
               tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-              ruleset: Permission.merge(input.agent.permission, input.session.permission ?? []),
+              // kilocode_change start - reapply Ask/Plan mode guards after session permissions
+              ruleset: Permission.merge(
+                input.agent.permission,
+                KiloSessionPrompt.guardPermissions({ agent: input.agent, session: input.session }),
+              ),
+              hardRuleset: KiloSessionPrompt.hardPermissions({ agent: input.agent }),
+              // kilocode_change end
             })
             .pipe(Effect.orDie),
       })
@@ -629,8 +635,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             permission
               .ask({
                 ...req,
+                // kilocode_change start - reapply Ask/Plan subagent guards after session permissions
                 sessionID,
-                ruleset: Permission.merge(taskAgent.permission, session.permission ?? []),
+                ruleset: Permission.merge(
+                  taskAgent.permission,
+                  KiloSessionPrompt.guardPermissions({ agent: taskAgent, session }),
+                ),
+                hardRuleset: KiloSessionPrompt.hardPermissions({ agent: taskAgent }),
+                // kilocode_change end
               })
               .pipe(Effect.orDie),
         })
@@ -1400,12 +1412,31 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
           )
+          // kilocode_change start - keep provider-executed tools from forcing a re-loop
           // Some providers return "stop" even when the assistant message contains tool calls.
           // Keep the loop running so tool results can be sent back to the model.
           // Skip provider-executed tool parts — those were fully handled within the
           // provider's stream (e.g. DWS Agent Platform) and don't need a re-loop.
           const hasToolCalls =
             lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
+          // kilocode_change end
+
+          // kilocode_change start - plan_exit is a hard stop before another model call
+          if (
+            lastAssistant?.finish &&
+            hasToolCalls &&
+            lastAssistant.parentID === lastUser.id &&
+            lastUser.id < lastAssistant.id &&
+            KiloSessionPrompt.shouldAskPlanFollowup({ messages: msgs, abort: AbortSignal.any([]) })
+          ) {
+            const action = yield* Effect.promise((signal) =>
+              KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal }),
+            )
+            if (action === "continue") continue
+            yield* slog.info("exiting loop")
+            break
+          }
+          // kilocode_change end
 
           if (
             lastAssistant?.finish &&
@@ -1579,11 +1610,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             ])
             const system = [...env, ...(skills ? [skills] : []), ...instructions]
             const format = lastUser.format ?? { type: "text" as const }
-            if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
-            const result = yield* handle.process({
+            if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
+            const result = yield* handle.process({ // kilocode_change
+              // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
               user: lastUser,
               agent,
-              permission: session.permission,
+              permission: KiloSessionPrompt.guardPermissions({ agent, session }),
+              // kilocode_change end
               sessionID,
               parentSessionID: session.parentID,
               system,

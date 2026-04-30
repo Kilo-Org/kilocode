@@ -4,6 +4,8 @@
  */
 
 import { $ } from "bun"
+import { defaultConfig } from "./config"
+import { matches } from "./match"
 
 export interface ConflictReport {
   timestamp: string
@@ -119,7 +121,7 @@ export function classifyFile(path: string): ConflictFile["type"] {
  * Check if a file should be skipped (not added from upstream)
  */
 function shouldSkipFile(path: string, skipPatterns: string[]): boolean {
-  return skipPatterns.some((pattern) => path === pattern || path.includes(pattern))
+  return matches(path, skipPatterns)
 }
 
 /**
@@ -150,7 +152,7 @@ export function getRecommendation(
   }
 
   // Kilo directories should always keep ours
-  if (path.includes("kilocode") || path.includes("kilo-gateway") || path.includes("kilo-telemetry")) {
+  if (matches(path, defaultConfig.kiloDirectories.map((dir) => `${dir}/**`))) {
     return {
       recommendation: "keep-ours",
       reason: "File is in a Kilo-specific directory",

@@ -73,7 +73,7 @@ const tasks = Object.entries(binaries).map(async ([name]) => {
 await Promise.all(tasks)
 await publish(`./dist/${pkg.name}`, pkg.name, version) // kilocode_change
 
-const image = "ghcr.io/kilo-org/kilo" // kilocode_change
+const image = "ghcr.io/kilo-org/kilocode" // kilocode_change
 const platforms = "linux/amd64,linux/arm64"
 const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])

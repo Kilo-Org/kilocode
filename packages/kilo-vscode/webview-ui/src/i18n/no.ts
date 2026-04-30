@@ -264,6 +264,12 @@ export const dict = {
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
+  "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
+  "prompt.action.autoApprove.disable": "Deaktiver automatisk godkjenning",
+  "prompt.action.autoApprove.enabled":
+    "Automatisk godkjenning er aktivert. Tillatelsesforespørsler godkjennes automatisk.",
+  "prompt.action.autoApprove.disabled":
+    "Automatisk godkjenning er deaktivert. Klikk for å godkjenne tillatelsesforespørsler automatisk.",
   "prompt.action.resetModel": "Tilbakestill modell til standard",
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
@@ -1389,6 +1395,10 @@ export const dict = {
   "settings.display.layout.description": "Layoutmodus for chatgrensesnittet",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Strekk",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

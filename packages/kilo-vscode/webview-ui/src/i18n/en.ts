@@ -263,6 +263,10 @@ export const dict = {
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.indexing": "Indexing settings",
+  "prompt.action.autoApprove.enable": "Enable auto-approve",
+  "prompt.action.autoApprove.disable": "Disable auto-approve",
+  "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
+  "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -1386,6 +1390,10 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",

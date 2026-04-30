@@ -21,6 +21,8 @@ class FakeAppRpcApi : KiloAppRpcApi {
 
     var connected = false
         private set
+    var retries = 0
+        private set
 
     override suspend fun connect() {
         assertNotEdt("connect")
@@ -35,6 +37,11 @@ class FakeAppRpcApi : KiloAppRpcApi {
     override suspend fun health(): HealthDto {
         assertNotEdt("health")
         return health
+    }
+
+    override suspend fun retry() {
+        assertNotEdt("retry")
+        retries += 1
     }
 
     override suspend fun restart() {

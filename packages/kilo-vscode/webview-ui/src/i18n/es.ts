@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
+  "prompt.action.autoApprove.enable": "Activar aprobación automática",
+  "prompt.action.autoApprove.disable": "Desactivar aprobación automática",
+  "prompt.action.autoApprove.enabled":
+    "La aprobación automática está activada. Las solicitudes de permisos se aprobarán automáticamente.",
+  "prompt.action.autoApprove.disabled":
+    "La aprobación automática está desactivada. Haz clic para aprobar solicitudes de permisos automáticamente.",
   "prompt.action.resetModel": "Restablecer modelo al predeterminado",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
@@ -1411,6 +1417,10 @@ export const dict = {
   "settings.display.layout.description": "Modo de diseño para la interfaz de chat",
   "settings.display.layout.auto": "Automático",
   "settings.display.layout.stretch": "Estirar",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Modelo predeterminado",
   "settings.providers.defaultModel.description": "Modelo principal para conversaciones",
   "settings.providers.smallModel.title": "Modelo pequeño",

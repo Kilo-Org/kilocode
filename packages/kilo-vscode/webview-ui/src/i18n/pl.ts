@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
   "prompt.action.stop": "Zatrzymaj",
   "prompt.action.enhance": "Ulepsz prompt",
+  "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
+  "prompt.action.autoApprove.disable": "Wyłącz automatyczne zatwierdzanie",
+  "prompt.action.autoApprove.enabled":
+    "Automatyczne zatwierdzanie jest włączone. Prośby o uprawnienia będą zatwierdzane automatycznie.",
+  "prompt.action.autoApprove.disabled":
+    "Automatyczne zatwierdzanie jest wyłączone. Kliknij, aby automatycznie zatwierdzać prośby o uprawnienia.",
   "prompt.action.resetModel": "Zresetuj model do domyślnego",
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
@@ -1398,6 +1404,10 @@ export const dict = {
   "settings.display.layout.description": "Tryb układu interfejsu czatu",
   "settings.display.layout.auto": "Automatyczny",
   "settings.display.layout.stretch": "Rozciągnij",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Domyślny model",
   "settings.providers.defaultModel.description": "Główny model do rozmów",
   "settings.providers.smallModel.title": "Mały model",

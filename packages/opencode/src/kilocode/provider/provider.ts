@@ -124,13 +124,6 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         return false
       })
 
-      if (!hasKey) {
-        for (const [key, value] of Object.entries(input.models)) {
-          if ((value as any).cost.input === 0) continue
-          delete input.models[key]
-        }
-      }
-
       const options: Record<string, string> = {}
       if (env.KILO_ORG_ID) {
         options.kilocodeOrganizationId = env.KILO_ORG_ID
