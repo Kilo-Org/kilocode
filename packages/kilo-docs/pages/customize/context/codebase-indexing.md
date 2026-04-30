@@ -8,7 +8,7 @@ description: "Index your codebase for improved AI understanding"
 Codebase Indexing enables semantic code search across your entire project using AI embeddings. Instead of searching for exact text matches, it understands the _meaning_ of your queries, helping Kilo Code find relevant code even when you don't know specific function names or file locations.
 
 {% callout type="warning" title="Experimental" %}
-Codebase Indexing is currently **experimental** in the CLI and the new VS Code extension. You must explicitly opt in before the feature becomes available — see [Enabling the feature](#enabling-the-feature) below. Behavior, configuration, and defaults may change in future releases.
+Codebase Indexing is currently **experimental** in the CLI and the new VS Code extension. You must explicitly opt in before the feature becomes available — see the **Setup** section below. Behavior, configuration, and defaults may change in future releases.
 {% /callout %}
 
 ## What It Does
@@ -29,65 +29,14 @@ This enables natural language queries like "user authentication logic" or "datab
 - **Cross-Project Discovery**: Search across all files, not just what's open
 - **Pattern Recognition**: Locate similar implementations and code patterns
 
-## Embedding Providers
-
-Indexing needs an embedding provider to turn code into vectors.
-
-{% tabs %}
-{% tab label="VSCode & CLI" %}
-
-| Provider | How to use | Notes |
-|---|---|---|
-| **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
-| **Ollama** | Local base URL | No API costs. Runs fully offline. |
-| **OpenAI-Compatible** | Base URL + API key | For self-hosted or third-party OpenAI-compatible endpoints. |
-| **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
-| **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
-| **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
-| **AWS Bedrock** | AWS region + profile | Uses the AWS SDK credential chain. |
-| **OpenRouter** | API key (optional specific provider) | Routes through [OpenRouter](https://openrouter.ai/). |
-| **Voyage** | API key | Voyage `voyage-code-3` is tuned for code. |
-
-{% callout type="tip" %}
-For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).
-{% /callout %}
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The legacy extension supports a smaller set of providers:
-
-| Provider | How to use | Notes |
-|---|---|---|
-| **OpenAI** | API key | Default: `text-embedding-3-small`. |
-| **Gemini** | Google AI API key | Supports Gemini embedding models including `gemini-embedding-001`. |
-| **Ollama (local)** | Local base URL | No API costs. |
-
-{% /tab %}
-{% /tabs %}
-
-## Vector Stores
-
-{% tabs %}
-{% tab label="VSCode & CLI" %}
-
-- **Qdrant** (default) — external server. Recommended for team deployments and larger codebases.
-- **LanceDB** — embedded, file-based. No server to run. Stores data under your Kilo data directory by default.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The legacy extension only supports **Qdrant**.
-
-{% /tab %}
-{% /tabs %}
-
-## Enabling the feature
-
-On the CLI and the new VS Code extension, codebase indexing is gated behind an experimental flag. Until the flag is turned on, the Indexing UI and the `/indexing` command are hidden and `semantic_search` is unavailable — even if you already have `indexing` settings in your config.
+## Setup
 
 {% tabs %}
 {% tab label="VSCode" %}
+
+### 1. Enable the experimental flag
+
+Codebase Indexing is gated behind an experimental flag. Until the flag is on, the Indexing UI is hidden and `semantic_search` is unavailable.
 
 1. Open Kilo Code **Settings** → **Experimental**.
 2. Toggle **Semantic Indexing** on.
@@ -103,39 +52,7 @@ Alternatively, set `experimental.semantic_indexing` to `true` in your `kilo.json
 }
 ```
 
-{% /tab %}
-{% tab label="CLI" %}
-
-Set the experimental flag in your `kilo.jsonc`:
-
-```json
-{
-  "experimental": {
-    "semantic_indexing": true
-  }
-}
-```
-
-Restart the CLI for the change to take effect. The `/indexing` command (and aliases `/index`, `/embedding`) will appear in the command palette once the flag is active.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The legacy extension does not require an experimental flag. Configure Codebase Indexing directly in Settings — see the **Configuration → VSCode (Legacy)** section below.
-
-{% /tab %}
-{% /tabs %}
-
-## Configuration
-
-{% tabs %}
-{% tab label="VSCode" %}
-
-### Open the Indexing settings
-
-{% callout type="info" %}
-The **Indexing** tab only shows up after you enable **Semantic Indexing** under Settings → Experimental. See [Enabling the feature](#enabling-the-feature) above.
-{% /callout %}
+### 2. Configure indexing
 
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
 2. Toggle **Enable Indexing** on.
@@ -144,9 +61,7 @@ The **Indexing** tab only shows up after you enable **Semantic Indexing** under 
 5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
 6. Save to start the initial scan.
 
-### Configure via `kilo.jsonc`
-
-The VS Code extension reads the same `indexing` section as the CLI:
+You can also edit the `indexing` section in `kilo.jsonc` directly:
 
 ```json
 {
@@ -161,7 +76,28 @@ The VS Code extension reads the same `indexing` section as the CLI:
 }
 ```
 
-See the **CLI** tab for the full list of provider keys and tuning parameters — the schema is shared.
+### Embedding providers
+
+| Provider | How to use | Notes |
+|---|---|---|
+| **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
+| **Ollama** | Local base URL | No API costs. Runs fully offline. |
+| **OpenAI-Compatible** | Base URL + API key | For self-hosted or third-party OpenAI-compatible endpoints. |
+| **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
+| **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
+| **Vercel AI Gateway** | API key | Routes requests through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
+| **AWS Bedrock** | AWS region + profile | Uses the AWS SDK credential chain. |
+| **OpenRouter** | API key (optional specific provider) | Routes through [OpenRouter](https://openrouter.ai/). |
+| **Voyage** | API key | Voyage `voyage-code-3` is tuned for code. |
+
+### Vector stores
+
+- **Qdrant** (default) — external server. Recommended for team deployments and larger codebases. See [Setting Up Qdrant](#setting-up-qdrant).
+- **LanceDB** — embedded, file-based. No server to run. Stores data under your Kilo data directory by default.
+
+{% callout type="tip" %}
+For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).
+{% /callout %}
 
 ### Status indicator
 
@@ -170,11 +106,23 @@ The prompt input panel shows a compact indexing status indicator that reflects t
 {% /tab %}
 {% tab label="CLI" %}
 
-### Configure via `/indexing`
+### 1. Enable the experimental flag
 
-{% callout type="info" %}
-The `/indexing` command is only registered after `experimental.semantic_indexing` is set to `true`. See [Enabling the feature](#enabling-the-feature) above.
-{% /callout %}
+Codebase Indexing is gated behind an experimental flag. Until the flag is on, the `/indexing` command is hidden and `semantic_search` is unavailable.
+
+Set the flag in your `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "semantic_indexing": true
+  }
+}
+```
+
+Restart the CLI for the change to take effect. The `/indexing` command (and aliases `/index`, `/embedding`) will appear in the command palette once the flag is active.
+
+### 2. Configure indexing
 
 Open a Kilo TUI session and run:
 
@@ -194,8 +142,6 @@ This opens an interactive configuration dialog where you can:
 - Adjust **Tuning Parameters** (search threshold, batch size, retries, max results)
 
 All changes are written to your `kilo.jsonc` config and take effect immediately.
-
-### Configure via `kilo.jsonc`
 
 You can also edit the `indexing` section directly. This is the full shape of the section:
 
@@ -222,22 +168,28 @@ You can also edit the `indexing` section directly. This is the full shape of the
 }
 ```
 
-Only one provider block is required — it must match the `provider` key. Supported provider keys:
+### Embedding providers
 
-- `openai` — `{ apiKey }`
-- `ollama` — `{ baseUrl }`
-- `openai-compatible` — `{ baseUrl, apiKey }`
-- `gemini` — `{ apiKey }`
-- `mistral` — `{ apiKey }`
-- `vercel-ai-gateway` — `{ apiKey }`
-- `bedrock` — `{ region, profile }`
-- `openrouter` — `{ apiKey, specificProvider? }`
-- `voyage` — `{ apiKey }`
+| Provider | Config key | Settings | Notes |
+|---|---|---|---|
+| **OpenAI** | `openai` | `{ apiKey }` | Default: `text-embedding-3-small`. |
+| **Ollama** | `ollama` | `{ baseUrl }` | No API costs. Runs fully offline. |
+| **OpenAI-Compatible** | `openai-compatible` | `{ baseUrl, apiKey }` | For self-hosted or third-party endpoints. |
+| **Gemini** | `gemini` | `{ apiKey }` | Supports `gemini-embedding-001`. |
+| **Mistral** | `mistral` | `{ apiKey }` | Use a [La Plateforme](https://console.mistral.ai/api-keys/) key — the Codestral-specific keys from the [autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) don't work for embeddings. |
+| **Vercel AI Gateway** | `vercel-ai-gateway` | `{ apiKey }` | Routes through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). |
+| **AWS Bedrock** | `bedrock` | `{ region, profile }` | Uses AWS SDK credential chain. |
+| **OpenRouter** | `openrouter` | `{ apiKey, specificProvider? }` | Routes through [OpenRouter](https://openrouter.ai/). |
+| **Voyage** | `voyage` | `{ apiKey }` | `voyage-code-3` is tuned for code. |
 
-Supported vector store blocks:
+### Vector stores
 
-- `qdrant` — `{ url?, apiKey? }`
-- `lancedb` — `{ directory? }` (uses a default Kilo data directory when omitted)
+- `qdrant` — `{ url?, apiKey? }` (default). See [Setting Up Qdrant](#setting-up-qdrant).
+- `lancedb` — `{ directory? }` — embedded, file-based. No server to run. Uses a default Kilo data directory when omitted.
+
+{% callout type="tip" %}
+For a fully local, zero-cost setup, combine **Ollama** (embeddings) with **LanceDB** (vector store — no separate server needed).
+{% /callout %}
 
 ### Status indicator
 
@@ -246,11 +198,13 @@ When indexing is enabled, the CLI shows an indexing status badge at the bottom o
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
+The legacy extension does not require an experimental flag.
+
 ### Open Codebase Indexing Settings
 
-1. In the chat header, click the database icon (indexing status)
-2. The Codebase Indexing settings panel opens
-3. If you don't see the icon, open Kilo Code settings ({% codicon name="gear" /%}) and search for **Codebase Indexing**
+1. In the chat header, click the database icon (indexing status).
+2. The Codebase Indexing settings panel opens.
+3. If you don't see the icon, open Kilo Code settings ({% codicon name="gear" /%}) and search for **Codebase Indexing**.
 
 {% image src="/docs/img/codebase-indexing/codebase-indexing.png" alt="Codebase Indexing Settings" width="800" caption="Codebase Indexing Settings (legacy)" /%}
 
@@ -265,7 +219,19 @@ When indexing is enabled, the CLI shows an indexing status badge at the bottom o
 4. Configure **Max Search Results** (default: 20, range: 1-100).
 5. Click **Save** to start initial indexing.
 
-The legacy extension only supports **Qdrant** as a vector store.
+### Embedding providers
+
+The legacy extension supports a smaller set of providers:
+
+| Provider | How to use | Notes |
+|---|---|---|
+| **OpenAI** | API key | Default: `text-embedding-3-small`. |
+| **Gemini** | Google AI API key | Supports Gemini embedding models including `gemini-embedding-001`. |
+| **Ollama (local)** | Local base URL | No API costs. |
+
+### Vector store
+
+The legacy extension only supports **Qdrant**. See [Setting Up Qdrant](#setting-up-qdrant).
 
 {% /tab %}
 {% /tabs %}
