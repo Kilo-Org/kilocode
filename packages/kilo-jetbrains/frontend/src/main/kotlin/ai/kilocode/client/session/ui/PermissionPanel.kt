@@ -1,6 +1,6 @@
 package ai.kilocode.client.session.ui
 
-import ai.kilocode.client.session.SessionController
+import ai.kilocode.client.session.update.SessionController
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons

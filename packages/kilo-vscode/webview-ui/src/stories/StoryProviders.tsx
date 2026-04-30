@@ -16,6 +16,7 @@ import { ServerProvider } from "../context/server"
 import { ProviderContext } from "../context/provider"
 import { flattenModels, findModel as _findModel } from "../context/provider-utils"
 import { ConfigProvider, ConfigContext } from "../context/config"
+import { DisplayProvider } from "../context/display"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -317,42 +318,44 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
     <VSCodeProvider>
       <ServerProvider>
         <ConfigWrapper config={props.config} onConfigChange={props.onConfigChange}>
-          <MockProviderProvider>
-            <DialogProvider>
-              <LanguageContext.Provider
-                value={{
-                  locale,
-                  setLocale: noop,
-                  userOverride: () => "" as any,
-                  t,
-                }}
-              >
-                <I18nProvider value={{ locale: () => "en", t }}>
-                  <NotificationsContext.Provider value={notifications}>
-                    <SessionContext.Provider value={session as any}>
-                      <IndexingProvider>
-                        <DataProvider data={data()} directory="/project/">
-                          <DiffComponentProvider component={Diff}>
-                            <CodeComponentProvider component={Code}>
-                              <FileComponentProvider component={File}>
-                                <MarkedProvider>
-                                  {props.noPadding ? (
-                                    props.children
-                                  ) : (
-                                    <div style={{ padding: "12px" }}>{props.children}</div>
-                                  )}
-                                </MarkedProvider>
-                              </FileComponentProvider>
-                            </CodeComponentProvider>
-                          </DiffComponentProvider>
-                        </DataProvider>
-                      </IndexingProvider>
-                    </SessionContext.Provider>
-                  </NotificationsContext.Provider>
-                </I18nProvider>
-              </LanguageContext.Provider>
-            </DialogProvider>
-          </MockProviderProvider>
+          <DisplayProvider>
+            <MockProviderProvider>
+              <DialogProvider>
+                <LanguageContext.Provider
+                  value={{
+                    locale,
+                    setLocale: noop,
+                    userOverride: () => "" as any,
+                    t,
+                  }}
+                >
+                  <I18nProvider value={{ locale: () => "en", t }}>
+                    <NotificationsContext.Provider value={notifications}>
+                      <SessionContext.Provider value={session as any}>
+                        <IndexingProvider>
+                          <DataProvider data={data()} directory="/project/">
+                            <DiffComponentProvider component={Diff}>
+                              <CodeComponentProvider component={Code}>
+                                <FileComponentProvider component={File}>
+                                  <MarkedProvider>
+                                    {props.noPadding ? (
+                                      props.children
+                                    ) : (
+                                      <div style={{ padding: "12px" }}>{props.children}</div>
+                                    )}
+                                  </MarkedProvider>
+                                </FileComponentProvider>
+                              </CodeComponentProvider>
+                            </DiffComponentProvider>
+                          </DataProvider>
+                        </IndexingProvider>
+                      </SessionContext.Provider>
+                    </NotificationsContext.Provider>
+                  </I18nProvider>
+                </LanguageContext.Provider>
+              </DialogProvider>
+            </MockProviderProvider>
+          </DisplayProvider>
         </ConfigWrapper>
       </ServerProvider>
     </VSCodeProvider>

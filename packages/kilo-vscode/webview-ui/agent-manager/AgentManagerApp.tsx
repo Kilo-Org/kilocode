@@ -75,6 +75,7 @@ import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
+import { DisplayProvider } from "../src/context/display"
 import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
@@ -3164,17 +3165,19 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <NotificationsProvider>
-                            <SessionProvider>
-                              <IndexingProvider>
-                                <WorktreeModeProvider>
-                                  <DataBridge>
-                                    <AgentManagerContent />
-                                  </DataBridge>
-                                </WorktreeModeProvider>
-                              </IndexingProvider>
-                            </SessionProvider>
-                          </NotificationsProvider>
+                          <DisplayProvider>
+                            <NotificationsProvider>
+                              <SessionProvider>
+                                <IndexingProvider>
+                                  <WorktreeModeProvider>
+                                    <DataBridge>
+                                      <AgentManagerContent />
+                                    </DataBridge>
+                                  </WorktreeModeProvider>
+                                </IndexingProvider>
+                              </SessionProvider>
+                            </NotificationsProvider>
+                          </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

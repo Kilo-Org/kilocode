@@ -1,4 +1,6 @@
 ---
+title: "Using GCP Vertex AI with Kilo Code"
+description: "Connect Google Cloud Vertex AI to Kilo Code to use Claude, Gemini, and other models through your GCP account."
 sidebar_label: GCP Vertex AI
 ---
 

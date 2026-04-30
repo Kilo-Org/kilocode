@@ -167,7 +167,14 @@ export const Info = Schema.Struct({
   remote_control: Schema.optional(Schema.Boolean).annotate({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
+  auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
+    description: "Automatically collapse reasoning blocks after the agent finishes writing them",
+  }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }), // kilocode_change
+  terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
+    description:
+      "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   // kilocode_change end
   // kilocode_change start - nullable for delete sentinel
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({

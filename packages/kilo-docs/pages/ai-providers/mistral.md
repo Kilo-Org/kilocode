@@ -1,4 +1,6 @@
 ---
+title: "Using Mistral AI with Kilo Code"
+description: "Configure Mistral AI models, including Codestral, in Kilo Code. Guide to getting an API key and setup for VS Code and the CLI."
 sidebar_label: Mistral AI
 ---
 

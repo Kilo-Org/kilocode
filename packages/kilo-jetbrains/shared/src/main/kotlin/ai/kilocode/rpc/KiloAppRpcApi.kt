@@ -31,6 +31,9 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
     /** One-shot health check against /global/health. */
     suspend fun health(): HealthDto
 
+    /** Retry app connection or loading after a failure. */
+    suspend fun retry()
+
     /** Kill the CLI process and restart it. */
     suspend fun restart()
 

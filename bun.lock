@@ -18,6 +18,7 @@
         "@changesets/changelog-github": "^0.5.1",
         "@changesets/cli": "^2.27.10",
         "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
         "@types/mime-types": "3.0.1",
         "@typescript/native-preview": "catalog:",
         "glob": "13.0.5",

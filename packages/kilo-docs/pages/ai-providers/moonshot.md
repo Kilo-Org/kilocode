@@ -1,4 +1,6 @@
 ---
+title: "Using Moonshot AI (Kimi) with Kilo Code"
+description: "Connect Moonshot's Kimi models to Kilo Code. Setup guide for getting an API key and selecting models in VS Code and the CLI."
 sidebar_label: Moonshot.ai
 ---
 

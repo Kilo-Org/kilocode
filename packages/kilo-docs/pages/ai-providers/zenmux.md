@@ -1,5 +1,6 @@
 ---
-title: ZenMux
+title: "Using ZenMux with Kilo Code | Unified AI Gateway"
+description: "Access OpenAI, Anthropic, Google, and other AI models through ZenMux in Kilo Code with automatic routing and cost optimization."
 ---
 
 import Codicon from "@site/src/components/Codicon";

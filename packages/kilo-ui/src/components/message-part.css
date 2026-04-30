@@ -261,8 +261,7 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 }
 
 /* Reasoning block: visually distinct from normal agent output.
-   While streaming: open with fixed-height scrollable window.
-   When done: auto-collapses; user can click to reopen. */
+   Reasoning stays open unless the user explicitly collapses it. */
 [data-component="reasoning-part"] {
   width: 100%;
   border-left: 2px solid var(--border-weak-base);
@@ -345,9 +344,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     }
   }
 
-  /* Streaming state: fixed-height window with auto-scroll */
+  /* Streaming state: keep the block open while content grows. */
   &[data-streaming] {
-    [data-slot="reasoning-content"] {
+    &[data-auto-collapse] [data-slot="reasoning-content"] {
       max-height: 120px;
       overflow-y: auto;
       scroll-behavior: smooth;

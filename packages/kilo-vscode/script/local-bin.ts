@@ -26,7 +26,6 @@ const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
 const versionFile = join(targetBinDir, ".cli-version")
-const sharedVersionFile = join(targetBinDir, ".shared-version")
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
@@ -123,8 +122,8 @@ async function ensureBuiltBinary(): Promise<string> {
     `No prebuilt binary found under ${relative(kiloVscodeDir, join(opencodeDir, "dist"))} - attempting build via bun.`,
   )
 
-  const bunFile = Bun.file(await Bun.which("bun"))
-  if (!(await bunFile.exists())) {
+  const bunPath = Bun.which("bun")
+  if (!bunPath) {
     throw new Error(
       `Bun is required to build the CLI binary, but was not found on PATH. ` +
         `Install bun, or build the CLI separately in ${opencodeDir} and re-run.`,
@@ -186,14 +185,6 @@ async function main() {
   // Record the CLI source version so future runs detect when a rebuild is needed
   const hash = await cliSourceHash()
   if (hash) await Bun.write(versionFile, hash + "\n")
-
-  // Also record shared package version for cache invalidation
-  try {
-    const sharedHash = await $`git log -1 --format=%H -- .`.cwd(sharedDir).quiet()
-    await Bun.write(sharedVersionFile, sharedHash.text().trim() + "\n")
-  } catch {
-    // ignore errors for shared package
-  }
 
   log(`Copied CLI binary from ${relative(packagesDir, sourceBinPath)} -> ${relative(kiloVscodeDir, targetBinPath)}`)
 }
