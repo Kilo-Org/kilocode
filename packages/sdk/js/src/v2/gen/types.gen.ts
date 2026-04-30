@@ -590,6 +590,30 @@ export type EventVcsBranchUpdated = {
   }
 }
 
+export type EventKilocodeAgentManagerStart = {
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      /**
+       * Initial prompt to send to the new session
+       */
+      prompt?: string
+      /**
+       * Display name or branch-name seed
+       */
+      name?: string
+      /**
+       * Explicit worktree branch name
+       */
+      branchName?: string
+    }>
+  }
+}
+
 export type EventSessionCompacted = {
   type: "session.compacted"
   properties: {
@@ -1331,6 +1355,7 @@ export type GlobalEvent = {
     | EventSessionIdle
     | EventTodoUpdated
     | EventVcsBranchUpdated
+    | EventKilocodeAgentManagerStart
     | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
     | EventWorktreeReady
@@ -1539,6 +1564,7 @@ export type PermissionConfig =
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
+      agent_manager?: PermissionRuleConfig
       [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
 
@@ -2022,6 +2048,10 @@ export type Config = {
      */
     semantic_indexing?: boolean
     /**
+     * Enable the VS Code Agent Manager orchestration tool
+     */
+    agent_manager_tool?: boolean
+    /**
      * Enable telemetry. Set to false to opt-out.
      */
     openTelemetry?: boolean
@@ -2453,6 +2483,7 @@ export type Event =
   | EventSessionIdle
   | EventTodoUpdated
   | EventVcsBranchUpdated
+  | EventKilocodeAgentManagerStart
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
   | EventWorktreeReady

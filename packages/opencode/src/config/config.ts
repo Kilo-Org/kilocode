@@ -288,6 +288,9 @@ export const Info = Schema.Struct({
       semantic_indexing: Schema.optional(Schema.Boolean).annotate({
         description: "Enable semantic codebase indexing and the semantic_search tool",
       }),
+      agent_manager_tool: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable the VS Code Agent Manager orchestration tool",
+      }),
       // kilocode_change end
       // kilocode_change start - enable telemetry by default
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({

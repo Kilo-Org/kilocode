@@ -1213,6 +1213,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-tool",
+  "settings.experimental.agentManagerTool.description":
+    "Sta agents toe om lokale Agent Manager-sessies en worktree-sessies te starten vanuit een tool call",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",

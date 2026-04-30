@@ -20,11 +20,14 @@ export namespace Global {
     Service,
     Effect.gen(function* () {
       const app = "opencode"
-      const home = process.env.KILO_TEST_HOME ?? os.homedir()
-      const data = path.join(xdgData!, app)
-      const cache = path.join(xdgCache!, app)
-      const cfg = path.join(xdgConfig!, app)
-      const state = path.join(xdgState!, app)
+      // kilocode_change start - guard against newline-contaminated HOME/XDG paths
+      const clean = (p: string | undefined) => p?.replace(/[\r\n]+/g, "")
+      const home = clean(process.env.KILO_TEST_HOME ?? os.homedir())!
+      const data = path.join(clean(xdgData)!, app)
+      const cache = path.join(clean(xdgCache)!, app)
+      const cfg = path.join(clean(xdgConfig)!, app)
+      const state = path.join(clean(xdgState)!, app)
+      // kilocode_change end
       const bin = path.join(cache, "bin")
       const log = path.join(data, "log")
 

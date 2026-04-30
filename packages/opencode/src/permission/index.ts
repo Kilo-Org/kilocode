@@ -519,6 +519,7 @@ const SCALAR_ONLY_PERMISSIONS = new Set([
   "websearch",
   "codesearch",
   "doom_loop",
+  "agent_manager", // kilocode_change
 ])
 
 export function toConfig(rules: Ruleset): ConfigPermission.Info {

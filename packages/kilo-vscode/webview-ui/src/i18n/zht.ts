@@ -1153,6 +1153,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
+  "settings.experimental.agentManagerTool.description":
+    "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
