@@ -56,4 +56,16 @@ describe("agent_manager tool", () => {
       },
     ])
   })
+
+  test("rejects empty tasks", async () => {
+    const tool = await init()
+
+    await expect(
+      runtime.runPromise(
+        provideTmpdirInstance(() =>
+          tool.execute({ mode: "local", tasks: [{}] }, { ...ctx, ask: () => Effect.void }),
+        ).pipe(Effect.scoped),
+      ),
+    ).rejects.toThrow("Each task must include prompt, name, or branchName")
+  })
 })

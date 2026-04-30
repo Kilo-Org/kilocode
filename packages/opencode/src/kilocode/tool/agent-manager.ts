@@ -9,7 +9,13 @@ const Task = Schema.Struct({
   prompt: Schema.optional(Schema.String).annotate({ description: "Initial prompt to send to the new session" }),
   name: Schema.optional(Schema.String).annotate({ description: "Short display name for the Agent Manager card" }),
   branchName: Schema.optional(Schema.String).annotate({ description: "Git branch name seed for worktree mode" }),
-})
+}).check(
+  Schema.makeFilter((task: { prompt?: string; name?: string; branchName?: string }) =>
+    task.prompt?.trim() || task.name?.trim() || task.branchName?.trim()
+      ? undefined
+      : "Each task must include prompt, name, or branchName",
+  ),
+)
 
 export const Params = Schema.Struct({
   mode: Schema.Literals(["worktree", "local"]).annotate({
