@@ -1350,6 +1350,9 @@ const userOpened = new Set<string>()
 const MAX_REASONING_STATE = 1000
 
 function rememberReasoningState(set: Set<string>, id: string) {
+  // Remember the most recent manual display choices without growing forever.
+  // If an old id is evicted, only its open/collapsed override is forgotten;
+  // the reasoning block still renders normally if it appears again.
   if (set.has(id)) set.delete(id)
   set.add(id)
   if (set.size <= MAX_REASONING_STATE) return

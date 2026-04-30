@@ -85,7 +85,7 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
-import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, LOCAL } from "./navigate"
+import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
@@ -721,16 +721,18 @@ const AgentManagerContent: Component = () => {
 
   // Invalidate local session IDs if they no longer exist (preserve pending tabs)
   createEffect(() => {
+    if (!worktreesLoaded()) return
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
-    const ids = all.map((s) => s.id)
-    const prev = localSessionIDs()
-    const valid = prev.filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
-    if (valid.length !== prev.length) {
-      const removed = prev.filter((lid) => !isPending(lid) && !valid.includes(lid))
-      for (const id of removed) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
-      setLocalSessionIDs(valid)
-    }
+    const next = reconcileLocalSessions(
+      localSessionIDs(),
+      all.map((s) => s.id),
+      managedSessions(),
+      isPending,
+    )
+    if (!next) return
+    for (const id of next.forget) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
+    setLocalSessionIDs(next.ids)
   })
   // Drop in-memory review state for worktrees that no longer exist.
   createEffect(() => {
