@@ -10,9 +10,16 @@ import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kiloc
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { optionalOmitUndefined } from "@/util/schema"
+import { InstallationVersion } from "@/installation/version"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+
+// Perplexity attribution slug — required by Perplexity for first-party integrations.
+// See https://docs.perplexity.ai
+export const PERPLEXITY_INTEGRATION_HEADER = "X-Pplx-Integration"
+export const PERPLEXITY_INTEGRATION_SLUG = "kilo-code"
+export const perplexityIntegrationValue = () => `${PERPLEXITY_INTEGRATION_SLUG}/${InstallationVersion}`
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -153,6 +160,36 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         autoload: false,
         options: { headers: DEFAULT_HEADERS },
       }),
+
+    // Perplexity (Sonar) — OpenAI-compatible Agent API at https://api.perplexity.ai
+    // Default model is `sonar-pro`. We:
+    //   • support `PPLX_API_KEY` as a fallback to `PERPLEXITY_API_KEY`
+    //   • attach the `X-Pplx-Integration: kilo-code/<version>` attribution header
+    //     on every outgoing request (see patchCustomLoaderResult)
+    perplexity: Effect.fnUntraced(function* (input: any) {
+      const env = yield* dep.env()
+      const config = yield* dep.config()
+      const auth = yield* dep.auth(input.id)
+      const configKey = config.provider?.["perplexity"]?.options?.apiKey
+
+      const apiKey =
+        configKey ??
+        (auth?.type === "api" ? auth.key : undefined) ??
+        env.PERPLEXITY_API_KEY ??
+        env.PPLX_API_KEY
+
+      const options: Record<string, any> = {
+        headers: {
+          [PERPLEXITY_INTEGRATION_HEADER]: perplexityIntegrationValue(),
+        },
+      }
+      if (apiKey) options.apiKey = apiKey
+
+      return {
+        autoload: Boolean(apiKey),
+        options,
+      }
+    }),
   }
 }
 
@@ -179,6 +216,13 @@ export function patchCustomLoaderResult(
       result.options.headers = {
         ...result.options.headers,
         "X-Cerebras-3rd-Party-Integration": "kilo",
+      }
+      break
+    case "perplexity":
+      // Perplexity attribution header — required on every outgoing request.
+      result.options.headers = {
+        ...result.options.headers,
+        [PERPLEXITY_INTEGRATION_HEADER]: perplexityIntegrationValue(),
       }
       break
     case "azure": {
