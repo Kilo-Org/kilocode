@@ -1,9 +1,12 @@
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
-import { versionedName } from "./branch-name"
+import { sanitizeBranchName, versionedName } from "./branch-name"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { PanelContext } from "./host"
 import { PLATFORM } from "./constants"
+
+const LABEL_MAX = 28
+const PREFIX = new Set(["feat", "fix", "chore", "bug", "issue", "task", "branch"])
 
 export interface ToolTask {
   prompt?: string
@@ -56,6 +59,40 @@ function text(task: ToolTask): string | undefined {
 
 function clean(value: string | undefined): string | undefined {
   return value?.trim() || undefined
+}
+
+function label(value: string | undefined): string | undefined {
+  const raw = clean(value)
+  if (!raw) return undefined
+  const words = raw
+    .toLowerCase()
+    .replace(/[/_.-]+/g, " ")
+    .replace(/[^a-z0-9 ]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+  const meaningful = words.filter((word) => !PREFIX.has(word))
+  const picked: string[] = []
+  for (const word of meaningful.length > 0 ? meaningful : words) {
+    const next = [...picked, word].join(" ")
+    if (next.length > LABEL_MAX) break
+    picked.push(word)
+    if (picked.length >= 3) break
+  }
+  return picked.join(" ") || words[0]?.slice(0, LABEL_MAX) || undefined
+}
+
+function branch(value: string | undefined): string | undefined {
+  const raw = clean(value)
+  if (!raw) return undefined
+  return sanitizeBranchName(raw) || undefined
+}
+
+function versionedLabel(base: string | undefined, index: number, total: number): string | undefined {
+  if (!base) return undefined
+  if (total > 1 && index > 0) return `${base} v${index + 1}`
+  return base
 }
 
 async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTask) {
@@ -114,14 +151,14 @@ async function worktree(
   groupId?: string,
   versions?: boolean,
 ) {
-  const name = task.name?.trim() || undefined
-  const branch = task.branchName?.trim() || undefined
-  const version = versionedName(branch || name, versions ? index : 0, versions ? total : 1)
+  const baseBranch = branch(task.branchName) ?? branch(task.name)
+  const baseLabel = label(task.name) ?? label(task.branchName) ?? label(task.prompt)
+  const version = versionedName(baseBranch, versions ? index : 0, versions ? total : 1)
   const created = await deps.createWorktree({
     groupId,
     branchName: version.branch,
     name: version.branch,
-    label: version.label,
+    label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
   })
   if (!created) return false
 

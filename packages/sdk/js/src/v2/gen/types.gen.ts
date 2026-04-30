@@ -603,11 +603,11 @@ export type EventKilocodeAgentManagerStart = {
        */
       prompt?: string
       /**
-       * Display name or branch-name seed
+       * Short display name for the Agent Manager card
        */
       name?: string
       /**
-       * Explicit worktree branch name
+       * Git branch name seed for worktree mode
        */
       branchName?: string
     }>

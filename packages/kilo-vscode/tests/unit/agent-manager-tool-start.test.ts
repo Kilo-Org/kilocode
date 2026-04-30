@@ -96,7 +96,9 @@ describe("agent manager tool start", () => {
     const c = deps()
     await startFromTool(c, { requestID: "am-2", mode: "worktree", tasks: [{ prompt: "Fix", branchName: "fix/one" }] })
 
-    expect(c.createWorktree).toHaveBeenCalledWith(expect.objectContaining({ branchName: "fix/one", name: "fix/one" }))
+    expect(c.createWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ branchName: "fix-one", name: "fix-one", label: "one" }),
+    )
     expect(c.setup).toHaveBeenCalled()
     expect(c.createSessionInWorktree).toHaveBeenCalled()
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
@@ -113,7 +115,10 @@ describe("agent manager tool start", () => {
         { prompt: "Fix two", branchName: "fix/two" },
       ],
     })
-    expect(normal.createWorktree).toHaveBeenNthCalledWith(2, expect.objectContaining({ branchName: "fix/two" }))
+    expect(normal.createWorktree).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ branchName: "fix-two", label: "two" }),
+    )
 
     const grouped = deps()
     await startFromTool(grouped, {
@@ -125,7 +130,32 @@ describe("agent manager tool start", () => {
         { prompt: "Try two", branchName: "try/work" },
       ],
     })
-    expect(grouped.createWorktree).toHaveBeenNthCalledWith(2, expect.objectContaining({ branchName: "try/work_v2" }))
+    expect(grouped.createWorktree).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ branchName: "try-work_v2", label: "try work v2" }),
+    )
+  })
+
+  it("sanitizes branch names and keeps card labels short", async () => {
+    const c = deps()
+    await startFromTool(c, {
+      requestID: "am-name",
+      mode: "worktree",
+      tasks: [
+        {
+          prompt: "Fix command permissions persistence regression",
+          name: "Fix command permissions persistence regression that is too long",
+          branchName: "fix command permissions @#$ persistence",
+        },
+      ],
+    })
+
+    expect(c.createWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({
+        branchName: "fix-command-permissions-persistence",
+        label: "command permissions",
+      }),
+    )
   })
 
   it("rejects local sessions for unknown worktree directories", async () => {

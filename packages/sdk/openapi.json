@@ -12261,11 +12261,11 @@
                       "type": "string"
                     },
                     "name": {
-                      "description": "Display name or branch-name seed",
+                      "description": "Short display name for the Agent Manager card",
                       "type": "string"
                     },
                     "branchName": {
-                      "description": "Explicit worktree branch name",
+                      "description": "Git branch name seed for worktree mode",
                       "type": "string"
                     }
                   }
