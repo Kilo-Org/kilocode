@@ -161,7 +161,8 @@ const PermissionEditor: Component<{
 }> = (props) => {
   const perms = createMemo(() => props.permissions ?? {})
 
-  const levelFor = (tool: string): PermissionLevel => wildcardAction(perms()[tool], effectiveRuleLevel(props.rules, tool))
+  const levelFor = (tool: string): PermissionLevel =>
+    wildcardAction(perms()[tool], effectiveRuleLevel(props.rules, tool))
 
   const ruleFor = (tool: string): PermissionRule | undefined => perms()[tool]
 
@@ -335,7 +336,12 @@ const SimpleToolRow: Component<{
           {language.t(props.descriptionKey)}
         </div>
       </div>
-      <ActionSelect level={props.level} inherited={props.inherited} onChange={props.onChange} onInherit={props.onInherit} />
+      <ActionSelect
+        level={props.level}
+        inherited={props.inherited}
+        onChange={props.onChange}
+        onInherit={props.onInherit}
+      />
     </div>
   )
 }
@@ -462,7 +468,12 @@ const GranularToolRow: Component<{
                     level={exc.action}
                     onChange={(level: PermissionLevel) => props.onExceptionChange(exc.pattern, level)}
                   />
-                  <IconButton variant="ghost" size="small" icon="close" onClick={() => props.onExceptionRemove(exc.pattern)} />
+                  <IconButton
+                    variant="ghost"
+                    size="small"
+                    icon="close"
+                    onClick={() => props.onExceptionRemove(exc.pattern)}
+                  />
                 </div>
               </div>
             )}

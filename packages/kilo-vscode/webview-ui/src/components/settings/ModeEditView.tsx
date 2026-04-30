@@ -262,8 +262,8 @@ const ModeEditView: Component<Props> = (props) => {
                 "line-height": "1.45",
               }}
             >
-              These settings only apply to this custom agent. Change a dropdown from Default to create an override,
-              or use Add path/Add command for tool-specific exceptions.
+              These settings only apply to this custom agent. Change a dropdown from Default to create an override, or
+              use Add path/Add command for tool-specific exceptions.
             </div>
           </div>
           <div style={{ padding: "0 16px 4px" }}>
