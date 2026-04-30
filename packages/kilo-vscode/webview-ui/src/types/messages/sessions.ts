@@ -17,7 +17,7 @@ export interface Message {
   parentID?: string
   path?: { cwd: string; root: string }
   error?: { name: string; data?: Record<string, unknown> }
-  summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
+  summary?: { title?: string; body?: string } | boolean
   cost?: number
   tokens?: TokenUsage
   finish?: string
