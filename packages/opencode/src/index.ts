@@ -50,6 +50,16 @@ if (!process.env[ENV_FEATURE]) {
   process.env[ENV_FEATURE] = isServe ? "unknown" : "cli"
 }
 
+// kilocode_change - default KILO_PLATFORM for the direct-CLI path. Same shape as the
+// KILOCODE_FEATURE default above: embedders (extension, jetbrains, cloud code-review,
+// app-builder) set KILO_PLATFORM themselves before spawning 'kilo serve', so this only
+// catches standalone CLI use. Without this, kilo-telemetry falls back to process.platform
+// and PostHog 'platform' rows show 'darwin'/'linux'/'win32' instead of 'cli'.
+if (!process.env["KILO_PLATFORM"]) {
+  const isServe = process.argv.includes("serve")
+  process.env["KILO_PLATFORM"] = isServe ? "unknown" : "cli"
+}
+
 // kilocode_change - set version so kilo-gateway can include it in the editor name header
 if (!process.env[ENV_VERSION]) {
   process.env[ENV_VERSION] = InstallationVersion
