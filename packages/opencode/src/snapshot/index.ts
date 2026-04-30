@@ -254,9 +254,15 @@ export const layer: Layer.Layer<
           const all = Array.from(new Set([...tracked, ...untracked]))
           if (!all.length) return
 
-          // Resolve source-repo ignore rules against the exact candidate set.
-          // --no-index keeps this pattern-based even when a path is already tracked.
-          const ignored = yield* ignore(all)
+          // kilocode_change start - only check-ignore the modified-tracked subset.
+          // `ls-files --others --exclude-standard` already honors gitignore, so untracked
+          // candidates cannot be ignored. The remaining reason to run `check-ignore` is to
+          // catch previously-tracked files that now match a gitignore pattern (so they can
+          // be dropped from the snapshot index). Restricting the input to `tracked` keeps
+          // snapshot startup fast on very large repos (e.g. intellij-community ~75k files)
+          // where passing the full file list to `git check-ignore` was hanging `Snapshot.track()`.
+          const ignored = yield* ignore(tracked)
+          // kilocode_change end
 
           // Remove newly-ignored files from snapshot index to prevent re-adding
           if (ignored.size > 0) {
