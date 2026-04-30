@@ -5,6 +5,7 @@ import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
 import type { ModelAllocation } from "./agent-manager"
+import type { WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -349,6 +350,17 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface RequestWorkStyleMessage {
+  type: "requestWorkStyle"
+}
+
+export interface SetWorkStyleMessage {
+  type: "setWorkStyle"
+  style: WorkStyleState
+  shown: boolean
+  source: "onboarding" | "settings"
 }
 
 export interface RequestBrowserSettingsMessage {
@@ -992,6 +1004,8 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestWorkStyleMessage
+  | SetWorkStyleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage

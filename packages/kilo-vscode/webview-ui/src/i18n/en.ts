@@ -927,6 +927,13 @@ export const dict = {
   "feedback.dialog.github": "Report an issue on GitHub",
   "feedback.dialog.discord": "Join our Discord community",
   "feedback.dialog.support": "Customer Support",
+  "workStyle.onboarding.title": "Choose your default agent autonomy",
+  "workStyle.onboarding.description":
+    "This sets the starting defaults for permissions, reasoning blocks, terminal output, and the context timeline. It only applies once and skips settings you already customized.",
+  "workStyle.onboarding.skip": "Skip for now",
+  "workStyle.settings.title": "Agent autonomy preset",
+  "workStyle.settings.description":
+    "Choose how much Kilo should pause for review. Display settings update immediately; permission/config changes are queued until you click Save.",
   "session.cloud.import.title": "Import session",
   "session.cloud.import.placeholder": "Session ID, URL, or kilo import command",
   "session.cloud.import.button": "Import",

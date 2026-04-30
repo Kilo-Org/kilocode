@@ -17,6 +17,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
+import { WorkStylePicker } from "../shared/WorkStylePicker"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -284,6 +285,8 @@ const AgentBehaviourTab: Component = () => {
 
     return (
       <div>
+        <WorkStylePicker variant="settings" />
+
         {/* Default agent */}
         <Card style={{ "margin-bottom": "12px" }}>
           <SettingsRow

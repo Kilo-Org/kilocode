@@ -23,6 +23,9 @@ import { useConfig } from "../../context/config"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
+type VscodePartProps = Parameters<typeof Part>[0] & { reasoningAutoCollapse?: boolean }
+const VscodePart = Part as Component<VscodePartProps>
+
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
 // so the user can see what the AI set up.
@@ -162,7 +165,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                             <Show
                               when={isUpstreamSuppressed}
                               fallback={
-                                <Part
+                                <VscodePart
                                   part={part}
                                   message={props.message as SDKMessage}
                                   showAssistantCopyPartID={props.showAssistantCopyPartID}

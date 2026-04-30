@@ -17,6 +17,7 @@ import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { DisplayProvider } from "./context/display"
+import { WorkStyleProvider } from "./context/work-style"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
@@ -348,20 +349,22 @@ const App: Component = () => {
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
                     <FileComponentProvider component={File}>
-                      <ProviderProvider>
-                        <ConfigProvider>
-                          <DisplayProvider>
-                            <IndexingProvider>
-                              <NotificationsProvider>
-                                <SessionProvider>
-                                  <DataBridge>
-                                    <AppContent />
-                                  </DataBridge>
-                                </SessionProvider>
-                              </NotificationsProvider>
-                            </IndexingProvider>
-                          </DisplayProvider>
-                        </ConfigProvider>
+                        <ProviderProvider>
+                          <ConfigProvider>
+                            <DisplayProvider>
+                              <WorkStyleProvider>
+                                <IndexingProvider>
+                                  <NotificationsProvider>
+                                    <SessionProvider>
+                                      <DataBridge>
+                                        <AppContent />
+                                      </DataBridge>
+                                    </SessionProvider>
+                                  </NotificationsProvider>
+                                </IndexingProvider>
+                              </WorkStyleProvider>
+                            </DisplayProvider>
+                          </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>
                   </CodeComponentProvider>

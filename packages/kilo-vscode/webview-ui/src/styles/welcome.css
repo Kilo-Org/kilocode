@@ -21,6 +21,144 @@
 }
 
 /* ============================================
+   Work Style Picker
+   ============================================ */
+
+[data-component="work-style-picker"] {
+  width: 100%;
+  max-width: 420px;
+  padding: 16px;
+  border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--vscode-editorWidget-background) 88%, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  text-align: left;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+[data-component="work-style-picker"][data-variant="settings"] {
+  max-width: none;
+  margin-bottom: 12px;
+}
+
+[data-slot="work-style-header"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+[data-slot="work-style-title"] {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+[data-slot="work-style-description"] {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+}
+
+[data-slot="work-style-options"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+[data-slot="work-style-option"] {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 94%, var(--vscode-button-secondaryBackground));
+  color: var(--vscode-foreground);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 120ms,
+    background-color 120ms,
+    transform 120ms;
+}
+
+[data-slot="work-style-option"]:hover,
+[data-slot="work-style-option"][data-selected] {
+  border-color: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
+  background: color-mix(in srgb, var(--vscode-list-hoverBackground) 70%, var(--vscode-editor-background));
+}
+
+[data-slot="work-style-option"]:hover {
+  transform: translateY(-1px);
+}
+
+[data-slot="work-style-option-header"] {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+[data-slot="work-style-option-heading"] {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+[data-slot="work-style-option-eyebrow"] {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vscode-textLink-foreground);
+}
+
+[data-slot="work-style-option-title"] {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+[data-slot="work-style-option-description"] {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+}
+
+[data-slot="work-style-option-changes"] {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 2px;
+}
+
+[data-slot="work-style-option-change"] {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+[data-slot="work-style-option-change-label"] {
+  color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  font-weight: 650;
+}
+
+[data-slot="work-style-option-change-value"] {
+  color: var(--vscode-foreground);
+}
+
+[data-slot="work-style-actions"] {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* ============================================
    Feedback Button (empty state)
    ============================================ */
 

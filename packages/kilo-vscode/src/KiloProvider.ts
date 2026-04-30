@@ -1,6 +1,5 @@
 import * as path from "path"
 import * as vscode from "vscode"
-import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
 import type {
   KiloClient,
@@ -21,7 +20,6 @@ import {
   sessionToWebview,
   indexProvidersById,
   filterVisibleAgents,
-  buildSettingPath,
   mapSSEEventToWebviewMessage,
   getErrorMessage,
   getConfigErrorDetails,
@@ -58,6 +56,7 @@ import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-pa
 import { childID } from "./kilo-provider/task-session"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession } from "./kilo-provider/abort"
+import { handlePreviewImage } from "./kilo-provider/preview-image"
 import {
   buildAutocompleteSettingsMessage,
   routeAutocompleteMessage,
@@ -66,6 +65,7 @@ import {
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
+import { getWorkStylePayload, handleWorkStyleMessage, updateSetting, WORK_STYLE_KEY } from "./kilo-provider/work-style"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -589,6 +589,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await routeSuggestionWebviewMessage(this.questionCtx, message)
       if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
       if (await routeAutocompleteMessage(message, (msg) => this.postMessage(msg))) return
+      if (await handleWorkStyleMessage({ context: this.extensionContext, message, post: (msg) => this.postMessage(msg) })) {
+        return
+      }
       if (
         await handleSidebarWorktreeMessage(message, {
           post: (msg) => this.postMessage(msg),
@@ -748,7 +751,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscode.commands.executeCommand("kilo-code.new.openSubAgentViewer", message.sessionID, message.title)
           break
         case "previewImage":
-          this.handlePreviewImage(message.dataUrl, message.filename)
+          handlePreviewImage(this.extensionContext, message.dataUrl, message.filename)
           break
         case "openFile":
           if (message.filePath) {
@@ -827,7 +830,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         case "updateConfig":
-          await this.handleUpdateConfig(message.config)
+          await this.handleUpdateConfig(message.config as Partial<Config>)
           break
         case "openSettingsTab":
           if (message.tab === "indexing") {
@@ -2298,6 +2301,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private sendWorkStyle(): void {
+    this.postMessage(getWorkStylePayload(this.extensionContext))
+  }
+
   /** Returns the number of sessions currently in "busy" state. */
   private getBusySessionCount(): number {
     return getBusySessionCount(this.sessionStatusMap)
@@ -2796,44 +2803,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private handlePreviewImage(dataUrl: string, filename: string): void {
-    const dir = this.extensionContext?.globalStorageUri
-    if (!dir) return
-
-    const img = parseImage(dataUrl, filename)
-    if (!img) return
-
-    const root = vscode.Uri.joinPath(dir, getPreviewDir())
-    const uri = vscode.Uri.joinPath(dir, buildPreviewPath(img.name, Date.now()))
-    const clean = () =>
-      vscode.workspace.fs.readDirectory(root).then(
-        (items) => {
-          const stale = trimEntries(items.map(([name]) => ({ path: name })))
-          return Promise.all(
-            stale.map((name) =>
-              Promise.resolve(vscode.workspace.fs.delete(vscode.Uri.joinPath(root, name), { recursive: true })).then(
-                undefined,
-                (err: unknown) => {
-                  console.warn("[Kilo New] KiloProvider: Failed to delete stale preview:", err)
-                },
-              ),
-            ),
-          )
-        },
-        () => [],
-      )
-    const open = () =>
-      vscode.commands
-        .executeCommand(...getPreviewCommand(uri))
-        .then(undefined, () => vscode.commands.executeCommand("vscode.open", uri))
-
-    void vscode.workspace.fs
-      .createDirectory(root)
-      .then(() => vscode.workspace.fs.writeFile(uri, img.data))
-      .then(() => clean())
-      .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
-  }
-
   /**
    * Handle openFile request from the webview — open a file in the VS Code editor.
    * Resolves relative paths against the current session's directory (which may be
@@ -2863,9 +2832,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * The key uses dot notation relative to `kilo-code.new` (e.g. "browserAutomation.enabled").
    */
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
-    const { section, leaf } = buildSettingPath(key)
-    const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
-    await config.update(leaf, value, vscode.ConfigurationTarget.Global)
+    await updateSetting({ context: this.extensionContext, key, value, post: (msg) => this.postMessage(msg) })
   }
 
   /**
@@ -2901,12 +2868,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
+    await this.extensionContext?.globalState.update(WORK_STYLE_KEY, undefined)
 
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview

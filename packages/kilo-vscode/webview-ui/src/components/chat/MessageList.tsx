@@ -17,6 +17,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useWorkStyle } from "../../context/work-style"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
@@ -27,6 +28,7 @@ import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
+import { WorkStylePicker } from "../shared/WorkStylePicker"
 import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
@@ -65,6 +67,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const work = useWorkStyle()
   const dialog = useDialog()
 
   const autoScroll = createAutoScroll({
@@ -92,6 +95,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     stableMessageTurns(messageTurns(session.messages(), boundary()), prev),
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
+  const showPicker = () => isEmpty() && !props.readonly && recent().length === 0 && work.shouldShowOnboarding()
 
   const recent = createMemo(() =>
     [...session.sessions()]
@@ -193,6 +197,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <div class="message-list-empty">
               <KiloLogo />
               <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
+              <Show when={showPicker()}>
+                <WorkStylePicker variant="onboarding" />
+              </Show>
               <Show when={recent().length > 0 && props.onSelectSession}>
                 <div class="recent-sessions">
                   <span class="recent-sessions-label">{language.t("session.recent")}</span>
