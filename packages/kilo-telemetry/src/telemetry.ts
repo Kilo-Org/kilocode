@@ -1,3 +1,4 @@
+import os from "os"
 import { Client } from "./client.js"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
@@ -8,6 +9,9 @@ export interface TelemetryProperties {
   platform: string
   editorName?: string
   vscodeVersion?: string
+  os: string
+  osVersion: string
+  arch: string
 }
 
 export interface IndexingTelemetryProperties extends Record<string, unknown> {
@@ -56,6 +60,9 @@ export namespace Telemetry {
     appName: "kilo-cli",
     appVersion: "unknown",
     platform: process.platform,
+    os: process.platform,
+    osVersion: os.release(),
+    arch: process.arch,
   }
 
   export async function init(options: { dataPath: string; version: string; enabled: boolean }): Promise<void> {

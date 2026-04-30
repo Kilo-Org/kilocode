@@ -88,4 +88,20 @@ describe("Telemetry", () => {
     expect(typeof Telemetry.trackIndexingBatchRetry).toBe("function")
     expect(typeof Telemetry.trackIndexingError).toBe("function")
   })
+
+  test("TelemetryProperties includes os, osVersion, arch", () => {
+    // Type-level assertion: omitting os/osVersion/arch must be a compile error.
+    // Runtime assertion: shape is correct.
+    const sample: import("../telemetry.js").TelemetryProperties = {
+      appName: "kilo-cli",
+      appVersion: "0.0.0",
+      platform: "cli",
+      os: "darwin",
+      osVersion: "23.0.0",
+      arch: "arm64",
+    }
+    expect(sample.os).toBe("darwin")
+    expect(sample.osVersion).toBe("23.0.0")
+    expect(sample.arch).toBe("arm64")
+  })
 })
