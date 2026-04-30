@@ -20,11 +20,13 @@ const forceRebuild = process.argv.includes("--force")
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
+const sharedDir = join(packagesDir, "shared")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
 const versionFile = join(targetBinDir, ".cli-version")
+const sharedVersionFile = join(targetBinDir, ".shared-version")
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
@@ -32,8 +34,9 @@ function log(msg: string) {
 
 async function cliSourceHash(): Promise<string | null> {
   try {
-    const result = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
-    return result.text().trim() || null
+    const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
+    const sharedResult = await $`git log -1 --format=%H -- .`.cwd(sharedDir).quiet()
+    return `${opencodeResult.text().trim()}-${sharedResult.text().trim()}` || null
   } catch {
     return null
   }
@@ -41,8 +44,9 @@ async function cliSourceHash(): Promise<string | null> {
 
 async function isDirty(): Promise<boolean> {
   try {
-    const result = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
-    return result.text().trim().length > 0
+    const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
+    const sharedResult = await $`git status --porcelain -- .`.cwd(sharedDir).quiet()
+    return opencodeResult.text().trim().length > 0 || sharedResult.text().trim().length > 0
   } catch {
     return false
   }
@@ -182,6 +186,14 @@ async function main() {
   // Record the CLI source version so future runs detect when a rebuild is needed
   const hash = await cliSourceHash()
   if (hash) await Bun.write(versionFile, hash + "\n")
+
+  // Also record shared package version for cache invalidation
+  try {
+    const sharedHash = await $`git log -1 --format=%H -- .`.cwd(sharedDir).quiet()
+    await Bun.write(sharedVersionFile, sharedHash.text().trim() + "\n")
+  } catch {
+    // ignore errors for shared package
+  }
 
   log(`Copied CLI binary from ${relative(packagesDir, sourceBinPath)} -> ${relative(kiloVscodeDir, targetBinPath)}`)
 }
