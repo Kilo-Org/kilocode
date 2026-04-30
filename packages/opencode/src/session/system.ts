@@ -37,10 +37,6 @@ export function soul() {
 
 export function provider(model: Provider.Model) {
   // kilocode_change start
-  if ((model.api.id === "gpt-5.5" || model.id === "gpt-5.5") && (!model.prompt || model.prompt === "codex")) {
-    return [PROMPT_GPT55]
-  }
-
   switch (model.prompt) {
     case "anthropic":
       return [PROMPT_ANTHROPIC]
@@ -52,6 +48,8 @@ export function provider(model: Provider.Model) {
       return [PROMPT_CODEX]
     case "gemini":
       return [PROMPT_GEMINI]
+    case "gpt55":
+      return [PROMPT_GPT55]
     case "ling":
       return [PROMPT_LING]
     case "trinity":

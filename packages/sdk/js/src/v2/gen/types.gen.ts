@@ -2164,7 +2164,7 @@ export type Model = {
     }
   }
   recommendedIndex?: number
-  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling"
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
   ai_sdk_provider?: "alibaba" | "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
