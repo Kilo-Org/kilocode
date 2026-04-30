@@ -228,31 +228,43 @@ export const layer: Layer.Layer<
 
         const add = Effect.fnUntraced(function* () {
           yield* sync()
-          const [diff, other] = yield* Effect.all(
-            [
-              git([...quote, ...args(["diff-files", "--name-only", "-z", "--", "."])], {
-                cwd: state.directory,
-              }),
-              git([...quote, ...args(["ls-files", "--others", "--exclude-standard", "-z", "--", "."])], {
-                cwd: state.directory,
-              }),
-            ],
-            { concurrency: 2 },
+          // kilocode_change start - enumerate modified + untracked files in a single
+          // `git ls-files -mo --exclude-standard --deduplicate -z -t` call so the walk
+          // and dedup happen in native git instead of JS. Fixes ~multi-minute hangs on
+          // repos with ~75k+ tracked files (e.g. jetbrains/intellij-community) where
+          // running two subprocesses and then building a JS union Set was dominating
+          // `Snapshot.track()` startup cost. The `-t` flag prefixes each record with a
+          // status tag (`C ` for changed/modified, `? ` for untracked) so we can still
+          // recover the untracked-only subset needed by the large-file block logic
+          // below.
+          const listed = yield* git(
+            [...quote, ...args(["ls-files", "-m", "-o", "--exclude-standard", "--deduplicate", "-z", "-t", "--", "."])],
+            { cwd: state.directory },
           )
-          if (diff.code !== 0 || other.code !== 0) {
+          if (listed.code !== 0) {
             log.warn("failed to list snapshot files", {
-              diffCode: diff.code,
-              diffStderr: diff.stderr,
-              otherCode: other.code,
-              otherStderr: other.stderr,
+              exitCode: listed.code,
+              stderr: listed.stderr,
             })
             return
           }
 
-          const tracked = diff.text.split("\0").filter(Boolean)
-          const untracked = other.text.split("\0").filter(Boolean)
-          const all = Array.from(new Set([...tracked, ...untracked]))
+          const all: string[] = []
+          const untracked = new Set<string>()
+          for (const entry of listed.text.split("\0")) {
+            if (entry.length < 2) continue
+            // Each record is "<tag><space><path>"; tag is a single char.
+            const tag = entry.charCodeAt(0)
+            const file = entry.slice(2)
+            if (!file) continue
+            all.push(file)
+            // `?` => untracked. Everything else here (`C` modified, `R` removed,
+            // `H` cached, etc.) is tracked. Only untracked paths are eligible for
+            // the large-file block below, matching the prior two-command behavior.
+            if (tag === 0x3f /* '?' */) untracked.add(file)
+          }
           if (!all.length) return
+          // kilocode_change end
 
           // Resolve source-repo ignore rules against the exact candidate set.
           // --no-index keeps this pattern-based even when a path is already tracked.
@@ -285,7 +297,13 @@ export const layer: Layer.Layer<
               { concurrency: 8 },
             )).filter((item): item is string => Boolean(item)),
           )
-          const block = new Set(untracked.filter((item) => large.has(item)))
+          // kilocode_change start - `untracked` is now a Set (see enumeration above),
+          // so iterate `large` and intersect instead of the original `untracked.filter`.
+          const block = new Set<string>()
+          for (const item of large) {
+            if (untracked.has(item)) block.add(item)
+          }
+          // kilocode_change end
           yield* sync(Array.from(block))
           // Stage only the allowed candidate paths so snapshot updates stay scoped.
           yield* stage(allow.filter((item) => !block.has(item)))
