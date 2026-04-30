@@ -8,6 +8,7 @@ import PROMPT_DEFAULT from "./prompt/default.txt"
 import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_GPT from "./prompt/gpt.txt"
+import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
 import PROMPT_KIMI from "./prompt/kimi.txt"
 import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 
@@ -36,6 +37,10 @@ export function soul() {
 
 export function provider(model: Provider.Model) {
   // kilocode_change start
+  if ((model.api.id === "gpt-5.5" || model.id === "gpt-5.5") && (!model.prompt || model.prompt === "codex")) {
+    return [PROMPT_GPT55]
+  }
+
   switch (model.prompt) {
     case "anthropic":
       return [PROMPT_ANTHROPIC]
