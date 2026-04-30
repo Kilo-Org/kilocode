@@ -416,6 +416,73 @@ describe("plan follow-up", () => {
       expect(part.synthetic).toBe(true)
     }))
 
+  test("ask - uses configured Code model on Start new session", () =>
+    withInstance(async () => {
+      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+        if (name === "code") {
+          return {
+            name: "code",
+            mode: "primary",
+            permission: [],
+            options: {},
+            model: saved,
+            variant: configVar,
+          } as any
+        }
+        return undefined as any
+      })
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(async (providerID: string, modelID: string) => {
+        if (providerID === saved.providerID && modelID === saved.modelID) return savedConfigFull
+        return fakeModel
+      })
+      const llmSpy = spyOn(LLM, "stream").mockResolvedValue({
+        text: Promise.resolve(""),
+      } as any)
+      const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({} as any)
+      const created: SessionID[] = []
+      const unsub = Bus.subscribe(TuiEvent.SessionSelect, (event) => {
+        created.push(event.properties.sessionID)
+      })
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+          llmSpy.mockRestore()
+          loop.mockRestore()
+          unsub()
+        },
+      }
+
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      await expect(pending).resolves.toBe("break")
+
+      const newSessionID = created[0]
+      expect(newSessionID).toBeDefined()
+      if (!newSessionID) return
+
+      const messages = await Session.messages({ sessionID: newSessionID })
+      const user = messages.find((item) => item.info.role === "user")
+      expect(user?.info.role).toBe("user")
+      if (!user || user.info.role !== "user") return
+      expect(user.info.agent).toBe("code")
+      expect(user.info.model).toEqual({ ...saved, variant: configVar })
+      expect(user.info.model).not.toEqual(model)
+    }))
+
   test("ask - returns continue and creates plan message for custom text", () =>
     withInstance(async () => {
       const seeded = await seed({ text: "1. Build\n2. Test" })

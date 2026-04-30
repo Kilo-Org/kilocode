@@ -478,11 +478,14 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
+      const code = await resolveCodeModel({
+        model: user.model,
+      })
       await startNew({
         sessionID: input.sessionID,
         plan,
         messages: input.messages,
-        model: user.model,
+        model: code.model,
         abort: input.abort,
       })
       return "break"
