@@ -1041,7 +1041,7 @@ export const dict = {
   "settings.indexing.title": "Indexering",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
-  "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit voor deze werkruimte.",
+  "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
   "settings.indexing.provider.title": "Embedding-provider",
   "settings.indexing.provider.description":
     "Kies de provider die wordt gebruikt om embeddings te genereren voor semantisch zoeken.",

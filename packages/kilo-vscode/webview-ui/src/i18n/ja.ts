@@ -748,8 +748,7 @@ export const dict = {
   "settings.indexing.dimension.description": "空のままにすると、モデルから埋め込み次元を自動検出します。",
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "ベクトル次元",
-  "settings.indexing.enable.description":
-    "このワークスペースのセマンティックコードベースインデックスをオンまたはオフにします。",
+  "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",

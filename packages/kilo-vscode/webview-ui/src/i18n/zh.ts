@@ -734,7 +734,7 @@ export const dict = {
 
   "settings.indexing.title": "索引",
   "settings.indexing.enable.title": "启用索引",
-  "settings.indexing.enable.description": "为此工作区打开或关闭语义代码库索引。",
+  "settings.indexing.enable.description": "打开或关闭语义代码库索引。",
   "settings.indexing.provider.title": "嵌入提供商",
   "settings.indexing.provider.description": "选择用于生成语义搜索嵌入的提供商。",
   "settings.indexing.model.title": "嵌入模型",

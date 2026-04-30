@@ -1025,7 +1025,7 @@ export const dict = {
   "settings.context.title": "السياق",
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
-  "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية لمساحة العمل هذه.",
+  "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
   "settings.indexing.provider.title": "موفر التضمين",
   "settings.indexing.provider.description": "اختر الموفر المستخدم لإنشاء التضمينات للبحث الدلالي.",
   "settings.indexing.model.title": "نموذج التضمين",

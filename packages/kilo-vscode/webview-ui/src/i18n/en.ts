@@ -1003,7 +1003,7 @@ export const dict = {
   "settings.indexing.title": "Indexing",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
-  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off for this workspace.",
+  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
   "settings.indexing.model.title": "Embedding model",

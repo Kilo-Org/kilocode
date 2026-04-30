@@ -754,8 +754,7 @@ export const dict = {
 
   "settings.indexing.title": "Indexación",
   "settings.indexing.enable.title": "Habilitar indexación",
-  "settings.indexing.enable.description":
-    "Activar o desactivar la indexación semántica de la base de código para este espacio de trabajo.",
+  "settings.indexing.enable.description": "Activar o desactivar la indexación semántica de la base de código.",
   "settings.indexing.provider.title": "Proveedor de embeddings",
   "settings.indexing.provider.description":
     "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",

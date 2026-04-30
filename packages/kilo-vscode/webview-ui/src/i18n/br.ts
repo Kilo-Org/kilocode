@@ -1044,8 +1044,7 @@ export const dict = {
   "settings.language.title": "Idioma",
   "settings.indexing.title": "Indexação",
   "settings.indexing.enable.title": "Ativar indexação",
-  "settings.indexing.enable.description":
-    "Ativar ou desativar a indexação semântica da base de código para este espaço de trabalho.",
+  "settings.indexing.enable.description": "Ativar ou desativar a indexação semântica da base de código.",
   "settings.indexing.provider.title": "Provedor de embedding",
   "settings.indexing.provider.description": "Escolha o provedor usado para gerar embeddings para busca semântica.",
   "settings.indexing.model.title": "Modelo de embedding",

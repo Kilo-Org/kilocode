@@ -753,8 +753,7 @@ export const dict = {
 
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
-  "settings.indexing.enable.description":
-    "Включить или отключить семантическую индексацию кодовой базы для этого рабочего пространства.",
+  "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.provider.title": "Провайдер эмбеддингов",
   "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",

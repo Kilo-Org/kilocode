@@ -1352,7 +1352,7 @@ export const dict = {
   "settings.indexing.dimension.description": "留空以自動從模型偵測嵌入維度。",
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "向量維度",
-  "settings.indexing.enable.description": "為此工作區開啟或關閉語意程式碼庫索引。",
+  "settings.indexing.enable.description": "開啟或關閉語意程式碼庫索引。",
   "settings.indexing.enable.title": "啟用索引",
   "settings.indexing.lancedbDirectory.description": "本機 LanceDB 儲存的可選目錄。",
   "settings.indexing.lancedbDirectory.placeholder": "留空使用預設值",

@@ -763,8 +763,7 @@ export const dict = {
     "Leer lassen, um die Embedding-Dimension automatisch aus dem Modell zu erkennen.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Vektordimension",
-  "settings.indexing.enable.description":
-    "Semantische Codebasis-Indizierung für diesen Arbeitsbereich ein- oder ausschalten.",
+  "settings.indexing.enable.description": "Semantische Codebasis-Indizierung ein- oder ausschalten.",
   "settings.indexing.enable.title": "Indizierung aktivieren",
   "settings.indexing.lancedbDirectory.description": "Optionaler Ordner für den lokalen LanceDB-Speicher.",
   "settings.indexing.lancedbDirectory.placeholder": "Leer lassen für Standard",

@@ -1195,7 +1195,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
-  "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av for dette arbeidsområdet.",
+  "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
   "settings.indexing.model.title": "Embedding-modell",

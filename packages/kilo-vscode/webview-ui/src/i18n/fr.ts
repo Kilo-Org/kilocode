@@ -682,8 +682,7 @@ export const dict = {
     "Laissez vide pour détecter automatiquement la dimension d'embedding à partir du modèle.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimension vectorielle",
-  "settings.indexing.enable.description":
-    "Activer ou désactiver l'indexation sémantique de la base de code pour cet espace de travail.",
+  "settings.indexing.enable.description": "Activer ou désactiver l'indexation sémantique de la base de code.",
   "settings.indexing.enable.title": "Activer l'indexation",
   "settings.indexing.lancedbDirectory.description": "Répertoire optionnel pour le stockage local LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Laissez vide pour la valeur par défaut",

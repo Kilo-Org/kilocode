@@ -1037,7 +1037,7 @@ export const dict = {
   "settings.indexing.dimension.description": "비워두면 모델에서 임베딩 차원을 자동으로 감지합니다.",
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",
-  "settings.indexing.enable.description": "이 작업 공간의 의미적 코드베이스 인덱싱을 켜거나 끕니다.",
+  "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
   "settings.indexing.enable.title": "인덱싱 활성화",
   "settings.indexing.lancedbDirectory.description": "로컬 LanceDB 저장소의 선택적 디렉터리입니다.",
   "settings.indexing.lancedbDirectory.placeholder": "기본값 사용을 위해 비워두세요",

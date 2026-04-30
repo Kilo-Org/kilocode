@@ -767,7 +767,7 @@ export const dict = {
 
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
-  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra for dette arbejdsområde.",
+  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
