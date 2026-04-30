@@ -49,6 +49,10 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 
 Managed worktrees are created under `.kilo/worktrees/` in your project. Kilo also stores Agent Manager UI state in `.kilo/agent-manager.json`.
 
+{% callout type="info" %}
+Worktrees share Git object storage with the main repository, but each worktree is still a separate checkout on disk. Files created inside each worktree, such as `node_modules`, build output, local databases, generated files, and package-manager caches, can multiply disk usage across parallel agents. Closing a managed worktree removes its checkout directory, but it does not remove external caches, containers, volumes, simulators, or databases that your scripts created outside the worktree.
+{% /callout %}
+
 ### PR Status Badges
 
 Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the PR in your browser.
@@ -200,7 +204,58 @@ A common workflow is letting the agent work, then switching to the terminal to r
 
 ## Setup Scripts
 
-Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
+Setup scripts let you prepare each new worktree before the agent starts, for example by installing dependencies, linking local config, copying non-standard env files, or creating per-worktree databases.
+
+Create a script file in `.kilo/` using the appropriate filename for your platform:
+
+| Platform | Filename (checked in order) |
+|---|---|
+| macOS / Linux | `.kilo/setup-script`, `.kilo/setup-script.sh` |
+| Windows | `.kilo/setup-script.ps1`, `.kilo/setup-script.cmd`, `.kilo/setup-script.bat` |
+
+Kilo runs the script automatically whenever a new worktree is created. It uses `sh` for POSIX scripts, PowerShell for `.ps1`, and `cmd.exe` for `.cmd` / `.bat`, so executable permissions are not required.
+
+Two extra variables are injected into the setup script's environment:
+
+| Variable | Value |
+|---|---|
+| `WORKTREE_PATH` | Absolute path to the new worktree directory |
+| `REPO_PATH` | Repository root |
+
+For example, on macOS / Linux:
+
+```sh
+#!/bin/sh
+set -e
+
+cd "$WORKTREE_PATH"
+npm install
+
+# Copy a nested env file that Kilo does not auto-copy.
+if [ -f "$REPO_PATH/apps/web/.env.local" ] && [ ! -f "$WORKTREE_PATH/apps/web/.env.local" ]; then
+  cp "$REPO_PATH/apps/web/.env.local" "$WORKTREE_PATH/apps/web/.env.local"
+fi
+```
+
+If the setup script fails, Agent Manager shows the failure and keeps the worktree available so you can inspect it, fix the script, or run setup steps manually.
+
+### Environment File Copying
+
+Before the setup script runs, Kilo automatically copies root-level `.env` files from the main repo into the new worktree.
+
+Copied automatically:
+
+- Root-level plain files named exactly `.env`
+- Root-level plain files matching `.env.*`, such as `.env.local` or `.env.development`
+
+Not copied automatically:
+
+- Nested env files, such as `apps/web/.env.local`
+- Non-dotenv files, such as `.envrc`, `.environment`, or `.env-cmdrc`
+- Directories named `.env` or `.env.local`
+- Files that already exist in the worktree, because Kilo never overwrites them
+
+Use `.kilo/setup-script` for anything outside the automatic copy rules, including nested env files, ignored local config, local certificates, local database files, generated config directories, or tool-specific files required to run the project.
 
 ## Run Script
 
@@ -221,6 +276,25 @@ For example, on macOS / Linux create `.kilo/run-script`:
 #!/bin/sh
 npm run dev
 ```
+
+For projects that need a unique dev-server port per worktree, assign the port in the run script and make your app read it from `PORT`:
+
+```sh
+#!/bin/sh
+set -e
+
+# Pick a deterministic port from the worktree path so each worktree keeps the same URL.
+sum=$(cksum <<EOF | cut -d ' ' -f 1
+$WORKTREE_PATH
+EOF
+)
+export PORT=$((4000 + (sum % 1000)))
+
+echo "Starting dev server on http://localhost:$PORT"
+npm run dev
+```
+
+If your stack supports `PORT=0`, you can also let the OS pick a free port instead. Prefer app-side env support where possible, then use the run script to provide per-worktree defaults.
 
 The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
 

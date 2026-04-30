@@ -19,6 +19,10 @@ Rule of thumb: if you would stash or switch branches to do the work, create a wo
 All Agent Manager sessions use the extension's embedded runtime. What each worktree isolates is the filesystem and git state: the branch, the directory, and the terminal. Providers, BYOK keys, custom providers, models, and extension settings are shared with the sidebar.
 {% /callout %}
 
+{% callout type="warning" %}
+Git worktrees are lightweight compared with cloning the repository several times, but they are not free. Each worktree has its own checked-out files, and any dependencies, build artifacts, caches, local databases, or generated files created inside that directory count separately on disk.
+{% /callout %}
+
 ## What parallelizes well
 
 Parallel work pays off when sessions are **independent** — neither one's output depends on the other, and they are unlikely to edit the same files.
@@ -102,6 +106,47 @@ Two fixes, in order of preference:
 
 The same applies to caches (avoid pointing `CARGO_TARGET_DIR` at a shared path), emulators (create a named simulator per worktree), and containers (use unique container names or `COMPOSE_PROJECT_NAME`).
 
+A practical run script pattern is to derive a stable port from `WORKTREE_PATH`, then start the app with that value:
+
+```sh
+#!/bin/sh
+set -e
+
+sum=$(cksum <<EOF | cut -d ' ' -f 1
+$WORKTREE_PATH
+EOF
+)
+export PORT=$((4000 + (sum % 1000)))
+
+npm run dev
+```
+
+For Docker Compose, do the same with `COMPOSE_PROJECT_NAME` so parallel worktrees get separate container names and volumes:
+
+```sh
+#!/bin/sh
+set -e
+
+name=$(basename "$WORKTREE_PATH" | tr -cd '[:alnum:]_-')
+export COMPOSE_PROJECT_NAME="kilo_${name}"
+
+docker compose up
+```
+
+If your app or framework supports `PORT=0`, that can be even simpler for local-only work because the OS chooses a free port. The tradeoff is that the URL changes each run.
+
+### Setup script and copied files
+
+Use `.kilo/setup-script` to make new worktrees runnable without manual setup. It runs after Kilo copies root-level `.env` and `.env.*` files, and before the agent starts in the new worktree.
+
+Kilo's env copy is intentionally narrow:
+
+- It copies root-level plain files named `.env` or `.env.*`
+- It skips existing files instead of overwriting them
+- It does not copy nested env files, `.envrc`, `.environment`, `.env-cmdrc`, local certificates, local databases, or ignored tool-specific config
+
+Put the remaining project-specific setup in `.kilo/setup-script`, for example copying `apps/web/.env.local`, creating a per-worktree database, or installing dependencies. The setup script receives `WORKTREE_PATH` and `REPO_PATH` in the environment.
+
 ## Reviewing changes
 
 Layer review in before asking a teammate:
@@ -161,6 +206,7 @@ Merge the most foundational one first. Then, in each remaining worktree, ask the
 
 - Merge within a day or two. Past that, pull the parent branch into the worktree rather than letting it drift.
 - After a branch merges, close the worktree from its context menu. The branch is preserved; the directory is removed.
+- Periodically clean up dependencies, build output, containers, volumes, simulators, and databases created by old worktrees. Closing a managed worktree removes the checkout, not external resources.
 - Do not run more than four or five agents at once. The practical limit is review and integration cost, not memory.
 
 ## Common mistakes
