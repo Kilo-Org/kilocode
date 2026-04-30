@@ -85,6 +85,7 @@
   "devDependencies": {
     "@actions/artifact": "5.0.1",
     "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
     "@types/mime-types": "3.0.1",
     "@typescript/native-preview": "catalog:",
     "glob": "13.0.5",
@@ -148,6 +149,6 @@
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
     "stream-chat@9.38.0": "patches/stream-chat@9.38.0.patch"
   },
-  "version": "7.2.30",
+  "version": "7.2.31",
   "peerDependencies": {}
 }

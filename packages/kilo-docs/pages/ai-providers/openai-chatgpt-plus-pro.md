@@ -1,4 +1,6 @@
 ---
+title: "Using ChatGPT Plus/Pro with Kilo Code"
+description: "Use your ChatGPT Plus or Pro subscription with Kilo Code. Setup guide for authenticating without a separate API key."
 sidebar_label: ChatGPT Plus/Pro
 ---
 

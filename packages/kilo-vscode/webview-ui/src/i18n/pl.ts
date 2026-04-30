@@ -1180,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
+  "settings.experimental.agentManagerTool.title": "Narzędzie Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Zezwól agentom na uruchamianie lokalnych sesji Agent Manager i sesji worktree z wywołania narzędzia",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
@@ -1197,8 +1200,7 @@ export const dict = {
   "settings.indexing.dimension.description": "Pozostaw puste, aby automatycznie wykryć wymiar osadzania z modelu.",
   "settings.indexing.dimension.placeholder": "Automatycznie",
   "settings.indexing.dimension.title": "Wymiar wektora",
-  "settings.indexing.enable.description":
-    "Włącz lub wyłącz semantyczne indeksowanie bazy kodu dla tego obszaru roboczego.",
+  "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
   "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",
@@ -1404,6 +1406,13 @@ export const dict = {
   "settings.display.layout.description": "Tryb układu interfejsu czatu",
   "settings.display.layout.auto": "Automatyczny",
   "settings.display.layout.stretch": "Rozciągnij",
+  "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
+  "settings.display.reasoningAutoCollapse.description":
+    "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Domyślny model",
   "settings.providers.defaultModel.description": "Główny model do rozmów",
   "settings.providers.smallModel.title": "Mały model",

@@ -12,7 +12,7 @@ When you install Kilo Code, you'll be prompted to sign in or create a free accou
 {% tabs %}
 {% tab label="VSCode" %}
 
-The extension prompts you to sign in when you first open the sidebar. Click **Sign In** and complete the browser-based flow. The extension communicates with the CLI backend, so authentication is shared between the CLI and extension.
+The extension prompts you to sign in when you first open Kilo Code in VS Code. Click **Sign In** and complete the browser-based flow. Sign-in applies across extension surfaces, including the sidebar and Agent Manager.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -106,13 +106,13 @@ Already have a ChatGPT subscription? You can use it with Kilo Code through the [
 {% tabs %}
 {% tab label="VSCode" %}
 
-1. Open the Kilo Code sidebar in VS Code
-2. Click the gear icon ({% codicon name="gear" /%}) to open **Settings**
+1. Open Kilo Code in VS Code
+2. Click the gear icon ({% codicon name="gear" /%}) in the extension UI to open **Settings**
 3. Go to the **Providers** tab
 4. Select your provider and enter your API key
 5. Choose your model
 
-You can also use `kilo auth login` for providers that support OAuth (like GitHub Copilot). The extension reads from the same underlying config files as the CLI, so provider settings are shared.
+These settings apply across the extension, including the sidebar and Agent Manager. Agent Manager does not need separate provider or Kilo CLI authentication setup.
 
 {% /tab %}
 {% tab label="CLI" %}

@@ -33,7 +33,7 @@ sealed class ConnectionState {
     data object Disconnected : ConnectionState()
     data object Connecting : ConnectionState()
     data class Connected(val port: Int, val password: String) : ConnectionState()
-    data class Error(val message: String) : ConnectionState()
+    data class Error(val message: String, val details: String? = null) : ConnectionState()
 }
 
 data class SseEvent(val type: String, val data: String)
@@ -165,7 +165,7 @@ class KiloConnectionService(
         val result = server.init()
 
         if (result is CliServer.State.Error) {
-            setState(ConnectionState.Error(result.message))
+            setState(ConnectionState.Error(result.message, result.details))
             return
         }
 
@@ -230,12 +230,17 @@ class KiloConnectionService(
         }
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
+            val detail = when {
+                t != null -> t.stackTraceToString()
+                response != null -> response.body?.string()
+                else -> null
+            }?.trim()?.ifEmpty { null }
             if (t != null) {
                 log.warn("SSE: failure (${t.message}) — scheduling reconnect")
             } else {
                 log.warn("SSE: failure (HTTP ${response?.code}) — scheduling reconnect")
             }
-            setState(ConnectionState.Error(t?.message ?: "SSE connection failed (HTTP ${response?.code})"))
+            setState(ConnectionState.Error(t?.message ?: "SSE connection failed (HTTP ${response?.code})", detail))
             scheduleReconnect()
         }
     }

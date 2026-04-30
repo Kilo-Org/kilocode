@@ -597,6 +597,40 @@ export type EventVcsBranchUpdated = {
   }
 }
 
+<<<<<<< HEAD
+=======
+export type EventKilocodeAgentManagerStart = {
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      /**
+       * Initial prompt to send to the new session
+       */
+      prompt?: string
+      /**
+       * Short display name for the Agent Manager card
+       */
+      name?: string
+      /**
+       * Git branch name seed for worktree mode
+       */
+      branchName?: string
+    }>
+  }
+}
+
+export type EventSessionCompacted = {
+  type: "session.compacted"
+  properties: {
+    sessionID: string
+  }
+}
+
+>>>>>>> origin/main
 export type EventKiloSessionsRemoteStatusChanged = {
   type: "kilo-sessions.remote-status-changed"
   properties: {
@@ -1331,6 +1365,14 @@ export type GlobalEvent = {
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
+<<<<<<< HEAD
+=======
+    | EventSessionStatus
+    | EventSessionIdle
+    | EventTodoUpdated
+    | EventVcsBranchUpdated
+    | EventKilocodeAgentManagerStart
+>>>>>>> origin/main
     | EventSessionCompacted
     | EventCommandExecuted
     | EventVcsBranchUpdated
@@ -1541,6 +1583,7 @@ export type PermissionConfig =
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
+      agent_manager?: PermissionRuleConfig
       [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
 
@@ -1861,7 +1904,15 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  /**
+   * Automatically collapse reasoning blocks after the agent finishes writing them
+   */
+  auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
+  /**
+   * Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI
+   */
+  terminal_command_display?: "expanded" | "collapsed"
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
@@ -2023,6 +2074,10 @@ export type Config = {
      * Enable semantic codebase indexing and the semantic_search tool
      */
     semantic_indexing?: boolean
+    /**
+     * Enable the VS Code Agent Manager orchestration tool
+     */
+    agent_manager_tool?: boolean
     /**
      * Enable telemetry. Set to false to opt-out.
      */
@@ -2454,6 +2509,14 @@ export type Event =
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
+<<<<<<< HEAD
+=======
+  | EventSessionStatus
+  | EventSessionIdle
+  | EventTodoUpdated
+  | EventVcsBranchUpdated
+  | EventKilocodeAgentManagerStart
+>>>>>>> origin/main
   | EventSessionCompacted
   | EventCommandExecuted
   | EventVcsBranchUpdated
