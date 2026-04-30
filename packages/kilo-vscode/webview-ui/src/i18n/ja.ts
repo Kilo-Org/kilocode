@@ -748,8 +748,7 @@ export const dict = {
   "settings.indexing.dimension.description": "空のままにすると、モデルから埋め込み次元を自動検出します。",
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "ベクトル次元",
-  "settings.indexing.enable.description":
-    "このワークスペースのセマンティックコードベースインデックスをオンまたはオフにします。",
+  "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
@@ -1200,6 +1199,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
+  "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
+  "settings.experimental.agentManagerTool.description":
+    "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",

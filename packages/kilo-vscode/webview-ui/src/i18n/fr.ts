@@ -682,8 +682,7 @@ export const dict = {
     "Laissez vide pour détecter automatiquement la dimension d'embedding à partir du modèle.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimension vectorielle",
-  "settings.indexing.enable.description":
-    "Activer ou désactiver l'indexation sémantique de la base de code pour cet espace de travail.",
+  "settings.indexing.enable.description": "Activer ou désactiver l'indexation sémantique de la base de code.",
   "settings.indexing.enable.title": "Activer l'indexation",
   "settings.indexing.lancedbDirectory.description": "Répertoire optionnel pour le stockage local LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Laissez vide pour la valeur par défaut",
@@ -1229,6 +1228,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",
+  "settings.experimental.agentManagerTool.title": "Outil Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Autoriser les agents à démarrer des sessions locales Agent Manager et des sessions worktree depuis un appel d'outil",
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
     "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",

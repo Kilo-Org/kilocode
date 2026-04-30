@@ -47,6 +47,7 @@ const InputObject = Schema.StructWithRest(
     lsp: Schema.optional(Rule),
     doom_loop: Schema.optional(Action),
     skill: Schema.optional(Rule),
+    agent_manager: Schema.optional(Rule), // kilocode_change
   }),
   [Schema.Record(Schema.String, Rule)],
 )

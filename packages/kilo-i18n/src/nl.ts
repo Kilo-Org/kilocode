@@ -81,4 +81,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementeren in een nieuwe sessie met een lege context",
   "plan.followup.answer.continue": "Hier doorgaan",
   "plan.followup.answer.continue.description": "Het plan in deze sessie implementeren",
+
+  "ui.messagePart.openInDiffViewer": "Openen in diff-viewer",
 }

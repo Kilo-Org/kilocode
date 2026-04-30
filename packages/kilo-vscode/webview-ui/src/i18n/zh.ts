@@ -734,7 +734,7 @@ export const dict = {
 
   "settings.indexing.title": "索引",
   "settings.indexing.enable.title": "启用索引",
-  "settings.indexing.enable.description": "为此工作区打开或关闭语义代码库索引。",
+  "settings.indexing.enable.description": "打开或关闭语义代码库索引。",
   "settings.indexing.provider.title": "嵌入提供商",
   "settings.indexing.provider.description": "选择用于生成语义搜索嵌入的提供商。",
   "settings.indexing.model.title": "嵌入模型",
@@ -1176,6 +1176,8 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "代码库搜索",
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
+  "settings.experimental.agentManagerTool.description": "允许智能体通过工具调用启动 Agent Manager 本地会话和工作树会话",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",

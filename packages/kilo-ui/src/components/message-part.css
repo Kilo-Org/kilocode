@@ -33,6 +33,39 @@
   }
 }
 
+/* Hover-revealed "Open in Diff Viewer" icon button in the edit-tool header */
+[data-component="tool-trigger"] [data-slot="basic-tool-tool-info"]:has([data-component="edit-trigger"]) {
+  flex: 1 1 auto;
+}
+
+[data-component="edit-trigger"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+
+  [data-slot="message-part-title-area"] {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  [data-slot="edit-trigger-actions"] {
+    flex-shrink: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+}
+
+[data-component="tool-trigger"]:hover [data-slot="edit-trigger-actions"],
+[data-slot="edit-trigger-actions"]:focus-within {
+  opacity: 1;
+}
+
 /* Prevent long title/path from hiding the collapsible expand arrow */
 [data-component="edit-trigger"],
 [data-component="write-trigger"] {

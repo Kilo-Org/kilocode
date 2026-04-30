@@ -1153,6 +1153,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
+  "settings.experimental.agentManagerTool.description":
+    "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
@@ -1352,7 +1355,7 @@ export const dict = {
   "settings.indexing.dimension.description": "留空以自動從模型偵測嵌入維度。",
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "向量維度",
-  "settings.indexing.enable.description": "為此工作區開啟或關閉語意程式碼庫索引。",
+  "settings.indexing.enable.description": "開啟或關閉語意程式碼庫索引。",
   "settings.indexing.enable.title": "啟用索引",
   "settings.indexing.lancedbDirectory.description": "本機 LanceDB 儲存的可選目錄。",
   "settings.indexing.lancedbDirectory.placeholder": "留空使用預設值",

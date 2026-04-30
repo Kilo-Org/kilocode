@@ -767,7 +767,7 @@ export const dict = {
 
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
-  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra for dette arbejdsområde.",
+  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
@@ -1203,6 +1203,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-værktøj",
+  "settings.experimental.agentManagerTool.description":
+    "Tillad agenter at starte lokale Agent Manager-sessioner og worktree-sessioner fra et værktøjskald",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",

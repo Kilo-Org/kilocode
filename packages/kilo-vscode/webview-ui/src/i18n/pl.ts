@@ -1180,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
+  "settings.experimental.agentManagerTool.title": "Narzędzie Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Zezwól agentom na uruchamianie lokalnych sesji Agent Manager i sesji worktree z wywołania narzędzia",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
@@ -1197,8 +1200,7 @@ export const dict = {
   "settings.indexing.dimension.description": "Pozostaw puste, aby automatycznie wykryć wymiar osadzania z modelu.",
   "settings.indexing.dimension.placeholder": "Automatycznie",
   "settings.indexing.dimension.title": "Wymiar wektora",
-  "settings.indexing.enable.description":
-    "Włącz lub wyłącz semantyczne indeksowanie bazy kodu dla tego obszaru roboczego.",
+  "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
   "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",

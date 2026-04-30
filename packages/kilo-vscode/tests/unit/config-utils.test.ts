@@ -204,4 +204,72 @@ describe("ConfigState", () => {
       expect(Object.keys(s.draft).length).toBe(0)
     })
   })
+
+  describe("agent permission patches", () => {
+    it("merges nested per-agent permission patches into existing rules", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          reviewer: {
+            permission: {
+              read: "allow",
+              edit: "deny",
+            },
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { reviewer: { permission: { bash: "ask" } } } })
+
+      expect(s.config.agent?.reviewer?.permission).toEqual({
+        read: "allow",
+        edit: "deny",
+        bash: "ask",
+      })
+      expect(s.draft.agent?.reviewer?.permission).toEqual({ bash: "ask" })
+    })
+
+    it("keeps nested permission delete sentinels in the draft", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          docs: {
+            permission: {
+              edit: { "*": "deny", "**/*.md": "allow" },
+            },
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { docs: { permission: { edit: { "**/*.md": null } } } } })
+
+      expect(s.config.agent?.docs?.permission).toEqual({ edit: { "*": "deny" } })
+      expect(s.draft.agent?.docs?.permission).toEqual({ edit: { "**/*.md": null } })
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { docs: { permission: { edit: { "**/*.md": null } } } },
+      })
+    })
+
+    it("keeps tool-level permission delete sentinels in the draft", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          reviewer: {
+            permission: {
+              read: "allow",
+              bash: "deny",
+            },
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { reviewer: { permission: { bash: null } } } })
+
+      expect(s.config.agent?.reviewer?.permission).toEqual({ read: "allow" })
+      expect(s.draft.agent?.reviewer?.permission).toEqual({ bash: null })
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { reviewer: { permission: { bash: null } } },
+      })
+    })
+  })
 })

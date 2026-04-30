@@ -1037,7 +1037,7 @@ export const dict = {
   "settings.indexing.dimension.description": "비워두면 모델에서 임베딩 차원을 자동으로 감지합니다.",
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",
-  "settings.indexing.enable.description": "이 작업 공간의 의미적 코드베이스 인덱싱을 켜거나 끕니다.",
+  "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
   "settings.indexing.enable.title": "인덱싱 활성화",
   "settings.indexing.lancedbDirectory.description": "로컬 LanceDB 저장소의 선택적 디렉터리입니다.",
   "settings.indexing.lancedbDirectory.placeholder": "기본값 사용을 위해 비워두세요",
@@ -1193,6 +1193,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
+  "settings.experimental.agentManagerTool.description":
+    "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",

@@ -1044,8 +1044,7 @@ export const dict = {
   "settings.language.title": "Idioma",
   "settings.indexing.title": "Indexação",
   "settings.indexing.enable.title": "Ativar indexação",
-  "settings.indexing.enable.description":
-    "Ativar ou desativar a indexação semântica da base de código para este espaço de trabalho.",
+  "settings.indexing.enable.description": "Ativar ou desativar a indexação semântica da base de código.",
   "settings.indexing.provider.title": "Provedor de embedding",
   "settings.indexing.provider.description": "Escolha o provedor usado para gerar embeddings para busca semântica.",
   "settings.indexing.model.title": "Modelo de embedding",
@@ -1211,6 +1210,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
+  "settings.experimental.agentManagerTool.title": "Ferramenta Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Permitir que agentes iniciem sessões locais e sessões worktree do Agent Manager a partir de uma chamada de ferramenta",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",

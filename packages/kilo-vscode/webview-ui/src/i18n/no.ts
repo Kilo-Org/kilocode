@@ -1180,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
+  "settings.experimental.agentManagerTool.description":
+    "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
@@ -1195,7 +1198,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
-  "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av for dette arbeidsområdet.",
+  "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
   "settings.indexing.model.title": "Embedding-modell",
