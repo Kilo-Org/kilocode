@@ -625,6 +625,48 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
+  it.live("saveAlwaysRules then reply(always) does not duplicate saved rules", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const fiber = yield* ask({
+          id: PermissionID.make("permission_saved_always"),
+          sessionID: SessionID.make("session_saved_always"),
+          permission: "bash",
+          patterns: ["kilo-permission-8353 test"],
+          metadata: { rules: ["kilo-permission-8353 *", "kilo-permission-8353 test"] },
+          always: ["kilo-permission-8353 *", "kilo-permission-8353 test"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionID.make("permission_saved_always"),
+          approvedAlways: ["kilo-permission-8353 test"],
+        })
+        yield* reply({ requestID: PermissionID.make("permission_saved_always"), reply: "always" })
+        yield* Fiber.join(fiber)
+
+        const cfg = yield* Effect.promise(() => Config.get())
+        expect(cfg.permission?.bash).toMatchObject({ "kilo-permission-8353 test": "allow" })
+        expect(cfg.permission?.bash).not.toMatchObject({ "kilo-permission-8353 *": "allow" })
+
+        const broad = yield* ask({
+          id: PermissionID.make("permission_saved_always_broad"),
+          sessionID: SessionID.make("session_saved_always"),
+          permission: "bash",
+          patterns: ["kilo-permission-8353 install"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* reply({ requestID: PermissionID.make("permission_saved_always_broad"), reply: "reject" })
+        expectFailure(yield* Fiber.await(broad), Permission.RejectedError)
+      }),
+    ),
+  )
+
   it.live("auto-rejects pending permission from sibling session when denied", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {
