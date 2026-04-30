@@ -119,20 +119,36 @@ test("ask agent denies edit/write/bash even when user config adds a specific edi
 // kilocode_change end
 
 // kilocode_change start
-test("plan agent asks before edits except .kilo/plans/* and .opencode/plans/*", async () => {
+test("plan agent denies edits except .kilo/plans/* and .opencode/plans/*", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
       const plan = await load(tmp.path, (svc) => svc.get("plan"))
       expect(plan).toBeDefined()
-      // Wildcard requires permission
-      expect(evalPerm(plan, "edit")).toBe("ask")
-      // kilocode_change start
-      // .kilo/plans/ is the primary allowed path
+      expect(evalPerm(plan, "edit")).toBe("deny")
+      expect(Permission.evaluate("edit", "src/index.ts", plan!.permission).action).toBe("deny")
       expect(Permission.evaluate("edit", ".kilo/plans/foo.md", plan!.permission).action).toBe("allow")
-      // kilocode_change end
-      // .opencode/plans/ is also allowed as backward compat fallback
+      expect(Permission.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("plan agent user config allows cannot re-enable non-plan edits", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        edit: { "src/output.log": "allow" },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const plan = await load(tmp.path, (svc) => svc.get("plan"))
+      expect(plan).toBeDefined()
+      expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
+      expect(Permission.evaluate("edit", ".kilo/plans/foo.md", plan!.permission).action).toBe("allow")
       expect(Permission.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
     },
   })

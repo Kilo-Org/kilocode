@@ -1383,6 +1383,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",

@@ -95,15 +95,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
+      # kilocode_change start - pack dist tree into a single zstd-compressed tar before upload.
+      # download-artifact@v4's streaming unzip is CPU-bound and processes entries one by one;
+      # collapsing ~480 files into one tar cuts build-vscode download from >30m to seconds.
+      # zstd compresses the wasms (~4x) and leaves the already-compact binaries alone, for
+      # ~1 GB artifact. compression-level: 0 on the outer zip avoids double-compression.
+      # zstd + GNU tar are preinstalled on both github-hosted and blacksmith ubuntu-2404.
+      # See actions/upload-artifact#36, actions/toolkit#1533.
+      - name: Pack CLI dist into tar.zst
+        run: |
+          find packages/opencode/dist -name '*.map' -delete
+          tar --zstd -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
+
       - uses: actions/upload-artifact@v4
         with:
           name: kilo-cli
-          # kilocode_change start - exclude sourcemaps + skip zstd to keep the artifact under the v4 download flaky threshold
-          path: |
-            packages/opencode/dist
-            !packages/opencode/dist/**/*.map
+          path: /tmp/kilo-cli.tar.zst
           compression-level: 0
-          # kilocode_change end
+      # kilocode_change end
 
     outputs:
       version: ${{ needs.version.outputs.version }}
@@ -125,11 +134,17 @@ jobs:
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
 
+      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          path: /tmp
 
+      - name: Unpack CLI dist
+        run: |
+          mkdir -p packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+      # kilocode_change end
       - name: Build VSIX packages
         run: bun script/build.ts
         working-directory: ./packages/kilo-vscode
@@ -317,11 +332,17 @@ jobs:
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
           # kilocode_change end
 
+      # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
       - uses: actions/download-artifact@v4
         with:
           name: kilo-cli
-          path: packages/opencode/dist
+          path: /tmp
 
+      - name: Unpack CLI dist
+        run: |
+          mkdir -p packages/opencode/dist
+          tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
+      # kilocode_change end
       - uses: actions/download-artifact@v4
         with:
           name: kilo-vscode

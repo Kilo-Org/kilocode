@@ -1,4 +1,6 @@
 ---
+title: "Using the VS Code Language Model API with Kilo Code"
+description: "Use GitHub Copilot's models in Kilo Code via the VS Code Language Model API. Setup guide and requirements."
 sidebar_label: VS Code Language Model API
 ---
 

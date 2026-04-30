@@ -1398,6 +1398,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

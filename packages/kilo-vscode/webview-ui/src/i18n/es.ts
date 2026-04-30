@@ -1420,6 +1420,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Modelo predeterminado",
   "settings.providers.defaultModel.description": "Modelo principal para conversaciones",
   "settings.providers.smallModel.title": "Modelo pequeño",

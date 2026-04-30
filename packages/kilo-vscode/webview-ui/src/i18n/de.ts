@@ -1429,6 +1429,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primäres Modell für Gespräche",
   "settings.providers.smallModel.title": "Kleines Modell",

@@ -82,7 +82,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
   const git = useGitChangesContext(vscode, ctx, hasGit)
-  const slash = useSlashCommand(vscode)
+  const slash = useSlashCommand(vscode, () => (session.variantList().length > 0 ? new Set() : new Set(["variant"])))
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -388,7 +388,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (message.type === "triggerTask") {
       if (isDisabled()) return
       const sel = session.selected()
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
 
     if (message.type === "sendMessageFailed") {
@@ -708,9 +708,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     }
 
     history.append(draft)

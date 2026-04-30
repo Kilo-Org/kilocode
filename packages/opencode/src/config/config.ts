@@ -171,6 +171,10 @@ export const Info = Schema.Struct({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }), // kilocode_change
+  terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
+    description:
+      "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   // kilocode_change end
   // kilocode_change start - nullable for delete sentinel
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({

@@ -29,7 +29,7 @@
  */
 
 import { spawnSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "..")
@@ -100,7 +100,7 @@ function isSource(file: string) {
   const ext = path.extname(file)
   if (SOURCE_EXTS.has(ext)) return true
   if (ext) return false
-  return readFileSync(path.join(ROOT, file), "utf8").startsWith("#!")
+  return content(file).startsWith("#!") // kilocode_change
 }
 
 function addedLines(file: string): Set<number> {
@@ -115,6 +115,19 @@ function addedLines(file: string): Set<number> {
   }
   return out
 }
+
+// kilocode_change start
+function content(file: string) {
+  const abs = path.join(ROOT, file)
+  if (existsSync(abs)) return readFileSync(abs, "utf8")
+
+  const out = run("git", ["show", `HEAD:${file}`])
+  const target = out.trim()
+  if (!target.startsWith("../")) return out
+
+  return readFileSync(path.resolve(path.dirname(abs), target), "utf8")
+}
+// kilocode_change end
 
 // Matches the start of a kilocode_change marker in JS, JSX, YAML, TOML, and shell comments.
 const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\b/
@@ -182,8 +195,7 @@ for (const file of files) {
   const nums = addedLines(file)
   if (nums.size === 0) continue
 
-  const abs = path.join(ROOT, file)
-  const text = readFileSync(abs, "utf8")
+  const text = content(file) // kilocode_change
   const { lines, covered } = coveredLines(text)
 
   for (const n of nums) {

@@ -1374,6 +1374,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
   "settings.display.reasoningAutoCollapse.description":
     "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",

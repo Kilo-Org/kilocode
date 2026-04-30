@@ -1,4 +1,6 @@
 ---
+title: "Using OpenRouter with Kilo Code | Unified AI API"
+description: "Access hundreds of AI models through a single API by configuring OpenRouter in Kilo Code. Setup guide for VS Code and the CLI."
 sidebar_label: OpenRouter
 ---
 

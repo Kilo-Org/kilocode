@@ -1330,6 +1330,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "自動收合推理",
   "settings.display.reasoningAutoCollapse.description":
     "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "預設模型",
   "settings.providers.defaultModel.description": "對話的主要模型",
   "settings.providers.smallModel.title": "小模型",

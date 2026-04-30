@@ -1393,6 +1393,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",

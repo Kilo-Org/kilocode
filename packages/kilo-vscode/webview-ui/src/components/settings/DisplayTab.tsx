@@ -6,6 +6,7 @@ import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
 import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
+import type { TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface LayoutOption {
@@ -16,6 +17,11 @@ interface LayoutOption {
 const LAYOUT_OPTIONS: LayoutOption[] = [
   { value: "auto", labelKey: "settings.display.layout.auto" },
   { value: "stretch", labelKey: "settings.display.layout.stretch" },
+]
+
+const TERMINAL_OPTIONS: LayoutOption[] = [
+  { value: "expanded", labelKey: "settings.display.terminalCommand.expanded" },
+  { value: "collapsed", labelKey: "settings.display.terminalCommand.collapsed" },
 ]
 
 const DisplayTab: Component = () => {
@@ -63,7 +69,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.reasoningAutoCollapse.title")}
           description={language.t("settings.display.reasoningAutoCollapse.description")}
-          last
         >
           <Switch
             checked={display.reasoningAutoCollapse()}
@@ -74,6 +79,28 @@ const DisplayTab: Component = () => {
           >
             {language.t("settings.display.reasoningAutoCollapse.title")}
           </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.terminalCommand.title")}
+          description={language.t("settings.display.terminalCommand.description")}
+          last
+        >
+          <Select
+            options={TERMINAL_OPTIONS}
+            current={TERMINAL_OPTIONS.find((o) => o.value === (config().terminal_command_display ?? "expanded"))}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as TerminalCommandDisplay
+              if (next === (config().terminal_command_display ?? "expanded")) return
+              updateConfig({ terminal_command_display: next })
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
         </SettingsRow>
       </Card>
     </div>

@@ -1380,6 +1380,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",

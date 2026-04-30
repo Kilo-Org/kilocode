@@ -1372,6 +1372,10 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",

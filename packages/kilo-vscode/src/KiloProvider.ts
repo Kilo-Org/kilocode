@@ -31,6 +31,7 @@ import {
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   resolveContextDirectory,
+  resolveNewSessionDirectory,
   resolveWorkspaceDirectory,
   SessionStreamScheduler,
   type SessionRefreshContext,
@@ -623,6 +624,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
+            typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
           )
           break
         }
@@ -639,6 +641,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.agent,
             message.variant,
             files,
+            typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
           )
           break
         }
@@ -2359,18 +2362,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Ensure a session exists, creating one if needed. Returns the resolved
-   * session ID and workspace directory, or undefined when the client is
-   * disconnected.
-   */
-  private async resolveSession(
-    sessionID?: string,
-    draftID?: string,
-  ): Promise<{ sid: string; dir: string } | undefined> {
+  private async resolveSession(sessionID?: string, draftID?: string, context?: string) {
     if (!this.client) return undefined
 
-    const dir = sessionID ? this.getWorkspaceDirectory(sessionID) : this.getContextDirectory()
+    const dir = resolveNewSessionDirectory({
+      sessionID,
+      currentSessionID: this.currentSession?.id,
+      contextSessionID: this.contextSessionID,
+      agentManagerContext: context,
+      sessionDirectories: this.sessionDirectories,
+      workspaceDirectory: this.getRootDirectory(),
+    })
 
     if (!sessionID && !this.currentSession) {
       const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
@@ -2378,7 +2380,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
       this.trackedSessionIds.add(session.id)
-      if (draftID) this.contextSessionID = session.id
       this.postMessage({
         type: "sessionCreated",
         session: this.sessionToWebview(session),
@@ -2477,6 +2478,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: MessageFile[],
+    context?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2493,7 +2495,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     let resolved: { sid: string; dir: string } | undefined
     try {
-      resolved = await this.resolveSession(sessionID, draftID)
+      resolved = await this.resolveSession(sessionID, draftID, context)
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -2553,6 +2555,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     agent?: string,
     variant?: string,
     files?: MessageFile[],
+    context?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2569,7 +2572,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     let resolved: { sid: string; dir: string } | undefined
     try {
-      resolved = await this.resolveSession(sessionID, draftID)
+      resolved = await this.resolveSession(sessionID, draftID, context)
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
@@ -3234,10 +3237,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Get the workspace directory for a session.
-   * Checks session directory overrides first (e.g., worktree paths), then falls back to workspace root.
-   */
   private getWorkspaceDirectory(sessionId?: string): string {
     return resolveWorkspaceDirectory({
       sessionID: sessionId,

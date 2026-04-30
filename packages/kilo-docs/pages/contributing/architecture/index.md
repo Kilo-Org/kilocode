@@ -210,21 +210,34 @@ const client = new KiloClient({ baseUrl: "http://localhost:3000" })
 const session = await client.session.create({ ... })
 ```
 
-### Namespace Module Pattern
+### Module Export Pattern
 
-The CLI uses a namespace module pattern for organizing related functionality:
+The CLI uses flat ESM exports inside each module, then re-exports the module as a namespace from an index file when callers need grouped access. Avoid adding new `export namespace` declarations; top-level exports are easier to tree-shake and work better with Node's type-stripping runtime.
 
 ```typescript
-export namespace Session {
-  export const create = fn(CreateSchema, async (input) => {
-    // ...
-  })
+// packages/opencode/src/session/session.ts
+export const create = fn(CreateSchema, async (input) => {
+  // ...
+})
 
-  export const list = fn(ListSchema, async (input) => {
-    // ...
-  })
-}
+export const list = fn(ListSchema, async (input) => {
+  // ...
+})
+
+// packages/opencode/src/session/index.ts
+export * as Session from "./session"
 ```
+
+Prefer importing the specific export when possible. Use the namespace re-export (`Session.create`, `Session.list`) when a caller benefits from grouped module access or when preserving the existing public shape.
+
+### CLI Server API
+
+The CLI server is Hono-based and publishes an OpenAPI-compatible HTTP + SSE API consumed by `@kilocode/sdk`. Some route groups are being migrated behind the experimental Effect `HttpApi` bridge while preserving the generated SDK shape.
+
+- Keep the SDK output stable when moving routes between Hono and Effect `HttpApi`.
+- Use `KILO_EXPERIMENTAL_HTTPAPI` only for migration testing; public clients should not depend on the bridge detail.
+- Regenerate `packages/sdk/js/` after server endpoint changes.
+- Keep request handling observable with route spans and stable attributes where possible.
 
 ### Tool Implementation
 

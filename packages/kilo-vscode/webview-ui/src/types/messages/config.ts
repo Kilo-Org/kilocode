@@ -92,6 +92,8 @@ export interface BrowserSettings {
   headless: boolean
 }
 
+export type TerminalCommandDisplay = "expanded" | "collapsed"
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -107,6 +109,7 @@ export interface Config {
   skills?: SkillsConfig
   snapshot?: boolean
   remote_control?: boolean
+  terminal_command_display?: TerminalCommandDisplay
   share?: "manual" | "auto" | "disabled"
   username?: string
   watcher?: WatcherConfig

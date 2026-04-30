@@ -22,7 +22,7 @@ export function registerVscodeToolOverrides() {
 
     ToolRegistry.register({
       name,
-      render: (props) => <Dynamic component={upstream} {...props} defaultOpen />,
+      render: (props) => <Dynamic component={upstream} {...props} defaultOpen={props.defaultOpen ?? true} />,
     })
     registered.add(name)
   }
