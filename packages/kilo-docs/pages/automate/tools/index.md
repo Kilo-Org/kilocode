@@ -11,16 +11,103 @@ Kilo Code implements a sophisticated tool system that allows AI models to intera
 
 ### Tool Groups
 
+{% tabs %}
+{% tab label="VSCode" %}
+
 Tools are organized into logical groups based on their functionality:
 
-| Category           | Purpose                           | Tools                                                                                                                                                                                                                                                                                     | Common Use                                         |
-| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Read Group**     | File system reading and searching | [read_file](/docs/automate/tools/read-file), [search_files](/docs/automate/tools/search-files), [list_files](/docs/automate/tools/list-files), [list_code_definition_names](/docs/automate/tools/list-code-definition-names)                                                              | Code exploration and analysis                      |
-| **Edit Group**     | File system modifications         | [apply_diff](/docs/automate/tools/apply-diff), [delete_file](/docs/automate/tools/delete-file), [write_to_file](/docs/automate/tools/write-to-file)                                                                                                                                       | Code changes and file manipulation                 |
-| **Browser Group**  | Web automation                    | [browser_action](/docs/automate/tools/browser-action)                                                                                                                                                                                                                                     | Web testing and interaction                        |
-| **Command Group**  | System command execution          | [execute_command](/docs/automate/tools/execute-command)                                                                                                                                                                                                                                   | Running scripts, building projects                 |
-| **MCP Group**      | External tool integration         | [use_mcp_tool](/docs/automate/tools/use-mcp-tool), [access_mcp_resource](/docs/automate/tools/access-mcp-resource)                                                                                                                                                                        | Specialized functionality through external servers |
-| **Workflow Group** | Mode and task management          | [switch_mode](/docs/automate/tools/switch-mode), [new_task](/docs/automate/tools/new-task), [ask_followup_question](/docs/automate/tools/ask-followup-question), [attempt_completion](/docs/automate/tools/attempt-completion), [update_todo_list](/docs/automate/tools/update-todo-list) | Context switching and task organization            |
+| Category | Purpose | Tools | Common Use |
+|---|---|---|---|
+| **Read Group** | File system reading and searching | `read`, `glob`, `grep` | Code exploration and analysis |
+| **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
+| **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
+| **Web Group** | Fetch and search web content | `webfetch`, `websearch`, `codesearch` | Research, documentation lookup |
+| **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
+| **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
+| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` | Context switching and task organization |
+
+### Always Available Tools
+
+Certain tools are accessible regardless of the current agent:
+
+- `question`: Ask the user a clarifying question with selectable options
+- `task`: Spawn a sub-agent session
+- `todowrite` / `todoread`: Manage session task lists
+
+## Available Tools
+
+### Read Tools
+
+These tools help Kilo Code understand your code and project:
+
+- `read` - Reads file contents with line numbers
+- `glob` - Finds files matching a glob pattern
+- `grep` - Searches file contents with regex
+
+### Edit Tools
+
+These tools help Kilo Code make changes to your code:
+
+- `edit` - Makes precise text replacements in a file
+- `write` - Creates new files or fully overwrites existing ones
+- `apply_patch` - Applies unified diffs (used with certain models)
+
+For multiple replacements in one file, Kilo uses repeated `edit` calls or a patch-style edit when the model supports it.
+
+### Execute Tools
+
+These tools help Kilo Code run commands:
+
+- `bash` - Runs shell commands with configurable timeout and working directory
+
+### Web Tools
+
+These tools help Kilo Code access web content:
+
+- `webfetch` - Fetches a URL and returns the content
+- `websearch` - Searches the web (available to Kilo/OpenRouter users)
+- `codesearch` - Semantic code search (available to Kilo/OpenRouter users)
+
+### Browser Tools
+
+The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
+
+- `kilo-playwright_browser_navigate` - Navigate to a URL
+- `kilo-playwright_browser_click` - Click an element
+- `kilo-playwright_browser_type` - Type text into an element
+- `kilo-playwright_browser_screenshot` - Capture a screenshot
+- `kilo-playwright_browser_snapshot` - Capture an accessibility snapshot
+
+These follow the same permission model as all MCP tools (see below).
+
+### MCP Tools
+
+MCP server tools are automatically available when an MCP server is connected. Tool names are namespaced as `{server}_{tool}`. See [MCP Overview](/docs/automate/mcp/overview) for details.
+
+### Workflow Tools
+
+These tools help manage the conversation and task flow:
+
+- `question` - Asks you a clarifying question with selectable options
+- `task` - Spawns a sub-agent (child session)
+- `todowrite` - Creates and updates a session TODO list
+- `todoread` - Reads the current session TODO list
+- `plan` - Enters structured planning mode
+- `skill` - Invokes a reusable skill (Markdown instruction module)
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+Tools are organized into logical groups based on their functionality:
+
+| Category | Purpose | Tools | Common Use |
+|---|---|---|---|
+| **Read Group** | File system reading and searching | [read_file](/docs/automate/tools/read-file), [search_files](/docs/automate/tools/search-files), [list_files](/docs/automate/tools/list-files), [list_code_definition_names](/docs/automate/tools/list-code-definition-names) | Code exploration and analysis |
+| **Edit Group** | File system modifications | [apply_diff](/docs/automate/tools/apply-diff), [delete_file](/docs/automate/tools/delete-file), [write_to_file](/docs/automate/tools/write-to-file) | Code changes and file manipulation |
+| **Browser Group** | Web automation | [browser_action](/docs/automate/tools/browser-action) | Web testing and interaction |
+| **Command Group** | System command execution | [execute_command](/docs/automate/tools/execute-command) | Running scripts, building projects |
+| **MCP Group** | External tool integration | [use_mcp_tool](/docs/automate/tools/use-mcp-tool), [access_mcp_resource](/docs/automate/tools/access-mcp-resource) | Specialized functionality through external servers |
+| **Workflow Group** | Mode and task management | [switch_mode](/docs/automate/tools/switch-mode), [new_task](/docs/automate/tools/new-task), [ask_followup_question](/docs/automate/tools/ask-followup-question), [attempt_completion](/docs/automate/tools/attempt-completion), [update_todo_list](/docs/automate/tools/update-todo-list) | Context switching and task organization |
 
 ### Always Available Tools
 
@@ -79,6 +166,9 @@ These tools help manage the conversation and task flow:
 - [switch_mode](/docs/automate/tools/switch-mode) - Changes to a different mode for specialized tasks
 - [new_task](/docs/automate/tools/new-task) - Creates a new subtask
 - [update_todo_list](/docs/automate/tools/update-todo-list) - Tracks task progress with step-by-step checklists
+
+{% /tab %}
+{% /tabs %}
 
 ## Tool Calling Mechanism
 

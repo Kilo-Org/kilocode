@@ -1,16 +1,20 @@
 #!/usr/bin/env bun
 /**
- * Transform package names from opencode to kilo
+ * Transform package names and branding from opencode to kilo
  *
  * This script transforms:
  * - opencode-ai -> @kilocode/cli
  * - @opencode-ai/cli -> @kilocode/cli
  * - @opencode-ai/sdk -> @kilocode/sdk
  * - @opencode-ai/plugin -> @kilocode/plugin
+ * - OPENCODE_* -> KILO_* (env variables, excluding OPENCODE_API_KEY)
+ * - x-opencode-* -> x-kilo-* (HTTP headers)
+ * - opencode.db -> kilo.db (database filename)
+ * - window.__OPENCODE__ -> window.__KILO__ (window global)
  */
 
 import { Glob } from "bun"
-import { info, success, warn, debug } from "../utils/logger"
+import { info, success } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 
 export interface TransformResult {
@@ -71,29 +75,50 @@ const PACKAGE_PATTERNS = [
   { pattern: /OpencodeClient/g, replacement: "KiloClient" },
   // createOpencode (without suffix) needs negative lookahead to avoid matching createOpencodeClient
   { pattern: /\bcreateOpencode\b(?!Client|Server|Tui)/g, replacement: "createKilo" },
+
+  // Branding: environment variables (exclude OPENCODE_API_KEY — upstream Zen SaaS key)
+  { pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g, replacement: "KILO_$1" },
+  { pattern: /VITE_OPENCODE_/g, replacement: "VITE_KILO_" },
+  { pattern: /_EXTENSION_OPENCODE_/g, replacement: "_EXTENSION_KILO_" },
+
+  // Branding: HTTP header prefix
+  { pattern: /x-opencode-/g, replacement: "x-kilo-" },
+
+  // Branding: window global
+  { pattern: /window\.__OPENCODE__/g, replacement: "window.__KILO__" },
+
+  // Branding: database filename
+  { pattern: /opencode\.db/g, replacement: "kilo.db" },
 ]
+
+/**
+ * Apply package name and branding transforms to content.
+ */
+export function applyPackageNameTransforms(input: string): { result: string; changes: number } {
+  return PACKAGE_PATTERNS.reduce(
+    (state, { pattern, replacement }) => {
+      const regex = typeof pattern === "string" ? new RegExp(pattern, "g") : pattern
+      regex.lastIndex = 0
+      const count = (state.result.match(regex) || []).length
+      regex.lastIndex = 0
+      const result = state.result.replace(regex, replacement)
+      if (result === state.result) return state
+      return { result, changes: state.changes + count }
+    },
+    { result: input, changes: 0 },
+  )
+}
 
 /**
  * Transform package names in a single file
  */
 export async function transformFile(filePath: string, options: TransformOptions = {}): Promise<TransformResult> {
   const file = Bun.file(filePath)
-  let content = await file.text()
-  const original = content
-  let changes = 0
-
-  for (const { pattern, replacement } of PACKAGE_PATTERNS) {
-    const regex = typeof pattern === "string" ? new RegExp(pattern, "g") : pattern
-    const newContent = content.replace(regex, replacement)
-    if (newContent !== content) {
-      const count = (content.match(regex) || []).length
-      changes += count
-      content = newContent
-    }
-  }
+  const input = await file.text()
+  const { result, changes } = applyPackageNameTransforms(input)
 
   if (changes > 0 && !options.dryRun) {
-    await Bun.write(filePath, content)
+    await Bun.write(filePath, result)
   }
 
   return {

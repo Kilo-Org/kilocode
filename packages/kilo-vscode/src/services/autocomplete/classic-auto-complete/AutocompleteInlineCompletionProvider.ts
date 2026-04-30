@@ -126,11 +126,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private recentlyVisitedRangesService: RecentlyVisitedRangesService
   private recentlyEditedTracker: RecentlyEditedTracker
   private debounceTimer: NodeJS.Timeout | null = null
+  /** The pending request associated with the current debounce timer (if any) */
+  private debouncedPendingRequest: PendingRequest | null = null
   private isFirstCall: boolean = true
   private ignoreController: Promise<FileIgnoreController>
   /** Abort controller for the current in-flight FIM request */
   private fimAbortController: AbortController | null = null
   private acceptedCommand: vscode.Disposable | null = null
+  private contextService: ContextRetrievalService | null = null
   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
   private latencyHistory: number[] = []
   private telemetry: AutocompleteTelemetry | null
@@ -165,10 +168,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     })()
 
     const ide = new VsCodeIde(context)
-    const contextService = new ContextRetrievalService(ide)
+    this.contextService = new ContextRetrievalService(ide)
     const contextProvider: AutocompleteContextProvider = {
       ide,
-      contextService,
+      contextService: this.contextService,
       model,
       ignoreController: this.ignoreController,
     }
@@ -297,9 +300,13 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
+    this.settleDebouncedPendingRequest()
+    this.pendingRequests.length = 0
     this.fimAbortController?.abort()
     this.fimAbortController = null
     this.telemetry?.dispose()
+    this.contextService?.dispose()
+    this.contextService = null
     this.recentlyVisitedRangesService.dispose()
     this.recentlyEditedTracker.dispose()
     void this.disposeIgnoreController()
@@ -480,6 +487,15 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
   }
 
+  private settleDebouncedPendingRequest(): void {
+    const pending = this.debouncedPendingRequest
+    if (!pending) return
+
+    this.removePendingRequest(pending)
+    pending.resolve?.()
+    this.debouncedPendingRequest = null
+  }
+
   /**
    * Debounced fetch with leading edge execution and pending request reuse.
    * - First call executes immediately (leading edge)
@@ -500,14 +516,23 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
 
     // If this is the first call (no pending debounce), execute immediately
+    // but still track it as a pending request so subsequent calls can reuse it
     if (this.isFirstCall && this.debounceTimer === null) {
       this.isFirstCall = false
-      return this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+      const promise = this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+      const leading: PendingRequest = { prefix, suffix, promise }
+      promise.finally(() => this.removePendingRequest(leading))
+      this.pendingRequests.push(leading)
+      return promise
     }
 
-    // Clear any existing timer (reset the debounce)
+    // Clear any existing timer and remove the stale pending request it belongs to.
+    // The cancelled timer's callback will never fire, so the pending entry would
+    // otherwise linger with a never-resolving promise.
     if (this.debounceTimer !== null) {
       clearTimeout(this.debounceTimer)
+      this.debounceTimer = null
+      this.settleDebouncedPendingRequest()
     }
 
     // Create the pending request object first so we can reference it in the cleanup
@@ -518,18 +543,25 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
 
     const requestPromise = new Promise<void>((resolve) => {
+      pendingRequest.resolve = resolve
       this.debounceTimer = setTimeout(async () => {
         this.debounceTimer = null
+        this.debouncedPendingRequest = null
         this.isFirstCall = true // Reset for next sequence
-        await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
-        // Remove this request from pending when done
-        this.removePendingRequest(pendingRequest)
-        resolve()
+        try {
+          await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+        } finally {
+          this.removePendingRequest(pendingRequest)
+          resolve()
+        }
       }, this.debounceDelayMs)
     })
 
     // Complete the pending request object
     pendingRequest.promise = requestPromise
+
+    // Track so we can remove it if the timer is cleared by a subsequent call
+    this.debouncedPendingRequest = pendingRequest
 
     // Add to the list of pending requests
     this.pendingRequests.push(pendingRequest)

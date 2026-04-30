@@ -13,12 +13,12 @@ This page covers everything you can do from the KiloClaw dashboard. For getting 
 
 Your instance is always in one of these states as indicated by the status label at the top of your dashboard:
 
-| Status          | Label           | Meaning                                                       |
-| --------------- | --------------- | ------------------------------------------------------------- |
-| **Running**     | Machine Online  | Your agent is online and reachable                            |
-| **Stopped**     | Machine Stopped | The machine is off, but all your files and data are preserved |
-| **Provisioned** | Provisioned     | Your instance has been created but never started              |
-| **Destroying**  | Destroying      | The instance is being permanently deleted                     |
+| Status | Label | Meaning |
+|---|---|---|
+| **Running** | Machine Online | Your agent is online and reachable |
+| **Stopped** | Machine Stopped | The machine is off, but all your files and data are preserved |
+| **Provisioned** | Provisioned | Your instance has been created but never started |
+| **Destroying** | Destroying | The instance is being permanently deleted |
 
 ## Instance Controls
 
@@ -100,7 +100,7 @@ You can pin your instance to a specific OpenClaw version and variant from the Se
 
 Select a version and variant from the dropdowns and click **Save**. To return to automatic updates, clear the version pin and save.
 
-See [Version Pinning](/docs/kiloclaw/version-pinning) for details.
+See [Version Pinning](/docs/kiloclaw/control-ui/version-pinning) for details.
 
 ### Version Status Indicators
 
@@ -168,23 +168,23 @@ The dashboard shows recent KiloClaw platform updates. Each entry is tagged as a 
 
 ## Instance Lifecycle
 
-| Action                 | What Happens                                                                | Data Preserved? |
-| ---------------------- | --------------------------------------------------------------------------- | --------------- |
-| **Create & Provision** | Allocates storage in the best region available and saves your config.       | N/A             |
-| **Start Machine**      | Boots the machine and starts OpenClaw.                                      | Yes             |
-| **Stop Instance**      | Shuts down the machine.                                                     | Yes             |
-| **Restart OpenClaw**   | Restarts the OpenClaw process. Machine stays up.                            | Yes             |
-| **Redeploy**           | Stops, applies config, and restarts the machine (same version or upgraded). | Yes             |
-| **Destroy Instance**   | Permanently deletes everything.                                             | No              |
+| Action | What Happens | Data Preserved? |
+|---|---|---|
+| **Create & Provision** | Allocates storage in the best region available and saves your config. | N/A |
+| **Start Machine** | Boots the machine and starts OpenClaw. | Yes |
+| **Stop Instance** | Shuts down the machine. | Yes |
+| **Restart OpenClaw** | Restarts the OpenClaw process. Machine stays up. | Yes |
+| **Redeploy** | Stops, applies config, and restarts the machine (same version or upgraded). | Yes |
+| **Destroy Instance** | Permanently deletes everything. | No |
 
 ## Machine Specs
 
 Each instance runs on a dedicated machine — there is no shared infrastructure between users.
 
-| Spec    | Value                |
-| ------- | -------------------- |
-| CPU     | 2 shared vCPUs       |
-| Memory  | 3 GB RAM             |
+| Spec | Value |
+|---|---|
+| CPU | 2 shared vCPUs |
+| Memory | 3 GB RAM |
 | Storage | 10 GB persistent SSD |
 
 Your storage is region-pinned — once your instance is created in a region (e.g., DFW), it always runs there. OpenClaw config lives at `/root/.openclaw` and the workspace at `/root/clawd`.
@@ -199,4 +199,4 @@ These are the beta specifications for machines and subject to change without not
 - [OpenClaw Control UI](/docs/kiloclaw/control-ui)
 - [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
 - [Troubleshooting](/docs/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/kiloclaw/pricing)
+- [KiloClaw Pricing](/docs/kiloclaw/faq/pricing)

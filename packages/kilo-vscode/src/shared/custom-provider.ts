@@ -10,6 +10,16 @@ export const EnvSchema = z
   .string()
   .trim()
   .regex(/^[A-Z_][A-Z0-9_]*$/, INVALID_ENV)
+
+const VariantConfigSchema = z.object({
+  enable_thinking: z.boolean().optional(),
+  thinking: z.object({ type: z.enum(["enabled", "disabled"]) }).optional(),
+  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high"]).optional(),
+  chat_template_args: z.object({ enable_thinking: z.boolean() }).optional(),
+})
+
+export type VariantConfig = z.infer<typeof VariantConfigSchema>
+
 export const CustomProviderConfigSchema = z
   .object({
     npm: z.string().optional(),
@@ -33,6 +43,8 @@ export const CustomProviderConfigSchema = z
         z
           .object({
             name: z.string().trim().min(1).max(200),
+            reasoning: z.boolean().optional(),
+            variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
           })
           .strict(),
       )
@@ -48,8 +60,12 @@ export type SanitizedProviderConfig = {
     baseURL: string
     headers?: Record<string, string>
   }
-  models: Record<string, { name: string }>
+  models: Record<string, { name: string; reasoning?: true; variants?: Record<string, VariantConfig> }>
 }
+
+export type CustomProviderAuthChange = { mode: "preserve" } | { mode: "clear" } | { mode: "set"; key: string }
+
+export const MASKED_CUSTOM_PROVIDER_KEY = "********"
 
 type Issue = { error: string; issue?: z.ZodIssue }
 
@@ -78,6 +94,18 @@ export function parseCustomProviderSecret(raw: string): { value: { apiKey?: stri
   return fail(issue?.message ?? INVALID_ENV, issue)
 }
 
+export function resolveCustomProviderAuth(apiKey: string | undefined, changed: boolean): CustomProviderAuthChange {
+  const key = apiKey?.trim()
+  if (!changed) return { mode: "preserve" }
+  if (key) return { mode: "set", key }
+  return { mode: "clear" }
+}
+
+export function resolveCustomProviderKey(auth: "api" | "oauth" | "wellknown" | undefined) {
+  if (auth !== "api") return ""
+  return MASKED_CUSTOM_PROVIDER_KEY
+}
+
 export function normalizeCustomProviderConfig(
   config: z.output<typeof CustomProviderConfigSchema>,
 ): SanitizedProviderConfig {
@@ -98,7 +126,14 @@ export function normalizeCustomProviderConfig(
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     },
     models: Object.fromEntries(
-      Object.entries(config.models).map(([id, model]) => [id.trim(), { name: model.name.trim() }]),
+      Object.entries(config.models).map(([id, model]) => [
+        id.trim(),
+        {
+          name: model.name.trim(),
+          ...(model.reasoning ? { reasoning: true as const } : {}),
+          ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
+        },
+      ]),
     ),
   }
 }
@@ -111,4 +146,40 @@ export function sanitizeCustomProviderConfig(provider: unknown): { value: Saniti
   }
 
   return { value: normalizeCustomProviderConfig(result.data) }
+}
+
+type AnyRecord = Record<string, unknown>
+
+function isRecord(v: unknown): v is AnyRecord {
+  return !!v && typeof v === "object" && !Array.isArray(v)
+}
+
+/**
+ * Build a provider patch that includes null sentinels for models and variants
+ * that existed in the previous config but are absent from the new one. The CLI
+ * `config.update` endpoint deep-merges the payload with the existing config;
+ * without explicit nulls, removed entries would persist on disk.
+ */
+export function withCustomProviderDeletions(existing: unknown, next: SanitizedProviderConfig): SanitizedProviderConfig {
+  if (!isRecord(existing)) return next
+  const oldModels = isRecord(existing.models) ? existing.models : {}
+  const patched: AnyRecord = { ...next.models }
+
+  for (const id of Object.keys(oldModels)) {
+    if (!(id in patched)) {
+      patched[id] = null
+      continue
+    }
+    const oldModel = oldModels[id]
+    const oldVariants = isRecord(oldModel) && isRecord(oldModel.variants) ? oldModel.variants : {}
+    const newModel = patched[id]
+    if (!isRecord(newModel)) continue
+    const newVariants = isRecord(newModel.variants) ? newModel.variants : {}
+    const removedVariants = Object.keys(oldVariants).filter((v) => !(v in newVariants))
+    if (removedVariants.length === 0) continue
+    const nulls = Object.fromEntries(removedVariants.map((v) => [v, null]))
+    patched[id] = { ...newModel, variants: { ...newVariants, ...nulls } }
+  }
+
+  return { ...next, models: patched as SanitizedProviderConfig["models"] }
 }

@@ -133,7 +133,7 @@ function normalizeToCompleteLine(params: AutocompleteSuggestion): AutocompleteSu
  * @param params.suggestion - The suggested text to insert
  * @param params.prefix - The text before the cursor position
  * @param params.suffix - The text after the cursor position
- * @param params.model - The model string (e.g., "codestral", "qwen3", etc.)
+ * @param params.model - The model string (e.g., "codestral", "mercury", etc.)
  * @param params.languageId - Optional language ID for language-specific filtering
  * @returns The processed suggestion text, or undefined if it should be filtered out
  */

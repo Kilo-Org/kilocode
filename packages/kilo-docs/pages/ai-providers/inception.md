@@ -1,4 +1,6 @@
 ---
+title: "Using Inception Labs with Kilo Code"
+description: "Connect Inception Labs' Mercury diffusion LLMs to Kilo Code for ultra-fast code generation. Setup guide for VS Code and the CLI."
 sidebar_label: Inception
 ---
 
@@ -23,10 +25,54 @@ Refer to Inception's current website and developer documentation for the most up
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2. **Select Provider:** Choose "Inception" from the "API Provider" dropdown.
 3. **Enter API Key:** Paste your Inception API key into the "Inception API Key" field.
 4. **Select Model:** Choose your desired model from the "Model" dropdown.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add Inception and enter your API key.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key as an environment variable or configure it in your `kilo.json` config file:
+
+**Environment variable:**
+
+```bash
+export INCEPTION_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "inception": {
+      "env": ["INCEPTION_API_KEY"],
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "inception/mercury-coder-small-beta",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

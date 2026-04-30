@@ -67,6 +67,7 @@ export interface InitialMessage {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
 }
 
@@ -81,6 +82,7 @@ export function buildInitialMessages(
   fallback: { providerID?: string; modelID?: string },
   prompt?: string,
   agent?: string,
+  variant?: string,
   files?: Array<{ mime: string; url: string }>,
 ): InitialMessage[] {
   return created.map((entry) => {
@@ -96,6 +98,7 @@ export function buildInitialMessages(
     if (prompt) {
       msg.text = prompt
       msg.agent = agent
+      msg.variant = variant
       msg.files = files
     }
     return msg

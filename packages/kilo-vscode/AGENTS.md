@@ -26,38 +26,38 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
                 └──────────┘ └─────────┘ └──────────────┘
 ```
 
-| Product                    | Package                                | What it is                                          | How it uses the CLI                                               |
-| -------------------------- | -------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
-| Kilo CLI (TUI)             | `packages/opencode/`                   | Interactive terminal UI (SolidJS + OpenTUI)         | In-process — TUI and server run together                          |
-| Kilo CLI (`kilo run`)      | `packages/opencode/`                   | Non-interactive headless mode for scripting         | In-process — no network socket                                    |
-| **Kilo VS Code Extension** | **`packages/kilo-vscode/`**            | VS Code extension with sidebar chat + Agent Manager | Bundles CLI binary, spawns `kilo serve --port 0` as child process |
-| OpenCode Desktop           | `packages/desktop/`                    | Standalone native app (Tauri)                       | Bundles CLI binary as sidecar, spawns `kilo serve`                |
-| OpenCode Web (`kilo web`)  | `packages/opencode/` + `packages/app/` | Browser-based UI                                    | CLI starts server + opens browser                                 |
+| Product | Package | What it is | How it uses the CLI |
+|---|---|---|---|
+| Kilo CLI (TUI) | `packages/opencode/` | Interactive terminal UI (SolidJS + OpenTUI) | In-process — TUI and server run together |
+| Kilo CLI (`kilo run`) | `packages/opencode/` | Non-interactive headless mode for scripting | In-process — no network socket |
+| **Kilo VS Code Extension** | **`packages/kilo-vscode/`** | VS Code extension with sidebar chat + Agent Manager | Bundles CLI binary, spawns `kilo serve --port 0` as child process |
+| OpenCode Desktop | `packages/desktop/` | Standalone native app (Tauri) | Bundles CLI binary as sidecar, spawns `kilo serve` |
+| OpenCode Web (`kilo web`) | `packages/opencode/` + `packages/app/` | Browser-based UI | CLI starts server + opens browser |
 
 **OpenCode Desktop** (`packages/desktop/`) and `kilo web` both render the shared `@opencode-ai/app` SolidJS frontend (`packages/app/`). They differ only in the platform layer (Tauri native APIs vs browser APIs). Neither has any relationship to this extension or the Agent Manager — they are independent clients of the same `kilo serve` backend.
 
 ### Kilo-Domain Packages
 
-| Package                    | Name                       | Role                                                                                                                         |
-| -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `packages/kilo-vscode/`    | `kilo-code`                | **This package.** VS Code extension.                                                                                         |
-| `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams)                         |
-| `packages/kilo-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
-| `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI                                                                        |
-| `packages/kilo-i18n/`      | `@kilocode/kilo-i18n`      | Translation strings (16 languages)                                                                                           |
-| `packages/kilo-docs/`      | `@kilocode/kilo-docs`      | Documentation site (Next.js + Markdoc)                                                                                       |
+| Package | Name | Role |
+|---|---|---|
+| `packages/kilo-vscode/` | `kilo-code` | **This package.** VS Code extension. |
+| `packages/kilo-gateway/` | `@kilocode/kilo-gateway` | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams) |
+| `packages/kilo-ui/` | `@kilocode/kilo-ui` | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
+| `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI |
+| `packages/kilo-i18n/` | `@kilocode/kilo-i18n` | Translation strings (16 languages) |
+| `packages/kilo-docs/` | `@kilocode/kilo-docs` | Documentation site (Next.js + Markdoc) |
 
 ### Upstream OpenCode Packages (not Kilo-specific)
 
-| Package              | Name                   | Role                                                                                     |
-| -------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| `packages/opencode/` | `@kilocode/cli`        | Core CLI — forked from upstream OpenCode. AI agents, tools, sessions, server.            |
-| `packages/sdk/js/`   | `@kilocode/sdk`        | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` by hand. |
-| `packages/app/`      | `@opencode-ai/app`     | Shared SolidJS web UI consumed by desktop app and `kilo web`                             |
-| `packages/desktop/`  | `@opencode-ai/desktop` | Tauri desktop app shell                                                                  |
-| `packages/ui/`       | `@opencode-ai/ui`      | Shared UI primitives                                                                     |
-| `packages/util/`     | `@opencode-ai/util`    | Shared utilities (error, path, retry, slug)                                              |
-| `packages/plugin/`   | `@kilocode/plugin`     | Plugin/tool interface definitions                                                        |
+| Package | Name | Role |
+|---|---|---|
+| `packages/opencode/` | `@kilocode/cli` | Core CLI — forked from upstream OpenCode. AI agents, tools, sessions, server. |
+| `packages/sdk/js/` | `@kilocode/sdk` | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` by hand. |
+| `packages/app/` | `@opencode-ai/app` | Shared SolidJS web UI consumed by desktop app and `kilo web` |
+| `packages/desktop/` | `@opencode-ai/desktop` | Tauri desktop app shell |
+| `packages/ui/` | `@opencode-ai/ui` | Shared UI primitives |
+| `packages/util/` | `@opencode-ai/util` | Shared utilities (error, path, retry, slug) |
+| `packages/plugin/` | `@kilocode/plugin` | Plugin/tool interface definitions |
 
 ## Commands
 
@@ -155,15 +155,15 @@ The Agent Manager is a feature within this extension (not a separate product). I
 
 ### How It Differs From the Sidebar
 
-| Aspect        | Sidebar                    | Agent Manager                                       |
-| ------------- | -------------------------- | --------------------------------------------------- |
-| Location      | Activity bar sidebar panel | Editor tab (full panel)                             |
-| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI           |
-| Git isolation | Uses workspace root        | Each session can get its own worktree branch        |
-| State         | No dedicated state file    | `.kilo/agent-manager.json`                          |
-| Terminals     | None                       | Dedicated VS Code terminal per session              |
-| Setup scripts | None                       | Configurable `.kilo/setup-script` runs per worktree |
-| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt     |
+| Aspect | Sidebar | Agent Manager |
+|---|---|---|
+| Location | Activity bar sidebar panel | Editor tab (full panel) |
+| Sessions | Single session at a time | Multiple parallel sessions with tabbed UI |
+| Git isolation | Uses workspace root | Each session can get its own worktree branch |
+| State | No dedicated state file | `.kilo/agent-manager.json` |
+| Terminals | None | Dedicated VS Code terminal per session |
+| Setup scripts | None | Configurable `.kilo/setup-script` runs per worktree |
+| Multi-version | Not supported | Up to 4 parallel worktrees with the same prompt |
 
 ### Architecture
 
@@ -185,6 +185,12 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 - **`data-component` and `data-slot` attributes carry CSS styling** — kilo-ui uses `[data-component]` and `[data-slot]` attribute selectors, not class names. When the app uses e.g. `data-component="permission-prompt"` and `data-slot="permission-actions"`, these get kilo-ui styling for free.
 - **Prefer kilo-ui styles**: Always reuse existing kilo-ui CSS variables, tokens, and component styles instead of writing custom CSS. If a style doesn't exist in kilo-ui yet, add it there and reuse it rather than inlining or duplicating styles in the webview.
 - **Icons**: kilo-ui has 75+ custom SVG icons in [`packages/ui/src/components/icon.tsx`](../../packages/ui/src/components/icon.tsx). To list all available icon names: `node -e "const c=require('fs').readFileSync('../../packages/ui/src/components/icon.tsx','utf8');[...c.matchAll(/^\\s{2}[\"']?([\\w-]+)[\"']?:\\s*\x60/gm)].map(m=>m[1]).sort().forEach(n=>console.log(n))"`. Icon names use both hyphenated (`arrow-left`) and bare-word (`brain`, `console`, `providers`) keys.
+
+## Docs Screenshot Stories
+
+When adding or updating Storybook stories for screenshots used by docs, make the story content match the docs page closely before replacing the docs image. Do not replace screenshots from VSCode Legacy docs tabs or sections.
+
+Generated screenshot baselines live under `packages/kilo-docs/public/img/screenshot-tests/` and are referenced from docs as `/docs/img/screenshot-tests/...`. If a generated VS Code visual-regression screenshot is used in docs, add the docs usage to the `DOCS` map in `tests/visual-regression.spec.ts` and keep `tests/visual-regression.spec.mts` in sync while that file exists.
 
 ## Debugging
 

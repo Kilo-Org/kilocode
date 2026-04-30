@@ -1,4 +1,6 @@
 ---
+title: "Virtual Quota Fallback in Kilo Code"
+description: "Configure automatic provider fallback in Kilo Code to handle quota limits and keep your AI coding workflow uninterrupted."
 sidebar_label: Virtual Quota Fallback
 ---
 

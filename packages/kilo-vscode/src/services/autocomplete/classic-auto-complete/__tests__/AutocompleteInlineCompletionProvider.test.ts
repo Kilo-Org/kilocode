@@ -851,7 +851,6 @@ describe("AutocompleteInlineCompletionProvider", () => {
       }),
       getModelName: vi.fn().mockReturnValue("test-model"),
       getProviderDisplayName: vi.fn().mockReturnValue("test-provider"),
-      supportsFim: vi.fn().mockReturnValue(true),
       hasValidCredentials: vi.fn().mockReturnValue(true), // Default to true for tests
     } as unknown as AutocompleteModel
     mockCostTrackingCallback = vi.fn() as CostTrackingCallback
@@ -1370,7 +1369,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
         await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
 
         // Second call should set a debounce timer
-        provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+        const promise = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
 
         // Verify timer is set for trailing edge
         const timerCountBeforeDispose = vi.getTimerCount()
@@ -1379,9 +1378,10 @@ describe("AutocompleteInlineCompletionProvider", () => {
         // Dispose the provider before timer fires
         provider.dispose()
 
-        // Verify timer is cleared
+        // Verify timer is cleared and the pending request settles
         const timerCountAfterDispose = vi.getTimerCount()
         expect(timerCountAfterDispose).toBeLessThan(timerCountBeforeDispose)
+        await expect(promise).resolves.toEqual([])
       })
     })
   })
@@ -1973,6 +1973,57 @@ describe("AutocompleteInlineCompletionProvider", () => {
       expect(callCount).toBe(1)
     })
 
+    it("should reuse slow leading-edge request when user types forward before it completes", async () => {
+      // Mock the model with a slow response that takes 500ms
+      let callCount = 0
+      let resolvers: Array<() => void> = []
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
+        callCount++
+        // Simulate a slow FIM response — wait for manual resolution
+        await new Promise<void>((resolve) => {
+          resolvers.push(resolve)
+        })
+        if (onChunk) {
+          onChunk("console.log('test');")
+        }
+        return {
+          cost: 0.01,
+          inputTokens: 100,
+          outputTokens: 50,
+          cacheWriteTokens: 0,
+          cacheReadTokens: 0,
+        }
+      })
+
+      // First request: leading edge fires immediately for "const x = 1"
+      const doc1 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
+      const pos1 = new vscode.Position(0, 11)
+      const promise1 = provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
+
+      // Leading edge should have started the request immediately
+      expect(callCount).toBe(1)
+
+      // User types "c" while the leading-edge request is still in-flight
+      const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1c\nconst y = 2")
+      const pos2 = new vscode.Position(0, 12)
+      const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
+
+      // The second request should NOT have triggered a new FIM call —
+      // it should reuse the leading-edge pending request since the prefix
+      // extends and the suffix is unchanged
+      expect(callCount).toBe(1)
+
+      // Now resolve the FIM response
+      resolvers[0]()
+      await vi.advanceTimersByTimeAsync(500)
+
+      await promise1
+      await promise2
+
+      // Only one FIM request should have been made total
+      expect(callCount).toBe(1)
+    })
+
     it("should NOT reuse pending request when suffix changes", async () => {
       // Mock the model to track call count
       let callCount = 0
@@ -2019,6 +2070,23 @@ describe("AutocompleteInlineCompletionProvider", () => {
       // The key point is that the second request was NOT reused from the first
       // because the suffix changed - it started a new debounce cycle
       expect(callCount).toBe(2)
+    })
+
+    it("should settle canceled debounced requests when the timer is reset", async () => {
+      await provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+      const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst z = 3")
+      const promise2 = provider.provideInlineCompletionItems(doc2, mockPosition, mockContext, mockToken)
+
+      await vi.advanceTimersByTimeAsync(100)
+
+      const doc3 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst q = 4")
+      const promise3 = provider.provideInlineCompletionItems(doc3, mockPosition, mockContext, mockToken)
+
+      await expect(promise2).resolves.toEqual([])
+
+      await vi.advanceTimersByTimeAsync(500)
+      await promise3
     })
 
     it("should NOT reuse pending request when user backspaces (prefix shrinks)", async () => {

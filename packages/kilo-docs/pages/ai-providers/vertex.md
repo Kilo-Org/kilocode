@@ -1,4 +1,6 @@
 ---
+title: "Using GCP Vertex AI with Kilo Code"
+description: "Connect Google Cloud Vertex AI to Kilo Code to use Claude, Gemini, and other models through your GCP account."
 sidebar_label: GCP Vertex AI
 ---
 
@@ -20,6 +22,9 @@ Kilo Code supports accessing models through Google Cloud Platform's Vertex AI, a
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2.  **Select Provider:** Choose "GCP Vertex AI" from the "API Provider" dropdown.
 3.  **Configure Authentication:**
@@ -31,7 +36,52 @@ Kilo Code supports accessing models through Google Cloud Platform's Vertex AI, a
 5.  **Select Region:** Choose the region where your Vertex AI resources are located (e.g., `us-east5`).
 6.  **Select Model:** Choose your desired model from the "Model" dropdown.
 
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add GCP Vertex AI. The extension uses Google Application Default Credentials (ADC) for authentication — run `gcloud auth application-default login` before adding the provider. Set your project ID and region in the provider settings.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Vertex AI uses Google Application Default Credentials (ADC) for authentication. Set up ADC using the Google Cloud CLI:
+
+```bash
+gcloud auth application-default login
+```
+
+Set your project and region as environment variables:
+
+```bash
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+export GOOGLE_CLOUD_LOCATION="us-east5"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "google-vertex": {},
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "google-vertex/claude-sonnet-4@20250514",
+}
+```
+
+{% /tab %}
+{% /tabs %}
+
 ## Tips and Notes
 
 - **Permissions:** Ensure your Google Cloud account has the necessary permissions to access Vertex AI and the specific models you want to use.
+- **Prompt caching:** Claude models served through Vertex AI support Kilo prompt caching. Kilo applies Anthropic cache controls and tracks cache write/read tokens when Vertex reports them. Native Vertex Gemini models use Google's implicit server-side caching; no extra Kilo configuration is required, and Gemini may not report cache write tokens.
 - **Pricing:** Refer to the [Vertex AI pricing](https://cloud.google.com/vertex-ai/pricing) page for details.

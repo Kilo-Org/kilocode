@@ -4,6 +4,7 @@ import {
   syncMentionedPaths,
   buildTextAfterMentionSelect,
   buildFileAttachments,
+  buildMentionResults,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -26,6 +27,49 @@ describe("AT_PATTERN", () => {
 
   it("matches empty @", () => {
     expect(AT_PATTERN.test("@")).toBe(true)
+  })
+})
+
+describe("buildMentionResults", () => {
+  it("includes special mentions for empty mention query", () => {
+    const result = buildMentionResults("", [])
+    expect(result[0]).toEqual({
+      type: "terminal",
+      value: "terminal",
+      label: "Terminal",
+      description: "Active terminal output",
+    })
+    expect(result[1]).toEqual({
+      type: "git-changes",
+      value: "git-changes",
+      label: "Git changes",
+      description: "Current session/worktree changes",
+    })
+  })
+
+  it("includes terminal for matching prefix", () => {
+    const result = buildMentionResults("term", ["src/terminal.ts"])
+    expect(result.map((item) => item.type)).toEqual(["terminal", "file"])
+  })
+
+  it("includes git changes for matching prefix", () => {
+    const result = buildMentionResults("git", ["src/git.ts"])
+    expect(result.map((item) => item.type)).toEqual(["git-changes", "file"])
+  })
+
+  it("omits special mentions for unrelated query", () => {
+    const result = buildMentionResults("src", ["src/index.ts"])
+    expect(result.map((item) => item.type)).toEqual(["file"])
+  })
+
+  it("omits git changes when git is unavailable", () => {
+    const result = buildMentionResults("git", ["src/git.ts"], false)
+    expect(result.map((item) => item.type)).toEqual(["file"])
+  })
+
+  it("includes folder results", () => {
+    const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
+    expect(result).toEqual([{ type: "folder", value: "src" }])
   })
 })
 

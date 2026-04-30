@@ -8,7 +8,7 @@
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
 import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
-import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js"
+import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
@@ -32,7 +32,10 @@ interface KiloRoutesDeps extends ImportDeps {
   Auth: Auth
   ModelCache: ModelCache
   z: Z
+  Instance: ImportDeps["Instance"] & { disposeAll(): Promise<void> }
 }
+
+const FIM_TIMEOUT_MS = 30_000
 
 /**
  * Create Kilo Gateway routes with OpenCode dependencies injected
@@ -109,6 +112,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
               content: z.string().optional(),
             })
             .optional(),
+          text: z.string().optional(), // Text-completion style streaming (Mercury)
         }),
       )
       .optional(),
@@ -206,6 +210,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
         ModelCache.clear("kilo")
         clearModesCache()
+        await Instance.disposeAll()
 
         return c.json(true)
       },
@@ -340,25 +345,35 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           [HEADER_FEATURE]: "autocomplete",
         }
 
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: fimModel,
-            prompt: prefix,
-            suffix,
-            max_tokens: fimMaxTokens,
-            temperature: fimTemperature,
-            stream: true,
-          }),
-        })
+        const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          return c.json({ error: `FIM request failed: ${response.status} ${errorText}` }, response.status as any)
+        let response: Response
+        try {
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            signal,
+            body: JSON.stringify({
+              model: fimModel,
+              prompt: prefix,
+              suffix,
+              max_tokens: fimMaxTokens,
+              temperature: fimTemperature,
+              stream: true,
+            }),
+          })
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "TimeoutError")
+            return c.json({ error: "FIM request timed out" }, 504 as any)
+          if (signal.aborted) return c.json({ error: "FIM request canceled" }, 499 as any)
+          throw err
         }
 
-        // Stream the response through
+        if (!response.ok) {
+          const text = await response.text()
+          return c.json({ error: `FIM request failed: ${response.status} ${text}` }, response.status as any)
+        }
+
         return new Response(response.body, {
           headers: {
             "Content-Type": "text/event-stream",
@@ -493,6 +508,126 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         } catch (err: any) {
           console.error("[Kilo Gateway] cloud/session/import: unhandled error", err?.message ?? err)
           return c.json({ error: "Internal error" }, 500)
+        }
+      },
+    )
+    .get(
+      "/claw/status",
+      describeRoute({
+        summary: "Get KiloClaw instance status",
+        description: "Fetch the user's KiloClaw instance status via the KiloClaw worker",
+        operationId: "kilo.claw.status",
+        responses: {
+          200: {
+            description: "Instance status",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    status: z
+                      .enum(["provisioned", "starting", "restarting", "running", "stopped", "destroying"])
+                      .nullable(),
+                    sandboxId: z.string().optional(),
+                    flyRegion: z.string().optional(),
+                    machineSize: z.object({ cpus: z.number(), memory_mb: z.number() }).optional(),
+                    openclawVersion: z.string().nullable().optional(),
+                    lastStartedAt: z.string().nullable().optional(),
+                    lastStoppedAt: z.string().nullable().optional(),
+                    channelCount: z.number().optional(),
+                    secretCount: z.number().optional(),
+                    userId: z.string().optional(),
+                  }),
+                ),
+              },
+            },
+          },
+          ...errors(401, 502),
+        },
+      }),
+      async (c: any) => {
+        try {
+          const auth = await Auth.get("kilo")
+          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          if (!token) return c.json({ error: "No valid token found" }, 401)
+
+          const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          }
+          if (organizationId) {
+            headers[HEADER_ORGANIZATIONID] = organizationId
+          }
+
+          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
+
+          if (!response.ok) {
+            const text = await response.text()
+            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
+          }
+
+          return c.json(await response.json())
+        } catch (err: any) {
+          console.error("[Kilo Gateway] claw/status: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach KiloClaw" }, 502)
+        }
+      },
+    )
+    .get(
+      "/claw/chat-credentials",
+      describeRoute({
+        summary: "Get KiloClaw chat credentials",
+        description: "Fetch Stream Chat credentials for the user's KiloClaw instance",
+        operationId: "kilo.claw.chatCredentials",
+        responses: {
+          200: {
+            description: "Stream Chat credentials or null",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z
+                    .object({
+                      apiKey: z.string(),
+                      userId: z.string(),
+                      userToken: z.string(),
+                      channelId: z.string(),
+                    })
+                    .nullable(),
+                ),
+              },
+            },
+          },
+          ...errors(401, 502),
+        },
+      }),
+      async (c: any) => {
+        try {
+          const auth = await Auth.get("kilo")
+          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          if (!token) return c.json({ error: "No valid token found" }, 401)
+
+          const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          }
+          if (organizationId) {
+            headers[HEADER_ORGANIZATIONID] = organizationId
+          }
+
+          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/chat-credentials`, { headers })
+
+          if (!response.ok) {
+            const text = await response.text()
+            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
+          }
+
+          return c.json(await response.json())
+        } catch (err: any) {
+          console.error("[Kilo Gateway] claw/chat-credentials: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach KiloClaw" }, 502)
         }
       },
     )

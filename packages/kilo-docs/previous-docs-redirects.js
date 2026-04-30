@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/contributing/cline-to-kilo-migration",
+    destination: "/docs/contributing",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/contributing/architecture/model-provider-blocklist",
     destination: "/docs/collaborate/enterprise/model-access-controls",
     basePath: false,
@@ -685,7 +691,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/free-and-budget-models",
-    destination: "/docs/code-with-ai/agents/free-and-budget-models",
+    destination: "/docs/getting-started/using-kilo-for-free",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/code-with-ai/agents/free-and-budget-models",
+    destination: "/docs/getting-started/using-kilo-for-free",
     basePath: false,
     permanent: true,
   },
@@ -796,6 +808,12 @@ module.exports = [
     permanent: true,
   },
   {
+    source: "/docs/automate/tools/codebase-search",
+    destination: "/docs/automate/tools/semantic-search",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/automate/kiloclaw/:path*",
     destination: "/docs/kiloclaw/:path*",
     basePath: false,
@@ -810,6 +828,40 @@ module.exports = [
   {
     source: "/docs/code-with-ai/agents/using-modes",
     destination: "/docs/code-with-ai/agents/using-agents",
+    basePath: false,
+    permanent: true,
+  },
+
+  // ============================================
+  // KILOCLAW
+  // ============================================
+  {
+    source: "/docs/kiloclaw/suggested-configuration",
+    destination: "/docs/kiloclaw/end-to-end",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/kiloclaw/control-ui",
+    destination: "/docs/kiloclaw/control-ui/overview",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/kiloclaw/pricing",
+    destination: "/docs/kiloclaw/faq/pricing",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/kiloclaw/troubleshooting",
+    destination: "/docs/kiloclaw/troubleshooting/common-questions",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/kiloclaw/version-pinning",
+    destination: "/docs/kiloclaw/control-ui/version-pinning",
     basePath: false,
     permanent: true,
   },

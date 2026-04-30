@@ -1,6 +1,6 @@
 import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: Event) => void
+export type SSEEventHandler = (event: Event, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -21,10 +21,8 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  *
  * NOTE on event coalescing:
  * The app batches rapid events into 16 ms windows before flushing to the UI.
- * We don't do that here because `postMessage()` to the webview already acts as
- * an implicit async buffer. If profiling shows the webview is overwhelmed by
- * high-frequency events, adding a similar coalescing queue here would be a
- * straightforward improvement.
+ * This adapter preserves raw SSE order for all subscribers; webview providers
+ * coalesce high-frequency part updates before calling `postMessage()`.
  */
 export class SdkSSEAdapter {
   private readonly handlers = new Set<SSEEventHandler>()
@@ -143,8 +141,18 @@ export class SdkSSEAdapter {
         console.log("[Kilo New] SSE: 🎬 Calling SDK global.event()...")
         const events = await this.client.global.event({
           signal: attempt.signal,
+          // Disable SDK-internal retries — consumeLoop handles reconnection
+          // with its own outer while-loop. Without this the SDK's infinite
+          // retry loop with exponential backoff runs in parallel, causing
+          // duplicate connections and "error" state flicker.
+          sseMaxRetryAttempts: 1,
           onSseError: (error) => {
             if (signal.aborted) {
+              return
+            }
+            // Filter AbortErrors — they are expected during heartbeat timeout
+            // or manual reconnect() calls, not real connection failures.
+            if (error instanceof DOMException && error.name === "AbortError") {
               return
             }
             console.error("[Kilo New] SSE: ❌ SDK SSE error callback:", error)
@@ -165,13 +173,19 @@ export class SdkSSEAdapter {
 
           // The SDK yields GlobalEvent = { directory, payload: Event }.
           const globalEvent = event as GlobalEvent
-          console.log("[Kilo New] SSE: 📨 Event:", globalEvent.payload.type)
-          this.notifyEvent(globalEvent.payload)
+          const type = (globalEvent.payload as { type: string }).type
+          if (type !== "server.heartbeat") {
+            console.log("[Kilo New] SSE: 📨 Event:", type)
+          }
+          this.notifyEvent(globalEvent.payload as Event, globalEvent.directory)
         }
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
       } catch (error) {
-        if (!signal.aborted) {
+        // Suppress AbortErrors — they are expected when the heartbeat timer
+        // or reconnect() aborts the per-attempt controller.
+        const aborted = signal.aborted || (error instanceof DOMException && error.name === "AbortError")
+        if (!aborted) {
           console.error("[Kilo New] SSE: ❌ Stream error:", error)
           this.notifyError(error instanceof Error ? error : new Error(String(error)))
         }
@@ -215,10 +229,10 @@ export class SdkSSEAdapter {
 
   // ── Notify helpers ─────────────────────────────────────────────────
 
-  private notifyEvent(event: Event): void {
+  private notifyEvent(event: Event, directory?: string): void {
     for (const handler of this.handlers) {
       try {
-        handler(event)
+        handler(event, directory)
       } catch (error) {
         console.error("[Kilo New] SSE: Error in event handler:", error)
       }

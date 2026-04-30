@@ -1,6 +1,7 @@
 ---
 title: "Custom Subagents"
 description: "Create and configure custom subagents in Kilo Code's CLI"
+platform: new
 ---
 
 # Custom Subagents
@@ -8,7 +9,7 @@ description: "Create and configure custom subagents in Kilo Code's CLI"
 Kilo Code's CLI supports **custom subagents** — specialized AI assistants that can be invoked by primary agents or manually via `@` mentions. Subagents run in their own isolated sessions with tailored prompts, models, tool access, and permissions, enabling you to build purpose-built workflows for tasks like code review, documentation, security audits, and more.
 
 {% callout type="info" %}
-Custom subagents are currently configured through the config file (`kilo.json`) or via markdown agent files. UI-based configuration is not yet available.
+Custom subagents are currently configured through the config file (`kilo.jsonc`) or via markdown agent files. UI-based configuration is not yet available.
 {% /callout %}
 
 ## What Are Subagents?
@@ -26,20 +27,20 @@ Key characteristics of subagents:
 
 Kilo Code includes two built-in subagents:
 
-| Name        | Description                                                                                                                                                        |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **general** | General-purpose agent for researching complex questions and executing multi-step tasks. Has full tool access (except todo).                                        |
+| Name | Description |
+|---|---|
+| **general** | General-purpose agent for researching complex questions and executing multi-step tasks. Has full tool access (except todo). |
 | **explore** | Fast, read-only agent for codebase exploration. Cannot modify files. Use for finding files by patterns, searching code, or answering questions about the codebase. |
 
 ## Agent Modes
 
 Every agent has a **mode** that determines how it can be used:
 
-| Mode       | Description                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| `primary`  | User-facing agents you interact with directly. Switch between them with **Tab**.            |
-| `subagent` | Only invocable via the Task tool or `@` mentions. Not available as a primary agent.         |
-| `all`      | Can function as both a primary agent and a subagent. This is the default for custom agents. |
+| Mode | Description |
+|---|---|
+| `primary` | User-facing agents you interact with directly. Switch between them with **Tab**. |
+| `subagent` | Only invocable via the Task tool or `@` mentions. Not available as a primary agent. |
+| `all` | Can function as both a primary agent and a subagent. This is the default for custom agents. |
 
 ## Configuring Custom Subagents
 
@@ -47,7 +48,7 @@ There are two ways to define custom subagents: through JSON configuration or mar
 
 ### Method 1: JSON Configuration
 
-Add agents to the `agent` section of your `kilo.json` config file. Any key that doesn't match a built-in agent name creates a new custom agent.
+Add agents to the `agent` section of your `kilo.jsonc` config file. Any key that doesn't match a built-in agent name creates a new custom agent.
 
 ```json
 {
@@ -148,19 +149,19 @@ kilo agent create \
 
 The following options are available when configuring a subagent:
 
-| Option        | Type                               | Description                                                                                                                                          |
-| ------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description` | `string`                           | What the agent does and when to use it. Shown to primary agents to help them decide which subagent to invoke.                                        |
-| `mode`        | `"subagent" \| "primary" \| "all"` | How the agent can be used. Defaults to `all` for custom agents.                                                                                      |
-| `model`       | `string`                           | Override the model for this agent (format: `provider/model-id`). If not set, subagents inherit the model of the invoking primary agent.              |
-| `prompt`      | `string`                           | Custom system prompt. In JSON, can use `{file:./path}` syntax. In markdown, the body is the prompt.                                                  |
-| `temperature` | `number`                           | Controls response randomness (0.0-1.0). Lower = more deterministic.                                                                                  |
-| `top_p`       | `number`                           | Alternative to temperature for controlling response diversity (0.0-1.0).                                                                             |
-| `permission`  | `object`                           | Controls tool access. See [Permissions](#permissions) below.                                                                                         |
-| `hidden`      | `boolean`                          | If `true`, hides the subagent from the `@` autocomplete menu. It can still be invoked by agents via the Task tool. Only applies to `mode: subagent`. |
-| `steps`       | `number`                           | Maximum agentic iterations before forcing a text-only response. Useful for cost control.                                                             |
-| `color`       | `string`                           | Visual color in the UI. Accepts hex (`#FF5733`) or theme names (`primary`, `accent`, `error`, etc.).                                                 |
-| `disable`     | `boolean`                          | Set to `true` to disable the agent entirely.                                                                                                         |
+| Option | Type | Description |
+|---|---|---|
+| `description` | `string` | What the agent does and when to use it. Shown to primary agents to help them decide which subagent to invoke. |
+| `mode` | `"subagent" \| "primary" \| "all"` | How the agent can be used. Defaults to `all` for custom agents. |
+| `model` | `string` | Override the model for this agent (format: `provider/model-id`). If not set, subagents inherit the model of the invoking primary agent. |
+| `prompt` | `string` | Custom system prompt. In JSON, can use `{file:./path}` syntax. In markdown, the body is the prompt. |
+| `temperature` | `number` | Controls response randomness (0.0-1.0). Lower = more deterministic. |
+| `top_p` | `number` | Alternative to temperature for controlling response diversity (0.0-1.0). |
+| `permission` | `object` | Controls tool access. See [Permissions](#permissions) below. |
+| `hidden` | `boolean` | If `true`, hides the subagent from the `@` autocomplete menu. It can still be invoked by agents via the Task tool. Only applies to `mode: subagent`. |
+| `steps` | `number` | Maximum agentic iterations before forcing a text-only response. Useful for cost control. |
+| `color` | `string` | Visual color in the UI. Accepts hex (`#FF5733`) or theme names (`primary`, `accent`, `error`, etc.). |
+| `disable` | `boolean` | Set to `true` to disable the agent entirely. |
 
 Any additional options not listed above are passed through to the model provider, allowing you to use provider-specific parameters like `reasoningEffort` for OpenAI models.
 
@@ -245,8 +246,8 @@ Agent configurations are merged from multiple sources. Later sources override ea
 
 1. **Built-in agent defaults** (native agents defined in the codebase)
 2. **Global config** (`~/.config/kilo/config.json`)
-3. **Global agent markdown files** (`~/.config/kilo/agents/*.md`)
-4. **Project config** (`kilo.json` in the project root)
+3. **Project config** (`kilo.jsonc` in the project root)
+4. **Global agent markdown files** (`~/.config/kilo/agents/*.md`)
 5. **Project agent markdown files** (`.kilo/agents/*.md`)
 
 When overriding a built-in agent, properties are merged — only the fields you specify are overridden. When creating a new custom agent, unspecified fields use sensible defaults (`mode: "all"`, full permissions inherited from global config).
