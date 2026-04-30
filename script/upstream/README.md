@@ -218,10 +218,21 @@ Options:
   --base-branch <name>   Base branch to merge into (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
+  --no-worktrees         Don't create reference worktrees
   --report-only          Only generate conflict report
   --verbose              Enable verbose logging
   --author <name>        Author name for branch prefix
 ```
+
+By default, `merge.ts` also prepares prompt-friendly reference worktrees under `.worktrees/opencode-merge/`:
+
+| Path | Snapshot |
+|---|---|
+| `.worktrees/opencode-merge/opencode` | Pristine upstream opencode at the requested version or commit |
+| `.worktrees/opencode-merge/kilo-main` | The Kilo base branch snapshot used for the merge |
+| `.worktrees/opencode-merge/auto-merge` | The automated merge result before final lockfile or SDK regeneration |
+
+If conflicts remain after automation, `auto-merge` is a committed local snapshot branch that may intentionally contain conflict markers as normal file content. The real merge branch remains unresolved so manual resolution can continue with accurate git conflict state.
 
 ### analyze.ts
 

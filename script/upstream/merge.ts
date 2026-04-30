@@ -13,6 +13,7 @@
  *   --base-branch <name> Base branch to merge into (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
+ *   --no-worktrees       Don't create reference worktrees for manual resolution
  *   --report-only        Only generate conflict report, don't merge
  *   --verbose            Enable verbose logging
  *   --author <name>      Author name for branch prefix (default: from git config)
@@ -23,6 +24,7 @@ import * as git from "./utils/git"
 import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
+import * as worktree from "./utils/worktree"
 import { defaultConfig, loadConfig, type MergeConfig } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
@@ -56,6 +58,7 @@ interface MergeOptions {
   baseBranch?: string
   dryRun: boolean
   push: boolean
+  worktrees: boolean
   reportOnly: boolean
   verbose: boolean
   author?: string
@@ -150,6 +153,7 @@ function parseArgs(): MergeOptions {
   const options: MergeOptions = {
     dryRun: args.includes("--dry-run"),
     push: !args.includes("--no-push"),
+    worktrees: !args.includes("--no-worktrees"),
     reportOnly: args.includes("--report-only"),
     verbose: args.includes("--verbose"),
   }
@@ -175,6 +179,29 @@ function parseArgs(): MergeOptions {
   }
 
   return options
+}
+
+function logWorktrees(refs: worktree.RefInfo, input: worktree.RefInput, baseName: string): void {
+  logger.divider()
+  logger.info("Reference worktrees:")
+  logger.info(`  opencode:   ${refs.opencode} (${input.tag}, ${input.upstream.slice(0, 8)})`)
+  logger.info(`  kilo-main:  ${refs.main} (${baseName}, ${input.base.slice(0, 8)})`)
+  logger.info(`  auto-merge: ${refs.auto} (${refs.branch}, ${refs.snapshot.slice(0, 8)})`)
+  logger.info("")
+  logger.info("Agent prompt:")
+  logger.info("  Use these references while resolving the merge:")
+  logger.info(`  - upstream opencode: ${refs.opencode}`)
+  logger.info(`  - Kilo base main: ${refs.main}`)
+  logger.info(`  - automated merge snapshot: ${refs.auto}`)
+}
+
+async function prepareWorktrees(options: MergeOptions, input: worktree.RefInput, baseName: string) {
+  if (!options.worktrees) return null
+
+  logger.info("Preparing reference worktrees...")
+  const refs = await worktree.prepare(input)
+  logWorktrees(refs, input, baseName)
+  return refs
 }
 
 async function getAuthor(): Promise<string> {
@@ -375,6 +402,7 @@ async function main() {
   // Create backup branch
   await git.checkout(config.baseBranch)
   await git.pull(config.originRemote)
+  const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
 
@@ -741,6 +769,17 @@ async function main() {
       await report.saveReport(conflictReport, reportPath)
       logger.success(`Report saved to ${reportPath}`)
 
+      await prepareWorktrees(
+        options,
+        {
+          tag: targetVersion.tag,
+          upstream: targetVersion.commit,
+          base: await git.getCommitHash("HEAD"),
+          merge: await git.getCommitHash(opencodeBranch),
+        },
+        config.baseBranch,
+      )
+
       logger.divider()
       logger.info("Next steps:")
       logger.info("  1. Resolve remaining conflicts manually")
@@ -767,6 +806,8 @@ async function main() {
       await git.commit(`merge: upstream ${targetVersion.tag}`)
     }
   }
+
+  const autoSha = await git.getCommitHash("HEAD")
 
   // Step 8: Regenerate lock files and finalize
   logger.step(8, 8, "Regenerating lock files and finalizing...")
@@ -823,6 +864,18 @@ async function main() {
   logger.info(`Opencode branch: ${opencodeBranch}`)
   logger.info(`Backup branch: ${backupBranch}`)
   logger.info(`Report: ${reportPath}`)
+
+  await prepareWorktrees(
+    options,
+    {
+      tag: targetVersion.tag,
+      upstream: targetVersion.commit,
+      base: baseSha,
+      merge: opencodeBranch,
+      snapshot: autoSha,
+    },
+    config.baseBranch,
+  )
 
   const remainingConflicts = await git.getConflictedFiles()
   if (remainingConflicts.length > 0) {

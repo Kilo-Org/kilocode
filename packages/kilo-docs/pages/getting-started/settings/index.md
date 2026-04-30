@@ -45,6 +45,18 @@ There are two primary config files:
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
 
+### Terminal Command Blocks
+
+Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:
+
+```json
+{
+  "terminal_command_display": "collapsed"
+}
+```
+
+Valid values are `expanded` and `collapsed`.
+
 ### Export and Import
 
 You can export and import settings from the **About Kilo Code** tab in the Settings UI:

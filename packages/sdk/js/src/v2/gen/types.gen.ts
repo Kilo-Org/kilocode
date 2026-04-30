@@ -1857,6 +1857,10 @@ export type Config = {
   remote_control?: boolean
   indexing?: IndexingConfig
   /**
+   * Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI
+   */
+  terminal_command_display?: "expanded" | "collapsed"
+  /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
   model?: string | null

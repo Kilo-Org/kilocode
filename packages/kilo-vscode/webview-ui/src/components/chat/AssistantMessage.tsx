@@ -18,6 +18,7 @@ import type {
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
+import { useConfig } from "../../context/config"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -83,9 +84,36 @@ function TodoToolCard(props: { part: ToolPart }) {
   )
 }
 
+function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
+  const render = ToolRegistry.render(props.part.tool)
+  const state = props.part.state as any
+  return (
+    <Show when={render}>
+      {(card) => (
+        <Dynamic
+          component={card() as unknown as Component<Record<string, unknown>>}
+          input={state?.input ?? {}}
+          metadata={state?.metadata ?? {}}
+          partMetadata={props.part.metadata ?? {}}
+          tool={props.part.tool}
+          partID={props.part.id}
+          callID={props.part.callID}
+          output={state?.output}
+          status={state?.status}
+          defaultOpen={props.defaultOpen}
+          animate
+          reveal={state?.status === "pending" || state?.status === "running"}
+        />
+      )}
+    </Show>
+  )
+}
+
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
+  const { config } = useConfig()
+  const open = createMemo(() => config().terminal_command_display !== "collapsed")
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
@@ -107,9 +135,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
 
           // Active suggestion tool parts render the interactive SuggestBar inline
           const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
+          const bash = createMemo(() => {
+            if (part.type !== "tool") return
+            const tool = part as unknown as ToolPart
+            if (tool.tool !== "bash") return
+            if (tool.state?.status === "error") return
+            return part
+          })
 
           return (
-            <Show when={isUpstreamSuppressed || activeQuestion() || activeSuggestion() || PART_MAPPING[part.type]}>
+            <Show
+              when={isUpstreamSuppressed || activeQuestion() || activeSuggestion() || bash() || PART_MAPPING[part.type]}
+            >
               <div data-component="tool-part-wrapper" data-part-type={part.type}>
                 <Show
                   when={activeQuestion()}
@@ -118,21 +155,28 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                       when={activeSuggestion()}
                       fallback={
                         <Show
-                          when={isUpstreamSuppressed}
+                          when={bash()}
                           fallback={
-                            <Part
-                              part={part}
-                              message={props.message as SDKMessage}
-                              showAssistantCopyPartID={props.showAssistantCopyPartID}
-                              animate={
-                                part.type === "tool" &&
-                                ((part as unknown as ToolPart).state?.status === "pending" ||
-                                  (part as unknown as ToolPart).state?.status === "running")
+                            <Show
+                              when={isUpstreamSuppressed}
+                              fallback={
+                                <Part
+                                  part={part}
+                                  message={props.message as SDKMessage}
+                                  showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                  animate={
+                                    part.type === "tool" &&
+                                    ((part as unknown as ToolPart).state?.status === "pending" ||
+                                      (part as unknown as ToolPart).state?.status === "running")
+                                  }
+                                />
                               }
-                            />
+                            >
+                              <TodoToolCard part={part as unknown as ToolPart} />
+                            </Show>
                           }
                         >
-                          <TodoToolCard part={part as unknown as ToolPart} />
+                          {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
                         </Show>
                       }
                     >

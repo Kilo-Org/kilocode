@@ -1982,7 +1982,8 @@ ToolRegistry.register({
         {...props}
         icon="console"
         animated
-        defaultOpen
+        defaultOpen={props.defaultOpen ?? true}
+        allowPendingToggle
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
