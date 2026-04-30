@@ -36,6 +36,8 @@ We will work one file at a time. The path to work on is provided in `$ARGUMENTS`
 
 Read from `.worktrees/opencode-merge/auto-merge` what the conflicts were, and analyze how it should be resolved.
 
+You can use `script/upstream/find-conflict-markers.sh <file>` to locate merge conflict markers in a file. Use it with the current file path, and with `.worktrees/opencode-merge/auto-merge/<file>` when inspecting the automated merge snapshot.
+
 I have already taken theirs in most of these files, in others I have left the conflict there. Either way, I want you to look at `.worktrees/opencode-merge/auto-merge` and find the bits we added, which will have kilocode markers.
 
 You need to inspect what's causing the conflict and prepare a fix, which most of the time will be adding our kilocode code to upstream's.
