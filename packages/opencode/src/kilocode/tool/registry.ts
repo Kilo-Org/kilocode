@@ -37,7 +37,9 @@ export namespace KiloToolRegistry {
 
   function semanticTool(deps: Deps) {
     return Effect.gen(function* () {
-      const ready = yield* Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready())).pipe(
+      const ready = yield* Effect.tryPromise(() =>
+        import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready()),
+      ).pipe(
         Effect.catch((err) =>
           Effect.sync(() => {
             log.warn("semantic search unavailable", { err })
@@ -64,11 +66,6 @@ export namespace KiloToolRegistry {
       if (!info) return undefined
       return yield* Tool.init(info)
     })
-  }
-
-  /** Override question-tool client gating (adds "vscode" to allowed clients) */
-  export function question(): boolean {
-    return ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL
   }
 
   /** Plan tool is always registered in Kilo (gated by agent permission instead) */

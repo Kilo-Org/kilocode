@@ -188,7 +188,8 @@ export const layer: Layer.Layer<
         }
 
         const cfg = yield* config.get()
-        const questionEnabled = KiloToolRegistry.question() // kilocode_change
+        const questionEnabled =
+          ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL // kilocode_change: add "vscode" to allowed clients
 
         // kilocode_change start
         const tool = yield* Effect.all({
