@@ -268,23 +268,33 @@ export const layer: Layer.Layer<
           const allow = all.filter((item) => !ignored.has(item))
           if (!allow.length) return
 
-          const large = new Set(
-            (yield* Effect.all(
-              allow.map((item) =>
-                fs
-                  .stat(path.join(state.directory, item))
-                  .pipe(Effect.catch(() => Effect.void))
-                  .pipe(
-                    Effect.map((stat) => {
-                      if (!stat || stat.type !== "File") return
-                      const size = typeof stat.size === "bigint" ? Number(stat.size) : stat.size
-                      return size > limit ? item : undefined
-                    }),
+          // kilocode_change start - only stat untracked files: tracked files are always
+          // staged regardless of size (the `block` set below only filters `untracked`).
+          // Skipping stat on tracked files avoids ~75k stat syscalls per turn on very
+          // large repos like jetbrains/intellij-community, which made Snapshot.track()
+          // hang. Remaining stats (untracked + not ignored) run at higher concurrency.
+          const untrackedSet = new Set(untracked)
+          const candidates = allow.filter((item) => untrackedSet.has(item))
+          const large = candidates.length
+            ? new Set(
+                (yield* Effect.all(
+                  candidates.map((item) =>
+                    fs
+                      .stat(path.join(state.directory, item))
+                      .pipe(Effect.catch(() => Effect.void))
+                      .pipe(
+                        Effect.map((stat) => {
+                          if (!stat || stat.type !== "File") return
+                          const size = typeof stat.size === "bigint" ? Number(stat.size) : stat.size
+                          return size > limit ? item : undefined
+                        }),
+                      ),
                   ),
-              ),
-              { concurrency: 8 },
-            )).filter((item): item is string => Boolean(item)),
-          )
+                  { concurrency: 64 },
+                )).filter((item): item is string => Boolean(item)),
+              )
+            : new Set<string>()
+          // kilocode_change end
           const block = new Set(untracked.filter((item) => large.has(item)))
           yield* sync(Array.from(block))
           // Stage only the allowed candidate paths so snapshot updates stay scoped.
