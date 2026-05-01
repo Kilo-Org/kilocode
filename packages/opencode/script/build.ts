@@ -219,7 +219,9 @@ for (const item of targets) {
     conditions: ["browser"],
     tsconfig: "./tsconfig.json",
     plugins: [plugin],
-    sourcemap: "external", // kilocode_change
+    // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)
+    sourcemap: Script.release ? "none" : "external",
+    // kilocode_change end
     external: ["node-gyp", ...LanceDBRuntime.external], // kilocode_change
     format: "esm",
     minify: true,

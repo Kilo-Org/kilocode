@@ -28,6 +28,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface AbortRequest {
@@ -226,6 +227,7 @@ export interface SendCommandRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface RemoveSkillMessage {
@@ -376,7 +378,10 @@ export interface OpenSettingsTabRequest {
 
 export interface UpdateConfigMessage {
   type: "updateConfig"
+  /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
+  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  projectConfig?: Partial<Config>
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -764,6 +769,14 @@ export interface AgentManagerOpenSessionsMessage {
   sessionIDs: string[]
 }
 
+export interface RequestAutoApproveStateMessage {
+  type: "requestAutoApproveState"
+}
+
+export interface ToggleAutoApproveMessage {
+  type: "toggleAutoApprove"
+}
+
 export interface ToggleRemoteMessage {
   type: "toggleRemote"
 }
@@ -1059,6 +1072,8 @@ export type WebviewMessage =
   | PreviewImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | RequestAutoApproveStateMessage
+  | ToggleAutoApproveMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

@@ -52,7 +52,7 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 **Who it's for**: Cost-conscious developers who want better results than free models at a fraction of frontier cost.
 
-**What it does**: Routes to a cost-effective model based on the API interface used by the client. Requests using the Completions API (default) route to `qwen/qwen3.6-plus`; Responses API requests route to `openai/gpt-5.3-codex`; Messages API requests route to `anthropic/claude-haiku-4.5`. Unlike Frontier, Balanced does not vary its underlying model by mode.
+**What it does**: Routes to a cost-effective model based on the API interface used by the client. Requests using the Completions API (default) route to `qwen/qwen3.6-plus`; Responses API requests route to `openai/gpt-5.5`; Messages API requests route to `anthropic/claude-sonnet-4.6`. Unlike Frontier, Balanced does not vary its underlying model by mode.
 
 **Pricing**: Paid, but significantly cheaper than Frontier.
 

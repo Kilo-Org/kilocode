@@ -1,11 +1,9 @@
 // kilocode_change - new file
 // Tests for per-agent model persistence in local.tsx (model.json read/write)
 //
-// NOTE: Bun test uses solid-js/dist/server.js (SSR build) where createMemo
-// evaluates once and never re-evaluates. The @opentui/solid preload plugin
-// that swaps server→client build is only in the top-level bunfig preload,
-// not the [test] section. Assertions therefore verify persistence via
-// model.json file contents rather than model.current() reactive state.
+// NOTE: The package test preload swaps Solid to the client build so effects
+// and memos re-run. Tests assert both in-memory current model state and the
+// persisted model.json contents.
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
 import { createRoot } from "solid-js"
@@ -59,6 +57,8 @@ let mockAgents = [
 
 let mockConfig: { model?: string } = {}
 let mockArgs: { model?: string } = {}
+let mockWorkspace: string | undefined
+let mockDirectory = "mock-project"
 let toastMessages: Array<{ variant: string; message: string }> = []
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
@@ -72,6 +72,7 @@ const realSync = await import("@tui/context/sync")
 const realTheme = await import("@tui/context/theme")
 const realArgs = await import("@tui/context/args")
 const realSdk = await import("@tui/context/sdk")
+const realProject = await import("@tui/context/project")
 const realToast = await import("@tui/ui/toast")
 
 let capturedInit: (() => any) | undefined
@@ -129,6 +130,18 @@ mock.module("@tui/context/sdk", () => ({
   }),
 }))
 
+mock.module("@tui/context/project", () => ({
+  ...realProject,
+  useProject: () => ({
+    workspace: {
+      current: () => mockWorkspace,
+    },
+    instance: {
+      directory: () => mockDirectory,
+    },
+  }),
+}))
+
 const toastMock = {
   show: (opts: { variant: string; message: string; duration?: number }) => {
     toastMessages.push({ variant: opts.variant, message: opts.message })
@@ -156,6 +169,8 @@ function resetMockState() {
   ]
   mockConfig = {}
   mockArgs = {}
+  mockWorkspace = undefined
+  mockDirectory = "mock-project"
   toastMessages = []
 }
 
@@ -198,6 +213,17 @@ async function readModelJson(): Promise<any> {
       if (Date.now() >= until) throw err
       await Bun.sleep(10)
     }
+  }
+}
+
+async function readModelJsonMaybe(): Promise<any | undefined> {
+  try {
+    const text = await fs.readFile(modelJsonPath, "utf-8")
+    return JSON.parse(text)
+  } catch (err) {
+    const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+    if (code === "ENOENT") return undefined
+    throw err
   }
 }
 
@@ -413,31 +439,30 @@ describe("edge cases and error handling", () => {
     }
   })
 
-  test("10: agent with config model persists when applied", async () => {
-    // NOTE: In production, a createEffect in local.tsx auto-applies agent config
-    // models when switching agents. In bun test, createEffect is a no-op (SSR build).
-    // This test verifies the underlying persistence: when an agent has a config model,
-    // model.set (what the effect would call) correctly persists it.
+  test("10: model.set for configured agent is in-process only", async () => {
     mockAgents = [
       { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
     ]
     const { local, dispose } = await initLocal()
     try {
-      // Switch to "plan" agent which has config model OPUS
       local.agent.set("plan")
-      // Simulate what createEffect would do: apply the agent's config model
-      local.model.set(OPUS)
       await Bun.sleep(50)
 
+      local.model.set(SONNET, { recent: true })
+      await Bun.sleep(50)
+
+      expect(local.model.current()).toEqual(SONNET)
+      expect(local.model.saved("plan")).toBeUndefined()
       const data = await readModelJson()
-      expect(data.model.plan).toEqual(OPUS)
+      expect(data.model.plan).toBeUndefined()
+      expect(data.recent[0]).toEqual(SONNET)
     } finally {
       dispose()
     }
   })
 
-  test("11: user override from file is retained after load", async () => {
+  test("11: stale persisted model is ignored when agent has config model", async () => {
     mockAgents = [
       { name: "code", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
@@ -451,16 +476,14 @@ describe("edge cases and error handling", () => {
       },
     })
     try {
-      // The file had model.code = SONNET, recent = [SONNET, OPUS]
-      // Verify file data was loaded into the store
       expect(local.model.recent()).toEqual([SONNET, OPUS])
+      expect(local.model.current()).toEqual(OPUS)
 
-      // Setting a new model should layer on top of the loaded state
       local.model.set(OPUS, { recent: true })
       await Bun.sleep(50)
       const data = await readModelJson()
-      // model.code should now be OPUS (the new set)
-      expect(data.model.code).toEqual(OPUS)
+      expect(data.model.code).toBeUndefined()
+      expect(data.recent[0]).toEqual(OPUS)
     } finally {
       dispose()
     }
@@ -482,41 +505,33 @@ describe("edge cases and error handling", () => {
   })
 })
 
-// ── Regression tests for #9050 ──────────────────────────────────────────────
-// The auto-apply createEffect in local.tsx previously clobbered user-selected
-// per-agent models whenever it re-fired. The fix gates it on (a) modelStore.ready
-// and (b) the absence of an existing saved entry for that agent.
+// ── Regression tests for #9050 follow-up ────────────────────────────────────
+// Configured agent defaults should win on restart/project switch, while manual
+// selections for those agents remain active only in the current process.
 
-describe("#9050: auto-apply effect respects saved per-agent selection", () => {
-  test("13: fresh start — config model for active agent is applied after ready", async () => {
-    // plan is second; code (first) has no config model. Switch to plan post-init.
+describe("#9050: configured agent defaults beat stale persisted picks", () => {
+  test("13: fresh start - config model resolves without persistence", async () => {
     mockAgents = [
-      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
     ]
     const { local, dispose } = await initLocal()
     try {
-      // Effect should not touch the code agent (no config model).
-      expect(local.model.saved("code")).toBeUndefined()
-
-      local.agent.set("plan")
-      // Give the effect time to re-run now that agent.current() changed.
       await Bun.sleep(50)
 
-      // First-time application: no saved entry → config model applied and persisted.
-      expect(local.model.saved("plan")).toEqual(OPUS)
-      const data = await readModelJson()
-      expect(data.model.plan).toEqual(OPUS)
+      expect(local.model.current()).toEqual(OPUS)
+      expect(local.model.saved("plan")).toBeUndefined()
+      const data = await readModelJsonMaybe()
+      expect(data?.model?.plan).toBeUndefined()
     } finally {
       dispose()
     }
   })
 
-  test("14: saved entry from model.json is preserved over a differing config model", async () => {
-    // Config says plan → OPUS; saved file says plan → SONNET. Saved must win.
+  test("14: configured model wins over stale persisted model", async () => {
     mockAgents = [
-      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
     ]
     const { local, dispose } = await initLocal({
       prewrite: {
@@ -527,11 +542,8 @@ describe("#9050: auto-apply effect respects saved per-agent selection", () => {
       },
     })
     try {
-      local.agent.set("plan")
-      await Bun.sleep(50)
-
-      // The fix: effect sees an existing saved entry and leaves it alone.
       expect(local.model.saved("plan")).toEqual(SONNET)
+      expect(local.model.current()).toEqual(OPUS)
       const data = await readModelJson()
       expect(data.model.plan).toEqual(SONNET)
     } finally {
@@ -539,42 +551,48 @@ describe("#9050: auto-apply effect respects saved per-agent selection", () => {
     }
   })
 
-  test("15: user override of a config-model agent sticks across agent switches", async () => {
-    // plan has config model OPUS; user picks SONNET for plan; switching away
-    // and back must not revert to OPUS.
+  test("15: user override of a config-model agent resets after re-init", async () => {
     mockAgents = [
-      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
     ]
-    const { local, dispose } = await initLocal()
-    try {
-      local.agent.set("plan")
-      await Bun.sleep(50)
-      // Effect applied config default (no saved entry yet).
-      expect(local.model.saved("plan")).toEqual(OPUS)
 
-      // User picks a different model.
-      local.model.set(SONNET, { recent: true })
-      await Bun.sleep(50)
-      expect(local.model.saved("plan")).toEqual(SONNET)
+    {
+      const { local, dispose } = await initLocal()
+      try {
+        expect(local.model.current()).toEqual(OPUS)
 
-      // Bounce agents.
-      local.agent.set("code")
-      await Bun.sleep(50)
-      local.agent.set("plan")
-      await Bun.sleep(50)
+        local.model.set(SONNET, { recent: true })
+        await Bun.sleep(50)
+        expect(local.model.current()).toEqual(SONNET)
+        expect(local.model.saved("plan")).toBeUndefined()
 
-      // Saved pick survives.
-      expect(local.model.saved("plan")).toEqual(SONNET)
-      const data = await readModelJson()
-      expect(data.model.plan).toEqual(SONNET)
-    } finally {
-      dispose()
+        local.agent.set("code")
+        await Bun.sleep(50)
+        local.agent.set("plan")
+        await Bun.sleep(50)
+        expect(local.model.current()).toEqual(SONNET)
+
+        const data = await readModelJson()
+        expect(data.model.plan).toBeUndefined()
+        expect(data.recent[0]).toEqual(SONNET)
+      } finally {
+        dispose()
+      }
+    }
+
+    {
+      const { local, dispose } = await initLocal()
+      try {
+        expect(local.model.current()).toEqual(OPUS)
+        expect(local.model.saved("plan")).toBeUndefined()
+      } finally {
+        dispose()
+      }
     }
   })
 
   test("16: invalid config model still emits a warning toast", async () => {
-    // Ensure the fix didn't silence the existing invalid-model warning path.
     mockAgents = [
       { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
       {
@@ -594,8 +612,9 @@ describe("#9050: auto-apply effect respects saved per-agent selection", () => {
 
       const warnings = toastMessages.filter((t) => t.variant === "warning" && t.message.includes("not valid"))
       expect(warnings.length).toBeGreaterThan(0)
-      // And no bogus value was written.
       expect(local.model.saved("plan")).toBeUndefined()
+      const data = await readModelJsonMaybe()
+      expect(data?.model?.plan).toBeUndefined()
     } finally {
       dispose()
     }

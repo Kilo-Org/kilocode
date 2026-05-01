@@ -16,6 +16,7 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
+import { DisplayProvider } from "./context/display"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
@@ -349,15 +350,17 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <IndexingProvider>
-                            <NotificationsProvider>
-                              <SessionProvider>
-                                <DataBridge>
-                                  <AppContent />
-                                </DataBridge>
-                              </SessionProvider>
-                            </NotificationsProvider>
-                          </IndexingProvider>
+                          <DisplayProvider>
+                            <IndexingProvider>
+                              <NotificationsProvider>
+                                <SessionProvider>
+                                  <DataBridge>
+                                    <AppContent />
+                                  </DataBridge>
+                                </SessionProvider>
+                              </NotificationsProvider>
+                            </IndexingProvider>
+                          </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

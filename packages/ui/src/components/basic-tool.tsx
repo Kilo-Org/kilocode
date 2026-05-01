@@ -33,6 +33,7 @@ export interface BasicToolProps {
   defer?: boolean
   locked?: boolean
   animated?: boolean
+  allowPendingToggle?: boolean // kilocode_change
   onSubtitleClick?: () => void
   onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
   triggerHref?: string
@@ -119,7 +120,7 @@ export function BasicTool(props: BasicToolProps) {
   })
 
   const handleOpenChange = (value: boolean) => {
-    if (pending()) return
+    if (pending() && !props.allowPendingToggle) return // kilocode_change
     if (props.hideDetails) return // kilocode_change
     if (props.locked && !value) return
     setState("open", value)
@@ -195,9 +196,11 @@ export function BasicTool(props: BasicToolProps) {
           </Switch>
         </div>
       </div>
-      <Show when={props.children && !props.hideDetails && !props.locked && !pending()}>
+      {/* kilocode_change start */}
+      <Show when={props.children && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
         <Collapsible.Arrow />
       </Show>
+      {/* kilocode_change end */}
     </div>
   )
 

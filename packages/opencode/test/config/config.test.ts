@@ -853,20 +853,6 @@ Hello from new command`,
   })
 })
 
-test("updates config and writes to file", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const newConfig = { model: "updated/model" }
-      await save(newConfig as any)
-
-      const writtenConfig = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, "config.json"))
-      expect(writtenConfig.model).toBe("updated/model")
-    },
-  })
-})
-
 test("gets config directories", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({

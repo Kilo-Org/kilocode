@@ -6,6 +6,7 @@ import { useConnected } from "../../component/dialog-model"
 import { useSDK } from "../../context/sdk" // kilocode_change
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
+import { useEvent } from "../../context/event" // kilocode_change
 import { RemoteIndicator } from "@/kilocode/remote-tui" // kilocode_change
 import { formatIndexingLabel } from "@/kilocode/indexing-label" // kilocode_change
 import type { IndexingStatusState } from "@kilocode/kilo-indexing/status" // kilocode_change
@@ -39,6 +40,7 @@ export function Footer() {
   const directory = useDirectory()
   const connected = useConnected()
   const sdk = useSDK() // kilocode_change
+  const event = useEvent() // kilocode_change
   const indexing = createMemo(() => sync.data.indexing) // kilocode_change
 
   const [store, setStore] = createStore({
@@ -74,7 +76,9 @@ export function Footer() {
     <box flexDirection="row" justifyContent="space-between" gap={1} flexShrink={0}>
       <text fg={theme.textMuted}>{directory()}</text>
       <box gap={2} flexDirection="row" flexShrink={0}>
-        <RemoteIndicator sdk={sdk} theme={theme} kilo={sync.data.provider_next.connected.includes("kilo")} />
+        {/* kilocode_change start */}
+        <RemoteIndicator sdk={sdk} theme={theme} kilo={sync.data.provider_next.connected.includes("kilo")} event={event} />
+        {/* kilocode_change end */}
         <Switch>
           <Match when={store.welcome}>
             <text fg={theme.text}>

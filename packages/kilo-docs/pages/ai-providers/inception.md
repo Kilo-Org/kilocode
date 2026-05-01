@@ -1,4 +1,6 @@
 ---
+title: "Using Inception Labs with Kilo Code"
+description: "Connect Inception Labs' Mercury diffusion LLMs to Kilo Code for ultra-fast code generation. Setup guide for VS Code and the CLI."
 sidebar_label: Inception
 ---
 

@@ -1,4 +1,6 @@
 ---
+title: "Using Groq with Kilo Code | Fast LLM Inference"
+description: "Run Llama, Mixtral, and other models at ultra-low latency by configuring Groq in Kilo Code. Setup guide for VS Code and the CLI."
 sidebar_label: Groq
 ---
 

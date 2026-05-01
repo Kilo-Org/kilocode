@@ -33,6 +33,39 @@
   }
 }
 
+/* Hover-revealed "Open in Diff Viewer" icon button in the edit-tool header */
+[data-component="tool-trigger"] [data-slot="basic-tool-tool-info"]:has([data-component="edit-trigger"]) {
+  flex: 1 1 auto;
+}
+
+[data-component="edit-trigger"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+
+  [data-slot="message-part-title-area"] {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  [data-slot="edit-trigger-actions"] {
+    flex-shrink: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+}
+
+[data-component="tool-trigger"]:hover [data-slot="edit-trigger-actions"],
+[data-slot="edit-trigger-actions"]:focus-within {
+  opacity: 1;
+}
+
 /* Prevent long title/path from hiding the collapsible expand arrow */
 [data-component="edit-trigger"],
 [data-component="write-trigger"] {
@@ -221,6 +254,20 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   margin-bottom: 0px;
 }
 
+[data-component="todos"] {
+  [data-slot="message-part-todo-hidden"] {
+    padding: 2px 0 2px 28px;
+    color: var(--text-weaker);
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-normal);
+  }
+
+  [data-slot="message-part-todo-content"][data-changed="changed"] {
+    color: var(--text-base);
+    font-weight: var(--font-weight-medium);
+  }
+}
+
 /* User message copy button: collapse wrapper when idle, show on hover.
  * The wrapper must be tall enough to fully contain the button (20px)
  * so that hovering the button keeps [data-component="user-message"]
@@ -247,8 +294,7 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 }
 
 /* Reasoning block: visually distinct from normal agent output.
-   While streaming: open with fixed-height scrollable window.
-   When done: auto-collapses; user can click to reopen. */
+   Reasoning stays open unless the user explicitly collapses it. */
 [data-component="reasoning-part"] {
   width: 100%;
   border-left: 2px solid var(--border-weak-base);
@@ -331,9 +377,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     }
   }
 
-  /* Streaming state: fixed-height window with auto-scroll */
+  /* Streaming state: keep the block open while content grows. */
   &[data-streaming] {
-    [data-slot="reasoning-content"] {
+    &[data-auto-collapse] [data-slot="reasoning-content"] {
       max-height: 120px;
       overflow-y: auto;
       scroll-behavior: smooth;

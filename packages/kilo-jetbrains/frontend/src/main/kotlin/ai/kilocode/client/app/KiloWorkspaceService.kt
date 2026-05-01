@@ -66,7 +66,7 @@ class KiloWorkspaceService internal constructor(
             LOG.info("Creating workspace for $directory")
             val state = stream { state(directory) }
                 .stateIn(cs, SharingStarted.Eagerly, INIT)
-            Workspace(directory, state)
+            Workspace(directory, state) { reload(directory) }
         }
     }
 

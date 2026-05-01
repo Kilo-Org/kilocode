@@ -116,6 +116,29 @@ export function activate(context: vscode.ExtensionContext) {
     agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
 
+  // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
+  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+  const autoApprove = registerToggleAutoApprove(
+    context,
+    connectionService,
+    (sessionId) => {
+      if (sessionId) {
+        const dir =
+          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
+        if (dir) return dir
+      }
+      return defaultDir()
+    },
+    () => {
+      const dirs = new Set([defaultDir()])
+      for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
+      for (const dir of agentManagerProvider.getSessionDirectories().values()) dirs.add(dir)
+      return [...dirs]
+    },
+  )
+  provider.setAutoApproveController(autoApprove)
+  agentManagerHost.setAutoApproveController(autoApprove)
+
   // Register serializer so Agent Manager restores when VS Code restarts
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
@@ -145,6 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
         tabProvider.setRemoteService(remoteService)
+        tabProvider.setAutoApproveController(autoApprove)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
         )
@@ -291,6 +315,7 @@ export function activate(context: vscode.ExtensionContext) {
         tabPanels,
         diffVirtualProvider,
         remoteService,
+        autoApprove,
       )
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
@@ -375,27 +400,6 @@ export function activate(context: vscode.ExtensionContext) {
   // Register commit message generation
   registerCommitMessageService(context, connectionService)
 
-  // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
-  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
-  registerToggleAutoApprove(
-    context,
-    connectionService,
-    (sessionId) => {
-      if (sessionId) {
-        const dir =
-          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
-        if (dir) return dir
-      }
-      return defaultDir()
-    },
-    () => {
-      const dirs = new Set([defaultDir()])
-      for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
-      for (const dir of agentManagerProvider.getSessionDirectories().values()) dirs.add(dir)
-      return [...dirs]
-    },
-  )
-
   registerHeapSnapshot(context, connectionService)
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
@@ -433,6 +437,7 @@ async function openKiloInNewTab(
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   diffVirtualProvider: DiffVirtualProvider,
   remoteService: RemoteStatusService,
+  autoApprove: ReturnType<typeof registerToggleAutoApprove>,
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -456,6 +461,7 @@ async function openKiloInNewTab(
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
   tabProvider.setRemoteService(remoteService)
+  tabProvider.setAutoApproveController(autoApprove)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )

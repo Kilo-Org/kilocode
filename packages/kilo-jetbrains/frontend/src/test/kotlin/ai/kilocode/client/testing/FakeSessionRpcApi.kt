@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
 
+    /** Recent sessions returned by [recent]. */
+    val recent = mutableListOf<SessionDto>()
+    var recentFailures = 0
+    var recentGate: CompletableDeferred<Unit>? = null
+
     /** Push chat events here; tests collect from [events]. */
     val events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 64, replay = 64)
 
@@ -66,6 +72,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
     val questionRejects = mutableListOf<Pair<String, String>>()
+    val recentCalls = mutableListOf<Pair<String, Int>>()
     var creates = 0
         private set
 
@@ -80,6 +87,17 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun list(directory: String): SessionListDto {
         assertNotEdt("list")
         return SessionListDto(emptyList(), emptyMap())
+    }
+
+    override suspend fun recent(directory: String, limit: Int): SessionListDto {
+        assertNotEdt("recent")
+        recentCalls.add(directory to limit)
+        recentGate?.await()
+        if (recentFailures > 0) {
+            recentFailures--
+            throw IllegalStateException("recent unavailable")
+        }
+        return SessionListDto(recent.take(limit), emptyMap())
     }
 
     override suspend fun get(id: String, directory: String): SessionDto {

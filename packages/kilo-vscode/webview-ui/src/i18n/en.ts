@@ -263,6 +263,10 @@ export const dict = {
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.indexing": "Indexing settings",
+  "prompt.action.autoApprove.enable": "Enable auto-approve",
+  "prompt.action.autoApprove.disable": "Disable auto-approve",
+  "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
+  "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -999,7 +1003,7 @@ export const dict = {
   "settings.indexing.title": "Indexing",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
-  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off for this workspace.",
+  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
   "settings.indexing.model.title": "Embedding model",
@@ -1193,6 +1197,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
+  "settings.experimental.agentManagerTool.description":
+    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1386,6 +1393,13 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
+  "settings.display.reasoningAutoCollapse.description":
+    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",

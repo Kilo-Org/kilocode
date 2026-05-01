@@ -8,9 +8,10 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { AgentConfig, AgentInfo, PermissionRuleItem } from "../../types/messages"
+import type { AgentConfig, AgentInfo, PermissionConfig, PermissionRuleItem } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 import { buildExport } from "./mode-io"
+import PermissionEditor from "./PermissionEditor"
 
 interface Props {
   name: string
@@ -41,6 +42,10 @@ const ModeEditView: Component<Props> = (props) => {
         [props.name]: { ...current, ...partial },
       },
     })
+  }
+
+  const updatePermission = (patch: PermissionConfig) => {
+    updateConfig({ agent: { [props.name]: { permission: patch } } })
   }
 
   const exportMode = () => {
@@ -230,6 +235,48 @@ const ModeEditView: Component<Props> = (props) => {
           </Switch>
         </SettingsRow>
       </Card>
+
+      <Show when={!native()}>
+        <Card
+          style={{
+            "margin-bottom": "12px",
+            padding: "0",
+            overflow: "hidden",
+            border: "1px solid var(--border-base, var(--vscode-panel-border))",
+          }}
+        >
+          <div
+            style={{
+              padding: "14px 16px 12px",
+              "border-bottom": "1px solid var(--border-weak-base, var(--vscode-panel-border))",
+              background: "var(--bg-subtle-base, var(--vscode-editorWidget-background))",
+            }}
+          >
+            <div data-slot="settings-row-label-title" style={{ "margin-bottom": "6px" }}>
+              Per-Agent Permissions
+            </div>
+            <div
+              style={{
+                "font-size": "12px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                "line-height": "1.45",
+              }}
+            >
+              These settings only apply to this custom agent. Change a dropdown from Default to create an override, or
+              use Add path/Add command for tool-specific exceptions.
+            </div>
+          </div>
+          <div style={{ padding: "0 16px 4px" }}>
+            <PermissionEditor
+              permissions={cfg().permission}
+              rules={agent()?.permission}
+              component="agent-permission-settings"
+              inherited
+              onChange={updatePermission}
+            />
+          </div>
+        </Card>
+      </Show>
 
       {/* Calculated permissions (read-only, collapsible) */}
       <Show when={agent()?.permission} keyed>

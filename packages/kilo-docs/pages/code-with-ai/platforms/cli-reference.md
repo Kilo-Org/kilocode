@@ -687,6 +687,8 @@ Options:
   --sanitize  redact sensitive transcript and file data  [boolean]
 ```
 
+Use `--sanitize` before sharing an exported session outside your team. Unsanitized exports can contain full prompts, assistant text, reasoning, tool inputs and outputs, file paths, file contents, snapshots, diffs, attachments, working directories, and other local context. Sanitized exports replace sensitive transcript and file data with stable `[redacted:...]` placeholders while preserving enough structure for debugging import/export issues.
+
 ## kilo import
 
 ```
