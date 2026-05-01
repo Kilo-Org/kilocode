@@ -18,6 +18,7 @@ import { buildWebviewHtml } from "../utils"
 import { TokenManager } from "./token-manager"
 import { KiloChatApiError, KiloChatClient } from "./kilo-chat-client"
 import { EventServiceClient, WebSocketAuthError } from "./event-service-client"
+import { ulid } from "./ulid"
 import type {
   ActionDeliveryFailedEvent,
   BotStatusEvent,
@@ -203,7 +204,7 @@ export class KiloClawProvider implements vscode.Disposable {
         await this.loadMoreConversations()
         return
       case "kiloclaw.sendMessage":
-        await this.sendMessage(msg.conversationId, msg.content, msg.clientId, msg.inReplyToMessageId)
+        await this.sendMessage(msg.conversationId, msg.content, msg.inReplyToMessageId)
         return
       case "kiloclaw.editMessage":
         await this.editMessage(msg.conversationId, msg.messageId, msg.content)
@@ -787,12 +788,14 @@ export class KiloClawProvider implements vscode.Disposable {
   private async sendMessage(
     conversationId: string,
     content: ContentBlock[],
-    clientId: string,
     inReplyToMessageId?: string,
   ): Promise<void> {
     if (!this.chat) return
     if (!this.currentUserId) return
 
+    // kilo-chat validates clientId as a ULID (Crockford Base32); generate
+    // it here so the webview doesn't need to know the format.
+    const clientId = ulid()
     const pendingId = `pending-${clientId}`
     const optimistic: Message = {
       id: pendingId,

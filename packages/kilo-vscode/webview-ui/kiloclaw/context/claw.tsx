@@ -85,18 +85,6 @@ export type ClawCtx = {
 
 const ClawContext = createContext<ClawCtx>()
 
-function generateClientId(): string {
-  // Lightweight ULID-ish identifier. The server only uses this to correlate
-  // optimistic messages with their server-assigned id, so collisions only
-  // matter within a single send burst (never realistic). 26 alphanum chars.
-  const ts = Date.now().toString(36).padStart(10, "0")
-  let rand = ""
-  for (let i = 0; i < 16; i++) {
-    rand += Math.floor(Math.random() * 36).toString(36)
-  }
-  return (ts + rand).toUpperCase().slice(0, 26)
-}
-
 export function ClawProvider(props: { children: JSX.Element }) {
   const [phase, setPhase] = createSignal<Phase>("loading")
   const [locale, setLocale] = createSignal<string | undefined>(undefined)
@@ -259,7 +247,6 @@ export function ClawProvider(props: { children: JSX.Element }) {
         conversationId,
         content,
         inReplyToMessageId,
-        clientId: generateClientId(),
       }),
     editMessage: (conversationId, messageId, content) =>
       vscode.postMessage({ type: "kiloclaw.editMessage", conversationId, messageId, content }),

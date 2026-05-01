@@ -240,7 +240,6 @@ export type KiloClawInMessage =
       conversationId: string
       content: ContentBlock[]
       inReplyToMessageId?: string
-      clientId: string
     }
   | { type: "kiloclaw.editMessage"; conversationId: string; messageId: string; content: ContentBlock[] }
   | { type: "kiloclaw.deleteMessage"; conversationId: string; messageId: string }

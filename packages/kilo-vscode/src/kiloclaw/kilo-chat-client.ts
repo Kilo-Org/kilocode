@@ -28,9 +28,26 @@ export class KiloChatApiError extends Error {
     public readonly status: number,
     public readonly body: unknown,
   ) {
-    super(`KiloChat request failed: ${status}`)
+    super(`KiloChat request failed: ${status}${formatBodyDetail(body)}`)
     this.name = "KiloChatApiError"
   }
+}
+
+function formatBodyDetail(body: unknown): string {
+  if (body === null || body === undefined) return ""
+  if (typeof body === "string") return ` - ${body}`
+  if (typeof body === "object") {
+    const err = (body as Record<string, unknown>).error
+    if (typeof err === "string") return ` - ${err}`
+    // Fall back to a compact JSON dump so validation errors (zod issues, etc.)
+    // show up in the extension's Output channel without a separate logging hop.
+    try {
+      return ` - ${JSON.stringify(body)}`
+    } catch {
+      return ""
+    }
+  }
+  return ""
 }
 
 type HttpOpts = {
