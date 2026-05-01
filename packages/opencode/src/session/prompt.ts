@@ -1666,9 +1666,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             const system = [...env, ...(skills ? [skills] : []), ...instructions]
             const format = lastUser.format ?? { type: "text" as const }
             if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
+            // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
             const result = yield* handle.process({
-              // kilocode_change
-              // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
               user: lastUser,
               agent,
               permission: KiloSessionPrompt.guardPermissions({ agent, session }),
