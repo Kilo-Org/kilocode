@@ -7,6 +7,8 @@ import PROMPT_DEFAULT from "../../src/session/prompt/default.txt"
 import PROMPT_BEAST from "../../src/session/prompt/beast.txt"
 import PROMPT_CODEX from "../../src/session/prompt/codex.txt"
 import PROMPT_GEMINI from "../../src/session/prompt/gemini.txt"
+import PROMPT_GPT from "../../src/session/prompt/gpt.txt"
+import PROMPT_GPT55 from "../../src/session/prompt/kilocode-gpt-5.5.txt"
 import PROMPT_TRINITY from "../../src/session/prompt/trinity.txt"
 
 describe("SystemPrompt.provider", () => {
@@ -33,6 +35,15 @@ describe("SystemPrompt.provider", () => {
       const model = ProviderTest.model({ prompt: "codex" })
       const result = SystemPrompt.provider(model)
       expect(result).toEqual([PROMPT_CODEX])
+    })
+
+    test("GPT-5.5 prompt is selected from prompt metadata", () => {
+      const model = ProviderTest.model({
+        prompt: "gpt55",
+        api: { id: "provider-specific-model", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      const result = SystemPrompt.provider(model)
+      expect(result).toEqual([PROMPT_GPT55])
     })
 
     test("gemini prompt is selected when model.prompt is 'gemini'", () => {
@@ -65,6 +76,33 @@ describe("SystemPrompt.provider", () => {
       })
       const result = SystemPrompt.provider(model)
       expect(result).toEqual([PROMPT_ANTHROPIC])
+    })
+
+    test("GPT-5.5 model ids are not prompt-special without metadata", () => {
+      const model = ProviderTest.model({
+        prompt: undefined,
+        api: { id: "gpt-5.5", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      const result = SystemPrompt.provider(model)
+      expect(result).toEqual([PROMPT_GPT])
+    })
+
+    test("codex prompt metadata still wins for GPT-5.5 model ids", () => {
+      const model = ProviderTest.model({
+        prompt: "codex",
+        api: { id: "gpt-5.5", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      const result = SystemPrompt.provider(model)
+      expect(result).toEqual([PROMPT_CODEX])
+    })
+
+    test("older Codex model ids keep the Codex prompt", () => {
+      const model = ProviderTest.model({
+        prompt: undefined,
+        api: { id: "gpt-5.1-codex", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      const result = SystemPrompt.provider(model)
+      expect(result).toEqual([PROMPT_CODEX])
     })
   })
 })

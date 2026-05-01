@@ -79,4 +79,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "نفّذ في جلسة جديدة بسياق نظيف",
   "plan.followup.answer.continue": "المتابعة هنا",
   "plan.followup.answer.continue.description": "نفّذ الخطة في هذه الجلسة",
+
+  "ui.messagePart.openInDiffViewer": "فتح في عارض الفروقات",
 }

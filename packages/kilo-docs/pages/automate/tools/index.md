@@ -19,7 +19,7 @@ Tools are organized into logical groups based on their functionality:
 | Category | Purpose | Tools | Common Use |
 |---|---|---|---|
 | **Read Group** | File system reading and searching | `read`, `glob`, `grep` | Code exploration and analysis |
-| **Edit Group** | File system modifications | `edit`, `multiedit`, `write`, `apply_patch` | Code changes and file manipulation |
+| **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
 | **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
 | **Web Group** | Fetch and search web content | `webfetch`, `websearch`, `codesearch` | Research, documentation lookup |
 | **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
@@ -49,9 +49,10 @@ These tools help Kilo Code understand your code and project:
 These tools help Kilo Code make changes to your code:
 
 - `edit` - Makes precise text replacements in a file
-- `multiedit` - Multiple edits in a single call
 - `write` - Creates new files or fully overwrites existing ones
 - `apply_patch` - Applies unified diffs (used with certain models)
+
+For multiple replacements in one file, Kilo uses repeated `edit` calls or a patch-style edit when the model supports it.
 
 ### Execute Tools
 

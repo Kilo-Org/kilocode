@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
+import { AgentManagerTool } from "./agent-manager"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@/flag/flag"
 import { Effect } from "effect"
@@ -18,17 +19,19 @@ export namespace KiloToolRegistry {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
-      return { codebase, recall }
+      const manager = yield* AgentManagerTool
+      return { codebase, recall, manager }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
-  export function build(tools: { codebase: Tool.Info; recall: Tool.Info }, deps: Deps) {
+  export function build(tools: { codebase: Tool.Info; recall: Tool.Info; manager: Tool.Info }, deps: Deps) {
     return Effect.gen(function* () {
       const base = yield* Effect.all({
         codebase: Tool.init(tools.codebase),
         recall: Tool.init(tools.recall),
+        manager: Tool.init(tools.manager),
       })
       const semantic = yield* semanticTool(deps)
       return { ...base, semantic }
@@ -37,7 +40,9 @@ export namespace KiloToolRegistry {
 
   function semanticTool(deps: Deps) {
     return Effect.gen(function* () {
-      const ready = yield* Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready())).pipe(
+      const ready = yield* Effect.tryPromise(() =>
+        import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready()),
+      ).pipe(
         Effect.catch((err) =>
           Effect.sync(() => {
             log.warn("semantic search unavailable", { err })
@@ -83,13 +88,15 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def },
-    cfg: { experimental?: { codebase_search?: boolean } },
+    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def },
+    cfg: { experimental?: { codebase_search?: boolean; agent_manager_tool?: boolean } },
   ): Tool.Def[] {
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
       ...(tools.semantic ? [tools.semantic] : []),
       tools.recall,
+      // The extension is the only client that can consume the Agent Manager start event.
+      ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.agent_manager_tool === true ? [tools.manager] : []),
     ]
   }
 

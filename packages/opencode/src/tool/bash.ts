@@ -47,6 +47,9 @@ const FILES = new Set([
   "new-item",
   "rename-item",
 ])
+// kilocode_change start
+const READ = new Set(["cat", "get-content"])
+// kilocode_change end
 const FLAGS = new Set(["-destination", "-literalpath", "-path"])
 const SWITCHES = new Set(["-confirm", "-debug", "-force", "-nonewline", "-recurse", "-verbose", "-whatif"])
 
@@ -70,10 +73,15 @@ type Part = {
   text: string
 }
 
+// kilocode_change start
+type Access = "read" | "unknown"
+// kilocode_change end
+
 type Scan = {
   dirs: Set<string>
   patterns: Set<string>
   always: Set<string>
+  access: Access // kilocode_change
 }
 
 type Chunk = {
@@ -121,6 +129,14 @@ function parts(node: Node) {
 function source(node: Node) {
   return (node.parent?.type === "redirected_statement" ? node.parent.text : node.text).trim()
 }
+
+// kilocode_change start
+function access(cmd: string, node: Node): Access {
+  if (!READ.has(cmd)) return "unknown"
+  if (node.parent?.type === "redirected_statement") return "unknown"
+  return "read"
+}
+// kilocode_change end
 
 function commands(node: Node) {
   return node.descendantsOfType("command").filter((child): child is Node => Boolean(child))
@@ -268,7 +284,7 @@ const ask = Effect.fn("BashTool.ask")(function* (ctx: Tool.Context, scan: Scan, 
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: {},
+      metadata: scan.access === "read" ? { command, access: "read" } : {}, // kilocode_change
     })
   }
 
@@ -370,20 +386,31 @@ export const BashTool = Tool.define(
         dirs: new Set<string>(),
         patterns: new Set<string>(),
         always: new Set<string>(),
+        access: "read", // kilocode_change
       }
 
-      for (const node of commands(root)) {
+      const nodes = commands(root) // kilocode_change
+      if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown" // kilocode_change
+      // kilocode_change start
+      if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
+        scan.access = "unknown"
+      }
+      // kilocode_change end
+
+      for (const node of nodes) { // kilocode_change
         const command = parts(node)
         const tokens = command.map((item) => item.text)
         const cmd = ps ? tokens[0]?.toLowerCase() : tokens[0]
 
         if (cmd && FILES.has(cmd)) {
+          const kind = access(cmd, node) // kilocode_change
           for (const arg of pathArgs(command, ps)) {
             const resolved = yield* argPath(arg, cwd, ps, shell)
             log.info("resolved path", { arg, resolved })
             if (!resolved || Instance.containsPath(resolved)) continue
             const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
             scan.dirs.add(dir)
+            if (kind !== "read") scan.access = "unknown" // kilocode_change
           }
         }
 
@@ -600,7 +627,12 @@ export const BashTool = Tool.define(
               const ps = PS.has(name)
               const root = yield* parse(params.command, ps)
               const scan = yield* collect(root, cwd, ps, shell)
-              if (!Instance.containsPath(cwd)) scan.dirs.add(cwd)
+              // kilocode_change start
+              if (!Instance.containsPath(cwd)) {
+                scan.dirs.add(cwd)
+                scan.access = "unknown"
+              }
+              // kilocode_change end
               yield* ask(ctx, scan, params.command) // kilocode_change
 
               return yield* run(

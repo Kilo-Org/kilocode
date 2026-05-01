@@ -44,7 +44,6 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `edit` | Editing existing files |
 | `glob` | File pattern matching / searching by name |
 | `grep` | Searching file contents by regex |
-| `list` | Listing directory contents |
 | `task` | Launching sub-agents |
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |
@@ -109,7 +108,6 @@ Permissions are configured under the `permission` key in `kilo.jsonc`. The follo
 | `edit` | Editing existing files |
 | `glob` | File pattern matching / searching by name |
 | `grep` | Searching file contents by regex |
-| `list` | Listing directory contents |
 | `task` | Launching sub-agents |
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |

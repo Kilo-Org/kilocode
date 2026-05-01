@@ -84,4 +84,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementiraj u novoj sesiji s čistim kontekstom",
   "plan.followup.answer.continue": "Nastavi ovdje",
   "plan.followup.answer.continue.description": "Implementiraj plan u ovoj sesiji",
+
+  "ui.messagePart.openInDiffViewer": "Otvori u pregledniku razlika",
 }

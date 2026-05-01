@@ -29,7 +29,7 @@ class KiloSettingsAction : AnAction() {
                 group,
                 e.dataContext,
                 JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
-                true,   // showDisabledActions — StatusInfoAction is always disabled
+                true,
             )
             .showUnderneathOf(component)
     }

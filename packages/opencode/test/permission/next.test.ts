@@ -949,7 +949,8 @@ it.live("reply - always resolves matching pending requests in same session", () 
   ),
 )
 
-it.live("reply - always keeps other session pending", () =>
+// kilocode_change start
+it.live("reply - always resolves matching pending requests from other sessions", () =>
   withDir({ git: true }, () =>
     Effect.gen(function* () {
       const a = yield* ask({
@@ -976,13 +977,47 @@ it.live("reply - always keeps other session pending", () =>
       yield* reply({ requestID: PermissionID.make("per_test6a"), reply: "always" })
 
       yield* Fiber.join(a)
-      expect((yield* list()).map((item) => item.id)).toEqual([PermissionID.make("per_test6b")])
+      yield* Fiber.join(b)
+      expect(yield* list()).toHaveLength(0)
+    }),
+  ),
+)
+
+it.live("reply - always does not resolve dangerous variants from other sessions", () =>
+  withDir({ git: true }, () =>
+    Effect.gen(function* () {
+      const a = yield* ask({
+        id: PermissionID.make("per_test_safe_a"),
+        sessionID: SessionID.make("session_a"),
+        permission: "bash",
+        patterns: ["npm test"],
+        metadata: {},
+        always: ["npm test"],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+
+      const b = yield* ask({
+        id: PermissionID.make("per_test_safe_b"),
+        sessionID: SessionID.make("session_b"),
+        permission: "bash",
+        patterns: ["npm test > ~/.ssh/authorized_keys"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+
+      yield* waitForPending(2)
+      yield* reply({ requestID: PermissionID.make("per_test_safe_a"), reply: "always" })
+
+      yield* Fiber.join(a)
+      expect((yield* list()).map((item) => item.id)).toEqual([PermissionID.make("per_test_safe_b")])
 
       yield* rejectAll()
       yield* Fiber.await(b)
     }),
   ),
 )
+// kilocode_change end
 
 it.live("reply - publishes replied event", () =>
   withDir({ git: true }, () =>

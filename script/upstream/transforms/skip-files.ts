@@ -13,6 +13,7 @@
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
+import { matches } from "../utils/match"
 
 export interface SkipResult {
   file: string
@@ -24,30 +25,14 @@ export interface SkipOptions {
   dryRun?: boolean
   verbose?: boolean
   patterns?: string[]
+  force?: boolean
 }
 
 /**
  * Check if a file matches any skip patterns
  */
 export function shouldSkip(filePath: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => {
-    // Exact match
-    if (filePath === pattern) return true
-
-    // Regex pattern (e.g., README\.[a-z]+\.md)
-    if (pattern.startsWith("^") || pattern.includes("\\")) {
-      const regex = new RegExp(pattern)
-      return regex.test(filePath)
-    }
-
-    // Glob-style pattern
-    if (pattern.includes("*")) {
-      const regex = new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$")
-      return regex.test(filePath)
-    }
-
-    return false
-  })
+  return matches(filePath, patterns)
 }
 
 /**
@@ -71,6 +56,21 @@ async function getUpstreamFiles(): Promise<string[]> {
  */
 async function getUnmergedFiles(): Promise<string[]> {
   const result = await $`git diff --name-only --diff-filter=U`.quiet().nothrow()
+
+  if (result.exitCode !== 0) return []
+
+  return result.stdout
+    .toString()
+    .trim()
+    .split("\n")
+    .filter((f) => f.length > 0)
+}
+
+/**
+ * Get tracked files from the current branch.
+ */
+async function getTrackedFiles(): Promise<string[]> {
+  const result = await $`git ls-files`.quiet().nothrow()
 
   if (result.exitCode !== 0) return []
 
@@ -125,7 +125,8 @@ export async function skipFiles(options: SkipOptions = {}): Promise<SkipResult[]
   // Get all files involved in the merge
   const stagedFiles = await getUpstreamFiles()
   const unmergedFiles = await getUnmergedFiles()
-  const allFiles = [...new Set([...stagedFiles, ...unmergedFiles])]
+  const tracked = options.force ? await getTrackedFiles() : []
+  const allFiles = [...new Set([...stagedFiles, ...unmergedFiles, ...tracked])]
 
   if (allFiles.length === 0) {
     info("No files to process")
@@ -138,7 +139,7 @@ export async function skipFiles(options: SkipOptions = {}): Promise<SkipResult[]
     if (!shouldSkip(file, patterns)) continue
 
     // Check if file existed in Kilo before merge (HEAD~1 or the merge base)
-    const existedInKilo = await fileExistsInRef(file, "HEAD")
+    const existedInKilo = options.force ? false : await fileExistsInRef(file, "HEAD")
 
     if (existedInKilo) {
       debug(`Skipping ${file} - exists in Kilo, not removing`)

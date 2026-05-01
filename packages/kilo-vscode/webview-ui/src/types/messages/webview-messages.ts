@@ -378,7 +378,10 @@ export interface OpenSettingsTabRequest {
 
 export interface UpdateConfigMessage {
   type: "updateConfig"
+  /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
+  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  projectConfig?: Partial<Config>
 }
 
 export interface RequestNotificationSettingsMessage {

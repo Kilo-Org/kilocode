@@ -151,7 +151,7 @@ permission:
   read: allow
 ```
 
-Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `list`, `task`, `webfetch`, `websearch`, `codesearch`, `todowrite`, `todoread`, and more.
+Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `task`, `webfetch`, `websearch`, `codesearch`, `todowrite`, `todoread`, and more.
 
 ### `model`
 
@@ -387,7 +387,7 @@ permission:
   read: allow
 ```
 
-Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `list`, `task`, `webfetch`, `websearch`, `codesearch`, `todowrite`, `todoread`, and more.
+Known permission types include: `read`, `edit`, `bash`, `glob`, `grep`, `task`, `webfetch`, `websearch`, `codesearch`, `todowrite`, `todoread`, and more.
 
 ### `model`
 

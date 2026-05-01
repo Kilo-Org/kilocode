@@ -8,6 +8,7 @@ import PROMPT_DEFAULT from "./prompt/default.txt"
 import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_GPT from "./prompt/gpt.txt"
+import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
 import PROMPT_KIMI from "./prompt/kimi.txt"
 import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 
@@ -47,6 +48,8 @@ export function provider(model: Provider.Model) {
       return [PROMPT_CODEX]
     case "gemini":
       return [PROMPT_GEMINI]
+    case "gpt55":
+      return [PROMPT_GPT55]
     case "ling":
       return [PROMPT_LING]
     case "trinity":

@@ -22,7 +22,7 @@
   align-items: center;
   flex-wrap: nowrap;
   min-height: 22px;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .session-actions-row > * {
@@ -34,10 +34,6 @@
 .session-actions-row > [data-component="tooltip-trigger"] {
   display: flex;
   flex: 0 0 auto;
-}
-
-.session-actions-row > .session-move-changes-trigger {
-  margin-left: auto;
 }
 
 .session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
@@ -333,6 +329,7 @@
   .session-actions-row {
     gap: 4px;
     flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .session-actions-row > *,
@@ -361,11 +358,5 @@
 
   .session-move-dot {
     opacity: 1;
-  }
-}
-
-@container (max-width: 420px) {
-  .session-actions-row > .session-move-changes-trigger {
-    margin-left: 0;
   }
 }

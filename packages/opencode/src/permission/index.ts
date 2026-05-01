@@ -159,6 +159,7 @@ interface PendingEntry {
   info: Request
   ruleset: Ruleset // kilocode_change
   hardRuleset?: Ruleset // kilocode_change
+  saved?: boolean // kilocode_change
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
 
@@ -309,40 +310,31 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
-        approved.push({
-          permission: existing.info.permission,
-          pattern,
-          action: "allow",
-        })
+        // kilocode_change start — saveAlwaysRules may have already persisted selected always-rules
+        if (!existing.saved) {
+          approved.push({
+            permission: existing.info.permission,
+            pattern,
+            action: "allow",
+          })
+        }
+        // kilocode_change end
       }
 
-      for (const [id, item] of pending.entries()) {
-        if (item.info.sessionID !== existing.info.sessionID) continue
-        if (ConfigProtection.isRequest(item.info)) continue // kilocode_change
-        // kilocode_change start
-        const ok = item.info.patterns.every((pattern) => {
-          if (veto(item.info.permission, pattern, item.hardRuleset)) return false
-          return evaluate(item.info.permission, pattern, item.ruleset, approved).action === "allow"
-        })
-        // kilocode_change end
-        if (!ok) continue
-        pending.delete(id)
-        yield* bus.publish(Event.Replied, {
-          sessionID: item.info.sessionID,
-          requestID: item.info.id,
-          reply: "always",
-        })
-        yield* Deferred.succeed(item.deferred, undefined)
-      }
+      // kilocode_change start — drain covered permissions across sibling Agent Manager sessions
+      yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, DeniedError)
+      // kilocode_change end
 
       // kilocode_change start — persist always-rules to global config
-      const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
-        permission: existing.info.permission,
-        pattern,
-        action: "allow" as const,
-      }))
-      if (alwaysRules.length > 0) {
-        yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+      if (!existing.saved) {
+        const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
+          permission: existing.info.permission,
+          pattern,
+          action: "allow" as const,
+        }))
+        if (alwaysRules.length > 0) {
+          yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+        }
       }
       // kilocode_change end
       return true // kilocode_change
@@ -377,6 +369,7 @@ export const layer = Layer.effect(
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
       s.approved.push(...newRules)
+      existing.saved = true // kilocode_change
 
       if (newRules.length > 0) {
         yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false }))

@@ -79,4 +79,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Temiz bir bağlamla yeni bir oturumda uygula",
   "plan.followup.answer.continue": "Burada devam et",
   "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
+
+  "ui.messagePart.openInDiffViewer": "Fark görüntüleyicide aç",
 }

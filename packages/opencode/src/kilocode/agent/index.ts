@@ -6,7 +6,6 @@ import * as Truncate from "../../tool/truncate"
 import { Config } from "../../config"
 import { Instance } from "../../project/instance"
 import { makeRuntime } from "@/effect/run-service"
-import { Telemetry } from "@kilocode/kilo-telemetry"
 import z from "zod"
 import path from "path"
 import { Global } from "@/global"
@@ -239,16 +238,9 @@ export function processConfigItem(item: {
 }
 
 // Returns experimental_telemetry config for generate calls.
-export function telemetryOptions(cfg: Config.Info) {
-  return {
-    isEnabled: cfg.experimental?.openTelemetry !== false,
-    recordInputs: false,
-    recordOutputs: false,
-    tracer: Telemetry.getTracer() ?? undefined,
-    metadata: {
-      userId: cfg.username ?? "unknown",
-    },
-  }
+// AI SDK span recording (ai.* / gen_ai.*) is disabled.
+export function telemetryOptions(_cfg: Config.Info) {
+  return { isEnabled: false as const }
 }
 
 // Patch the base agents map in-place with all kilo-specific changes:
