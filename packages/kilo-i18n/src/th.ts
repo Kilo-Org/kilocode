@@ -79,4 +79,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า",
   "plan.followup.answer.continue": "ดำเนินการต่อที่นี่",
   "plan.followup.answer.continue.description": "ดำเนินการตามแผนในเซสชันนี้",
+
+  "ui.messagePart.openInDiffViewer": "เปิดในตัวดูความแตกต่าง",
 }

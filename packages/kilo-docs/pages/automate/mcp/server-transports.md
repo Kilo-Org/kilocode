@@ -180,19 +180,19 @@ Some scenarios benefit from a hybrid approach:
 
 ## Choosing Between STDIO and SSE
 
-| Consideration        | STDIO                    | SSE                                 |
-| -------------------- | ------------------------ | ----------------------------------- |
-| **Location**         | Local machine only       | Local or remote                     |
-| **Clients**          | Single client            | Multiple clients                    |
-| **Performance**      | Lower latency            | Higher latency (network overhead)   |
-| **Setup Complexity** | Simpler                  | More complex (requires HTTP server) |
-| **Security**         | Inherently secure        | Requires explicit security measures |
-| **Network Access**   | Not needed               | Required                            |
-| **Scalability**      | Limited to local machine | Can distribute across network       |
-| **Deployment**       | Per-user installation    | Centralized installation            |
-| **Updates**          | Distributed updates      | Centralized updates                 |
-| **Resource Usage**   | Uses client resources    | Uses server resources               |
-| **Dependencies**     | Client-side dependencies | Server-side dependencies            |
+| Consideration | STDIO | SSE |
+|---|---|---|
+| **Location** | Local machine only | Local or remote |
+| **Clients** | Single client | Multiple clients |
+| **Performance** | Lower latency | Higher latency (network overhead) |
+| **Setup Complexity** | Simpler | More complex (requires HTTP server) |
+| **Security** | Inherently secure | Requires explicit security measures |
+| **Network Access** | Not needed | Required |
+| **Scalability** | Limited to local machine | Can distribute across network |
+| **Deployment** | Per-user installation | Centralized installation |
+| **Updates** | Distributed updates | Centralized updates |
+| **Resource Usage** | Uses client resources | Uses server resources |
+| **Dependencies** | Client-side dependencies | Server-side dependencies |
 
 ## Configuring Transports in Kilo Code
 

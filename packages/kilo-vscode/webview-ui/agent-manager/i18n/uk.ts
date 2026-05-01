@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Розгалужити сесію",
   "agentManager.tab.terminal": "Термінал",
   "agentManager.tab.openTerminal": "Відкрити термінал",
+  "agentManager.tab.newOptions": "Інші параметри нової вкладки",
+
+  "agentManager.terminal.new": "Нова вкладка термінала",
+  "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
+  "agentManager.terminal.connectionError": "помилка з'єднання термінала",
+  "agentManager.terminal.errorTitle": "Помилка термінала",
 
   "agentManager.setup.failed": "Налаштування робочого дерева не вдалося",
   "agentManager.setup.settingUp": "Налаштування робочого дерева",
@@ -72,7 +78,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Наступний елемент",
   "agentManager.shortcuts.newWorktree": "Нове робоче дерево",
   "agentManager.shortcuts.openWorktree": "Відкрити робоче дерево",
-  "agentManager.shortcuts.advancedWorktree": "Розширене робоче дерево",
+  "agentManager.shortcuts.advancedWorktree": "Налаштувати нове worktree",
   "agentManager.shortcuts.deleteWorktree": "Видалити робоче дерево",
   "agentManager.shortcuts.previousTab": "Попередня вкладка",
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
@@ -95,6 +101,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
+  "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",
   "agentManager.dialog.tab.import": "Імпортувати",
   "agentManager.dialog.namePlaceholder": "Назва робочого дерева (необов'язково)",

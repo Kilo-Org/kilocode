@@ -13,28 +13,29 @@ import { errorMessage } from "../util/error"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
 import { Git } from "@/git"
-import { Effect, Layer, Path, Scope, Context, Stream } from "effect"
+import { Effect, Layer, Path, Schema, Scope, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { BootstrapRuntime } from "@/effect/bootstrap-runtime"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 import { InstanceState } from "@/effect"
+import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
 
 const log = Log.create({ service: "worktree" })
 
 export const Event = {
   Ready: BusEvent.define(
     "worktree.ready",
-    z.object({
-      name: z.string(),
-      branch: z.string(),
+    Schema.Struct({
+      name: Schema.String,
+      branch: Schema.String,
     }),
   ),
   Failed: BusEvent.define(
     "worktree.failed",
-    z.object({
-      message: z.string(),
+    Schema.Struct({
+      message: Schema.String,
     }),
   ),
 }
@@ -353,25 +354,28 @@ export const layer: Layer.Layer<
       )
     }
 
+    // kilocode_change start - use Kilo cleanup helper for slow Windows handle release
     function cleanDirectory(target: string) {
-      return Effect.promise(() =>
-        import("fs/promises")
-          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
-          .catch((error) => {
+      return Effect.promise(() => WorktreeCleanup.removeDirectory(target)).pipe(
+        Effect.catch((error) =>
+          Effect.sync(() => {
             const message = errorMessage(error)
             throw new RemoveFailedError({ message: message || "Failed to remove git worktree directory" })
           }),
+        ),
       )
     }
+    // kilocode_change end
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {
-      if (Instance.project.vcs !== "git") {
+      const ctx = yield* InstanceState.context
+      if (ctx.project.vcs !== "git") {
         throw new NotGitError({ message: "Worktrees are only supported for git projects" })
       }
 
       const directory = yield* canonical(input.directory)
 
-      const list = yield* git(["worktree", "list", "--porcelain"], { cwd: Instance.worktree })
+      const list = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
       if (list.code !== 0) {
         throw new RemoveFailedError({ message: list.stderr || list.text || "Failed to read git worktrees" })
       }
@@ -388,10 +392,9 @@ export const layer: Layer.Layer<
         return true
       }
 
-      yield* stopFsmonitor(entry.path)
-      const removed = yield* git(["worktree", "remove", "--force", entry.path], { cwd: Instance.worktree })
+      const removed = yield* WorktreeCleanup.remove({ root: ctx.worktree, target: entry.path, git, stop: stopFsmonitor }) // kilocode_change
       if (removed.code !== 0) {
-        const next = yield* git(["worktree", "list", "--porcelain"], { cwd: Instance.worktree })
+        const next = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
         if (next.code !== 0) {
           throw new RemoveFailedError({
             message: removed.stderr || removed.text || next.stderr || next.text || "Failed to remove git worktree",
@@ -408,7 +411,7 @@ export const layer: Layer.Layer<
 
       const branch = entry.branch?.replace(/^refs\/heads\//, "")
       if (branch) {
-        const deleted = yield* git(["branch", "-D", branch], { cwd: Instance.worktree })
+        const deleted = yield* git(["branch", "-D", branch], { cwd: ctx.worktree })
         if (deleted.code !== 0) {
           throw new RemoveFailedError({
             message: deleted.stderr || deleted.text || "Failed to delete worktree branch",
@@ -498,17 +501,18 @@ export const layer: Layer.Layer<
     })
 
     const reset = Effect.fn("Worktree.reset")(function* (input: ResetInput) {
-      if (Instance.project.vcs !== "git") {
+      const ctx = yield* InstanceState.context
+      if (ctx.project.vcs !== "git") {
         throw new NotGitError({ message: "Worktrees are only supported for git projects" })
       }
 
       const directory = yield* canonical(input.directory)
-      const primary = yield* canonical(Instance.worktree)
+      const primary = yield* canonical(ctx.worktree)
       if (directory === primary) {
         throw new ResetFailedError({ message: "Cannot reset the primary workspace" })
       }
 
-      const list = yield* git(["worktree", "list", "--porcelain"], { cwd: Instance.worktree })
+      const list = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
       if (list.code !== 0) {
         throw new ResetFailedError({ message: list.stderr || list.text || "Failed to read git worktrees" })
       }
@@ -520,7 +524,7 @@ export const layer: Layer.Layer<
 
       const worktreePath = entry.path
 
-      const base = yield* gitSvc.defaultBranch(Instance.worktree)
+      const base = yield* gitSvc.defaultBranch(ctx.worktree)
       if (!base) {
         throw new ResetFailedError({ message: "Default branch not found" })
       }
@@ -531,7 +535,7 @@ export const layer: Layer.Layer<
         const branch = base.ref.slice(sep + 1)
         yield* gitExpect(
           ["fetch", remote, branch],
-          { cwd: Instance.worktree },
+          { cwd: ctx.worktree },
           (r) => new ResetFailedError({ message: r.stderr || r.text || `Failed to fetch ${base.ref}` }),
         )
       }
@@ -574,7 +578,7 @@ export const layer: Layer.Layer<
         throw new ResetFailedError({ message: `Worktree reset left local changes:\n${status.text.trim()}` })
       }
 
-      yield* runStartScripts(worktreePath, { projectID: Instance.project.id }).pipe(
+      yield* runStartScripts(worktreePath, { projectID: ctx.project.id }).pipe(
         Effect.catchCause((cause) => Effect.sync(() => log.error("worktree start task failed", { cause }))),
         Effect.forkIn(scope),
       )

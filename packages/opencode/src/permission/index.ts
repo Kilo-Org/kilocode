@@ -79,16 +79,14 @@ export class Approval extends Schema.Class<Approval>("PermissionApproval")({
 }
 
 export const Event = {
-  Asked: BusEvent.define("permission.asked", Request.zod),
+  Asked: BusEvent.define("permission.asked", Request),
   Replied: BusEvent.define(
     "permission.replied",
-    zod(
-      Schema.Struct({
-        sessionID: SessionID,
-        requestID: PermissionID,
-        reply: Reply,
-      }),
-    ),
+    Schema.Struct({
+      sessionID: SessionID,
+      requestID: PermissionID,
+      reply: Reply,
+    }),
   ),
 }
 
@@ -120,6 +118,7 @@ export const AskInput = Schema.Struct({
   ...Request.fields,
   id: Schema.optional(PermissionID),
   ruleset: Ruleset,
+  hardRuleset: Schema.optional(Ruleset), // kilocode_change
 })
   .annotate({ identifier: "PermissionAskInput" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -149,9 +148,9 @@ export const AllowEverythingInput = z.object({
 
 export interface Interface {
   readonly ask: (input: AskInput) => Effect.Effect<void, Error>
-  readonly reply: (input: ReplyInput) => Effect.Effect<void>
+  readonly reply: (input: ReplyInput) => Effect.Effect<boolean> // kilocode_change
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
-  readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<void> // kilocode_change
+  readonly saveAlwaysRules: (input: z.infer<typeof SaveAlwaysRulesInput>) => Effect.Effect<boolean> // kilocode_change
   readonly allowEverything: (input: z.infer<typeof AllowEverythingInput>) => Effect.Effect<void> // kilocode_change
   readonly pending: (id: string) => Effect.Effect<Request | undefined> // kilocode_change
 }
@@ -159,6 +158,8 @@ export interface Interface {
 interface PendingEntry {
   info: Request
   ruleset: Ruleset // kilocode_change
+  hardRuleset?: Ruleset // kilocode_change
+  saved?: boolean // kilocode_change
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
 
@@ -172,6 +173,17 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
   log.info("evaluate", { permission, pattern, ruleset: rulesets.flat() })
   return evalRule(permission, pattern, ...rulesets)
 }
+
+// kilocode_change start
+function veto(permission: string, pattern: string, ruleset?: Ruleset) {
+  if (!ruleset) return false
+  return evaluate(permission, pattern, ruleset).action === "deny"
+}
+
+function subset(permission: string, ruleset: Ruleset) {
+  return ruleset.filter((rule) => Wildcard.match(permission, rule.permission))
+}
+// kilocode_change end
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Permission") {}
 
@@ -205,7 +217,7 @@ export const layer = Layer.effect(
 
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
-      const { ruleset, ...request } = input
+      const { ruleset, hardRuleset, ...request } = input // kilocode_change
       const s = yield* InstanceState.get(state) // kilocode_change
       const local = s.session[request.sessionID] ?? [] // kilocode_change
       let needsAsk = false
@@ -217,9 +229,14 @@ export const layer = Layer.effect(
       for (const pattern of request.patterns) {
         const rule = evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
+        // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
+        if (veto(request.permission, pattern, hardRuleset)) {
+          return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
+        }
+        // kilocode_change end
         if (rule.action === "deny") {
           return yield* new DeniedError({
-            ruleset: ruleset.filter((rule) => Wildcard.match(request.permission, rule.permission)),
+            ruleset: subset(request.permission, ruleset), // kilocode_change
           })
         }
         // kilocode_change start — override "allow" to "ask" for config paths
@@ -244,7 +261,7 @@ export const layer = Layer.effect(
       log.info("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, deferred }) // kilocode_change
+      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* bus.publish(Event.Asked, info)
       return yield* Effect.ensuring(
         Deferred.await(deferred),
@@ -257,7 +274,7 @@ export const layer = Layer.effect(
     const reply = Effect.fn("Permission.reply")(function* (input: ReplyInput) {
       const { approved, pending } = yield* InstanceState.get(state)
       const existing = pending.get(input.requestID)
-      if (!existing) return
+      if (!existing) return false // kilocode_change
 
       pending.delete(input.requestID)
       yield* bus.publish(Event.Replied, {
@@ -282,49 +299,45 @@ export const layer = Layer.effect(
           })
           yield* Deferred.fail(item.deferred, new RejectedError())
         }
-        return
+        return true // kilocode_change
       }
 
       yield* Deferred.succeed(existing.deferred, undefined)
-      if (input.reply === "once") return
+      if (input.reply === "once") return true // kilocode_change
 
       // kilocode_change start — downgrade "always" to "once" for config file edits
-      if (ConfigProtection.isRequest(existing.info)) return
+      if (ConfigProtection.isRequest(existing.info)) return true // kilocode_change
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
-        approved.push({
-          permission: existing.info.permission,
-          pattern,
-          action: "allow",
-        })
+        // kilocode_change start — saveAlwaysRules may have already persisted selected always-rules
+        if (!existing.saved) {
+          approved.push({
+            permission: existing.info.permission,
+            pattern,
+            action: "allow",
+          })
+        }
+        // kilocode_change end
       }
 
-      for (const [id, item] of pending.entries()) {
-        if (item.info.sessionID !== existing.info.sessionID) continue
-        const ok = item.info.patterns.every(
-          (pattern) => evaluate(item.info.permission, pattern, item.ruleset, approved).action === "allow", // kilocode_change — include original ruleset
-        )
-        if (!ok) continue
-        pending.delete(id)
-        yield* bus.publish(Event.Replied, {
-          sessionID: item.info.sessionID,
-          requestID: item.info.id,
-          reply: "always",
-        })
-        yield* Deferred.succeed(item.deferred, undefined)
-      }
+      // kilocode_change start — drain covered permissions across sibling Agent Manager sessions
+      yield* drainCovered(pending as unknown as Map<string, PendingEntry>, approved, DeniedError)
+      // kilocode_change end
 
       // kilocode_change start — persist always-rules to global config
-      const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
-        permission: existing.info.permission,
-        pattern,
-        action: "allow" as const,
-      }))
-      if (alwaysRules.length > 0) {
-        yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+      if (!existing.saved) {
+        const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
+          permission: existing.info.permission,
+          pattern,
+          action: "allow" as const,
+        }))
+        if (alwaysRules.length > 0) {
+          yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+        }
       }
       // kilocode_change end
+      return true // kilocode_change
     })
 
     const list = Effect.fn("Permission.list")(function* () {
@@ -338,9 +351,9 @@ export const layer = Layer.effect(
     ) {
       const s = yield* InstanceState.get(state)
       const existing = s.pending.get(input.requestID)
-      if (!existing) return
+      if (!existing) return false // kilocode_change
 
-      if (ConfigProtection.isRequest(existing.info)) return
+      if (ConfigProtection.isRequest(existing.info)) return true // kilocode_change
 
       const validRules = new Set([
         ...((existing.info.metadata?.rules as string[] | undefined) ?? []),
@@ -356,6 +369,7 @@ export const layer = Layer.effect(
         if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
       }
       s.approved.push(...newRules)
+      existing.saved = true // kilocode_change
 
       if (newRules.length > 0) {
         yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false }))
@@ -367,6 +381,7 @@ export const layer = Layer.effect(
         DeniedError,
         input.requestID as unknown as string,
       )
+      return true
     })
 
     const allowEverything = Effect.fn("Permission.allowEverything")(function* (
@@ -390,7 +405,10 @@ export const layer = Layer.effect(
 
       if (input.requestID) {
         const entry = s.pending.get(PermissionID.make(input.requestID))
-        if (entry && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
+        const ok = entry
+          ? entry.info.patterns.every((pattern) => !veto(entry.info.permission, pattern, entry.hardRuleset))
+          : false // kilocode_change
+        if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
           s.pending.delete(PermissionID.make(input.requestID))
           yield* bus.publish(Event.Replied, {
             sessionID: entry.info.sessionID,
@@ -404,6 +422,7 @@ export const layer = Layer.effect(
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
         if (ConfigProtection.isRequest(entry.info)) continue
+        if (entry.info.patterns.some((pattern) => veto(entry.info.permission, pattern, entry.hardRuleset))) continue // kilocode_change
         s.pending.delete(id)
         yield* bus.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
@@ -433,8 +452,18 @@ function expand(pattern: string): string {
 }
 
 export function fromConfig(permission: ConfigPermission.Info) {
+  // Sort top-level keys so wildcard permissions (`*`, `mcp_*`) come before
+  // specific ones. Combined with `findLast` in evaluate(), this gives the
+  // intuitive semantic "specific tool rules override the `*` fallback"
+  // regardless of the user's JSON key order. Sub-pattern order inside a
+  // single permission key is preserved — only top-level keys are sorted.
+  const entries = Object.entries(permission).sort(([a], [b]) => {
+    const aWild = a.includes("*")
+    const bWild = b.includes("*")
+    return aWild === bWild ? 0 : aWild ? -1 : 1
+  })
   const ruleset: Ruleset = []
-  for (const [key, value] of Object.entries(permission)) {
+  for (const [key, value] of entries) {
     if (typeof value === "string") {
       ruleset.push({ permission: key, action: value, pattern: "*" })
       continue
@@ -459,7 +488,7 @@ export function merge(...rulesets: Ruleset[]): Ruleset {
   return rulesets.flat()
 }
 
-const EDIT_TOOLS = ["edit", "write", "apply_patch", "multiedit"]
+const EDIT_TOOLS = ["edit", "write", "apply_patch"]
 
 export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
   const result = new Set<string>()
@@ -503,7 +532,7 @@ export function toConfig(rules: Ruleset): ConfigPermission.Info {
       result[rule.permission] = { "*": existing, [rule.pattern]: rule.action }
       continue
     }
-    existing[rule.pattern] = rule.action
+    result[rule.permission] = { ...existing, [rule.pattern]: rule.action }
   }
   return result
 }

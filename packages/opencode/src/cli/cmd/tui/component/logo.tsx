@@ -1,9 +1,62 @@
 import { BoxRenderable, MouseButton, MouseEvent, RGBA, TextAttributes } from "@opentui/core"
-import { For, createMemo, createSignal, onCleanup, type JSX } from "solid-js"
+import { For, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { useTheme, tint } from "@tui/context/theme"
 import { KiloLogo } from "./kilo-logo" // kilocode_change
 import * as Sound from "@tui/util/sound"
-import { logo } from "@/cli/logo"
+import { go, logo } from "@/cli/logo"
+
+export type LogoShape = {
+  left: string[]
+  right: string[]
+}
+
+type ShimmerConfig = {
+  period: number
+  rings: number
+  sweepFraction: number
+  coreWidth: number
+  coreAmp: number
+  softWidth: number
+  softAmp: number
+  tail: number
+  tailAmp: number
+  haloWidth: number
+  haloOffset: number
+  haloAmp: number
+  breathBase: number
+  noise: number
+  ambientAmp: number
+  ambientCenter: number
+  ambientWidth: number
+  shadowMix: number
+  primaryMix: number
+  originX: number
+  originY: number
+}
+
+const shimmerConfig: ShimmerConfig = {
+  period: 4600,
+  rings: 2,
+  sweepFraction: 1,
+  coreWidth: 1.2,
+  coreAmp: 1.9,
+  softWidth: 10,
+  softAmp: 1.6,
+  tail: 5,
+  tailAmp: 0.64,
+  haloWidth: 4.3,
+  haloOffset: 0.6,
+  haloAmp: 0.16,
+  breathBase: 0.04,
+  noise: 0.1,
+  ambientAmp: 0.36,
+  ambientCenter: 0.5,
+  ambientWidth: 0.34,
+  shadowMix: 0.1,
+  primaryMix: 0.3,
+  originX: 4.5,
+  originY: 13.5,
+}
 
 // Shadow markers (rendered chars in parens):
 // _ = full shadow cell (space with bg=shadow)
@@ -75,9 +128,6 @@ type Frame = {
   spark: number
 }
 
-const LEFT = logo.left[0]?.length ?? 0
-const FULL = logo.left.map((line, i) => line + " ".repeat(GAP) + logo.right[i])
-const SPAN = Math.hypot(FULL[0]?.length ?? 0, FULL.length * 2) * 0.94
 const NEAR = [
   [1, 0],
   [1, 1],
@@ -141,7 +191,7 @@ function noise(x: number, y: number, t: number) {
 }
 
 function lit(char: string) {
-  return char !== " " && char !== "_" && char !== "~"
+  return char !== " " && char !== "_" && char !== "~" && char !== ","
 }
 
 function key(x: number, y: number) {
@@ -189,12 +239,12 @@ function route(list: Array<{ x: number; y: number }>) {
   return path
 }
 
-function mapGlyphs() {
+function mapGlyphs(full: string[]) {
   const cells = [] as Array<{ x: number; y: number }>
 
-  for (let y = 0; y < FULL.length; y++) {
-    for (let x = 0; x < (FULL[y]?.length ?? 0); x++) {
-      if (lit(FULL[y]?.[x] ?? " ")) cells.push({ x, y })
+  for (let y = 0; y < full.length; y++) {
+    for (let x = 0; x < (full[y]?.length ?? 0); x++) {
+      if (lit(full[y]?.[x] ?? " ")) cells.push({ x, y })
     }
   }
 
@@ -238,9 +288,25 @@ function mapGlyphs() {
   return { glyph, trace, center }
 }
 
-const MAP = mapGlyphs()
+type LogoContext = {
+  LEFT: number
+  FULL: string[]
+  SPAN: number
+  MAP: ReturnType<typeof mapGlyphs>
+  shape: LogoShape
+}
 
-function shimmer(x: number, y: number, frame: Frame) {
+function build(shape: LogoShape): LogoContext {
+  const LEFT = shape.left[0]?.length ?? 0
+  const FULL = shape.left.map((line, i) => line + " ".repeat(GAP) + shape.right[i])
+  const SPAN = Math.hypot(FULL[0]?.length ?? 0, FULL.length * 2) * 0.94
+  return { LEFT, FULL, SPAN, MAP: mapGlyphs(FULL), shape }
+}
+
+const DEFAULT = build(logo)
+const GO = build(go)
+
+function shimmer(x: number, y: number, frame: Frame, ctx: LogoContext) {
   return frame.list.reduce((best, item) => {
     const age = frame.t - item.at
     if (age < SHIMMER_IN || age > LIFE) return best
@@ -248,7 +314,7 @@ function shimmer(x: number, y: number, frame: Frame) {
     const dy = y * 2 + 1 - item.y
     const dist = Math.hypot(dx, dy)
     const p = age / LIFE
-    const r = SPAN * (1 - (1 - p) ** EXPAND)
+    const r = ctx.SPAN * (1 - (1 - p) ** EXPAND)
     const lag = r - dist
     if (lag < 0.18 || lag > SHIMMER_OUT) return best
     const band = Math.exp(-(((lag - 1.05) / 0.68) ** 2))
@@ -259,19 +325,19 @@ function shimmer(x: number, y: number, frame: Frame) {
   }, 0)
 }
 
-function remain(x: number, y: number, item: Release, t: number) {
+function remain(x: number, y: number, item: Release, t: number, ctx: LogoContext) {
   const age = t - item.at
   if (age < 0 || age > LIFE) return 0
   const p = age / LIFE
   const dx = x + 0.5 - item.x - 0.5
   const dy = y * 2 + 1 - item.y * 2 - 1
   const dist = Math.hypot(dx, dy)
-  const r = SPAN * (1 - (1 - p) ** EXPAND)
+  const r = ctx.SPAN * (1 - (1 - p) ** EXPAND)
   if (dist > r) return 1
   return clamp((r - dist) / 1.35 < 1 ? 1 - (r - dist) / 1.35 : 0)
 }
 
-function wave(x: number, y: number, frame: Frame, live: boolean) {
+function wave(x: number, y: number, frame: Frame, live: boolean, ctx: LogoContext) {
   return frame.list.reduce((sum, item) => {
     const age = frame.t - item.at
     if (age < 0 || age > LIFE) return sum
@@ -279,7 +345,7 @@ function wave(x: number, y: number, frame: Frame, live: boolean) {
     const dx = x + 0.5 - item.x
     const dy = y * 2 + 1 - item.y
     const dist = Math.hypot(dx, dy)
-    const r = SPAN * (1 - (1 - p) ** EXPAND)
+    const r = ctx.SPAN * (1 - (1 - p) ** EXPAND)
     const fade = (1 - p) ** 1.32
     const j = 1.02 + noise(x + item.x * 0.7, y + item.y * 0.7, item.at * 0.002 + age * 0.06) * 0.52
     const edge = Math.exp(-(((dist - r) / WIDTH) ** 2)) * GAIN * fade * item.force * j
@@ -293,7 +359,7 @@ function wave(x: number, y: number, frame: Frame, live: boolean) {
   }, 0)
 }
 
-function field(x: number, y: number, frame: Frame) {
+function field(x: number, y: number, frame: Frame, ctx: LogoContext) {
   const held = frame.hold
   const rest = frame.release
   const item = held ?? rest
@@ -327,11 +393,11 @@ function field(x: number, y: number, frame: Frame) {
     Math.max(0, noise(item.x * 3.1, item.y * 2.7, frame.t * 1.7) - 0.72) *
     Math.exp(-(dist * dist) / 0.15) *
     lerp(0.08, 0.42, body)
-  const fade = frame.release && !frame.hold ? remain(x, y, frame.release, frame.t) : 1
+  const fade = frame.release && !frame.hold ? remain(x, y, frame.release, frame.t, ctx) : 1
   return (core + shell + ember + ring + fork + glitch + lash + flicker - dim) * fade
 }
 
-function pick(x: number, y: number, frame: Frame) {
+function pick(x: number, y: number, frame: Frame, ctx: LogoContext) {
   const held = frame.hold
   const rest = frame.release
   const item = held ?? rest
@@ -340,26 +406,26 @@ function pick(x: number, y: number, frame: Frame) {
   const dx = x + 0.5 - item.x - 0.5
   const dy = y * 2 + 1 - item.y * 2 - 1
   const dist = Math.hypot(dx, dy)
-  const fade = frame.release && !frame.hold ? remain(x, y, frame.release, frame.t) : 1
+  const fade = frame.release && !frame.hold ? remain(x, y, frame.release, frame.t, ctx) : 1
   return Math.exp(-(dist * dist) / 1.7) * lerp(0.2, 0.96, rise) * fade
 }
 
-function select(x: number, y: number) {
-  const direct = MAP.glyph.get(key(x, y))
+function select(x: number, y: number, ctx: LogoContext) {
+  const direct = ctx.MAP.glyph.get(key(x, y))
   if (direct !== undefined) return direct
 
-  const near = NEAR.map(([dx, dy]) => MAP.glyph.get(key(x + dx, y + dy))).find(
+  const near = NEAR.map(([dx, dy]) => ctx.MAP.glyph.get(key(x + dx, y + dy))).find(
     (item): item is number => item !== undefined,
   )
   return near
 }
 
-function trace(x: number, y: number, frame: Frame) {
+function trace(x: number, y: number, frame: Frame, ctx: LogoContext) {
   const held = frame.hold
   const rest = frame.release
   const item = held ?? rest
   if (!item || item.glyph === undefined) return 0
-  const step = MAP.trace.get(key(x, y))
+  const step = ctx.MAP.trace.get(key(x, y))
   if (!step || step.glyph !== item.glyph || step.l < 2) return 0
   const age = frame.t - item.at
   const rise = held ? ramp(age, HOLD, CHARGE) : rest!.rise
@@ -369,269 +435,131 @@ function trace(x: number, y: number, frame: Frame) {
   const dist = Math.min(Math.abs(step.i - head), step.l - Math.abs(step.i - head))
   const tail = (head - TAIL + step.l) % step.l
   const lag = Math.min(Math.abs(step.i - tail), step.l - Math.abs(step.i - tail))
-  const fade = frame.release && !frame.hold ? remain(x, y, frame.release, frame.t) : 1
+  const fade = frame.release && !frame.hold ? remain(x, y, frame.release, frame.t, ctx) : 1
   const core = Math.exp(-((dist / 1.05) ** 2)) * lerp(0.8, 2.35, rise)
   const glow = Math.exp(-((dist / 1.85) ** 2)) * lerp(0.08, 0.34, rise)
   const trail = Math.exp(-((lag / 1.45) ** 2)) * lerp(0.04, 0.42, rise)
   return (core + glow + trail) * appear * fade
 }
 
-function bloom(x: number, y: number, frame: Frame) {
+function idle(
+  x: number,
+  pixelY: number,
+  frame: Frame,
+  ctx: LogoContext,
+  state: IdleState,
+): { glow: number; peak: number; primary: number } {
+  const cfg = state.cfg
+  const dx = x + 0.5 - cfg.originX
+  const dy = pixelY - cfg.originY
+  const dist = Math.hypot(dx, dy)
+  const angle = Math.atan2(dy, dx)
+  const wob1 = noise(x * 0.32, pixelY * 0.25, frame.t * 0.0005) - 0.5
+  const wob2 = noise(x * 0.12, pixelY * 0.08, frame.t * 0.00022) - 0.5
+  const ripple = Math.sin(angle * 3 + frame.t * 0.0012) * 0.3
+  const jitter = (wob1 * 0.55 + wob2 * 0.32 + ripple * 0.18) * cfg.noise
+  const traveled = dist + jitter
+  let glow = 0
+  let peak = 0
+  let halo = 0
+  let primary = 0
+  let ambient = 0
+  for (const active of state.active) {
+    const head = active.head
+    const eased = active.eased
+    const delta = traveled - head
+    // Use shallower exponent (1.6 vs 2) for softer edges on the Gaussians
+    // so adjacent pixels have smaller brightness deltas
+    const core = Math.exp(-(Math.abs(delta / cfg.coreWidth) ** 1.8))
+    const soft = Math.exp(-(Math.abs(delta / cfg.softWidth) ** 1.6))
+    const tailRange = cfg.tail * 2.6
+    const tail = delta < 0 && delta > -tailRange ? (1 + delta / tailRange) ** 2.6 : 0
+    const haloDelta = delta + cfg.haloOffset
+    const haloBand = Math.exp(-(Math.abs(haloDelta / cfg.haloWidth) ** 1.6))
+    glow += (soft * cfg.softAmp + tail * cfg.tailAmp) * eased
+    peak += core * cfg.coreAmp * eased
+    halo += haloBand * cfg.haloAmp * eased
+    // Primary-tinted fringe follows the halo (which trails behind the core) and the tail
+    primary += (haloBand + tail * 0.6) * eased
+    ambient += active.ambient
+  }
+  ambient /= state.rings
+  return {
+    glow: glow / state.rings,
+    peak: cfg.breathBase + ambient + (peak + halo) / state.rings,
+    primary: (primary / state.rings) * cfg.primaryMix,
+  }
+}
+
+function bloom(x: number, y: number, frame: Frame, ctx: LogoContext) {
   const item = frame.glow
   if (!item) return 0
-  const glyph = MAP.glyph.get(key(x, y))
+  const glyph = ctx.MAP.glyph.get(key(x, y))
   if (glyph !== item.glyph) return 0
   const age = frame.t - item.at
   if (age < 0 || age > GLOW_OUT) return 0
   const p = age / GLOW_OUT
   const flash = (1 - p) ** 2
-  const dx = x + 0.5 - MAP.center.get(item.glyph)!.x
-  const dy = y * 2 + 1 - MAP.center.get(item.glyph)!.y
+  const dx = x + 0.5 - ctx.MAP.center.get(item.glyph)!.x
+  const dy = y * 2 + 1 - ctx.MAP.center.get(item.glyph)!.y
   const bias = Math.exp(-((Math.hypot(dx, dy) / 2.8) ** 2))
   return lerp(item.force, item.force * 0.18, p) * lerp(0.72, 1.1, bias) * flash
 }
 
-export function Logo() {
-  // kilocode_change start
+type IdleState = {
+  cfg: ShimmerConfig
+  reach: number
+  rings: number
+  active: Array<{
+    head: number
+    eased: number
+    ambient: number
+  }>
+}
+
+function buildIdleState(t: number, ctx: LogoContext): IdleState {
+  const cfg = shimmerConfig
+  const w = ctx.FULL[0]?.length ?? 1
+  const h = ctx.FULL.length * 2
+  const corners: [number, number][] = [
+    [0, 0],
+    [w, 0],
+    [0, h],
+    [w, h],
+  ]
+  let maxCorner = 0
+  for (const [cx, cy] of corners) {
+    const d = Math.hypot(cx - cfg.originX, cy - cfg.originY)
+    if (d > maxCorner) maxCorner = d
+  }
+  const reach = maxCorner + cfg.tail * 2
+  const rings = Math.max(1, Math.floor(cfg.rings))
+  const active = [] as IdleState["active"]
+  for (let i = 0; i < rings; i++) {
+    const offset = i / rings
+    const cyclePhase = (t / cfg.period + offset) % 1
+    if (cyclePhase >= cfg.sweepFraction) continue
+    const phase = cyclePhase / cfg.sweepFraction
+    const envelope = Math.sin(phase * Math.PI)
+    const eased = envelope * envelope * (3 - 2 * envelope)
+    const d = (phase - cfg.ambientCenter) / cfg.ambientWidth
+    active.push({
+      head: phase * reach,
+      eased,
+      ambient: Math.abs(d) < 1 ? (1 - d * d) ** 2 * cfg.ambientAmp : 0,
+    })
+  }
+  return { cfg, reach, rings, active }
+}
+
+// kilocode_change start
+export function Logo(_props: { shape?: LogoShape; ink?: RGBA; idle?: boolean } = {}) {
   return <KiloLogo />
-  // kilocode_change end
+}
+// kilocode_change end
+
+export function GoLogo() {
   const { theme } = useTheme()
-  const [rings, setRings] = createSignal<Ring[]>([])
-  const [hold, setHold] = createSignal<Hold>()
-  const [release, setRelease] = createSignal<Release>()
-  const [glow, setGlow] = createSignal<Glow>()
-  const [now, setNow] = createSignal(0)
-  let box: BoxRenderable | undefined
-  let timer: ReturnType<typeof setInterval> | undefined
-  let hum = false
-
-  const stop = () => {
-    if (!timer) return
-    clearInterval(timer)
-    timer = undefined
-  }
-
-  const tick = () => {
-    const t = performance.now()
-    setNow(t)
-    const item = hold()
-    if (item && !hum && t - item.at >= HOLD) {
-      hum = true
-      Sound.start()
-    }
-    if (item && t - item.at >= CHARGE) {
-      burst(item.x, item.y)
-    }
-    let live = false
-    setRings((list) => {
-      const next = list.filter((item) => t - item.at < LIFE)
-      live = next.length > 0
-      return next
-    })
-    const flash = glow()
-    if (flash && t - flash.at >= GLOW_OUT) {
-      setGlow(undefined)
-    }
-    if (!live) setRelease(undefined)
-    if (live || hold() || release() || glow()) return
-    stop()
-  }
-
-  const start = () => {
-    if (timer) return
-    timer = setInterval(tick, 16)
-  }
-
-  const hit = (x: number, y: number) => {
-    const char = FULL[y]?.[x]
-    return char !== undefined && char !== " "
-  }
-
-  const press = (x: number, y: number, t: number) => {
-    const last = hold()
-    if (last) burst(last.x, last.y)
-    setNow(t)
-    if (!last) setRelease(undefined)
-    setHold({ x, y, at: t, glyph: select(x, y) })
-    hum = false
-    start()
-  }
-
-  const burst = (x: number, y: number) => {
-    const item = hold()
-    if (!item) return
-    hum = false
-    const t = performance.now()
-    const age = t - item.at
-    const rise = ramp(age, HOLD, CHARGE)
-    const level = push(rise)
-    setHold(undefined)
-    setRelease({ x, y, at: t, glyph: item.glyph, level, rise })
-    if (item.glyph !== undefined) {
-      setGlow({ glyph: item.glyph, at: t, force: lerp(0.18, 1.5, rise * level) })
-    }
-    setRings((list) => [
-      ...list,
-      {
-        x: x + 0.5,
-        y: y * 2 + 1,
-        at: t,
-        force: lerp(0.82, 2.55, level),
-        kick: lerp(0.32, 0.32 + KICK, level),
-      },
-    ])
-    setNow(t)
-    start()
-    Sound.pulse(lerp(0.8, 1, level))
-  }
-
-  const frame = createMemo(() => {
-    const t = now()
-    const item = hold()
-    return {
-      t,
-      list: rings(),
-      hold: item,
-      release: release(),
-      glow: glow(),
-      spark: item ? noise(item.x, item.y, t) : 0,
-    }
-  })
-
-  const dusk = createMemo(() => {
-    const base = frame()
-    const t = base.t - LAG
-    const item = base.hold
-    return {
-      t,
-      list: base.list,
-      hold: item,
-      release: base.release,
-      glow: base.glow,
-      spark: item ? noise(item.x, item.y, t) : 0,
-    }
-  })
-
-  const renderLine = (
-    line: string,
-    y: number,
-    ink: RGBA,
-    bold: boolean,
-    off: number,
-    frame: Frame,
-    dusk: Frame,
-  ): JSX.Element[] => {
-    const shadow = tint(theme.background, ink, 0.25)
-    const attrs = bold ? TextAttributes.BOLD : undefined
-
-    return Array.from(line).map((char, i) => {
-      const h = field(off + i, y, frame)
-      const n = wave(off + i, y, frame, lit(char)) + h
-      const s = wave(off + i, y, dusk, false) + h
-      const p = lit(char) ? pick(off + i, y, frame) : 0
-      const e = lit(char) ? trace(off + i, y, frame) : 0
-      const b = lit(char) ? bloom(off + i, y, frame) : 0
-      const q = shimmer(off + i, y, frame)
-
-      if (char === "_") {
-        return (
-          <text
-            fg={shade(ink, theme, s * 0.08)}
-            bg={shade(shadow, theme, ghost(s, 0.24) + ghost(q, 0.06))}
-            attributes={attrs}
-            selectable={false}
-          >
-            {" "}
-          </text>
-        )
-      }
-
-      if (char === "^") {
-        return (
-          <text
-            fg={shade(ink, theme, n + p + e + b)}
-            bg={shade(shadow, theme, ghost(s, 0.18) + ghost(q, 0.05) + ghost(b, 0.08))}
-            attributes={attrs}
-            selectable={false}
-          >
-            ▀
-          </text>
-        )
-      }
-
-      if (char === "~") {
-        return (
-          <text fg={shade(shadow, theme, ghost(s, 0.22) + ghost(q, 0.05))} attributes={attrs} selectable={false}>
-            ▀
-          </text>
-        )
-      }
-
-      if (char === " ") {
-        return (
-          <text fg={ink} attributes={attrs} selectable={false}>
-            {char}
-          </text>
-        )
-      }
-
-      return (
-        <text fg={shade(ink, theme, n + p + e + b)} attributes={attrs} selectable={false}>
-          {char}
-        </text>
-      )
-    })
-  }
-
-  onCleanup(() => {
-    stop()
-    hum = false
-    Sound.dispose()
-  })
-
-  const mouse = (evt: MouseEvent) => {
-    if (!box) return
-    if ((evt.type === "down" || evt.type === "drag") && evt.button === MouseButton.LEFT) {
-      const x = evt.x - box.x
-      const y = evt.y - box.y
-      if (!hit(x, y)) return
-      if (evt.type === "drag" && hold()) return
-      evt.preventDefault()
-      evt.stopPropagation()
-      const t = performance.now()
-      press(x, y, t)
-      return
-    }
-
-    if (!hold()) return
-    if (evt.type === "up") {
-      const item = hold()
-      if (!item) return
-      burst(item.x, item.y)
-    }
-  }
-
-  return (
-    <box ref={(item: BoxRenderable) => (box = item)}>
-      <box
-        position="absolute"
-        top={0}
-        left={0}
-        width={FULL[0]?.length ?? 0}
-        height={FULL.length}
-        zIndex={1}
-        onMouse={mouse}
-      />
-      <For each={logo.left}>
-        {(line, index) => (
-          <box flexDirection="row" gap={1}>
-            <box flexDirection="row">{renderLine(line, index(), theme.textMuted, false, 0, frame(), dusk())}</box>
-            <box flexDirection="row">
-              {renderLine(logo.right[index()], index(), theme.text, true, LEFT + GAP, frame(), dusk())}
-            </box>
-          </box>
-        )}
-      </For>
-    </box>
-  )
+  const base = tint(theme.background, theme.text, 0.62)
+  return <Logo shape={go} ink={base} idle />
 }

@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Bifurcar sessão",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
+  "agentManager.tab.newOptions": "Mais opções de nova aba",
+
+  "agentManager.terminal.new": "Nova aba de terminal",
+  "agentManager.terminal.ended": "terminal encerrado — feche a aba para dispensar",
+  "agentManager.terminal.connectionError": "erro de conexão do terminal",
+  "agentManager.terminal.errorTitle": "Erro no terminal",
   "agentManager.setup.failed": "Falha na configuração do worktree",
   "agentManager.setup.settingUp": "Configurando worktree",
   "agentManager.setup.error.git_not_found":
@@ -66,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Próximo item",
   "agentManager.shortcuts.newWorktree": "Novo Worktree",
   "agentManager.shortcuts.openWorktree": "Abrir Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Worktree avançado",
+  "agentManager.shortcuts.advancedWorktree": "Configurar novo worktree",
   "agentManager.shortcuts.deleteWorktree": "Excluir Worktree",
   "agentManager.shortcuts.previousTab": "Aba anterior",
   "agentManager.shortcuts.nextTab": "Próxima aba",
@@ -88,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Remover Worktree obsoleto",
 
   "agentManager.dialog.openWorktree": "Novo Worktree",
+  "agentManager.dialog.configureWorktree": "Configurar Novo Worktree...",
   "agentManager.dialog.tab.new": "Novo",
   "agentManager.dialog.tab.import": "Importar",
   "agentManager.dialog.namePlaceholder": "Nome do Worktree (opcional)",

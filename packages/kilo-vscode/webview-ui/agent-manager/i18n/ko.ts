@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
+  "agentManager.tab.newOptions": "더 많은 새 탭 옵션",
+
+  "agentManager.terminal.new": "새 터미널 탭",
+  "agentManager.terminal.ended": "터미널 종료됨 — 탭을 닫아 해제",
+  "agentManager.terminal.connectionError": "터미널 연결 오류",
+  "agentManager.terminal.errorTitle": "터미널 오류",
   "agentManager.setup.failed": "워크스페이스 설정 실패",
   "agentManager.setup.settingUp": "워크스페이스 설정 중",
   "agentManager.setup.error.git_not_found":
@@ -66,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "다음 항목",
   "agentManager.shortcuts.newWorktree": "새 Worktree",
   "agentManager.shortcuts.openWorktree": "Worktree 열기",
-  "agentManager.shortcuts.advancedWorktree": "고급 Worktree",
+  "agentManager.shortcuts.advancedWorktree": "새 worktree 구성",
   "agentManager.shortcuts.deleteWorktree": "Worktree 삭제",
   "agentManager.shortcuts.previousTab": "이전 탭",
   "agentManager.shortcuts.nextTab": "다음 탭",
@@ -88,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "오래된 Worktree 제거",
 
   "agentManager.dialog.openWorktree": "새 워크트리",
+  "agentManager.dialog.configureWorktree": "새 Worktree 구성...",
   "agentManager.dialog.tab.new": "새로 만들기",
   "agentManager.dialog.tab.import": "가져오기",
   "agentManager.dialog.namePlaceholder": "Worktree 이름 (선택사항)",

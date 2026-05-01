@@ -9,43 +9,49 @@ import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
 import { which } from "../util/which"
 import { ProjectID } from "./schema"
-import { Effect, Layer, Path, Scope, Context, Stream } from "effect"
+import { Effect, Layer, Path, Scope, Context, Stream, Types, Schema } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 
 const log = Log.create({ service: "project" })
 
-export const Info = z
-  .object({
-    id: ProjectID.zod,
-    worktree: z.string(),
-    vcs: z.literal("git").optional(),
-    name: z.string().optional(),
-    icon: z
-      .object({
-        url: z.string().optional(),
-        override: z.string().optional(),
-        color: z.string().optional(),
-      })
-      .optional(),
-    commands: z
-      .object({
-        start: z.string().optional().describe("Startup script to run when creating a new workspace (worktree)"),
-      })
-      .optional(),
-    time: z.object({
-      created: z.number(),
-      updated: z.number(),
-      initialized: z.number().optional(),
-    }),
-    sandboxes: z.array(z.string()),
-  })
-  .meta({
-    ref: "Project",
-  })
-export type Info = z.infer<typeof Info>
+const ProjectVcs = Schema.Literal("git")
+
+const ProjectIcon = Schema.Struct({
+  url: Schema.optional(Schema.String),
+  override: Schema.optional(Schema.String),
+  color: Schema.optional(Schema.String),
+})
+
+const ProjectCommands = Schema.Struct({
+  start: Schema.optional(
+    Schema.String.annotate({ description: "Startup script to run when creating a new workspace (worktree)" }),
+  ),
+})
+
+const ProjectTime = Schema.Struct({
+  created: Schema.Number,
+  updated: Schema.Number,
+  initialized: Schema.optional(Schema.Number),
+})
+
+export const Info = Schema.Struct({
+  id: ProjectID,
+  worktree: Schema.String,
+  vcs: Schema.optional(ProjectVcs),
+  name: Schema.optional(Schema.String),
+  icon: Schema.optional(ProjectIcon),
+  commands: Schema.optional(ProjectCommands),
+  time: ProjectTime,
+  sandboxes: Schema.Array(Schema.String),
+})
+  .annotate({ identifier: "Project" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
 export const Event = {
   Updated: BusEvent.define("project.updated", Info),
@@ -55,11 +61,17 @@ type Row = typeof ProjectTable.$inferSelect
 
 export function fromRow(row: Row): Info {
   const icon =
-    row.icon_url || row.icon_color ? { url: row.icon_url ?? undefined, color: row.icon_color ?? undefined } : undefined
+    row.icon_url || row.icon_url_override || row.icon_color
+      ? {
+          url: row.icon_url ?? undefined,
+          override: row.icon_url_override ?? undefined,
+          color: row.icon_color ?? undefined,
+        }
+      : undefined
   return {
     id: row.id,
     worktree: row.worktree,
-    vcs: row.vcs ? Info.shape.vcs.parse(row.vcs) : undefined,
+    vcs: row.vcs ? Schema.decodeUnknownSync(ProjectVcs)(row.vcs) : undefined,
     name: row.name ?? undefined,
     icon,
     time: {
@@ -75,8 +87,8 @@ export function fromRow(row: Row): Info {
 export const UpdateInput = z.object({
   projectID: ProjectID.zod,
   name: z.string().optional(),
-  icon: Info.shape.icon.optional(),
-  commands: Info.shape.commands.optional(),
+  icon: zod(ProjectIcon).optional(),
+  commands: zod(ProjectCommands).optional(),
 })
 export type UpdateInput = z.infer<typeof UpdateInput>
 
@@ -140,7 +152,7 @@ export const layer: Layer.Layer<
         }),
       )
 
-    const fakeVcs = Info.shape.vcs.parse(Flag.KILO_FAKE_VCS)
+    const fakeVcs = Schema.decodeUnknownSync(Schema.optional(ProjectVcs))(Flag.KILO_FAKE_VCS)
 
     const resolveGitPath = (cwd: string, name: string) => {
       if (!name) return cwd
@@ -154,8 +166,8 @@ export const layer: Layer.Layer<
     const scope = yield* Scope.Scope
 
     const readCachedProjectId = Effect.fnUntraced(function* (dir: string) {
-        // kilocode change start
-        return yield* fs.readFileString(pathSvc.join(dir, "kilo")).pipe(
+      // kilocode change start
+      return yield* fs.readFileString(pathSvc.join(dir, "kilo")).pipe(
         // kilocode change end
         Effect.map((x) => x.trim()),
         Effect.map(ProjectID.make),
@@ -204,13 +216,13 @@ export const layer: Layer.Layer<
             vcs: fakeVcs,
           }
         }
-        const worktree = (() => {
-          const common = resolveGitPath(sandbox, commonDir.text.trim())
-          return common === sandbox ? sandbox : pathSvc.dirname(common)
-        })()
+        const common = resolveGitPath(sandbox, commonDir.text.trim())
+        const bareCheck = yield* git(["config", "--bool", "core.bare"], { cwd: sandbox })
+        const isBareRepo = bareCheck.code === 0 && bareCheck.text.trim() === "true"
+        const worktree = common === sandbox ? sandbox : isBareRepo ? common : pathSvc.dirname(common)
 
         if (id == null) {
-          id = yield* readCachedProjectId(pathSvc.join(worktree, ".git"))
+          id = yield* readCachedProjectId(common)
         }
 
         if (!id) {
@@ -223,9 +235,7 @@ export const layer: Layer.Layer<
 
           id = roots[0] ? ProjectID.make(roots[0]) : undefined
           if (id) {
-            // kilocode_change start
-            yield* fs.writeFileString(pathSvc.join(worktree, ".git", "kilo"), id).pipe(Effect.ignore)
-            // kilocode_change end
+            yield* fs.writeFileString(pathSvc.join(common, "kilo"), id).pipe(Effect.ignore) // kilocode_change
           }
         }
 
@@ -288,6 +298,7 @@ export const layer: Layer.Layer<
             vcs: result.vcs ?? null,
             name: result.name,
             icon_url: result.icon?.url,
+            icon_url_override: result.icon?.override,
             icon_color: result.icon?.color,
             time_created: result.time.created,
             time_updated: result.time.updated,
@@ -302,6 +313,7 @@ export const layer: Layer.Layer<
               vcs: result.vcs ?? null,
               name: result.name,
               icon_url: result.icon?.url,
+              icon_url_override: result.icon?.override,
               icon_color: result.icon?.color,
               time_updated: result.time.updated,
               time_initialized: result.time.initialized,
@@ -364,6 +376,7 @@ export const layer: Layer.Layer<
           .set({
             name: input.name,
             icon_url: input.icon?.url,
+            icon_url_override: input.icon?.override,
             icon_color: input.icon?.color,
             commands: input.commands,
             time_updated: Date.now(),

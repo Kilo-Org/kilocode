@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Sitzung verzweigen",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal öffnen",
+  "agentManager.tab.newOptions": "Weitere Tab-Optionen",
+
+  "agentManager.terminal.new": "Neuer Terminal-Tab",
+  "agentManager.terminal.ended": "Terminal beendet — Tab schließen zum Verwerfen",
+  "agentManager.terminal.connectionError": "Verbindungsfehler im Terminal",
+  "agentManager.terminal.errorTitle": "Terminal-Fehler",
   "agentManager.setup.failed": "Einrichtung des Arbeitsbereichs fehlgeschlagen",
   "agentManager.setup.settingUp": "Arbeitsbereich wird eingerichtet",
   "agentManager.setup.error.git_not_found":
@@ -67,7 +73,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Nächstes Element",
   "agentManager.shortcuts.newWorktree": "Neuer Worktree",
   "agentManager.shortcuts.openWorktree": "Worktree öffnen",
-  "agentManager.shortcuts.advancedWorktree": "Erweiterter Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Neuen Worktree konfigurieren",
   "agentManager.shortcuts.deleteWorktree": "Worktree löschen",
   "agentManager.shortcuts.previousTab": "Vorheriger Tab",
   "agentManager.shortcuts.nextTab": "Nächster Tab",
@@ -89,6 +95,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Veralteten Worktree entfernen",
 
   "agentManager.dialog.openWorktree": "Neuer Worktree",
+  "agentManager.dialog.configureWorktree": "Neuen Worktree konfigurieren...",
   "agentManager.dialog.tab.new": "Neu",
   "agentManager.dialog.tab.import": "Importieren",
   "agentManager.dialog.namePlaceholder": "Worktree-Name (optional)",

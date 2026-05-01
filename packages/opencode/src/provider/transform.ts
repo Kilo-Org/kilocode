@@ -183,7 +183,34 @@ function normalizeMessages(
     return result
   }
 
-  if (typeof model.capabilities.interleaved === "object" && model.capabilities.interleaved.field) {
+  // kilocode_change start - cherry-picked from anomalyco/opencode#24180;
+  // will be reverted on the next wholesale upstream merge.
+  // Deepseek requires all assistant messages to have reasoning on them
+  if (model.api.id.includes("deepseek")) {
+    msgs = msgs.map((msg) => {
+      if (msg.role !== "assistant") return msg
+      if (Array.isArray(msg.content)) {
+        if (msg.content.some((part) => part.type === "reasoning")) return msg
+        return { ...msg, content: [...msg.content, { type: "reasoning", text: "" }] }
+      }
+      return {
+        ...msg,
+        content: [
+          ...(msg.content ? [{ type: "text" as const, text: msg.content }] : []),
+          { type: "reasoning" as const, text: "" },
+        ],
+      }
+    })
+  }
+  // kilocode_change end
+
+  // kilocode_change start - cherry-picked from anomalyco/opencode#24435
+  if (
+    typeof model.capabilities.interleaved === "object" &&
+    model.capabilities.interleaved.field &&
+    model.api.npm !== "@openrouter/ai-sdk-provider"
+  ) {
+    // kilocode_change end
     const field = model.capabilities.interleaved.field
     return msgs.map((msg) => {
       if (msg.role === "assistant" && Array.isArray(msg.content)) {
@@ -193,24 +220,19 @@ function normalizeMessages(
         // Filter out reasoning parts from content
         const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
 
-        // Include reasoning_content | reasoning_details directly on the message for all assistant messages
-        if (reasoningText) {
-          return {
-            ...msg,
-            content: filteredContent,
-            providerOptions: {
-              ...msg.providerOptions,
-              openaiCompatible: {
-                ...msg.providerOptions?.openaiCompatible,
-                [field]: reasoningText,
-              },
-            },
-          }
-        }
-
+        // Include reasoning_content | reasoning_details directly on the message for all assistant messages.
+        // Always set the field even when empty — some providers (e.g. DeepSeek) may return empty
+        // reasoning_content which still needs to be sent back in subsequent requests.
         return {
           ...msg,
           content: filteredContent,
+          providerOptions: {
+            ...msg.providerOptions,
+            openaiCompatible: {
+              ...msg.providerOptions?.openaiCompatible,
+              [field]: reasoningText,
+            },
+          },
         }
       }
 
@@ -427,13 +449,15 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
 
   if (
-    id.includes("deepseek") ||
+    id.includes("deepseek-chat") ||
+    id.includes("deepseek-reasoner") ||
+    id.includes("deepseek-r1") ||
+    id.includes("deepseek-v3") ||
     id.includes("minimax") ||
     // id.includes("glm") || // kilocode_change
-    id.includes("mistral") ||
     // id.includes("kimi") || // kilocode_change
     // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
-    id.includes("k2p5") ||
+    id.includes("k2p") ||
     id.includes("qwen") ||
     id.includes("big-pickle")
   )
@@ -571,7 +595,11 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "venice-ai-sdk-provider":
     // https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort
     case "@ai-sdk/openai-compatible":
-      return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+      const efforts = [...WIDELY_SUPPORTED_EFFORTS]
+      if (model.api.id.includes("deepseek-v4")) {
+        efforts.push("max")
+      }
+      return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
 
     case "@ai-sdk/azure":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure
@@ -631,6 +659,12 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@ai-sdk/google-vertex/anthropic":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
 
+      if (model.providerID === "github-copilot") {
+        if (model.api.id.includes("opus-4.7")) {
+          return Object.fromEntries(["medium"].map((effort) => [effort, { reasoningEffort: effort }]))
+        }
+      }
+
       if (adaptiveEfforts) {
         return Object.fromEntries(
           adaptiveEfforts.map((effort) => [
@@ -673,6 +707,9 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
               reasoningConfig: {
                 type: "adaptive",
                 maxReasoningEffort: effort,
+                ...(model.api.id.includes("opus-4-7") || model.api.id.includes("opus-4.7")
+                  ? { display: "summarized" }
+                  : {}),
               },
             },
           ]),
@@ -748,7 +785,14 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 
     case "@ai-sdk/mistral":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
-      return {}
+      // https://docs.mistral.ai/capabilities/reasoning/adjustable
+      if (!model.capabilities.reasoning) return {}
+      // Only Mistral Small 4 supports reasoning (mistral-small-2603, mistral-small-latest)
+      const mistralId = model.api.id.toLowerCase()
+      if (!mistralId.includes("mistral-small-2603") && !mistralId.includes("mistral-small-latest")) return {}
+      return {
+        high: { reasoningEffort: "high" },
+      }
 
     case "@ai-sdk/cohere":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/cohere
@@ -842,11 +886,14 @@ export function options(input: {
 
   if (input.model.api.npm === "@ai-sdk/azure") {
     result["store"] = true
+    result["promptCacheKey"] = input.sessionID
   }
 
-  // kilocode_change start
-  if (input.model.api.npm === "@openrouter/ai-sdk-provider" || input.model.api.npm === "@kilocode/kilo-gateway") {
-    // kilocode_change end
+  if (
+    input.model.api.npm === "@openrouter/ai-sdk-provider" ||
+    input.model.api.npm === "@llmgateway/ai-sdk-provider" ||
+    input.model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
+  ) {
     result["usage"] = {
       include: true,
     }
@@ -887,11 +934,11 @@ export function options(input: {
     }
   }
 
-  // Enable thinking by default for kimi-k2.5/k2p5 models using anthropic SDK
+  // Enable thinking by default for kimi models using anthropic SDK
   const modelId = input.model.api.id.toLowerCase()
   if (
     (input.model.api.npm === "@ai-sdk/anthropic" || input.model.api.npm === "@ai-sdk/google-vertex/anthropic") &&
-    (modelId.includes("k2p5") || modelId.includes("kimi-k2.5") || modelId.includes("kimi-k2p5"))
+    (modelId.includes("k2p") || modelId.includes("kimi-k2.") || modelId.includes("kimi-k2p"))
   ) {
     result["thinking"] = {
       type: "enabled",
@@ -983,8 +1030,11 @@ export function smallOptions(model: Provider.Model) {
     }
     return { thinkingConfig: { thinkingBudget: 0 } }
   }
-  // kilocode_change - add Kilo Gateway support
-  if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
+  if (
+    model.providerID === "openrouter" ||
+    model.providerID === "llmgateway" ||
+    model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
+  ) {
     if (model.api.id.includes("google")) {
       return { reasoning: { enabled: false } }
     }

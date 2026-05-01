@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
+  "agentManager.tab.newOptions": "More new-tab options",
+
+  "agentManager.terminal.new": "New Terminal Tab",
+  "agentManager.terminal.ended": "terminal ended — close tab to dismiss",
+  "agentManager.terminal.connectionError": "terminal connection error",
+  "agentManager.terminal.errorTitle": "Terminal error",
 
   "agentManager.setup.failed": "Worktree setup failed",
   "agentManager.setup.settingUp": "Setting up worktree",
@@ -71,7 +77,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Next item",
   "agentManager.shortcuts.newWorktree": "New worktree",
   "agentManager.shortcuts.openWorktree": "Open worktree",
-  "agentManager.shortcuts.advancedWorktree": "Advanced worktree",
+  "agentManager.shortcuts.advancedWorktree": "Configure new worktree",
   "agentManager.shortcuts.deleteWorktree": "Delete worktree",
   "agentManager.shortcuts.previousTab": "Previous tab",
   "agentManager.shortcuts.nextTab": "Next tab",
@@ -116,6 +122,7 @@ export const dict = {
   "agentManager.dialog.createWorktree": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
+  "agentManager.dialog.configureWorktree": "Configure New Worktree...",
 
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.diff.openFile": "Open file",

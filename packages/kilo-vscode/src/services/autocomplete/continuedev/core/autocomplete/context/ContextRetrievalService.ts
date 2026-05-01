@@ -64,6 +64,10 @@ export class ContextRetrievalService {
     return this.staticContextService.getContext(helper)
   }
 
+  public dispose(): void {
+    this.importDefinitionsService.dispose()
+  }
+
   /**
    * Initialize the import definitions cache for a file.
    * This is normally done automatically when the active text editor changes,

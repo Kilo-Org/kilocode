@@ -391,10 +391,10 @@ When using the Kilo Code VS Code extension with the Agent Manager, each agent se
 
 ### Keyboard Shortcuts
 
-| Shortcut                    | Action                       |
-| --------------------------- | ---------------------------- |
+| Shortcut | Action |
+|---|---|
 | <kbd>Cmd</kbd>+<kbd>/</kbd> | Focus the session's terminal |
-| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agent mode             |
+| <kbd>Cmd</kbd>+<kbd>.</kbd> | Cycle agent mode |
 
 ### Terminal Context Menu Actions
 

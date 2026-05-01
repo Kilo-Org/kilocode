@@ -22,6 +22,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.assertContains
 
 class KiloBackendAppServiceTest {
 
@@ -64,6 +65,72 @@ class KiloBackendAppServiceTest {
 
         assertNotNull(svc.config)
         assertEquals("claude-4", svc.config!!.model)
+    }
+
+    @Test
+    fun `config warnings are loaded without blocking Ready`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val ready = svc.appState.value as KiloAppState.Ready
+        assertEquals(1, ready.data.warnings.size)
+        assertEquals(".kilo/kilo.json", ready.data.warnings.first().path)
+        assertEquals("Invalid JSON", ready.data.warnings.first().message)
+    }
+
+    @Test
+    fun `retry refreshes warnings while Ready`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val before = svc.appState.value as KiloAppState.Ready
+        assertEquals(1, before.data.warnings.size)
+
+        mock.warnings = "[]"
+        svc.retry()
+
+        withTimeout(5_000) {
+            while ((svc.appState.value as? KiloAppState.Ready)?.data?.warnings?.isNotEmpty() == true) {
+                delay(100)
+            }
+        }
+
+        val ready = svc.appState.value as KiloAppState.Ready
+        assertTrue(ready.data.warnings.isEmpty())
+        assertTrue(svc.warnings.isEmpty())
+    }
+
+    @Test
+    fun `retry restarts app when warnings remain after refresh`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val before = mock.requestCount("/global/config")
+        svc.retry()
+
+        withTimeout(15_000) {
+            while (mock.requestCount("/global/config") <= before) {
+                delay(100)
+            }
+        }
+
+        assertTrue(mock.requestCount("/global/config") > before)
+        assertTrue(log.messages.any { it.contains("retry: restarted connection") })
     }
 
     @Test
@@ -127,6 +194,89 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `retry reruns load for app load error`() = runBlocking {
+        mock.configStatus = 500
+        mock.config = """{"error":"internal"}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(15_000) {
+            svc.appState.first { it is KiloAppState.Error }
+        }
+
+        assertEquals(3, mock.requestCount("/global/config"))
+
+        mock.configStatus = 200
+        mock.config = """{"model":"retry/model"}"""
+        svc.retry()
+
+        withTimeout(15_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        assertEquals("retry/model", svc.config?.model)
+        assertEquals(4, mock.requestCount("/global/config"))
+    }
+
+    @Test
+    fun `connection error surfaces details as connection load error`() = runBlocking {
+        val failing = object : ai.kilocode.backend.cli.CliServer {
+            override var forceExtract = false
+            override fun process(): Process? = null
+            override suspend fun init() = ai.kilocode.backend.cli.CliServer.State.Error(
+                message = "CLI startup failed",
+                details = "stderr: missing dependency",
+            )
+            override fun exited(proc: Process) {}
+            override fun stop() {}
+            override fun dispose() {}
+        }
+        val svc = KiloBackendAppService.create(scope, failing, log)
+        svc.connect()
+
+        withTimeout(5_000) {
+            svc.appState.first { it is KiloAppState.Error }
+        }
+
+        val err = svc.appState.value as KiloAppState.Error
+        assertEquals("CLI startup failed", err.message)
+        assertContains(err.errors.map { it.resource }, "connection")
+        assertEquals("stderr: missing dependency", err.errors.first { it.resource == "connection" }.detail)
+        assertTrue(log.messages.any { it.contains("App error: CLI startup failed") })
+    }
+
+    @Test
+    fun `warning state emits final warn log`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        assertTrue(log.messages.any {
+            it.contains("App warnings:") && it.contains(".kilo/kilo.json: Invalid JSON")
+        })
+    }
+
+    @Test
+    fun `app load error emits final warn log`() = runBlocking {
+        mock.configStatus = 500
+        mock.config = """{"error":"internal"}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(15_000) {
+            svc.appState.first { it is KiloAppState.Error }
+        }
+
+        assertTrue(log.messages.any {
+            it.contains("App error: Failed to load required data") && it.contains("config")
+        })
+    }
+
+    @Test
     fun `connect when already Ready is no-op`() = runBlocking {
         val svc = create()
         svc.connect()
@@ -170,18 +320,18 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
-    fun `profile 500 transitions to Error`() = runBlocking {
+    fun `profile 500 does not prevent Ready`() = runBlocking {
         mock.profileStatus = 500
         mock.profile = """{"error":"internal"}"""
         val svc = create()
         svc.connect()
 
         withTimeout(15_000) {
-            svc.appState.first { it is KiloAppState.Error }
+            svc.appState.first { it is KiloAppState.Ready }
         }
 
-        val err = svc.appState.value as KiloAppState.Error
-        assertTrue(err.errors.any { it.resource == "profile" })
+        assertNull(svc.profile)
+        assertIs<KiloAppState.Ready>(svc.appState.value)
     }
 
     @Test
@@ -245,6 +395,31 @@ class KiloBackendAppServiceTest {
         }
 
         assertEquals("updated", svc.config?.model)
+    }
+
+    @Test
+    fun `SSE config updated refreshes warnings`() = runBlocking {
+        mock.warnings = """[{"path":".kilo/kilo.json","message":"Invalid JSON","detail":"CloseBraceExpected"}]"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        assertEquals(1, (svc.appState.value as KiloAppState.Ready).data.warnings.size)
+
+        mock.warnings = "[]"
+        mock.awaitSseConnection()
+        mock.pushEvent("global.config.updated", """{"type":"global.config.updated"}""")
+
+        withTimeout(5_000) {
+            while ((svc.appState.value as? KiloAppState.Ready)?.data?.warnings?.isNotEmpty() == true) {
+                delay(100)
+            }
+        }
+
+        assertTrue((svc.appState.value as KiloAppState.Ready).data.warnings.isEmpty())
     }
 
     // ------ Concurrency & lifecycle tests ------

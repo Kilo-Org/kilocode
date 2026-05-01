@@ -21,6 +21,7 @@ const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
+const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
 
 function check(code: string): { ok: boolean; output: string } {
   const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", code], {
@@ -117,6 +118,27 @@ describe("DataProvider contract (runtime)", () => {
     expect(src).toContain("onOpenFile")
     expect(src).toContain("OpenFileFn")
     expect(src).toMatch(/openFile:\s*props\.onOpenFile/)
+  })
+
+  it("DataProvider accepts onOpenDiff prop and exports OpenDiffFn (source)", () => {
+    // onOpenDiff and OpenDiffFn are `kilocode_change` additions — TypeScript types
+    // erased at runtime, so we verify via source analysis
+    const src = fs.readFileSync(DATA_CONTEXT_FILE, "utf-8")
+    expect(src).toContain("onOpenDiff")
+    expect(src).toContain("OpenDiffFn")
+    expect(src).toMatch(/openDiff:\s*props\.onOpenDiff/)
+  })
+})
+
+describe("Edit tool diff-first click contract (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  const editBlockMatch = src.match(/ToolRegistry\.register\(\{\s*name:\s*"edit"[\s\S]*?(?=ToolRegistry\.register\(|$)/)
+  const editBlock = editBlockMatch?.[0] ?? ""
+
+  it("edit tool derives before/after content from filediff or input", () => {
+    expect(editBlock).toMatch(/filediff\?\.before\s*\?\?.*oldString/)
+    expect(editBlock).toMatch(/filediff\?\.after\s*\?\?.*newString/)
   })
 })
 

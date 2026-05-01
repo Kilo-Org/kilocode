@@ -10,6 +10,7 @@ import type { Config } from "../../src/config"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { Instance } from "../../src/project/instance"
 import { TestLLMServer } from "../lib/llm-server"
+import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 // Strip null bytes from paths (defensive fix for CI environment issues)
 function sanitizePath(p: string): string {
@@ -24,12 +25,7 @@ function exists(dir: string) {
 }
 
 function clean(dir: string) {
-  return fs.rm(dir, {
-    recursive: true,
-    force: true,
-    maxRetries: 5,
-    retryDelay: 100,
-  })
+  return cleanup(dir) // kilocode_change
 }
 
 async function stop(dir: string) {

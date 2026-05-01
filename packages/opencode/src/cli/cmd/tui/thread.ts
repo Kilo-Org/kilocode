@@ -18,6 +18,8 @@ import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { TuiConfig } from "./config/tui"
+import { KILO_PROCESS_ROLE, KILO_RUN_ID, ensureRunID, sanitizedProcessEnv } from "@/util/opencode-process"
+import { validateSession } from "./validate-session"
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -148,11 +150,13 @@ export const TuiThreadCommand = cmd({
         return
       }
       const cwd = Filesystem.resolve(process.cwd())
+      const env = sanitizedProcessEnv({
+        [KILO_PROCESS_ROLE]: "worker",
+        [KILO_RUN_ID]: ensureRunID(),
+      })
 
       const worker = new Worker(file, {
-        env: Object.fromEntries(
-          Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-        ),
+        env,
       })
       worker.onerror = (e) => {
         Log.Default.error("thread error", {
@@ -281,6 +285,19 @@ export const TuiThreadCommand = cmd({
             fetch: createWorkerFetch(client),
             events: createEventSource(client),
           }
+
+      try {
+        await validateSession({
+          url: transport.url,
+          sessionID: args.session,
+          directory: cwd,
+          fetch: transport.fetch,
+        })
+      } catch (error) {
+        UI.error(errorMessage(error))
+        process.exitCode = 1
+        return
+      }
 
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})

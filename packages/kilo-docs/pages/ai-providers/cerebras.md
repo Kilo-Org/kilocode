@@ -1,4 +1,6 @@
 ---
+title: "Using Cerebras with Kilo Code | Ultra-Fast Inference"
+description: "Run Llama and Qwen models at record-breaking speeds by configuring Cerebras in Kilo Code. Setup for VS Code and the CLI."
 sidebar_label: Cerebras
 ---
 

@@ -24,6 +24,7 @@ import { DialogProvider as DialogProviderList } from "@tui/component/dialog-prov
 import { InstallationVersion } from "@/installation/version" // kilocode_change
 import { PluginRouteMissing } from "@tui/component/plugin-route-missing"
 import { ProjectProvider } from "@tui/context/project"
+import { EditorContextProvider } from "@tui/context/editor"
 import { useEvent } from "@tui/context/event"
 import { SDKProvider, useSDK } from "@tui/context/sdk"
 import { StartupLoading } from "@tui/component/startup-loading"
@@ -63,7 +64,7 @@ import { TuiConfigProvider, useTuiConfig } from "./context/tui-config"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { createTuiApi, TuiPluginRuntime, type RouteMap } from "./plugin"
 import { FormatError, FormatUnknownError } from "@/cli/error"
-import { resetTerminalState } from "@tui/util/terminal" // kilocode_change
+import { resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
 
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
@@ -126,8 +127,8 @@ export function tui(input: {
 
     const mode = await Terminal.getTerminalBackgroundColor()
 
-    // Re-clear after getTerminalBackgroundColor() — setRawMode(false) restores
-    // the original console mode which re-enables ENABLE_PROCESSED_INPUT.
+    // Re-clear after getTerminalBackgroundColor() because setRawMode(false)
+    // restores the original console mode, including processed input on Windows.
     win32DisableProcessedInput()
 
     const onExit = async () => {
@@ -157,7 +158,16 @@ export function tui(input: {
             <ExitProvider onBeforeExit={onBeforeExit} onExit={onExit}>
               <KVProvider>
                 <ToastProvider>
-                  <RouteProvider>
+                  <RouteProvider
+                    initialRoute={
+                      input.args.continue
+                        ? {
+                            type: "session",
+                            sessionID: "dummy",
+                          }
+                        : undefined
+                    }
+                  >
                     <TuiConfigProvider config={input.config}>
                       <SDKProvider
                         url={input.url}
@@ -177,7 +187,9 @@ export function tui(input: {
                                         <FrecencyProvider>
                                           <PromptHistoryProvider>
                                             <PromptRefProvider>
-                                              <App onSnapshot={input.onSnapshot} />
+                                              <EditorContextProvider>
+                                                <App onSnapshot={input.onSnapshot} />
+                                              </EditorContextProvider>
                                             </PromptRefProvider>
                                           </PromptHistoryProvider>
                                         </FrecencyProvider>
@@ -351,7 +363,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           })
         local.model.set({ providerID, modelID }, { recent: true })
       }
-      // Handle --session without --fork immediately (fork is handled in createEffect below)
       if (args.sessionID && !args.fork) {
         route.navigate({
           type: "session",
@@ -438,12 +449,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         aliases: ["clear"],
       },
       onSelect: () => {
-        const current = promptRef.current
-        // Don't require focus - if there's any text, preserve it
-        const currentPrompt = current?.current?.input ? current.current : undefined
         route.navigate({
           type: "home",
-          initialPrompt: currentPrompt,
         })
         dialog.clear()
       },
@@ -620,7 +627,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       category: "System",
     },
     {
-      title: "Toggle theme mode",
+      title: mode() === "dark" ? "Switch to light mode" : "Switch to dark mode",
       value: "theme.switch_mode",
       onSelect: (dialog) => {
         setMode(mode() === "dark" ? "light" : "dark")

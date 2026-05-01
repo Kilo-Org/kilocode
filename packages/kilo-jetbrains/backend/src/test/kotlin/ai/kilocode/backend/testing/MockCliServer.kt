@@ -30,10 +30,12 @@ class MockCliServer : AutoCloseable {
     // Configurable REST responses — can be changed between requests
     @Volatile var health = """{"healthy":true,"version":"1.0.0"}"""
     @Volatile var config = """{"model":"test/model"}"""
+    @Volatile var warnings = "[]"
     @Volatile var notifications = "[]"
     @Volatile var profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":null}"""
     @Volatile var profileStatus = 200
     @Volatile var configStatus = 200
+    @Volatile var warningsStatus = 200
     @Volatile var notificationsStatus = 200
 
     // Project-scoped REST responses
@@ -48,9 +50,11 @@ class MockCliServer : AutoCloseable {
 
     // Session REST responses
     @Volatile var sessions = "[]"
+    @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionStatuses = "{}"
     @Volatile var sessionsStatus = 200
+    @Volatile var recentSessionsStatus = 200
     @Volatile var sessionCreateStatus = 200
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
@@ -64,6 +68,8 @@ class MockCliServer : AutoCloseable {
 
     /** Return the number of requests received for [path] (bare, no query). */
     fun requestCount(path: String): Int = counts[path]?.get() ?: 0
+
+    @Volatile var lastExperimentalSessionPath: String? = null
 
     /** Reset all request counters. */
     fun resetCounts() { counts.clear() }
@@ -184,6 +190,7 @@ class MockCliServer : AutoCloseable {
             when {
                 path == "/global/health" -> respond(output, 200, health)
                 path == "/global/config" -> respond(output, configStatus, config)
+                path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
                 path.startsWith("/kilo/notifications") -> respond(output, notificationsStatus, notifications)
                 path.startsWith("/kilo/profile") -> {
                     if (profileStatus == 401) {
@@ -197,6 +204,10 @@ class MockCliServer : AutoCloseable {
                 bare == "/agent" -> respond(output, agentsStatus, agents)
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
+                bare == "/experimental/session" -> {
+                    lastExperimentalSessionPath = path
+                    respond(output, recentSessionsStatus, recentSessions)
+                }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)

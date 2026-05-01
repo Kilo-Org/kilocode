@@ -1,4 +1,5 @@
 import path from "path"
+import { existsSync, writeFileSync } from "fs" // kilocode_change
 import fs from "fs/promises"
 import { Global } from "../global"
 import z from "zod"
@@ -71,8 +72,22 @@ export async function init(options: Options) {
   const stream = createStream(path.basename(logpath), {
     size: "50M",
     maxFiles: 10,
-    history: path.join(dir, ".log-history"),
+    history: ".log-history",
     path: dir,
+  })
+  stream.on("rotation", () => {
+    if (!existsSync(dir)) return
+
+    try {
+      // RATIONALE: If current log path was deleted while stream still holds the fd,
+      // rotating-file-stream will try to rename a missing path and emit ENOENT.
+      writeFileSync(logpath, "", { flag: "wx" })
+    } catch (err) {
+      if (typeof err === "object" && err && "code" in err && err.code === "EEXIST") return
+
+      const msg = err instanceof Error ? err.message : String(err)
+      process.stderr.write("log stream warning: " + msg + "\n")
+    }
   })
   stream.on("error", (err: Error) => {
     process.stderr.write("log stream error: " + err.message + "\n")

@@ -1,6 +1,6 @@
 import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: Event) => void
+export type SSEEventHandler = (event: Event, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -177,7 +177,7 @@ export class SdkSSEAdapter {
           if (type !== "server.heartbeat") {
             console.log("[Kilo New] SSE: 📨 Event:", type)
           }
-          this.notifyEvent(globalEvent.payload as Event)
+          this.notifyEvent(globalEvent.payload as Event, globalEvent.directory)
         }
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
@@ -229,10 +229,10 @@ export class SdkSSEAdapter {
 
   // ── Notify helpers ─────────────────────────────────────────────────
 
-  private notifyEvent(event: Event): void {
+  private notifyEvent(event: Event, directory?: string): void {
     for (const handler of this.handlers) {
       try {
-        handler(event)
+        handler(event, directory)
       } catch (error) {
         console.error("[Kilo New] SSE: Error in event handler:", error)
       }

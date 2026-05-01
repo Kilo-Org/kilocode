@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
+  "agentManager.tab.newOptions": "Другие параметры новой вкладки",
+
+  "agentManager.terminal.new": "Новая вкладка терминала",
+  "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
+  "agentManager.terminal.connectionError": "ошибка подключения к терминалу",
+  "agentManager.terminal.errorTitle": "Ошибка терминала",
   "agentManager.setup.failed": "Не удалось настроить рабочее пространство",
   "agentManager.setup.settingUp": "Настройка рабочего пространства",
   "agentManager.setup.error.git_not_found":
@@ -66,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Следующий элемент",
   "agentManager.shortcuts.newWorktree": "Новый Worktree",
   "agentManager.shortcuts.openWorktree": "Открыть Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Расширенный Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Настроить новое worktree",
   "agentManager.shortcuts.deleteWorktree": "Удалить Worktree",
   "agentManager.shortcuts.previousTab": "Предыдущая вкладка",
   "agentManager.shortcuts.nextTab": "Следующая вкладка",
@@ -88,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Удалить устаревший Worktree",
 
   "agentManager.dialog.openWorktree": "Новый worktree",
+  "agentManager.dialog.configureWorktree": "Настроить новое Worktree...",
   "agentManager.dialog.tab.new": "Новый",
   "agentManager.dialog.tab.import": "Импорт",
   "agentManager.dialog.namePlaceholder": "Имя Worktree (необязательно)",

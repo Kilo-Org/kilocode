@@ -3,13 +3,14 @@ import { Bus } from "@/bus"
 import { InstanceState } from "@/effect"
 import { Instance } from "@/project/instance"
 import type { Proc } from "#pty"
-import z from "zod"
 import { Log } from "../util"
 import { lazy } from "@opencode-ai/shared/util/lazy"
 import { Shell } from "@/shell/shell"
 import { Plugin } from "@/plugin"
 import { PtyID } from "./schema"
-import { Effect, Layer, Context } from "effect"
+import { Effect, Layer, Context, Schema, Types } from "effect"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 import { EffectBridge } from "@/effect"
 
 const log = Log.create({ service: "pty" })
@@ -53,47 +54,47 @@ const meta = (cursor: number) => {
 
 const pty = lazy(() => import("#pty"))
 
-export const Info = z
-  .object({
-    id: PtyID.zod,
-    title: z.string(),
-    command: z.string(),
-    args: z.array(z.string()),
-    cwd: z.string(),
-    status: z.enum(["running", "exited"]),
-    pid: z.number(),
-  })
-  .meta({ ref: "Pty" })
-
-export type Info = z.infer<typeof Info>
-
-export const CreateInput = z.object({
-  command: z.string().optional(),
-  args: z.array(z.string()).optional(),
-  cwd: z.string().optional(),
-  title: z.string().optional(),
-  env: z.record(z.string(), z.string()).optional(),
+export const Info = Schema.Struct({
+  id: PtyID,
+  title: Schema.String,
+  command: Schema.String,
+  args: Schema.Array(Schema.String),
+  cwd: Schema.String,
+  status: Schema.Literals(["running", "exited"]),
+  pid: Schema.Number,
 })
+  .annotate({ identifier: "Pty" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
 
-export type CreateInput = z.infer<typeof CreateInput>
+export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
-export const UpdateInput = z.object({
-  title: z.string().optional(),
-  size: z
-    .object({
-      rows: z.number(),
-      cols: z.number(),
-    })
-    .optional(),
-})
+export const CreateInput = Schema.Struct({
+  command: Schema.optional(Schema.String),
+  args: Schema.optional(Schema.Array(Schema.String)),
+  cwd: Schema.optional(Schema.String),
+  title: Schema.optional(Schema.String),
+  env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
 
-export type UpdateInput = z.infer<typeof UpdateInput>
+export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInput>>
+
+export const UpdateInput = Schema.Struct({
+  title: Schema.optional(Schema.String),
+  size: Schema.optional(
+    Schema.Struct({
+      rows: Schema.Number,
+      cols: Schema.Number,
+    }),
+  ),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+
+export type UpdateInput = Types.DeepMutable<Schema.Schema.Type<typeof UpdateInput>>
 
 export const Event = {
-  Created: BusEvent.define("pty.created", z.object({ info: Info })),
-  Updated: BusEvent.define("pty.updated", z.object({ info: Info })),
-  Exited: BusEvent.define("pty.exited", z.object({ id: PtyID.zod, exitCode: z.number() })),
-  Deleted: BusEvent.define("pty.deleted", z.object({ id: PtyID.zod })),
+  Created: BusEvent.define("pty.created", Schema.Struct({ info: Info })),
+  Updated: BusEvent.define("pty.updated", Schema.Struct({ info: Info })),
+  Exited: BusEvent.define("pty.exited", Schema.Struct({ id: PtyID, exitCode: Schema.Number })),
+  Deleted: BusEvent.define("pty.deleted", Schema.Struct({ id: PtyID })),
 }
 
 export interface Interface {
@@ -189,6 +190,16 @@ export const layer = Layer.effect(
         TERM: "xterm-256color",
         KILO_TERMINAL: "1",
       } as Record<string, string>
+      // kilocode_change start
+      // Don't leak the kilo server's auth credential into user shells.
+      // Anything the shell forks (npm post-install scripts, `curl | bash`,
+      // supply-chain-compromised tools) would otherwise see the password
+      // with zero effort. Users who genuinely need `kilo run`/`kilo tui
+      // attach` to auto-connect from inside a kilo-spawned terminal can
+      // pass `--password` explicitly or re-export the env themselves.
+      delete env.KILO_SERVER_PASSWORD
+      delete env.KILO_SERVER_USERNAME
+      // kilocode_change end
 
       if (process.platform === "win32") {
         env.LC_ALL = "C.UTF-8"

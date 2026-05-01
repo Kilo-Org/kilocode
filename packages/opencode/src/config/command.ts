@@ -1,10 +1,12 @@
 export * as ConfigCommand from "./command"
 
 import { Log } from "../util"
-import z from "zod"
+import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/shared/util/error"
 import { Glob } from "@opencode-ai/shared/util/glob"
 import { Bus } from "@/bus"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 import { configEntryNameFromPath } from "./entry-name"
 import * as ConfigMarkdown from "./markdown"
 import { ConfigModelID } from "./model-id"
@@ -15,15 +17,15 @@ import type { Warning } from "./config"
 
 const log = Log.create({ service: "config" })
 
-export const Info = z.object({
-  template: z.string(),
-  description: z.string().optional(),
-  agent: z.string().optional(),
-  model: ConfigModelID.optional(),
-  subtask: z.boolean().optional(),
-})
+export const Info = Schema.Struct({
+  template: Schema.String,
+  description: Schema.optional(Schema.String),
+  agent: Schema.optional(Schema.String),
+  model: Schema.optional(ConfigModelID),
+  subtask: Schema.optional(Schema.Boolean),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
 
-export type Info = z.infer<typeof Info>
+export type Info = Schema.Schema.Type<typeof Info>
 
 // kilocode_change start
 export async function load(dir: string, warnings?: Warning[]) {
@@ -72,7 +74,7 @@ export async function load(dir: string, warnings?: Warning[]) {
       ...md.data,
       template: md.content.trim(),
     }
-    const parsed = Info.safeParse(config)
+    const parsed = Info.zod.safeParse(config)
     if (parsed.success) {
       result[config.name] = parsed.data
       continue

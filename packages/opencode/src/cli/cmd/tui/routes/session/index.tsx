@@ -43,12 +43,12 @@ import type { WebSearchTool } from "@/tool/websearch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
+import type { SemanticSearchTool } from "@/kilocode/tool/semantic-search" // kilocode_change
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import type { DialogContext } from "@tui/ui/dialog"
 import { useKeybind } from "@tui/context/keybind"
-import { parsePatch } from "diff"
 import { useDialog } from "../../ui/dialog"
 import { TodoItem } from "../../component/todo-item"
 import { DialogMessage } from "./dialog-message"
@@ -64,6 +64,7 @@ import { Flag } from "@/flag/flag"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import * as Clipboard from "../../util/clipboard"
+import { errorMessage } from "@/util/error"
 import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import * as Editor from "../../util/editor"
@@ -84,10 +85,12 @@ import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
 import { bell } from "@/kilocode/bell" // kilocode_change
+import { SessionIndexing } from "@/kilocode/components/session-indexing" // kilocode_change
 import { getScrollAcceleration } from "../../util/scroll"
 import { TuiPluginRuntime } from "../../plugin"
 import { DialogGoUpsell } from "../../component/dialog-go-upsell"
 import { SessionRetry } from "@/session/retry"
+import { getRevertDiffFiles } from "../../util/revert-diff"
 
 addDefaultParsers(parsers.parsers)
 
@@ -261,28 +264,45 @@ export function Session() {
   const toast = useToast()
   const sdk = useSDK()
 
-  createEffect(async () => {
-    await sdk.client.session
-      .get({ sessionID: route.sessionID }, { throwOnError: true })
-      .then((x) => {
-        project.workspace.set(x.data?.workspaceID)
-      })
-      .then(() => sync.session.sync(route.sessionID))
-      .then(() => {
-        if (scroll) scroll.scrollBy(100_000)
-      })
-      .catch((e) => {
-        console.error(e)
+  createEffect(() => {
+    const sessionID = route.sessionID
+    void (async () => {
+      const previousWorkspace = project.workspace.current()
+      const result = await sdk.client.session.get({ sessionID }, { throwOnError: true })
+      if (!result.data) {
         toast.show({
-          message: `Session not found: ${route.sessionID}`,
+          message: `Session not found: ${sessionID}`,
           variant: "error",
+          duration: 5000,
         })
-        return navigate({ type: "home" })
+        navigate({ type: "home" })
+        return
+      }
+
+      if (result.data.workspaceID !== previousWorkspace) {
+        project.workspace.set(result.data.workspaceID)
+
+        // Sync all the data for this workspace. Note that this
+        // workspace may not exist anymore which is why this is not
+        // fatal. If it doesn't we still want to show the session
+        // (which will be non-interactive)
+        try {
+          await sync.bootstrap({ fatal: false })
+        } catch {}
+      }
+      await sync.session.sync(sessionID)
+      if (route.sessionID === sessionID && scroll) scroll.scrollBy(100_000)
+    })().catch((error) => {
+      if (route.sessionID !== sessionID) return
+      toast.show({
+        message: errorMessage(error),
+        variant: "error",
+        duration: 5000,
       })
+      navigate({ type: "home" })
+    })
   })
 
-  // Handle initial prompt from fork
-  let seeded = false
   let lastSwitch: string | undefined = undefined
   event.on("message.part.updated", (evt) => {
     const part = evt.properties.part
@@ -298,14 +318,15 @@ export function Session() {
     }
   })
 
+  let seeded = false
   let scroll: ScrollBoxRenderable
   let prompt: PromptRef | undefined
   const bind = (r: PromptRef | undefined) => {
     prompt = r
     promptRef.set(r)
-    if (seeded || !route.initialPrompt || !r) return
+    if (seeded || !route.prompt || !r) return
     seeded = true
-    r.set(route.initialPrompt)
+    r.set(route.prompt)
   }
   const keybind = useKeybind()
   const dialog = useDialog()
@@ -529,7 +550,7 @@ export function Session() {
       },
     },
     {
-      title: "Fork from message",
+      title: "Fork session",
       value: "session.fork",
       keybind: "session_fork",
       category: "Session",
@@ -540,6 +561,7 @@ export function Session() {
         dialog.replace(() => (
           <DialogForkFromTimeline
             onMove={(messageID) => {
+              if (!messageID) return
               const child = scroll.getChildren().find((child) => {
                 return child.id === messageID
               })
@@ -1075,31 +1097,7 @@ export function Session() {
   const revertInfo = createMemo(() => session()?.revert)
   const revertMessageID = createMemo(() => revertInfo()?.messageID)
 
-  const revertDiffFiles = createMemo(() => {
-    const diffText = revertInfo()?.diff ?? ""
-    if (!diffText) return []
-
-    try {
-      const patches = parsePatch(diffText)
-      return patches.map((patch) => {
-        const filename = patch.newFileName || patch.oldFileName || "unknown"
-        const cleanFilename = filename.replace(/^[ab]\//, "")
-        return {
-          filename: cleanFilename,
-          additions: patch.hunks.reduce(
-            (sum, hunk) => sum + hunk.lines.filter((line) => line.startsWith("+")).length,
-            0,
-          ),
-          deletions: patch.hunks.reduce(
-            (sum, hunk) => sum + hunk.lines.filter((line) => line.startsWith("-")).length,
-            0,
-          ),
-        }
-      })
-    } catch {
-      return []
-    }
-  })
+  const revertDiffFiles = createMemo(() => getRevertDiffFiles(revertInfo()?.diff ?? ""))
 
   const revertRevertedMessages = createMemo(() => {
     const messageID = revertMessageID()
@@ -1295,7 +1293,8 @@ export function Session() {
                 <NetworkPrompt request={network()[0]} />
               </Show>
               {/* kilocode_change end */}
-              <Show when={visible()}>
+              {/* kilocode_change start */}
+              <Show when={!session()?.parentID}>
                 <TuiPluginRuntime.Slot
                   name="session_prompt"
                   mode="replace"
@@ -1317,8 +1316,12 @@ export function Session() {
                   />
                 </TuiPluginRuntime.Slot>
               </Show>
+              {/* kilocode_change end */}
             </box>
           </Show>
+          {/* kilocode_change start */}
+          <SessionIndexing />
+          {/* kilocode_change end */}
           <Toast />
         </box>
         <Show when={sidebarVisible()}>
@@ -1365,7 +1368,17 @@ function UserMessage(props: {
 }) {
   const ctx = use()
   const local = useLocal()
-  const text = createMemo(() => props.parts.flatMap((x) => (x.type === "text" && !x.synthetic ? [x] : []))[0])
+  const text = createMemo(() => {
+    const texts = props.parts
+      .map((x) => {
+        if (x.type === "text" && !x.synthetic) {
+          return x.text
+        }
+        return null
+      })
+      .filter(Boolean)
+    return texts.join("\n\n")
+  })
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
@@ -1400,7 +1413,7 @@ function UserMessage(props: {
             backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
           >
-            <text fg={theme.text}>{text()?.text}</text>
+            <text fg={theme.text}>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
@@ -1677,6 +1690,11 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "grep"}>
           <Grep {...toolprops} />
         </Match>
+        {/* kilocode_change start */}
+        <Match when={props.part.tool === "semantic_search"}>
+          <SemanticSearch {...toolprops} />
+        </Match>
+        {/* kilocode_change end */}
         <Match when={props.part.tool === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -2096,6 +2114,23 @@ function WebSearch(props: ToolProps<typeof WebSearchTool>) {
     </InlineTool>
   )
 }
+
+// kilocode_change start
+function SemanticSearch(props: ToolProps<typeof SemanticSearchTool>) {
+  const meta = createMemo(() => props.metadata as { results?: { length: number }[] })
+  const args = createMemo(() => props.input as { query?: string; path?: string })
+  const count = createMemo(() => meta().results?.length ?? 0)
+
+  return (
+    <InlineTool icon="✱" pending="Searching codebase..." complete={args().query} part={props.part}>
+      Codebase Search "{args().query}" <Show when={args().path}>in {normalizePath(args().path!)} </Show>
+      <Show when={count() > 0}>
+        ({count()} {count() === 1 ? "result" : "results"})
+      </Show>
+    </InlineTool>
+  )
+}
+// kilocode_change end
 
 function Task(props: ToolProps<typeof TaskTool>) {
   const { navigate } = useRoute()

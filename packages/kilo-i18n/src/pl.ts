@@ -79,4 +79,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Wdróż w nowej sesji z czystym kontekstem",
   "plan.followup.answer.continue": "Kontynuuj tutaj",
   "plan.followup.answer.continue.description": "Wdróż plan w tej sesji",
+
+  "ui.messagePart.openInDiffViewer": "Otwórz w podglądzie różnic",
 }

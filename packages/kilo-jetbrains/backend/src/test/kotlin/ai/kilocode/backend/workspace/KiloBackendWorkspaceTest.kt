@@ -179,6 +179,23 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers"))
+        assertTrue(err.errors.any { it.resource == "providers" })
+        assertTrue(log.messages.any { it.contains("Workspace error [/test/project]: Failed to load:") && it.contains("providers") })
+    }
+
+    @Test
+    fun `providers decode failure includes detail`() = runBlocking {
+        mock.providers = """{"all":[false],"default":{},"connected":[]}"""
+        val app = setup()
+        val ws = ready(app)
+
+        withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Error }
+        }
+
+        val err = ws.state.value as KiloWorkspaceState.Error
+        val detail = err.errors.single { it.resource == "providers" }.detail
+        assertTrue(detail?.isNotBlank() == true)
     }
 
     @Test
@@ -236,6 +253,7 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers") || err.message.contains("skills"))
+        assertTrue(err.errors.any { it.resource == "providers" } || err.errors.any { it.resource == "skills" })
     }
 
     // ------ Reload ------

@@ -15,7 +15,7 @@ import { UninstallCommand } from "./cli/cmd/uninstall"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
 import { Installation } from "./installation"
-import { InstallationVersion } from "./installation/version"
+import { InstallationBuildKind, InstallationVersion } from "./installation/version" // kilocode_change - add InstallationBuildKind
 import { NamedError } from "@opencode-ai/shared/util/error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
@@ -35,6 +35,7 @@ import { EOL } from "os"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
+import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "./project/instance" // kilocode_change
@@ -66,6 +67,9 @@ import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
+import { ensureProcessMetadata } from "./util/opencode-process"
+
+const processMetadata = ensureProcessMetadata("main")
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
@@ -83,12 +87,13 @@ const args = hideBin(process.argv)
 
 function show(out: string) {
   const text = out.trimStart()
+  const end = out.endsWith(EOL) ? "" : EOL // kilocode_change - keep shell prompt on the next line
   if (!text.startsWith("opencode ")) {
     process.stderr.write(UI.logo() + EOL + EOL)
-    process.stderr.write(text)
+    process.stderr.write(text + end) // kilocode_change
     return
   }
-  process.stderr.write(out)
+  process.stderr.write(out + end) // kilocode_change
 }
 
 let cli = yargs(args) // kilocode_change
@@ -136,6 +141,8 @@ let cli = yargs(args) // kilocode_change
     Log.Default.info("opencode", {
       version: InstallationVersion,
       args: process.argv.slice(2),
+      process_role: processMetadata.processRole,
+      run_id: processMetadata.runID,
     })
 
     // kilocode_change start - Initialize telemetry
@@ -232,6 +239,12 @@ let cli = yargs(args) // kilocode_change
   .command(ConfigCLICommand) // kilocode_change
   .command(PluginCommand)
   .command(DbCommand)
+
+// kilocode_change start - dev-only commands are hidden from release builds
+if (InstallationBuildKind !== "release") {
+  cli = cli.command(DevSetupCommand).command(DevAliasCommand)
+}
+// kilocode_change end
 
 // kilocode_change start - registered after initial chain to avoid self-referential type error
 cli = cli.command(createHelpCommand(() => cli))

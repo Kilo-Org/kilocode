@@ -72,12 +72,13 @@ export namespace TsClient {
           // trigger notify.open() but should NOT spawn tsgo. The actual
           // check is deferred to waitForDiagnostics() which is only
           // called when tools need diagnostics (write, edit, apply_patch).
+          return 0
         },
       },
       get diagnostics() {
         return diagnostics
       },
-      async waitForDiagnostics(_input: { path: string }) {
+      async waitForDiagnostics(_input: { path: string; version: number; mode?: "document" | "full"; after?: number }) {
         // Run tsgo --noEmit and wait for results. Coalesces concurrent calls.
         // 30s cap matches the process timeout in TsCheck.run(). Silent catch
         // matches the real LSPClient's .catch(() => {}) on its 3s timeout.

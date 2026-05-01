@@ -1,10 +1,12 @@
 import type { FileAttachment, FileSearchItem } from "../types/messages"
+import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
 
 export const AT_PATTERN = /(?:^|\s)@(\S*)$/
 
 export type MentionResult =
   | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
+  | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
   | { type: "file"; value: string }
   | { type: "folder"; value: string }
 
@@ -13,6 +15,13 @@ export const TERMINAL_RESULT: MentionResult = {
   value: TERMINAL_MENTION,
   label: "Terminal",
   description: "Active terminal output",
+}
+
+export const GIT_CHANGES_RESULT: MentionResult = {
+  type: "git-changes",
+  value: GIT_CHANGES_MENTION,
+  label: "Git changes",
+  description: "Current session/worktree changes",
 }
 
 /**
@@ -28,13 +37,19 @@ export function getTerminalMentionResult(query: string): MentionResult[] {
   return [TERMINAL_RESULT]
 }
 
-export function buildMentionResults(query: string, items: Array<FileSearchItem | string>): MentionResult[] {
+export function getGitChangesMentionResult(query: string): MentionResult[] {
+  const normalized = query.toLowerCase()
+  if (normalized && !GIT_CHANGES_MENTION.startsWith(normalized) && !"git".startsWith(normalized)) return []
+  return [GIT_CHANGES_RESULT]
+}
+
+export function buildMentionResults(query: string, items: Array<FileSearchItem | string>, git = true): MentionResult[] {
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
     return { type: "file", value: item.path }
   })
-  return [...getTerminalMentionResult(query), ...results]
+  return [...getTerminalMentionResult(query), ...(git ? getGitChangesMentionResult(query) : []), ...results]
 }
 
 /**
