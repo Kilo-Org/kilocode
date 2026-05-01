@@ -429,10 +429,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 16px;
+  padding: 8px 16px;
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
+  flex-shrink: 0;
 }
 
 .kiloclaw-reply-preview {

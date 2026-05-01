@@ -1,9 +1,10 @@
 // KiloClaw active-conversation view — message list + composer.
 // Mirrors cloud/apps/web/src/app/(app)/claw/kilo-chat/components/MessageArea.tsx
 
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { createAutoScroll } from "@opencode-ai/ui/hooks"
 import { useClaw } from "../context/claw"
 import { useKiloClawLanguage } from "../context/language"
 import { MessageBubble } from "./MessageBubble"
@@ -14,16 +15,24 @@ export function MessageArea() {
   const claw = useClaw()
   const { t } = useKiloClawLanguage()
 
-  let scrollEl!: HTMLDivElement
-  let contentEl!: HTMLDivElement
+  let scrollEl: HTMLDivElement | undefined
   let input!: HTMLTextAreaElement
-  let observer: ResizeObserver | null = null
-  let autoScroll = true
+
+  // Sticky-to-bottom scroll mirrored from the session route: follows new
+  // content while near the bottom, pauses when the user scrolls up, and
+  // reactivates on `forceScrollToBottom()`. Using the shared hook fixes
+  // the <Show>-lifecycle issue with the previous onMount/ResizeObserver
+  // setup (refs weren't bound until the user selected a conversation, by
+  // which time onMount had already returned early).
+  const auto = createAutoScroll({
+    working: () => true,
+    overflowAnchor: "dynamic",
+  })
 
   const [text, setText] = createSignal("")
-  const [showScrollButton, setShowScrollButton] = createSignal(false)
   const [replyingTo, setReplyingTo] = createSignal<Message | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = createSignal<string | null>(null)
+  const showScrollButton = createMemo(() => auto.userScrolled())
 
   // Staleness ticker (10s) for send-gate & bot status display.
   const now = useNowTicker(10_000)
@@ -61,30 +70,29 @@ export function MessageArea() {
     return claw.typingMembers(activeId).map((m) => (m.memberId.startsWith("bot:") ? assistant : m.memberId))
   })
 
-  // Subscribe to ResizeObserver so the message list auto-scrolls on growth.
-  onMount(() => {
-    if (!scrollEl || !contentEl) return
-    observer = new ResizeObserver(() => {
-      if (autoScroll) scrollEl.scrollTop = scrollEl.scrollHeight
-    })
-    observer.observe(contentEl)
-  })
-  onCleanup(() => {
-    observer?.disconnect()
-    observer = null
-  })
-
-  // Reset auto-scroll when active conversation changes.
+  // Reset auto-scroll when active conversation changes — force to bottom
+  // so the freshly-loaded history lands pinned at the latest message.
   createEffect(() => {
     claw.activeConversationId()
-    autoScroll = true
-    setShowScrollButton(false)
+    auto.forceScrollToBottom()
     setReplyingTo(null)
     setText("")
     if (input) {
       input.style.height = "auto"
       input.focus()
     }
+  })
+
+  // Keep the bottom pinned when the composer region grows or shrinks.
+  // The typing indicator and reply preview sit OUTSIDE the scroll
+  // container, so their show/hide shrinks the messages viewport without
+  // firing `createAutoScroll`'s content-side ResizeObserver — leaving
+  // the last message clipped behind the new row. Re-pin on change.
+  createEffect(() => {
+    typingNames().length
+    replyingTo()
+    if (auto.userScrolled()) return
+    auto.forceScrollToBottom()
   })
 
   const onScroll = () => {
@@ -97,24 +105,16 @@ export function MessageArea() {
         claw.loadMoreMessages(activeId, oldest.id)
       }
     }
-    const nearBottom = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < 100
-    autoScroll = nearBottom
-    setShowScrollButton(!nearBottom)
+    auto.handleScroll()
   }
 
-  const scrollToBottom = () => {
-    if (!scrollEl) return
-    autoScroll = true
-    setShowScrollButton(false)
-    scrollEl.scrollTo({ top: scrollEl.scrollHeight, behavior: "smooth" })
-  }
+  const scrollToBottom = () => auto.forceScrollToBottom()
 
   const submit = () => {
     const val = text().trim()
     const activeId = claw.activeConversationId()
     if (!val || !activeId || !canSend()) return
-    autoScroll = true
-    setShowScrollButton(false)
+    auto.forceScrollToBottom()
     claw.sendMessage(activeId, [{ type: "text", text: val }], replyingTo()?.id)
     setText("")
     setReplyingTo(null)
@@ -187,8 +187,18 @@ export function MessageArea() {
       <div class="kiloclaw-area">
         {/* Messages */}
         <div class="kiloclaw-area-messages-wrap">
-          <div class="kiloclaw-area-messages" ref={scrollEl} onScroll={onScroll} role="log" aria-live="polite">
-            <div ref={contentEl}>
+          <div
+            class="kiloclaw-area-messages"
+            ref={(el) => {
+              scrollEl = el
+              auto.scrollRef(el)
+            }}
+            onScroll={onScroll}
+            onClick={auto.handleInteraction}
+            role="log"
+            aria-live="polite"
+          >
+            <div ref={auto.contentRef}>
               <Show when={claw.messages().length === 0}>
                 <div class="kiloclaw-empty">
                   {claw.assistantName()

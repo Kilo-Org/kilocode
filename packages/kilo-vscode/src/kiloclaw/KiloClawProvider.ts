@@ -424,6 +424,33 @@ export class KiloClawProvider implements vscode.Disposable {
       const message = err instanceof Error ? err.message : String(err)
       console.warn("[Kilo New] KiloClaw getBotStatus failed:", message)
     }
+
+    // Auto-select the most recent conversation so the panel opens straight
+    // into the user's ongoing chat instead of the "select a conversation"
+    // empty state. Only runs on first init (or after the active one was
+    // explicitly cleared) — preserves the user's selection across reconnects.
+    if (!this.activeConversationId && this.conversations.length > 0) {
+      const latest = this.conversations.reduce((best, c) => {
+        const ax = best.lastActivityAt ?? best.joinedAt
+        const bx = c.lastActivityAt ?? c.joinedAt
+        return bx > ax ? c : best
+      })
+      this.activeConversationId = latest.conversationId
+      this.subscribeConversationContext(latest.conversationId)
+      await this.refreshActiveMessages()
+
+      try {
+        const res = await this.chat.getConversationStatus(latest.conversationId)
+        if (this.activeConversationId === latest.conversationId) {
+          this.conversationStatus = res.status ?? null
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.warn("[Kilo New] KiloClaw getConversationStatus failed:", message)
+      }
+
+      void this.markRead(latest.conversationId)
+    }
   }
 
   private async resolveClient(): Promise<KiloClient | null> {
