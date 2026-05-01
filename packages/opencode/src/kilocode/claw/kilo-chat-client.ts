@@ -119,11 +119,12 @@ export class KiloChatClient {
       })
     const next = prev.then(send, send)
     this.sendQueues.set(req.conversationId, next)
-    void next.finally(() => {
+    const cleanup = () => {
       if (this.sendQueues.get(req.conversationId) === next) {
         this.sendQueues.delete(req.conversationId)
       }
-    })
+    }
+    void next.then(cleanup, cleanup)
     return next
   }
 
