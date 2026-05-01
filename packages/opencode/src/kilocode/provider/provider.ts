@@ -8,14 +8,10 @@
 
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
-import { AiSdkProvider, Prompt } from "@/provider/models"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
-
-// Re-export for consumers that previously imported from provider.ts
-export { Prompt, AiSdkProvider }
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
@@ -127,13 +123,6 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         if ((yield* dep.config()).provider?.["kilo"]?.options?.apiKey) return true
         return false
       })
-
-      if (!hasKey) {
-        for (const [key, value] of Object.entries(input.models)) {
-          if ((value as any).cost.input === 0) continue
-          delete input.models[key]
-        }
-      }
 
       const options: Record<string, string> = {}
       if (env.KILO_ORG_ID) {

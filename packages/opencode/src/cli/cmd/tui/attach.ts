@@ -5,6 +5,8 @@ import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { errorMessage } from "@/util/error"
+import { validateSession } from "./validate-session"
 
 export const AttachCommand = cmd({
   command: "attach <url>",
@@ -98,6 +100,20 @@ export const AttachCommand = cmd({
       }
       // kilocode_change end
       const config = await TuiConfig.get()
+
+      try {
+        await validateSession({
+          url: args.url,
+          sessionID: args.session,
+          directory,
+          headers,
+        })
+      } catch (error) {
+        UI.error(errorMessage(error))
+        process.exitCode = 1
+        return
+      }
+
       await tui({
         url: args.url,
         config,

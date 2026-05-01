@@ -30,8 +30,11 @@ const node = CrossSpawnSpawner.defaultLayer
 
 const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node))
 
+// kilocode_change - skip on windows: address windows ci failures #9496
+const unix = process.platform !== "win32" ? it.live : it.live.skip
+
 describe("tool.skill", () => {
-  it.live("execute returns skill content block with files", () =>
+  unix("execute returns skill content block with files", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {

@@ -587,7 +587,7 @@ Options:
       --path         directory path to generate the agent file  [string]
       --description  what the agent should do  [string]
       --mode         agent mode  [string] [choices: "all", "primary", "subagent"]
-      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, list, glob, grep, webfetch, task, todowrite"  [string]
+      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, glob, grep, webfetch, task, todowrite"  [string]
   -m, --model        model to use in the format of provider/model  [string]
 ```
 
@@ -686,6 +686,8 @@ Options:
   --version   Show version number  [boolean]
   --sanitize  redact sensitive transcript and file data  [boolean]
 ```
+
+Use `--sanitize` before sharing an exported session outside your team. Unsanitized exports can contain full prompts, assistant text, reasoning, tool inputs and outputs, file paths, file contents, snapshots, diffs, attachments, working directories, and other local context. Sanitized exports replace sensitive transcript and file data with stable `[redacted:...]` placeholders while preserving enough structure for debugging import/export issues.
 
 ## kilo import
 

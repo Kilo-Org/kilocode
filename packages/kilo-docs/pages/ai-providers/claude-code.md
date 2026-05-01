@@ -1,4 +1,6 @@
 ---
+title: "Using Claude Code with Kilo Code"
+description: "Use your Claude Code subscription with Kilo Code. Setup guide for authenticating and selecting Claude models."
 sidebar_label: Claude Code
 ---
 

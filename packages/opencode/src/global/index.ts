@@ -8,15 +8,14 @@ import { Flock } from "@opencode-ai/shared/util/flock"
 const app = "kilo" // kilocode_change
 
 // kilocode_change start
-// Defensively strip surrounding whitespace from the resolved XDG paths.
+// Defensively strip newline characters from the resolved XDG paths.
 // If `$HOME` (or any `$XDG_*_HOME` override) has a trailing newline in
 // the user's shell — e.g. because a shell snippet did `export HOME=$(cmd)`
 // against a command with an implicit newline — the unsanitised path
 // makes `fs.mkdir` try to create `/Users/<name>\n` and fail with EACCES,
 // which breaks every `kilo` invocation at startup (including the SDK
-// regen that runs during `bun run extension`). A trim is cheap and
-// trailing whitespace is never legitimate in a filesystem path.
-const clean = (p: string | undefined) => p?.trim()
+// regen that runs during `bun run extension`).
+const clean = (p: string | undefined) => p?.replace(/[\r\n]+/g, "")
 const data = path.join(clean(xdgData)!, app)
 const cache = path.join(clean(xdgCache)!, app)
 const config = path.join(clean(xdgConfig)!, app)

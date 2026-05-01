@@ -1,3 +1,5 @@
+/** @jsxImportSource solid-js */
+
 /**
  * MessageList component
  * Scrollable turn-based message list with virtualization.
@@ -7,7 +9,7 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, JSX } from "solid-js"
+import { type Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"

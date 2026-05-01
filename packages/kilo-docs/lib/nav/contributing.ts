@@ -70,6 +70,10 @@ export const ContributingNav: NavSection[] = [
             href: "/contributing/architecture/voice-transcription",
             children: "Voice Transcription",
           },
+          {
+            href: "/contributing/architecture/per-message-feedback",
+            children: "Per-Message Feedback",
+          },
         ],
       },
     ],

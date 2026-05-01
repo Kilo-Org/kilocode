@@ -43,7 +43,7 @@ export namespace ConfigValidation {
       return `\n\n<config_validation>\nERROR: Config file at ${label(filepath)} is not valid JSON(C)\n  ${detail}\n</config_validation>`
     }
 
-    const result = Config.Info.safeParse(data)
+    const result = Config.Info.zod.safeParse(data)
     if (!result.success) {
       const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
       return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`

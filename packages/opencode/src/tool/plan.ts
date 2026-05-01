@@ -1,10 +1,11 @@
-import z from "zod"
 import path from "path"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { Session } from "../session"
 import { Instance } from "../project/instance"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
+
+export const Parameters = Schema.Struct({})
 
 // kilocode_change start - simplified plan_exit: readiness signal only, no user prompt
 export const PlanExitTool = Tool.define(
@@ -14,7 +15,7 @@ export const PlanExitTool = Tool.define(
 
     return {
       description: EXIT_DESCRIPTION,
-      parameters: z.object({}),
+      parameters: Parameters,
       execute: (_params: {}, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const info = yield* session.get(ctx.sessionID)

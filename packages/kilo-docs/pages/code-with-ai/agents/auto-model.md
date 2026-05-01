@@ -7,11 +7,11 @@ description: "Smart model routing that automatically selects the optimal AI mode
 
 Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
 
-| Tier                 | Best For                                          | Pricing |
-| -------------------- | ------------------------------------------------- | ------- |
-| `kilo-auto/frontier` | Maximum capability with the best available models | Paid    |
-| `kilo-auto/balanced` | Strong performance at a lower cost                | Paid    |
-| `kilo-auto/free`     | The best free models available                    | Free    |
+| Tier | Best For | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
+| `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
+| `kilo-auto/free` | The best free models available | Free |
 
 ## How It Works
 
