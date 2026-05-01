@@ -1,10 +1,10 @@
 // KiloClaw active-conversation view — message list + composer.
 // Mirrors cloud/apps/web/src/app/(app)/claw/kilo-chat/components/MessageArea.tsx
 
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { For, Show, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { createAutoScroll } from "@opencode-ai/ui/hooks"
+import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useClaw } from "../context/claw"
 import { useKiloClawLanguage } from "../context/language"
 import { MessageBubble } from "./MessageBubble"
@@ -24,9 +24,14 @@ export function MessageArea() {
   // the <Show>-lifecycle issue with the previous onMount/ResizeObserver
   // setup (refs weren't bound until the user selected a conversation, by
   // which time onMount had already returned early).
+  //
+  // Uses @kilocode/kilo-ui's createAutoScroll (the same one MessageList.tsx
+  // uses) because it tracks real user-input events — wheel/pointer/key/touch —
+  // via `markUser`. The older @opencode-ai/ui hook only listens to wheel
+  // events, so touchpad/scrollbar/keyboard scrolls never set `userScrolled`
+  // and the ResizeObserver kept yanking the view back to the bottom.
   const auto = createAutoScroll({
     working: () => true,
-    overflowAnchor: "dynamic",
   })
 
   const [text, setText] = createSignal("")
@@ -72,28 +77,51 @@ export function MessageArea() {
 
   // Reset auto-scroll when active conversation changes — force to bottom
   // so the freshly-loaded history lands pinned at the latest message.
-  createEffect(() => {
-    claw.activeConversationId()
-    auto.forceScrollToBottom()
-    setReplyingTo(null)
-    setText("")
-    if (input) {
-      input.style.height = "auto"
-      input.focus()
-    }
-  })
+  //
+  // Wrapped in `on()` so the effect only fires when the conversation id
+  // actually changes. A plain `createEffect` would subscribe to every
+  // reactive read in its body, including `store.userScrolled` (read
+  // internally by `auto.forceScrollToBottom` at create-auto-scroll.tsx:77
+  // to reset the flag). Without `on`, the effect would re-run the instant
+  // the user scrolls up — re-calling `forceScrollToBottom` and snapping
+  // the view right back to the bottom, making upward scrolling impossible.
+  createEffect(
+    on(
+      () => claw.activeConversationId(),
+      () => {
+        auto.forceScrollToBottom()
+        setReplyingTo(null)
+        setText("")
+        if (input) {
+          input.style.height = "auto"
+          input.focus()
+        }
+      },
+    ),
+  )
 
-  // Keep the bottom pinned when the composer region grows or shrinks.
+  // Keep the bottom pinned when the composer region first grows.
   // The typing indicator and reply preview sit OUTSIDE the scroll
-  // container, so their show/hide shrinks the messages viewport without
+  // container, so their appearance shrinks the messages viewport without
   // firing `createAutoScroll`'s content-side ResizeObserver — leaving
-  // the last message clipped behind the new row. Re-pin on change.
-  createEffect(() => {
-    typingNames().length
-    replyingTo()
-    if (auto.userScrolled()) return
-    auto.forceScrollToBottom()
-  })
+  // the last message clipped behind the new row. A boolean memo gates
+  // this to the rising edge only: typing-heartbeat events that keep
+  // `typingNames` "non-empty" don't rerun the effect (memoized identity
+  // stays `true`), so we don't fight the user's scroll attempts with
+  // a `forceScrollToBottom` every few seconds.
+  //
+  // Wrapped in `on()` for the same reason as the reset effect above:
+  // `forceScrollToBottom` internally reads `userScrolled`, so a plain
+  // `createEffect` would subscribe to that read and re-fire whenever the
+  // user scrolls up, immediately pulling the view back to the bottom.
+  const composerExpanded = createMemo(() => typingNames().length > 0 || replyingTo() !== null)
+  createEffect(
+    on(composerExpanded, (expanded) => {
+      if (!expanded) return
+      if (auto.userScrolled()) return
+      auto.forceScrollToBottom()
+    }),
+  )
 
   const onScroll = () => {
     if (!scrollEl) return
@@ -194,7 +222,6 @@ export function MessageArea() {
               auto.scrollRef(el)
             }}
             onScroll={onScroll}
-            onClick={auto.handleInteraction}
             role="log"
             aria-live="polite"
           >
