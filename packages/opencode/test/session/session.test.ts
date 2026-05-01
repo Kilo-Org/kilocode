@@ -126,6 +126,10 @@ describe("step-finish token propagation via Bus event", () => {
             reasoning: 200,
             cache: { read: 100, write: 50 },
           }
+          const metrics = {
+            duration: 2_000,
+            rate: { output: 400, prompt: 100, generation: 80 },
+          }
 
           const partInput = {
             id: PartID.ascending(),
@@ -135,6 +139,7 @@ describe("step-finish token propagation via Bus event", () => {
             reason: "stop",
             cost: 0.005,
             tokens,
+            metrics,
           }
 
           await updatePart(partInput)
@@ -149,6 +154,10 @@ describe("step-finish token propagation via Bus event", () => {
           expect(finish.tokens.total).toBe(1500)
           expect(finish.tokens.cache.read).toBe(100)
           expect(finish.tokens.cache.write).toBe(50)
+          expect(finish.metrics?.duration).toBe(2_000)
+          expect(finish.metrics?.rate.output).toBe(400)
+          expect(finish.metrics?.rate.prompt).toBe(100)
+          expect(finish.metrics?.rate.generation).toBe(80)
           expect(finish.cost).toBe(0.005)
           expect(received).not.toBe(partInput)
 

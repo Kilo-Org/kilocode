@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import type { AssistantMessage, Message, UserMessage } from "@kilocode/sdk/v2"
-import { formatCount, getUsage } from "../../../src/cli/cmd/tui/routes/session/usage"
+import { formatCount, formatRate, getUsage } from "../../../src/cli/cmd/tui/routes/session/usage"
 
 function assistant(id: string, input: number, output: number, read: number): AssistantMessage {
   return {
@@ -57,5 +57,14 @@ describe("session usage", () => {
     expect(formatCount(0)).toBe("0")
     expect(formatCount(12345)).toBe("12,345")
     expect(formatCount(9876543)).toBe("9,876,543")
+  })
+
+  test("formats throughput with one decimal", () => {
+    expect(formatRate(38.15)).toBe("38.1 t/s")
+  })
+
+  test("hides missing or invalid throughput", () => {
+    expect(formatRate(undefined)).toBeUndefined()
+    expect(formatRate(0)).toBeUndefined()
   })
 })

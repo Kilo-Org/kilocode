@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
 import { createMemo } from "solid-js"
-import { formatCount, getUsage } from "@tui/routes/session/usage"
+import { formatCount, formatRate, getUsage } from "@tui/routes/session/usage"
 
 const id = "internal:kilo-sidebar-usage"
 
@@ -14,6 +14,18 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       input: formatCount(total.input),
       output: formatCount(total.output),
       cached: formatCount(total.cached),
+    }
+  })
+  const rate = createMemo(() => {
+    const part = msg()
+      .filter((item) => item.role === "assistant")
+      .flatMap((item) => props.api.state.part(item.id))
+      .findLast((item) => item.type === "step-finish" && item.metrics)
+    const metrics = part?.type === "step-finish" ? part.metrics : undefined
+    const generation = metrics?.rate.generation ?? metrics?.rate.output
+    return {
+      prompt: formatRate(metrics?.rate.prompt),
+      generation: formatRate(generation),
     }
   })
 
@@ -34,6 +46,18 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
         <text fg={theme().textMuted}>Cached</text>
         <text fg={theme().textMuted}>{usage().cached}</text>
       </box>
+      {rate().prompt && (
+        <box flexDirection="row" justifyContent="space-between">
+          <text fg={theme().textMuted}>PP</text>
+          <text fg={theme().textMuted}>{rate().prompt}</text>
+        </box>
+      )}
+      {rate().generation && (
+        <box flexDirection="row" justifyContent="space-between">
+          <text fg={theme().textMuted}>TG</text>
+          <text fg={theme().textMuted}>{rate().generation}</text>
+        </box>
+      )}
     </box>
   )
 }

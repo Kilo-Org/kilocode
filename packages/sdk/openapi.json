@@ -13435,6 +13435,29 @@
         },
         "required": ["id", "sessionID", "messageID", "type"]
       },
+      "StepMetrics": {
+        "type": "object",
+        "properties": {
+          "duration": {
+            "type": "number"
+          },
+          "rate": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "number"
+              },
+              "generation": {
+                "type": "number"
+              },
+              "output": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": ["rate"]
+      },
       "StepFinishPart": {
         "type": "object",
         "properties": {
@@ -13492,6 +13515,9 @@
               }
             },
             "required": ["input", "output", "reasoning", "cache"]
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/StepMetrics"
           }
         },
         "required": ["id", "sessionID", "messageID", "type", "reason", "cost", "tokens"]

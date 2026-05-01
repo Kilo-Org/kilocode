@@ -258,6 +258,18 @@ export const StepStartPart = Schema.Struct({
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type StepStartPart = Types.DeepMutable<Schema.Schema.Type<typeof StepStartPart>>
 
+export const StepMetrics = Schema.Struct({
+  duration: Schema.optional(Schema.Number),
+  rate: Schema.Struct({
+    prompt: Schema.optional(Schema.Number),
+    generation: Schema.optional(Schema.Number),
+    output: Schema.optional(Schema.Number),
+  }),
+})
+  .annotate({ identifier: "StepMetrics" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type StepMetrics = Types.DeepMutable<Schema.Schema.Type<typeof StepMetrics>>
+
 export const StepFinishPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("step-finish"),
@@ -274,6 +286,7 @@ export const StepFinishPart = Schema.Struct({
       write: Schema.Number,
     }),
   }),
+  metrics: Schema.optional(StepMetrics), // kilocode_change
 })
   .annotate({ identifier: "StepFinishPart" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))

@@ -18,6 +18,7 @@ import { SessionSummary } from "./summary"
 import type { Provider } from "@/provider"
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloSessionMetrics } from "@/kilocode/session/metrics" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { NotFoundError } from "@/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
@@ -412,18 +413,26 @@ export const layer: Layer.Layer<
             return
 
           case "finish-step": {
+            const elapsed = Math.round(performance.now() - ctx.stepStart) // kilocode_change
             const usage = Session.getUsage({
               model: ctx.model,
               usage: value.usage,
               metadata: value.providerMetadata,
             })
             // kilocode_change start
+            const metrics = KiloSessionMetrics.create({
+              elapsed,
+              tokens: usage.tokens,
+              metadata: value.providerMetadata,
+            })
+            // kilocode_change end
+            // kilocode_change start
             KiloSessionProcessor.trackStep({
               sessionID: ctx.sessionID,
               model: ctx.model,
               tokens: usage.tokens,
               cost: usage.cost,
-              elapsed: Math.round(performance.now() - ctx.stepStart),
+              elapsed,
             })
             // kilocode_change end
             ctx.assistantMessage.finish = value.finishReason
@@ -441,6 +450,7 @@ export const layer: Layer.Layer<
               type: "step-finish",
               tokens: usage.tokens,
               cost: usage.cost,
+              metrics, // kilocode_change
             })
             yield* session.updateMessage(ctx.assistantMessage)
             if (ctx.snapshot) {

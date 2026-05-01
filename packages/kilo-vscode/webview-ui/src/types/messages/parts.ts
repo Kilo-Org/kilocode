@@ -62,6 +62,16 @@ export interface StepFinishPart extends BasePart {
     reasoning?: number
     cache?: { read: number; write: number }
   }
+  metrics?: StepMetrics
+}
+
+export interface StepMetrics {
+  duration?: number
+  rate: {
+    prompt?: number
+    generation?: number
+    output?: number
+  }
 }
 
 export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart

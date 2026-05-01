@@ -3,6 +3,8 @@ import {
   computeStatus,
   calcTotalCost,
   calcContextUsage,
+  formatRate,
+  latestRates,
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
@@ -132,6 +134,49 @@ describe("calcContextUsage", () => {
     const result = calcContextUsage({ input: 100, output: 0 }, 1000)
     expect(result.tokens).toBe(100)
     expect(result.percentage).toBe(10)
+  })
+})
+
+describe("latestRates", () => {
+  it("returns provider prompt and generation rates from newest assistant step", () => {
+    const msgs = [
+      {
+        role: "assistant",
+        parts: [
+          {
+            id: "sf1",
+            type: "step-finish" as const,
+            reason: "stop",
+            metrics: { duration: 2000, rate: { output: 25, prompt: 412.49, generation: 38.15 } },
+          },
+        ],
+      },
+    ]
+
+    expect(latestRates(msgs)).toEqual({ prompt: 412.49, generation: 38.15, output: 25 })
+  })
+
+  it("falls back to computed output as generation", () => {
+    const msgs = [
+      {
+        role: "assistant",
+        parts: [
+          {
+            id: "sf1",
+            type: "step-finish" as const,
+            reason: "stop",
+            metrics: { duration: 2000, rate: { output: 25 } },
+          },
+        ],
+      },
+    ]
+
+    expect(latestRates(msgs)).toEqual({ generation: 25, output: 25 })
+  })
+
+  it("formats compact throughput text", () => {
+    expect(formatRate(38.15)).toBe("38.1 t/s")
+    expect(formatRate(undefined)).toBeUndefined()
   })
 })
 

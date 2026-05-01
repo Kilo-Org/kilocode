@@ -24,3 +24,10 @@ export function getUsage(msg: readonly Message[]) {
 export function formatCount(input: number) {
   return fmt.format(input)
 }
+
+export function formatRate(input: number | undefined) {
+  if (input === undefined) return undefined
+  if (!Number.isFinite(input)) return undefined
+  if (input <= 0) return undefined
+  return `${input.toFixed(1)} t/s`
+}

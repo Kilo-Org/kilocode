@@ -1,4 +1,4 @@
-import type { Part } from "../types/messages"
+import type { Part, StepMetrics } from "../types/messages"
 
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
@@ -82,6 +82,27 @@ export function calcContextUsage(
     tokens.input + tokens.output + (tokens.reasoning ?? 0) + (tokens.cache?.read ?? 0) + (tokens.cache?.write ?? 0)
   const percentage = contextLimit ? Math.round((total / contextLimit) * 100) : null
   return { tokens: total, percentage }
+}
+
+export function formatRate(input: number | undefined): string | undefined {
+  if (input === undefined) return undefined
+  if (!Number.isFinite(input)) return undefined
+  if (input <= 0) return undefined
+  return `${input.toFixed(1)} t/s`
+}
+
+export function latestRates(msgs: Array<{ role?: string; parts?: Array<{ type?: string; metrics?: StepMetrics }> }>) {
+  const msg = [...msgs]
+    .reverse()
+    .find(
+      (item) => item.role === "assistant" && item.parts?.some((part) => part.type === "step-finish" && part.metrics),
+    )
+  const part = [...(msg?.parts ?? [])].reverse().find((item) => item.type === "step-finish" && item.metrics)
+  if (!part?.metrics) return undefined
+  const rate = part.metrics.rate
+  const generation = rate.generation ?? rate.output
+  if (!rate.prompt && !generation && !rate.output) return undefined
+  return { prompt: rate.prompt, generation, output: rate.output }
 }
 
 /**

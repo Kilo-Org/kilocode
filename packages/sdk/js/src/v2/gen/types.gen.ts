@@ -999,6 +999,15 @@ export type StepStartPart = {
   snapshot?: string
 }
 
+export type StepMetrics = {
+  duration?: number
+  rate: {
+    prompt?: number
+    generation?: number
+    output?: number
+  }
+}
+
 export type StepFinishPart = {
   id: string
   sessionID: string
@@ -1017,6 +1026,7 @@ export type StepFinishPart = {
       write: number
     }
   }
+  metrics?: StepMetrics
 }
 
 export type SnapshotPart = {
