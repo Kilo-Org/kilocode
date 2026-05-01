@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloClient, Event } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
+import { shouldAutoApprove, type Config } from "./auto-approve-rules"
 
 /**
  * Callback that resolves the correct working directory for a session.
@@ -82,7 +83,7 @@ export function registerToggleAutoApprove(
     const client = tryGetClient(connectionService)
     if (!client) return
     const dir = resolve(event.properties.sessionID)
-    client.permission.reply({ requestID: event.properties.id, directory: dir, reply: "once" }).catch((err) => {
+    autoReply(client, dir, event).catch((err) => {
       console.error("[Kilo New] toggleAutoApprove: failed to auto-reply:", err)
     })
   })
@@ -106,6 +107,19 @@ export function registerToggleAutoApprove(
       }
     },
   }
+}
+
+async function autoReply(client: KiloClient, dir: string, event: Extract<Event, { type: "permission.asked" }>) {
+  const { data } = await client.config.get({ directory: dir }, { throwOnError: true })
+  if (!shouldAutoApprove({
+    permission: event.properties.permission,
+    patterns: event.properties.patterns ?? [],
+    config: data.permission as Config | undefined,
+  })) {
+    return
+  }
+
+  await client.permission.reply({ requestID: event.properties.id, directory: dir, reply: "once" })
 }
 
 function tryGetClient(connectionService: KiloConnectionService): KiloClient | undefined {

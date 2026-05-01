@@ -16,6 +16,7 @@ import type { Agent } from "../../src/agent/agent"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { Permission } from "../../src/permission"
 
 async function getModel(providerID: ProviderID, modelID: ModelID) {
   return AppRuntime.runPromise(
@@ -116,6 +117,46 @@ describe("session.llm.hasToolCalls", () => {
       },
     ] as ModelMessage[]
     expect(LLM.hasToolCalls(messages)).toBe(true)
+  })
+})
+
+describe("session.llm.preapprovedToolNames", () => {
+  test("defaults missing rules to requiring approval", () => {
+    expect(LLM.preapprovedToolNames(["bash", "supabase_apply_migration"], [])).toEqual([])
+  })
+
+  test("only preapproves explicit allow rules", () => {
+    const ruleset = Permission.fromConfig({
+      bash: "allow",
+      read: "deny",
+      supabase_apply_migration: "ask",
+    })
+
+    expect(LLM.preapprovedToolNames(["bash", "read", "supabase_apply_migration"], ruleset)).toEqual(["bash"])
+  })
+
+  test("does not preapprove tools allowed only for specific argument patterns", () => {
+    const ruleset = Permission.fromConfig({
+      bash: {
+        "git status*": "allow",
+      },
+      read: {
+        "*": "allow",
+      },
+    })
+
+    expect(LLM.preapprovedToolNames(["bash", "read"], ruleset)).toEqual(["read"])
+  })
+
+  test("respects specific MCP allow overrides after server wildcard ask", () => {
+    const ruleset = Permission.fromConfig({
+      "supabase_*": "ask",
+      supabase_get_project_url: "allow",
+    })
+
+    expect(
+      LLM.preapprovedToolNames(["supabase_get_project_url", "supabase_apply_migration"], ruleset),
+    ).toEqual(["supabase_get_project_url"])
   })
 })
 

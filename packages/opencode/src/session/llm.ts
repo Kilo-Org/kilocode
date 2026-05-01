@@ -16,7 +16,6 @@ import { Flag } from "@/flag/flag"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Bus } from "@/bus"
-import { Wildcard } from "@/util"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 // kilocode_change start
@@ -261,11 +260,22 @@ const live: Layer.Layer<
         }
         workflowModel.sessionID = input.sessionID
         workflowModel.systemPrompt = system.join("\n")
+        const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
+        const approvedToolsForSession = new Set<string>()
         workflowModel.toolExecutor = async (toolName, argsJson, _requestID) => {
           const t = tools[toolName]
           if (!t || !t.execute) {
             return { result: "", error: `Unknown tool: ${toolName}` }
           }
+
+          const rule = Permission.evaluate(toolName, "*", ruleset)
+          if (rule.action === "deny") {
+            return { result: "", error: `Tool denied by permission rules: ${toolName}` }
+          }
+          if (rule.action === "ask" && !approvedToolsForSession.has(toolName)) {
+            return { result: "", error: `Tool requires approval before execution: ${toolName}` }
+          }
+
           try {
             const result = await t.execute!(JSON.parse(argsJson), {
               toolCallId: _requestID,
@@ -283,16 +293,14 @@ const live: Layer.Layer<
           }
         }
 
-        const ruleset = Permission.merge(input.agent.permission ?? [], input.permission ?? [])
-        workflowModel.sessionPreapprovedTools = Object.keys(tools).filter((name) => {
-          const match = ruleset.findLast((rule) => Wildcard.match(name, rule.permission))
-          return !match || match.action !== "ask"
-        })
+        workflowModel.sessionPreapprovedTools = preapprovedToolNames(Object.keys(tools), ruleset)
 
         const bridge = yield* EffectBridge.make()
-        const approvedToolsForSession = new Set<string>()
         workflowModel.approvalHandler = Instance.bind(async (approvalTools) => {
           const uniqueNames = [...new Set(approvalTools.map((t: { name: string }) => t.name))] as string[]
+          if (uniqueNames.some((name) => Permission.evaluate(name, "*", ruleset).action === "deny")) {
+            return { approved: false }
+          }
           // Auto-approve tools that were already approved in this session
           // (prevents infinite approval loops for server-side MCP tools)
           if (uniqueNames.every((name) => approvedToolsForSession.has(name))) {
@@ -491,6 +499,10 @@ export function hasToolCalls(messages: ModelMessage[]): boolean {
     }
   }
   return false
+}
+
+export function preapprovedToolNames(toolNames: string[], ruleset: Permission.Ruleset): string[] {
+  return toolNames.filter((name) => Permission.evaluate(name, "*", ruleset).action === "allow")
 }
 
 export * as LLM from "./llm"
