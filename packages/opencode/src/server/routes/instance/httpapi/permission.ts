@@ -106,8 +106,10 @@ export const permissionHandlers = Layer.unwrap(
     })
     // kilocode_change end
 
-    return HttpApiBuilder.group(PermissionApi, "permission", (handlers) =>
-      handlers.handle("list", list).handle("reply", reply).handle("saveAlwaysRules", saveAlwaysRules), // kilocode_change
+    return HttpApiBuilder.group(
+      PermissionApi,
+      "permission",
+      (handlers) => handlers.handle("list", list).handle("reply", reply).handle("saveAlwaysRules", saveAlwaysRules), // kilocode_change
     )
   }),
 ).pipe(Layer.provide(Permission.defaultLayer))

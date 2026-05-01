@@ -227,7 +227,10 @@ export async function generateCommandTable(options?: { commands?: Cmd[] }) {
     })
   }
 
-  const lines = ["| Command | Description |", "| --- | --- |"]
+  // The repo enforces unpadded markdown table separators via
+  // script/check-md-table-padding.ts (see AGENTS.md). Padded `| --- | --- |`
+  // separators fail CI, so emit the compact form here.
+  const lines = ["| Command | Description |", "|---|---|"]
 
   for (const row of rows) {
     lines.push(`| \`${row.display}\` | ${row.description} |`)

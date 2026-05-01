@@ -295,7 +295,7 @@ describe("coveredLines", () => {
   })
 
   test("whole-file shell annotation after shebang", () => {
-    const covered = coveredLines('#!/usr/bin/env bash\n# kilocode_change - new file\nset -euo pipefail')
+    const covered = coveredLines("#!/usr/bin/env bash\n# kilocode_change - new file\nset -euo pipefail")
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
@@ -350,7 +350,7 @@ describe("coveredLines", () => {
   })
 
   test("TOML block markers", () => {
-    const text = ['# kilocode_change start', 'id = "opencode"', '# kilocode_change end'].join("\n")
+    const text = ["# kilocode_change start", 'id = "opencode"', "# kilocode_change end"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
   })

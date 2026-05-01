@@ -37,7 +37,9 @@ export namespace KiloToolRegistry {
 
   function semanticTool(deps: Deps) {
     return Effect.gen(function* () {
-      const ready = yield* Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready())).pipe(
+      const ready = yield* Effect.tryPromise(() =>
+        import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready()),
+      ).pipe(
         Effect.catch((err) =>
           Effect.sync(() => {
             log.warn("semantic search unavailable", { err })

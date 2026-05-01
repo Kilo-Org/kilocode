@@ -10571,6 +10571,16 @@
                     },
                     "userId": {
                       "type": "string"
+                    },
+                    "botName": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": ["status"]
@@ -10607,10 +10617,10 @@
           }
         ],
         "summary": "Get KiloClaw chat credentials",
-        "description": "Fetch Stream Chat credentials for the user's KiloClaw instance",
+        "description": "Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.",
         "responses": {
           "200": {
-            "description": "Stream Chat credentials or null",
+            "description": "Kilo Chat credentials or null",
             "content": {
               "application/json": {
                 "schema": {
@@ -10618,20 +10628,20 @@
                     {
                       "type": "object",
                       "properties": {
-                        "apiKey": {
+                        "token": {
                           "type": "string"
                         },
-                        "userId": {
+                        "expiresAt": {
                           "type": "string"
                         },
-                        "userToken": {
+                        "kiloChatUrl": {
                           "type": "string"
                         },
-                        "channelId": {
+                        "eventServiceUrl": {
                           "type": "string"
                         }
                       },
-                      "required": ["apiKey", "userId", "userToken", "channelId"]
+                      "required": ["token", "expiresAt", "kiloChatUrl", "eventServiceUrl"]
                     },
                     {
                       "type": "null"
@@ -12221,50 +12231,6 @@
                 "type": "string"
               }
             }
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "IndexingStatusState": {
-        "type": "string",
-        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
-      },
-      "IndexingStatus": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "$ref": "#/components/schemas/IndexingStatusState"
-          },
-          "message": {
-            "type": "string"
-          },
-          "processedFiles": {
-            "type": "number"
-          },
-          "totalFiles": {
-            "type": "number"
-          },
-          "percent": {
-            "type": "number"
-          }
-        },
-        "required": ["state", "message", "processedFiles", "totalFiles", "percent"]
-      },
-      "Event.indexing.status": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "indexing.status"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "$ref": "#/components/schemas/IndexingStatus"
-              }
-            },
-            "required": ["status"]
           }
         },
         "required": ["type", "properties"]
@@ -13968,6 +13934,50 @@
         },
         "required": ["type", "properties"]
       },
+      "IndexingStatusState": {
+        "type": "string",
+        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
+      },
+      "IndexingStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/IndexingStatusState"
+          },
+          "message": {
+            "type": "string"
+          },
+          "processedFiles": {
+            "type": "number"
+          },
+          "totalFiles": {
+            "type": "number"
+          },
+          "percent": {
+            "type": "number"
+          }
+        },
+        "required": ["state", "message", "processedFiles", "totalFiles", "percent"]
+      },
+      "Event.indexing.status": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "indexing.status"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/IndexingStatus"
+              }
+            },
+            "required": ["status"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "SyncEvent.message.updated": {
         "type": "object",
         "properties": {
@@ -14578,9 +14588,6 @@
                 "$ref": "#/components/schemas/Event.vcs.branch.updated"
               },
               {
-                "$ref": "#/components/schemas/Event.indexing.status"
-              },
-              {
                 "$ref": "#/components/schemas/Event.session.compacted"
               },
               {
@@ -14636,6 +14643,9 @@
               },
               {
                 "$ref": "#/components/schemas/Event.session.deleted"
+              },
+              {
+                "$ref": "#/components/schemas/Event.indexing.status"
               },
               {
                 "$ref": "#/components/schemas/SyncEvent.message.updated"
@@ -17202,9 +17212,6 @@
             "$ref": "#/components/schemas/Event.vcs.branch.updated"
           },
           {
-            "$ref": "#/components/schemas/Event.indexing.status"
-          },
-          {
             "$ref": "#/components/schemas/Event.session.compacted"
           },
           {
@@ -17260,6 +17267,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.session.deleted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.indexing.status"
           }
         ]
       },

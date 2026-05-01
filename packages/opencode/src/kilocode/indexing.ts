@@ -207,7 +207,9 @@ export namespace KiloIndexing {
     if (cfg.experimental?.semantic_indexing !== true) {
       return track(
         hit,
-        await inert(() => disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings.")),
+        await inert(() =>
+          disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings."),
+        ),
       )
     }
 

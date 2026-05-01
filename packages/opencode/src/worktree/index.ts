@@ -392,7 +392,12 @@ export const layer: Layer.Layer<
         return true
       }
 
-      const removed = yield* WorktreeCleanup.remove({ root: ctx.worktree, target: entry.path, git, stop: stopFsmonitor }) // kilocode_change
+      const removed = yield* WorktreeCleanup.remove({
+        root: ctx.worktree,
+        target: entry.path,
+        git,
+        stop: stopFsmonitor,
+      }) // kilocode_change
       if (removed.code !== 0) {
         const next = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
         if (next.code !== 0) {
