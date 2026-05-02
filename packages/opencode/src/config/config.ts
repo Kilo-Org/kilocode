@@ -513,30 +513,45 @@ export const layer = Layer.effect(
 
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
       const gitignore = path.join(dir, ".gitignore")
-      const hasIgnore = yield* fs.existsSafe(gitignore)
-      if (!hasIgnore) {
-        yield* fs
-          .writeFileString(
-            gitignore,
-            // kilocode_change start - added pnpm-lock.yaml and yarn.lock (not in upstream)
-            [
-              "node_modules",
-              "package.json",
-              "package-lock.json",
-              "pnpm-lock.yaml",
-              "bun.lock",
-              "yarn.lock",
-              ".gitignore",
-            ].join("\n"),
-            // kilocode_change end
-          )
-          .pipe(
-            Effect.catchIf(
-              (e) => e.reason._tag === "PermissionDenied",
-              () => Effect.void,
-            ),
-          )
-      }
+      // kilocode_change start - added pnpm-lock.yaml and yarn.lock (not in upstream)
+      const required = [
+        "node_modules",
+        "package.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "bun.lock",
+        "yarn.lock",
+        ".gitignore",
+      ]
+      // kilocode_change end
+
+      const existing = yield* fs.readFileString(gitignore).pipe(
+        Effect.catchIf(
+          (e) => e.reason._tag === "NotFound",
+          () => Effect.succeed(undefined),
+        ),
+        Effect.orDie,
+      )
+
+      const next = (() => {
+        if (existing === undefined) return required.join("\n")
+        const present = new Set(existing.split("\n").map((line) => line.trim()))
+        const missing = required.filter((entry) => !present.has(entry))
+        if (missing.length === 0) return undefined
+        const sep = existing.length === 0 || existing.endsWith("\n") ? "" : "\n"
+        return existing + sep + missing.join("\n") + "\n"
+      })()
+
+      if (next === undefined) return
+
+      yield* fs
+        .writeFileString(gitignore, next)
+        .pipe(
+          Effect.catchIf(
+            (e) => e.reason._tag === "PermissionDenied",
+            () => Effect.void,
+          ),
+        )
     })
 
     const loadInstanceState = Effect.fn("Config.loadInstanceState")(
