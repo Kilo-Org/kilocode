@@ -14,8 +14,6 @@ const timeout = { timeout: 30000 }
 
 Log.init({ print: false })
 
-process.env["KILO_CONFIG_CONTENT"] = JSON.stringify({ plugin: ["@kilocode/kilo-indexing"] })
-
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
   experimental: {
@@ -48,6 +46,7 @@ const off: Partial<Config.Info> = {
 const configDir = process.env["KILO_CONFIG_DIR"]
 const content = process.env["KILO_CONFIG_CONTENT"]
 const error = new Error("test indexing initialization failed")
+const plugins = JSON.stringify({ plugin: ["@kilocode/kilo-indexing"] })
 
 async function wait(read: () => Promise<KiloIndexing.Status>, state: KiloIndexing.Status["state"]) {
   for (const _ of Array.from({ length: 1000 })) {
@@ -74,6 +73,11 @@ afterEach(async () => {
   await Instance.disposeAll()
 })
 
+function configure(dir: string) {
+  process.env["KILO_CONFIG_DIR"] = dir
+  process.env["KILO_CONFIG_CONTENT"] = plugins
+}
+
 describe("indexing startup degradation", () => {
   test(
     "keeps server routes alive when indexing initialization fails",
@@ -81,7 +85,7 @@ describe("indexing startup degradation", () => {
       const init = spyOn(CodeIndexManager.prototype, "initialize").mockRejectedValue(error)
 
       await using tmp = await tmpdir({ git: true, config: cfg })
-      process.env["KILO_CONFIG_DIR"] = tmp.path
+      configure(tmp.path)
 
       try {
         const app = Server.Default().app
@@ -118,7 +122,7 @@ describe("indexing startup degradation", () => {
     "reports routes as in progress while initialization is in flight",
     async () => {
       await using tmp = await tmpdir({ git: true, config: cfg })
-      process.env["KILO_CONFIG_DIR"] = tmp.path
+      configure(tmp.path)
       const gate = Promise.withResolvers<{ requiresRestart: boolean }>()
       const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
 
@@ -157,7 +161,7 @@ describe("indexing startup degradation", () => {
     "does not publish initialized status after in-flight startup is disposed",
     async () => {
       await using tmp = await tmpdir({ git: true, config: cfg })
-      process.env["KILO_CONFIG_DIR"] = tmp.path
+      configure(tmp.path)
       const gate = Promise.withResolvers<{ requiresRestart: boolean }>()
       const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
       const events: KiloIndexing.Status[] = []
@@ -202,7 +206,7 @@ describe("indexing startup degradation", () => {
       const init = spyOn(CodeIndexManager.prototype, "initialize").mockRejectedValue(error)
 
       await using tmp = await tmpdir({ git: true, config: cfg })
-      process.env["KILO_CONFIG_DIR"] = tmp.path
+      configure(tmp.path)
 
       try {
         await Instance.provide({
@@ -229,7 +233,7 @@ describe("indexing startup degradation", () => {
     "reports not ready while initialization is in flight",
     async () => {
       await using tmp = await tmpdir({ git: true, config: cfg })
-      process.env["KILO_CONFIG_DIR"] = tmp.path
+      configure(tmp.path)
       const gate = Promise.withResolvers<{ requiresRestart: boolean }>()
       const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
 
@@ -258,7 +262,7 @@ describe("indexing startup degradation", () => {
     "stays disabled when semantic indexing flag is off",
     async () => {
       await using tmp = await tmpdir({ git: true, config: off })
-      process.env["KILO_CONFIG_DIR"] = tmp.path
+      configure(tmp.path)
       const init = spyOn(CodeIndexManager.prototype, "initialize")
 
       await Instance.provide({
