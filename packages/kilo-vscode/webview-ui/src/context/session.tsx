@@ -46,6 +46,7 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
+import { getStoredVariant, variantKey } from "./session-variant-store"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
@@ -80,7 +81,7 @@ interface SessionStore {
   modelSelections: Record<string, ModelSelection | null> // agentName -> model (global, extension-lifetime)
   sessionOverrides: Record<string, ModelSelection> // sessionID -> per-session model override (compare mode)
   agentSelections: Record<string, string> // sessionID -> agent name
-  variantSelections: Record<string, string> // "providerID/modelID" -> variant name
+  variantSelections: Record<string, string> // "agent:providerID/modelID" -> variant name (legacy "providerID/modelID" entries still readable)
   recentModels: ModelSelection[]
   favoriteModels: ModelSelection[]
 }
@@ -654,9 +655,9 @@ export const SessionProvider: ParentComponent = (props) => {
     clearTimeout(fallback)
   })
 
-  // Variant (thinking effort) selection — keyed by "providerID/modelID"
-  const variantKey = (sel: ModelSelection) => `${sel.providerID}/${sel.modelID}`
-
+  // Variant (thinking effort) selection — keyed by "agent:providerID/modelID"
+  // so two modes using the same model keep independent thinking levels (#9757).
+  // Legacy "providerID/modelID" entries remain readable as a fallback.
   const variantList = () => {
     const sel = selected()
     if (!sel) return []
@@ -670,14 +671,14 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!sel) return undefined
     const list = variantList()
     if (list.length === 0) return undefined
-    const stored = store.variantSelections[variantKey(sel)]
+    const stored = getStoredVariant(store.variantSelections, selectedAgentName(), sel)
     return stored && list.includes(stored) ? stored : list[0]
   }
 
   const selectVariant = (value: string) => {
     const sel = selected()
     if (!sel) return
-    const key = variantKey(sel)
+    const key = variantKey(selectedAgentName(), sel)
     setStore("variantSelections", key, value)
     vscode.postMessage({ type: "persistVariant", key, value })
   }
