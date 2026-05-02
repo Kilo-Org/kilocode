@@ -42,6 +42,7 @@ import {
   buildFamilyLabels,
   buildCostBreakdown,
   childID,
+  latestRates,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -158,6 +159,7 @@ interface SessionContextValue {
   // Cost and context usage for the current session
   costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
+  throughput: Accessor<ReturnType<typeof latestRates> | undefined>
 
   // Skills loaded from the CLI backend
   skills: Accessor<SkillInfo[]>
@@ -2173,6 +2175,8 @@ export const SessionProvider: ParentComponent = (props) => {
     return undefined
   })
 
+  const throughput = createMemo(() => latestRates(messages(), store.parts))
+
   const value: SessionContextValue = {
     currentSessionID,
     currentSession,
@@ -2208,6 +2212,7 @@ export const SessionProvider: ParentComponent = (props) => {
     clearModelOverride,
     costBreakdown,
     contextUsage,
+    throughput,
     agents,
     allAgents,
     skills,

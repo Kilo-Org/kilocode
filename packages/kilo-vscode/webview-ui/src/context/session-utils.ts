@@ -91,13 +91,17 @@ export function formatRate(input: number | undefined): string | undefined {
   return `${input.toFixed(1)} t/s`
 }
 
-export function latestRates(msgs: Array<{ role?: string; parts?: Array<{ type?: string; metrics?: StepMetrics }> }>) {
-  const msg = [...msgs]
-    .reverse()
-    .find(
-      (item) => item.role === "assistant" && item.parts?.some((part) => part.type === "step-finish" && part.metrics),
-    )
-  const part = [...(msg?.parts ?? [])].reverse().find((item) => item.type === "step-finish" && item.metrics)
+export function latestRates(
+  msgs: Array<{ id?: string; role?: string; parts?: Array<{ type?: string; metrics?: StepMetrics }> }>,
+  all?: Record<string, Array<{ type?: string; metrics?: StepMetrics }>>,
+) {
+  const msg = [...msgs].reverse().find((item) => {
+    if (item.role !== "assistant") return false
+    const parts = item.parts ?? (item.id ? all?.[item.id] : undefined)
+    return parts?.some((part) => part.type === "step-finish" && part.metrics)
+  })
+  const parts = msg?.parts ?? (msg?.id ? all?.[msg.id] : undefined) ?? []
+  const part = [...parts].reverse().find((item) => item.type === "step-finish" && item.metrics)
   if (!part?.metrics) return undefined
   const rate = part.metrics.rate
   const generation = rate.generation ?? rate.output

@@ -14,7 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { collapseCostBreakdown, formatRate, latestRates } from "../../context/session-utils"
+import { collapseCostBreakdown, formatRate } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -77,7 +77,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     }
     return undefined
   })
-  const rates = createMemo(() => latestRates(session.messages()))
+  const rates = createMemo(() => session.throughput())
 
   const fmtNum = (n: number): string => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`

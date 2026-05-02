@@ -156,6 +156,22 @@ describe("latestRates", () => {
     expect(latestRates(msgs)).toEqual({ prompt: 412.49, generation: 38.15, output: 25 })
   })
 
+  it("returns rates from the current parts store", () => {
+    const msgs = [{ id: "msg1", role: "assistant" }]
+    const parts = {
+      msg1: [
+        {
+          id: "sf1",
+          type: "step-finish" as const,
+          reason: "stop",
+          metrics: { duration: 2000, rate: { output: 25, prompt: 412.49, generation: 38.15 } },
+        },
+      ],
+    }
+
+    expect(latestRates(msgs, parts)).toEqual({ prompt: 412.49, generation: 38.15, output: 25 })
+  })
+
   it("falls back to computed output as generation", () => {
     const msgs = [
       {
