@@ -31,8 +31,9 @@ if (typeof window !== "undefined" && DOMPurify.isSupported) {
 }
 
 const config = {
-  USE_PROFILES: { html: true, mathMl: true },
+  USE_PROFILES: { html: true, mathMl: true, svg: true }, // kilocode_change: svg needed for KaTeX sqrt/surd rendering
   SANITIZE_NAMED_PROPS: true,
+  ADD_ATTR: ["style"], // kilocode_change: KaTeX needs inline style attributes for layout
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
   ADD_TAGS: ["svg", "path"],
