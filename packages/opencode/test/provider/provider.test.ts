@@ -2560,6 +2560,7 @@ test("plugin config providers persist after instance dispose", async () => {
   expect(second[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
 })
 
+// kilocode_change start
 test(
   "plugin config enabled and disabled providers are honored",
   async () => {
@@ -2600,8 +2601,10 @@ test(
   },
   { timeout: 60000 },
 )
+// kilocode_change end
 
 test("opencode loader keeps paid models when config apiKey is present", async () => {
+  // kilocode_change
   await using base = await tmpdir({
     init: async (dir) => {
       await Bun.write(
