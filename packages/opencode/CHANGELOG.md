@@ -1,5 +1,25 @@
 # @kilocode/cli
 
+## 7.2.33
+
+### Minor Changes
+
+- [#9737](https://github.com/Kilo-Org/kilocode/pull/9737) [`d5fb9eb`](https://github.com/Kilo-Org/kilocode/commit/d5fb9eb2265c03127e776c99020b03bb770255a1) - Support starting Agent Manager local sessions and worktree sessions from an experimental agent tool.
+
+### Patch Changes
+
+- [#9746](https://github.com/Kilo-Org/kilocode/pull/9746) [`80535d4`](https://github.com/Kilo-Org/kilocode/commit/80535d4ed6266888988a66ca28706260ee89e533) - Avoid repeated command approval prompts when multiple sessions request the same saved command permission, without widening bash permission matching.
+
+- [#9460](https://github.com/Kilo-Org/kilocode/pull/9460) [`26e4c11`](https://github.com/Kilo-Org/kilocode/commit/26e4c1148f4e7a734bb8e535e02a1a9ad75be584) - Scope the custom commit message prompt to the current project. Setting it in the VS Code settings now writes to the workspace's `kilo.json` so different repositories can have different conventions, instead of silently applying globally. Also fixes the project-level config update endpoint, which previously wrote to a file that wasn't loaded.
+
+- [#9626](https://github.com/Kilo-Org/kilocode/pull/9626) [`5dbf91c`](https://github.com/Kilo-Org/kilocode/commit/5dbf91cc167c16e04bb41e8af68108f8865a18c8) - Honor allowed read-only external-directory access to Kilo config paths without repeated permission prompts.
+
+- [#9745](https://github.com/Kilo-Org/kilocode/pull/9745) [`da3d79a`](https://github.com/Kilo-Org/kilocode/commit/da3d79a6886944b4ad311211e3f67c350958a6ca) - Use a GPT-5.5-specific coding prompt that improves autonomous task handling while keeping older Codex generations on their existing prompt.
+
+- [#9729](https://github.com/Kilo-Org/kilocode/pull/9729) [`1493d65`](https://github.com/Kilo-Org/kilocode/commit/1493d656c9afcafd41a13b45bdf734fb881536df) - Keep Remote status visible in the TUI while remote control is connecting.
+
+- [#9669](https://github.com/Kilo-Org/kilocode/pull/9669) [`0bf14eb`](https://github.com/Kilo-Org/kilocode/commit/0bf14eb2ff5ef59f9dc98342218addc670a87481) - Stop emitting `ai.*` and `gen_ai.*` OpenTelemetry spans from AI SDK calls, and remove the PostHog bridge that forwarded them. Tool/session/indexing telemetry is unchanged.
+
 ## 7.2.31
 
 ### Patch Changes
