@@ -36,7 +36,9 @@ export function formatTranscript(
   transcript += `---\n\n`
 
   for (const msg of messages) {
-    transcript += formatMessage(msg.info, msg.parts, options, providers)
+    const text = formatMessage(msg.info, msg.parts, options, providers)
+    if (!text.trim()) continue
+    transcript += text
     transcript += `---\n\n`
   }
 
@@ -49,6 +51,9 @@ export function formatMessage(
   options: TranscriptOptions,
   providers?: Provider[] | ReadonlyMap<string, Provider>,
 ): string {
+  const body = parts.map((part) => formatPart(part, options)).join("")
+  if (!body.trim()) return ""
+
   let result = ""
 
   if (msg.role === "user") {
@@ -57,11 +62,7 @@ export function formatMessage(
     result += formatAssistantHeader(msg, options.assistantMetadata, providers ?? options.providers)
   }
 
-  for (const part of parts) {
-    result += formatPart(part, options)
-  }
-
-  return result
+  return result + body
 }
 
 export function formatAssistantHeader(

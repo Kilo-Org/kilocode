@@ -24,7 +24,16 @@ import { selectedForeground, useTheme } from "@tui/context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
 // kilocode_change start
-import type { AssistantMessage, Part, Provider, ToolPart, UserMessage, TextPart, ReasoningPart } from "@kilocode/sdk/v2"
+import type {
+  AssistantMessage,
+  Message,
+  Part,
+  Provider,
+  ToolPart,
+  UserMessage,
+  TextPart,
+  ReasoningPart,
+} from "@kilocode/sdk/v2"
 // kilocode_change end
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util"
@@ -1167,7 +1176,7 @@ export function Session() {
                 </box>
               </Show>
               {/* kilocode_change end */}
-              <For each={messages()}>
+              <For each={messages().filter(renderableMessage(showThinking(), sync.data.part))}>
                 {(message, index) => (
                   <Switch>
                     <Match when={message.id === revert()?.messageID}>
@@ -1357,6 +1366,25 @@ const MIME_BADGE: Record<string, string> = {
   "image/webp": "img",
   "application/pdf": "pdf",
   "application/x-directory": "dir",
+}
+
+function renderableMessage(thinking: boolean, map: Record<string, Part[]>) {
+  return (message: Message) => {
+    const parts = map[message.id] ?? []
+    if (message.role === "user") {
+      return parts.some((part) => {
+        if (part.type === "file" || part.type === "compaction") return true
+        return part.type === "text" && !part.synthetic && !part.ignored && part.text.trim().length > 0
+      })
+    }
+
+    if (message.role !== "assistant") return true
+    return parts.some((part) => {
+      if (part.type === "reasoning") return thinking && part.text.trim().length > 0
+      if (part.type === "text") return !part.synthetic && part.text.trim().length > 0
+      return part.type === "tool"
+    })
+  }
 }
 
 function UserMessage(props: {

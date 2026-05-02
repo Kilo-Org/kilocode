@@ -422,5 +422,116 @@ describe("transcript", () => {
       expect(result).not.toContain("Code") // kilocode_change
       expect(result).not.toContain("claude-sonnet-4-20250514")
     })
+
+    test("skips synthetic-only user turns and empty assistant metadata", () => {
+      const session = {
+        id: "ses_abc123",
+        title: "Test Session",
+        time: { created: 1000000000000, updated: 1000000001000 },
+      }
+      const messages = [
+        {
+          info: {
+            id: "msg_user",
+            sessionID: "ses_abc123",
+            role: "user" as const,
+            agent: "code",
+            model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
+            time: { created: 1000000000000 },
+          },
+          parts: [
+            {
+              id: "part_user",
+              sessionID: "ses_abc123",
+              messageID: "msg_user",
+              type: "text" as const,
+              text: "hello",
+            },
+          ],
+        },
+        {
+          info: {
+            id: "msg_reply",
+            sessionID: "ses_abc123",
+            role: "assistant" as const,
+            agent: "code",
+            modelID: "claude-sonnet-4-20250514",
+            providerID: "anthropic",
+            mode: "code",
+            parentID: "msg_user",
+            path: { cwd: "/test", root: "/test" },
+            cost: 0.001,
+            tokens: { input: 100, output: 50, reasoning: 0, cache: { read: 0, write: 0 } },
+            time: { created: 1000000000100, completed: 1000000000600 },
+          },
+          parts: [
+            {
+              id: "part_reply",
+              sessionID: "ses_abc123",
+              messageID: "msg_reply",
+              type: "text" as const,
+              text: "visible reply",
+            },
+          ],
+        },
+        {
+          info: {
+            id: "msg_synthetic",
+            sessionID: "ses_abc123",
+            role: "user" as const,
+            agent: "code",
+            model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
+            time: { created: 1000000000700 },
+          },
+          parts: [
+            {
+              id: "part_synthetic",
+              sessionID: "ses_abc123",
+              messageID: "msg_synthetic",
+              type: "text" as const,
+              text: "A background subagent has completed.",
+              synthetic: true,
+            },
+          ],
+        },
+        {
+          info: {
+            id: "msg_empty",
+            sessionID: "ses_abc123",
+            role: "assistant" as const,
+            agent: "code",
+            modelID: "claude-sonnet-4-20250514",
+            providerID: "anthropic",
+            mode: "code",
+            parentID: "msg_synthetic",
+            path: { cwd: "/test", root: "/test" },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            time: { created: 1000000000800, completed: 1000000000900 },
+          },
+          parts: [
+            {
+              id: "part_empty",
+              sessionID: "ses_abc123",
+              messageID: "msg_empty",
+              type: "text" as const,
+              text: "",
+            },
+          ],
+        },
+      ]
+
+      const result = formatTranscript(session, messages, {
+        thinking: false,
+        toolDetails: false,
+        assistantMetadata: true,
+        providers,
+      })
+
+      expect(result).toContain("hello")
+      expect(result).toContain("visible reply")
+      expect(result).not.toContain("A background subagent has completed")
+      expect(result).not.toContain("## Assistant (Code · Claude Sonnet 4 · 0.1s)")
+    })
   })
 })
