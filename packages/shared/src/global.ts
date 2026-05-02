@@ -19,8 +19,8 @@ export namespace Global {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const app = "opencode"
       // kilocode_change start - guard against newline-contaminated HOME/XDG paths
+      const app = "kilo"
       const clean = (p: string | undefined) => p?.replace(/[\r\n]+/g, "")
       const home = clean(process.env.KILO_TEST_HOME ?? os.homedir())!
       const data = path.join(clean(xdgData)!, app)

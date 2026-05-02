@@ -20,6 +20,7 @@ const forceRebuild = process.argv.includes("--force")
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
+const sharedDir = join(packagesDir, "shared")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
@@ -32,8 +33,9 @@ function log(msg: string) {
 
 async function cliSourceHash(): Promise<string | null> {
   try {
-    const result = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
-    return result.text().trim() || null
+    const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
+    const sharedResult = await $`git log -1 --format=%H -- .`.cwd(sharedDir).quiet()
+    return `${opencodeResult.text().trim()}-${sharedResult.text().trim()}` || null
   } catch {
     return null
   }
@@ -41,8 +43,9 @@ async function cliSourceHash(): Promise<string | null> {
 
 async function isDirty(): Promise<boolean> {
   try {
-    const result = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
-    return result.text().trim().length > 0
+    const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
+    const sharedResult = await $`git status --porcelain -- .`.cwd(sharedDir).quiet()
+    return opencodeResult.text().trim().length > 0 || sharedResult.text().trim().length > 0
   } catch {
     return false
   }
@@ -119,8 +122,8 @@ async function ensureBuiltBinary(): Promise<string> {
     `No prebuilt binary found under ${relative(kiloVscodeDir, join(opencodeDir, "dist"))} - attempting build via bun.`,
   )
 
-  const bunFile = Bun.file(await Bun.which("bun"))
-  if (!(await bunFile.exists())) {
+  const bunPath = Bun.which("bun")
+  if (!bunPath) {
     throw new Error(
       `Bun is required to build the CLI binary, but was not found on PATH. ` +
         `Install bun, or build the CLI separately in ${opencodeDir} and re-run.`,
