@@ -45,6 +45,7 @@ const off: Partial<Config.Info> = {
 }
 const configDir = process.env["KILO_CONFIG_DIR"]
 const content = process.env["KILO_CONFIG_CONTENT"]
+const lancedb = process.env["KILO_LANCEDB_PATH"]
 const error = new Error("test indexing initialization failed")
 const plugins = JSON.stringify({ plugin: ["@kilocode/kilo-indexing"] })
 
@@ -70,12 +71,15 @@ afterEach(async () => {
   else process.env["KILO_CONFIG_DIR"] = configDir
   if (content === undefined) delete process.env["KILO_CONFIG_CONTENT"]
   else process.env["KILO_CONFIG_CONTENT"] = content
+  if (lancedb === undefined) delete process.env["KILO_LANCEDB_PATH"]
+  else process.env["KILO_LANCEDB_PATH"] = lancedb
   await Instance.disposeAll()
 })
 
 function configure(dir: string) {
   process.env["KILO_CONFIG_DIR"] = dir
   process.env["KILO_CONFIG_CONTENT"] = plugins
+  process.env["KILO_LANCEDB_PATH"] = "@lancedb/lancedb"
 }
 
 describe("indexing startup degradation", () => {
