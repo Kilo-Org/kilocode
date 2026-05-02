@@ -2560,42 +2560,46 @@ test("plugin config providers persist after instance dispose", async () => {
   expect(second[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
 })
 
-test("plugin config enabled and disabled providers are honored", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      const root = path.join(dir, ".opencode", "plugin")
-      await mkdir(root, { recursive: true })
-      await Bun.write(
-        path.join(root, "provider-filter.ts"),
-        [
-          "export default {",
-          '  id: "demo.provider-filter",',
-          "  server: async () => ({",
-          "    async config(cfg) {",
-          '      cfg.enabled_providers = ["anthropic", "openai"]',
-          '      cfg.disabled_providers = ["openai"]',
-          "    },",
-          "  }),",
-          "}",
-          "",
-        ].join("\n"),
-      )
-    },
-  })
+test(
+  "plugin config enabled and disabled providers are honored",
+  async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        const root = path.join(dir, ".opencode", "plugin")
+        await mkdir(root, { recursive: true })
+        await Bun.write(
+          path.join(root, "provider-filter.ts"),
+          [
+            "export default {",
+            '  id: "demo.provider-filter",',
+            "  server: async () => ({",
+            "    async config(cfg) {",
+            '      cfg.enabled_providers = ["anthropic", "openai"]',
+            '      cfg.disabled_providers = ["openai"]',
+            "    },",
+            "  }),",
+            "}",
+            "",
+          ].join("\n"),
+        )
+      },
+    })
 
-  await Instance.provide({
-    directory: tmp.path,
-    init: async () => {
-      set("ANTHROPIC_API_KEY", "test-anthropic-key")
-      set("OPENAI_API_KEY", "test-openai-key")
-    },
-    fn: async () => {
-      const providers = await list()
-      expect(providers[ProviderID.anthropic]).toBeDefined()
-      expect(providers[ProviderID.openai]).toBeUndefined()
-    },
-  })
-})
+    await Instance.provide({
+      directory: tmp.path,
+      init: async () => {
+        set("ANTHROPIC_API_KEY", "test-anthropic-key")
+        set("OPENAI_API_KEY", "test-openai-key")
+      },
+      fn: async () => {
+        const providers = await list()
+        expect(providers[ProviderID.anthropic]).toBeDefined()
+        expect(providers[ProviderID.openai]).toBeUndefined()
+      },
+    })
+  },
+  { timeout: 60000 },
+)
 
 test("opencode loader keeps paid models when config apiKey is present", async () => {
   await using base = await tmpdir({

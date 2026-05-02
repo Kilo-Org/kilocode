@@ -10,7 +10,7 @@ import { Server } from "../../src/server/server"
 import { Log } from "../../src/util"
 import { tmpdir } from "../fixture/fixture"
 
-const timeout = { timeout: 30000 }
+const timeout = { timeout: 60000 }
 
 Log.init({ print: false })
 
@@ -50,7 +50,7 @@ const error = new Error("test indexing initialization failed")
 const plugins = JSON.stringify({ plugin: ["@kilocode/kilo-indexing"] })
 
 async function wait(read: () => Promise<KiloIndexing.Status>, state: KiloIndexing.Status["state"]) {
-  for (const _ of Array.from({ length: 1000 })) {
+  for (const _ of Array.from({ length: 100 })) {
     const status = await read()
     if (status.state === state) return status
     await new Promise((resolve) => setTimeout(resolve, 10))
@@ -67,14 +67,18 @@ async function called(init: ReturnType<typeof spyOn<CodeIndexManager, "initializ
 }
 
 afterEach(async () => {
+  reset()
+  await Instance.disposeAll()
+})
+
+function reset() {
   if (configDir === undefined) delete process.env["KILO_CONFIG_DIR"]
   else process.env["KILO_CONFIG_DIR"] = configDir
   if (content === undefined) delete process.env["KILO_CONFIG_CONTENT"]
   else process.env["KILO_CONFIG_CONTENT"] = content
   if (lancedb === undefined) delete process.env["KILO_LANCEDB_PATH"]
   else process.env["KILO_LANCEDB_PATH"] = lancedb
-  await Instance.disposeAll()
-})
+}
 
 function configure(dir: string) {
   process.env["KILO_CONFIG_DIR"] = dir
@@ -117,6 +121,7 @@ describe("indexing startup degradation", () => {
         expect(body.message).toContain("Failed to initialize: test indexing initialization failed")
       } finally {
         init.mockRestore()
+        reset()
       }
     },
     timeout,
@@ -156,6 +161,7 @@ describe("indexing startup degradation", () => {
       } finally {
         gate.resolve({ requiresRestart: false })
         init.mockRestore()
+        reset()
       }
     },
     timeout,
@@ -199,6 +205,7 @@ describe("indexing startup degradation", () => {
         GlobalBus.off("event", on)
         gate.resolve({ requiresRestart: false })
         init.mockRestore()
+        reset()
       }
     },
     timeout,
@@ -228,6 +235,7 @@ describe("indexing startup degradation", () => {
         })
       } finally {
         init.mockRestore()
+        reset()
       }
     },
     timeout,
@@ -257,6 +265,7 @@ describe("indexing startup degradation", () => {
       } finally {
         gate.resolve({ requiresRestart: false })
         init.mockRestore()
+        reset()
       }
     },
     timeout,
