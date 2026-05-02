@@ -31,6 +31,7 @@ import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
+import { KiloSession } from "../../src/kilocode/session" // kilocode_change
 import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
 import { Shell } from "../../src/shell/shell"
@@ -335,6 +336,18 @@ const boot = Effect.fn("test.boot")(function* (input?: { title?: string }) {
   const chat = yield* sessions.create(input ?? { title: "Pinned" })
   return { prompt, run, sessions, chat }
 })
+
+// kilocode_change start - wait for a turn-close event for a specific session
+const turnClose = Effect.fn("test.turnClose")(function* (sessionID: SessionID) {
+  const bus = yield* Bus.Service
+  const turn = defer<KiloSession.CloseReason>()
+  const unsub = yield* bus.subscribeCallback(KiloSession.Event.TurnClose, (evt) => {
+    if (evt.properties.sessionID === sessionID) turn.resolve(evt.properties.reason)
+  })
+  yield* Effect.addFinalizer(() => Effect.sync(unsub))
+  return turn
+})
+// kilocode_change end
 
 // Loop semantics
 
@@ -1265,6 +1278,105 @@ unix(
     ),
   30_000,
 )
+
+// kilocode_change start - background subagent completion should not interrupt active replies
+it.live(
+  "background completion is used on the next explicit turn",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Pinned" })
+        const turn = yield* turnClose(chat.id)
+        yield* llm.text("ack")
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          model: ref,
+          parts: [
+            {
+              type: "text",
+              synthetic: true,
+              text: "A background subagent has completed.\n\n<task_result>done</task_result>",
+            },
+          ],
+        })
+        const reason = yield* Effect.promise(() => turn.promise).pipe(Effect.timeout("2 seconds"))
+        expect(reason).toBe("completed")
+        const inputs = yield* llm.inputs
+        expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("A background subagent has completed")
+      }),
+      { git: true, config: providerCfg },
+    ),
+  10_000,
+)
+
+it.live(
+  "background completion waits until the active parent reply finishes",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const gate = defer<void>()
+        const child = defer<void>()
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Pinned" })
+        const turn = yield* turnClose(chat.id)
+        yield* llm.toolMatch((hit) => JSON.stringify(hit.body).includes("hello"), "task", {
+          description: "inspect bug",
+          prompt: "look into the cache key path",
+          subagent_type: "general",
+          background: true,
+        })
+        yield* llm.pushMatch(
+          (hit) => JSON.stringify(hit.body).includes("look into the cache key path"),
+          reply().wait(child.promise).text("child done").stop(),
+        )
+        yield* llm.pushMatch(
+          (hit) => JSON.stringify(hit.body).includes("background subagent running"),
+          reply().wait(gate.promise).text("active reply").stop(),
+        )
+        const fiber = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          model: ref,
+          parts: [{ type: "text", text: "hello" }],
+        }).pipe(Effect.forkChild)
+
+        yield* waitFor(
+          "parent follow-up request",
+          llm.inputs.pipe(
+            Effect.map((inputs) =>
+              inputs.some((item) => JSON.stringify(item.messages).includes("background subagent running"))
+                ? true
+                : undefined,
+            ),
+          ),
+        )
+        child.resolve()
+        const early = yield* Effect.promise(() => turn.promise).pipe(Effect.timeoutOption("50 millis"))
+        expect(early._tag).toBe("None")
+        gate.resolve()
+        const exit = yield* Fiber.await(fiber)
+        expect(Exit.isSuccess(exit)).toBe(true)
+        const reason = yield* Effect.promise(() => turn.promise).pipe(Effect.timeout("2 seconds"))
+        expect(reason).toBe("completed")
+        yield* llm.text("after")
+        yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "build",
+          model: ref,
+          parts: [{ type: "text", text: "next" }],
+        })
+        const inputs = yield* llm.inputs
+        expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("child done")
+      }),
+      { git: true, config: providerCfg },
+    ),
+  10_000,
+)
+// kilocode_change end
 // kilocode_change end
 
 it.live(

@@ -1398,10 +1398,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         reason,
       })
 
+      const parentStatus = yield* status.get(input.parent.sessionID)
       yield* prompt({
         sessionID: input.parent.sessionID,
         agent: input.parent.agent,
         model: input.parent.model,
+        noReply: parentStatus.type === "busy" ? true : undefined,
         parts: [
           {
             type: "text",
