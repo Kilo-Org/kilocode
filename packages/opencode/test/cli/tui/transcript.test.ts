@@ -423,6 +423,7 @@ describe("transcript", () => {
       expect(result).not.toContain("claude-sonnet-4-20250514")
     })
 
+    // kilocode_change start - synthetic background completion messages should not export empty sections
     test("skips synthetic-only user turns and empty assistant metadata", () => {
       const session = {
         id: "ses_abc123",
@@ -533,5 +534,6 @@ describe("transcript", () => {
       expect(result).not.toContain("A background subagent has completed")
       expect(result).not.toContain("## Assistant (Code · Claude Sonnet 4 · 0.1s)")
     })
+    // kilocode_change end
   })
 })

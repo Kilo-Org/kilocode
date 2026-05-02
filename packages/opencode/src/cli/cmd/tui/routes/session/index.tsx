@@ -1176,6 +1176,7 @@ export function Session() {
                 </box>
               </Show>
               {/* kilocode_change end */}
+              {/* kilocode_change start - hide synthetic-only context turns from the transcript UI */}
               <For each={messages().filter(renderableMessage(showThinking(), sync.data.part))}>
                 {(message, index) => (
                   <Switch>
@@ -1271,6 +1272,7 @@ export function Session() {
                   </Switch>
                 )}
               </For>
+              {/* kilocode_change end */}
             </scrollbox>
             <box flexShrink={0}>
               <Show when={permissions().length > 0}>
@@ -1366,8 +1368,9 @@ const MIME_BADGE: Record<string, string> = {
   "image/webp": "img",
   "application/pdf": "pdf",
   "application/x-directory": "dir",
-}
+} // kilocode_change
 
+// kilocode_change start - hide synthetic-only context turns from the transcript UI
 function renderableMessage(thinking: boolean, map: Record<string, Part[]>) {
   return (message: Message) => {
     const parts = map[message.id] ?? []
@@ -1386,6 +1389,7 @@ function renderableMessage(thinking: boolean, map: Record<string, Part[]>) {
     })
   }
 }
+// kilocode_change end
 
 function UserMessage(props: {
   message: UserMessage
@@ -2164,17 +2168,20 @@ function Task(props: ToolProps<typeof TaskTool>) {
   const { navigate } = useRoute()
   const sync = useSync()
 
+  // kilocode_change start - sync child session data for task progress rendering
   onMount(() => {
     if (props.metadata.sessionId && !sync.data.message[props.metadata.sessionId]?.length)
       void sync.session.sync(props.metadata.sessionId)
   })
 
   const messages = createMemo(() => sync.data.message[props.metadata.sessionId ?? ""] ?? [])
+  // kilocode_change end
   // kilocode_change start - track background task state after tool completion
   const status = createMemo(() => sync.data.session_status[props.metadata.sessionId ?? ""])
   const background = createMemo(() => props.metadata.background === true)
   // kilocode_change end
 
+  // kilocode_change start - surface child task tool state in the parent task summary
   const tools = createMemo(() => {
     return messages().flatMap((msg) =>
       (sync.data.part[msg.id] ?? [])
@@ -2182,6 +2189,7 @@ function Task(props: ToolProps<typeof TaskTool>) {
         .map((part) => ({ tool: part.tool, state: part.state })),
     )
   })
+  // kilocode_change end
 
   // kilocode_change start - surface latest child tool state for background tasks
   const current = createMemo(() =>
@@ -2204,16 +2212,14 @@ function Task(props: ToolProps<typeof TaskTool>) {
   })
   // kilocode_change end
 
+  // kilocode_change start - include background task state in task summary text
   const content = createMemo(() => {
     if (!props.input.description) return ""
-    // kilocode_change start - label background tasks distinctly
     const prefix = background() ? "Background " : ""
     let content = [
       `${prefix}${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`,
     ]
-    // kilocode_change end
 
-    // kilocode_change start
     if (isRunning()) {
       if (tools().length === 0) {
         content.push(
@@ -2227,16 +2233,14 @@ function Task(props: ToolProps<typeof TaskTool>) {
         content.push(`↳ ${tools().length} toolcalls`)
       }
     }
-    // kilocode_change end
 
-    // kilocode_change start - suppress completed summary while a background child is still busy
     if (props.part.state.status === "completed" && !isRunning()) {
       content.push(`└ ${tools().length} toolcalls · ${Locale.duration(duration())}`)
     }
-    // kilocode_change end
 
     return content.join("\n")
   })
+  // kilocode_change end
 
   return (
     <InlineTool

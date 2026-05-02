@@ -35,16 +35,19 @@ export function formatTranscript(
   transcript += `**Updated:** ${new Date(session.time.updated).toLocaleString()}\n\n`
   transcript += `---\n\n`
 
+  // kilocode_change start - skip synthetic-only context messages in exports
   for (const msg of messages) {
     const text = formatMessage(msg.info, msg.parts, options, providers)
     if (!text.trim()) continue
     transcript += text
     transcript += `---\n\n`
   }
+  // kilocode_change end
 
   return transcript
 }
 
+// kilocode_change start - skip empty/synthetic-only messages in exports
 export function formatMessage(
   msg: UserMessage | AssistantMessage,
   parts: Part[],
@@ -64,6 +67,7 @@ export function formatMessage(
 
   return result + body
 }
+// kilocode_change end
 
 export function formatAssistantHeader(
   msg: AssistantMessage,
