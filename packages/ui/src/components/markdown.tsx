@@ -18,16 +18,21 @@ const max = 200
 const cache = new Map<string, Entry>()
 
 if (typeof window !== "undefined" && DOMPurify.isSupported) {
+  // kilocode_change start: strip style from non-KaTeX elements after sanitization
   DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
-    if (!(node instanceof HTMLAnchorElement)) return
-    if (node.target !== "_blank") return
-
-    const rel = node.getAttribute("rel") ?? ""
-    const set = new Set(rel.split(/\s+/).filter(Boolean))
-    set.add("noopener")
-    set.add("noreferrer")
-    node.setAttribute("rel", Array.from(set).join(" "))
+    if (node instanceof HTMLAnchorElement && node.target === "_blank") {
+      const rel = node.getAttribute("rel") ?? ""
+      const set = new Set(rel.split(/\s+/).filter(Boolean))
+      set.add("noopener")
+      set.add("noreferrer")
+      node.setAttribute("rel", Array.from(set).join(" "))
+    }
+    // Only allow inline style on KaTeX elements — strip from everything else
+    if (node.hasAttribute("style") && !node.closest(".katex")) {
+      node.removeAttribute("style")
+    }
   })
+  // kilocode_change end
 }
 
 const config = {
