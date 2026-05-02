@@ -1337,12 +1337,14 @@ it.live(
           (hit) => JSON.stringify(hit.body).includes("background subagent running"),
           reply().wait(gate.promise).text("active reply").stop(),
         )
-        const fiber = yield* prompt.prompt({
-          sessionID: chat.id,
-          agent: "build",
-          model: ref,
-          parts: [{ type: "text", text: "hello" }],
-        }).pipe(Effect.forkChild)
+        const fiber = yield* prompt
+          .prompt({
+            sessionID: chat.id,
+            agent: "build",
+            model: ref,
+            parts: [{ type: "text", text: "hello" }],
+          })
+          .pipe(Effect.forkChild)
 
         yield* waitFor(
           "parent follow-up request",
@@ -1354,9 +1356,9 @@ it.live(
             ),
           ),
         )
-        child.resolve()
         const early = yield* Effect.promise(() => turn.promise).pipe(Effect.timeoutOption("50 millis"))
         expect(early._tag).toBe("None")
+        child.resolve()
         gate.resolve()
         const exit = yield* Fiber.await(fiber)
         expect(Exit.isSuccess(exit)).toBe(true)
