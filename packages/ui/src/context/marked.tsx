@@ -14,6 +14,15 @@ import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
+export const katexAttr = "data-kilo-katex"
+export const katexToken = Math.random().toString(36).slice(2)
+const katexTag = /<span class="(katex(?:-display)?|katex-error)"/
+
+function renderKatex(text: string, display: boolean) {
+  const html = katex.renderToString(text, { displayMode: display, throwOnError: false })
+  return html.replace(katexTag, `<span class="$1" ${katexAttr}="${katexToken}"`)
+}
+
 registerCustomTheme("Kilo", () => {
   return Promise.resolve({
     name: "Kilo",
@@ -396,10 +405,7 @@ function renderMathInText(text: string): string {
   const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
   result = result.replace(displayMathRegex, (_, math) => {
     try {
-      return katex.renderToString(math, {
-        displayMode: true,
-        throwOnError: false,
-      })
+      return renderKatex(math, true)
     } catch {
       return `$$${math}$$`
     }
@@ -693,7 +699,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
               }
             },
             renderer(token) {
-              return `${katex.renderToString(token.text, { displayMode: true, throwOnError: false })}\n`
+              return `${renderKatex(token.text, true)}\n`
             },
           } satisfies TokenizerAndRendererExtension,
           {
@@ -715,7 +721,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
               }
             },
             renderer(token) {
-              return katex.renderToString(token.text, { displayMode: true, throwOnError: false })
+              return renderKatex(token.text, true)
             },
           } satisfies TokenizerAndRendererExtension,
         ],

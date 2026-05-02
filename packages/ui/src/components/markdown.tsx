@@ -1,4 +1,4 @@
-import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
+import { useMarked, deferredHighlight, fnv1a, katexAttr, katexToken } from "../context/marked"
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -18,7 +18,15 @@ const max = 200
 const cache = new Map<string, Entry>()
 
 if (typeof window !== "undefined" && DOMPurify.isSupported) {
-  // kilocode_change start: strip style from non-KaTeX elements after sanitization
+  DOMPurify.addHook("uponSanitizeAttribute", (node: Element, hook) => {
+    if (hook.attrName !== "style") return
+    if (node.closest(`[${katexAttr}="${katexToken}"]`)) {
+      hook.forceKeepAttr = true
+      return
+    }
+    hook.keepAttr = false
+  })
+
   DOMPurify.addHook("afterSanitizeAttributes", (node: Element) => {
     if (node instanceof HTMLAnchorElement && node.target === "_blank") {
       const rel = node.getAttribute("rel") ?? ""
@@ -27,22 +35,21 @@ if (typeof window !== "undefined" && DOMPurify.isSupported) {
       set.add("noreferrer")
       node.setAttribute("rel", Array.from(set).join(" "))
     }
-    // Only allow inline style on KaTeX elements — strip from everything else
-    if (node.hasAttribute("style") && !node.closest(".katex")) {
-      node.removeAttribute("style")
-    }
+
+    const math = node.closest(`[${katexAttr}="${katexToken}"]`)
+    if (node.hasAttribute("style") && !math) node.removeAttribute("style")
+    if (node.namespaceURI === "http://www.w3.org/2000/svg" && !math) node.remove()
+    if (node.getAttribute(katexAttr) !== katexToken) node.removeAttribute(katexAttr)
   })
-  // kilocode_change end
 }
 
 const config = {
-  USE_PROFILES: { html: true, mathMl: true, svg: true }, // kilocode_change: svg needed for KaTeX sqrt/surd rendering
+  USE_PROFILES: { html: true, mathMl: true, svg: true },
   SANITIZE_NAMED_PROPS: true,
-  ADD_ATTR: ["style"], // kilocode_change: KaTeX needs inline style attributes for layout
   FORBID_TAGS: ["style"],
   FORBID_CONTENTS: ["style", "script"],
   ADD_TAGS: ["svg", "path"],
-  ADD_ATTR: ["d", "viewBox", "preserveAspectRatio", "xmlns"],
+  ADD_ATTR: [katexAttr, "d", "viewBox", "preserveAspectRatio", "xmlns"],
 }
 
 const iconPaths = {
