@@ -29,6 +29,7 @@ export type Locale =
   | "bs"
   | "nl"
   | "tr"
+  | "it"
 
 type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // kilocode_change
 type Dictionary = i18n.Flatten<RawDictionary>
@@ -57,6 +58,7 @@ const LOCALES: readonly Locale[] = [
   "br",
   "th",
   "tr",
+  "it",
 ]
 
 const INTL: Record<Locale, string> = {
@@ -79,6 +81,7 @@ const INTL: Record<Locale, string> = {
   nl: "nl",
 
   tr: "tr",
+  it: "it",
 }
 
 const LABEL_KEY: Record<Locale, keyof Dictionary> = {
@@ -100,13 +103,16 @@ const LABEL_KEY: Record<Locale, keyof Dictionary> = {
   bs: "language.bs",
   nl: "language.nl",
   tr: "language.tr",
+  it: "language.it",
 }
 
 const base = i18n.flatten({ ...en, ...uiEn, ...kiloEn }) as Dictionary // kilocode_change
 const dicts = new Map<Locale, Dictionary>([["en", base]])
 
-const merge = (app: Promise<Source>, ui: Promise<Source>) =>
-  Promise.all([app, ui]).then(([a, b]) => ({ ...base, ...i18n.flatten({ ...a.dict, ...b.dict }) }) as Dictionary)
+const merge = (app: Promise<Source>, ui: Promise<Source>, kilo?: Promise<Source>) =>
+  Promise.all([app, ui, kilo]).then(
+    ([a, b, c]) => ({ ...base, ...i18n.flatten({ ...a.dict, ...b.dict, ...c?.dict }) }) as Dictionary,
+  )
 
 const loaders: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
   zh: () => merge(import("@/i18n/zh"), import("@opencode-ai/ui/i18n/zh")),
@@ -126,6 +132,7 @@ const loaders: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
   bs: () => merge(import("@/i18n/bs"), import("@opencode-ai/ui/i18n/bs")),
   nl: () => merge(import("@/i18n/nl"), import("@opencode-ai/ui/i18n/nl")),
   tr: () => merge(import("@/i18n/tr"), import("@opencode-ai/ui/i18n/tr")),
+  it: () => merge(import("@/i18n/it"), import("@opencode-ai/ui/i18n/it"), import("@kilocode/kilo-i18n/it")),
 }
 
 function loadDict(locale: Locale) {
@@ -165,6 +172,7 @@ const localeMatchers: Array<{ locale: Locale; match: (language: string) => boole
   { locale: "bs", match: (language) => language.startsWith("bs") },
   { locale: "nl", match: (language) => language.startsWith("nl") },
   { locale: "tr", match: (language) => language.startsWith("tr") },
+  { locale: "it", match: (language) => language.startsWith("it") },
 ]
 
 function detectLocale(): Locale {
