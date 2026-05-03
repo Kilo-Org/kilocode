@@ -7,6 +7,30 @@ import { Effect, FileSystem, Layer, Schema, Context } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
 
+// Windows-resilient mkdir -p.
+// fs.mkdir(dir, { recursive: true }) should be idempotent, but on Windows
+// with NTFS reparse points (OneDrive), directory junctions, or WSL-served
+// paths, libuv can still throw EEXIST.  This wrapper catches that specific
+// error so callers get the promised directory-exists semantics.
+//
+//   https://github.com/Kilo-Org/kilocode/issues/9618
+//   https://github.com/Kilo-Org/kilocode/issues/9755
+function isEexist(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'code' in error
+    && (error as NodeJS.ErrnoException).code === 'EEXIST'
+  )
+}
+
+async function mkdirSafe(dir: string): Promise<void> {
+  try {
+    await NFS.mkdir(dir, { recursive: true })
+  } catch (error: unknown) {
+    if (isEexist(error)) return
+    throw error
+  }
+}
+
 export namespace AppFileSystem {
   export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
     method: Schema.String,
@@ -84,7 +108,10 @@ export namespace AppFileSystem {
       })
 
       const ensureDir = Effect.fn("FileSystem.ensureDir")(function* (path: string) {
-        yield* fs.makeDirectory(path, { recursive: true })
+      yield* Effect.tryPromise({
+        try: () => mkdirSafe(path),
+        catch: (cause) => new FileSystemError({ method: 'ensureDir', cause }),
+      })
       })
 
       const writeWithDirs = Effect.fn("FileSystem.writeWithDirs")(function* (
@@ -99,7 +126,10 @@ export namespace AppFileSystem {
             (e) => e.reason._tag === "NotFound",
             () =>
               Effect.gen(function* () {
-                yield* fs.makeDirectory(dirname(path), { recursive: true })
+            yield* Effect.tryPromise({
+              try: () => mkdirSafe(dirname(path)),
+              catch: (cause) => new FileSystemError({ method: 'writeWithDirs:mkdir', cause }),
+            })
                 yield* write
               }),
           ),

@@ -133,10 +133,34 @@ export namespace Encoding {
     const encoding = detect(bytes)
     return { text: decode(bytes, encoding), encoding }
   }
+// Windows-resilient mkdir -p.
+// fs.mkdir(dir, { recursive: true }) should be idempotent, but on Windows
+// with NTFS reparse points (OneDrive), directory junctions, or WSL-served
+// paths, libuv can still throw EEXIST.  This wrapper catches that specific
+// error so callers get the promised 'directory exists' semantics.
+//
+//   https://github.com/Kilo-Org/kilocode/issues/9618
+//   https://github.com/Kilo-Org/kilocode/issues/9755
+function isEexist(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'code' in error
+    && (error as NodeJS.ErrnoException).code === 'EEXIST'
+  )
+}
+
+async function mkdirSafe(dir: string): Promise<void> {
+  try {
+    await mkdir(dir, { recursive: true })
+  } catch (error: unknown) {
+    if (isEexist(error)) return
+    throw error
+  }
+}
+
 
   /** Write text, ensuring parent directory exists, using the given encoding. */
   export async function write(path: string, text: string, encoding: string = DEFAULT): Promise<void> {
-    await mkdir(dirname(path), { recursive: true })
+    await mkdirSafe(dirname(path), { recursive: true })
     await writeFile(path, encode(text, encoding))
   }
 }
