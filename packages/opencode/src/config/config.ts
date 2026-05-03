@@ -525,24 +525,26 @@ export const layer = Layer.effect(
       ]
       // kilocode_change end
 
-      const existing = yield* fs.readFileString(gitignore).pipe(
-        Effect.catchIf(
-          (e) => e.reason._tag === "NotFound",
-          () => Effect.succeed(undefined),
-        ),
-        Effect.orDie,
-      )
+      const hasIgnore = yield* fs.existsSafe(gitignore)
 
-      const next = (() => {
-        if (existing === undefined) return required.join("\n")
+      let next: string
+      if (!hasIgnore) {
+        next = required.join("\n")
+      } else {
+        const existing = yield* fs.readFileString(gitignore).pipe(
+          Effect.catchIf(
+            (e) => e.reason._tag === "PermissionDenied",
+            () => Effect.succeed(undefined),
+          ),
+          Effect.orDie,
+        )
+        if (existing === undefined) return
         const present = new Set(existing.split("\n").map((line) => line.trim()))
         const missing = required.filter((entry) => !present.has(entry))
-        if (missing.length === 0) return undefined
+        if (missing.length === 0) return
         const sep = existing.length === 0 || existing.endsWith("\n") ? "" : "\n"
-        return existing + sep + missing.join("\n") + "\n"
-      })()
-
-      if (next === undefined) return
+        next = existing + sep + missing.join("\n") + "\n"
+      }
 
       yield* fs
         .writeFileString(gitignore, next)
