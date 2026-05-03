@@ -18,6 +18,7 @@ export type Locale =
   | "tr"
   | "nl"
   | "uk"
+  | "it"
 
 /** Locales that use right-to-left script. */
 export const RTL_LOCALES = new Set<Locale>(["ar"])
@@ -53,6 +54,7 @@ export const LOCALES: readonly Locale[] = [
   "tr",
   "nl",
   "uk",
+  "it",
 ]
 
 /**

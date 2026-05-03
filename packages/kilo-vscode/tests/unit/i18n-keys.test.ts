@@ -40,6 +40,7 @@ import { dict as appBs } from "../../webview-ui/src/i18n/bs"
 import { dict as appTr } from "../../webview-ui/src/i18n/tr"
 import { dict as appNl } from "../../webview-ui/src/i18n/nl"
 import { dict as appUk } from "../../webview-ui/src/i18n/uk"
+import { dict as appIt } from "../../webview-ui/src/i18n/it"
 
 // Layer 2: upstream UI (@opencode-ai/ui re-exported via @kilocode/kilo-ui)
 import { dict as uiEn } from "../../../ui/src/i18n/en"
@@ -61,6 +62,7 @@ import { dict as uiBs } from "../../../ui/src/i18n/bs"
 import { dict as uiTr } from "../../../ui/src/i18n/tr"
 import { dict as uiNl } from "../../../ui/src/i18n/nl"
 import { dict as uiUk } from "../../../ui/src/i18n/uk"
+import { dict as uiIt } from "../../../ui/src/i18n/it"
 
 // Layer 3: kilo-i18n overrides
 import { dict as kiloEn } from "../../../kilo-i18n/src/en"
@@ -82,6 +84,7 @@ import { dict as kiloBs } from "../../../kilo-i18n/src/bs"
 import { dict as kiloTr } from "../../../kilo-i18n/src/tr"
 import { dict as kiloNl } from "../../../kilo-i18n/src/nl"
 import { dict as kiloUk } from "../../../kilo-i18n/src/uk"
+import { dict as kiloIt } from "../../../kilo-i18n/src/it"
 
 // Layer 4: agent manager (locale alignment already tested in agent-manager-i18n-split.test.ts)
 import { dict as amEn } from "../../webview-ui/agent-manager/i18n/en"
@@ -110,6 +113,7 @@ import { dict as cliBs } from "../../src/services/cli-backend/i18n/bs"
 import { dict as cliTr } from "../../src/services/cli-backend/i18n/tr"
 import { dict as cliNl } from "../../src/services/cli-backend/i18n/nl"
 import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
+import { dict as cliIt } from "../../src/services/cli-backend/i18n/it"
 
 import { dict as acEn } from "../../src/services/autocomplete/i18n/en"
 
@@ -137,6 +141,7 @@ const appLocales: Record<string, Record<string, string>> = {
   tr: appTr,
   nl: appNl,
   uk: appUk,
+  it: appIt,
 }
 
 const kiloLocales: Record<string, Record<string, string>> = {
@@ -159,6 +164,7 @@ const kiloLocales: Record<string, Record<string, string>> = {
   tr: kiloTr,
   nl: kiloNl,
   uk: kiloUk,
+  it: kiloIt,
 }
 
 const uiLocales: Record<string, Record<string, string>> = {
@@ -181,6 +187,7 @@ const uiLocales: Record<string, Record<string, string>> = {
   tr: uiTr,
   nl: uiNl,
   uk: uiUk,
+  it: uiIt,
 }
 
 const cliLocales: Record<string, Record<string, string>> = {
@@ -203,6 +210,7 @@ const cliLocales: Record<string, Record<string, string>> = {
   tr: cliTr,
   nl: cliNl,
   uk: cliUk,
+  it: cliIt,
 }
 
 // Merge webview dictionaries in the same priority order as language.tsx

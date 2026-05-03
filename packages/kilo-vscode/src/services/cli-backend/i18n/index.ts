@@ -7,6 +7,7 @@ import { dict as de } from "./de"
 import { dict as en } from "./en"
 import { dict as es } from "./es"
 import { dict as fr } from "./fr"
+import { dict as it } from "./it"
 import { dict as ja } from "./ja"
 import { dict as ko } from "./ko"
 import { dict as no } from "./no"
@@ -29,6 +30,7 @@ const bundles: Record<string, Record<string, string>> = {
   en,
   es,
   fr,
+  it,
   ja,
   ko,
   no,

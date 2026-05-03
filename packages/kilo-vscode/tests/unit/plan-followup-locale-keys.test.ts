@@ -7,6 +7,7 @@ import { dict as de } from "@kilocode/kilo-i18n/de"
 import { dict as en } from "@kilocode/kilo-i18n/en"
 import { dict as es } from "@kilocode/kilo-i18n/es"
 import { dict as fr } from "@kilocode/kilo-i18n/fr"
+import { dict as it } from "@kilocode/kilo-i18n/it"
 import { dict as ja } from "@kilocode/kilo-i18n/ja"
 import { dict as ko } from "@kilocode/kilo-i18n/ko"
 import { dict as nl } from "@kilocode/kilo-i18n/nl"
@@ -28,6 +29,7 @@ const dicts: Record<string, Record<string, string>> = {
   en,
   es,
   fr,
+  it,
   ja,
   ko,
   nl,
