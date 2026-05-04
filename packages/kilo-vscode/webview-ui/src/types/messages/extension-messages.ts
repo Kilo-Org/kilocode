@@ -1,5 +1,5 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
-import type { PartBatch, PartUpdate } from "../../../../src/shared/stream-messages"
+import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
@@ -93,6 +93,7 @@ export interface SendMessageFailedMessage {
 // webview's concrete union.
 export type PartUpdatedMessage = PartUpdate<Part>
 export type PartsUpdatedMessage = PartBatch<Part>
+export type PartRemovedMessage = PartRemove
 
 export interface SessionStatusMessage {
   type: "sessionStatus"
@@ -824,6 +825,7 @@ export type ExtensionMessage =
   | SendMessageFailedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
+  | PartRemovedMessage
   | SessionStatusMessage
   | SessionErrorMessage
   | PermissionRequestMessage

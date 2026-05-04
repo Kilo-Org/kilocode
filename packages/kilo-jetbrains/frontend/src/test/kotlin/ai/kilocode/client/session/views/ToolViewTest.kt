@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
 
@@ -261,6 +262,35 @@ class ToolViewTest : BasePlatformTestCase() {
 
         assertEquals(15, view.bodyMaxRows())
         assertTrue(view.preferredSize.height > 0)
+    }
+
+    fun `test large tool output is truncated in preview`() {
+        val out = "x".repeat(UiStyle.Size.toolBodyLimit() + 1_000)
+        val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "log")
+            it.output = out
+        }
+
+        val view = ToolView(t)
+        view.toggle()
+
+        assertEquals("$ log\n\n$out", view.bodyText())
+        assertTrue(view.previewText().length < view.bodyText().length)
+        assertTrue(view.previewText().contains("Output truncated in preview"))
+    }
+
+    fun `test large generic tool output is truncated in preview`() {
+        val out = "x".repeat(UiStyle.Size.toolBodyLimit() + 1_000)
+        val t = tool("p1", "glob", ToolExecState.COMPLETED).also {
+            it.output = out
+        }
+
+        val view = ToolView(t)
+        view.toggle()
+
+        assertEquals(out, view.bodyText())
+        assertTrue(view.previewText().length < view.bodyText().length)
+        assertTrue(view.previewText().contains("Output truncated in preview"))
     }
 
     // ---- update ------

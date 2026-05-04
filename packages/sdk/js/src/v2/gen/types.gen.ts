@@ -76,6 +76,103 @@ export type EventFileWatcherUpdated = {
   }
 }
 
+export type QuestionOption = {
+  /**
+   * Display text (1-5 words, concise)
+   */
+  label: string
+  /**
+   * Explanation of choice
+   */
+  description: string
+  /**
+   * Optional i18n key for the label; clients translate and still reply with `label`
+   */
+  labelKey?: string
+  /**
+   * Optional i18n key for the description
+   */
+  descriptionKey?: string
+}
+
+export type QuestionInfo = {
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  /**
+   * Available choices
+   */
+  options: Array<QuestionOption>
+  /**
+   * Allow selecting multiple choices
+   */
+  multiple?: boolean
+  /**
+   * Optional i18n key for the question text; clients fall back to `question` when missing
+   */
+  questionKey?: string
+  /**
+   * Optional i18n key for the header; clients fall back to `header` when missing
+   */
+  headerKey?: string
+  /**
+   * Allow typing a custom answer (default: true)
+   */
+  custom?: boolean
+}
+
+export type QuestionTool = {
+  messageID: string
+  callID: string
+}
+
+export type QuestionRequest = {
+  id: string
+  sessionID: string
+  /**
+   * Questions to ask
+   */
+  questions: Array<QuestionInfo>
+  /**
+   * Whether this question blocks prompt input (default: true)
+   */
+  blocking?: boolean
+  tool?: QuestionTool
+}
+
+export type EventQuestionAsked = {
+  type: "question.asked"
+  properties: QuestionRequest
+}
+
+export type QuestionAnswer = Array<string>
+
+export type QuestionReplied = {
+  sessionID: string
+  requestID: string
+  answers: Array<QuestionAnswer>
+}
+
+export type EventQuestionReplied = {
+  type: "question.replied"
+  properties: QuestionReplied
+}
+
+export type QuestionRejected = {
+  sessionID: string
+  requestID: string
+}
+
+export type EventQuestionRejected = {
+  type: "question.rejected"
+  properties: QuestionRejected
+}
+
 export type EventLspClientDiagnostics = {
   type: "lsp.client.diagnostics"
   properties: {
@@ -358,103 +455,6 @@ export type EventInstallationUpdateAvailable = {
   properties: {
     version: string
   }
-}
-
-export type QuestionOption = {
-  /**
-   * Display text (1-5 words, concise)
-   */
-  label: string
-  /**
-   * Explanation of choice
-   */
-  description: string
-  /**
-   * Optional i18n key for the label; clients translate and still reply with `label`
-   */
-  labelKey?: string
-  /**
-   * Optional i18n key for the description
-   */
-  descriptionKey?: string
-}
-
-export type QuestionInfo = {
-  /**
-   * Complete question
-   */
-  question: string
-  /**
-   * Very short label (max 30 chars)
-   */
-  header: string
-  /**
-   * Available choices
-   */
-  options: Array<QuestionOption>
-  /**
-   * Allow selecting multiple choices
-   */
-  multiple?: boolean
-  /**
-   * Optional i18n key for the question text; clients fall back to `question` when missing
-   */
-  questionKey?: string
-  /**
-   * Optional i18n key for the header; clients fall back to `header` when missing
-   */
-  headerKey?: string
-  /**
-   * Allow typing a custom answer (default: true)
-   */
-  custom?: boolean
-}
-
-export type QuestionTool = {
-  messageID: string
-  callID: string
-}
-
-export type QuestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Questions to ask
-   */
-  questions: Array<QuestionInfo>
-  /**
-   * Whether this question blocks prompt input (default: true)
-   */
-  blocking?: boolean
-  tool?: QuestionTool
-}
-
-export type EventQuestionAsked = {
-  type: "question.asked"
-  properties: QuestionRequest
-}
-
-export type QuestionAnswer = Array<string>
-
-export type QuestionReplied = {
-  sessionID: string
-  requestID: string
-  answers: Array<QuestionAnswer>
-}
-
-export type EventQuestionReplied = {
-  type: "question.replied"
-  properties: QuestionReplied
-}
-
-export type QuestionRejected = {
-  sessionID: string
-  requestID: string
-}
-
-export type EventQuestionRejected = {
-  type: "question.rejected"
-  properties: QuestionRejected
 }
 
 export type Todo = {
@@ -1325,6 +1325,9 @@ export type GlobalEvent = {
     | EventGlobalConfigUpdated
     | EventFileEdited
     | EventFileWatcherUpdated
+    | EventQuestionAsked
+    | EventQuestionReplied
+    | EventQuestionRejected
     | EventLspClientDiagnostics
     | EventLspUpdated
     | EventTuiPromptAppend
@@ -1346,9 +1349,6 @@ export type GlobalEvent = {
     | EventSessionError
     | EventInstallationUpdated
     | EventInstallationUpdateAvailable
-    | EventQuestionAsked
-    | EventQuestionReplied
-    | EventQuestionRejected
     | EventTodoUpdated
     | EventSessionStatus
     | EventSessionIdle
@@ -1576,9 +1576,9 @@ export type AgentConfig = {
    * Default model variant for this agent (applies only when using the agent's configured model).
    */
   variant?: string
-  temperature?: number
-  top_p?: number
-  prompt?: string
+  temperature?: number | null
+  top_p?: number | null
+  prompt?: string | null
   /**
    * @deprecated Use 'permission' field instead
    */
@@ -1589,7 +1589,7 @@ export type AgentConfig = {
   /**
    * Description of when to use the agent
    */
-  description?: string
+  description?: string | null
   mode?: "subagent" | "primary" | "all"
   /**
    * Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)
@@ -1605,7 +1605,7 @@ export type AgentConfig = {
   /**
    * Maximum number of agentic iterations before forcing text-only response
    */
-  steps?: number
+  steps?: number | null
   /**
    * @deprecated Use 'steps' field instead.
    */
@@ -1908,7 +1908,7 @@ export type Config = {
   /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
-  default_agent?: string
+  default_agent?: string | null
   /**
    * Custom username to display in conversations instead of system username
    */
@@ -2463,6 +2463,9 @@ export type Event =
   | EventGlobalConfigUpdated
   | EventFileEdited
   | EventFileWatcherUpdated
+  | EventQuestionAsked
+  | EventQuestionReplied
+  | EventQuestionRejected
   | EventLspClientDiagnostics
   | EventLspUpdated
   | EventTuiPromptAppend
@@ -2484,9 +2487,6 @@ export type Event =
   | EventSessionError
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventQuestionAsked
-  | EventQuestionReplied
-  | EventQuestionRejected
   | EventTodoUpdated
   | EventSessionStatus
   | EventSessionIdle

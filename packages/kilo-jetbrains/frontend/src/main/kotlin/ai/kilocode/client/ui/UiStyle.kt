@@ -28,6 +28,12 @@ object UiStyle {
         const val BUTTON_WIDTH = 28
         const val BUTTON = 24
         const val SCROLL = 16
+        const val USER_PROMPT = 100
+        const val TOOL_BODY = 20_000
+
+        fun userPromptMin(): Int = JBUI.scale(USER_PROMPT)
+
+        fun toolBodyLimit(): Int = TOOL_BODY
     }
 
     object Space {
@@ -108,7 +114,11 @@ object UiStyle {
     }
 
     object Insets {
-        fun transcript(): Border = JBUI.Borders.empty(Space.PAD, Space.PAD)
+        fun none(): java.awt.Insets = JBUI.emptyInsets()
+
+        fun transcript(): java.awt.Insets = JBUI.insets(Space.PAD, Space.PAD, Space.PAD, Space.PAD)
+
+        fun userPrompt(): Int = Size.userPromptMin()
 
         fun empty(): Border = JBUI.Borders.empty(Space.PAD)
 
@@ -117,8 +127,6 @@ object UiStyle {
         fun header(): Border = JBUI.Borders.empty(Space.LG, Space.LG)
 
         fun body(): Border = JBUI.Borders.empty(Space.LG, Space.PAD)
-
-        fun progress(): Border = JBUI.Borders.empty(Space.MD, 0, Space.SM, 0)
     }
 
     object Borders {
@@ -133,8 +141,8 @@ object UiStyle {
         fun picker(): Border = JBUI.Borders.empty(Space.XS, Space.LG)
 
         fun user(): Border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(Colors.line()),
-            JBUI.Borders.empty(Space.LG, 0, Space.SM, 0),
+            RoundedLineBorder(Colors.line(), JBUI.scale(Space.LG)),
+            JBUI.Borders.empty(Space.LG, Space.PAD),
         )!!
 
         fun assistant(): Border = JBUI.Borders.empty()

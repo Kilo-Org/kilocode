@@ -31,14 +31,18 @@ const AgentSchema = Schema.StructWithRest(
     variant: Schema.optional(Schema.String).annotate({
       description: "Default model variant for this agent (applies only when using the agent's configured model).",
     }),
-    temperature: Schema.optional(Schema.Number),
-    top_p: Schema.optional(Schema.Number),
-    prompt: Schema.optional(Schema.String),
+    temperature: Schema.optional(Schema.NullOr(Schema.Number)), // kilocode_change - nullable for delete sentinel
+    top_p: Schema.optional(Schema.NullOr(Schema.Number)), // kilocode_change - nullable for delete sentinel
+    prompt: Schema.optional(Schema.NullOr(Schema.String)), // kilocode_change - nullable for delete sentinel
     tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
       description: "@deprecated Use 'permission' field instead",
     }),
     disable: Schema.optional(Schema.Boolean),
-    description: Schema.optional(Schema.String).annotate({ description: "Description of when to use the agent" }),
+    // kilocode_change start - nullable for delete sentinel
+    description: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+      description: "Description of when to use the agent",
+    }),
+    // kilocode_change end
     mode: Schema.optional(Schema.Literals(["subagent", "primary", "all"])),
     hidden: Schema.optional(Schema.Boolean).annotate({
       description: "Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)",
@@ -47,9 +51,11 @@ const AgentSchema = Schema.StructWithRest(
     color: Schema.optional(Color).annotate({
       description: "Hex color code (e.g., #FF5733) or theme color (e.g., primary)",
     }),
-    steps: Schema.optional(PositiveInt).annotate({
+    // kilocode_change start - nullable for delete sentinel
+    steps: Schema.optional(Schema.NullOr(PositiveInt)).annotate({
       description: "Maximum number of agentic iterations before forcing text-only response",
     }),
+    // kilocode_change end
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
     permission: Schema.optional(ConfigPermission.Info),
   }),
@@ -98,8 +104,10 @@ const normalize = (agent: Schema.Schema.Type<typeof AgentSchema>): Schema.Schema
   }
   globalThis.Object.assign(permission, agent.permission)
 
-  const steps = agent.steps ?? agent.maxSteps
+  // kilocode_change start - preserve null delete sentinel (?? would collapse null to maxSteps)
+  const steps = agent.steps !== undefined ? agent.steps : agent.maxSteps
   return { ...agent, options, permission, ...(steps !== undefined ? { steps } : {}) }
+  // kilocode_change end
 }
 
 export const Info = AgentSchema.pipe(

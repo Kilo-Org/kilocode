@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.2.34",
+  "version": "7.2.35",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -60,6 +60,7 @@
     "marked": "catalog:",
     "marked-katex-extension": "5.1.6",
     "marked-shiki": "catalog:",
+    "mermaid": "11.14.0",
     "morphdom": "2.7.8",
     "motion": "12.34.5",
     "motion-dom": "12.34.3",

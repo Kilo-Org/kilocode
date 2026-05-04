@@ -1,5 +1,13 @@
 # kilo-code
 
+## 7.2.35
+
+### Patch Changes
+
+- [#9816](https://github.com/Kilo-Org/kilocode/pull/9816) [`c8494f2`](https://github.com/Kilo-Org/kilocode/commit/c8494f2f25c17f68455230feec146775d6707090) - Remember the main auto-approve toggle preference across VS Code reloads and extension restarts.
+
+- [#8910](https://github.com/Kilo-Org/kilocode/pull/8910) [`8472f90`](https://github.com/Kilo-Org/kilocode/commit/8472f9052883d9acf643e0786e3819936c44a61a) Thanks [@eolbrych](https://github.com/eolbrych)! - Restore the Sign in action for MCP servers that require OAuth authentication in VS Code settings.
+
 ## 7.2.33
 
 ### Minor Changes

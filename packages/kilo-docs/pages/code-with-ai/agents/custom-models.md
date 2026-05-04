@@ -129,6 +129,8 @@ The `limit` object controls how Kilo manages the model's context window and outp
 }
 ```
 
+If a model stops because it reaches `limit.output`, Kilo shows a visible warning that the response may be incomplete. For reasoning models that spend the whole response reasoning and produce no text or tool call, the warning suggests disabling reasoning or increasing `limit.output`.
+
 #### How limits are resolved
 
 Kilo resolves token limits in this order:
