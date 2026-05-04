@@ -99,19 +99,20 @@ jobs:
       # download-artifact@v4's streaming unzip is CPU-bound and processes entries one by one;
       # collapsing ~480 files into one tar cuts build-vscode download from >30m to seconds.
       # zstd compresses the wasms (~4x) and leaves the already-compact binaries alone, for
-      # ~1 GB artifact. compression-level: 0 on the outer zip avoids double-compression.
-      # zstd + GNU tar are preinstalled on both github-hosted and blacksmith ubuntu-2404.
-      # See actions/upload-artifact#36, actions/toolkit#1533.
+      # ~1 GB artifact. upload-artifact@v7's `archive: false` skips the zip wrapper entirely
+      # so the tarball travels as-is (download-artifact@v8 auto-detects via Content-Type).
+      # With `archive: false` the `name:` input is ignored; the artifact is named after the
+      # file (kilo-cli.tar.zst). zstd + GNU tar are preinstalled on both github-hosted and
+      # blacksmith ubuntu-2404. See actions/upload-artifact#36, actions/toolkit#1533.
       - name: Pack CLI dist into tar.zst
         run: |
           find packages/opencode/dist -name '*.map' -delete
           tar --zstd -cf /tmp/kilo-cli.tar.zst -C packages/opencode/dist .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: kilo-cli
           path: /tmp/kilo-cli.tar.zst
-          compression-level: 0
+          archive: false
       # kilocode_change end
 
     outputs:
@@ -135,10 +136,11 @@ jobs:
         run: bun install -g @vscode/vsce
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli
+          name: kilo-cli.tar.zst
           path: /tmp
+          skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
@@ -333,17 +335,18 @@ jobs:
           # kilocode_change end
 
       # kilocode_change start - download into /tmp and extract the tar.zst packed by build-cli
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          name: kilo-cli
+          name: kilo-cli.tar.zst
           path: /tmp
+          skip-decompress: true
 
       - name: Unpack CLI dist
         run: |
           mkdir -p packages/opencode/dist
           tar --zstd -xf /tmp/kilo-cli.tar.zst -C packages/opencode/dist
       # kilocode_change end
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out

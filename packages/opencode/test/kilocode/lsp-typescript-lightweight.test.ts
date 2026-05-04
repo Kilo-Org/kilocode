@@ -4,10 +4,10 @@
 
 import { describe, test, expect, spyOn, afterEach } from "bun:test"
 import path from "path"
-import { LSPServer } from "../../src/lsp"
+import * as LSPServer from "../../src/lsp/server"
 import { TsClient } from "../../src/kilocode/ts-client"
 import { TsCheck } from "../../src/kilocode/ts-check"
-import { Flag } from "../../src/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance, type InstanceContext } from "../../src/project/instance"
 
 afterEach(async () => {

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { Instance } from "../../../src/project/instance"
-import { Session } from "../../../src/session"
+import { Session } from "../../../src/session/session"
 import { tmpdir } from "../../fixture/fixture"
 
 afterEach(() => {
@@ -202,5 +202,4 @@ describe("POST /permission/:requestID/always-rules", () => {
       },
     })
   })
-
 })

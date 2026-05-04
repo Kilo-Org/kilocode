@@ -6,7 +6,7 @@ import { GlobalBus } from "@/bus/global"
 // app-runtime → Worktree. Static import here caused Worktree.defaultLayer to be
 // undefined when app-runtime evaluated during tests that import Worktree.
 import { Instance } from "@/project/instance"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
@@ -15,7 +15,7 @@ import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@/util/effect-zod"
 

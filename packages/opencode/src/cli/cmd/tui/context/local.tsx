@@ -5,14 +5,14 @@ import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
 import { uniqueBy } from "remeda"
 import path from "path"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { iife } from "@/util/iife"
 import { useToast } from "../ui/toast"
 import { useArgs } from "./args"
 import { useSDK } from "./sdk"
 import { useProject } from "./project" // kilocode_change
 import { RGBA } from "@opentui/core"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 
 export function parseModel(model: string) {
   const [providerID, ...rest] = model.split("/")

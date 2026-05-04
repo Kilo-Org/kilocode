@@ -6,7 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep, win32
 // kilocode_change end
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
-import { Glob } from "@opencode-ai/shared/util/glob"
+import { Glob } from "@opencode-ai/core/util/glob"
 
 // Fast sync version for metadata checks
 export async function exists(p: string): Promise<boolean> {
@@ -246,3 +246,5 @@ export async function globUp(pattern: string, start: string, stop?: string) {
   }
   return result
 }
+
+export * as Filesystem from "./filesystem"

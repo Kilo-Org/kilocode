@@ -4,7 +4,7 @@ import { $ } from "bun"
 import path from "path"
 import * as Config from "../../src/config/config"
 import { Instance } from "../../src/project/instance"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
@@ -35,7 +35,7 @@ describe("experimental.session.list", () => {
 
       try {
         const { Server } = await import("../../src/server/server")
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
 
         // Create worktree session first so it computes its own project ID via rev-list
         const branch = await Instance.provide({
@@ -105,7 +105,7 @@ describe("experimental.session.list", () => {
 
       try {
         const { Server } = await import("../../src/server/server")
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
 
         const branch = await Instance.provide({
           directory: worktree,

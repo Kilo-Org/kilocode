@@ -152,7 +152,12 @@ export function getRecommendation(
   }
 
   // Kilo directories should always keep ours
-  if (matches(path, defaultConfig.kiloDirectories.map((dir) => `${dir}/**`))) {
+  if (
+    matches(
+      path,
+      defaultConfig.kiloDirectories.map((dir) => `${dir}/**`),
+    )
+  ) {
     return {
       recommendation: "keep-ours",
       reason: "File is in a Kilo-specific directory",

@@ -20,7 +20,7 @@ const forceRebuild = process.argv.includes("--force")
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
-const sharedDir = join(packagesDir, "shared")
+const coreDir = join(packagesDir, "core")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
@@ -34,8 +34,8 @@ function log(msg: string) {
 async function cliSourceHash(): Promise<string | null> {
   try {
     const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
-    const sharedResult = await $`git log -1 --format=%H -- .`.cwd(sharedDir).quiet()
-    return `${opencodeResult.text().trim()}-${sharedResult.text().trim()}` || null
+    const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
+    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}` || null
   } catch {
     return null
   }
@@ -44,8 +44,8 @@ async function cliSourceHash(): Promise<string | null> {
 async function isDirty(): Promise<boolean> {
   try {
     const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
-    const sharedResult = await $`git status --porcelain -- .`.cwd(sharedDir).quiet()
-    return opencodeResult.text().trim().length > 0 || sharedResult.text().trim().length > 0
+    const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
+    return opencodeResult.text().trim().length > 0 || coreResult.text().trim().length > 0
   } catch {
     return false
   }

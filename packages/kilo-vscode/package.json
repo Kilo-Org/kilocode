@@ -847,6 +847,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show the task timeline graph in the chat header"
+        },
+        "kilo-code.new.diff.renderMarkdown": {
+          "type": "boolean",
+          "default": false,
+          "description": "Render Markdown files in Kilo diff viewers by default. Toggle this from a Markdown file header in the diff viewer."
         }
       }
     }
