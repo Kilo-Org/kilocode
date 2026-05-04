@@ -717,6 +717,31 @@ export interface DiffViewerRevertFileResultMessage {
   message: string
 }
 
+export interface DiffSourceCapabilities {
+  revert: boolean
+  comments: boolean
+}
+
+export interface DiffSourceDescriptor {
+  /** Unique within a panel context. E.g. "workspace", "session:<sessionId>". */
+  id: string
+  label: string
+  group: "Workspace" | "Session" | "Git"
+  icon?: string
+  capabilities: DiffSourceCapabilities
+}
+
+export interface SetAvailableSourcesMessage {
+  type: "setAvailableSources"
+  descriptors: DiffSourceDescriptor[]
+  currentId: string
+}
+
+export interface DiffViewerCapabilitiesMessage {
+  type: "diffViewer.capabilities"
+  capabilities: DiffSourceCapabilities
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -917,6 +942,8 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | SetAvailableSourcesMessage
+  | DiffViewerCapabilitiesMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage

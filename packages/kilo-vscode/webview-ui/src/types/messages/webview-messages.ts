@@ -143,6 +143,11 @@ export interface WebviewReadyRequest {
   type: "webviewReady"
 }
 
+export interface SelectSourceRequest {
+  type: "selectSource"
+  id: string
+}
+
 export interface RequestProvidersMessage {
   type: "requestProviders"
 }
@@ -967,6 +972,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
