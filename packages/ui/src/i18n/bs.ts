@@ -100,6 +100,7 @@ export const dict = {
   "ui.textField.copied": "Kopirano",
 
   "ui.imagePreview.alt": "Pregled slike",
+  // kilocode_change start
   "ui.mermaid.rendering": "Renderovanje Mermaid dijagrama...",
   "ui.mermaid.renderError": "Renderovanje Mermaid dijagrama nije uspjelo: {{message}}",
   "ui.mermaid.errorDefault": "Nije moguće renderovati Mermaid dijagram.",
@@ -110,6 +111,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "Preuzmi SVG",
   "ui.mermaid.downloadPng": "Preuzmi PNG",
   "ui.mermaid.openPreview": "Otvori pregled slike",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "sadržaj za pomjeranje",
 
   "ui.tool.read": "Čitanje",

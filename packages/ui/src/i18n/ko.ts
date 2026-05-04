@@ -96,6 +96,7 @@ export const dict = {
   "ui.textField.copied": "복사됨",
 
   "ui.imagePreview.alt": "이미지 미리보기",
+  // kilocode_change start
   "ui.mermaid.rendering": "Mermaid 다이어그램 렌더링 중...",
   "ui.mermaid.renderError": "Mermaid 렌더링 실패: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid 다이어그램을 렌더링할 수 없습니다.",
@@ -106,6 +107,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "SVG 다운로드",
   "ui.mermaid.downloadPng": "PNG 다운로드",
   "ui.mermaid.openPreview": "이미지 미리보기 열기",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "스크롤 가능한 콘텐츠",
 
   "ui.tool.read": "읽기",

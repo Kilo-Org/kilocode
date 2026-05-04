@@ -96,6 +96,7 @@ export const dict = {
   "ui.textField.copied": "Copiado",
 
   "ui.imagePreview.alt": "Vista previa de imagen",
+  // kilocode_change start
   "ui.mermaid.rendering": "Renderizando diagrama Mermaid...",
   "ui.mermaid.renderError": "Error al renderizar Mermaid: {{message}}",
   "ui.mermaid.errorDefault": "No se puede renderizar el diagrama Mermaid.",
@@ -106,6 +107,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "Descargar SVG",
   "ui.mermaid.downloadPng": "Descargar PNG",
   "ui.mermaid.openPreview": "Abrir vista previa de imagen",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "contenido desplazable",
 
   "ui.tool.read": "Leer",

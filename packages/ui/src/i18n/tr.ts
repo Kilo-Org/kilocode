@@ -102,6 +102,7 @@ export const dict = {
   "ui.textField.copied": "Kopyalandı",
 
   "ui.imagePreview.alt": "Görsel önizleme",
+  // kilocode_change start
   "ui.mermaid.rendering": "Mermaid diyagramı işleniyor...",
   "ui.mermaid.renderError": "Mermaid işleme başarısız: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid diyagramı işlenemiyor.",
@@ -112,6 +113,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "SVG indir",
   "ui.mermaid.downloadPng": "PNG indir",
   "ui.mermaid.openPreview": "Görsel önizlemeyi aç",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "kaydırılabilir içerik",
 
   "ui.tool.read": "Oku",

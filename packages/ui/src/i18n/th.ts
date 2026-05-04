@@ -97,6 +97,7 @@ export const dict = {
   "ui.textField.copied": "คัดลอกแล้ว",
 
   "ui.imagePreview.alt": "ตัวอย่างรูปภาพ",
+  // kilocode_change start
   "ui.mermaid.rendering": "กำลังเรนเดอร์ไดอะแกรม Mermaid...",
   "ui.mermaid.renderError": "เรนเดอร์ Mermaid ไม่สำเร็จ: {{message}}",
   "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
@@ -107,6 +108,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
   "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
   "ui.mermaid.openPreview": "เปิดตัวอย่างรูปภาพ",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "เนื้อหาที่เลื่อนได้",
 
   "ui.tool.read": "อ่าน",

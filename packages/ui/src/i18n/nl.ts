@@ -97,6 +97,7 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Gekopieerd",
 
   "ui.imagePreview.alt": "Afbeeldingsvoorbeeld",
+  // kilocode_change start
   "ui.mermaid.rendering": "Mermaid-diagram renderen...",
   "ui.mermaid.renderError": "Mermaid-rendering mislukt: {{message}}",
   "ui.mermaid.errorDefault": "Kan Mermaid-diagram niet renderen.",
@@ -107,6 +108,7 @@ export const dict: Record<string, string> = {
   "ui.mermaid.downloadSvg": "SVG downloaden",
   "ui.mermaid.downloadPng": "PNG downloaden",
   "ui.mermaid.openPreview": "Afbeeldingsvoorbeeld openen",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollbare inhoud",
 
   "ui.fileSearch.placeholder": "Zoeken",

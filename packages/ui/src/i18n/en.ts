@@ -102,6 +102,7 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Copied",
 
   "ui.imagePreview.alt": "Image preview",
+  // kilocode_change start
   "ui.mermaid.rendering": "Rendering Mermaid diagram...",
   "ui.mermaid.renderError": "Mermaid render failed: {{message}}",
   "ui.mermaid.errorDefault": "Unable to render Mermaid diagram.",
@@ -112,6 +113,7 @@ export const dict: Record<string, string> = {
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
   "ui.mermaid.openPreview": "Open image preview",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollable content",
 
   "ui.tool.read": "Read",

@@ -95,6 +95,7 @@ export const dict = {
   "ui.textField.copied": "コピーしました",
 
   "ui.imagePreview.alt": "画像プレビュー",
+  // kilocode_change start
   "ui.mermaid.rendering": "Mermaid 図をレンダリング中...",
   "ui.mermaid.renderError": "Mermaid のレンダリングに失敗しました: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid 図をレンダリングできません。",
@@ -105,6 +106,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "SVG をダウンロード",
   "ui.mermaid.downloadPng": "PNG をダウンロード",
   "ui.mermaid.openPreview": "画像プレビューを開く",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "スクロール可能なコンテンツ",
 
   "ui.tool.read": "読み込み",

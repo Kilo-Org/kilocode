@@ -95,6 +95,7 @@ export const dict = {
   "ui.textField.copied": "Kopieret",
 
   "ui.imagePreview.alt": "Billedforhåndsvisning",
+  // kilocode_change start
   "ui.mermaid.rendering": "Renderer Mermaid-diagram...",
   "ui.mermaid.renderError": "Mermaid-rendering mislykkedes: {{message}}",
   "ui.mermaid.errorDefault": "Kan ikke rendere Mermaid-diagram.",
@@ -105,6 +106,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
   "ui.mermaid.openPreview": "Åbn billedforhåndsvisning",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "rulbart indhold",
 
   "ui.tool.read": "Læs",

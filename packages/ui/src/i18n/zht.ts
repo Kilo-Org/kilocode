@@ -100,6 +100,7 @@ export const dict = {
   "ui.textField.copied": "已複製",
 
   "ui.imagePreview.alt": "圖片預覽",
+  // kilocode_change start
   "ui.mermaid.rendering": "正在渲染 Mermaid 圖表...",
   "ui.mermaid.renderError": "Mermaid 渲染失敗：{{message}}",
   "ui.mermaid.errorDefault": "無法渲染 Mermaid 圖表。",
@@ -110,6 +111,7 @@ export const dict = {
   "ui.mermaid.downloadSvg": "下載 SVG",
   "ui.mermaid.downloadPng": "下載 PNG",
   "ui.mermaid.openPreview": "開啟圖片預覽",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "可捲動內容",
 
   "ui.tool.read": "讀取",

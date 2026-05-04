@@ -149,22 +149,19 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   return (
-    <>
-      <MermaidImageBridge />
-      <DataProvider
-        data={data}
-        directory={directory()}
-        // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
-        onPermissionRespond={respond}
-        onQuestionReply={reply}
-        onQuestionReject={reject}
-        onOpenFile={open}
-        onOpenDiff={openDiff}
-        onOpenUrl={openUrl}
-      >
-        {props.children}
-      </DataProvider>
-    </>
+    <DataProvider
+      data={data}
+      directory={directory()}
+      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
+      onPermissionRespond={respond}
+      onQuestionReply={reply}
+      onQuestionReject={reject}
+      onOpenFile={open}
+      onOpenDiff={openDiff}
+      onOpenUrl={openUrl}
+    >
+      {props.children}
+    </DataProvider>
   )
 }
 
@@ -374,6 +371,7 @@ const App: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
+          <MermaidImageBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>
