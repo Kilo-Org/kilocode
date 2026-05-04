@@ -83,6 +83,12 @@ const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") })))
 const files =
   patterns.length > 0 ? all.filter((f) => patterns.some((p) => f.includes(p) || path.join("test", f).includes(p))) : all
 
+const serial = new Set([
+  // These tests share the fixed default OAuth callback port.
+  "mcp/oauth-auto-connect.test.ts",
+  "mcp/oauth-browser.test.ts",
+])
+
 if (files.length === 0) {
   console.log("No test files found")
   process.exit(0)
@@ -193,10 +199,11 @@ console.log(`\nRunning ${bold(String(files.length))} test files with concurrency
 
 const start = performance.now()
 const results: Result[] = []
-const queue = [...files]
+const queue = files.filter((file) => !serial.has(file))
+const tail = files.filter((file) => serial.has(file))
 const stopped = { value: false }
 
-const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
     const file = queue.shift()!
     const result = await run(file)
@@ -207,6 +214,14 @@ const workers = Array.from({ length: Math.min(concurrency, files.length) }, asyn
 })
 
 await Promise.all(workers)
+
+for (const file of tail) {
+  if (stopped.value) break
+  const result = await run(file)
+  results.push(result)
+  report(result)
+  if (bail && !result.passed) stopped.value = true
+}
 
 const elapsed = (performance.now() - start) / 1000
 
