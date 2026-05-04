@@ -35,9 +35,31 @@ export function soul() {
 }
 // kilocode_change end
 
-export function provider(model: Provider.Model) { // kilocode_change
+export function provider(model: Provider.Model) {
   // kilocode_change start
-  const kilo = kiloPrompt(model) // kilocode_change
+  function prompt() {
+    switch (model.prompt) {
+      case "anthropic":
+        return [PROMPT_ANTHROPIC]
+      case "anthropic_without_todo":
+        return [PROMPT_DEFAULT]
+      case "beast":
+        return [PROMPT_BEAST]
+      case "codex":
+        return [PROMPT_CODEX]
+      case "gemini":
+        return [PROMPT_GEMINI]
+      case "gpt55":
+        return [PROMPT_GPT55]
+      case "ling":
+        return [PROMPT_LING]
+      case "trinity":
+        return [PROMPT_TRINITY]
+    }
+    return undefined
+  }
+
+  const kilo = prompt()
   if (kilo) return kilo
   // kilocode_change end
 
@@ -56,32 +78,6 @@ export function provider(model: Provider.Model) { // kilocode_change
   if (isLing(model.api.id)) return [PROMPT_LING] // kilocode_change
   return [PROMPT_DEFAULT]
 }
-
-// kilocode_change start
-// Metadata-driven Kilo prompt selection. Kept separate from upstream's
-// heuristic branching so their if-chain can evolve without merge conflicts.
-function kiloPrompt(model: Provider.Model): string[] | undefined {
-  switch (model.prompt) {
-    case "anthropic":
-      return [PROMPT_ANTHROPIC]
-    case "anthropic_without_todo":
-      return [PROMPT_DEFAULT]
-    case "beast":
-      return [PROMPT_BEAST]
-    case "codex":
-      return [PROMPT_CODEX]
-    case "gemini":
-      return [PROMPT_GEMINI]
-    case "gpt55":
-      return [PROMPT_GPT55]
-    case "ling":
-      return [PROMPT_LING]
-    case "trinity":
-      return [PROMPT_TRINITY]
-  }
-  return undefined
-}
-// kilocode_change end
 
 export interface Interface {
   readonly environment: (model: Provider.Model, editorContext?: EditorContext) => string[] // kilocode_change
