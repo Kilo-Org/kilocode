@@ -3,6 +3,7 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -15,6 +16,11 @@ import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
+import {
+  CUSTOM_PROVIDER_INTERFACE_IDS,
+  customProviderInterface,
+} from "../../../../src/shared/provider-model"
+import type { CustomProviderInterface } from "../../../../src/shared/provider-model"
 import { ModelCard } from "./CustomProviderModelCard"
 import type {
   ChatTemplateArgsValue,
@@ -28,6 +34,11 @@ import { validateCustomProvider } from "./CustomProviderValidation"
 import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
 const SEARCH_DEBOUNCE_MS = 150
+
+const INTERFACE_OPTIONS = CUSTOM_PROVIDER_INTERFACE_IDS.map((value) => ({
+  value,
+  labelKey: `provider.custom.interface.${value}.label`,
+}))
 
 /** Subsequence fuzzy match — "gpt4o" matches "gpt-4o-mini". */
 function fuzzy(query: string, target: string) {
@@ -65,11 +76,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   function initModels(): ModelEntry[] {
     const cfg = props.existing?.config
-    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
+    if (!cfg?.models || typeof cfg.models !== "object")
+      return [{ id: "", name: "", context: "", reasoning: false, variants: [] }]
     const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
+    if (entries.length === 0) return [{ id: "", name: "", context: "", reasoning: false, variants: [] }]
     return entries.map(([id, m]) => {
-      const raw = m as { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
+      const raw = m as {
+        name?: string
+        reasoning?: boolean
+        limit?: { context?: number }
+        variants?: Record<string, Record<string, unknown>>
+      }
       const variants: VariantEntry[] = Object.entries(raw?.variants ?? {}).map(([vname, vcfg]) => ({
         name: vname,
         enableThinking: typeof vcfg.enable_thinking === "boolean" ? (vcfg.enable_thinking as boolean) : undefined,
@@ -87,6 +104,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       return {
         id,
         name: raw?.name ?? id,
+        context: typeof raw?.limit?.context === "number" && raw.limit.context > 0 ? String(raw.limit.context) : "",
         reasoning: raw?.reasoning ?? false,
         variants,
       }
@@ -108,9 +126,18 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       ? provider.authStates()[props.existing.providerID]
       : undefined
 
+  function initInterface(): CustomProviderInterface {
+    const opts = props.existing?.config?.options
+    return customProviderInterface(
+      props.existing?.config?.npm,
+      opts && typeof opts === "object" ? (opts as { interfaceType?: unknown }).interfaceType : undefined,
+    )
+  }
+
   const [form, setForm] = createStore<FormState>({
     providerID: props.existing?.providerID ?? "",
     name: props.existing?.name ?? "",
+    interfaceType: initInterface(),
     baseURL: (props.existing?.config?.options as { baseURL?: string } | undefined)?.baseURL ?? "",
     apiKey: resolveCustomProviderKey(auth),
     models: initModels(),
@@ -292,7 +319,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
+    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, context: "", reasoning: false, variants: [] })
     const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
 
     setForm("models", merged)
@@ -321,7 +348,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, variants: [] }])
+    setForm("models", (v) => [...v, { id: "", name: "", context: "", reasoning: false, variants: [] }])
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
@@ -483,6 +510,24 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               validationState={errors.name ? "invalid" : undefined}
               error={errors.name}
             />
+            <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+              <label style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}>
+                {language.t("provider.custom.interface.label")}
+              </label>
+              <Select
+                options={INTERFACE_OPTIONS}
+                current={INTERFACE_OPTIONS.find((o) => o.value === form.interfaceType)}
+                value={(o) => o.value}
+                label={(o) => language.t(o.labelKey)}
+                onSelect={(o) => {
+                  if (!o) return
+                  setForm("interfaceType", o.value)
+                }}
+                variant="secondary"
+                triggerVariant="settings"
+                placeholder={language.t("provider.custom.interface.placeholder")}
+              />
+            </div>
             <TextField
               label={language.t("provider.custom.field.baseURL.label")}
               placeholder={language.t("provider.custom.field.baseURL.placeholder")}
@@ -535,6 +580,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   canRemove={form.models.length > 1}
                   onChangeId={(v) => setForm("models", i(), "id", v)}
                   onChangeName={(v) => setForm("models", i(), "name", v)}
+                  onChangeContext={(v) => setForm("models", i(), "context", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
                   onRemove={() => removeModel(i())}
                   onAddVariant={() => addVariant(i())}

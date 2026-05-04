@@ -1,4 +1,6 @@
 import type { ModelEntry, VariantEntry } from "./CustomProviderModelCard"
+import { customProviderPackage } from "../../../../src/shared/provider-model"
+import type { CustomProviderInterface } from "../../../../src/shared/provider-model"
 
 type Translator = (key: string, params?: Record<string, string>) => string
 
@@ -10,6 +12,7 @@ export type HeaderRow = {
 export type FormState = {
   providerID: string
   name: string
+  interfaceType: CustomProviderInterface
   baseURL: string
   apiKey: string
   models: ModelEntry[]
@@ -21,7 +24,7 @@ export type FormErrors = {
   providerID: string | undefined
   name: string | undefined
   baseURL: string | undefined
-  models: Array<{ id?: string; name?: string; variants?: Array<{ name?: string }> }>
+  models: Array<{ id?: string; name?: string; context?: string; variants?: Array<{ name?: string }> }>
   headers: Array<{ key?: string; value?: string }>
 }
 
@@ -45,14 +48,13 @@ type ValidateResult = {
       npm: string
       name: string
       env?: string[]
-      options: { baseURL: string; headers?: Record<string, string> }
+      options: { baseURL: string; interfaceType: CustomProviderInterface; headers?: Record<string, string> }
       models: Record<string, unknown>
     }
   }
 }
 
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
-const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
 
 function checkVariant(v: VariantEntry, seen: Set<string>, t: Translator) {
   const n = v.name.trim()
@@ -70,9 +72,12 @@ function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator) {
   else seenModels.add(id)
 
   const nameErr = !m.name.trim() ? t("provider.custom.error.required") : undefined
+  const raw = m.context.trim()
+  const contextErr =
+    raw && (!Number.isSafeInteger(Number(raw)) || Number(raw) <= 0) ? t("provider.custom.error.positiveInteger") : undefined
   const seen = new Set<string>()
   const variants = m.reasoning ? m.variants.map((v) => checkVariant(v, seen, t)) : []
-  return { id: idErr, name: nameErr, variants }
+  return { id: idErr, name: nameErr, context: contextErr, variants }
 }
 
 function checkHeader(h: HeaderRow, seenKeys: Set<string>, t: Translator) {
@@ -113,8 +118,10 @@ function serializeVariant(v: VariantEntry): [string, Record<string, unknown>] {
 
 function serializeModel(m: ModelEntry): [string, Record<string, unknown>] {
   const ventries = m.reasoning ? m.variants.filter((v) => v.name.trim()).map(serializeVariant) : []
+  const context = Number(m.context.trim())
   const entry: Record<string, unknown> = { name: m.name.trim() }
   if (m.reasoning) entry.reasoning = true
+  if (Number.isSafeInteger(context) && context > 0) entry.limit = { context, output: 0 }
   if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
   return [m.id.trim(), entry]
 }
@@ -153,7 +160,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
 
   const seenModels = new Set<string>()
   const modelErrors = input.form.models.map((m) => checkModel(m, seenModels, input.t))
-  const modelsValid = modelErrors.every((m) => !m.id && !m.name && m.variants.every((v) => !v.name))
+  const modelsValid = modelErrors.every((m) => !m.id && !m.name && !m.context && m.variants.every((v) => !v.name))
 
   const seenHeaders = new Set<string>()
   const headerErrors = input.form.headers.map((h) => checkHeader(h, seenHeaders, input.t))
@@ -179,6 +186,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
 
   const options = {
     baseURL,
+    interfaceType: input.form.interfaceType,
     ...(Object.keys(headers).length ? { headers } : {}),
   }
 
@@ -189,7 +197,7 @@ export function validateCustomProvider(input: ValidateArgs): ValidateResult {
       name,
       key,
       config: {
-        npm: OPENAI_COMPATIBLE,
+        npm: customProviderPackage(input.form.interfaceType),
         name,
         ...resolveEnv(rawEnv, savedEnv),
         options,

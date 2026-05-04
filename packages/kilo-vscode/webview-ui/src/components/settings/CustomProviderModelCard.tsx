@@ -10,7 +10,7 @@ export type Translator = ReturnType<typeof useLanguage>["t"]
 // undefined = not set; true/false = enable_thinking value
 export type EnableThinkingValue = undefined | boolean
 export type ThinkingTypeValue = undefined | "enabled" | "disabled"
-export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
 export type ChatTemplateArgsValue = undefined | boolean
 
 export type VariantEntry = {
@@ -24,6 +24,7 @@ export type VariantEntry = {
 export type ModelEntry = {
   id: string
   name: string
+  context: string
   reasoning: boolean
   variants: VariantEntry[]
 }
@@ -56,6 +57,7 @@ const REASONING_EFFORT_OPTIONS: SelectOption<ReasoningEffortValue>[] = [
   { value: "medium", labelKey: "provider.custom.models.variants.reasoningEffort.medium" },
   { value: "high", labelKey: "provider.custom.models.variants.reasoningEffort.high" },
   { value: "xhigh", labelKey: "provider.custom.models.variants.reasoningEffort.xhigh" },
+  { value: "max", labelKey: "provider.custom.models.variants.reasoningEffort.max" },
 ]
 
 type VariantRowProps = {
@@ -218,11 +220,12 @@ function VariantRow(props: VariantRowProps) {
 type ModelCardProps = {
   m: ModelEntry
   i: () => number
-  errors: { id?: string; name?: string; variants?: Array<{ name?: string }> }
+  errors: { id?: string; name?: string; context?: string; variants?: Array<{ name?: string }> }
   t: Translator
   canRemove: boolean
   onChangeId: (val: string) => void
   onChangeName: (val: string) => void
+  onChangeContext: (val: string) => void
   onChangeReasoning: (val: boolean) => void
   onRemove: () => void
   onAddVariant: () => void
@@ -247,7 +250,7 @@ export function ModelCard(props: ModelCardProps) {
       }}
     >
       {/* Model id + name + remove */}
-      <div style={{ display: "flex", gap: "8px", "align-items": "flex-end" }}>
+      <div style={{ display: "flex", gap: "8px", "align-items": "flex-end", "flex-wrap": "wrap" }}>
         <div style={{ flex: 1 }}>
           <TextField
             label={props.t("provider.custom.models.id.label")}
@@ -266,6 +269,17 @@ export function ModelCard(props: ModelCardProps) {
             onChange={props.onChangeName}
             validationState={props.errors.name ? "invalid" : undefined}
             error={props.errors.name}
+          />
+        </div>
+        <div style={{ flex: "0 1 132px" }}>
+          <TextField
+            type="number"
+            label={props.t("provider.custom.models.context.label")}
+            placeholder={props.t("provider.custom.models.context.placeholder")}
+            value={props.m.context}
+            onChange={props.onChangeContext}
+            validationState={props.errors.context ? "invalid" : undefined}
+            error={props.errors.context}
           />
         </div>
         <IconButton
