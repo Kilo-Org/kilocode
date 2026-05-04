@@ -8,7 +8,7 @@ describe("normalizeEnhancePromptErrorMessage", () => {
     )
 
     expect(msg).toContain("provider quota/billing limits")
-    expect(msg).toContain("API quota is separate from ChatGPT subscription")
+    expect(msg).toContain("Check your provider account billing/quota and API access, then retry.")
     expect(msg).toContain("Provider response:")
   })
 
