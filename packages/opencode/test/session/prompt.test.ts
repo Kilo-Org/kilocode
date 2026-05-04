@@ -742,7 +742,7 @@ it.live(
         // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
         const gate = defer<void>()
         yield* llm.push(reply().wait(gate.promise).text("late").stop())
-        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
         // kilocode_change end
 
         yield* user(chat.id, "more")
@@ -772,7 +772,7 @@ it.live(
         // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
         const gate = defer<void>()
         yield* llm.push(reply().wait(gate.promise).text("late").stop())
-        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
         // kilocode_change end
         yield* user(chat.id, "hello")
 
@@ -912,7 +912,7 @@ it.live(
         // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
         const gate = defer<void>()
         yield* llm.push(reply().wait(gate.promise).text("late").stop())
-        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
         // kilocode_change end
         yield* user(chat.id, "hello")
 
@@ -1279,7 +1279,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
-        const status = yield* SessionStatus.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1323,7 +1323,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
-        const status = yield* SessionStatus.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1524,7 +1524,7 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, chat } = yield* boot()
-            const status = yield* SessionStatus.Service
+            const status = yield* SessionStatus.Service // kilocode_change
 
             const a = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
@@ -1815,7 +1815,7 @@ it.live(
         // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
         const gate = defer<void>()
         yield* llm.push(reply().wait(gate.promise).text("late").stop())
-        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
         // kilocode_change end
 
         const fiber = yield* prompt
