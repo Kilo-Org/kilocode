@@ -136,6 +136,21 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Use session history to reopen local sessions or preview cloud sessions
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
+## Starting Sessions From Chat
+
+Kilo can start Agent Manager sessions from chat with the experimental `agent_manager` tool. Enable it in **Settings > Experimental > Agent Manager Tool**, or set `experimental.agent_manager_tool` to `true` in `kilo.jsonc`.
+
+The tool is available only in the VS Code extension because Agent Manager is an extension feature. It supports two modes:
+
+| Mode | Behavior |
+|---|---|
+| `worktree` | Creates one Agent Manager git worktree and session per task |
+| `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation |
+
+Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
+
+The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested mode, so approving `worktree` does not automatically approve `local`.
+
 ## Sections
 
 Sections let you group worktrees into collapsible, color-coded folders in the sidebar. Use them to organize your workflow however you like — by status ("Review Pending", "In Progress"), by project area ("Frontend", "Backend"), priority, or any other scheme that fits.

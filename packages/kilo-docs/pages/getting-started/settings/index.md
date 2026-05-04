@@ -193,6 +193,7 @@ Available experimental toggles include:
 - **LSP integration** — expose language server diagnostics to the agent
 - **Paste summary** — summarize large clipboard pastes before including them
 - **Batch tool** — allow the agent to batch multiple tool calls in one step
+- **Agent Manager Tool** - allow agents to start Agent Manager local and worktree sessions from chat
 - **OpenTelemetry** — enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -202,6 +203,7 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
   "experimental": {
     "codebase_search": true,
     "batch_tool": false,
+    "agent_manager_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
     "mcp_timeout": 30000
