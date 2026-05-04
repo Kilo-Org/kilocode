@@ -426,7 +426,7 @@ export function Markdown(
       })
       // kilocode_change end
 
-      kickMermaid(container, local.streaming ?? false)
+      kickMermaid(container, local.streaming ?? false) // kilocode_change
       kickHighlight(container, nextLabels)
     })
     // kilocode_change end
