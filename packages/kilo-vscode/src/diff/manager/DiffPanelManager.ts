@@ -14,7 +14,7 @@ type CommentHandler = (comments: unknown[], autoSend: boolean) => void
 
 export interface DiffPanelManagerOptions {
   scheduler?: Scheduler
-  createSurface?: (panel: vscode.WebviewPanel) => PanelSurface
+  createSurface?: () => PanelSurface
 }
 
 /**
@@ -35,7 +35,7 @@ export class DiffPanelManager implements vscode.Disposable {
   private webviewReady = false
   private commentHandler: CommentHandler | undefined
   private readonly scheduler: Scheduler
-  private readonly createSurface: (panel: vscode.WebviewPanel) => PanelSurface
+  private readonly createSurface: () => PanelSurface
   private readonly output: vscode.OutputChannel
 
   constructor(
@@ -45,8 +45,22 @@ export class DiffPanelManager implements vscode.Disposable {
     options: DiffPanelManagerOptions = {},
   ) {
     this.scheduler = options.scheduler ?? realScheduler()
-    this.createSurface = options.createSurface ?? panelSurface
+    this.createSurface = options.createSurface ?? (() => this.defaultCreateSurface())
     this.output = vscode.window.createOutputChannel("Kilo Diff Panel")
+  }
+
+  private defaultCreateSurface(): PanelSurface {
+    const panel = vscode.window.createWebviewPanel(DiffPanelManager.viewType, "Changes", vscode.ViewColumn.One, {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: [this.extensionUri],
+    })
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+    }
+    panel.webview.html = this.getHtml(panel.webview)
+    return panelSurface(panel)
   }
 
   public setCommentHandler(handler: CommentHandler): void {
@@ -63,17 +77,15 @@ export class DiffPanelManager implements vscode.Disposable {
       return
     }
 
-    const panel = vscode.window.createWebviewPanel(DiffPanelManager.viewType, "Changes", vscode.ViewColumn.One, {
-      enableScripts: true,
-      retainContextWhenHidden: true,
-      localResourceRoots: [this.extensionUri],
-    })
-    this.adoptPanel(panel)
+    this.adoptSurface(this.createSurface())
   }
 
-  /** Re-wire a deserialized panel after extension restart. */
+  /**
+   * Called when VS Code restores a serialized panel after restart. State
+   * is not persisted, so we discard the panel instead of rewiring it.
+   */
   public deserializePanel(panel: vscode.WebviewPanel): void {
-    this.adoptPanel(panel)
+    panel.dispose()
   }
 
   public dispose(): void {
@@ -82,14 +94,7 @@ export class DiffPanelManager implements vscode.Disposable {
     this.output.dispose()
   }
 
-  private adoptPanel(panel: vscode.WebviewPanel): void {
-    panel.iconPath = {
-      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
-      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
-    }
-    panel.webview.html = this.getHtml(panel.webview)
-
-    const surface = this.createSurface(panel)
+  private adoptSurface(surface: PanelSurface): void {
     this.surface = surface
     this.webviewReady = false
 

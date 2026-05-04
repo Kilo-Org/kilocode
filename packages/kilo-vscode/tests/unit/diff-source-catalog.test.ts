@@ -1,0 +1,86 @@
+import { describe, it, expect } from "bun:test"
+import type { KiloConnectionService } from "../../src/services/cli-backend"
+import { DiffSourceCatalog } from "../../src/diff/sources/catalog"
+import { SessionDiffSource } from "../../src/diff/sources/session"
+import { WorktreeDiffSource } from "../../src/diff/sources/worktree"
+
+// Minimal stand-in for the connection service — the catalog only holds a
+// reference and passes it to the source constructors, so we never exercise
+// any of its methods in these tests.
+const connection = {} as unknown as KiloConnectionService
+
+function makeCatalog(): DiffSourceCatalog {
+  return new DiffSourceCatalog(connection)
+}
+
+describe("DiffSourceCatalog.listAvailable", () => {
+  it("returns workspace + session when both are available", () => {
+    const out = makeCatalog().listAvailable({ workspaceRoot: "/repo", sessionId: "s1" })
+    expect(out.map((d) => d.id)).toEqual(["workspace", "session:s1"])
+  })
+
+  it("returns only workspace when sessionId is missing", () => {
+    const out = makeCatalog().listAvailable({ workspaceRoot: "/repo" })
+    expect(out.map((d) => d.id)).toEqual(["workspace"])
+  })
+
+  it("returns only session when workspaceRoot is missing", () => {
+    const out = makeCatalog().listAvailable({ workspaceRoot: undefined, sessionId: "s1" })
+    expect(out.map((d) => d.id)).toEqual(["session:s1"])
+  })
+
+  it("returns [] when the context is empty", () => {
+    const out = makeCatalog().listAvailable({ workspaceRoot: undefined })
+    expect(out).toEqual([])
+  })
+})
+
+describe("DiffSourceCatalog.defaultSourceId", () => {
+  it("prefers explicit initialSourceId", () => {
+    const id = makeCatalog().defaultSourceId({
+      workspaceRoot: "/repo",
+      sessionId: "s1",
+      initialSourceId: "workspace",
+    })
+    expect(id).toBe("workspace")
+  })
+
+  it("falls back to session when sessionId is present", () => {
+    const id = makeCatalog().defaultSourceId({ workspaceRoot: "/repo", sessionId: "s1" })
+    expect(id).toBe("session:s1")
+  })
+
+  it("falls back to workspace when only workspaceRoot is present", () => {
+    const id = makeCatalog().defaultSourceId({ workspaceRoot: "/repo" })
+    expect(id).toBe("workspace")
+  })
+
+  it("returns undefined when nothing can be inferred", () => {
+    const id = makeCatalog().defaultSourceId({ workspaceRoot: undefined })
+    expect(id).toBeUndefined()
+  })
+})
+
+describe("DiffSourceCatalog.build", () => {
+  it("builds a WorktreeDiffSource for 'workspace'", () => {
+    const src = makeCatalog().build("workspace", { workspaceRoot: "/repo" })
+    expect(src).toBeInstanceOf(WorktreeDiffSource)
+    expect(src.descriptor.id).toBe("workspace")
+    src.dispose()
+  })
+
+  it("builds a SessionDiffSource for 'session:<id>'", () => {
+    const src = makeCatalog().build("session:s1", { workspaceRoot: "/repo", sessionId: "s1" })
+    expect(src).toBeInstanceOf(SessionDiffSource)
+    expect(src.descriptor.id).toBe("session:s1")
+    src.dispose()
+  })
+
+  it("throws on an empty session id", () => {
+    expect(() => makeCatalog().build("session:", { workspaceRoot: "/repo" })).toThrow(/empty session id/)
+  })
+
+  it("throws on an unknown source id", () => {
+    expect(() => makeCatalog().build("bogus", { workspaceRoot: "/repo" })).toThrow(/unknown source id/)
+  })
+})
