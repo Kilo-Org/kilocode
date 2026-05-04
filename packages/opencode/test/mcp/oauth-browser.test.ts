@@ -156,7 +156,7 @@ test("BrowserOpenFailed event is published when open() throws", async () => {
         }),
       ).catch(() => undefined)
 
-      await waitFor(() => events.length > 0)
+      await waitFor(() => events.length > 0) // kilocode_change
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()
@@ -209,7 +209,7 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
         }),
       ).catch(() => undefined)
 
-      await waitFor(() => openCalledWith !== undefined)
+      await waitFor(() => openCalledWith !== undefined) // kilocode_change
       await new Promise((resolve) => setTimeout(resolve, 600)) // kilocode_change - let authenticate await callbackPromise before stop rejects it
 
       // Stop the callback server and cancel any pending auth
@@ -259,7 +259,7 @@ test("open() is called with the authorization URL", async () => {
         }),
       ).catch(() => undefined)
 
-      await waitFor(() => openCalledWith !== undefined)
+      await waitFor(() => openCalledWith !== undefined) // kilocode_change
       await new Promise((resolve) => setTimeout(resolve, 600)) // kilocode_change - let authenticate await callbackPromise before stop rejects it
 
       // Stop the callback server and cancel any pending auth
