@@ -1,0 +1,34 @@
+[data-component="markdown"] {
+  [data-component="markdown-code"][data-kind="mermaid"] {
+    overflow: hidden;
+  }
+
+  [data-component="markdown-mermaid"] {
+    margin: 12px 0 32px;
+    padding: 12px;
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 6px;
+    background: var(--surface-base);
+    overflow: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendered"] {
+    display: flex;
+    justify-content: center;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendered"] > svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendering"] {
+    color: var(--text-weak);
+    font-style: italic;
+  }
+
+  [data-component="markdown-mermaid"][data-state="error"] {
+    color: var(--text-danger, var(--text-strong));
+    white-space: pre-wrap;
+  }
+}
