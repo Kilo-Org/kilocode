@@ -69,3 +69,9 @@ Only ask the user before proceeding if a decision is destructive, changes auth,
 billing, data deletion, public API compatibility, config schema behavior,
 migrations, provider routing, or security posture in a way that cannot be
 safely inferred from the existing Kilo changes.
+
+See `script/upstream/README.md` → `Common Pitfalls` for patterns that bite
+repeatedly: auto-merged code referencing conflict-block declarations, related
+sibling files that need edits but are not unmerged, when to prefer `hybrid`
+over `renamed`, function signatures drifting across a conflict boundary, and
+why full turbo typecheck is the right catch-all.

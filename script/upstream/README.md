@@ -358,6 +358,60 @@ routing, or security behavior.
 For `renamed` decisions, include `--target <new-path>` so the checker can
 verify the new file exists and record its resolution hash.
 
+### Common Pitfalls
+
+These come up repeatedly during manual resolution and are easy to miss. Read
+through before starting:
+
+1. **Auto-merged code outside the conflict can depend on declarations inside
+   it.** When picking between ours / theirs / hybrid, scan the non-conflicting
+   parts of the same file for references whose declaration lives in the
+   conflict block. Example from v1.14.30: `sync.tsx` had an auto-merged call to
+   `sessionListQuery()` that used `kv.get(...)`, while `const kv = useKV()` sat
+   inside the conflict block on the upstream side. A naive `take-ours`
+   resolution would leave `kv` undeclared. Always run typecheck after each
+   decision batch to catch these.
+
+2. **Related files can need edits even when they are not listed as unmerged.**
+   Upstream refactors sometimes split a file into siblings (e.g. v1.14.30 split
+   `httpapi/permission.ts` into `groups/permission.ts` + `handlers/permission.ts`).
+   The ledger only tracks the file that remained unmerged, but Kilo behavior
+   must be ported into the new sibling. Mention every touched sibling in the
+   decision rationale so reviewers can find the diff. `decisions.ts check` will
+   not flag changes to non-unmerged files.
+
+3. **`renamed` is stricter than it sounds.** Use `renamed` only when the
+   resolution moves content to a different file from the ledger entry. If git
+   already recorded the rename during automerge (so the ledger entry is already
+   at the new path) and the work is just adapting content, use `hybrid`. The
+   `renamed` kind makes `decisions.ts check` fail with "original path still
+   exists after renamed decision" if the old path is still tracked.
+
+4. **Function signatures can drift across a conflict boundary.** Automerge can
+   pick one side of a paired change without noticing that a non-conflicting
+   consumer relied on the other side's shape. Example from v1.14.30: our
+   `parse()` returned `tree.rootNode`, upstream's returns the full `tree` and
+   accesses `tree.rootNode` at the call site inside the conflict block.
+   Auto-merge kept the new return type, so the old call site would have been
+   broken if we had taken ours. Re-read call sites after resolving, not only
+   the conflict block itself.
+
+5. **Always run full turbo typecheck before declaring done.** Visually clean
+   resolutions can still break typing at an unrelated call site (e.g. taking
+   upstream's `Msg = string | ArrayBuffer | Uint8Array` broke `ws.send()`
+   because Uint8Array is not assignable to `BufferSource` on the queue replay
+   path). `bun run typecheck` from the repo root is the cheapest catch-all.
+   Targeted per-package typechecks are not enough — the failing call site can
+   live in a non-conflicted file.
+
+6. **The ledger is gitignored.** JSON and markdown under
+   `script/upstream/reports/` do not get added by `git add -A`. If the reviewer
+   wants the decision artifacts in the PR, force-add them in a separate commit:
+   ```bash
+   git add -f script/upstream/reports/manual-decisions-<version>.{json,md}
+   git commit -m "docs(upstream): record v<version> manual merge decision ledger"
+   ```
+
 ### Reviewing Manual Decisions
 
 Use the generated markdown to verify each conflict resolution without replaying
