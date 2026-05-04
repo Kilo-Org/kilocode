@@ -146,7 +146,7 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
 }
 
 export async function ensureRunning(redirectUri?: string): Promise<void> {
-  // kilocode_change start - delegate Kilo-specific callback binding without replacing upstream fallback code
+  // kilocode_change start - delegate Kilo-specific callback binding from here because OAuth state lives in this module
   await KiloOAuthCallback.ensureRunning({
     redirectUri,
     parse: parseRedirectUri,
