@@ -739,7 +739,11 @@ it.live(
         const chat = yield* sessions.create({ title: "Pinned" })
         yield* seed(chat.id)
 
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        // kilocode_change end
 
         yield* user(chat.id, "more")
 
@@ -765,7 +769,11 @@ it.live(
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        // kilocode_change end
         yield* user(chat.id, "hello")
 
         const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -901,7 +909,11 @@ it.live(
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        // kilocode_change end
         yield* user(chat.id, "hello")
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -1267,6 +1279,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1276,7 +1289,12 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell state instead of sleeping
+        yield* waitFor(
+          "shell busy status",
+          status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+        )
+        // kilocode_change end
 
         const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* Effect.sleep(50)
@@ -1305,6 +1323,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1314,7 +1333,12 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell state instead of sleeping
+        yield* waitFor(
+          "shell busy status",
+          status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+        )
+        // kilocode_change end
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -1500,11 +1524,17 @@ unix(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, chat } = yield* boot()
+            const status = yield* SessionStatus.Service
 
             const a = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - wait for shell state instead of sleeping
+            yield* waitFor(
+              "shell busy status",
+              status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+            )
+            // kilocode_change end
 
             const exit = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "echo hi" })
@@ -1782,7 +1812,11 @@ it.live(
         const sessions = yield* Session.Service
         const session = yield* sessions.create({ title: "Prompt cancel regression" })
 
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(Effect.sync(() => gate.resolve()))
+        // kilocode_change end
 
         const fiber = yield* prompt
           .prompt({
