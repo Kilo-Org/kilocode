@@ -35,10 +35,31 @@ export function soul() {
 }
 // kilocode_change end
 
+export function provider(model: Provider.Model) { // kilocode_change
+  // kilocode_change start
+  const kilo = kiloPrompt(model) // kilocode_change
+  if (kilo) return kilo
+  // kilocode_change end
+
+  if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
+    return [PROMPT_BEAST]
+  if (model.api.id.includes("gpt")) {
+    if (model.api.id.includes("codex")) {
+      return [PROMPT_CODEX]
+    }
+    return [PROMPT_GPT]
+  }
+  if (model.api.id.includes("gemini-")) return [PROMPT_GEMINI]
+  if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
+  if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
+  if (model.api.id.toLowerCase().includes("kimi")) return [PROMPT_KIMI]
+  if (isLing(model.api.id)) return [PROMPT_LING] // kilocode_change
+  return [PROMPT_DEFAULT]
+}
+
 // kilocode_change start
-// Kilo-specific prompt selection. Kept as a separate function and invoked
-// before upstream's heuristic branching so that our metadata-driven routing
-// takes priority and upstream's if-chain can evolve without merge conflicts.
+// Metadata-driven Kilo prompt selection. Kept separate from upstream's
+// heuristic branching so their if-chain can evolve without merge conflicts.
 function kiloPrompt(model: Provider.Model): string[] | undefined {
   switch (model.prompt) {
     case "anthropic":
@@ -58,29 +79,9 @@ function kiloPrompt(model: Provider.Model): string[] | undefined {
     case "trinity":
       return [PROMPT_TRINITY]
   }
-  if (isLing(model.api.id)) return [PROMPT_LING]
   return undefined
 }
 // kilocode_change end
-
-export function provider(model: Provider.Model) {
-  const kilo = kiloPrompt(model) // kilocode_change
-  if (kilo) return kilo // kilocode_change
-
-  if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
-    return [PROMPT_BEAST]
-  if (model.api.id.includes("gpt")) {
-    if (model.api.id.includes("codex")) {
-      return [PROMPT_CODEX]
-    }
-    return [PROMPT_GPT]
-  }
-  if (model.api.id.includes("gemini-")) return [PROMPT_GEMINI]
-  if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
-  if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
-  if (model.api.id.toLowerCase().includes("kimi")) return [PROMPT_KIMI]
-  return [PROMPT_DEFAULT]
-}
 
 export interface Interface {
   readonly environment: (model: Provider.Model, editorContext?: EditorContext) => string[] // kilocode_change
