@@ -90,6 +90,10 @@ export function Select<T>(props: SelectProps<T> & Omit<ButtonProps, "children">)
       data-trigger-style={local.triggerVariant}
       placement={local.triggerVariant === "settings" ? "bottom-end" : "bottom-start"}
       gutter={4}
+      // kilocode_change start: when the trigger is right-aligned (settings variant), let the
+      // content expand leftward and shrink to fit so long labels don't overflow the viewport.
+      {...(local.triggerVariant === "settings" ? { overlap: true, fitViewport: true } : {})}
+      // kilocode_change end
       value={local.current}
       options={grouped()}
       optionValue={(x) => (local.value ? local.value(x) : (x as string))}
