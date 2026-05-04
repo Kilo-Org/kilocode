@@ -398,7 +398,8 @@ export const dict = {
   "toast.session.unshare.failed.description": "Une erreur s'est produite lors de l'annulation du partage de la session",
   "toast.session.listFailed.title": "Échec du chargement des sessions pour {{project}}",
   "toast.update.title": "Mise à jour disponible",
-  "toast.update.description": "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
+  "toast.update.description":
+    "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
   "toast.update.action.installRestart": "Installer et redémarrer",
   "toast.update.action.notYet": "Pas encore",
   "error.page.title": "Quelque chose s'est mal passé",
@@ -548,7 +549,8 @@ export const dict = {
   "sidebar.workspaces.enable": "Activer les espaces de travail",
   "sidebar.workspaces.disable": "Désactiver les espaces de travail",
   "sidebar.gettingStarted.title": "Commencer",
-  "sidebar.gettingStarted.line1": "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
+  "sidebar.gettingStarted.line1":
+    "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
   "sidebar.gettingStarted.line2":
     "Connectez n'importe quel fournisseur pour utiliser des modèles, y compris Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Sessions récentes",
@@ -739,8 +741,6 @@ export const dict = {
   "settings.permissions.tool.webfetch.description": "Récupérer le contenu d'une URL",
   "settings.permissions.tool.websearch.title": "Recherche Web",
   "settings.permissions.tool.websearch.description": "Rechercher sur le web",
-  "settings.permissions.tool.codesearch.title": "Recherche de code",
-  "settings.permissions.tool.codesearch.description": "Rechercher du code sur le web",
   "settings.permissions.tool.external_directory.title": "Répertoire externe",
   "settings.permissions.tool.external_directory.description": "Accéder aux fichiers en dehors du répertoire du projet",
   "settings.permissions.tool.doom_loop.title": "Boucle infernale",
