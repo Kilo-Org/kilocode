@@ -61,6 +61,8 @@ When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt with
 | **Run** | Allow this specific invocation |
 | **Deny** | Block this specific invocation |
 
+Use the shield button in the prompt controls to toggle runtime auto-approve for permission prompts without opening Settings. When enabled, the shield is highlighted and pending permission prompts are approved automatically. The runtime state stays synced across the sidebar, open Kilo tabs, and Agent Manager session views.
+
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
 ## MCP Tool Permissions
