@@ -77,4 +77,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
   "plan.followup.answer.continue": "ここで続行",
   "plan.followup.answer.continue.description": "このセッションで計画を実装する",
+
+  "ui.messagePart.openInDiffViewer": "差分ビューアで開く",
 }

@@ -1,6 +1,6 @@
 // kilocode_change - new file
 //
-// Tests that the kilo custom loader gates paid models behind authentication.
+// Tests that the kilo custom loader keeps paid models visible without authentication.
 // Mocks fetchKiloModels from @kilocode/kilo-gateway to avoid real network
 // calls (which fail on Windows CI).
 
@@ -48,7 +48,7 @@ function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
 }
 
-test("kilo loader keeps paid models when config apiKey is present", async () => {
+test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
   // Reset state that may be stale from other test files sharing this process.
   // Auth.set from other tests persists in the shared auth.json, ModelsDev.Data
   // holds a lazy singleton whose resolved object gets mutated in-place by get(),
@@ -96,11 +96,11 @@ test("kilo loader keeps paid models when config apiKey is present", async () => 
     fn: async () => paid(await Provider.list()),
   })
 
-  expect(none).toBe(0)
+  expect(none).toBeGreaterThan(0)
   expect(count).toBeGreaterThan(0)
 })
 
-test("kilo loader keeps paid models when auth exists", async () => {
+test("kilo loader keeps paid models without auth and when auth exists", async () => {
   await Auth.remove("kilo")
   ModelCache.clear("kilo")
   ModelsDev.Data.reset()
@@ -155,7 +155,7 @@ test("kilo loader keeps paid models when auth exists", async () => {
       fn: async () => paid(await Provider.list()),
     })
 
-    expect(none).toBe(0)
+    expect(none).toBeGreaterThan(0)
     expect(count).toBeGreaterThan(0)
   } finally {
     if (prev !== undefined) {

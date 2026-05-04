@@ -15,25 +15,28 @@ import { useSync } from "@/cli/cmd/tui/context/sync"
 
 const id = "internal:kilo-home-footer"
 
+type Status = {
+  enabled: boolean
+  connected: boolean
+}
+
 // ---------------------------------------------------------------------------
 // RemoteIndicator – adapted from @/kilocode/remote-tui for plugin API usage
 // ---------------------------------------------------------------------------
 
 function RemoteIndicator(props: { api: TuiPluginApi; kilo: boolean }) {
   const theme = () => props.api.theme.current
-  const [status, setStatus] = createSignal<{
-    enabled: boolean
-    connected: boolean
-  } | null>(null)
+  const [status, setStatus] = createSignal<Status | null>(null)
 
   onMount(() => {
-    const poll = async () => {
-      const res = await props.api.client.remote.status().catch(() => null)
-      if (res?.data) setStatus(res.data)
-    }
-    poll()
-    const timer = setInterval(poll, 5000)
-    onCleanup(() => clearInterval(timer))
+    void props.api.client.remote
+      .status()
+      .then((res: { data?: Status }) => {
+        if (res.data) setStatus(res.data)
+      })
+      .catch(() => undefined)
+    const off = props.api.event.on("kilo-sessions.remote-status-changed", (evt) => setStatus(evt.properties))
+    onCleanup(off)
   })
 
   return (

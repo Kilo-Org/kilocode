@@ -7,10 +7,7 @@ description: "Manage and orchestrate multiple AI agents"
 
 The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions.
 
-{% tabs %}
-{% tab label="VSCode" %}
-
-The Agent Manager is a **full-panel editor tab** built directly into the extension. All sessions share the single `kilo serve` backend process. It supports:
+The Agent Manager is a **full-panel editor tab** built directly into the extension. It uses the extension's embedded runtime, so no separate Kilo CLI installation or CLI authentication setup is required. It supports:
 
 - Multiple parallel sessions, each in its own git worktree
 - A diff/review panel showing changes vs. the parent branch
@@ -18,6 +15,7 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 - Setup scripts and `.env` auto-copy on worktree creation
 - Session import from existing branches, external worktrees, or GitHub PR URLs
 - "Continue in Worktree" to promote a sidebar session to the Agent Manager
+- The same providers, BYOK keys, custom providers, and extension features supported in the sidebar
 
 {% callout type="tip" %}
 New to running multiple agents in parallel? The [Agent Manager Workflows](/docs/automate/agent-manager-workflows) guide walks through when to use the sidebar vs. the Agent Manager, how to pick tasks that parallelize well, and the common patterns for testing, reviewing, and integrating changes across worktrees.
@@ -31,9 +29,29 @@ New to running multiple agents in parallel? The [Agent Manager Workflows](/docs/
 
 The panel opens as an editor tab and stays active across focus changes.
 
+## Requirements
+
+- Open a VS Code workspace folder
+- Use a git repository for worktree features
+- Open the main repository, not an existing worktree checkout, when creating new worktrees
+
+## Providers and Authentication
+
+Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
+
+See [Setup & Authentication](/docs/getting-started/setup-authentication), [AI Providers](/docs/ai-providers), and [Bring Your Own Key](/docs/getting-started/byok) for setup details.
+
 ## Working with Worktrees
 
 Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
+
+### Worktree Location
+
+Managed worktrees are created under `.kilo/worktrees/` in your project. Kilo also stores Agent Manager UI state in `.kilo/agent-manager.json`.
+
+{% callout type="info" %}
+Worktrees share Git object storage with the main repository, but each worktree is still a separate checkout on disk. Files created inside each worktree, such as `node_modules`, build output, local databases, generated files, and package-manager caches, can multiply disk usage across parallel agents. Closing a managed worktree removes its checkout directory, but it does not remove external caches, containers, volumes, simulators, or databases that your scripts created outside the worktree.
+{% /callout %}
 
 ### PR Status Badges
 
@@ -109,6 +127,15 @@ You can run up to 4 parallel implementations of the same prompt across separate 
 - **From an external worktree:** Import a worktree that already exists on disk
 - **Continue in Worktree:** From the sidebar chat, promote the current session to a new Agent Manager worktree
 
+Imported work stays associated with its branch or worktree and can be continued from Agent Manager.
+
+### Sessions and History
+
+- Create a worktree session to start a new agent in an isolated branch
+- Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
+- Use session history to reopen local sessions or preview cloud sessions
+- Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
+
 ## Sections
 
 Sections let you group worktrees into collapsible, color-coded folders in the sidebar. Use them to organize your workflow however you like — by status ("Review Pending", "In Progress"), by project area ("Frontend", "Backend"), priority, or any other scheme that fits.
@@ -177,7 +204,58 @@ A common workflow is letting the agent work, then switching to the terminal to r
 
 ## Setup Scripts
 
-Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
+Setup scripts let you prepare each new worktree before the agent starts, for example by installing dependencies, linking local config, copying non-standard env files, or creating per-worktree databases.
+
+Create a script file in `.kilo/` using the appropriate filename for your platform:
+
+| Platform | Filename (checked in order) |
+|---|---|
+| macOS / Linux | `.kilo/setup-script`, `.kilo/setup-script.sh` |
+| Windows | `.kilo/setup-script.ps1`, `.kilo/setup-script.cmd`, `.kilo/setup-script.bat` |
+
+Kilo runs the script automatically whenever a new worktree is created. It uses `sh` for POSIX scripts, PowerShell for `.ps1`, and `cmd.exe` for `.cmd` / `.bat`, so executable permissions are not required.
+
+Two extra variables are injected into the setup script's environment:
+
+| Variable | Value |
+|---|---|
+| `WORKTREE_PATH` | Absolute path to the new worktree directory |
+| `REPO_PATH` | Repository root |
+
+For example, on macOS / Linux:
+
+```sh
+#!/bin/sh
+set -e
+
+cd "$WORKTREE_PATH"
+npm install
+
+# Copy a nested env file that Kilo does not auto-copy.
+if [ -f "$REPO_PATH/apps/web/.env.local" ] && [ ! -f "$WORKTREE_PATH/apps/web/.env.local" ]; then
+  cp "$REPO_PATH/apps/web/.env.local" "$WORKTREE_PATH/apps/web/.env.local"
+fi
+```
+
+If the setup script fails, Agent Manager shows the failure and keeps the worktree available so you can inspect it, fix the script, or run setup steps manually.
+
+### Environment File Copying
+
+Before the setup script runs, Kilo automatically copies root-level `.env` files from the main repo into the new worktree.
+
+Copied automatically:
+
+- Root-level plain files named exactly `.env`
+- Root-level plain files matching `.env.*`, such as `.env.local` or `.env.development`
+
+Not copied automatically:
+
+- Nested env files, such as `apps/web/.env.local`
+- Non-dotenv files, such as `.envrc`, `.environment`, or `.env-cmdrc`
+- Directories named `.env` or `.env.local`
+- Files that already exist in the worktree, because Kilo never overwrites them
+
+Use `.kilo/setup-script` for anything outside the automatic copy rules, including nested env files, ignored local config, local certificates, local database files, generated config directories, or tool-specific files required to run the project.
 
 ## Run Script
 
@@ -198,6 +276,25 @@ For example, on macOS / Linux create `.kilo/run-script`:
 #!/bin/sh
 npm run dev
 ```
+
+For projects that need a unique dev-server port per worktree, assign the port in the run script and make your app read it from `PORT`:
+
+```sh
+#!/bin/sh
+set -e
+
+# Pick a deterministic port from the worktree path so each worktree keeps the same URL.
+sum=$(cksum <<EOF | cut -d ' ' -f 1
+$WORKTREE_PATH
+EOF
+)
+export PORT=$((4000 + (sum % 1000)))
+
+echo "Starting dev server on http://localhost:$PORT"
+npm run dev
+```
+
+If your stack supports `PORT=0`, you can also let the OS pick a free port instead. Prefer app-side env support where possible, then use the run script to provide per-worktree defaults.
 
 The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
 
@@ -222,7 +319,9 @@ Two extra variables are injected into the script's environment:
 
 ## Session State and Persistence
 
-Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktrees, and their order are restored on reload.
+Agent Manager state is persisted in `.kilo/agent-manager.json`. It stores worktrees, sections, session tabs, ordering, collapsed state, diff preferences, and cached PR metadata. Git branches and worktree directories remain on disk separately.
+
+Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/worktrees/` directory, and deletes the local branch. Closing an imported external worktree removes the Agent Manager entry but leaves the external directory and branch untouched.
 
 ## Keyboard Shortcuts (Agent Manager Panel)
 
@@ -247,154 +346,13 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 
 - **"Please open a folder…" error** — the Agent Manager requires a VS Code workspace folder
 - **Worktree creation fails** — ensure Git is installed and the workspace is a valid git repository. Open the main repository (where `.git` is a directory), not an existing worktree checkout.
-
-{% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-The Agent Manager is a dedicated control panel for running and supervising Kilo Code agents as interactive CLI processes. It supports:
-
-- Local sessions
-- Resuming existing sessions
-- Parallel Mode (with support for Git worktree) for safe, isolated changes
-- Viewing and continuing cloud-synced sessions filtered to your current repository
-
-This page reflects the actual implementation in the extension.
-
-## Prerequisites
-
-- Install/update the Kilo Code CLI (latest) — see [CLI setup](/docs/code-with-ai/platforms/cli)
-- Open a project in VS Code (workspace required)
-- Authentication: You must be logged in via the extension settings OR use CLI with kilocode as provider (see [Authentication Requirements](#authentication-requirements))
-
-## Opening the Agent Manager
-
-- Command Palette: "Kilo Code: Open Agent Manager"
-- Or use the title/menu entry if available in your Kilo Code UI
-
-The panel opens as a webview and stays active across focus changes.
-
-## Sending messages, approvals, and control
-
-- Continue the conversation: Send a follow-up message to the running agent
-- Approvals: If the agent asks to use a tool, run a command, launch the browser, or connect to an MCP server, the UI shows an approval prompt
-  - Approve or reject, optionally adding a short note
-- Cancel vs Stop
-  - Cancel sends a structured cancel message to the running process (clean cooperative stop)
-  - Stop force-terminates the underlying CLI process, updating status to "stopped"
-
-## Resuming an existing session
-
-You can continue a session later (local or remote):
-
-- If a session is not currently running, the Agent Manager will spawn a new CLI process attached to that session's ID
-- Labels from the original session are preserved whenever possible
-- Your first follow-up message becomes the continuation input
-
-## Parallel Mode
-
-Parallel Mode runs the agent in an isolated Git worktree branch, keeping your main branch clean.
-
-- Enable the "Parallel Mode" toggle before starting
-- The extension prevents using Parallel Mode inside an existing worktree
-  - Open the main repository (where .git is a directory) to use this feature
-
-### Worktree Location
-
-Worktrees are created in `.kilocode/worktrees/` within your project directory. This folder is automatically excluded from git via `.git/info/exclude` (a local-only ignore file that doesn't require a commit).
-
-```
-your-project/
-├── .git/
-│   └── info/
-│       └── exclude   # local ignore rules (includes .kilocode/worktrees/)
-├── .kilocode/
-│   └── worktrees/
-│       └── feature-branch-1234567890/   # isolated working directory
-└── ...
-```
-
-### While Running
-
-The Agent Manager surfaces:
-
-- Branch name created/used
-- Worktree path
-- A completion/merge instruction message when the agent finishes
-
-### After Completion
-
-- The worktree is cleaned up automatically, but the branch is preserved
-- Review the branch in your VCS UI
-- Merge or cherry-pick the changes as desired
-
-### Resuming Sessions
-
-If you resume a Parallel Mode session later, the extension will:
-
-1. Reuse the existing worktree if it still exists
-2. Or recreate it from the session's branch
-
-## Authentication Requirements
-
-The Agent Manager requires proper authentication for full functionality, including session syncing and cloud features.
-
-### Supported Authentication Methods
-
-1. **Kilo Code Extension (Recommended)**
-   - Sign in through the extension settings
-   - Provides seamless authentication for the Agent Manager
-   - Enables session syncing and cloud features
-
-2. **CLI with Kilo Code Provider**
-   - Use the CLI configured with `kilocode` as the provider
-   - Run `kilocode config` to set up authentication
-   - See [CLI setup](/docs/code-with-ai/platforms/cli) for details
-
-### BYOK Limitations
-
-**Important:** Bring Your Own Key (BYOK) is not fully supported with the Agent Manager.
-
-If you're using BYOK with providers like Anthropic, OpenAI, or OpenRouter:
-
-- The Agent Manager will not have access to cloud-synced sessions
-- Session syncing features will be unavailable
-- You must use one of the supported authentication methods above for full functionality
-
-To use the Agent Manager with all features enabled, switch to the Kilo Code provider or sign in through the extension.
-
-## Remote sessions (Cloud)
-
-When signed in (Kilo Cloud), the Agent Manager lists your recent cloud-synced sessions:
-
-- Up to 50 sessions are fetched
-- Sessions are filtered to the current repository via normalized Git remote URL
-  - If the current workspace has no remote, only sessions without a git_url are shown
-- Selecting a remote session loads its message transcript
-- To continue the work locally, send a message — the Agent Manager will spawn a local process bound to that session
-
-Message transcripts are fetched from a signed blob and exclude internal checkpoint "save" markers as chat rows (checkpoints still appear as dedicated entries in the UI).
-
-## Troubleshooting
-
-- CLI not found or outdated
-  - Install/update the CLI: [CLI setup](/docs/code-with-ai/platforms/cli)
-  - If you see an "unknown option --json-io" error, update to the latest CLI
-- "Please open a folder…" error
-  - The Agent Manager requires a VS Code workspace folder
-- "Cannot use parallel mode from within a git worktree"
-  - Open the main repository (where .git is a directory), not a worktree checkout
-- Remote sessions not visible
-  - Ensure you're signed in and the repo's remote URL matches the sessions you expect to see
-  - If using BYOK, session syncing is not available — switch to Kilo Code provider or sign in through the extension
-- Authentication errors
-  - Verify you're logged in via extension settings or using CLI with kilocode provider
-  - BYOK configurations do not support Agent Manager authentication
-
-{% /tab %}
-{% /tabs %}
+- **Provider or authentication errors** — open extension Settings and verify your sign-in, provider, model, or BYOK configuration. Agent Manager uses the same settings as the sidebar.
+- **Session history missing cloud sessions** — sign in through the extension and confirm the repository remote matches the sessions you expect to see.
+- **PR badges or PR import missing** — install and authenticate the GitHub CLI (`gh`). This is only required for GitHub PR features.
 
 ## Related features
 
 - [Sessions](/docs/collaborate/sessions-sharing)
 - [Auto-approving Actions](/docs/getting-started/settings/auto-approving-actions)
-- [CLI](/docs/code-with-ai/platforms/cli)
+- [AI Providers](/docs/ai-providers)
+- [Bring Your Own Key](/docs/getting-started/byok)

@@ -33,9 +33,17 @@ data class LoadErrorDto(
 )
 
 @Serializable
+data class ConfigWarningDto(
+    val path: String,
+    val message: String,
+    val detail: String? = null,
+)
+
+@Serializable
 data class KiloAppStateDto(
     val status: KiloAppStatusDto,
     val error: String? = null,
     val errors: List<LoadErrorDto> = emptyList(),
     val progress: LoadProgressDto? = null,
+    val warnings: List<ConfigWarningDto> = emptyList(),
 )

@@ -24,7 +24,7 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 | Category | Purpose | Tool Names |
 |:---|:---|:---|
 | Read | Access file content and code structure | `read`, `glob`, `grep` |
-| Edit | Create or modify files and code | `edit`, `multiedit`, `write`, `apply_patch` |
+| Edit | Create or modify files and code | `edit`, `write`, `apply_patch` |
 | Execute | Run commands and perform system operations | `bash` |
 | Web | Fetch and search web content | `webfetch`, `websearch`, `codesearch` |
 | Workflow | Manage task flow and sub-agents | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` |
@@ -103,8 +103,8 @@ Every tool use is subject to a permission check. The default action for any tool
 
 | Tool(s) | Default |
 |:---|:---|
-| `read`, `glob`, `grep`, `list` | `ask` |
-| `edit`, `write`, `multiedit`, `apply_patch` | `ask` |
+| `read`, `glob`, `grep` | `ask` |
+| `edit`, `write`, `apply_patch` | `ask` |
 | `bash` | `ask` (per-command) |
 | `external_directory` | `ask` (when accessing paths outside the project) |
 | `task` | `ask` |
@@ -160,7 +160,6 @@ This safety mechanism ensures you maintain control over which files are modified
 | `glob` | Finds files by glob pattern | Read |
 | `grep` | Searches file contents with regex | Read |
 | `edit` | Makes precise text replacements in a file | Edit |
-| `multiedit` | Multiple edits in a single call | Edit |
 | `write` | Creates new files or overwrites existing ones | Edit |
 | `apply_patch` | Applies unified diffs (used with certain models) | Edit |
 | `bash` | Runs shell commands | Execute |

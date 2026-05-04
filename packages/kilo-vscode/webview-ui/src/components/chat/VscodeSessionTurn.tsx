@@ -32,6 +32,8 @@ import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { visibleError } from "../../context/session-errors"
+import type { ErrorDisplayProps } from "./ErrorDisplay"
 import type { Message as WebMessage } from "../../types/messages"
 
 function getDirectory(path: string): string {
@@ -87,9 +89,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
   const interrupted = createMemo(() => assistantMessages().some((m) => m.error?.name === "MessageAbortedError"))
 
-  const error = createMemo(
-    () => assistantMessages().find((m) => m.error && m.error.name !== "MessageAbortedError")?.error,
-  )
+  const error = createMemo(() => visibleError(assistantMessages(), session.isErrorHidden))
 
   // Diffs from message summary
   const diffs = createMemo(() => {
@@ -276,7 +276,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
           {/* Error handling */}
           <Show when={error()}>
-            <ErrorDisplay error={error()!} onLogin={server.startLogin} />
+            {(err) => <ErrorDisplay error={err() as ErrorDisplayProps["error"]} onLogin={server.startLogin} />}
           </Show>
         </div>
       )}

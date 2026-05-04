@@ -1,4 +1,6 @@
 ---
+title: "Using OpenAI with Kilo Code | Setup & Models"
+description: "Connect the official OpenAI API to Kilo Code. Step-by-step guide to creating an API key and configuring GPT models in VS Code and the CLI."
 sidebar_label: OpenAI
 ---
 

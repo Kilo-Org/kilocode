@@ -73,6 +73,11 @@ class KiloAppService internal constructor(
         null
     }
 
+    suspend fun retry() {
+        LOG.info("retry: sending RPC")
+        call { retry() }
+    }
+
     /** Kill the CLI process and restart it. */
     suspend fun restart() {
         LOG.info("restart: resetting state and sending RPC")
@@ -95,6 +100,11 @@ class KiloAppService internal constructor(
     fun restartAsync() {
         LOG.info("restartAsync: launching restart")
         cs.launch { restart() }
+    }
+
+    fun retryAsync() {
+        LOG.info("retryAsync: launching retry")
+        cs.launch { retry() }
     }
 
     /** Fire-and-forget reinstall from non-suspend context (e.g. action handlers). */

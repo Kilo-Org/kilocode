@@ -5,7 +5,7 @@ description: "Configure Kilo Code settings and preferences"
 
 # Settings
 
-The VS Code extension can be configured through the Settings window, opened by pressing the gear icon. Both the CLI and the extension can also be configured through interactions with the agent. The current VS Code extension and CLI share the same underlying settings, so changes in one are reflected in the other.
+The VS Code extension can be configured through the Settings window, opened by pressing the gear icon in Kilo Code. Changes apply across extension surfaces, including the sidebar and Agent Manager. The CLI can also use the same JSONC config files when you use it directly.
 
 ## Configuring with the Agent
 
@@ -30,9 +30,9 @@ This is especially useful for complex configuration like custom model definition
 {% tabs %}
 {% tab label="VSCode" %}
 
-The VS Code extension provides a **Settings webview UI** accessible from the extension sidebar by clicking the gear icon ({% codicon name="gear" /%}). The UI is organized into tabs including Providers, Auto-Approve, Models, and more.
+The VS Code extension provides a **Settings webview UI** accessible from Kilo Code by clicking the gear icon ({% codicon name="gear" /%}). The UI is organized into tabs including Providers, Auto-Approve, Models, and more.
 
-This UI reads and writes to the same underlying JSONC config files used by the CLI, so changes made in either place are reflected in both.
+This UI reads and writes to the same underlying JSONC config files used across extension surfaces. Changes apply to the sidebar, Agent Manager, and the CLI when used directly.
 
 ### Config File Locations
 
@@ -44,6 +44,28 @@ There are two primary config files:
 {% callout type="warning" %}
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
+
+### Reasoning Blocks
+
+Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-Collapse Reasoning** in the Display tab, or set `auto_collapse_reasoning` in `kilo.jsonc`, to collapse them after the agent finishes writing them:
+
+```json
+{
+  "auto_collapse_reasoning": true
+}
+```
+
+### Terminal Command Blocks
+
+Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:
+
+```json
+{
+  "terminal_command_display": "collapsed"
+}
+```
+
+Valid values are `expanded` and `collapsed`.
 
 ### Export and Import
 
@@ -171,6 +193,7 @@ Available experimental toggles include:
 - **LSP integration** — expose language server diagnostics to the agent
 - **Paste summary** — summarize large clipboard pastes before including them
 - **Batch tool** — allow the agent to batch multiple tool calls in one step
+- **OpenTelemetry** — enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
 
@@ -179,6 +202,7 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
   "experimental": {
     "codebase_search": true,
     "batch_tool": false,
+    "openTelemetry": true,
     "disable_paste_summary": false,
     "mcp_timeout": 30000
   }
@@ -190,7 +214,9 @@ Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of 
 {% /tab %}
 {% tab label="CLI" %}
 
-The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, telemetry, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+
+Telemetry is enabled by default. Set `experimental.openTelemetry` to `false` in `kilo.jsonc` to opt out. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the environment, the CLI also exports OpenTelemetry traces and logs to that OTLP HTTP endpoint.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}

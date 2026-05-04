@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  * Project-level frontend service for session management.
  *
  * Stateless with respect to "active session" — callers pass explicit
- * session IDs. [ai.kilocode.client.session.SessionController] owns the
+ * session IDs. [ai.kilocode.client.session.update.SessionController] owns the
  * active session concept.
  */
 @Service(Service.Level.PROJECT)
@@ -83,6 +83,10 @@ class KiloSessionService internal constructor(
             }
         }
     }
+
+    /** Load recent sessions for the current worktree family. */
+    suspend fun recent(dir: String, limit: Int): List<SessionDto> =
+        call { recent(dir, limit) }.sessions
 
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {

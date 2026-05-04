@@ -261,6 +261,10 @@ export const dict = {
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
+  "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
+  "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
+  "prompt.action.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว คลิกเพื่ออนุมัติคำขอสิทธิ์โดยอัตโนมัติ",
   "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
@@ -740,7 +744,7 @@ export const dict = {
 
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
-  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมายสำหรับพื้นที่ทำงานนี้",
+  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
   "settings.indexing.provider.title": "ผู้ให้บริการการฝัง",
   "settings.indexing.provider.description": "เลือกผู้ให้บริการที่ใช้สร้างการฝังสำหรับการค้นหาเชิงความหมาย",
   "settings.indexing.model.title": "โมเดลการฝัง",
@@ -1187,6 +1191,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
+  "settings.experimental.agentManagerTool.title": "เครื่องมือ Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "อนุญาตให้เอเจนต์เริ่มเซสชัน Agent Manager ในเครื่องและเซสชัน worktree จากการเรียกเครื่องมือ",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
@@ -1373,6 +1380,13 @@ export const dict = {
   "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
   "settings.display.layout.auto": "อัตโนมัติ",
   "settings.display.layout.stretch": "ยืด",
+  "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
+  "settings.display.reasoningAutoCollapse.description":
+    "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",

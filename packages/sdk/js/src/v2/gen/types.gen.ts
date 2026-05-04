@@ -590,20 +590,27 @@ export type EventVcsBranchUpdated = {
   }
 }
 
-export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
-
-export type IndexingStatus = {
-  state: IndexingStatusState
-  message: string
-  processedFiles: number
-  totalFiles: number
-  percent: number
-}
-
-export type EventIndexingStatus = {
-  type: "indexing.status"
+export type EventKilocodeAgentManagerStart = {
+  type: "kilocode.agent_manager.start"
   properties: {
-    status: IndexingStatus
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      /**
+       * Initial prompt to send to the new session
+       */
+      prompt?: string
+      /**
+       * Short display name for the Agent Manager card
+       */
+      name?: string
+      /**
+       * Git branch name seed for worktree mode
+       */
+      branchName?: string
+    }>
   }
 }
 
@@ -1170,6 +1177,23 @@ export type EventSessionDeleted = {
   }
 }
 
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
+export type EventIndexingStatus = {
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type SyncEventMessageUpdated = {
   type: "sync"
   name: "message.updated.1"
@@ -1331,7 +1355,7 @@ export type GlobalEvent = {
     | EventSessionIdle
     | EventTodoUpdated
     | EventVcsBranchUpdated
-    | EventIndexingStatus
+    | EventKilocodeAgentManagerStart
     | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
     | EventWorktreeReady
@@ -1351,6 +1375,7 @@ export type GlobalEvent = {
     | EventSessionCreated
     | EventSessionUpdated
     | EventSessionDeleted
+    | EventIndexingStatus
     | SyncEventMessageUpdated
     | SyncEventMessageRemoved
     | SyncEventMessagePartUpdated
@@ -1539,6 +1564,7 @@ export type PermissionConfig =
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
+      agent_manager?: PermissionRuleConfig
       [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
 
@@ -1646,6 +1672,7 @@ export type ProviderConfig = {
       id?: string
       name?: string
       family?: string
+      prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
       release_date?: string
       attachment?: boolean
       reasoning?: boolean
@@ -1855,7 +1882,15 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  /**
+   * Automatically collapse reasoning blocks after the agent finishes writing them
+   */
+  auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
+  /**
+   * Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI
+   */
+  terminal_command_display?: "expanded" | "collapsed"
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
@@ -2018,6 +2053,10 @@ export type Config = {
      */
     semantic_indexing?: boolean
     /**
+     * Enable the VS Code Agent Manager orchestration tool
+     */
+    agent_manager_tool?: boolean
+    /**
      * Enable telemetry. Set to false to opt-out.
      */
     openTelemetry?: boolean
@@ -2156,7 +2195,7 @@ export type Model = {
     }
   }
   recommendedIndex?: number
-  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling"
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
   ai_sdk_provider?: "alibaba" | "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
@@ -2449,7 +2488,7 @@ export type Event =
   | EventSessionIdle
   | EventTodoUpdated
   | EventVcsBranchUpdated
-  | EventIndexingStatus
+  | EventKilocodeAgentManagerStart
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
   | EventWorktreeReady
@@ -2469,6 +2508,7 @@ export type Event =
   | EventSessionCreated
   | EventSessionUpdated
   | EventSessionDeleted
+  | EventIndexingStatus
 
 export type McpStatusConnected = {
   status: "connected"

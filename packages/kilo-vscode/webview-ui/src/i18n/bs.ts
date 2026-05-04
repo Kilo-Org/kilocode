@@ -262,6 +262,12 @@ export const dict = {
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
+  "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
+  "prompt.action.autoApprove.disable": "Isključi automatsko odobravanje",
+  "prompt.action.autoApprove.enabled":
+    "Automatsko odobravanje je uključeno. Zahtjevi za dozvole bit će automatski odobreni.",
+  "prompt.action.autoApprove.disabled":
+    "Automatsko odobravanje je isključeno. Kliknite za automatsko odobravanje zahtjeva za dozvole.",
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
@@ -751,8 +757,7 @@ export const dict = {
     "Ostavite prazno za automatsko prepoznavanje dimenzije embeddinga iz modela.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimenzija vektora",
-  "settings.indexing.enable.description":
-    "Uključite ili isključite semantičko indeksiranje baze koda za ovaj radni prostor.",
+  "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
   "settings.indexing.lancedbDirectory.description": "Opcionalni direktorij za lokalno LanceDB skladište.",
   "settings.indexing.lancedbDirectory.placeholder": "Ostavite prazno za zadano",
@@ -1205,6 +1210,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
+  "settings.experimental.agentManagerTool.title": "Agent Manager alat",
+  "settings.experimental.agentManagerTool.description":
+    "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1402,6 +1410,13 @@ export const dict = {
   "settings.display.layout.description": "Način rasporeda za sučelje chata",
   "settings.display.layout.auto": "Automatski",
   "settings.display.layout.stretch": "Rastegni",
+  "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
+  "settings.display.reasoningAutoCollapse.description":
+    "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",

@@ -190,116 +190,120 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     vscode.postMessage({ type: "agentManager.requestRepoInfo" })
   })
 
+  const canStartSession = (hasChat: boolean) => hasChat
+
+  const canStartWorktree = () => isSidebar() && server.gitInstalled()
+
+  const canMoveToWorktree = (hasChat: boolean) => hasChat && canContinueInWorktree() && server.gitInstalled()
+
+  const hasActions = (hasChat: boolean) => canStartSession(hasChat) || canStartWorktree() || canMoveToWorktree(hasChat)
+
   const renderActions = (hasChat: boolean) => (
-    <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
-      <div class="session-actions-row">
-        <Tooltip
-          value={
-            hasChat
-              ? language.t("sidebar.session.newSession.tooltip")
-              : language.t("sidebar.session.newSession.disabled")
-          }
-          placement="top"
-        >
-          <Button
-            variant="secondary"
-            size="small"
-            class="session-new-button"
-            onClick={startSession}
-            disabled={!hasChat}
-            aria-label={language.t("sidebar.session.newSession")}
-          >
-            {language.t("sidebar.session.newSession")}
-          </Button>
-        </Tooltip>
-        <Show when={isSidebar() && server.gitInstalled()}>
-          <div class="session-worktree-split" ref={worktreeRef}>
-            <Tooltip value={worktreeTooltip} placement="top">
+    <Show when={hasActions(hasChat)}>
+      <div class="new-task-button-wrapper" classList={{ "new-task-button-wrapper--empty": !hasChat }}>
+        <div class="session-actions-row">
+          <Show when={canStartSession(hasChat)}>
+            <Tooltip value={language.t("sidebar.session.newSession.tooltip")} placement="top">
               <Button
                 variant="secondary"
                 size="small"
-                class="session-worktree-main"
-                onClick={startWorktree}
-                aria-label={language.t("sidebar.session.newWorktree")}
+                class="session-new-button"
+                onClick={startSession}
+                aria-label={language.t("sidebar.session.newSession")}
               >
-                {language.t("sidebar.session.newWorktree")}
+                {language.t("sidebar.session.newSession")}
               </Button>
             </Tooltip>
-            <DropdownMenu gutter={4} placement="top-start" getAnchorRect={() => worktreeRef?.getBoundingClientRect()}>
-              <Tooltip value={advancedTooltip} placement="top">
-                <DropdownMenu.Trigger
-                  class="session-worktree-split-arrow"
-                  aria-label={language.t("agentManager.worktree.advancedOptions")}
+          </Show>
+          <Show when={canStartWorktree()}>
+            <div class="session-worktree-split" ref={worktreeRef}>
+              <Tooltip value={worktreeTooltip} placement="top">
+                <Button
+                  variant="secondary"
+                  size="small"
+                  class="session-worktree-main"
+                  onClick={startWorktree}
+                  aria-label={language.t("sidebar.session.newWorktree")}
                 >
-                  <Icon name="chevron-down" size="small" />
-                </DropdownMenu.Trigger>
+                  {language.t("sidebar.session.newWorktree")}
+                </Button>
               </Tooltip>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content class="session-worktree-split-menu">
-                  <DropdownMenu.Item disabled={!repoBranch()} onSelect={startWorktreeFromBranch}>
-                    <span class="session-worktree-menu-gap" aria-hidden="true" />
-                    <DropdownMenu.ItemLabel class="session-worktree-menu-label">
-                      <span>{language.t("sidebar.session.newWorktree.from")}</span>
-                      <span class="session-worktree-menu-branch">
-                        <Icon name="branch" size="small" />
-                        <strong>{repoBranch() ?? language.t("sidebar.session.currentBranch")}</strong>
-                      </span>
-                    </DropdownMenu.ItemLabel>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item onSelect={showAdvancedWorktree}>
-                    <Icon name="settings-gear" size="small" />
-                    <DropdownMenu.ItemLabel>
-                      {language.t("agentManager.dialog.configureWorktree")}
-                    </DropdownMenu.ItemLabel>
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu>
-          </div>
-        </Show>
-        <Show when={hasChat && canContinueInWorktree() && server.gitInstalled()}>
-          <>
-            <Tooltip value={moveTooltip()} placement="top">
-              <Button
-                variant="ghost"
-                size="small"
-                class="session-move-action"
-                aria-disabled={transferring()}
-                onClick={moveToWorktree}
-                aria-label={language.t("sidebar.session.moveToWorktree")}
-              >
-                <Show when={transferring()} fallback={<Icon name="branch" size="small" />}>
-                  <Spinner class="chat-spinner-small" />
-                </Show>
-                <span class="session-move-label">
-                  {transferring() ? transferDetail() : language.t("sidebar.session.moveToWorktree")}
-                </span>
-              </Button>
-            </Tooltip>
-            <Tooltip value={changesTooltip()} placement="top" class="session-move-changes-trigger">
-              <Button
-                variant="ghost"
-                size="small"
-                class="session-move-changes"
-                classList={{
-                  "session-move-changes--empty": !session.worktreeStats()?.files,
-                  "session-move-changes--has-changes": !!session.worktreeStats()?.files,
-                }}
-                onClick={openChanges}
-                aria-label={language.t("command.session.show.changes")}
-              >
-                <Icon name="layers" size="small" />
-                <Show when={session.worktreeStats()?.files}>
-                  <span class="session-diff-add">+{session.worktreeStats()!.additions}</span>
-                  <span class="session-diff-del">-{session.worktreeStats()!.deletions}</span>
-                  <span class="session-move-dot" aria-hidden="true" />
-                </Show>
-              </Button>
-            </Tooltip>
-          </>
-        </Show>
+              <DropdownMenu gutter={4} placement="top-start" getAnchorRect={() => worktreeRef?.getBoundingClientRect()}>
+                <Tooltip value={advancedTooltip} placement="top">
+                  <DropdownMenu.Trigger
+                    class="session-worktree-split-arrow"
+                    aria-label={language.t("agentManager.worktree.advancedOptions")}
+                  >
+                    <Icon name="chevron-down" size="small" />
+                  </DropdownMenu.Trigger>
+                </Tooltip>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content class="session-worktree-split-menu">
+                    <DropdownMenu.Item disabled={!repoBranch()} onSelect={startWorktreeFromBranch}>
+                      <span class="session-worktree-menu-gap" aria-hidden="true" />
+                      <DropdownMenu.ItemLabel class="session-worktree-menu-label">
+                        <span>{language.t("sidebar.session.newWorktree.from")}</span>
+                        <span class="session-worktree-menu-branch">
+                          <Icon name="branch" size="small" />
+                          <strong>{repoBranch() ?? language.t("sidebar.session.currentBranch")}</strong>
+                        </span>
+                      </DropdownMenu.ItemLabel>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item onSelect={showAdvancedWorktree}>
+                      <Icon name="settings-gear" size="small" />
+                      <DropdownMenu.ItemLabel>
+                        {language.t("agentManager.dialog.configureWorktree")}
+                      </DropdownMenu.ItemLabel>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu>
+            </div>
+          </Show>
+          <Show when={canMoveToWorktree(hasChat)}>
+            <>
+              <Tooltip value={moveTooltip()} placement="top">
+                <Button
+                  variant="ghost"
+                  size="small"
+                  class="session-move-action"
+                  aria-disabled={transferring()}
+                  onClick={moveToWorktree}
+                  aria-label={language.t("sidebar.session.moveToWorktree")}
+                >
+                  <Show when={transferring()} fallback={<Icon name="branch" size="small" />}>
+                    <Spinner class="chat-spinner-small" />
+                  </Show>
+                  <span class="session-move-label">
+                    {transferring() ? transferDetail() : language.t("sidebar.session.moveToWorktree")}
+                  </span>
+                </Button>
+              </Tooltip>
+              <Tooltip value={changesTooltip()} placement="top" class="session-move-changes-trigger">
+                <Button
+                  variant="ghost"
+                  size="small"
+                  class="session-move-changes"
+                  classList={{
+                    "session-move-changes--empty": !session.worktreeStats()?.files,
+                    "session-move-changes--has-changes": !!session.worktreeStats()?.files,
+                  }}
+                  onClick={openChanges}
+                  aria-label={language.t("command.session.show.changes")}
+                >
+                  <Icon name="layers" size="small" />
+                  <Show when={session.worktreeStats()?.files}>
+                    <span class="session-diff-add">+{session.worktreeStats()!.additions}</span>
+                    <span class="session-diff-del">-{session.worktreeStats()!.deletions}</span>
+                    <span class="session-move-dot" aria-hidden="true" />
+                  </Show>
+                </Button>
+              </Tooltip>
+            </>
+          </Show>
+        </div>
       </div>
-    </div>
+    </Show>
   )
 
   return (
@@ -332,7 +336,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               />
             )}
           </Show>
-          <Show when={!props.readonly && idle() && !blocked() && (hasMessages() || isSidebar())}>
+          <Show when={!props.readonly && idle() && !blocked() && hasActions(hasMessages())}>
             {renderActions(hasMessages())}
           </Show>
           <Show when={!props.readonly}>

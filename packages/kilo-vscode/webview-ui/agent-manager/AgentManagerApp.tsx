@@ -75,6 +75,7 @@ import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
+import { DisplayProvider } from "../src/context/display"
 import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
@@ -84,7 +85,7 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
-import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, LOCAL } from "./navigate"
+import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
@@ -100,6 +101,7 @@ import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import SectionHeader from "./SectionHeader"
 import { randomColor } from "./section-colors"
+import { createNewTaskDrafts } from "./new-task-drafts"
 import {
   buildTopLevelItems,
   buildSidebarOrder,
@@ -719,16 +721,18 @@ const AgentManagerContent: Component = () => {
 
   // Invalidate local session IDs if they no longer exist (preserve pending tabs)
   createEffect(() => {
+    if (!worktreesLoaded()) return
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
-    const ids = all.map((s) => s.id)
-    const prev = localSessionIDs()
-    const valid = prev.filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
-    if (valid.length !== prev.length) {
-      const removed = prev.filter((lid) => !isPending(lid) && !valid.includes(lid))
-      for (const id of removed) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
-      setLocalSessionIDs(valid)
-    }
+    const next = reconcileLocalSessions(
+      localSessionIDs(),
+      all.map((s) => s.id),
+      managedSessions(),
+      isPending,
+    )
+    if (!next) return
+    for (const id of next.forget) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
+    setLocalSessionIDs(next.ids)
   })
   // Drop in-memory review state for worktrees that no longer exist.
   createEffect(() => {
@@ -1164,6 +1168,18 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
+    const drafts = createNewTaskDrafts()
+    const newTaskHandler = (e: Event) => {
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      e.stopImmediatePropagation()
+      const draft = drafts.create(sel)
+      window.dispatchEvent(new CustomEvent("agentManagerCaptureDraft", { detail: { id: draft.id } }))
+      terms.setActiveId(undefined)
+      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    }
+    window.addEventListener("newTaskRequest", newTaskHandler, true)
+
     // Add created sessions as local tabs (both direct from the prompt and
     // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
@@ -1259,6 +1275,7 @@ const AgentManagerContent: Component = () => {
         saveTabMemory()
         appendToTabOrder(ev.worktreeId, ev.sessionId)
         setSelection(ev.worktreeId)
+        drafts.apply(ev.worktreeId, ev.sessionId)
         session.selectSession(ev.sessionId)
       }
 
@@ -1502,6 +1519,8 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
+      window.removeEventListener("newTaskRequest", newTaskHandler, true)
+      drafts.cleanup()
       unsubCreate()
       unsubSessions()
       unsubRun()
@@ -3148,17 +3167,19 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <NotificationsProvider>
-                            <SessionProvider>
-                              <IndexingProvider>
-                                <WorktreeModeProvider>
-                                  <DataBridge>
-                                    <AgentManagerContent />
-                                  </DataBridge>
-                                </WorktreeModeProvider>
-                              </IndexingProvider>
-                            </SessionProvider>
-                          </NotificationsProvider>
+                          <DisplayProvider>
+                            <NotificationsProvider>
+                              <SessionProvider>
+                                <IndexingProvider>
+                                  <WorktreeModeProvider>
+                                    <DataBridge>
+                                      <AgentManagerContent />
+                                    </DataBridge>
+                                  </WorktreeModeProvider>
+                                </IndexingProvider>
+                              </SessionProvider>
+                            </NotificationsProvider>
+                          </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

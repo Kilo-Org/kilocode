@@ -263,6 +263,11 @@ export const dict = {
   "prompt.action.stop": "Зупинити",
   "prompt.action.enhance": "Покращити запит",
   "prompt.action.indexing": "Налаштування індексування",
+  "prompt.action.autoApprove.enable": "Увімкнути автоматичне схвалення",
+  "prompt.action.autoApprove.disable": "Вимкнути автоматичне схвалення",
+  "prompt.action.autoApprove.enabled": "Автоматичне схвалення увімкнено. Запити дозволів схвалюватимуться автоматично.",
+  "prompt.action.autoApprove.disabled":
+    "Автоматичне схвалення вимкнено. Натисніть, щоб автоматично схвалювати запити дозволів.",
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
@@ -1035,8 +1040,7 @@ export const dict = {
   "settings.indexing.title": "Індексування",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
-  "settings.indexing.enable.description":
-    "Увімкніть або вимкніть семантичне індексування кодової бази для цього робочого простору.",
+  "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
   "settings.indexing.provider.title": "Провайдер ембедингів",
   "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
   "settings.indexing.model.title": "Модель ембедингів",
@@ -1204,6 +1208,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
@@ -1366,6 +1373,13 @@ export const dict = {
   "settings.display.layout.description": "Режим макету для інтерфейсу чату",
   "settings.display.layout.auto": "Автоматично",
   "settings.display.layout.stretch": "Розтягнути",
+  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
+  "settings.display.reasoningAutoCollapse.description":
+    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",

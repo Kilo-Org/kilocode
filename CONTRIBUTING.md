@@ -16,7 +16,7 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.3.10+
+- **Requirements:** Bun 1.3.13+
 - Install dependencies and start the dev server from the repo root:
 
   ```bash
@@ -132,18 +132,56 @@ There are also optional overrides for other services:
 
 > **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `KILO_API_URL=http://localhost:3000` automatically.
 
-### Pull Request Expectations
+## Issue Template Requirements
+
+If you open an issue through the GitHub web UI, GitHub will guide you through the correct template automatically.
+
+If you open an issue through `gh issue create`, the API, or another tool that bypasses the web UI, include the equivalent required fields yourself so the issue still matches the template.
+
+Current required fields by issue type:
+
+- **Bug report:** include a `Description`.
+- **Feature request:** prefix the title with `[FEATURE]:`, include confirmation that the feature has not already been suggested, and add a description of the enhancement.
+- **Question:** include the `Question`.
+
+Recommended fields for bug reports, even when not strictly required by the template:
+
+- Plugins
+- Kilo version
+- Steps to reproduce
+- Screenshot and/or share link
+- Operating System
+- Terminal
+
+## Pull Request Expectations
 
 - **Issue First Policy:** All PRs must reference an existing issue.
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
 - **PR Titles:** Follow conventional commit standards (`feat:`, `fix:`, `docs:`, etc.).
 
-### Issue and PR Lifecycle
+## Issue First Policy
+
+All pull requests must reference an existing issue.
+
+This helps reviewers understand the problem statement, discussion, and intended scope before reviewing the code change.
+
+## PR Titles
+
+Use conventional commit style PR titles such as:
+
+- `feat: add MCP settings tab`
+- `fix: correct Windows path handling`
+- `docs: clarify issue template requirements`
+- `chore: bump TypeScript to 5.8`
+- `refactor: extract diff renderer into a hook`
+- `test: cover ServerManager orphan cleanup`
+
+## Issue and PR Lifecycle
 
 To keep our backlog manageable, we automatically close inactive issues and PRs after a period of inactivity. This isn't a judgment on quality — older items tend to lose context over time and we'd rather start fresh if they're still relevant. Feel free to reopen or create a new issue/PR if you're still working on something!
 
-### Style Preferences
+## Style Preferences
 
 - **Functions:** Keep logic within a single function unless breaking it out adds clear reuse.
 - **Destructuring:** Avoid unnecessary destructuring.

@@ -1,18 +1,49 @@
 import { describe, expect, test } from "bun:test"
 import path from "node:path"
 
-const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx"])
+const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".sh", ".bash", ".zsh"])
+const FILES = new Map<string, string>()
+const SCOPES = [
+  "sdks/vscode",
+  "packages/opencode",
+  "packages/extensions",
+  "packages/ui",
+  "packages/app",
+  "packages/desktop",
+  "packages/desktop-electron",
+  "packages/shared",
+  "packages/script",
+  "packages/storybook",
+  "script",
+  ".github",
+  "github",
+]
+const EXEMPT_SCOPES = [
+  "script/upstream",
+  "script/check-opencode-annotations.ts",
+  "packages/script/tests/check-opencode-annotations.test.ts",
+  ".github/workflows/check-opencode-annotations.yml",
+]
+
+function isChecked(file: string) {
+  const norm = file.replaceAll("\\", "/")
+  return SCOPES.some((scope) => norm === scope || norm.startsWith(`${scope}/`))
+}
 
 function isExempt(file: string) {
   const norm = file.replaceAll("\\", "/").toLowerCase()
-  return norm.split("/").some((part) => part.includes("kilocode"))
+  if (norm.split("/").some((part) => part.includes("kilocode") || part.startsWith("kilo-"))) return true
+  return EXEMPT_SCOPES.some((scope) => norm === scope || norm.startsWith(`${scope}/`))
 }
 
 function isSource(file: string) {
-  return SOURCE_EXTS.has(path.extname(file))
+  const ext = path.extname(file)
+  if (SOURCE_EXTS.has(ext)) return true
+  if (ext) return false
+  return FILES.get(file)?.startsWith("#!") ?? false
 }
 
-const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*)\s*kilocode_change\b/
+const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\b/
 
 function hasMarker(line: string) {
   return MARKER_PREFIX.test(line)
@@ -22,8 +53,8 @@ function coveredLines(text: string): Set<number> {
   const lines = text.split(/\r?\n/)
   const covered = new Set<number>()
 
-  const first = lines.find((x) => x.trim() !== "")
-  if (first?.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s*-\s*new\s*file\b/)) {
+  const first = lines.find((x) => x.trim() !== "" && !x.startsWith("#!"))
+  if (first?.match(/(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\s*-\s*new\s*file\b/)) {
     for (let i = 1; i <= lines.length; i++) covered.add(i)
     return covered
   }
@@ -33,13 +64,13 @@ function coveredLines(text: string): Set<number> {
     const n = i + 1
     const line = lines[i] ?? ""
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s+start\b/)) {
+    if (line.match(/(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\s+start\b/)) {
       block = true
       covered.add(n)
       continue
     }
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s+end\b/)) {
+    if (line.match(/(?:\/\/|\{?\s*\/\*|#)\s*kilocode_change\s+end\b/)) {
       covered.add(n)
       block = false
       continue
@@ -54,13 +85,6 @@ function coveredLines(text: string): Set<number> {
   }
 
   return covered
-}
-
-function checkLine(line: string, covered: Set<number>, n: number): boolean {
-  const trim = line.trim()
-  if (!trim) return true
-  if (hasMarker(trim)) return true
-  return covered.has(n)
 }
 
 // ─── hasMarker tests ──────────────────────────────────────────────────────────
@@ -93,6 +117,15 @@ describe("hasMarker", () => {
     ["/* kilocode_change start */", true],
     ["/* kilocode_change end */", true],
 
+    // YAML/TOML/shell-style inline
+    ["# kilocode_change", true],
+    ["  # kilocode_change", true],
+    ["name: test # kilocode_change", true],
+    ['name = "zed" # kilocode_change', true],
+    ['export FOO="bar" # kilocode_change', true],
+    ["# kilocode_change start", true],
+    ["# kilocode_change end", true],
+
     // Non-markers
     ["const x = 1", false],
     ["<text fg={color}>{label}</text>", false],
@@ -123,6 +156,13 @@ describe("isExempt", () => {
     ["packages/opencode/test/kilocode/bar.test.ts", true],
     ["packages/opencode/src/some/kilocode/deep/path.ts", true],
     ["packages/opencode/src/kilocode/deep/nested/file.tsx", true],
+    ["packages/opencode/src/kilo-sessions/session.ts", true],
+    ["packages/kilo-ui/src/components/icon.tsx", true],
+    ["packages/kilo-vscode/src/extension.ts", true],
+    ["script/upstream/merge.ts", true],
+    ["script/check-opencode-annotations.ts", true],
+    ["packages/script/tests/check-opencode-annotations.test.ts", true],
+    [".github/workflows/check-opencode-annotations.yml", true],
     // exempt — "kilocode" in filename
     ["packages/opencode/src/foo/kilocode.ts", true],
     ["packages/opencode/src/bar/kilocode.test.ts", true],
@@ -137,12 +177,49 @@ describe("isExempt", () => {
     ["packages/opencode/src/tool/registry.ts", false],
     ["packages/opencode/src/config/config.ts", false],
     ["packages/opencode/src/indexing/search-service.ts", false],
+    ["packages/ui/src/components/icon.tsx", false],
+    ["packages/app/src/index.ts", false],
+    ["packages/desktop/src/main.ts", false],
+    ["packages/desktop-electron/src/main/index.ts", false],
+    ["sdks/vscode/src/extension.ts", false],
+    ["packages/extensions/zed/extension.toml", false],
+    ["github/script/release", false],
+    ["github/script/publish", false],
+    ["script/changelog.ts", false],
     // kilocode_change is not the same as kilocode
     ["packages/opencode/src/check-opencode-annotations.ts", false],
   ]
 
   test.each(cases)("%j → exempt=%j", (file, expected) => {
     expect(isExempt(file)).toBe(expected)
+  })
+})
+
+describe("isChecked", () => {
+  const cases: Array<[string, boolean]> = [
+    ["packages/opencode/src/index.ts", true],
+    ["packages/ui/src/components/icon.tsx", true],
+    ["packages/app/src/index.ts", true],
+    ["packages/desktop/src/main.ts", true],
+    ["packages/desktop-electron/src/main/index.ts", true],
+    ["sdks/vscode/src/extension.ts", true],
+    ["packages/extensions/zed/extension.toml", true],
+    ["packages/shared/src/index.ts", true],
+    ["packages/script/src/index.ts", true],
+    ["packages/storybook/.storybook/main.ts", true],
+    ["script/check-opencode-annotations.ts", true],
+    [".github/workflows/test.yml", true],
+    ["github/action.yml", true],
+    ["github/script/release", true],
+    ["github/script/publish", true],
+    ["packages/kilo-ui/src/components/icon.tsx", false],
+    ["packages/kilo-vscode/src/extension.ts", false],
+    ["packages/sdk/js/src/index.ts", false],
+    ["README.md", false],
+  ]
+
+  test.each(cases)("%j → checked=%j", (file, expected) => {
+    expect(isChecked(file)).toBe(expected)
   })
 })
 
@@ -156,15 +233,26 @@ describe("isSource", () => {
     ["foo.js", true],
     ["foo.jsx", true],
     [".json", false],
+    ["workflow.yml", true],
+    ["workflow.yaml", true],
+    ["extension.toml", true],
+    ["script.sh", true],
+    ["script.bash", true],
+    ["script.zsh", true],
     [".md", false],
     [".txt", false],
     ["Makefile", false],
+    ["github/script/release", true],
+    ["github/script/plain", false],
     ["foo.go", false],
     ["foo.rs", false],
   ]
 
   test.each(cases)("%j → isSource=%j", (file, expected) => {
+    FILES.set("github/script/release", "#!/usr/bin/env bash\n")
+    FILES.set("github/script/plain", "set -euo pipefail\n")
     expect(isSource(file)).toBe(expected)
+    FILES.clear()
   })
 })
 
@@ -186,8 +274,28 @@ describe("coveredLines", () => {
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
+  test("whole-file JS annotation after shebang", () => {
+    const covered = coveredLines("#!/usr/bin/env bun\n// kilocode_change - new file\nexport const x = 1")
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
   test("whole-file JSX annotation", () => {
     const covered = coveredLines("{/* kilocode_change - new file */}\nexport const x = 1\nexport const y = 2")
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("whole-file YAML annotation", () => {
+    const covered = coveredLines("# kilocode_change - new file\nname: test\non: pull_request")
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("whole-file TOML annotation", () => {
+    const covered = coveredLines('# kilocode_change - new file\nid = "opencode"\nname = "OpenCode"')
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("whole-file shell annotation after shebang", () => {
+    const covered = coveredLines('#!/usr/bin/env bash\n# kilocode_change - new file\nset -euo pipefail')
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
@@ -231,6 +339,24 @@ describe("coveredLines", () => {
 
   test("bare /* */ block markers", () => {
     const text = ["/* kilocode_change start */", "const b = 2", "/* kilocode_change end */"].join("\n")
+    const covered = coveredLines(text)
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("YAML block markers", () => {
+    const text = ["# kilocode_change start", "name: test", "# kilocode_change end"].join("\n")
+    const covered = coveredLines(text)
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("TOML block markers", () => {
+    const text = ['# kilocode_change start', 'id = "opencode"', '# kilocode_change end'].join("\n")
+    const covered = coveredLines(text)
+    expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("shell block markers", () => {
+    const text = ["# kilocode_change start", "set -euo pipefail", "# kilocode_change end"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
@@ -451,6 +577,10 @@ describe("MARKER_PREFIX regex edge cases", () => {
 
   test("handles // with lots of spaces", () => {
     expect(hasMarker("//    kilocode_change")).toBe(true)
+  })
+
+  test("handles # with lots of spaces", () => {
+    expect(hasMarker("#    kilocode_change")).toBe(true)
   })
 
   test("does not match {/* without kilocode_change", () => {
