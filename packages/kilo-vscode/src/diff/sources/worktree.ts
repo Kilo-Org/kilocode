@@ -8,7 +8,7 @@ import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
 
 const POLL_INTERVAL_MS = 2500
 
-const DESCRIPTOR: DiffSourceDescriptor = {
+export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
   id: "workspace",
   label: "Workspace local",
   group: "Workspace",
@@ -21,7 +21,7 @@ const DESCRIPTOR: DiffSourceDescriptor = {
  * with hash dedup, and file revert via WorktreeDiffClient.
  */
 export class WorktreeDiffSource implements DiffSource {
-  readonly descriptor = DESCRIPTOR
+  readonly descriptor = WORKSPACE_DESCRIPTOR
 
   private readonly git: GitOps
   private readonly output: vscode.OutputChannel

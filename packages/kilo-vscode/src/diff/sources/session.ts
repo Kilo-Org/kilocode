@@ -6,6 +6,17 @@ import { patchToBeforeAfter } from "./patch-to-before-after"
 
 export type SessionDiffFetch = (params: { sessionID: string; directory?: string }) => Promise<SnapshotFileDiff[]>
 
+export const SESSION_PREFIX = "session:"
+
+export function sessionDescriptor(sessionId: string): DiffSourceDescriptor {
+  return {
+    id: `${SESSION_PREFIX}${sessionId}`,
+    label: "Current session",
+    group: "Session",
+    capabilities: { revert: false, comments: true },
+  }
+}
+
 /**
  * Diff for the current session. One-shot fetch;
  * no polling and no SSE. Backend returns `{file, patch, ...}`
@@ -20,12 +31,7 @@ export class SessionDiffSource implements DiffSource {
     private readonly fetch: SessionDiffFetch,
     private readonly workspaceRoot?: string,
   ) {
-    this.descriptor = {
-      id: `session:${sessionId}`,
-      label: "Current session",
-      group: "Session",
-      capabilities: { revert: false, comments: true },
-    }
+    this.descriptor = sessionDescriptor(sessionId)
   }
 
   async initialFetch(post: DiffSourcePost): Promise<void> {
