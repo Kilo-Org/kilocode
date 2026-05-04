@@ -100,6 +100,15 @@ beforeEach(() => {
   transportCalls.length = 0
 })
 
+// kilocode_change start - CI can be slow to reach OAuth redirect; wait for the tested signal instead of fixed sleeps
+async function waitFor(fn: () => boolean, timeout = 5_000) {
+  const deadline = Date.now() + timeout
+  while (!fn() && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+}
+// kilocode_change end
+
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
 const { AppRuntime } = await import("../../src/effect/app-runtime")
@@ -147,8 +156,7 @@ test("BrowserOpenFailed event is published when open() throws", async () => {
         }),
       ).catch(() => undefined)
 
-      // Config.get() can be slow in tests, so give it plenty of time.
-      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      await waitFor(() => events.length > 0)
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()
@@ -201,8 +209,8 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
         }),
       ).catch(() => undefined)
 
-      // Config.get() can be slow in tests; also covers the ~500ms open() error-detection window.
-      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      await waitFor(() => openCalledWith !== undefined)
+      await new Promise((resolve) => setTimeout(resolve, 600)) // kilocode_change - let authenticate await callbackPromise before stop rejects it
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()
@@ -251,8 +259,8 @@ test("open() is called with the authorization URL", async () => {
         }),
       ).catch(() => undefined)
 
-      // Config.get() can be slow in tests; also covers the ~500ms open() error-detection window.
-      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      await waitFor(() => openCalledWith !== undefined)
+      await new Promise((resolve) => setTimeout(resolve, 600)) // kilocode_change - let authenticate await callbackPromise before stop rejects it
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()
