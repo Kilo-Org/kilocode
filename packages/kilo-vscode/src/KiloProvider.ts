@@ -125,7 +125,6 @@ type KiloProviderOptions = { projectDirectory?: string | null; slimEditMetadata?
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 
-// Helper to map agent data to the subset of fields sent to the webview
 const mapAgent = (a: Agent) => ({
   name: a.name,
   displayName: a.displayName,
@@ -160,7 +159,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
   private cachedSkillsMessage: unknown = null
-  /** Cached commandsLoaded payload so requestCommands can be served before client is ready */
   private cachedCommandsMessage: unknown = null
   /** Cached configLoaded payload so requestConfig can be served before client is ready */
   private cachedConfigMessage: unknown = null
@@ -171,7 +169,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
   private configWarningsShown = false
-  /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
   private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
   private readyResolvers: (() => void)[] = []
@@ -1293,13 +1290,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getContextDirectory()
-      const { data: session } = await this.client.session.create({ directory: workspaceDir, platform: this.platform }, { throwOnError: true })
+      const { data: session } = await this.client.session.create(
+        { directory: workspaceDir, platform: this.platform },
+        { throwOnError: true },
+      )
       this.currentSession = session
       this.contextSessionID = session.id
       this.trackDirectory(session.id, workspaceDir)
       this.trackedSessionIds.add(session.id)
 
-      // Notify webview of the new session
       this.postMessage({
         type: "sessionCreated",
         session: this.sessionToWebview(this.currentSession!),
@@ -2375,7 +2374,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
 
     if (!sessionID && !this.currentSession) {
-      const { data: session } = await this.client.session.create({ directory: dir, platform: this.platform }, { throwOnError: true })
+      const { data: session } = await this.client.session.create(
+        { directory: dir, platform: this.platform },
+        { throwOnError: true },
+      )
       this.currentSession = session
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
@@ -2575,7 +2577,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       if (messageID) this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
 
-      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url, filename: f.filename, source: f.source }))
+      const parts = files?.map((f) => ({
+        type: "file" as const,
+        mime: f.mime,
+        url: f.url,
+        filename: f.filename,
+        source: f.source,
+      }))
 
       const sid = resolved!.sid
       const dir = resolved!.dir
