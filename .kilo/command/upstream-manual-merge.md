@@ -19,6 +19,7 @@ Workflow:
    - `git diff --name-only --diff-filter=U`
    - `script/upstream/reports/manual-decisions-<version>.md`
    - `upstream-merge-report-<version>.md` when present
+   - `.worktrees/opencode-merge/auto-merge` for the automated merge snapshot when present
 2. If no decision ledger exists yet, run:
    - `bun script/upstream/decisions.ts init --version <version>`
 3. Before editing, write a concise plan in the chat:
@@ -27,9 +28,18 @@ Workflow:
    - risk level: `low`, `medium`, or `high`
    - verification commands you expect to run
 4. Resolve each conflict carefully:
+   - use `.worktrees/opencode-merge/opencode` as the pristine upstream reference when present
+   - use `.worktrees/opencode-merge/kilo-main` as the Kilo base reference when present
+   - use `.worktrees/opencode-merge/auto-merge` to inspect the original automated conflict when present
+   - use `script/upstream/find-conflict-markers.sh <file>` and `script/upstream/find-conflict-markers.sh .worktrees/opencode-merge/auto-merge/<file>` when the marker location is not obvious
    - preserve Kilo-specific behavior marked with `kilocode_change`
-   - adopt upstream changes when they do not conflict with Kilo behavior
+   - adopt upstream code and architecture whenever it does not conflict with Kilo behavior
    - keep `kilocode_change` markers around Kilo-specific changes in shared opencode files
+   - maintain the same Kilo-specific text, code, and marker comments from the conflict snapshot unless refactoring is required
+   - if Kilo-specific code must be refactored to fit new upstream architecture, explain the refactor in the decision rationale
+   - if upstream moved the relevant logic to another file, port the Kilo behavior there and record the decision as `renamed` or `hybrid` with `--target <new-path>`
+   - if upstream deleted a file, analyze whether the Kilo behavior should be ported elsewhere or removed rather than restoring the deleted file
+   - if tests fail only because upstream intentionally removed behavior, remove or update the obsolete tests rather than adding the old file back
    - do not modify unrelated files
 5. After resolving each file, record the decision before staging it:
    - `bun script/upstream/decisions.ts add --version <version> --file <path> --kind <kind> --risk <risk> --summary "..." --rationale "..." --alternative "..." --verification "..."`
