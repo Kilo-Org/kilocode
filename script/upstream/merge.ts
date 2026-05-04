@@ -267,6 +267,11 @@ async function main() {
     await git.ensureRerere()
     logger.info("git rerere enabled (resolutions will be recorded and reused automatically)")
 
+    // Force zdiff3 markers repo-wide so every git op (merge, rebase, cherry-pick,
+    // pull --rebase, stash pop) emits conflicts with a ||||||| base block.
+    await git.ensureConflictStyle()
+    logger.info("merge.conflictStyle set to zdiff3 (conflicts will include the merge base)")
+
     // Train rerere from past upstream merge commits so the cache is populated
     // even on a fresh clone. This replays past merges to learn their resolutions.
     // The grep covers both the current convention ("merge: upstream vX.Y.Z") and the

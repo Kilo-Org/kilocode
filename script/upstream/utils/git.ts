@@ -268,6 +268,16 @@ export async function ensureRerere(): Promise<void> {
 }
 
 /**
+ * Force zdiff3 conflict markers at the repo level so every git op during the
+ * merge run (merge, rebase, cherry-pick, pull --rebase, stash pop, ...) writes
+ * conflicts with a ||||||| base block. Makes manual resolution much easier and
+ * gives mergiraf the base it needs for structural heuristics.
+ */
+export async function ensureConflictStyle(): Promise<void> {
+  await $`git config merge.conflictStyle zdiff3`.quiet()
+}
+
+/**
  * Train the rerere cache from past merge commits in the repo history.
  * Implements the same logic as git's contrib/rerere-train.sh:
  *   For each merge commit in the range, replay the merge to let rerere
