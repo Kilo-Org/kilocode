@@ -26,6 +26,7 @@ const DiffViewerContent: Component = () => {
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
 
   const markReverting = (file: string, active: boolean) => {
@@ -50,6 +51,11 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.revertFileResult") {
       markReverting(msg.file, false)
+      return
+    }
+
+    if (msg.type === "diffViewer.markdownRender") {
+      setMarkdown(msg.render)
       return
     }
   })
@@ -78,6 +84,11 @@ const DiffViewerContent: Component = () => {
       onDiffStyleChange={(style) => {
         setDiffStyle(style)
         post({ type: "diffViewer.setDiffStyle", style })
+      }}
+      markdownRender={markdown()}
+      onMarkdownRenderChange={(render) => {
+        setMarkdown(render)
+        post({ type: "diffViewer.setMarkdownRender", render })
       }}
       onOpenFile={(relativePath) => {
         post({ type: "openFile", filePath: relativePath })

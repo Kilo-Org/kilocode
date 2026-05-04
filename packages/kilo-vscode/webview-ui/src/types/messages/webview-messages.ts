@@ -638,6 +638,12 @@ export interface SetReviewDiffStyleRequest {
   style: "unified" | "split"
 }
 
+// Persist Markdown render preference in diff viewers
+export interface SetReviewMarkdownRenderRequest {
+  type: "agentManager.setReviewMarkdownRender"
+  render: boolean
+}
+
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
@@ -1045,6 +1051,7 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetReviewDiffStyleRequest
+  | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestCloudSessionDataMessage

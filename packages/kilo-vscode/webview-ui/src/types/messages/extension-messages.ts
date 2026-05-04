@@ -498,6 +498,7 @@ export interface AgentManagerStateMessage {
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  reviewMarkdownRender?: boolean
   isGitRepo?: boolean
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
@@ -717,6 +718,11 @@ export interface DiffViewerRevertFileResultMessage {
   message: string
 }
 
+export interface DiffViewerMarkdownRenderMessage {
+  type: "diffViewer.markdownRender"
+  render: boolean
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -917,6 +923,7 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | DiffViewerMarkdownRenderMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
