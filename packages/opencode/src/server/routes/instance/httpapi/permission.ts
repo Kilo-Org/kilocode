@@ -2,6 +2,7 @@ import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { Effect, Layer, Schema } from "effect"
 import { HttpApi, HttpApiBuilder, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi" // kilocode_change
+import { Authorization } from "./auth"
 
 const root = "/permission"
 // kilocode_change start
@@ -58,7 +59,8 @@ export const PermissionApi = HttpApi.make("permission")
           title: "permission",
           description: "Experimental HttpApi permission routes.",
         }),
-      ),
+      )
+      .middleware(Authorization),
   )
   .annotateMerge(
     OpenApi.annotations({
@@ -106,8 +108,10 @@ export const permissionHandlers = Layer.unwrap(
     })
     // kilocode_change end
 
-    return HttpApiBuilder.group(PermissionApi, "permission", (handlers) =>
-      handlers.handle("list", list).handle("reply", reply).handle("saveAlwaysRules", saveAlwaysRules), // kilocode_change
+    return HttpApiBuilder.group(
+      PermissionApi,
+      "permission",
+      (handlers) => handlers.handle("list", list).handle("reply", reply).handle("saveAlwaysRules", saveAlwaysRules), // kilocode_change
     )
   }),
 ).pipe(Layer.provide(Permission.defaultLayer))

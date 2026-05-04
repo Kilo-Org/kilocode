@@ -280,9 +280,11 @@ async function merge() {
       const extracted = extract(content)
       if (extracted) {
         suites.push(extracted)
-        counts.tests += attr(extracted, "tests")
-        counts.failures += attr(extracted, "failures")
-        counts.errors += attr(extracted, "errors")
+        // kilocode_change start - count nested suites without matching the root testsuites tag.
+        counts.tests += sum(extracted, "tests")
+        counts.failures += sum(extracted, "failures")
+        counts.errors += sum(extracted, "errors")
+        // kilocode_change end
         continue
       }
     }
@@ -320,9 +322,8 @@ async function merge() {
 }
 
 function extract(content: string, from = 0): string {
-  const open = "<testsuite"
   const close = "</testsuite>"
-  const s = content.indexOf(open, from)
+  const s = open(content, from) // kilocode_change
   if (s === -1) return ""
   const e = content.indexOf(close, s)
   if (e === -1) return ""
@@ -331,10 +332,20 @@ function extract(content: string, from = 0): string {
   return rest ? suite + "\n" + rest : suite
 }
 
-function attr(content: string, name: string): number {
-  const match = content.match(new RegExp(`${name}="(\\d+)"`))
-  return match ? Number(match[1]) : 0
+// kilocode_change start
+function open(content: string, from: number): number {
+  const tag = "<testsuite"
+  const s = content.indexOf(tag, from)
+  if (s === -1) return -1
+  const ch = content[s + tag.length]
+  if (ch === ">" || /\s/.test(ch)) return s
+  return open(content, s + 1)
 }
+
+function sum(content: string, name: string): number {
+  return Array.from(content.matchAll(new RegExp(`${name}="(\\d+)"`, "g"))).reduce((n, m) => n + Number(m[1]), 0)
+}
+// kilocode_change end
 
 function esc(s: string): string {
   return s

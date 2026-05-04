@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { appendOutput, getWorkspaceRoot } from "./review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
 
 export interface DiffVirtualFile {
   file: string
@@ -86,12 +87,22 @@ export class DiffVirtualProvider implements vscode.Disposable {
 
     if (type === "diffVirtual.close") {
       this.panel?.dispose()
+      return
+    }
+
+    if (type === "diffVirtual.setMarkdownRender" && typeof msg.render === "boolean") {
+      void setDiffMarkdownRender(msg.render)
     }
   }
 
   private pushData(): void {
     if (!this.pending) return
-    this.post({ type: "diffVirtual.data", diff: this.pending, initialDiffStyle: this.pending.initialDiffStyle })
+    this.post({
+      type: "diffVirtual.data",
+      diff: this.pending,
+      initialDiffStyle: this.pending.initialDiffStyle,
+      markdownRender: getDiffMarkdownRender(),
+    })
   }
 
   private post(message: Record<string, unknown>): void {

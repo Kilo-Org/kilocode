@@ -142,7 +142,7 @@
   [data-slot="question-options"] {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 4px;
     padding: 2px 4px;
     max-height: 40vh;
     overflow-y: auto;
@@ -164,6 +164,7 @@
     text-align: left;
     width: 100%;
     cursor: pointer;
+    outline: none;
     transition: background-color 0.15s ease;
 
     &:hover:not([data-picked="true"]) {
@@ -172,6 +173,11 @@
 
     &[data-picked="true"] {
       background-color: var(--surface-interactive-weak);
+    }
+
+    &:focus-visible {
+      outline: 1px solid var(--border-focus);
+      outline-offset: 1px;
     }
 
     &:disabled {

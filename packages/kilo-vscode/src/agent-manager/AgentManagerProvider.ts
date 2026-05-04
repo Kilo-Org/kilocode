@@ -4,6 +4,7 @@ import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager } from "./WorktreeStateManager"
@@ -497,6 +498,10 @@ export class AgentManagerProvider implements Disposable {
     if (this.handleSection(m)) return null
     if (m.type === "agentManager.setReviewDiffStyle") {
       this.state?.setReviewDiffStyle(m.style)
+      return null
+    }
+    if (m.type === "agentManager.setReviewMarkdownRender") {
+      void setDiffMarkdownRender(m.render).then(() => this.pushState())
       return null
     }
     if (m.type === "agentManager.setDefaultBaseBranch") {
@@ -1401,6 +1406,7 @@ export class AgentManagerProvider implements Disposable {
       worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
+      reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       ...run,
@@ -1422,6 +1428,7 @@ export class AgentManagerProvider implements Disposable {
       sessions: [],
       staleWorktreeIds: [],
       reviewDiffStyle: "unified",
+      reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,

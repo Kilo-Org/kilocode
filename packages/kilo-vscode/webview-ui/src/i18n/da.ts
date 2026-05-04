@@ -1415,6 +1415,7 @@ export const dict = {
     "Letvægtsmodel til titelgenerering, generering af commit-beskeder, prompt-forbedring og andre hurtige opgaver",
   "settings.providers.disabled": "Deaktiverede udbydere",
   "settings.providers.disabled.description": "Udbydere at skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverede udbydere (hvidliste)",
   "settings.providers.enabled.description": "Hvis angivet, er kun disse udbydere tilgængelige",
   "settings.providers.notSet": "Ikke angivet (brug serverstandard)",

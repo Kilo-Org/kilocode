@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, spyOn } from "bun:test"
 import { Effect, Layer } from "effect"
 import { KiloIndexing } from "../../src/kilocode/indexing"
-import { ToolRegistry } from "../../src/tool"
+import { ToolRegistry } from "../../src/tool/registry"
 import { Instance } from "../../src/project/instance"
 import { provideTmpdirInstance } from "../fixture/fixture"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
 const node = CrossSpawnSpawner.defaultLayer

@@ -2,10 +2,10 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { Instance } from "../../src/project/instance"
 import { ProjectTable } from "../../src/project/project.sql"
 import { ProjectID } from "../../src/project/schema"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { SessionTable } from "../../src/session/session.sql"
-import { Database, eq } from "../../src/storage"
-import { Log } from "../../src/util"
+import { Database, eq } from "../../src/storage/db"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
