@@ -916,7 +916,9 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         parts: [],
       }
       for (const part of msg.parts) {
-        if (part.type === "text" && !part.ignored) // kilocode_change - keep local UI warnings out of future prompts
+        // kilocode_change start - keep local UI warnings out of future prompts
+        if (part.type === "text" && !part.ignored)
+          // kilocode_change end
           assistantMessage.parts.push({
             type: "text",
             text: part.text,

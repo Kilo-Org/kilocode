@@ -1448,6 +1448,7 @@ export const dict = {
     "Modèle léger pour la génération de titres, de messages de commit, l'amélioration de prompts et d'autres tâches rapides",
   "settings.providers.disabled": "Fournisseurs désactivés",
   "settings.providers.disabled.description": "Fournisseurs à masquer de la liste",
+  "settings.providers.disabled.enable": "Activer",
   "settings.providers.enabled": "Fournisseurs activés (liste blanche)",
   "settings.providers.enabled.description": "Si défini, seuls ces fournisseurs seront disponibles",
   "settings.providers.notSet": "Non défini (utiliser la valeur par défaut du serveur)",

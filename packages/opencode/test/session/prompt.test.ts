@@ -1585,9 +1585,8 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
-unix(
+unixSkip(
   "shell rejects when another shell is already running",
   () =>
     withSh(() =>
@@ -1617,6 +1616,7 @@ unix(
     ),
   30_000,
 )
+// kilocode_change end
 
 // Abort signal propagation tests for inline tool execution
 

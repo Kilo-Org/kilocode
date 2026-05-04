@@ -80,5 +80,16 @@ export const dict = {
   "plan.followup.answer.continue": "Burada devam et",
   "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
 
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Anlık görüntü yavaş",
+  "snapshot.slowRepo.question":
+    "Anlık görüntü sisteminin başlatılması uzun sürüyor, muhtemelen deponun boyutu nedeniyle.\n\nBu depo için anlık görüntüleri devre dışı bırakmak istiyor musunuz?",
+  "snapshot.slowRepo.answer.continue": "Anlık görüntülerle devam et",
+  "snapshot.slowRepo.answer.continue.description":
+    "Anlık görüntü tamamlanana kadar bekleyin. İlk anlık görüntü oluşturulduktan sonra sonraki turlar hızlıdır.",
+  "snapshot.slowRepo.answer.disable": "Bu proje için devre dışı bırak",
+  "snapshot.slowRepo.answer.disable.description":
+    "Bu proje için Kilo anlık görüntülerini kapat. Kilo değişiklikleri için geri alma/yeniden yapmayı kaybedersiniz, ancak git her şeyi izlemeye devam eder.",
+
   "ui.messagePart.openInDiffViewer": "Fark görüntüleyicide aç",
 }

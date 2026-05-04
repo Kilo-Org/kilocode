@@ -1410,6 +1410,7 @@ export const dict = {
     "タイトル生成、コミットメッセージ生成、プロンプト改善、およびその他の高速タスク用の軽量モデル",
   "settings.providers.disabled": "無効化されたプロバイダー",
   "settings.providers.disabled.description": "プロバイダーリストから非表示にするプロバイダー",
+  "settings.providers.disabled.enable": "有効化",
   "settings.providers.enabled": "有効化されたプロバイダー（ホワイトリスト）",
   "settings.providers.enabled.description": "設定された場合、これらのプロバイダーのみが利用可能",
   "settings.providers.notSet": "未設定（サーバーのデフォルトを使用）",

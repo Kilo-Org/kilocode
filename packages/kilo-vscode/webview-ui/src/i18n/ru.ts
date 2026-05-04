@@ -1420,6 +1420,7 @@ export const dict = {
     "Лёгкая модель для генерации заголовков, сообщений коммитов, улучшения промптов и других быстрых задач",
   "settings.providers.disabled": "Отключённые провайдеры",
   "settings.providers.disabled.description": "Провайдеры для скрытия из списка",
+  "settings.providers.disabled.enable": "Включить",
   "settings.providers.enabled": "Включённые провайдеры (белый список)",
   "settings.providers.enabled.description": "Если установлено, только эти провайдеры будут доступны",
   "settings.providers.notSet": "Не задано (использовать значение сервера по умолчанию)",
