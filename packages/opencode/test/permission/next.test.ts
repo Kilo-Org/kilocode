@@ -204,6 +204,26 @@ test("evaluate - matches expanded $HOME pattern", () => {
   expect(result.action).toBe("allow")
 })
 
+// kilocode_change start
+test("resolve - broad read allow does not bypass env ask", () => {
+  const ruleset = Permission.merge(
+    Permission.fromConfig({
+      read: {
+        "*": "allow",
+        "*.env": "ask",
+        "*.env.*": "ask",
+        "*.env.example": "allow",
+      },
+    }),
+    Permission.fromConfig({ read: { "*": "allow" } }),
+  )
+
+  expect(Permission.resolve("read", "project/.env", ruleset).action).toBe("ask")
+  expect(Permission.resolve("read", "project/.env.local", ruleset).action).toBe("ask")
+  expect(Permission.resolve("read", "project/.env.example", ruleset).action).toBe("allow")
+})
+// kilocode_change end
+
 // merge tests
 
 test("merge - simple concatenation", () => {
@@ -602,6 +622,52 @@ it.live("ask - throws DeniedError when action is deny", () =>
     }),
   ),
 )
+
+// kilocode_change start
+it.live("ask - saved wildcard read approval does not bypass env ask", () =>
+  withDir({ git: true }, () =>
+    Effect.gen(function* () {
+      const session = SessionID.make("session_env")
+      const first = yield* ask({
+        id: PermissionID.make("per_env_first"),
+        sessionID: session,
+        permission: "read",
+        patterns: ["README.md"],
+        metadata: {},
+        always: ["*"],
+        ruleset: Permission.fromConfig({ read: "ask" }),
+      }).pipe(Effect.forkScoped)
+
+      yield* waitForPending(1)
+      yield* reply({ requestID: PermissionID.make("per_env_first"), reply: "always" })
+      yield* Fiber.join(first)
+
+      const second = yield* ask({
+        id: PermissionID.make("per_env_second"),
+        sessionID: session,
+        permission: "read",
+        patterns: ["project/.env"],
+        metadata: {},
+        always: ["*"],
+        ruleset: Permission.fromConfig({
+          read: {
+            "*": "allow",
+            "*.env": "ask",
+            "*.env.*": "ask",
+            "*.env.example": "allow",
+          },
+        }),
+      }).pipe(Effect.forkScoped)
+
+      const items = yield* waitForPending(1)
+      expect(items[0].id).toBe(PermissionID.make("per_env_second"))
+
+      yield* rejectAll()
+      yield* Fiber.await(second)
+    }),
+  ),
+)
+// kilocode_change end
 
 it.live("ask - stays pending when action is ask", () =>
   withDir({ git: true }, () =>

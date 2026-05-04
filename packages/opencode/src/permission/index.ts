@@ -177,6 +177,36 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
 }
 
 // kilocode_change start
+function readGuard(pattern: string) {
+  if (Wildcard.match(pattern, "*.env.example")) return
+  if (Wildcard.match(pattern, "*.env")) return "*.env"
+  if (Wildcard.match(pattern, "*.env.*")) return "*.env.*"
+}
+
+function harden(permission: string, pattern: string, rule: Rule): Rule {
+  if (permission !== "read") return rule
+  if (rule.action !== "allow") return rule
+  const guard = readGuard(pattern)
+  if (!guard) return rule
+  if (rule.pattern !== "*" && rule.permission !== "*") return rule
+  return { permission, pattern: guard, action: "ask" }
+}
+
+export function resolve(permission: string, pattern: string, ruleset: Ruleset, ...overrides: Ruleset[]): Rule {
+  const base = harden(permission, pattern, evaluate(permission, pattern, ruleset))
+  const saved = evaluate(permission, pattern, ...overrides)
+  if (base.action === "deny") return base
+  if (saved.action === "deny") return saved
+  if (base.action === "ask") {
+    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern)) return saved
+    return base
+  }
+  if (saved.action === "allow") return saved
+  return base
+}
+// kilocode_change end
+
+// kilocode_change start
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
   return evaluate(permission, pattern, ruleset).action === "deny"
@@ -229,7 +259,7 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
