@@ -181,8 +181,42 @@ function hunks(text: string) {
   return clip(body, 16000)
 }
 
+// Prefix diff3 content lines so GitHub's ```diff fence colors them:
+// ours → `-` (red), theirs → `+` (green), base → unchanged. Marker lines
+// (<<<<<<<, |||||||, =======, >>>>>>>) pass through untouched.
+function colorize(text: string) {
+  const out: string[] = []
+  let state: "outside" | "ours" | "base" | "theirs" = "outside"
+  for (const line of text.split("\n")) {
+    if (line.startsWith("<<<<<<< ")) {
+      state = "ours"
+      out.push(line)
+      continue
+    }
+    if (line.startsWith("||||||| ")) {
+      state = "base"
+      out.push(line)
+      continue
+    }
+    if (line === "=======") {
+      state = "theirs"
+      out.push(line)
+      continue
+    }
+    if (line.startsWith(">>>>>>> ")) {
+      state = "outside"
+      out.push(line)
+      continue
+    }
+    if (state === "ours") out.push(`-${line}`)
+    else if (state === "theirs") out.push(`+${line}`)
+    else out.push(line)
+  }
+  return out.join("\n")
+}
+
 function diff3(entry: Item) {
-  if (entry.conflict) return entry.conflict
+  if (entry.conflict) return colorize(entry.conflict)
   const name = `diff3 snapshot for ${entry.file}`
   const lines = [`<<<<<<< ours (${entry.ours.present ? "present" : "deleted"} in Kilo)`]
   lines.push(entry.ours.preview ?? "[not present]")
@@ -191,7 +225,7 @@ function diff3(entry: Item) {
     lines.push(entry.base.preview ?? "[not present]")
   }
   lines.push(`=======`, entry.theirs.preview ?? "[not present]", `>>>>>>> theirs (${name})`)
-  return clip(lines.join("\n"), 16000)
+  return colorize(clip(lines.join("\n"), 16000))
 }
 
 async function side(file: string, stage: 1 | 2 | 3): Promise<Side> {
