@@ -91,6 +91,20 @@ export function formatPart(part: Part, options: TranscriptOptions): string {
     return `${part.text}\n\n`
   }
 
+  // kilocode_change start - preserve non-text user turns in transcript exports
+  if (part.type === "file") {
+    return `**File:** ${part.filename ?? part.url} (${part.mime})\n\n`
+  }
+
+  if (part.type === "agent") {
+    return `**Agent:** ${part.name}\n\n`
+  }
+
+  if (part.type === "subtask") {
+    return `**Subtask:** ${part.description}\n\n${part.prompt}\n\n`
+  }
+  // kilocode_change end
+
   if (part.type === "reasoning") {
     if (options.thinking) {
       return `_Thinking:_\n\n${part.text}\n\n`

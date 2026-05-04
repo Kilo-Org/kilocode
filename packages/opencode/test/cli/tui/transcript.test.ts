@@ -257,6 +257,22 @@ describe("transcript", () => {
       expect(result).toContain("**Error:**")
       expect(result).toContain("Command failed")
     })
+
+    // kilocode_change start - attachment-only user turns should remain visible in exports
+    test("formats file part", () => {
+      const part: Part = {
+        id: "part_1",
+        sessionID: "ses_123",
+        messageID: "msg_123",
+        type: "file",
+        filename: "diagram.png",
+        mime: "image/png",
+        url: "file:///tmp/diagram.png",
+      }
+      const result = formatPart(part, options)
+      expect(result).toBe("**File:** diagram.png (image/png)\n\n")
+    })
+    // kilocode_change end
   })
 
   describe("formatMessage", () => {
@@ -297,6 +313,33 @@ describe("transcript", () => {
       expect(result).toContain("## Assistant (Code · Claude Sonnet 4 · 5.4s)") // kilocode_change
       expect(result).toContain("Hi there")
     })
+
+    // kilocode_change start - preserve non-text user turns in transcript exports
+    test("formats attachment-only user message", () => {
+      const msg: UserMessage = {
+        id: "msg_123",
+        sessionID: "ses_123",
+        role: "user",
+        agent: "code",
+        model: { providerID: "anthropic", modelID: "claude-sonnet-4-20250514" },
+        time: { created: 1000000 },
+      }
+      const parts: Part[] = [
+        {
+          id: "p1",
+          sessionID: "ses_123",
+          messageID: "msg_123",
+          type: "file",
+          filename: "report.pdf",
+          mime: "application/pdf",
+          url: "file:///tmp/report.pdf",
+        },
+      ]
+      const result = formatMessage(msg, parts, options)
+      expect(result).toContain("## User")
+      expect(result).toContain("**File:** report.pdf (application/pdf)")
+    })
+    // kilocode_change end
   })
 
   describe("formatTranscript", () => {

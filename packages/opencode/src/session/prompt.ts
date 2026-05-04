@@ -1376,6 +1376,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
     // kilocode_change end
 
+    // kilocode_change start - defer background completions until parent turns are idle
+    const waitIdle: (sessionID: SessionID) => Effect.Effect<void> = Effect.fn("SessionPrompt.waitIdle")(
+      function* (sessionID: SessionID) {
+        const state = yield* status.get(sessionID)
+        if (state.type !== "busy") return
+        yield* Effect.sleep("50 millis")
+        return yield* waitIdle(sessionID)
+      },
+    )
+    // kilocode_change end
+
     // kilocode_change start - background subagent completion is both a UI event and parent-session context
     const background = Effect.fn("SessionPrompt.background")(function* (input: {
       parent: PromptInput
@@ -1403,6 +1414,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       })
 
       const parentStatus = yield* status.get(input.parent.sessionID)
+      if (parentStatus.type === "busy") yield* waitIdle(input.parent.sessionID) // kilocode_change
       yield* prompt({
         sessionID: input.parent.sessionID,
         agent: input.parent.agent,

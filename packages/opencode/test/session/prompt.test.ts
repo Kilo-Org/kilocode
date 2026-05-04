@@ -1382,6 +1382,18 @@ it.live(
         expect(Exit.isSuccess(exit)).toBe(true)
         const reason = yield* Effect.promise(() => turn.promise).pipe(Effect.timeout("2 seconds"))
         expect(reason).toBe("completed")
+        yield* waitFor(
+          "background completion storage",
+          MessageV2.filterCompactedEffect(chat.id).pipe(
+            Effect.map((msgs) =>
+              msgs.some((msg) =>
+                msg.parts.some((part) => part.type === "text" && part.text.includes("child done")),
+              )
+                ? true
+                : undefined,
+            ),
+          ),
+        )
         yield* llm.text("after")
         yield* prompt.prompt({
           sessionID: chat.id,
