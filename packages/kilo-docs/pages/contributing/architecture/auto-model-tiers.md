@@ -1,13 +1,13 @@
 ---
 title: "Auto Model Tiers"
-description: "Architecture of Kilo Auto — a family of smart model tiers that match users to the right models without requiring AI expertise"
+description: "Architecture of the Auto Model tiers — a family of smart model tiers that match users to the right models without requiring AI expertise"
 ---
 
 # Auto Model Tiers
 
 ## Overview
 
-Kilo Auto is a model routing system that automatically selects the optimal AI model based on the user's current mode (Code, Architect, Debug, etc.). It comes in multiple tiers so that every user — regardless of budget, preference, or expertise — gets a "just works" experience without needing to understand the AI model landscape.
+Auto Model is a routing system that automatically selects the optimal AI model based on the user's current mode (Code, Architect, Debug, etc.). It comes in multiple tiers so that every user — regardless of budget, preference, or expertise — gets a "just works" experience without needing to understand the AI model landscape.
 
 Three tiers are user-facing, and one is internal:
 
@@ -67,6 +67,8 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 **Pricing**: Free. No credits required.
 
 **Constraints**: Free models do not vary by mode — the same model is used for every mode within a session. Quality will be lower than Frontier or Balanced tiers — this is a tradeoff users accept by choosing free.
+
+**Data handling**: Auto Free may route to providers that log prompts and outputs and use them to improve their services, including NVIDIA's free endpoints (governed by the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf)). This is surfaced to users alongside Auto Free mentions in the user-facing docs.
 
 ### Auto: Small (internal)
 
@@ -170,7 +172,8 @@ The client-side chain works as follows:
 ## Data and compliance
 
 - **Frontier**: Uses Anthropic models with no training on user data.
-- **Balanced and Free**: The underlying models may have different data handling policies depending on the provider. This should be documented per-tier so enterprise users can make informed choices.
+- **Balanced**: As a paid tier, underlying providers are selected with data-handling policies suitable for professional use. Prefer providers with stronger privacy posture when updating the routing.
+- **Free**: May route to providers that log prompts and outputs and use them to improve their services, including NVIDIA's free endpoints (see [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf)). Users should avoid submitting personal or confidential data. Surface this disclosure in proximity to every user-facing Auto Free mention.
 - **Small**: Same concern as Balanced/Free — the model selected depends on credit status, which may route to providers with different policies.
 
 ## Features for the future
