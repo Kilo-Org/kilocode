@@ -33,6 +33,7 @@ Workflow:
    - do not modify unrelated files
 5. After resolving each file, record the decision before staging it:
    - `bun script/upstream/decisions.ts add --version <version> --file <path> --kind <kind> --risk <risk> --summary "..." --rationale "..." --alternative "..." --verification "..."`
+   - the add command captures the resolved file snapshot; use `--resolution "..."` only when a file was deleted, renamed, generated, or too large to summarize automatically
    - include at least one rejected alternative for non-trivial `hybrid`, `take-ours`, or `take-theirs` choices
    - include `--target <new-path>` for `renamed` decisions
    - use the rationale to explain why this preserves Kilo behavior while accepting the appropriate upstream change
@@ -46,6 +47,13 @@ Workflow:
    - decisions recorded
    - checks run and results
    - any remaining high-risk areas for reviewer attention
+
+The generated markdown is the review artifact. For each manual file, ensure it
+contains the original diff3 conflict, the resolved content snapshot, the
+decision kind, summary, rationale, rejected alternatives, verification, and
+resolution hash. The PR body from `decisions.ts pr-body` should therefore let a
+reviewer compare the conflict with the resolution without reconstructing the
+agent session.
 
 Only ask the user before proceeding if a decision is destructive, changes auth,
 billing, data deletion, public API compatibility, config schema behavior,

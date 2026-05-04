@@ -29,6 +29,7 @@ interface Item {
   type: string
   recommendation: string
   reason: string
+  conflict?: string
   base: Side
   ours: Side
   theirs: Side
@@ -46,6 +47,7 @@ interface Choice {
   notes?: string
   target?: string
   resolved?: string
+  resolution?: string
   updated: string
 }
 
@@ -87,10 +89,13 @@ interface CliOptions extends InitOptions {
   rationale?: string
   notes?: string
   target?: string
+  resolution?: string
   alternatives: string[]
   verification: string[]
   write: boolean
 }
+
+type Snap = Pick<Choice, "file" | "kind" | "target">
 
 const kinds: Kind[] = ["hybrid", "take-ours", "take-theirs", "regenerated", "removed", "renamed", "other"]
 const risks: Risk[] = ["low", "medium", "high"]
@@ -133,8 +138,44 @@ async function sha(text: string) {
     .slice(0, 12)
 }
 
+function clip(text: string, size = 12000) {
+  const body = text.trimEnd()
+  if (body.length <= size) return body
+  return `${body.slice(0, size).trimEnd()}\n\n... truncated after ${size} characters ...`
+}
+
 function preview(text: string) {
-  return text.split("\n").slice(0, 40).join("\n").slice(0, 4000)
+  return clip(text.split("\n").slice(0, 40).join("\n"), 4000)
+}
+
+function hunks(text: string) {
+  const lines = text.split("\n")
+  const out: string[] = []
+  const state = { open: false }
+  for (const line of lines) {
+    if (line.startsWith("<<<<<<< ")) state.open = true
+    if (state.open) out.push(line)
+    if (state.open && line.startsWith(">>>>>>> ")) {
+      state.open = false
+      out.push("")
+    }
+  }
+  const body = out.join("\n").trimEnd()
+  if (!body) return undefined
+  return clip(body, 16000)
+}
+
+function diff3(entry: Item) {
+  if (entry.conflict) return entry.conflict
+  const name = `diff3 snapshot for ${entry.file}`
+  const lines = [`<<<<<<< ours (${entry.ours.present ? "present" : "deleted"} in Kilo)`]
+  lines.push(entry.ours.preview ?? "[not present]")
+  if (entry.base.present) {
+    lines.push(`||||||| base (${name})`)
+    lines.push(entry.base.preview ?? "[not present]")
+  }
+  lines.push(`=======`, entry.theirs.preview ?? "[not present]", `>>>>>>> theirs (${name})`)
+  return clip(lines.join("\n"), 16000)
 }
 
 async function side(file: string, stage: 1 | 2 | 3): Promise<Side> {
@@ -172,6 +213,15 @@ async function status() {
   return map
 }
 
+async function conflict(file: string) {
+  const ok = await Bun.file(file).exists()
+  if (!ok) return undefined
+  const text = await Bun.file(file)
+    .text()
+    .catch(() => "")
+  return hunks(text)
+}
+
 async function conflicts() {
   const res = await $`git diff --name-only --diff-filter=U`.quiet().nothrow()
   return res.stdout
@@ -206,6 +256,7 @@ async function item(file: string, status: string): Promise<Item> {
     type: type(status),
     recommendation: rec.recommendation,
     reason: rec.reason,
+    conflict: await conflict(file),
     base: await side(file, 1),
     ours,
     theirs: await side(file, 3),
@@ -261,12 +312,28 @@ async function load(opts: Pick<InitOptions, "version" | "output" | "ledger">) {
   return { out, ledger }
 }
 
+function path(entry: Snap) {
+  if (entry.kind === "renamed" && entry.target) return entry.target
+  return entry.file
+}
+
 async function resolved(entry: Choice) {
-  const file = entry.kind === "renamed" && entry.target ? entry.target : entry.file
+  const file = path(entry)
   const ok = await Bun.file(file).exists()
   if (!ok && entry.kind === "removed") return "deleted"
   if (!ok) return undefined
   return sha(await Bun.file(file).text())
+}
+
+async function snapshot(entry: Snap) {
+  const ok = await Bun.file(path(entry)).exists()
+  if (!ok && entry.kind === "removed") return "deleted"
+  if (!ok) return undefined
+  const text = await Bun.file(path(entry))
+    .text()
+    .catch(() => "")
+  if (!text) return undefined
+  return clip(text, 16000)
 }
 
 async function addDecision(opts: CliOptions) {
@@ -288,6 +355,7 @@ async function addDecision(opts: CliOptions) {
     verification: opts.verification,
     notes: opts.notes ?? prev?.notes,
     target: opts.target ?? prev?.target,
+    resolution: opts.resolution ?? (await snapshot({ ...prev, ...opts, file: opts.file })) ?? prev?.resolution,
     updated: new Date().toISOString(),
   })
   map.set(opts.file, next)
@@ -345,7 +413,7 @@ export async function checkLedger(opts: InitOptions & { write?: boolean }) {
     const gaps = missing(item)
     if (gaps.length > 0) issues.push(`${entry.file}: missing ${gaps.join(", ")}`)
     if (open.includes(entry.file)) issues.push(`${entry.file}: still has an unresolved git conflict`)
-    if (await markers(entry.file)) issues.push(`${entry.file}: still has conflict markers`)
+    if (await markers(path(item))) issues.push(`${path(item)}: still has conflict markers`)
     if (await stale(item)) issues.push(`${entry.file}: original path still exists after renamed decision`)
     if (!item.resolved && item.kind !== "removed") issues.push(`${entry.file}: resolved file is missing`)
   }
@@ -376,6 +444,11 @@ function bullet(lines: string[], label: string, value?: string) {
 function list(lines: string[], label: string, values: string[]) {
   if (values.length === 0) return
   lines.push(`- ${label}: ${values.join("; ")}`)
+}
+
+function fence(lines: string[], label: string, text?: string) {
+  if (!text) return
+  lines.push(`<details><summary>${label}</summary>`, "", "```diff", text, "```", "", "</details>", "")
 }
 
 function markdown(ledger: Ledger) {
@@ -416,6 +489,7 @@ function markdown(ledger: Ledger) {
     bullet(lines, "Base Hash", entry.base.hash ? `\`${entry.base.hash}\`` : "not present")
     bullet(lines, "Ours Hash", entry.ours.hash ? `\`${entry.ours.hash}\`` : "not present")
     bullet(lines, "Theirs Hash", entry.theirs.hash ? `\`${entry.theirs.hash}\`` : "not present")
+    fence(lines, "Original diff3 conflict", diff3(entry))
     bullet(lines, "Plan", pick.plan)
     bullet(lines, "Decision", pick.kind)
     bullet(lines, "Risk", pick.risk)
@@ -426,6 +500,7 @@ function markdown(ledger: Ledger) {
     list(lines, "Verification", pick.verification)
     bullet(lines, "Notes", pick.notes)
     bullet(lines, "Resolution Hash", pick.resolved ? `\`${pick.resolved}\`` : undefined)
+    fence(lines, "Resolved content", pick.resolution)
     const gaps = missing(pick)
     if (gaps.length > 0) bullet(lines, "Missing", gaps.join(", "))
     lines.push("")
@@ -457,6 +532,9 @@ function body(ledger: Ledger) {
       if (entry.target) lines.push(`  - Target: ${entry.target}`)
       if (entry.alternatives.length > 0) lines.push(`  - Alternatives: ${entry.alternatives.join("; ")}`)
       if (entry.verification.length > 0) lines.push(`  - Verification: ${entry.verification.join("; ")}`)
+      const item = ledger.files.find((file) => file.file === entry.file)
+      fence(lines, "Original diff3 conflict", item ? diff3(item) : undefined)
+      fence(lines, "Resolved content", entry.resolution)
     }
     lines.push("")
   }
@@ -505,6 +583,7 @@ function parse(args: string[]): { command: string; opts: CliOptions } {
       rationale: value(args, "rationale"),
       notes: value(args, "notes"),
       target: value(args, "target"),
+      resolution: value(args, "resolution"),
       alternatives: values(args, "alternative"),
       verification: values(args, "verification"),
       write: !flag(args, "no-write"),
@@ -531,6 +610,7 @@ Options:
   --force                  Rebuild init snapshot and drop existing decisions
   --alternative <text>     Repeatable alternative considered for add
   --target <path>          New path for renamed decisions
+  --resolution <text>      Override the resolved-content snapshot captured by add
   --verification <text>    Repeatable verification command/result for add
   --no-write               Do not update hashes/report during check
 `)

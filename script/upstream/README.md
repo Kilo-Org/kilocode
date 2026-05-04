@@ -305,7 +305,9 @@ After running the merge script, you may have remaining conflicts. To resolve:
 
 1. Open each conflicted file
 2. Look for `kilocode_change` markers to identify Kilo-specific code
-3. Review `script/upstream/reports/manual-decisions-<version>.md`
+3. Review `script/upstream/reports/manual-decisions-<version>.md`; each file
+   section shows the original diff3 conflict (ours/base/theirs) that remained
+   after automation stopped.
 4. Resolve conflicts, keeping Kilo-specific changes
 5. Record each manual decision with rationale:
    ```bash
@@ -332,8 +334,10 @@ After running the merge script, you may have remaining conflicts. To resolve:
 The merge script initializes the decision ledger automatically when it stops for
 manual conflicts. The ledger stores a local JSON source of truth and markdown
 report under `script/upstream/reports/`; these reports are gitignored so merge
-PRs do not accumulate process artifacts. Paste the PR-ready per-file summary
-from:
+PRs do not accumulate process artifacts. The markdown is the detailed local
+review artifact: for every manual file it includes the original diff3 conflict,
+the resolved content snapshot, hashes for base/ours/theirs/resolution, and the
+agent or human rationale. Paste the PR-ready per-file review summary from:
 
 ```bash
 bun script/upstream/decisions.ts pr-body --version v1.1.50
@@ -345,6 +349,24 @@ auth, billing, data deletion, public APIs, config schemas, migrations, provider
 routing, or security behavior.
 For `renamed` decisions, include `--target <new-path>` so the checker can
 verify the new file exists and record its resolution hash.
+
+### Reviewing Manual Decisions
+
+Use the generated markdown to verify each conflict resolution without replaying
+the agent session:
+
+1. Open the file's `Original diff3 conflict` block. It preserves the conflict
+   shown to the resolver: `<<<<<<< ours`, `||||||| base`, `=======`, and
+   `>>>>>>> theirs`.
+2. Compare it with the `Resolved content` block captured when
+   `decisions.ts add` ran. The block is truncated for very large files, but the
+   full resolved file remains in the merge commit and is tied to the
+   `Resolution Hash`.
+3. Read `Decision`, `Summary`, `Rationale`, and `Alternatives` next to the
+   conflict. The rationale should explain why the resolution preserves Kilo
+   behavior while accepting compatible upstream changes.
+4. Treat `High Risk Decisions` or missing fields as reviewer focus areas before
+   approving the upstream merge PR.
 
 ### Agent-Assisted Manual Resolution
 
