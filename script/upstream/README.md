@@ -21,8 +21,9 @@ bun run merge.ts --version v1.1.49
 # Dry-run to preview what would happen
 bun run merge.ts --version v1.1.49 --dry-run
 
-# Use a different base branch (e.g., for incremental merges)
-bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+# Use a different base branch by checking it out first
+git checkout catrielmuller/kilo-opencode-v1.1.44
+bun run merge.ts --version v1.1.50
 ```
 
 ## Scripts
@@ -72,7 +73,7 @@ The merge automation follows this process, applying **all transformations BEFORE
 3. **Generate conflict report** analyzing which files will conflict
 
 4. **Create branches**
-   - `backup/<branch>-<timestamp>` - Backup of current state
+   - `backup/<branch>-<timestamp>` - Backup of the selected base branch
    - `<author>/kilo-opencode-<version>` - Merge target branch
    - `<author>/opencode-<version>` - Transformed upstream branch
 
@@ -215,7 +216,7 @@ The only remaining conflicts are files with **actual code differences** - files 
 Options:
   --version <version>    Target upstream version (e.g., v1.1.49)
   --commit <hash>        Target upstream commit hash
-  --base-branch <name>   Base branch to merge into (default: main)
+  --base-branch <name>   Base branch to merge into (default: current branch)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
   --no-worktrees         Don't create reference worktrees
@@ -229,7 +230,7 @@ By default, `merge.ts` also prepares prompt-friendly reference worktrees under `
 | Path | Snapshot |
 |---|---|
 | `.worktrees/opencode-merge/opencode` | Pristine upstream opencode at the requested version or commit |
-| `.worktrees/opencode-merge/kilo-main` | The Kilo base branch snapshot used for the merge |
+| `.worktrees/opencode-merge/kilo-base` | The Kilo base branch snapshot used for the merge |
 | `.worktrees/opencode-merge/auto-merge` | The automated merge result before final lockfile or SDK regeneration |
 
 If conflicts remain after automation, `auto-merge` is a committed local snapshot branch that may intentionally contain conflict markers as normal file content. The real merge branch remains unresolved so manual resolution can continue with accurate git conflict state.
@@ -240,7 +241,7 @@ If conflicts remain after automation, `auto-merge` is a committed local snapshot
 Options:
   --version <version>    Target upstream version
   --commit <hash>        Target commit hash
-  --base-branch <name>   Base branch to analyze from (default: main)
+  --base-branch <name>   Base branch to analyze from (default: current branch)
   --output <file>        Output file for report
 ```
 
@@ -256,9 +257,9 @@ Options:
 
 The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
 
-## Using Custom Base Branches
+## Choosing the Base Branch
 
-By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
+By default, upstream merges start from the currently checked-out branch. The script does not update or check out `main`; selecting the base branch is the caller's responsibility. You can still pass `--base-branch` explicitly for automation. This is useful for:
 
 ### Incremental Merges
 
@@ -266,12 +267,14 @@ When working on multiple upstream versions, you can create a chain of merge PRs:
 
 ```bash
 # First merge: v1.1.44 into main
+git checkout main
 bun run merge.ts --version v1.1.44
 
 # Create PR: catrielmuller/kilo-opencode-v1.1.44 -> main
 
 # Second merge: v1.1.50 based on the previous PR (without waiting for approval)
-bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+git checkout catrielmuller/kilo-opencode-v1.1.44
+bun run merge.ts --version v1.1.50
 
 # Create PR: catrielmuller/kilo-opencode-v1.1.50 -> catrielmuller/kilo-opencode-v1.1.44
 # OR: catrielmuller/kilo-opencode-v1.1.50 -> main (once first PR is merged)
@@ -288,10 +291,11 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 
 ```bash
 # 1. Analyze next version from your WIP branch
-bun run analyze.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+git checkout catrielmuller/kilo-opencode-v1.1.44
+bun run analyze.ts --version v1.1.50
 
 # 2. Run the merge
-bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.1.44
+bun run merge.ts --version v1.1.50
 
 # 3. Create PR from catrielmuller/kilo-opencode-v1.1.50
 #    - Target: catrielmuller/kilo-opencode-v1.1.44 (if first PR not merged yet)
@@ -320,8 +324,8 @@ If something goes wrong:
 git branch | grep backup
 
 # Reset to backup
-git checkout main
-git reset --hard backup/main-<timestamp>
+git checkout <base-branch>
+git reset --hard backup/<base-branch>-<timestamp>
 ```
 
 ## Adding New Transformations

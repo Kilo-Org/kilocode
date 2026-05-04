@@ -10,7 +10,7 @@
  * Options:
  *   --version <version>  Target upstream version (e.g., v1.1.49)
  *   --commit <hash>      Target upstream commit hash
- *   --base-branch <name> Base branch to merge into (default: main)
+ *   --base-branch <name> Base branch to merge into (default: current branch)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
  *   --no-worktrees       Don't create reference worktrees for manual resolution
@@ -25,7 +25,7 @@ import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
 import * as worktree from "./utils/worktree"
-import { defaultConfig, loadConfig, type MergeConfig } from "./utils/config"
+import { loadConfig } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
 import { keepOursFiles, resetToOurs } from "./transforms/keep-ours"
@@ -185,13 +185,13 @@ function logWorktrees(refs: worktree.RefInfo, input: worktree.RefInput, baseName
   logger.divider()
   logger.info("Reference worktrees:")
   logger.info(`  opencode:   ${refs.opencode} (${input.tag}, ${input.upstream.slice(0, 8)})`)
-  logger.info(`  kilo-main:  ${refs.main} (${baseName}, ${input.base.slice(0, 8)})`)
+  logger.info(`  kilo-base:  ${refs.base} (${baseName}, ${input.base.slice(0, 8)})`)
   logger.info(`  auto-merge: ${refs.auto} (${refs.branch}, ${refs.snapshot.slice(0, 8)})`)
   logger.info("")
   logger.info("Agent prompt:")
   logger.info("  Use these references while resolving the merge:")
   logger.info(`  - upstream opencode: ${refs.opencode}`)
-  logger.info(`  - Kilo base main: ${refs.main}`)
+  logger.info(`  - Kilo base branch: ${refs.base}`)
   logger.info(`  - automated merge snapshot: ${refs.auto}`)
 }
 
@@ -214,12 +214,11 @@ async function getAuthor(): Promise<string> {
     .replace(/\s+/g, "")
 }
 
-async function createBackupBranch(baseBranch: string): Promise<string> {
+async function createBackupBranch(baseBranch: string, ref = "HEAD"): Promise<string> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)
   const backupName = `backup/${baseBranch}-${timestamp}`
 
-  await git.createBranch(backupName, baseBranch)
-  await git.checkout(baseBranch)
+  await $`git branch ${backupName} ${ref}`
 
   return backupName
 }
@@ -232,7 +231,6 @@ async function main() {
   process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
 
   const options = parseArgs()
-  const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
   if (options.verbose) {
     logger.setVerbose(true)
@@ -259,7 +257,9 @@ async function main() {
   }
 
   const currentBranch = await git.getCurrentBranch()
+  const config = loadConfig({ baseBranch: options.baseBranch || currentBranch })
   logger.info(`Current branch: ${currentBranch}`)
+  logger.info(`Merge base branch: ${config.baseBranch}`)
 
   // Enable git rerere so conflict resolutions are recorded and reused across merges
   if (!options.dryRun) {
@@ -399,11 +399,11 @@ async function main() {
   await git.restoreDirectories(dirs)
   await git.cleanDirectories(dirs)
 
-  // Create backup branch
-  await git.checkout(config.baseBranch)
-  await git.pull(config.originRemote)
-  const baseSha = await git.getCommitHash("HEAD")
-  const backupBranch = await createBackupBranch(config.baseBranch)
+  // Create backup branch from the user-selected base. The script no longer
+  // updates or checks out main; callers choose the base by checking out a branch
+  // before running the merge, or by passing --base-branch explicitly.
+  const baseSha = await git.getCommitHash(config.baseBranch)
+  const backupBranch = await createBackupBranch(config.baseBranch, config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
 
   // Create Kilo merge branch
@@ -412,7 +412,7 @@ async function main() {
   if (kiloBackup) {
     logger.info(`Backed up existing branch to: ${kiloBackup}`)
   }
-  await git.createBranch(kiloBranch)
+  await git.createBranch(kiloBranch, config.baseBranch)
 
   if (options.push) {
     await git.push(config.originRemote, kiloBranch, true)
@@ -480,7 +480,11 @@ async function main() {
 
   // 6f. Transform package.json files (names, deps, Kilo injections)
   logger.info("Transforming package.json files...")
-  const pkgPreResults = await transformAllPackageJson({ dryRun: false, verbose: options.verbose })
+  const pkgPreResults = await transformAllPackageJson({
+    dryRun: false,
+    verbose: options.verbose,
+    baseBranch: config.baseBranch,
+  })
   const pkgPreCount = pkgPreResults.filter((r) => r.action === "transformed" && r.changes.length > 0).length
   if (pkgPreCount > 0) {
     logger.success(`Transformed ${pkgPreCount} package.json files`)

@@ -7,14 +7,13 @@
  * Usage:
  *   bun run script/upstream/analyze.ts --version v1.1.49
  *   bun run script/upstream/analyze.ts --commit abc123
- *   bun run script/upstream/analyze.ts --version v1.1.49 --base-branch catrielmuller/kilo-opencode-v1.1.44
+ *   git checkout catrielmuller/kilo-opencode-v1.1.44 && bun run script/upstream/analyze.ts --version v1.1.49
  */
 
-import { $ } from "bun"
 import * as git from "./utils/git"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
-import { defaultConfig, loadConfig } from "./utils/config"
+import { loadConfig } from "./utils/config"
 import { header, info, success, warn, error, divider, list } from "./utils/logger"
 
 interface AnalyzeOptions {
@@ -53,9 +52,11 @@ function parseArgs(): AnalyzeOptions {
 
 async function main() {
   const options = parseArgs()
-  const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
+  const branch = await git.getCurrentBranch()
+  const config = loadConfig({ baseBranch: options.baseBranch || branch })
 
   header("Upstream Change Analysis")
+  info(`Merge base branch: ${config.baseBranch}`)
 
   // Check upstream remote
   if (!(await git.hasUpstreamRemote())) {
@@ -188,7 +189,7 @@ async function main() {
   console.log()
   info("Next steps:")
   info("  1. Review the report")
-  info("  2. Run merge with: bun run script/upstream/merge.ts --version " + target.tag)
+  info("  2. Run merge from the same branch with: bun run script/upstream/merge.ts --version " + target.tag)
 }
 
 main().catch((err) => {

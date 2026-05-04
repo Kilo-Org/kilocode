@@ -16,7 +16,7 @@ export interface RefInput {
 
 export interface RefInfo {
   opencode: string
-  main: string
+  base: string
   auto: string
   branch: string
   snapshot: string
@@ -99,7 +99,7 @@ export async function prepare(input: RefInput): Promise<RefInfo> {
   const repo = await root()
   const dir = join(repo, ".worktrees", "opencode-merge")
   const opencode = join(dir, "opencode")
-  const main = join(dir, "kilo-main")
+  const base = join(dir, "kilo-base")
   const auto = join(dir, "auto-merge")
   const branch = `opencode-merge/auto-${slug(input.tag)}`
 
@@ -111,12 +111,12 @@ export async function prepare(input: RefInput): Promise<RefInfo> {
   await $`git branch -f ${branch} ${snap}`.quiet()
 
   await checkout(opencode, input.upstream)
-  await checkout(main, input.base)
+  await checkout(base, input.base)
   await checkout(auto, branch)
 
   return {
     opencode,
-    main,
+    base,
     auto,
     branch,
     snapshot: snap,

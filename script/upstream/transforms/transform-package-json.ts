@@ -167,6 +167,7 @@ export interface PackageJsonOptions {
   dryRun?: boolean
   verbose?: boolean
   preserveVersion?: boolean
+  baseBranch?: string
 }
 
 // Package name mappings
@@ -501,13 +502,12 @@ export async function transformConflictedPackageJson(
 }
 
 /**
- * Get Kilo's package.json from the base branch (main) for comparison
+ * Get Kilo's package.json from the base branch for comparison
  * Used during pre-merge to compare upstream versions against Kilo's versions
  */
 async function getKiloPackageJson(path: string, baseBranch = "main"): Promise<Record<string, unknown> | null> {
   try {
-    // Try to get the file from origin/main (or whatever base branch)
-    const content = await $`git show origin/${baseBranch}:${path}`.text()
+    const content = await $`git show ${baseBranch}:${path}`.text()
     return JSON.parse(content)
   } catch {
     // File might not exist in Kilo
@@ -539,7 +539,7 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
       const changes: string[] = []
 
       // Get Kilo's version from base branch for comparison
-      const kiloPkg = await getKiloPackageJson(path)
+      const kiloPkg = await getKiloPackageJson(path, options.baseBranch)
 
       // 1. Transform package name if needed
       const newName = TRANSFORM_PACKAGE_NAMES[path]
