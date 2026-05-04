@@ -1,8 +1,10 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../../services/cli-backend"
 import { GitOps } from "../../agent-manager/GitOps"
-import { WorktreeDiffClient, type DiffTarget } from "../../worktree-diff-client"
-import { appendOutput, getWorkspaceRoot, hashFileDiffs, resolveLocalDiffTarget } from "../../review-utils"
+import { WorktreeDiffClient, type DiffTarget } from "../shared/client"
+import { hashFileDiffs } from "../shared/hash"
+import { resolveLocalDiffTarget } from "../shared/target"
+import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
 

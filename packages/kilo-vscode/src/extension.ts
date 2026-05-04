@@ -3,7 +3,6 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
-import { DiffViewerProvider } from "./DiffViewerProvider"
 import { DiffPanelManager } from "./diff/manager/DiffPanelManager"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
@@ -193,9 +192,6 @@ export function activate(context: vscode.ExtensionContext) {
       },
     }),
   )
-
-  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
-  context.subscriptions.push(diffViewerProvider)
 
   const diffSourceCatalog = new DiffSourceCatalog(connectionService)
   const diffPanelManager = new DiffPanelManager(context.extensionUri, connectionService, diffSourceCatalog, {

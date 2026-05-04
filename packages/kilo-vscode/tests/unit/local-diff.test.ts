@@ -4,7 +4,7 @@ import * as os from "os"
 import * as path from "path"
 import { diffSummary, diffFile, generatedLike, resolveBase, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
-import { resolveLocalDiffTarget } from "../../src/review-utils"
+import { resolveLocalDiffTarget } from "../../src/diff/shared/target"
 
 function git(): GitOps {
   return new GitOps({ log: () => undefined })
