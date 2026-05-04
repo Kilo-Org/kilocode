@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { Menu, shell } from "electron"
 
 import { UPDATER_ENABLED } from "./constants"

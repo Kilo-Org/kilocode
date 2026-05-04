@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { execFile } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -95,7 +96,7 @@ function getConfig() {
         appId: "ai.opencode.desktop.beta",
         productName: "Kilo Beta",
         protocols: { name: "Kilo Beta", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode-beta", channel: "latest" },
+        publish: { provider: "github", owner: "Kilo-Org", repo: "kilocode-beta", channel: "latest" },
         rpm: { packageName: "opencode-beta" },
       }
     }
@@ -105,7 +106,7 @@ function getConfig() {
         appId: "ai.opencode.desktop",
         productName: "Kilo",
         protocols: { name: "Kilo", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode", channel: "latest" },
+        publish: { provider: "github", owner: "Kilo-Org", repo: "kilocode", channel: "latest" },
         rpm: { packageName: "opencode" },
       }
     }

@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { $ } from "bun"
 
 export type Channel = "dev" | "beta" | "prod"

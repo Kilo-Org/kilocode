@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import * as i18n from "@solid-primitives/i18n"
 
 import { dict as desktopEn } from "./en"

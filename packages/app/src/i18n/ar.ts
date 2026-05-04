@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const dict = {
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",

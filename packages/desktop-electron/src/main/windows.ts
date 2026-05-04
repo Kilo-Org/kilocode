@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import windowState from "electron-window-state"
 import { app, BrowserWindow, net, nativeImage, nativeTheme, protocol } from "electron"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"

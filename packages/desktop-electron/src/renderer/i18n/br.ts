@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const dict = {
   "desktop.menu.checkForUpdates": "Verificar atualizações...",
   "desktop.menu.installCli": "Instalar CLI...",

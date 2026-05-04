@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const deepLinkEvent = "opencode:deep-link"
 
 const parseUrl = (input: string) => {

@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const dict = {
   "command.category.suggested": "Suggéré",
   "command.category.view": "Affichage",
