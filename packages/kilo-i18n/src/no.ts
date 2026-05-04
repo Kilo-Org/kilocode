@@ -80,5 +80,16 @@ export const dict = {
   "plan.followup.answer.continue": "Fortsett her",
   "plan.followup.answer.continue.description": "Implementer planen i denne økten",
 
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot er tregt",
+  "snapshot.slowRepo.question":
+    "Det tar lang tid å initialisere snapshot-systemet, sannsynligvis på grunn av størrelsen på depotet.\n\nVil du deaktivere snapshots for dette depotet?",
+  "snapshot.slowRepo.answer.continue": "Fortsett med snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Vent til snapshotet er ferdig. Påfølgende runder er raske når det første snapshotet er bygget.",
+  "snapshot.slowRepo.answer.disable": "Deaktiver for dette prosjektet",
+  "snapshot.slowRepo.answer.disable.description":
+    "Slå av Kilos snapshots for dette prosjektet. Du mister angre/gjør om for Kilo-endringer, men git fortsetter å spore alt.",
+
   "ui.messagePart.openInDiffViewer": "Åpne i diff-viser",
 }

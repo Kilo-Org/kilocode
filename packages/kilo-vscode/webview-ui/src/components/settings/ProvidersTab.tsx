@@ -448,7 +448,7 @@ const ProvidersTab: Component = () => {
                 <Tag>{language.t("settings.providers.disabled")}</Tag>
               </div>
               <Button size="large" variant="ghost" onClick={() => enableProvider(index())}>
-                {language.t("common.delete")}
+                {language.t("settings.providers.disabled.enable")}
               </Button>
             </div>
           )}

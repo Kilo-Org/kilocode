@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import { Bus } from "@/bus"
 import { AgentManagerEvent } from "@/kilocode/agent-manager/event"
-import { Tool } from "@/tool"
+import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import DESCRIPTION from "./agent-manager.txt"
 

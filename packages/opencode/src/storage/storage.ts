@@ -1,9 +1,9 @@
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
-import { Global } from "../global"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { Global } from "@opencode-ai/core/global"
+import { NamedError } from "@opencode-ai/core/util/error"
 import z from "zod"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Effect, Exit, Layer, Option, RcMap, Schema, Context, TxReentrantLock } from "effect"
 import { Git } from "@/git"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
@@ -339,3 +339,5 @@ export const remove = (key: string[]) => runPromise((svc) => svc.remove(key))
 export const list = (prefix: string[]) => runPromise((svc) => svc.list(prefix))
 export const update = <T>(key: string[], fn: (draft: T) => void) => runPromise((svc) => svc.update<T>(key, fn))
 // kilocode_change end
+
+export * as Storage from "./storage"

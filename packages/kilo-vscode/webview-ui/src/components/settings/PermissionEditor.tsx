@@ -4,7 +4,21 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useLanguage } from "../../context/language"
 import type { PermissionConfig, PermissionLevel, PermissionRule, PermissionRuleItem } from "../../types/messages"
-import { effectiveRuleLevel } from "./permission-utils"
+import {
+  addExceptionPatch,
+  clearGroupedPatch,
+  clearWildcardPatch,
+  effectiveRuleLevel,
+  inheritedWildcard,
+  mostRestrictive,
+  permissionExceptions,
+  removeExceptionPatch,
+  setExceptionPatch,
+  setGroupedPatch,
+  setWildcardPatch,
+  wildcardAction,
+  type PermissionPatch,
+} from "./permission-utils"
 
 type LevelValue = PermissionLevel | "inherit"
 
@@ -109,38 +123,6 @@ const TRAILING_TOOLS: ToolDef[] = [
   { id: "doom_loop", descriptionKey: "settings.autoApprove.tool.doom_loop" },
 ]
 
-const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
-
-type PermissionPatch = PermissionConfig
-
-function mostRestrictive(levels: PermissionLevel[]): PermissionLevel {
-  return levels.reduce<PermissionLevel>(
-    (best, level) => (RESTRICTION_ORDER[level] > RESTRICTION_ORDER[best] ? level : best),
-    levels[0] ?? "allow",
-  )
-}
-
-function wildcardAction(rule: PermissionRule | undefined, fallback: PermissionLevel): PermissionLevel {
-  if (!rule) return fallback
-  if (typeof rule === "string") return rule
-  if (rule === null) return fallback
-  return rule["*"] ?? fallback
-}
-
-function inheritedWildcard(rule: PermissionRule | undefined): boolean {
-  if (!rule) return true
-  if (typeof rule === "string") return false
-  if (rule === null) return true
-  return rule["*"] === undefined || rule["*"] === null
-}
-
-function exceptions(rule: PermissionRule | undefined): Array<{ pattern: string; action: PermissionLevel }> {
-  if (!rule || typeof rule === "string") return []
-  return Object.entries(rule)
-    .filter(([key, action]) => key !== "*" && action !== null)
-    .map(([pattern, action]) => ({ pattern, action: action as PermissionLevel }))
-}
-
 function toolTitle(id: string): string {
   return id
     .split("_")
@@ -175,57 +157,32 @@ const PermissionEditor: Component<{
   }
 
   const setGrouped = (ids: string[], level: PermissionLevel) => {
-    const patch: PermissionPatch = {}
-    for (const id of ids) patch[id] = level
-    props.onChange(patch)
+    props.onChange(setGroupedPatch(ids, level))
   }
 
   const clearGrouped = (ids: string[]) => {
-    const patch: PermissionPatch = {}
-    for (const id of ids) patch[id] = null
-    props.onChange(patch)
+    props.onChange(clearGroupedPatch(ids))
   }
 
   const setWildcard = (tool: string, level: PermissionLevel) => {
-    const excs = exceptions(ruleFor(tool))
-    if (excs.length === 0) {
-      props.onChange({ [tool]: level })
-      return
-    }
-    const obj: Record<string, PermissionLevel | null> = { "*": level }
-    for (const exc of excs) obj[exc.pattern] = exc.action
-    props.onChange({ [tool]: obj })
+    props.onChange(setWildcardPatch(ruleFor(tool), tool, level))
   }
 
   const clearWildcard = (tool: string) => {
-    const excs = exceptions(ruleFor(tool))
-    if (excs.length === 0) {
-      props.onChange({ [tool]: null })
-      return
-    }
-    props.onChange({ [tool]: { "*": null } })
+    props.onChange(clearWildcardPatch(ruleFor(tool), tool))
   }
 
   const setException = (tool: string, pattern: string, level: PermissionLevel) => {
-    const current = ruleFor(tool)
-    const base: Record<string, PermissionLevel | null> =
-      typeof current === "string" || current === null ? { "*": current } : { ...(current ?? {}) }
-    base[pattern] = level
-    props.onChange({ [tool]: base })
+    props.onChange(setExceptionPatch(ruleFor(tool), tool, pattern, level))
   }
 
   const addException = (tool: string, pattern: string) => {
-    const current = ruleFor(tool)
-    const base: Record<string, PermissionLevel | null> =
-      typeof current === "string" || current === null ? { "*": current } : { ...(current ?? {}) }
-    base[pattern] = "allow"
-    props.onChange({ [tool]: base })
+    props.onChange(addExceptionPatch(ruleFor(tool), tool, pattern))
   }
 
   const removeException = (tool: string, pattern: string) => {
-    const current = ruleFor(tool)
-    if (!current || typeof current === "string") return
-    props.onChange({ [tool]: { [pattern]: null } })
+    const patch = removeExceptionPatch(ruleFor(tool), tool, pattern)
+    if (patch) props.onChange(patch)
   }
 
   return (
@@ -367,7 +324,7 @@ const GranularToolRow: Component<{
     if (adding()) ref?.focus()
   })
 
-  const excs = createMemo(() => exceptions(props.rule))
+  const excs = createMemo(() => permissionExceptions(props.rule))
   const level = createMemo(() => wildcardAction(props.rule, props.fallback))
 
   const submit = () => {

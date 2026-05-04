@@ -99,7 +99,7 @@ export interface Config {
   permission?: PermissionConfig
   model?: string | null
   small_model?: string | null
-  default_agent?: string
+  default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
   disabled_providers?: string[]

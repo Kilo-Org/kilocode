@@ -1343,6 +1343,7 @@ export const dict = {
   "settings.providers.smallModel.description": "用於標題產生、提交訊息產生、提示增強和其他快速任務的輕量模型",
   "settings.providers.disabled": "已停用的供應商",
   "settings.providers.disabled.description": "從供應商清單中隱藏的供應商",
+  "settings.providers.disabled.enable": "啟用",
   "settings.providers.enabled": "已啟用的供應商（白名單）",
   "settings.providers.enabled.description": "如果設定，只有這些供應商可用（排他性白名單）",
   "settings.providers.notSet": "未設定（使用伺服器預設值）",
