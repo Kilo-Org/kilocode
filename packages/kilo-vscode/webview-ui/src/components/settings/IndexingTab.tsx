@@ -140,7 +140,9 @@ const IndexingTab: Component = () => {
       updateIndexing({ model: undefined })
       return
     }
-    updateIndexing({ model: selectedProvider() === "kilo" ? (normalizeKiloEmbeddingModelId(trimmed) ?? trimmed) : trimmed })
+    updateIndexing({
+      model: selectedProvider() === "kilo" ? (normalizeKiloEmbeddingModelId(trimmed) ?? trimmed) : trimmed,
+    })
   }
 
   const providerValue = (group: string, key: string) => {
@@ -208,11 +210,7 @@ const IndexingTab: Component = () => {
           description={language.t("settings.indexing.enable.description")}
           last
         >
-          <Switch
-            checked={cfg().enabled ?? false}
-            onChange={saveEnabled}
-            hideLabel
-          >
+          <Switch checked={cfg().enabled ?? false} onChange={saveEnabled} hideLabel>
             {language.t("settings.indexing.enable.title")}
           </Switch>
         </SettingsRow>
@@ -245,7 +243,9 @@ const IndexingTab: Component = () => {
               current={kiloModels.find((item) => item.value === knownKiloModel(cfg().model))}
               value={(item) => item.value}
               label={(item) => item.label}
-              onSelect={(item) => updateIndexing({ model: item?.value ?? KILO_DEFAULT_EMBEDDING_MODEL, dimension: undefined })}
+              onSelect={(item) =>
+                updateIndexing({ model: item?.value ?? KILO_DEFAULT_EMBEDDING_MODEL, dimension: undefined })
+              }
               variant="secondary"
               size="small"
               triggerVariant="settings"
