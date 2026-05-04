@@ -8,9 +8,13 @@ export type SessionDiffFetch = (params: { sessionID: string; directory?: string 
 
 export const SESSION_PREFIX = "session:"
 
+export function sessionSourceId(sessionId: string): string {
+  return `${SESSION_PREFIX}${sessionId}`
+}
+
 export function sessionDescriptor(sessionId: string): DiffSourceDescriptor {
   return {
-    id: `${SESSION_PREFIX}${sessionId}`,
+    id: sessionSourceId(sessionId),
     label: "Current session",
     group: "Session",
     capabilities: { revert: false, comments: true },

@@ -8,8 +8,10 @@ import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
 
 const POLL_INTERVAL_MS = 2500
 
+export const WORKSPACE_SOURCE_ID = "workspace"
+
 export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
-  id: "workspace",
+  id: WORKSPACE_SOURCE_ID,
   label: "Workspace local",
   group: "Workspace",
   capabilities: { revert: true, comments: true },

@@ -1,8 +1,8 @@
 import type { KiloConnectionService } from "../../services/cli-backend"
 import type { PanelContext } from "../types"
 import type { DiffSource, DiffSourceDescriptor } from "./types"
-import { WorktreeDiffSource, WORKSPACE_DESCRIPTOR } from "./worktree"
-import { SESSION_PREFIX, SessionDiffSource, sessionDescriptor, type SessionDiffFetch } from "./session"
+import { WorktreeDiffSource, WORKSPACE_DESCRIPTOR, WORKSPACE_SOURCE_ID } from "./worktree"
+import { SESSION_PREFIX, SessionDiffSource, sessionDescriptor, sessionSourceId, type SessionDiffFetch } from "./session"
 
 /**
  * Enumerates and constructs diff sources for a PanelContext.
@@ -23,8 +23,15 @@ export class DiffSourceCatalog {
     return out
   }
 
+  defaultSourceId(ctx: PanelContext): string | undefined {
+    if (ctx.initialSourceId) return ctx.initialSourceId
+    if (ctx.sessionId) return sessionSourceId(ctx.sessionId)
+    if (ctx.workspaceRoot) return WORKSPACE_SOURCE_ID
+    return undefined
+  }
+
   build(id: string, ctx: PanelContext): DiffSource {
-    if (id === "workspace") return new WorktreeDiffSource(this.connection)
+    if (id === WORKSPACE_SOURCE_ID) return new WorktreeDiffSource(this.connection)
 
     if (id.startsWith(SESSION_PREFIX)) {
       const sessionId = id.slice(SESSION_PREFIX.length)

@@ -4,6 +4,9 @@ import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
 import { DiffViewerProvider } from "./DiffViewerProvider"
+import { DiffPanelManager } from "./diff/manager/DiffPanelManager"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
+import { getWorkspaceRoot } from "./review-utils"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -192,12 +195,15 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Create standalone diff viewer provider for the sidebar "Show Changes" action
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
-  diffViewerProvider.setCommentHandler((comments, autoSend) => {
+  context.subscriptions.push(diffViewerProvider)
+
+  const diffSourceCatalog = new DiffSourceCatalog(connectionService)
+  const diffPanelManager = new DiffPanelManager(context.extensionUri, connectionService, diffSourceCatalog)
+  diffPanelManager.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
-  context.subscriptions.push(diffViewerProvider)
+  context.subscriptions.push(diffPanelManager)
 
   // Create diff virtual provider (lightweight single-file diff for permission approval)
   const diffVirtualProvider = new DiffVirtualProvider(context.extensionUri)
@@ -228,9 +234,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
+    vscode.window.registerWebviewPanelSerializer(DiffPanelManager.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        diffViewerProvider.deserializePanel(panel)
+        diffPanelManager.deserializePanel(panel)
         return Promise.resolve()
       },
     }),
@@ -318,9 +324,16 @@ export function activate(context: vscode.ExtensionContext) {
         autoApprove,
       )
     }),
-    vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
-      diffViewerProvider.openPanel()
-    }),
+    vscode.commands.registerCommand(
+      "kilo-code.new.showChanges",
+      (arg?: { sessionId?: string; initialSourceId?: string }) => {
+        diffPanelManager.openPanel({
+          workspaceRoot: getWorkspaceRoot(),
+          sessionId: arg?.sessionId ?? provider.getCurrentSessionId(),
+          initialSourceId: arg?.initialSourceId,
+        })
+      },
+    ),
     vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {
       subAgentViewerProvider.openPanel(sessionID, title)
     }),
