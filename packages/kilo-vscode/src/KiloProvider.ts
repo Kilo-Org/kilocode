@@ -66,12 +66,7 @@ import {
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
-import {
-  authenticateMcpServer,
-  connectMcpServer,
-  disconnectMcpServer,
-  openMcpOAuthUrlOnce,
-} from "./kilo-provider/mcp-oauth"
+import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -582,7 +577,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
-    // eslint-disable-next-line complexity -- exhaustive webview protocol switch
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       const intercepted = await interceptMessage(message, {
         workspaceDir: (sid) => this.getWorkspaceDirectory(sid ?? this.currentSession?.id),
@@ -806,16 +800,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "connectMcp": {
           const c1 = this.client
           if (c1) {
-            void connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () => this.fetchAndSendMcpStatus()).catch(
-              (e) => console.error("[Kilo New] connectMcpServer failed:", e),
-            )
+            void McpOAuth.connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] connectMcpServer failed:", e))
           }
           break
         }
         case "disconnectMcp": {
           const c2 = this.client
           if (c2) {
-            void disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
+            void McpOAuth.disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
               this.fetchAndSendMcpStatus(),
             ).catch((e) => console.error("[Kilo New] disconnectMcpServer failed:", e))
           }
@@ -824,7 +818,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "authenticateMcp": {
           const c = this.client
           if (c) {
-            void authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
+            void McpOAuth.authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
               this.fetchAndSendMcpStatus(),
             ).catch((e) => console.error("[Kilo New] authenticateMcpServer failed:", e))
           }
@@ -2981,7 +2975,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     if (event.type === "mcp.browser.open.failed") {
-      openMcpOAuthUrlOnce(event.properties.url)
+      McpOAuth.openMcpOAuthUrlOnce(event.properties.url)
       return
     }
 

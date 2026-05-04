@@ -2,6 +2,7 @@ import { createConnection } from "net"
 import { createServer } from "http"
 import { Log } from "../util"
 import { OAUTH_CALLBACK_PORT, OAUTH_CALLBACK_PATH, parseRedirectUri } from "./oauth-provider"
+import * as KiloOAuthCallback from "../kilocode/mcp-oauth-callback" // kilocode_change
 
 const log = Log.create({ service: "mcp.oauth-callback" })
 
@@ -145,6 +146,26 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
 }
 
 export async function ensureRunning(redirectUri?: string): Promise<void> {
+  // kilocode_change start - delegate Kilo-specific callback binding without replacing upstream fallback code
+  if (KiloOAuthCallback.enabled) {
+    await KiloOAuthCallback.ensureRunning({
+      redirectUri,
+      parse: parseRedirectUri,
+      state: () => ({ server, port: currentPort, path: currentPath }),
+      set: (next) => {
+        server = next.server
+        currentPort = next.port
+        currentPath = next.path
+      },
+      create: () => createServer(handleRequest),
+      stop,
+      info: (msg, data) => log.info(msg, data),
+      error: (msg, data) => log.error(msg, data),
+    })
+    return
+  }
+  // kilocode_change end
+
   // Parse the redirect URI to get port and path (uses defaults if not provided)
   const { port, path } = parseRedirectUri(redirectUri)
 
