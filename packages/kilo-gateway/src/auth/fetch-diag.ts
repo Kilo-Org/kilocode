@@ -11,33 +11,48 @@
 const BODY_SNIPPET_MAX = 300
 
 /**
- * Read a small prefix of the response body without throwing. Returns an empty
- * string if the body can't be read (already consumed, stream error, etc).
+ * Read the raw response body without throwing. Returns an empty string if the
+ * body can't be read (already consumed, stream error, etc). Returned untrimmed
+ * and unclipped so callers can try structured parsing against the full payload
+ * before falling back to a truncated snippet.
  */
-async function snippet(res: Response): Promise<string> {
-  const text = await res.text().catch(() => "")
-  if (!text) return ""
-  const trimmed = text.trim()
+async function raw(res: Response): Promise<string> {
+  return res.text().catch(() => "")
+}
+
+/** Clip a body to a reasonable size for inclusion in an error message. */
+function clip(body: string): string {
+  const trimmed = body.trim()
   if (trimmed.length <= BODY_SNIPPET_MAX) return trimmed
   return trimmed.slice(0, BODY_SNIPPET_MAX) + "…"
 }
 
 /**
- * Best-effort extraction of a server-provided error message. Falls back to the
- * raw snippet if the body isn't JSON or doesn't carry an `error`/`message`
- * field.
+ * Best-effort extraction of a server-provided error message. Parses the full
+ * body (not the clipped snippet — a JSON payload truncated at 300 chars would
+ * no longer be valid) and falls back to the clipped raw body if the payload
+ * isn't JSON, is malformed, or doesn't carry an `error`/`message` field.
  */
 function extract(body: string): string {
   if (!body) return ""
-  if (body.startsWith("{") || body.startsWith("[")) {
-    const parsed = JSON.parse(body) as unknown
+  const head = body.trimStart()
+  if (head.startsWith("{") || head.startsWith("[")) {
+    const parsed = safeJson(body)
     if (parsed && typeof parsed === "object") {
       const obj = parsed as Record<string, unknown>
       if (typeof obj.error === "string") return obj.error
       if (typeof obj.message === "string") return obj.message
     }
   }
-  return body
+  return clip(body)
+}
+
+function safeJson(body: string): unknown {
+  try {
+    return JSON.parse(body)
+  } catch {
+    return undefined
+  }
 }
 
 /** Hint for common status codes seen from the Kilo auth backend. */
@@ -58,7 +73,7 @@ function hint(status: number): string {
  * a body snippet if available, then appends a status-specific hint.
  */
 export async function httpError(prefix: string, url: string, res: Response): Promise<Error> {
-  const body = await snippet(res)
+  const body = await raw(res)
   const msg = extract(body)
   const rid = res.headers.get("x-request-id") || res.headers.get("x-vercel-id") || ""
   const parts = [`${prefix}: ${res.status} ${res.statusText || ""}`.trim(), `url=${url}`]
