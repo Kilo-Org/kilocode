@@ -27,15 +27,22 @@ Workflow:
    - expected decision kind: `hybrid`, `take-ours`, `take-theirs`, `regenerated`, `removed`, `renamed`, or `other`
    - risk level: `low`, `medium`, or `high`
    - verification commands you expect to run
-4. Resolve each conflict carefully:
-   - use `.worktrees/opencode-merge/opencode` as the pristine upstream reference when present
-   - use `.worktrees/opencode-merge/kilo-main` as the Kilo base reference when present
-   - use `.worktrees/opencode-merge/auto-merge` to inspect the original automated conflict when present
-   - use `script/upstream/find-conflict-markers.sh <file>` and `script/upstream/find-conflict-markers.sh .worktrees/opencode-merge/auto-merge/<file>` when the marker location is not obvious
+4. Resolve each conflict carefully.
+
+   **Reference worktrees when present:**
+   - `.worktrees/opencode-merge/opencode` is the pristine upstream opencode tree
+   - `.worktrees/opencode-merge/kilo-main` is the Kilo base snapshot
+   - `.worktrees/opencode-merge/auto-merge` is the automated merge snapshot and the original conflict reference
+
+   **Inspect conflicts (optional):**
+   - `script/upstream/find-conflict-markers.sh <file>` on the working tree
+   - `script/upstream/find-conflict-markers.sh .worktrees/opencode-merge/auto-merge/<file>` on the auto-merge snapshot
+
+   **Apply the resolution rules:**
+   - prefer upstream code and architecture whenever compatible with Kilo behavior
    - preserve Kilo-specific behavior marked with `kilocode_change`
-   - adopt upstream code and architecture whenever it does not conflict with Kilo behavior
    - keep `kilocode_change` markers around Kilo-specific changes in shared opencode files
-   - maintain the same Kilo-specific text, code, and marker comments from the conflict snapshot unless refactoring is required
+   - keep Kilo-specific text, code, and marker comments the same as the auto-merge conflict snapshot unless a refactor is required
    - if Kilo-specific code must be refactored to fit new upstream architecture, explain the refactor in the decision rationale
    - if upstream moved the relevant logic to another file, port the Kilo behavior there and record the decision as `renamed` or `hybrid` with `--target <new-path>`
    - if upstream deleted a file, analyze whether the Kilo behavior should be ported elsewhere or removed rather than restoring the deleted file
