@@ -24,6 +24,7 @@
  * so nothing accumulates — the same dirs are reused on every launch.
  */
 import { $ } from "bun"
+import { parse as parseJsonc, type ParseError } from "jsonc-parser"
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
@@ -269,12 +270,20 @@ function settings(keep: boolean) {
   }
 
   mkdirSync(dir, { recursive: true })
-  const cfg =
-    keep && existsSync(file)
-      ? { ...defaults, ...(JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>) }
-      : defaults
+  const cfg = keep && existsSync(file) ? { ...defaults, ...load(file) } : defaults
 
   writeFileSync(file, JSON.stringify(cfg, null, 2) + "\n")
+}
+
+function load(file: string) {
+  const errors: ParseError[] = []
+  const cfg = parseJsonc(readFileSync(file, "utf8"), errors)
+  if (!errors.length && cfg && typeof cfg === "object" && !Array.isArray(cfg)) return cfg as Record<string, unknown>
+
+  const err = errors.at(0)
+  const msg = err ? `error ${err.error} at offset ${err.offset}` : "settings root must be an object"
+  console.warn(`[launch] Could not parse existing settings.json, rewriting defaults: ${msg}`)
+  return {}
 }
 
 // ---------------------------------------------------------------------------
