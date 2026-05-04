@@ -36,6 +36,7 @@ interface Side {
   present: boolean
   hash?: string
   preview?: string
+  full?: string
 }
 
 interface Item {
@@ -197,7 +198,10 @@ async function side(file: string, stage: 1 | 2 | 3): Promise<Side> {
   const res = await run(["git", "show", `:${stage}:${file}`])
   if (res.exitCode !== 0 || res.stdout.length === 0) return { present: false }
   const text = res.stdout
-  return { present: true, hash: await sha(text), preview: preview(text) }
+  // Keep full ours content (clipped) so we can diff the resolution against it
+  // at add-time. base/theirs don't need the full content for review.
+  const keep = stage === 2 ? clip(text, 64000) : undefined
+  return { present: true, hash: await sha(text), preview: preview(text), full: keep }
 }
 
 async function read(file: string) {
@@ -343,7 +347,32 @@ async function resolved(entry: Choice) {
   return sha(await Bun.file(file).text())
 }
 
-async function snapshot(entry: Snap) {
+async function unifiedDiff(oursText: string, resolvedText: string, file: string) {
+  const tmp = process.env.TMPDIR ?? "/tmp"
+  const suffix = `${process.pid}-${Date.now()}`
+  const oursPath = `${tmp}/decisions-ours-${suffix}`
+  const resolvedPath = `${tmp}/decisions-resolved-${suffix}`
+  await Bun.write(oursPath, oursText)
+  await Bun.write(resolvedPath, resolvedText)
+  const res = await run([
+    "diff",
+    "-u",
+    "-U3",
+    "--label",
+    `a/${file} (ours)`,
+    "--label",
+    `b/${file} (resolved)`,
+    oursPath,
+    resolvedPath,
+  ])
+  await Bun.file(oursPath).delete()
+  await Bun.file(resolvedPath).delete()
+  // diff exits 0 when identical, 1 when different, >1 on error
+  if (res.exitCode > 1) return undefined
+  return res.stdout.trimEnd()
+}
+
+async function snapshot(entry: Snap, ours?: string) {
   const ok = await Bun.file(path(entry)).exists()
   if (!ok && entry.kind === "removed") return "deleted"
   if (!ok) return undefined
@@ -351,6 +380,12 @@ async function snapshot(entry: Snap) {
     .text()
     .catch(() => "")
   if (!text) return undefined
+  if (ours !== undefined) {
+    const diff = await unifiedDiff(ours, text, entry.file)
+    if (diff !== undefined) {
+      return diff.length === 0 ? "(no changes relative to ours)" : clip(diff, 16000)
+    }
+  }
   return clip(text, 16000)
 }
 
@@ -362,6 +397,8 @@ async function addDecision(opts: CliOptions) {
   }
   const map = new Map(data.ledger.decisions.map((entry) => [entry.file, entry]))
   const prev = map.get(opts.file)
+  const tracked = data.ledger.files.find((entry) => entry.file === opts.file)
+  const ours = tracked?.ours.full
   const next = merge(prev, {
     file: opts.file,
     kind: opts.kind ?? prev?.kind,
@@ -373,7 +410,7 @@ async function addDecision(opts: CliOptions) {
     verification: opts.verification,
     notes: opts.notes ?? prev?.notes,
     target: opts.target ?? prev?.target,
-    resolution: opts.resolution ?? (await snapshot({ ...prev, ...opts, file: opts.file })) ?? prev?.resolution,
+    resolution: opts.resolution ?? (await snapshot({ ...prev, ...opts, file: opts.file }, ours)) ?? prev?.resolution,
     updated: new Date().toISOString(),
   })
   map.set(opts.file, next)
@@ -519,7 +556,7 @@ function markdown(ledger: Ledger) {
     list(lines, "Verification", pick.verification)
     bullet(lines, "Notes", pick.notes)
     bullet(lines, "Resolution Hash", pick.resolved ? `\`${pick.resolved}\`` : undefined)
-    fence(lines, "Resolved content", pick.resolution)
+    fence(lines, "Resolution (diff: ours → resolved)", pick.resolution)
     const gaps = missing(pick)
     if (gaps.length > 0) bullet(lines, "Missing", gaps.join(", "))
     lines.push("")
@@ -553,7 +590,7 @@ function body(ledger: Ledger) {
       if (entry.verification.length > 0) lines.push(`  - Verification: ${entry.verification.join("; ")}`)
       const item = ledger.files.find((file) => file.file === entry.file)
       fence(lines, "Original diff3 conflict", item ? diff3(item) : undefined)
-      fence(lines, "Resolved content", entry.resolution)
+      fence(lines, "Resolution (diff: ours → resolved)", entry.resolution)
     }
     lines.push("")
   }
