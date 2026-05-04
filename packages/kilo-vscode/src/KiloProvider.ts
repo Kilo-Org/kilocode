@@ -1292,10 +1292,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getContextDirectory()
-      const { data: session } = await this.client.session.create(
-        { directory: workspaceDir, platform: this.platform },
-        { throwOnError: true },
-      )
+      const { data: session } = await this.client.session.create({ directory: workspaceDir, platform: this.platform }, { throwOnError: true })
       this.currentSession = session
       this.contextSessionID = session.id
       this.trackDirectory(session.id, workspaceDir)
@@ -2380,10 +2377,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const dir = sessionID ? this.getWorkspaceDirectory(sessionID) : this.getContextDirectory()
 
     if (!sessionID && !this.currentSession) {
-      const { data: session } = await this.client.session.create(
-        { directory: dir, platform: this.platform },
-        { throwOnError: true },
-      )
+      const { data: session } = await this.client.session.create({ directory: dir, platform: this.platform }, { throwOnError: true })
       this.currentSession = session
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
@@ -2515,9 +2509,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const editorContext = await this.gatherEditorContext()
 
-      if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
-      }
+      if (messageID) this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
 
       const sid = resolved!.sid
       const dir = resolved!.dir
@@ -2582,17 +2574,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       resolved = await this.resolveSession(sessionID, draftID)
 
-      if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
-      }
+      if (messageID) this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
 
-      const parts = files?.map((f) => ({
-        type: "file" as const,
-        mime: f.mime,
-        url: f.url,
-        filename: f.filename,
-        source: f.source,
-      }))
+      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url, filename: f.filename, source: f.source }))
 
       const sid = resolved!.sid
       const dir = resolved!.dir

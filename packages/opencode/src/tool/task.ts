@@ -8,6 +8,7 @@ import type { SessionPrompt } from "../session/prompt"
 import { Config } from "../config"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
+import { KiloSession } from "../kilocode/session" // kilocode_change
 import { Effect, Schema } from "effect"
 
 export interface TaskPromptOps {
@@ -72,6 +73,10 @@ export const TaskTool = Tool.define(
       // kilocode_change end
 
       const taskID = params.task_id
+      // kilocode_change start - inherit the active request surface, not a later session default
+      const platform =
+        typeof ctx.extra?.platform === "string" ? ctx.extra.platform : KiloSession.getPlatformOverride(ctx.sessionID)
+      // kilocode_change end
       const session = taskID
         ? yield* sessions.get(SessionID.make(taskID)).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
         : undefined
@@ -79,6 +84,7 @@ export const TaskTool = Tool.define(
         session ??
         (yield* sessions.create({
           parentID: ctx.sessionID,
+          platform, // kilocode_change - child LLM calls inherit parent request surface
           title: params.description + ` (@${next.name} subagent)`,
           permission: [
             ...(canTodo
@@ -109,6 +115,11 @@ export const TaskTool = Tool.define(
             // kilocode_change end
           ],
         }))
+      // kilocode_change start - keep resumed child tasks attributed to the active request surface
+      if (platform && !KiloSession.getPlatformOverride(nextSession.id)) {
+        KiloSession.setPlatformOverride(nextSession.id, platform)
+      }
+      // kilocode_change end
 
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
@@ -158,6 +169,7 @@ export const TaskTool = Tool.define(
                 modelID: model.modelID,
                 providerID: model.providerID,
               },
+              platform, // kilocode_change - request surface for queued child prompt
               variant, // kilocode_change
               agent: next.name,
               tools: {

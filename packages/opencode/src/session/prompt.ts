@@ -367,6 +367,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       model: Provider.Model
       session: Session.Info
       tools?: Record<string, boolean>
+      platform?: string // kilocode_change - request surface for feature attribution
       processor: Pick<SessionProcessor.Handle, "message" | "updateToolCall" | "completeToolCall">
       bypassAgentCheck: boolean
       messages: MessageV2.WithParts[]
@@ -381,7 +382,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         abort: options.abortSignal!,
         messageID: input.processor.message.id,
         callID: options.toolCallId,
-        extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps },
+        extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps, platform: input.platform }, // kilocode_change
         agent: input.agent.name,
         messages: input.messages,
         metadata: (val) =>
@@ -540,6 +541,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       sessionID: SessionID
       session: Session.Info
       msgs: MessageV2.WithParts[]
+      platform?: string // kilocode_change - request surface for feature attribution
     }) {
       const { task, model, lastUser, sessionID, session, msgs } = input
       const ctx = yield* InstanceState.context
@@ -615,7 +617,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           sessionID,
           abort: taskAbort.signal,
           callID: part.callID,
-          extra: { bypassAgentCheck: true, promptOps },
+          extra: { bypassAgentCheck: true, promptOps, platform: input.platform }, // kilocode_change
           messages: msgs,
           metadata: (val: { title?: string; metadata?: Record<string, any> }) =>
             Effect.gen(function* () {
@@ -1338,7 +1340,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
-          loop({ sessionID: input.sessionID }),
+          loop({ sessionID: input.sessionID, platform: input.platform }),
           lastAssistant(input.sessionID),
         )
         // kilocode_change end
@@ -1362,8 +1364,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
     const closeReasons = new Map<string, KiloSession.CloseReason>()
 
-    const runLoop: (sessionID: SessionID) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
-      function* (sessionID: SessionID) {
+    // kilocode_change start - keep queued turn attribution request-scoped
+    const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
+      function* (input: LoopInput) {
+        const sessionID = input.sessionID
         // kilocode_change — cache environment details per turn (prompt caching)
         const envCache: KiloSessionPrompt.EnvCache = {}
         closeReasons.delete(sessionID) // kilocode_change
@@ -1373,6 +1377,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         let structured: unknown | undefined
         let step = 0
         const session = yield* sessions.get(sessionID)
+        const platform =
+          input.platform ??
+          KiloSession.getPlatformOverride(sessionID) ??
+          (session.parentID ? KiloSession.getPlatformOverride(session.parentID) : undefined)
+        // kilocode_change end
 
         while (true) {
           yield* status.set(sessionID, { type: "busy" })
@@ -1438,7 +1447,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const task = tasks.pop()
 
           if (task?.type === "subtask") {
-            yield* handleSubtask({ task, model, lastUser, sessionID, session, msgs })
+            yield* handleSubtask({ task, model, lastUser, sessionID, session, msgs, platform }) // kilocode_change
             continue
           }
 
@@ -1528,6 +1537,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               session,
               model,
               tools: lastUser.tools,
+              platform, // kilocode_change
               processor: handle,
               bypassAgentCheck,
               messages: msgs,
@@ -1587,6 +1597,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               permission: session.permission,
               sessionID,
               parentSessionID: session.parentID,
+              platform, // kilocode_change
               system,
               messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS }] : [])],
               tools,
@@ -1668,7 +1679,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       // kilocode_change start
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
-        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID)),
+        state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input)),
         Effect.fnUntraced(function* (exit) {
           yield* bus.publish(KiloSession.Event.TurnClose, {
             sessionID: input.sessionID,
@@ -1866,7 +1877,7 @@ export const PromptInput = Schema.Struct({
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
   // kilocode_change start - reuse shared editor context schema
-  platform: Schema.optional(Schema.String), // request surface for feature attribution
+  platform: Schema.optional(Schema.String), // kilocode_change - request surface for feature attribution
   editorContext: Schema.optional(MessageV2.EditorContext),
   // kilocode_change end
   parts: Schema.Array(
@@ -1894,6 +1905,7 @@ export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" |
 
 export class LoopInput extends Schema.Class<LoopInput>("SessionPrompt.LoopInput")({
   sessionID: SessionID,
+  platform: Schema.optional(Schema.String), // kilocode_change - request surface for feature attribution
 }) {
   static readonly zod = zod(this)
 }

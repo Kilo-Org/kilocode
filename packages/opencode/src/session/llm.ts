@@ -52,6 +52,7 @@ export type StreamInput = {
   user: MessageV2.User
   sessionID: string
   parentSessionID?: string
+  platform?: string // kilocode_change - request surface for feature attribution
   model: Provider.Model
   agent: Agent.Info
   permission?: Permission.Ruleset
@@ -226,7 +227,13 @@ const live: Layer.Layer<
       const machineId = yield* isKilo
         ? Effect.promise(() => Identity.getMachineId().catch(() => undefined))
         : Effect.succeed(undefined)
-      const kiloFeature = isKilo ? feature(KiloSession.getPlatformOverride(input.sessionID)) : undefined
+      const kiloFeature = isKilo
+        ? feature(
+            input.platform ??
+              KiloSession.getPlatformOverride(input.sessionID) ??
+              (input.parentSessionID ? KiloSession.getPlatformOverride(input.parentSessionID) : undefined),
+          )
+        : undefined
       // kilocode_change end
 
       const tools = resolveTools(input)
