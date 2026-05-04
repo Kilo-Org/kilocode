@@ -15,11 +15,40 @@
   }
 
   [data-component="markdown-mermaid"][data-state="rendered"] {
+    display: block;
+  }
+
+  [data-slot="markdown-mermaid-actions"] {
     display: flex;
-    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-right: 32px;
+  }
+
+  [data-slot="markdown-mermaid-action"] {
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 4px;
+    background: var(--surface-raised-base, var(--surface-base));
+    color: var(--text-strong);
+    cursor: pointer;
+    font-family: var(--font-family-sans);
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 6px;
+  }
+
+  [data-slot="markdown-mermaid-action"]:hover {
+    background: var(--surface-raised-base-hover, var(--surface-base-hover));
+  }
+
+  [data-slot="markdown-mermaid-action"][data-copied="true"] {
+    color: var(--text-interactive-base);
   }
 
   [data-component="markdown-mermaid"][data-state="rendered"] > svg {
+    display: block;
+    margin: 0 auto;
     max-width: 100%;
     height: auto;
   }

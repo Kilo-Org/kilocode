@@ -96,6 +96,16 @@ export const dict = {
   "ui.textField.copied": "복사됨",
 
   "ui.imagePreview.alt": "이미지 미리보기",
+  "ui.mermaid.rendering": "Mermaid 다이어그램 렌더링 중...",
+  "ui.mermaid.renderError": "Mermaid 렌더링 실패: {{message}}",
+  "ui.mermaid.errorDefault": "Mermaid 다이어그램을 렌더링할 수 없습니다.",
+  "ui.mermaid.errorEmpty": "Mermaid가 빈 다이어그램을 렌더링했습니다.",
+  "ui.mermaid.copySource": "Mermaid 소스 복사",
+  "ui.mermaid.copySvg": "SVG 복사",
+  "ui.mermaid.copyPng": "PNG 복사",
+  "ui.mermaid.downloadSvg": "SVG 다운로드",
+  "ui.mermaid.downloadPng": "PNG 다운로드",
+  "ui.mermaid.openPreview": "이미지 미리보기 열기",
   "ui.scrollView.ariaLabel": "스크롤 가능한 콘텐츠",
 
   "ui.tool.read": "읽기",

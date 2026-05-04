@@ -10,6 +10,34 @@ const svgConfig = {
 
 type Mermaid = typeof import("mermaid").default
 
+export type MermaidLabels = {
+  rendering: string
+  renderError: (message: string) => string
+  errorDefault: string
+  errorEmpty: string
+  copied: string
+  copySource: string
+  copySvg: string
+  copyPng: string
+  downloadSvg: string
+  downloadPng: string
+  openPreview: string
+}
+
+const labels: MermaidLabels = {
+  rendering: "Rendering Mermaid diagram...",
+  renderError: (message) => `Mermaid render failed: ${message}`,
+  errorDefault: "Unable to render Mermaid diagram.",
+  errorEmpty: "Mermaid rendered an empty diagram.",
+  copied: "Copied",
+  copySource: "Copy Mermaid source",
+  copySvg: "Copy SVG",
+  copyPng: "Copy PNG",
+  downloadSvg: "Download SVG",
+  downloadPng: "Download PNG",
+  openPreview: "Open image preview",
+}
+
 const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = {
   id: 0,
   queue: Promise.resolve(),
@@ -159,10 +187,14 @@ function sanitize(svg: string) {
   return DOMPurify.sanitize(svg, svgConfig)
 }
 
-function message(err: unknown) {
+function mergeLabels(input?: Partial<MermaidLabels>) {
+  return { ...labels, ...input }
+}
+
+function message(err: unknown, labels: MermaidLabels) {
   if (err instanceof Error) return err.message
   if (typeof err === "string") return err
-  return "Unable to render Mermaid diagram."
+  return labels.errorDefault
 }
 
 function panel(wrapper: HTMLElement) {
@@ -178,12 +210,155 @@ function panel(wrapper: HTMLElement) {
   return el
 }
 
-function fail(wrapper: HTMLElement, pre: HTMLPreElement, err: unknown) {
+function fail(wrapper: HTMLElement, pre: HTMLPreElement, err: unknown, labels: MermaidLabels) {
   const el = panel(wrapper)
   el.setAttribute("data-state", "error")
-  el.textContent = `Mermaid render failed: ${message(err)}`
+  el.textContent = labels.renderError(message(err, labels))
   wrapper.setAttribute("data-mermaid-state", "error")
   pre.hidden = false
+}
+
+function button(label: string, onClick: (button: HTMLButtonElement) => Promise<void> | void) {
+  const item = document.createElement("button")
+  item.type = "button"
+  item.setAttribute("data-slot", "markdown-mermaid-action")
+  item.setAttribute("aria-label", label)
+  item.setAttribute("title", label)
+  item.textContent = label
+  item.addEventListener("click", (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    void Promise.resolve(onClick(item)).catch((err) => console.warn("Mermaid action failed", err))
+  })
+  return item
+}
+
+function setDone(item: HTMLButtonElement, labels: MermaidLabels) {
+  const text = item.textContent
+  item.textContent = labels.copied
+  item.setAttribute("data-copied", "true")
+  setTimeout(() => {
+    if (!item.isConnected) return
+    item.textContent = text
+    item.removeAttribute("data-copied")
+  }, 1500)
+}
+
+function serialize(svg: SVGSVGElement) {
+  const clone = svg.cloneNode(true) as SVGSVGElement
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+  return new XMLSerializer().serializeToString(clone)
+}
+
+function dataUrl(type: string, content: string) {
+  return `data:${type};base64,${btoa(unescape(encodeURIComponent(content)))}`
+}
+
+function size(svg: SVGSVGElement) {
+  const box = svg.viewBox.baseVal
+  const rect = svg.getBoundingClientRect()
+  const width = Math.max(Math.ceil(box?.width || rect.width || 1), 1)
+  const height = Math.max(Math.ceil(box?.height || rect.height || 1), 1)
+  return { width, height }
+}
+
+async function png(svg: SVGSVGElement) {
+  const source = serialize(svg)
+  const url = dataUrl("image/svg+xml", source)
+  const img = new Image()
+  const dims = size(svg)
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error("Unable to export Mermaid diagram."))
+    img.src = url
+  })
+
+  const canvas = document.createElement("canvas")
+  canvas.width = dims.width
+  canvas.height = dims.height
+  const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("Unable to export Mermaid diagram.")
+  ctx.drawImage(img, 0, 0, dims.width, dims.height)
+  return canvas.toDataURL("image/png")
+}
+
+function download(url: string, filename: string) {
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+function save(url: string, filename: string) {
+  const event = new CustomEvent("kilo:save-image", {
+    bubbles: true,
+    cancelable: true,
+    detail: { dataUrl: url, filename },
+  })
+  window.dispatchEvent(event)
+  if (event.defaultPrevented) return
+  download(url, filename)
+}
+
+async function copyText(text: string, item: HTMLButtonElement, labels: MermaidLabels) {
+  await navigator.clipboard.writeText(text)
+  setDone(item, labels)
+}
+
+async function copyPng(svg: SVGSVGElement, item: HTMLButtonElement, labels: MermaidLabels) {
+  const url = await png(svg)
+  const blob = await (await fetch(url)).blob()
+  if (typeof ClipboardItem === "undefined") {
+    await navigator.clipboard.writeText(serialize(svg))
+    setDone(item, labels)
+    return
+  }
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+  setDone(item, labels)
+}
+
+function preview(svg: SVGSVGElement) {
+  const url = dataUrl("image/svg+xml", serialize(svg))
+  const event = new CustomEvent("kilo:preview-image", {
+    bubbles: true,
+    cancelable: true,
+    detail: { dataUrl: url, filename: "mermaid-diagram.svg" },
+  })
+  window.dispatchEvent(event)
+  if (event.defaultPrevented) return
+  window.open(url, "_blank", "noopener,noreferrer")
+}
+
+function actions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels: MermaidLabels) {
+  const svg = el.querySelector("svg")
+  if (!(svg instanceof SVGSVGElement)) return
+
+  const old = el.querySelector('[data-slot="markdown-mermaid-actions"]')
+  old?.remove()
+
+  const bar = document.createElement("div")
+  bar.setAttribute("data-slot", "markdown-mermaid-actions")
+  const sourceText = pre.querySelector("code")?.textContent ?? source
+  const sourceSvg = () => serialize(svg)
+  const sourceSvgUrl = () => dataUrl("image/svg+xml", sourceSvg())
+
+  bar.append(
+    button(labels.copySource, (button) => {
+      return copyText(sourceText, button, labels)
+    }),
+    button(labels.copySvg, (button) => {
+      return copyText(sourceSvg(), button, labels)
+    }),
+    button(labels.copyPng, (button) => {
+      return copyPng(svg, button, labels)
+    }),
+    button(labels.downloadSvg, () => save(sourceSvgUrl(), "mermaid-diagram.svg")),
+    button(labels.downloadPng, async () => save(await png(svg), "mermaid-diagram.png")),
+    button(labels.openPreview, () => preview(svg)),
+  )
+  el.insertBefore(bar, el.firstChild)
 }
 
 export function preserveMermaid(fromEl: Element, toEl: Element) {
@@ -212,7 +387,8 @@ async function svg(renderer: Mermaid, source: string, cfg: ReturnType<typeof con
   })
 }
 
-export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boolean }) {
+export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boolean }, input?: Partial<MermaidLabels>) {
+  const label = mergeLabels(input)
   const blocks = Array.from(root.querySelectorAll('pre > code[data-lang="mermaid"]'))
   if (blocks.length === 0) return
 
@@ -223,7 +399,7 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
       if (!(pre instanceof HTMLPreElement)) continue
       if (!(wrapper instanceof HTMLElement)) continue
       if (wrapper.getAttribute("data-component") !== "markdown-code") continue
-      fail(wrapper, pre, err)
+      fail(wrapper, pre, err, label)
     }
   })
   if (!renderer) return
@@ -265,7 +441,7 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
     const el = panel(wrapper)
     if (!keep) {
       el.setAttribute("data-state", "rendering")
-      el.textContent = "Rendering Mermaid diagram..."
+      el.textContent = label.rendering
       pre.hidden = false
     } else {
       pre.hidden = true
@@ -276,15 +452,16 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
       if (signal.aborted || !root.isConnected || !wrapper.isConnected) return
 
       const safe = sanitize(result.svg)
-      if (!safe) throw new Error("Mermaid rendered an empty diagram.")
+      if (!safe) throw new Error(label.errorEmpty)
 
       el.setAttribute("data-state", "rendered")
       el.innerHTML = safe
+      actions(el, pre, source, label)
       wrapper.setAttribute("data-mermaid-state", "rendered")
       pre.hidden = true
     } catch (err) {
       if (signal.aborted || !root.isConnected || !wrapper.isConnected) return
-      fail(wrapper, pre, err)
+      fail(wrapper, pre, err, label)
     }
   }
 }

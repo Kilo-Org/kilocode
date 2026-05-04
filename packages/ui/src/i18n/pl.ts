@@ -95,6 +95,16 @@ export const dict = {
   "ui.textField.copied": "Skopiowano",
 
   "ui.imagePreview.alt": "Podgląd obrazu",
+  "ui.mermaid.rendering": "Renderowanie diagramu Mermaid...",
+  "ui.mermaid.renderError": "Renderowanie Mermaid nie powiodło się: {{message}}",
+  "ui.mermaid.errorDefault": "Nie można wyrenderować diagramu Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid wyrenderował pusty diagram.",
+  "ui.mermaid.copySource": "Kopiuj źródło Mermaid",
+  "ui.mermaid.copySvg": "Kopiuj SVG",
+  "ui.mermaid.copyPng": "Kopiuj PNG",
+  "ui.mermaid.downloadSvg": "Pobierz SVG",
+  "ui.mermaid.downloadPng": "Pobierz PNG",
+  "ui.mermaid.openPreview": "Otwórz podgląd obrazu",
   "ui.scrollView.ariaLabel": "treść przewijana",
 
   "ui.tool.read": "Odczyt",

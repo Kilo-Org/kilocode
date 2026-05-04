@@ -102,6 +102,16 @@ export const dict = {
   "ui.textField.copied": "Kopyalandı",
 
   "ui.imagePreview.alt": "Görsel önizleme",
+  "ui.mermaid.rendering": "Mermaid diyagramı işleniyor...",
+  "ui.mermaid.renderError": "Mermaid işleme başarısız: {{message}}",
+  "ui.mermaid.errorDefault": "Mermaid diyagramı işlenemiyor.",
+  "ui.mermaid.errorEmpty": "Mermaid boş bir diyagram işledi.",
+  "ui.mermaid.copySource": "Mermaid kaynağını kopyala",
+  "ui.mermaid.copySvg": "SVG kopyala",
+  "ui.mermaid.copyPng": "PNG kopyala",
+  "ui.mermaid.downloadSvg": "SVG indir",
+  "ui.mermaid.downloadPng": "PNG indir",
+  "ui.mermaid.openPreview": "Görsel önizlemeyi aç",
   "ui.scrollView.ariaLabel": "kaydırılabilir içerik",
 
   "ui.tool.read": "Oku",

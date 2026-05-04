@@ -149,19 +149,22 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   return (
-    <DataProvider
-      data={data}
-      directory={directory()}
-      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
-      onPermissionRespond={respond}
-      onQuestionReply={reply}
-      onQuestionReject={reject}
-      onOpenFile={open}
-      onOpenDiff={openDiff}
-      onOpenUrl={openUrl}
-    >
-      {props.children}
-    </DataProvider>
+    <>
+      <MermaidImageBridge />
+      <DataProvider
+        data={data}
+        directory={directory()}
+        // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
+        onPermissionRespond={respond}
+        onQuestionReply={reply}
+        onQuestionReject={reject}
+        onOpenFile={open}
+        onOpenDiff={openDiff}
+        onOpenUrl={openUrl}
+      >
+        {props.children}
+      </DataProvider>
+    </>
   )
 }
 
@@ -176,6 +179,35 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
       {props.children}
     </LanguageProvider>
   )
+}
+
+type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
+
+export const MermaidImageBridge: Component = () => {
+  const vscode = useVSCode()
+
+  onMount(() => {
+    const preview = (event: Event) => {
+      const detail = (event as MermaidImageEvent).detail
+      if (!detail?.dataUrl || !detail.filename) return
+      event.preventDefault()
+      vscode.postMessage({ type: "previewImage", dataUrl: detail.dataUrl, filename: detail.filename })
+    }
+    const save = (event: Event) => {
+      const detail = (event as MermaidImageEvent).detail
+      if (!detail?.dataUrl || !detail.filename) return
+      event.preventDefault()
+      vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
+    }
+    window.addEventListener("kilo:preview-image", preview)
+    window.addEventListener("kilo:save-image", save)
+    onCleanup(() => {
+      window.removeEventListener("kilo:preview-image", preview)
+      window.removeEventListener("kilo:save-image", save)
+    })
+  })
+
+  return null
 }
 
 // Inner app component that uses the contexts

@@ -102,6 +102,16 @@ export const dict = {
   "ui.textField.copied": "Скопійовано",
 
   "ui.imagePreview.alt": "Попередній перегляд зображення",
+  "ui.mermaid.rendering": "Відтворення діаграми Mermaid...",
+  "ui.mermaid.renderError": "Не вдалося відтворити Mermaid: {{message}}",
+  "ui.mermaid.errorDefault": "Не вдалося відтворити діаграму Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid відтворив порожню діаграму.",
+  "ui.mermaid.copySource": "Копіювати вихідний код Mermaid",
+  "ui.mermaid.copySvg": "Копіювати SVG",
+  "ui.mermaid.copyPng": "Копіювати PNG",
+  "ui.mermaid.downloadSvg": "Завантажити SVG",
+  "ui.mermaid.downloadPng": "Завантажити PNG",
+  "ui.mermaid.openPreview": "Відкрити попередній перегляд зображення",
   "ui.scrollView.ariaLabel": "вміст з прокруткою",
 
   "ui.fileSearch.placeholder": "Знайти",

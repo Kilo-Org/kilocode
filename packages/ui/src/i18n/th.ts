@@ -97,6 +97,16 @@ export const dict = {
   "ui.textField.copied": "คัดลอกแล้ว",
 
   "ui.imagePreview.alt": "ตัวอย่างรูปภาพ",
+  "ui.mermaid.rendering": "กำลังเรนเดอร์ไดอะแกรม Mermaid...",
+  "ui.mermaid.renderError": "เรนเดอร์ Mermaid ไม่สำเร็จ: {{message}}",
+  "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
+  "ui.mermaid.errorEmpty": "Mermaid เรนเดอร์ไดอะแกรมว่าง",
+  "ui.mermaid.copySource": "คัดลอกซอร์ส Mermaid",
+  "ui.mermaid.copySvg": "คัดลอก SVG",
+  "ui.mermaid.copyPng": "คัดลอก PNG",
+  "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
+  "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
+  "ui.mermaid.openPreview": "เปิดตัวอย่างรูปภาพ",
   "ui.scrollView.ariaLabel": "เนื้อหาที่เลื่อนได้",
 
   "ui.tool.read": "อ่าน",

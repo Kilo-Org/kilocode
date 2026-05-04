@@ -96,6 +96,16 @@ export const dict = {
   "ui.textField.copied": "تم النسخ",
 
   "ui.imagePreview.alt": "معاينة الصورة",
+  "ui.mermaid.rendering": "جارٍ عرض مخطط Mermaid...",
+  "ui.mermaid.renderError": "فشل عرض Mermaid: {{message}}",
+  "ui.mermaid.errorDefault": "تعذر عرض مخطط Mermaid.",
+  "ui.mermaid.errorEmpty": "عرض Mermaid مخططًا فارغًا.",
+  "ui.mermaid.copySource": "نسخ مصدر Mermaid",
+  "ui.mermaid.copySvg": "نسخ SVG",
+  "ui.mermaid.copyPng": "نسخ PNG",
+  "ui.mermaid.downloadSvg": "تنزيل SVG",
+  "ui.mermaid.downloadPng": "تنزيل PNG",
+  "ui.mermaid.openPreview": "فتح معاينة الصورة",
   "ui.scrollView.ariaLabel": "محتوى قابل للتمرير",
 
   "ui.tool.read": "قراءة",

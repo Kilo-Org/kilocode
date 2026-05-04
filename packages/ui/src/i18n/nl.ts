@@ -97,6 +97,16 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Gekopieerd",
 
   "ui.imagePreview.alt": "Afbeeldingsvoorbeeld",
+  "ui.mermaid.rendering": "Mermaid-diagram renderen...",
+  "ui.mermaid.renderError": "Mermaid-rendering mislukt: {{message}}",
+  "ui.mermaid.errorDefault": "Kan Mermaid-diagram niet renderen.",
+  "ui.mermaid.errorEmpty": "Mermaid heeft een leeg diagram gerenderd.",
+  "ui.mermaid.copySource": "Mermaid-bron kopiëren",
+  "ui.mermaid.copySvg": "SVG kopiëren",
+  "ui.mermaid.copyPng": "PNG kopiëren",
+  "ui.mermaid.downloadSvg": "SVG downloaden",
+  "ui.mermaid.downloadPng": "PNG downloaden",
+  "ui.mermaid.openPreview": "Afbeeldingsvoorbeeld openen",
   "ui.scrollView.ariaLabel": "scrollbare inhoud",
 
   "ui.fileSearch.placeholder": "Zoeken",

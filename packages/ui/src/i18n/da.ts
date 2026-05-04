@@ -95,6 +95,16 @@ export const dict = {
   "ui.textField.copied": "Kopieret",
 
   "ui.imagePreview.alt": "Billedforhåndsvisning",
+  "ui.mermaid.rendering": "Renderer Mermaid-diagram...",
+  "ui.mermaid.renderError": "Mermaid-rendering mislykkedes: {{message}}",
+  "ui.mermaid.errorDefault": "Kan ikke rendere Mermaid-diagram.",
+  "ui.mermaid.errorEmpty": "Mermaid renderede et tomt diagram.",
+  "ui.mermaid.copySource": "Kopiér Mermaid-kilde",
+  "ui.mermaid.copySvg": "Kopiér SVG",
+  "ui.mermaid.copyPng": "Kopiér PNG",
+  "ui.mermaid.downloadSvg": "Download SVG",
+  "ui.mermaid.downloadPng": "Download PNG",
+  "ui.mermaid.openPreview": "Åbn billedforhåndsvisning",
   "ui.scrollView.ariaLabel": "rulbart indhold",
 
   "ui.tool.read": "Læs",
