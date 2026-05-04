@@ -4,6 +4,7 @@ import path from "path"
 import os from "os"
 import { Filesystem } from "../util"
 import { Flock } from "@opencode-ai/shared/util/flock"
+import { markNoIndex } from "../kilocode/spotlight" // kilocode_change
 
 const app = "kilo" // kilocode_change
 
@@ -64,5 +65,9 @@ if (version !== CACHE_VERSION) {
   } catch {}
   await Filesystem.write(path.join(Path.cache, "version"), CACHE_VERSION)
 }
+
+// kilocode_change start - keep generated Kilo data out of macOS Spotlight
+await Promise.all([Path.data, Path.cache, Path.state].map(markNoIndex))
+// kilocode_change end
 
 export * as Global from "."
