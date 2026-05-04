@@ -27,7 +27,6 @@ export type Locale =
   | "br"
   | "th"
   | "bs"
-  | "nl"
   | "tr"
 
 type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // kilocode_change
@@ -51,7 +50,6 @@ const LOCALES: readonly Locale[] = [
   "pl",
   "ru",
   "bs",
-  "nl",
   "ar",
   "no",
   "br",
@@ -76,8 +74,6 @@ const INTL: Record<Locale, string> = {
   br: "pt-BR",
   th: "th",
   bs: "bs",
-  nl: "nl",
-
   tr: "tr",
 }
 
@@ -98,7 +94,6 @@ const LABEL_KEY: Record<Locale, keyof Dictionary> = {
   br: "language.br",
   th: "language.th",
   bs: "language.bs",
-  nl: "language.nl",
   tr: "language.tr",
 }
 
@@ -124,7 +119,6 @@ const loaders: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
   br: () => merge(import("@/i18n/br"), import("@opencode-ai/ui/i18n/br")),
   th: () => merge(import("@/i18n/th"), import("@opencode-ai/ui/i18n/th")),
   bs: () => merge(import("@/i18n/bs"), import("@opencode-ai/ui/i18n/bs")),
-  nl: () => merge(import("@/i18n/nl"), import("@opencode-ai/ui/i18n/nl")),
   tr: () => merge(import("@/i18n/tr"), import("@opencode-ai/ui/i18n/tr")),
 }
 
@@ -163,7 +157,6 @@ const localeMatchers: Array<{ locale: Locale; match: (language: string) => boole
   { locale: "br", match: (language) => language.startsWith("pt") },
   { locale: "th", match: (language) => language.startsWith("th") },
   { locale: "bs", match: (language) => language.startsWith("bs") },
-  { locale: "nl", match: (language) => language.startsWith("nl") },
   { locale: "tr", match: (language) => language.startsWith("tr") },
 ]
 

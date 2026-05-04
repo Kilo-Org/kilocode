@@ -1,6 +1,6 @@
-# OpenCode Desktop
+# Kilo Desktop
 
-Native OpenCode desktop app, built with Tauri v2.
+Native Kilo desktop app, built with Tauri v2.
 
 ## Prerequisites
 

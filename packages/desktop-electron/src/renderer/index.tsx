@@ -1,3 +1,4 @@
+// kilocode_change - new file
 // @refresh reload
 
 import {
@@ -187,7 +188,7 @@ const createPlatform = (): Platform => {
 
       const notification = new Notification(title, {
         body: description ?? "",
-        icon: "https://opencode.ai/favicon-96x96-v3.png",
+        icon: "https://kilo.ai/favicon-96x96-v3.png",
       })
       notification.onclick = () => {
         void window.api.showWindow()

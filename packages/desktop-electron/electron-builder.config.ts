@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { execFile } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -54,7 +55,7 @@ const getBase = (): Configuration => ({
     sign: true,
   },
   protocols: {
-    name: "OpenCode",
+    name: "Kilo",
     schemes: ["opencode"],
   },
   win: {
@@ -85,7 +86,7 @@ function getConfig() {
       return {
         ...base,
         appId: "ai.opencode.desktop.dev",
-        productName: "OpenCode Dev",
+        productName: "Kilo Dev",
         rpm: { packageName: "opencode-dev" },
       }
     }
@@ -93,9 +94,9 @@ function getConfig() {
       return {
         ...base,
         appId: "ai.opencode.desktop.beta",
-        productName: "OpenCode Beta",
-        protocols: { name: "OpenCode Beta", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode-beta", channel: "latest" },
+        productName: "Kilo Beta",
+        protocols: { name: "Kilo Beta", schemes: ["opencode"] },
+        publish: { provider: "github", owner: "Kilo-Org", repo: "kilocode-beta", channel: "latest" },
         rpm: { packageName: "opencode-beta" },
       }
     }
@@ -103,9 +104,9 @@ function getConfig() {
       return {
         ...base,
         appId: "ai.opencode.desktop",
-        productName: "OpenCode",
-        protocols: { name: "OpenCode", schemes: ["opencode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "opencode", channel: "latest" },
+        productName: "Kilo",
+        protocols: { name: "Kilo", schemes: ["opencode"] },
+        publish: { provider: "github", owner: "Kilo-Org", repo: "kilocode", channel: "latest" },
         rpm: { packageName: "opencode" },
       }
     }

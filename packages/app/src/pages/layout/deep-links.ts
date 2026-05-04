@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const deepLinkEvent = "opencode:deep-link"
 
 const parseUrl = (input: string) => {
@@ -36,13 +37,13 @@ export const collectOpenProjectDeepLinks = (urls: string[]) =>
 export const collectNewSessionDeepLinks = (urls: string[]) =>
   urls.map(parseNewSessionDeepLink).filter((link): link is { directory: string; prompt?: string } => !!link)
 
-type OpenCodeWindow = Window & {
+type KiloWindow = Window & {
   __KILO__?: {
     deepLinks?: string[]
   }
 }
 
-export const drainPendingDeepLinks = (target: OpenCodeWindow) => {
+export const drainPendingDeepLinks = (target: KiloWindow) => {
   const pending = target.__KILO__?.deepLinks ?? []
   if (pending.length === 0) return []
   if (target.__KILO__) target.__KILO__.deepLinks = []

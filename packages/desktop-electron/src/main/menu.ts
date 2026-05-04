@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { Menu, shell } from "electron"
 
 import { UPDATER_ENABLED } from "./constants"
@@ -15,7 +16,7 @@ export function createMenu(deps: Deps) {
 
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: "OpenCode",
+      label: "Kilo",
       submenu: [
         { role: "about" },
         {
@@ -115,18 +116,18 @@ export function createMenu(deps: Deps) {
     {
       label: "Help",
       submenu: [
-        { label: "OpenCode Documentation", click: () => shell.openExternal("https://opencode.ai/docs") },
+        { label: "Kilo Documentation", click: () => shell.openExternal("https://kilo.ai/docs") },
         { label: "Support Forum", click: () => shell.openExternal("https://discord.com/invite/opencode") },
         { type: "separator" },
         { type: "separator" },
         {
           label: "Share Feedback",
           click: () =>
-            shell.openExternal("https://github.com/anomalyco/opencode/issues/new?template=feature_request.yml"),
+            shell.openExternal("https://github.com/Kilo-Org/kilocode/issues/new?template=feature_request.yml"),
         },
         {
           label: "Report a Bug",
-          click: () => shell.openExternal("https://github.com/anomalyco/opencode/issues/new?template=bug_report.yml"),
+          click: () => shell.openExternal("https://github.com/Kilo-Org/kilocode/issues/new?template=bug_report.yml"),
         },
       ],
     },

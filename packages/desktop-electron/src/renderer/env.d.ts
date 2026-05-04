@@ -1,9 +1,10 @@
+// kilocode_change - new file
 import type { ElectronAPI } from "../preload/types"
 
 declare global {
   interface Window {
     api: ElectronAPI
-    __OPENCODE__?: {
+    __KILO__?: {
       deepLinks?: string[]
     }
   }

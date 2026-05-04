@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import * as i18n from "@solid-primitives/i18n"
 
 import { dict as desktopEn } from "./en"
@@ -15,7 +16,6 @@ import { dict as desktopAr } from "./ar"
 import { dict as desktopNo } from "./no"
 import { dict as desktopBr } from "./br"
 import { dict as desktopBs } from "./bs"
-import { dict as desktopNl } from "./nl"
 
 import { dict as appEn } from "../../../../app/src/i18n/en"
 import { dict as appZh } from "../../../../app/src/i18n/zh"
@@ -32,7 +32,6 @@ import { dict as appAr } from "../../../../app/src/i18n/ar"
 import { dict as appNo } from "../../../../app/src/i18n/no"
 import { dict as appBr } from "../../../../app/src/i18n/br"
 import { dict as appBs } from "../../../../app/src/i18n/bs"
-import { dict as appNl } from "../../../../app/src/i18n/nl"
 
 export type Locale =
   | "en"
@@ -50,7 +49,6 @@ export type Locale =
   | "no"
   | "br"
   | "bs"
-  | "nl"
 
 type RawDictionary = typeof appEn & typeof desktopEn
 type Dictionary = i18n.Flatten<RawDictionary>
@@ -68,7 +66,6 @@ const LOCALES: readonly Locale[] = [
   "pl",
   "ru",
   "bs",
-  "nl",
   "ar",
   "no",
   "br",
@@ -102,7 +99,6 @@ function detectLocale(): Locale {
       return "no"
     if (language.toLowerCase().startsWith("pt")) return "br"
     if (language.toLowerCase().startsWith("bs")) return "bs"
-    if (language.toLowerCase().startsWith("nl")) return "nl"
   }
 
   return "en"
@@ -157,7 +153,6 @@ function build(locale: Locale): Dictionary {
   if (locale === "no") return { ...base, ...i18n.flatten(appNo), ...i18n.flatten(desktopNo) }
   if (locale === "br") return { ...base, ...i18n.flatten(appBr), ...i18n.flatten(desktopBr) }
   if (locale === "bs") return { ...base, ...i18n.flatten(appBs), ...i18n.flatten(desktopBs) }
-  if (locale === "nl") return { ...base, ...i18n.flatten(appNl), ...i18n.flatten(desktopNl) }
   return { ...base, ...i18n.flatten(appKo), ...i18n.flatten(desktopKo) }
 }
 

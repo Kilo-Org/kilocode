@@ -4,10 +4,10 @@
   "version": "7.2.34",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://opencode.ai",
+  "homepage": "https://kilo.ai",
   "author": {
-    "name": "OpenCode",
-    "email": "hello@opencode.ai"
+    "name": "Kilo",
+    "email": "hello@kilo.ai"
   },
   "scripts": {
     "typecheck": "tsgo -b",
