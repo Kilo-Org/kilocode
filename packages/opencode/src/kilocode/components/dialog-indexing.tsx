@@ -76,8 +76,15 @@ async function saveIndexing(
   indexing: IndexingConfig,
   toast: ReturnType<typeof useToast>,
 ): Promise<boolean> {
-  const response = await sdk.client.global.config.update({ config: { indexing } })
-  if (response.error) {
+  const global = { ...indexing }
+  delete global.enabled
+  const responses = await Promise.all([
+    ...(Object.keys(global).length > 0 ? [sdk.client.global.config.update({ config: { indexing: global } })] : []),
+    ...(indexing.enabled !== undefined
+      ? [sdk.client.config.update({ config: { indexing: { enabled: indexing.enabled } } })]
+      : []),
+  ])
+  if (responses.some((response) => response.error)) {
     toast.show({ message: "Failed to save indexing config", variant: "error" })
     return false
   }
