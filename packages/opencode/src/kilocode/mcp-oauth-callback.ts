@@ -1,7 +1,6 @@
 import type { Server } from "http"
 
 const host = "127.0.0.1"
-export const enabled: boolean = true
 
 type State = {
   server: Server | undefined
