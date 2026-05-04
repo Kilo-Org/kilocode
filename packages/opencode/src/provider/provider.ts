@@ -1609,12 +1609,24 @@ const layer: Layer.Layer<
         const sdk = await resolveSDK(model, s, envs)
 
         try {
-          const language = s.modelLoaders[model.providerID]
-            ? await s.modelLoaders[model.providerID](sdk, model.api.id, {
+          // kilocode_change start - PoC: let custom providers on @ai-sdk/openai opt into Responses API
+          const language = await (async () => {
+            const loader = s.modelLoaders[model.providerID]
+            if (loader) {
+              return loader(sdk, model.api.id, {
                 ...provider.options,
                 ...model.options,
               })
-            : sdk.languageModel(model.api.id)
+            }
+            if (model.api.npm === "@ai-sdk/openai") {
+              const useResponses = model.options?.useResponsesApi ?? provider.options?.useResponsesApi
+              const anySdk = sdk as any
+              if (useResponses === true && typeof anySdk.responses === "function") return anySdk.responses(model.api.id)
+              if (useResponses === false && typeof anySdk.chat === "function") return anySdk.chat(model.api.id)
+            }
+            return sdk.languageModel(model.api.id)
+          })()
+          // kilocode_change end
           s.models.set(key, language)
           return language
         } catch (e) {
