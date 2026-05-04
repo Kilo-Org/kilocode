@@ -21,6 +21,7 @@ import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
+import { ReadPermission } from "@/kilocode/permission/read" // kilocode_change
 
 const log = Log.create({ service: "permission" })
 
@@ -177,23 +178,8 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
 }
 
 // kilocode_change start
-function readGuard(pattern: string) {
-  if (Wildcard.match(pattern, "*.env.example")) return
-  if (Wildcard.match(pattern, "*.env")) return "*.env"
-  if (Wildcard.match(pattern, "*.env.*")) return "*.env.*"
-}
-
-function harden(permission: string, pattern: string, rule: Rule): Rule {
-  if (permission !== "read") return rule
-  if (rule.action !== "allow") return rule
-  const guard = readGuard(pattern)
-  if (!guard) return rule
-  if (rule.pattern !== "*" && rule.permission !== "*") return rule
-  return { permission, pattern: guard, action: "ask" }
-}
-
 export function resolve(permission: string, pattern: string, ruleset: Ruleset, ...overrides: Ruleset[]): Rule {
-  const base = harden(permission, pattern, evaluate(permission, pattern, ruleset))
+  const base = ReadPermission.harden(permission, pattern, evaluate(permission, pattern, ruleset))
   const saved = evaluate(permission, pattern, ...overrides)
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
@@ -214,6 +200,14 @@ function veto(permission: string, pattern: string, ruleset?: Ruleset) {
 
 function subset(permission: string, ruleset: Ruleset) {
   return ruleset.filter((rule) => Wildcard.match(permission, rule.permission))
+}
+
+function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
+  if (ConfigProtection.isRequest(entry.info)) return false
+  return entry.info.patterns.every((pattern) => {
+    if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
+    return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
+  })
 }
 // kilocode_change end
 
@@ -437,9 +431,7 @@ export const layer = Layer.effect(
 
       if (input.requestID) {
         const entry = s.pending.get(PermissionID.make(input.requestID))
-        const ok = entry
-          ? entry.info.patterns.every((pattern) => !veto(entry.info.permission, pattern, entry.hardRuleset))
-          : false // kilocode_change
+        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? []) : false // kilocode_change
         if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
           s.pending.delete(PermissionID.make(input.requestID))
           yield* bus.publish(Event.Replied, {
@@ -453,8 +445,7 @@ export const layer = Layer.effect(
 
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
-        if (ConfigProtection.isRequest(entry.info)) continue
-        if (entry.info.patterns.some((pattern) => veto(entry.info.permission, pattern, entry.hardRuleset))) continue // kilocode_change
+        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [])) continue // kilocode_change
         s.pending.delete(id)
         yield* bus.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
