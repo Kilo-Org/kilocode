@@ -259,6 +259,11 @@ export interface DisconnectMcpMessage {
   name: string
 }
 
+export interface AuthenticateMcpMessage {
+  type: "authenticateMcp"
+  name: string
+}
+
 export interface SetLanguageRequest {
   type: "setLanguage"
   locale: string
@@ -979,6 +984,7 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
+  | AuthenticateMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest

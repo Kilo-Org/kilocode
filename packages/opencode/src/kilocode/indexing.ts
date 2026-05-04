@@ -18,10 +18,10 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { registerDisposer } from "@/effect/instance-registry"
-import { Global } from "@/global"
-import { Log } from "@/util"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 
 const log = Log.create({ service: "kilocode-indexing" })
@@ -207,7 +207,9 @@ export namespace KiloIndexing {
     if (cfg.experimental?.semantic_indexing !== true) {
       return track(
         hit,
-        await inert(() => disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings.")),
+        await inert(() =>
+          disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings."),
+        ),
       )
     }
 

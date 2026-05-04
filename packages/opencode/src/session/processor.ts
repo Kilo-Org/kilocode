@@ -2,7 +2,7 @@ import { Cause, Deferred, Effect, Layer, Context, Scope } from "effect"
 import * as Stream from "effect/Stream"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import { Snapshot } from "@/snapshot"
@@ -15,13 +15,13 @@ import type { SessionID } from "./schema"
 import { SessionRetry } from "./retry"
 import { SessionStatus } from "./status"
 import { SessionSummary } from "./summary"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
-import { NotFoundError } from "@/storage" // kilocode_change
+import { NotFoundError } from "@/storage/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
 
 const DOOM_LOOP_THRESHOLD = 3

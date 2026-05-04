@@ -4,14 +4,14 @@ import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import z from "zod"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
-import { InstanceState } from "@/effect"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { Hash } from "@opencode-ai/shared/util/hash"
-import { Config } from "../config"
-import { Global } from "../global"
-import { Log } from "../util"
-import { Flag } from "@/flag/flag" // kilocode_change
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { InstanceState } from "@/effect/instance-state"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Hash } from "@opencode-ai/core/util/hash"
+import { Config } from "@/config/config"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { DiffFull } from "../kilocode/snapshot/diff-full" // kilocode_change
 import { withStatics } from "@/util/schema"
 import { zod } from "@/util/effect-zod"

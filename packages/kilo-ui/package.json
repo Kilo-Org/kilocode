@@ -115,7 +115,7 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.11",
-    "@opencode-ai/shared": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@solid-primitives/lifecycle": "0.1.2",
     "@solid-primitives/media": "2.3.3",

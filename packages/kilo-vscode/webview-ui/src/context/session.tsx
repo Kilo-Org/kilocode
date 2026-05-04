@@ -175,6 +175,7 @@ interface SessionContextValue {
   mcpLoading: Accessor<string | null>
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
+  authenticateMcp: (name: string) => void
   refreshMcpStatus: () => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
@@ -354,6 +355,13 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!server.isConnected()) return
     setMcpLoading(name)
     vscode.postMessage({ type: "disconnectMcp", name })
+  }
+
+  const authenticateMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "authenticateMcp", name })
   }
 
   const refreshMcpStatus = () => {
@@ -2219,6 +2227,7 @@ export const SessionProvider: ParentComponent = (props) => {
     mcpLoading,
     connectMcp,
     disconnectMcp,
+    authenticateMcp,
     refreshMcpStatus,
     selectedAgent: selectedAgentName,
     selectAgent,

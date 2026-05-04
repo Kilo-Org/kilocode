@@ -66,6 +66,7 @@ import {
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
+import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -796,14 +797,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestMcpStatus":
           this.fetchAndSendMcpStatus().catch((e) => console.error("[Kilo New] fetchAndSendMcpStatus failed:", e))
           break
-        case "connectMcp":
-          this.handleConnectMcp(message.name).catch((e) => console.error("[Kilo New] handleConnectMcp failed:", e))
+        case "connectMcp": {
+          const c1 = this.client
+          if (c1) {
+            void McpOAuth.connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] connectMcpServer failed:", e))
+          }
           break
-        case "disconnectMcp":
-          this.handleDisconnectMcp(message.name).catch((e) =>
-            console.error("[Kilo New] handleDisconnectMcp failed:", e),
-          )
+        }
+        case "disconnectMcp": {
+          const c2 = this.client
+          if (c2) {
+            void McpOAuth.disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] disconnectMcpServer failed:", e))
+          }
           break
+        }
+        case "authenticateMcp": {
+          const c = this.client
+          if (c) {
+            void McpOAuth.authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] authenticateMcpServer failed:", e))
+          }
+          break
+        }
 
         case "questionReply":
           this.noteFollowup(message.answers, message.sessionID)
@@ -1950,30 +1970,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleConnectMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      await this.client.mcp.connect({ name, directory })
-      await this.fetchAndSendMcpStatus()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to connect MCP:", name, error)
-      await this.fetchAndSendMcpStatus()
-    }
-  }
-
-  private async handleDisconnectMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      await this.client.mcp.disconnect({ name, directory })
-      await this.fetchAndSendMcpStatus()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to disconnect MCP:", name, error)
-      await this.fetchAndSendMcpStatus()
-    }
-  }
-
   /**
    * Remove a marketplace item from a single scope and invalidate CLI caches.
    */
@@ -2976,6 +2972,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     if (event.type === "permission.replied") {
       this.permissionDirectories.delete(event.properties.requestID)
+    }
+
+    if (event.type === "mcp.browser.open.failed") {
+      McpOAuth.openMcpOAuthUrlOnce(event.properties.url)
+      return
     }
 
     if (event.type === "message.updated") {

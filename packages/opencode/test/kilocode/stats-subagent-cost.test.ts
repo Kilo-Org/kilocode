@@ -8,9 +8,9 @@ import { aggregateSessionStats } from "../../src/cli/cmd/stats"
 import { MessageV2 } from "../../src/session/message-v2"
 import { Instance } from "../../src/project/instance"
 import { ProviderID, ModelID } from "../../src/provider/schema"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { MessageID, PartID } from "../../src/session/schema"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })

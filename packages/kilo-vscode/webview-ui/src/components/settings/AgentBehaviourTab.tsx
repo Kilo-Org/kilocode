@@ -658,6 +658,18 @@ const AgentBehaviourTab: Component = () => {
                         </span>
                       </div>
                       <div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
+                        <Show when={session.mcpStatus()[name]?.status === "needs_auth"}>
+                          <div onClick={(e: MouseEvent) => e.stopPropagation()}>
+                            <Button
+                              variant="secondary"
+                              size="small"
+                              disabled={session.mcpLoading() === name}
+                              onClick={() => session.authenticateMcp(name)}
+                            >
+                              {language.t("common.signIn")}
+                            </Button>
+                          </div>
+                        </Show>
                         <div onClick={(e: MouseEvent) => e.stopPropagation()}>
                           <Switch
                             checked={isConnected(name)}

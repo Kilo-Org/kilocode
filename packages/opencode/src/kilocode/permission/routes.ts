@@ -5,7 +5,7 @@ import { Bus } from "@/bus"
 import * as Config from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Permission } from "@/permission"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema" // kilocode_change
 import { Event } from "../../server/event"
 import { errors } from "../../server/error"
