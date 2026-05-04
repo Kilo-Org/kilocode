@@ -1252,7 +1252,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         })
       }
-
       this.postMessage({ type: "connectionState", state: this.connectionState })
 
       // connect() can resolve after SSE reaches "connected" but before this
