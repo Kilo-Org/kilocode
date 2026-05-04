@@ -228,9 +228,11 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
+        // kilocode_change start - external_directory allows must survive Ask/Plan hard rules
         const rule = hardRuleset
           ? ExternalDirectoryPermission.evaluate(request.permission, pattern, ruleset, approved, local)
           : evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        // kilocode_change end
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
