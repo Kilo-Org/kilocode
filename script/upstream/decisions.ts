@@ -7,12 +7,27 @@
  * audit the manual part of an upstream merge.
  */
 
-import { $ } from "bun"
 import { dirname, join } from "node:path"
 import { mkdir } from "node:fs/promises"
 import { loadConfig } from "./utils/config"
 import { getRecommendation } from "./utils/report"
 import * as log from "./utils/logger"
+
+interface RunResult {
+  exitCode: number
+  stdout: string
+}
+
+// Use Bun.spawn instead of Bun's $ shell template. The $ template hangs
+// after ~10 sequential invocations when filenames contain glob-like
+// characters (e.g. `[channel]`, `[platform]`), silently killing the
+// process without an error. Direct spawn avoids the shell entirely.
+async function run(args: string[]): Promise<RunResult> {
+  const proc = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" })
+  const stdout = await new Response(proc.stdout).text()
+  const exitCode = await proc.exited
+  return { exitCode, stdout }
+}
 
 type Kind = "hybrid" | "take-ours" | "take-theirs" | "regenerated" | "removed" | "renamed" | "other"
 type Risk = "low" | "medium" | "high"
@@ -101,9 +116,9 @@ const kinds: Kind[] = ["hybrid", "take-ours", "take-theirs", "regenerated", "rem
 const risks: Risk[] = ["low", "medium", "high"]
 
 async function root() {
-  const res = await $`git rev-parse --show-toplevel`.quiet().nothrow()
+  const res = await run(["git", "rev-parse", "--show-toplevel"])
   if (res.exitCode !== 0) throw new Error("not inside a git repository")
-  return res.stdout.toString().trim()
+  return res.stdout.trim()
 }
 
 async function setup() {
@@ -179,9 +194,9 @@ function diff3(entry: Item) {
 }
 
 async function side(file: string, stage: 1 | 2 | 3): Promise<Side> {
-  const res = await $`git show ${`:${stage}:${file}`}`.quiet().nothrow()
-  if (res.exitCode !== 0) return { present: false }
-  const text = res.stdout.toString()
+  const res = await run(["git", "show", `:${stage}:${file}`])
+  if (res.exitCode !== 0 || res.stdout.length === 0) return { present: false }
+  const text = res.stdout
   return { present: true, hash: await sha(text), preview: preview(text) }
 }
 
@@ -198,14 +213,14 @@ async function write(file: string, ledger: Ledger) {
 }
 
 async function branch() {
-  const res = await $`git rev-parse --abbrev-ref HEAD`.quiet().nothrow()
-  return res.exitCode === 0 ? res.stdout.toString().trim() : ""
+  const res = await run(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+  return res.exitCode === 0 ? res.stdout.trim() : ""
 }
 
 async function status() {
-  const res = await $`git status --porcelain`.quiet().nothrow()
+  const res = await run(["git", "status", "--porcelain"])
   const map = new Map<string, string>()
-  for (const line of res.stdout.toString().split("\n")) {
+  for (const line of res.stdout.split("\n")) {
     if (!line) continue
     const file = line.startsWith("?? ") ? line.slice(3) : (line.slice(3).split(" -> ").at(-1) ?? line.slice(3))
     map.set(file, line.slice(0, 2))
@@ -223,9 +238,8 @@ async function conflict(file: string) {
 }
 
 async function conflicts() {
-  const res = await $`git diff --name-only --diff-filter=U`.quiet().nothrow()
+  const res = await run(["git", "diff", "--name-only", "--diff-filter=U"])
   return res.stdout
-    .toString()
     .split("\n")
     .map((file) => file.trim())
     .filter(Boolean)
@@ -247,8 +261,8 @@ function type(status: string) {
 async function item(file: string, status: string): Promise<Item> {
   const ours = await side(file, 2)
   const config = loadConfig()
-  const res = ours.present ? await $`git show ${`:2:${file}`}`.quiet().nothrow() : undefined
-  const text = res?.exitCode === 0 ? res.stdout.toString() : ""
+  const res = ours.present ? await run(["git", "show", `:2:${file}`]) : undefined
+  const text = res?.exitCode === 0 ? res.stdout : ""
   const rec = getRecommendation(file, config.keepOurs, config.skipFiles, text)
   return {
     file,
@@ -285,7 +299,11 @@ export async function initLedger(opts: InitOptions) {
   const stats = await status()
   const files = opts.files ?? (await conflicts())
   if (files.length === 0) throw new Error("no unresolved merge conflicts found")
-  const items = await Promise.all(files.map((file) => item(file, stats.get(file) ?? "UU")))
+  // Process sequentially to avoid overwhelming the subprocess pool.
+  const items: Item[] = []
+  for (const file of files) {
+    items.push(await item(file, stats.get(file) ?? "UU"))
+  }
   const now = new Date().toISOString()
   const ledger: Ledger = {
     schema: 1,
@@ -400,9 +418,10 @@ export async function checkLedger(opts: InitOptions & { write?: boolean }) {
   for (const file of open) {
     if (!files.has(file)) issues.push(`${file}: unresolved conflict is missing from the ledger`)
   }
-  const decisions: Resolved[] = await Promise.all(
-    data.ledger.decisions.map(async (entry) => ({ ...entry, resolved: await resolved(entry) })),
-  )
+  const decisions: Resolved[] = []
+  for (const entry of data.ledger.decisions) {
+    decisions.push({ ...entry, resolved: await resolved(entry) })
+  }
   const byFile = new Map(decisions.map((entry) => [entry.file, entry]))
   for (const entry of data.ledger.files) {
     const item = byFile.get(entry.file)
