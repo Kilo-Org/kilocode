@@ -50,8 +50,4 @@
     margin-bottom: 1rem;
   }
 
-  [data-component="markdown-code"][data-kind="mermaid"] {
-    border: 0.5px solid var(--border-weak-base);
-    border-radius: 6px;
-  }
 }
