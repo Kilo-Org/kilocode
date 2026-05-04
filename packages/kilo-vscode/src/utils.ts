@@ -23,6 +23,7 @@ function fontStyle(): string {
   const vars = SIZES.map((size) => `--kilo-font-size-${size}: ${(base * size) / 13}px;`).join("\n      ")
   return `:root {
       ${vars}
+      --kilo-font-scale: ${base / 13};
       --font-size-x-small: var(--kilo-font-size-10);
       --font-size-small: var(--kilo-font-size-11);
       --font-size-base: var(--kilo-font-size-13);

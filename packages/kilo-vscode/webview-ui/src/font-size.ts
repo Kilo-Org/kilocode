@@ -19,6 +19,7 @@ export function applyFontSize(size: number) {
   for (const token of SIZES) {
     root.style.setProperty(`--kilo-font-size-${token}`, `${(base * token) / DEFAULT_SIZE}px`)
   }
+  root.style.setProperty("--kilo-font-scale", String(base / DEFAULT_SIZE))
   root.style.setProperty("--font-size-x-small", "var(--kilo-font-size-10)")
   root.style.setProperty("--font-size-small", "var(--kilo-font-size-11)")
   root.style.setProperty("--font-size-base", "var(--kilo-font-size-13)")

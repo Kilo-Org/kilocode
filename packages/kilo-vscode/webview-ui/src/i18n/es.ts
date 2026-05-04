@@ -1419,8 +1419,9 @@ export const dict = {
   "settings.display.layout.description": "Modo de diseño para la interfaz de chat",
   "settings.display.layout.auto": "Automático",
   "settings.display.layout.stretch": "Estirar",
-  "settings.display.fontSize.title": "Font Size",
-  "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
+  "settings.display.fontSize.title": "Tamaño de fuente",
+  "settings.display.fontSize.description":
+    "Ajusta el tamaño de fuente de la webview UI de Kilo de forma independiente a VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
