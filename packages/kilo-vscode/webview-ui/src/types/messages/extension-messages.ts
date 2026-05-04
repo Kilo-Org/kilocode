@@ -1,4 +1,5 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PartBatch, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
@@ -715,20 +716,6 @@ export interface DiffViewerRevertFileResultMessage {
   file: string
   status: "success" | "error"
   message: string
-}
-
-export interface DiffSourceCapabilities {
-  revert: boolean
-  comments: boolean
-}
-
-export interface DiffSourceDescriptor {
-  /** Unique within a panel context. E.g. "workspace", "session:<sessionId>". */
-  id: string
-  label: string
-  group: "Workspace" | "Session" | "Git"
-  icon?: string
-  capabilities: DiffSourceCapabilities
 }
 
 export interface SetAvailableSourcesMessage {

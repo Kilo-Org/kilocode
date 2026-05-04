@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from "solid-js"
+import { createSignal, onCleanup, Show } from "solid-js"
 import type { Component } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -15,6 +15,8 @@ import { LanguageProvider } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
+import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../src/types/messages/extension-messages"
+import { DiffPickerHeader } from "./DiffPickerHeader"
 
 type DiffStyle = "unified" | "split"
 
@@ -27,6 +29,9 @@ const DiffViewerContent: Component = () => {
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
+  const [availableSources, setAvailableSources] = createSignal<DiffSourceDescriptor[]>([])
+  const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
+  const [capabilities, setCapabilities] = createSignal<DiffSourceCapabilities | undefined>(undefined)
 
   const markReverting = (file: string, active: boolean) => {
     setReverting((prev) => {
@@ -52,7 +57,23 @@ const DiffViewerContent: Component = () => {
       markReverting(msg.file, false)
       return
     }
+
+    if (msg.type === "setAvailableSources") {
+      setAvailableSources(msg.descriptors)
+      setCurrentSourceId(msg.currentId)
+      return
+    }
+
+    if (msg.type === "diffViewer.capabilities") {
+      setCapabilities(msg.capabilities)
+      return
+    }
   })
+
+  const selectSource = (id: string) => {
+    if (id === currentSourceId()) return
+    post({ type: "selectSource", id })
+  }
 
   const handler = (event: MessageEvent) => {
     const msg = event.data
@@ -67,30 +88,35 @@ const DiffViewerContent: Component = () => {
   })
 
   return (
-    <FullScreenDiffView
-      diffs={diffs()}
-      loading={loading()}
-      sessionKey="local"
-      comments={comments()}
-      onCommentsChange={setComments}
-      onSendAll={() => {}}
-      diffStyle={diffStyle()}
-      onDiffStyleChange={(style) => {
-        setDiffStyle(style)
-        post({ type: "diffViewer.setDiffStyle", style })
-      }}
-      onOpenFile={(relativePath) => {
-        post({ type: "openFile", filePath: relativePath })
-      }}
-      onRevertFile={(file) => {
-        markReverting(file, true)
-        post({ type: "diffViewer.revertFile", file })
-      }}
-      revertingFiles={reverting()}
-      onClose={() => {
-        post({ type: "diffViewer.close" })
-      }}
-    />
+    <>
+      <Show when={availableSources().length > 0}>
+        <DiffPickerHeader descriptors={availableSources()} currentId={currentSourceId()} onSelect={selectSource} />
+      </Show>
+      <FullScreenDiffView
+        diffs={diffs()}
+        loading={loading()}
+        sessionKey="local"
+        comments={comments()}
+        onCommentsChange={setComments}
+        onSendAll={() => {}}
+        diffStyle={diffStyle()}
+        onDiffStyleChange={(style) => {
+          setDiffStyle(style)
+          post({ type: "diffViewer.setDiffStyle", style })
+        }}
+        onOpenFile={(relativePath) => {
+          post({ type: "openFile", filePath: relativePath })
+        }}
+        onRevertFile={(file) => {
+          markReverting(file, true)
+          post({ type: "diffViewer.revertFile", file })
+        }}
+        revertingFiles={reverting()}
+        onClose={() => {
+          post({ type: "diffViewer.close" })
+        }}
+      />
+    </>
   )
 }
 
