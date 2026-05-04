@@ -1508,4 +1508,8 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
+  "settings.indexing.kiloModel.title": "إعداد مسبق لنموذج Kilo",
+  "settings.indexing.kiloModel.description": "اختر نموذج Kilo-hosted embeddings مدعوماً.",
+  "settings.indexing.kiloSignIn.title": "مطلوب تسجيل الدخول إلى Kilo",
+  "settings.indexing.kiloSignIn.description": "قم بتسجيل الدخول إلى Kilo لاستخدام hosted embeddings.",
 }

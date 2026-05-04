@@ -9,6 +9,12 @@
 import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
+import {
+  KILO_DEFAULT_EMBEDDING_MODEL,
+  KILO_EMBEDDING_MODELS,
+  getKiloEmbeddingModel,
+  normalizeKiloEmbeddingModelId,
+} from "@kilocode/kilo-indexing/embedding-models"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { reconcile } from "solid-js/store"
@@ -20,7 +26,12 @@ type SDK = any
 
 type EmbeddingProvider = NonNullable<IndexingConfig["provider"]>
 
+function kiloModel(model: string | undefined): string | undefined {
+  return getKiloEmbeddingModel(model)?.id
+}
+
 const PROVIDER_LABELS: Record<EmbeddingProvider, string> = {
+  kilo: "Kilo",
   openai: "OpenAI",
   ollama: "Ollama (local)",
   "openai-compatible": "OpenAI-Compatible",
@@ -35,6 +46,7 @@ const PROVIDER_LABELS: Record<EmbeddingProvider, string> = {
 type ProviderFieldDef = { key: string; label: string; placeholder: string; sensitive?: boolean }
 
 const PROVIDER_FIELDS: Record<EmbeddingProvider, ProviderFieldDef[]> = {
+  kilo: [],
   openai: [{ key: "apiKey", label: "API Key", placeholder: "sk-...", sensitive: true }],
   ollama: [{ key: "baseUrl", label: "Base URL", placeholder: "http://localhost:11434" }],
   "openai-compatible": [
@@ -70,6 +82,21 @@ function getIndexing(sync: ReturnType<typeof useSync>): IndexingConfig {
   return (sync.data.config as Config & { indexing?: IndexingConfig }).indexing ?? {}
 }
 
+function hasKiloAuth(sync: ReturnType<typeof useSync>): boolean {
+  const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
+  if (provider?.key) return true
+  const token = provider?.options?.kilocodeToken
+  if (typeof token === "string" && token.length > 0) return true
+  const cfg = (sync.data.config.provider?.kilo?.options ?? {}) as Record<string, unknown>
+  return typeof cfg.apiKey === "string" && cfg.apiKey.length > 0
+}
+
+function defaultIndexing(sync: ReturnType<typeof useSync>): IndexingConfig {
+  const indexing = getIndexing(sync)
+  if (indexing.provider || !hasKiloAuth(sync)) return indexing
+  return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL }
+}
+
 async function saveIndexing(
   sdk: SDK,
   sync: ReturnType<typeof useSync>,
@@ -92,7 +119,12 @@ async function saveIndexing(
   return true
 }
 
-function providerSettingsDescription(indexing: IndexingConfig, provider: EmbeddingProvider): string {
+function providerSettingsDescription(
+  sync: ReturnType<typeof useSync>,
+  indexing: IndexingConfig,
+  provider: EmbeddingProvider,
+): string {
+  if (provider === "kilo") return hasKiloAuth(sync) ? "uses Kilo account" : "sign in to Kilo"
   const fields = PROVIDER_FIELDS[provider]
   const settings = indexing[provider] as Record<string, string | undefined> | undefined
   if (!settings) return "not configured"
@@ -115,15 +147,17 @@ function ProviderSelect(props: SubDialogProps) {
   const sync = useSync()
   const sdk = props.useSDK()
   const toast = useToast()
-  const indexing = getIndexing(sync)
+  const indexing = defaultIndexing(sync)
 
   const options: DialogSelectOption<EmbeddingProvider>[] = (
     Object.entries(PROVIDER_LABELS) as [EmbeddingProvider, string][]
-  ).map(([value, title]) => ({
-    value,
-    title,
-    description: value === indexing.provider ? "(current)" : undefined,
-  }))
+  )
+    .filter(([value]) => value !== "kilo" || hasKiloAuth(sync) || indexing.provider === "kilo")
+    .map(([value, title]) => ({
+      value,
+      title,
+      description: value === indexing.provider ? "(current)" : undefined,
+    }))
 
   return (
     <DialogSelect
@@ -132,7 +166,16 @@ function ProviderSelect(props: SubDialogProps) {
       current={indexing.provider}
       onSelect={async (option) => {
         const provider = option.value
-        const updated = { ...getIndexing(sync), provider }
+        const current = getIndexing(sync)
+        const updated: IndexingConfig =
+          provider === "kilo"
+            ? { ...current, provider, model: kiloModel(current.model) ?? KILO_DEFAULT_EMBEDDING_MODEL, dimension: undefined }
+            : {
+                ...current,
+                provider,
+                model: indexing.provider === "kilo" && kiloModel(current.model) ? undefined : current.model,
+                dimension: undefined,
+              }
         const saved = await saveIndexing(sdk, sync, updated, toast)
         if (!saved) {
           dialog.clear()
@@ -153,7 +196,11 @@ async function showProviderSettings(
   useSDK: () => UseSDK,
 ) {
   const fields = PROVIDER_FIELDS[provider]
-  const indexing = getIndexing(sync)
+  if (fields.length === 0) {
+    dialog.replace(() => <DialogIndexing useSDK={useSDK} />)
+    return
+  }
+  const indexing = defaultIndexing(sync)
   const currentSettings = (indexing[provider] as Record<string, string | undefined>) ?? {}
   const newSettings: Record<string, string | undefined> = { ...currentSettings }
 
@@ -181,7 +228,7 @@ function VectorStoreSelect(props: SubDialogProps) {
   const sync = useSync()
   const sdk = props.useSDK()
   const toast = useToast()
-  const indexing = getIndexing(sync)
+  const indexing = defaultIndexing(sync)
 
   const options: DialogSelectOption<string>[] = Object.entries(VECTOR_STORE_LABELS).map(([value, title]) => ({
     value,
@@ -337,6 +384,30 @@ function TuningMenu(props: SubDialogProps) {
   )
 }
 
+function KiloModelSelect(props: SubDialogProps) {
+  const dialog = useDialog()
+  const sync = useSync()
+  const sdk = props.useSDK()
+  const toast = useToast()
+  const indexing = defaultIndexing(sync)
+
+  return (
+    <DialogSelect
+      title="Kilo Embedding Model"
+      options={KILO_EMBEDDING_MODELS.map((item) => ({
+        value: item.id,
+        title: item.name,
+        description: item.id === (kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL) ? "(current)" : `${item.dimension}d`,
+      }))}
+      current={kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL}
+      onSelect={async (option) => {
+        await saveIndexing(sdk, sync, { ...getIndexing(sync), provider: "kilo", model: option.value, dimension: undefined }, toast)
+        dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
+      }}
+    />
+  )
+}
+
 // --- Main Dialog ---
 
 interface DialogIndexingProps {
@@ -348,7 +419,7 @@ export function DialogIndexing(props: DialogIndexingProps) {
   const sync = useSync()
   const sdk = props.useSDK()
   const toast = useToast()
-  const indexing = getIndexing(sync)
+  const indexing = defaultIndexing(sync)
 
   const providerLabel = indexing.provider ? PROVIDER_LABELS[indexing.provider] : "not set"
   const storeLabel = indexing.vectorStore
@@ -397,9 +468,18 @@ export function DialogIndexing(props: DialogIndexingProps) {
     },
   ]
 
+  if (indexing.provider === "kilo") {
+    options.splice(3, 0, {
+      value: "kiloModel",
+      title: "Kilo Model Preset",
+      category: "Embedding",
+      description: kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL,
+    })
+  }
+
   // If a provider is selected, add a provider-settings entry below it
   if (indexing.provider) {
-    const settingsDesc = providerSettingsDescription(indexing, indexing.provider)
+    const settingsDesc = providerSettingsDescription(sync, indexing, indexing.provider)
     options.splice(2, 0, {
       value: "providerSettings",
       title: `${PROVIDER_LABELS[indexing.provider]} Settings`,
@@ -416,7 +496,9 @@ export function DialogIndexing(props: DialogIndexingProps) {
       onSelect={async (option) => {
         switch (option.value) {
           case "toggle": {
-            const updated = { ...getIndexing(sync), enabled: !indexing.enabled }
+            const current = getIndexing(sync)
+            const enabled = !indexing.enabled
+            const updated = enabled && !current.provider && hasKiloAuth(sync) ? { ...defaultIndexing(sync), enabled } : { ...current, enabled }
             await saveIndexing(sdk, sync, updated, toast)
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
             break
@@ -429,15 +511,23 @@ export function DialogIndexing(props: DialogIndexingProps) {
               await showProviderSettings(dialog, sync, sdk, toast, indexing.provider, props.useSDK)
             }
             break
+          case "kiloModel":
+            dialog.replace(() => <KiloModelSelect useSDK={props.useSDK} />)
+            break
           case "model": {
             const result = await DialogPrompt.show(dialog, "Embedding Model", {
               value: indexing.model ?? "",
-              placeholder: "e.g. text-embedding-3-small",
+              placeholder: indexing.provider === "kilo" ? KILO_DEFAULT_EMBEDDING_MODEL : "e.g. text-embedding-3-small",
             })
             if (result !== null) {
+              const trimmed = result.trim()
               const updated = {
                 ...getIndexing(sync),
-                model: result.trim() || undefined,
+                model: trimmed
+                  ? indexing.provider === "kilo"
+                    ? (normalizeKiloEmbeddingModelId(trimmed) ?? trimmed)
+                    : trimmed
+                  : undefined,
               }
               await saveIndexing(sdk, sync, updated, toast)
             }

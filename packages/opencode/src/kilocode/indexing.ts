@@ -19,6 +19,7 @@ import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
+import { Auth } from "@/auth"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
@@ -61,6 +62,67 @@ function pending(): z.infer<typeof IndexingStatus> {
     processedFiles: 0,
     totalFiles: 0,
     percent: 0,
+  }
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
+function text(value: unknown): string | undefined {
+  if (typeof value !== "string") return
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
+function token(auth: Awaited<ReturnType<typeof Auth.get>>): string | undefined {
+  if (!auth) return
+  if (auth.type === "api") return auth.key
+  if (auth.type === "oauth") return auth.access
+  return
+}
+
+function org(auth: Awaited<ReturnType<typeof Auth.get>>): string | undefined {
+  if (!auth) return
+  if (auth.type === "oauth") return auth.accountId
+  return
+}
+
+type KiloAuth = {
+  apiKey?: string
+  baseUrl?: string
+  organizationId?: string
+}
+
+async function kiloAuth(cfg: Awaited<ReturnType<typeof Config.get>>): Promise<KiloAuth> {
+  const options = record(cfg.provider?.kilo?.options)
+  const kilo = record(record(cfg.indexing).kilo)
+  const auth = await Auth.get("kilo")
+
+  return {
+    apiKey: text(kilo.apiKey) ?? text(options.apiKey) ?? token(auth) ?? text(process.env.KILO_API_KEY),
+    baseUrl: text(kilo.baseUrl) ?? text(options.baseURL) ?? text(options.baseUrl),
+    organizationId:
+      text(kilo.organizationId) ?? text(options.kilocodeOrganizationId) ?? org(auth) ?? text(process.env.KILO_ORG_ID),
+  }
+}
+
+function source(cfg: Awaited<ReturnType<typeof Config.get>>, auth: KiloAuth): Config.Indexing | undefined {
+  const indexing = cfg.indexing
+  const raw = record(indexing)
+  if (raw.provider !== undefined || !auth.apiKey) return indexing
+  return { ...raw, provider: "kilo" } as Config.Indexing
+}
+
+function enrichKilo(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloAuth) {
+  if (input.embedderProvider !== "kilo") return input
+
+  return {
+    ...input,
+    kiloApiKey: input.kiloApiKey ?? auth.apiKey,
+    kiloBaseUrl: input.kiloBaseUrl ?? auth.baseUrl,
+    kiloOrganizationId: input.kiloOrganizationId ?? auth.organizationId,
   }
 }
 
@@ -220,7 +282,8 @@ export namespace KiloIndexing {
     log.info("initializing project indexing", { workspacePath: dir })
     const root = path.join(Global.Path.state, "indexing")
     const manager = new CodeIndexManager(dir, root)
-    const input = toIndexingConfigInput(cfg.indexing)
+    const auth = await kiloAuth(cfg)
+    const input = enrichKilo(toIndexingConfigInput(source(cfg, auth)), auth)
     const box = { status: pending() as Status | undefined }
     const current = () => box.status ?? normalizeIndexingStatus(manager)
     let disposed = false

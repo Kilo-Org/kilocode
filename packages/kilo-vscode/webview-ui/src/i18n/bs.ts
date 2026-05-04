@@ -1543,4 +1543,8 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
+  "settings.indexing.kiloModel.title": "Unaprijed postavljeni Kilo model",
+  "settings.indexing.kiloModel.description": "Odaberite podržani Kilo-hosted embeddings model.",
+  "settings.indexing.kiloSignIn.title": "Potrebna prijava na Kilo",
+  "settings.indexing.kiloSignIn.description": "Prijavite se na Kilo da biste koristili hosted embeddings.",
 }

@@ -1546,4 +1546,8 @@ export const dict = {
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",
   "notifications.action.tryModelGeneric": "Experimentar modelo",
+  "settings.indexing.kiloModel.title": "Predefinição de modelo Kilo",
+  "settings.indexing.kiloModel.description": "Escolha um modelo de Kilo-hosted embeddings suportado.",
+  "settings.indexing.kiloSignIn.title": "Login no Kilo obrigatório",
+  "settings.indexing.kiloSignIn.description": "Faça login no Kilo para usar hosted embeddings.",
 }

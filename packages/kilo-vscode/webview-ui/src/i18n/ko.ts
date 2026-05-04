@@ -1513,4 +1513,8 @@ export const dict = {
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
   "notifications.action.tryModelGeneric": "모델 시도",
+  "settings.indexing.kiloModel.title": "Kilo 모델 사전 설정",
+  "settings.indexing.kiloModel.description": "지원되는 Kilo-hosted embeddings 모델을 선택하세요.",
+  "settings.indexing.kiloSignIn.title": "Kilo 로그인 필요",
+  "settings.indexing.kiloSignIn.description": "hosted embeddings를 사용하려면 Kilo에 로그인하세요.",
 }

@@ -1528,4 +1528,8 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
+  "settings.indexing.kiloModel.title": "Forhåndsinnstilling for Kilo-modell",
+  "settings.indexing.kiloModel.description": "Velg en støttet Kilo-hosted embeddings-modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-innlogging kreves",
+  "settings.indexing.kiloSignIn.description": "Logg inn på Kilo for å bruke hosted embeddings.",
 } satisfies Partial<Record<Keys, string>>

@@ -52,6 +52,7 @@ export interface CommitMessageConfig {
 }
 
 export type IndexingProvider =
+  | "kilo"
   | "openai"
   | "ollama"
   | "openai-compatible"
@@ -68,6 +69,7 @@ export interface IndexingConfig {
   model?: string
   dimension?: number
   vectorStore?: "lancedb" | "qdrant"
+  kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
   ollama?: { baseUrl?: string }
   "openai-compatible"?: { baseUrl?: string; apiKey?: string }

@@ -1528,4 +1528,8 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
+  "settings.indexing.kiloModel.title": "Kiloモデルのプリセット",
+  "settings.indexing.kiloModel.description": "サポートされているKilo-hosted embeddingsモデルを選択します。",
+  "settings.indexing.kiloSignIn.title": "Kiloのサインインが必要です",
+  "settings.indexing.kiloSignIn.description": "hosted embeddingsを使用するにはKiloにサインインしてください。",
 }

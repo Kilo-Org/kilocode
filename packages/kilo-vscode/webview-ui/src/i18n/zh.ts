@@ -1479,4 +1479,8 @@ export const dict = {
   "notifications.action.close": "关闭",
   "notifications.action.tryModel": "尝试 {{model}}",
   "notifications.action.tryModelGeneric": "尝试模型",
+  "settings.indexing.kiloModel.title": "Kilo 模型预设",
+  "settings.indexing.kiloModel.description": "选择一个受支持的 Kilo-hosted embeddings 模型。",
+  "settings.indexing.kiloSignIn.title": "需要登录 Kilo",
+  "settings.indexing.kiloSignIn.description": "登录 Kilo 以使用 hosted embeddings。",
 } satisfies Partial<Record<Keys, string>>

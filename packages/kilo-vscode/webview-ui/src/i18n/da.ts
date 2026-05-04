@@ -1533,4 +1533,8 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
+  "settings.indexing.kiloModel.title": "Kilo model-forudindstilling",
+  "settings.indexing.kiloModel.description": "Vælg en understøttet Kilo-hosted embeddings model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-login påkrævet",
+  "settings.indexing.kiloSignIn.description": "Log ind på Kilo for at bruge hosted embeddings.",
 }

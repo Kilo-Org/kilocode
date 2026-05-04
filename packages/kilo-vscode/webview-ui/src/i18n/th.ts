@@ -1512,4 +1512,8 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
+  "settings.indexing.kiloModel.title": "พรีเซ็ตโมเดล Kilo",
+  "settings.indexing.kiloModel.description": "เลือกโมเดล Kilo-hosted embeddings ที่รองรับ",
+  "settings.indexing.kiloSignIn.title": "จำเป็นต้องลงชื่อเข้าใช้ Kilo",
+  "settings.indexing.kiloSignIn.description": "ลงชื่อเข้าใช้ Kilo เพื่อใช้งาน hosted embeddings",
 }

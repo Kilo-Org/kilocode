@@ -1563,4 +1563,8 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
+  "settings.indexing.kiloModel.title": "Kilo-Modell-Voreinstellung",
+  "settings.indexing.kiloModel.description": "Wählen Sie ein unterstütztes Kilo-hosted embeddings Modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-Anmeldung erforderlich",
+  "settings.indexing.kiloSignIn.description": "Melden Sie sich bei Kilo an, um hosted embeddings zu verwenden.",
 } satisfies Partial<Record<Keys, string>>

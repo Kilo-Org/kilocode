@@ -1538,4 +1538,8 @@ export const dict = {
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
   "notifications.action.tryModelGeneric": "Попробовать модель",
+  "settings.indexing.kiloModel.title": "Пресет модели Kilo",
+  "settings.indexing.kiloModel.description": "Выберите поддерживаемую модель Kilo-hosted embeddings.",
+  "settings.indexing.kiloSignIn.title": "Требуется вход в Kilo",
+  "settings.indexing.kiloSignIn.description": "Войдите в Kilo, чтобы использовать hosted embeddings.",
 }

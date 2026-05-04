@@ -41,6 +41,16 @@ const off: Partial<Config.Info> = {
     },
   },
 }
+const kilo: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: true,
+    vectorStore: "qdrant",
+  },
+}
 const configDir = process.env["KILO_CONFIG_DIR"]
 const error = new Error("test indexing initialization failed")
 
@@ -247,5 +257,37 @@ describe("indexing startup degradation", () => {
         expect(init).not.toHaveBeenCalled()
       },
     })
+  })
+
+  test("enriches Kilo provider config from env auth", async () => {
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+    const org = process.env.KILO_ORG_ID
+
+    await using tmp = await tmpdir({ git: true, config: kilo })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+    process.env.KILO_ORG_ID = "org_123"
+
+    try {
+      await Instance.provide({
+        directory: tmp.path,
+        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            kiloApiKey: "kilo-token",
+            kiloOrganizationId: "org_123",
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      if (org === undefined) delete process.env.KILO_ORG_ID
+      else process.env.KILO_ORG_ID = org
+      init.mockRestore()
+    }
   })
 })

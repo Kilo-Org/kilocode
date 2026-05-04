@@ -1,10 +1,11 @@
 import type { Ignore } from "ignore"
 import path from "path"
 
-import { getDefaultModelId } from "./model-registry"
+import { getDefaultModelId, normalizeKiloModelId } from "./model-registry"
 import { resolveEmbeddingProfile } from "./embedding-profile"
 
 import { OpenAiEmbedder } from "./embedders/openai"
+import { KiloEmbedder } from "./embedders/kilo"
 import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
 import { GeminiEmbedder } from "./embedders/gemini"
@@ -63,6 +64,16 @@ export class CodeIndexServiceFactory {
     const config = this.configManager.getConfig()
     const provider = config.embedderProvider
 
+    if (provider === "kilo") {
+      if (!config.kiloOptions?.apiKey) throw new Error("Kilo API key is required for embedding.")
+      const model = normalizeKiloModelId(config.modelId) ?? getDefaultModelId("kilo")
+      return new KiloEmbedder({
+        apiKey: config.kiloOptions.apiKey,
+        baseUrl: config.kiloOptions.baseUrl,
+        organizationId: config.kiloOptions.organizationId,
+        modelId: model,
+      })
+    }
     if (provider === "openai") {
       if (!config.openAiOptions?.apiKey) throw new Error("OpenAI API key is required for embedding.")
       return new OpenAiEmbedder(config.openAiOptions.apiKey, config.modelId)

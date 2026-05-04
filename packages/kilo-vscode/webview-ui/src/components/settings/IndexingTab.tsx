@@ -1,18 +1,38 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
+import {
+  KILO_DEFAULT_EMBEDDING_MODEL,
+  KILO_EMBEDDING_MODELS,
+  formatKiloEmbeddingModelLabel,
+  getKiloEmbeddingModel,
+  normalizeKiloEmbeddingModelId,
+} from "@kilocode/kilo-indexing/embedding-models"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useConfig } from "../../context/config"
 import { formatIndexingLabel, useIndexing } from "../../context/indexing"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
+import { useServer } from "../../context/server"
 import type { IndexingConfig, IndexingProvider as ProviderId } from "../../types/messages"
+import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import SettingsRow from "./SettingsRow"
 
 type Option = { value: string; label: string }
 type TuningKey = "searchMinScore" | "searchMaxResults" | "embeddingBatchSize" | "scannerMaxBatchRetries"
 
-const providers: { value: ProviderId; label: string }[] = [
+const kiloModels = KILO_EMBEDDING_MODELS.map((model) => ({
+  value: model.id,
+  label: formatKiloEmbeddingModelLabel(model),
+}))
+
+function knownKiloModel(model: string | undefined): string | undefined {
+  return getKiloEmbeddingModel(model)?.id
+}
+
+const allProviders: { value: ProviderId; label: string }[] = [
+  { value: "kilo", label: "Kilo" },
   { value: "openai", label: "OpenAI" },
   { value: "ollama", label: "Ollama (local)" },
   { value: "openai-compatible", label: "OpenAI-Compatible" },
@@ -37,6 +57,7 @@ const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
 ]
 
 function providerFields(provider: ProviderId | undefined): Array<{ key: string; label: string; placeholder: string }> {
+  if (provider === "kilo") return []
   if (provider === "openai") return [{ key: "apiKey", label: "API Key", placeholder: "sk-..." }]
   if (provider === "ollama") return [{ key: "baseUrl", label: "Base URL", placeholder: "http://localhost:11434" }]
   if (provider === "openai-compatible") {
@@ -68,6 +89,8 @@ const IndexingTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const indexing = useIndexing()
   const language = useLanguage()
+  const provider = useProvider()
+  const server = useServer()
   const [providerDrafts, setProviderDrafts] = createSignal<Record<string, string>>({})
   const [storeDrafts, setStoreDrafts] = createSignal<Record<string, string>>({})
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
@@ -78,8 +101,47 @@ const IndexingTab: Component = () => {
     updateConfig({ indexing: { ...cfg(), ...partial } })
   }
 
-  const provider = () => cfg().provider
   const vectorStore = () => cfg().vectorStore ?? "qdrant"
+  const kiloAvailable = () => !!server.profileData() || provider.authStates()[KILO_PROVIDER_ID] !== undefined
+  const selectedProvider = () => cfg().provider ?? (kiloAvailable() ? "kilo" : undefined)
+  const providers = createMemo(() =>
+    allProviders.filter((item) => item.value !== "kilo" || kiloAvailable() || selectedProvider() === "kilo"),
+  )
+  const fields = createMemo(() => providerFields(selectedProvider()))
+
+  const saveProvider = (next: ProviderId | undefined) => {
+    if (next === "kilo") {
+      updateIndexing({
+        provider: next,
+        model: knownKiloModel(cfg().model) ?? KILO_DEFAULT_EMBEDDING_MODEL,
+        dimension: undefined,
+      })
+      return
+    }
+    const model = selectedProvider() === "kilo" && knownKiloModel(cfg().model) ? undefined : cfg().model
+    updateIndexing({ provider: next, model, dimension: undefined })
+  }
+
+  const saveEnabled = (enabled: boolean) => {
+    if (enabled && !cfg().provider && kiloAvailable()) {
+      updateIndexing({
+        enabled,
+        provider: "kilo",
+        model: knownKiloModel(cfg().model) ?? KILO_DEFAULT_EMBEDDING_MODEL,
+      })
+      return
+    }
+    updateIndexing({ enabled })
+  }
+
+  const saveModel = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      updateIndexing({ model: undefined })
+      return
+    }
+    updateIndexing({ model: selectedProvider() === "kilo" ? (normalizeKiloEmbeddingModelId(trimmed) ?? trimmed) : trimmed })
+  }
 
   const providerValue = (group: string, key: string) => {
     const draftKey = `${group}.${key}`
@@ -148,7 +210,7 @@ const IndexingTab: Component = () => {
         >
           <Switch
             checked={cfg().enabled ?? false}
-            onChange={(checked) => updateIndexing({ enabled: checked })}
+            onChange={saveEnabled}
             hideLabel
           >
             {language.t("settings.indexing.enable.title")}
@@ -162,31 +224,49 @@ const IndexingTab: Component = () => {
           description={language.t("settings.indexing.provider.description")}
         >
           <Select
-            options={providers}
-            current={providers.find((item) => item.value === provider())}
+            options={providers()}
+            current={providers().find((item) => item.value === selectedProvider())}
             value={(item) => item.value}
             label={(item) => item.label}
-            onSelect={(item) => updateIndexing({ provider: item?.value as ProviderId | undefined })}
+            onSelect={(item) => saveProvider(item?.value as ProviderId | undefined)}
             variant="secondary"
             size="small"
             triggerVariant="settings"
             placeholder={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
+        <Show when={selectedProvider() === "kilo"}>
+          <SettingsRow
+            title={language.t("settings.indexing.kiloModel.title")}
+            description={language.t("settings.indexing.kiloModel.description")}
+          >
+            <Select
+              options={kiloModels}
+              current={kiloModels.find((item) => item.value === knownKiloModel(cfg().model))}
+              value={(item) => item.value}
+              label={(item) => item.label}
+              onSelect={(item) => updateIndexing({ model: item?.value ?? KILO_DEFAULT_EMBEDDING_MODEL, dimension: undefined })}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              placeholder="Custom model"
+            />
+          </SettingsRow>
+        </Show>
         <SettingsRow
           title={language.t("settings.indexing.model.title")}
           description={language.t("settings.indexing.model.description")}
         >
           <TextField
             value={cfg().model ?? ""}
-            placeholder="text-embedding-3-small"
-            onChange={(value) => updateIndexing({ model: value.trim() || undefined })}
+            placeholder={selectedProvider() === "kilo" ? KILO_DEFAULT_EMBEDDING_MODEL : "text-embedding-3-small"}
+            onChange={saveModel}
           />
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.indexing.dimension.title")}
           description={language.t("settings.indexing.dimension.description")}
-          last={!provider()}
+          last={!selectedProvider() || (fields().length === 0 && !(selectedProvider() === "kilo" && !kiloAvailable()))}
         >
           <TextField
             value={cfg().dimension === undefined ? "" : String(cfg().dimension)}
@@ -194,10 +274,19 @@ const IndexingTab: Component = () => {
             onChange={(value) => saveNumber("dimension", value, { integer: true, min: 1 })}
           />
         </SettingsRow>
-        <Show when={provider()} keyed>
+        <Show when={selectedProvider() === "kilo" && !kiloAvailable()}>
+          <SettingsRow
+            title={language.t("settings.indexing.kiloSignIn.title")}
+            description={language.t("settings.indexing.kiloSignIn.description")}
+            last
+          >
+            <span />
+          </SettingsRow>
+        </Show>
+        <Show when={fields().length > 0 ? selectedProvider() : undefined} keyed>
           {(group) => {
             const fields = providerFields(group)
-            const label = providers.find((item) => item.value === group)?.label ?? group
+            const label = allProviders.find((item) => item.value === group)?.label ?? group
             return (
               <For each={fields}>
                 {(field, index) => (

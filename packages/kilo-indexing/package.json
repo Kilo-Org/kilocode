@@ -17,6 +17,7 @@
     ".": "./src/index.ts",
     "./config": "./src/config.ts",
     "./detect": "./src/detect.ts",
+    "./embedding-models": "./src/kilo-embedding-models.ts",
     "./engine": "./src/indexing/index.ts",
     "./server": "./src/server/routes.ts",
     "./status": "./src/status.ts"

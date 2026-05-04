@@ -34,6 +34,7 @@ export {
   promptOrganizationSelection,
 } from "./api/profile.js"
 export { fetchKiloModels } from "./api/models.js"
+export { resolveKiloGatewayBaseUrl, resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 export {
   fetchOrganizationModes,
   clearModesCache,
