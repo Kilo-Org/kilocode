@@ -187,6 +187,7 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Select files and click **Apply to local** to copy the worktree's changes onto your local checkout of the base branch
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
+- Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.

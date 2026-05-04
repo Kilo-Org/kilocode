@@ -67,6 +67,10 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### Markdown Diff Rendering
+
+Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
+
 ### Export and Import
 
 You can export and import settings from the **About Kilo Code** tab in the Settings UI:
