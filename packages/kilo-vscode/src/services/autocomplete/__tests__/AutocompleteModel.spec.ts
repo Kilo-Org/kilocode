@@ -75,13 +75,6 @@ describe("AutocompleteModel", () => {
     })
   })
 
-  describe("supportsFim", () => {
-    it("always returns true", () => {
-      const model = new AutocompleteModel()
-      expect(model.supportsFim()).toBe(true)
-    })
-  })
-
   describe("getModelName", () => {
     it("returns the default model", () => {
       const model = new AutocompleteModel()
@@ -90,9 +83,16 @@ describe("AutocompleteModel", () => {
   })
 
   describe("getProviderDisplayName", () => {
-    it("returns Kilo Gateway", () => {
+    it("returns the default provider", () => {
       const model = new AutocompleteModel()
-      expect(model.getProviderDisplayName()).toBe("Kilo Gateway")
+      expect(model.getProviderDisplayName()).toBe("Mistral AI")
+    })
+
+    it("returns the selected provider", () => {
+      const model = new AutocompleteModel()
+      model.setModel("inception/mercury-edit")
+
+      expect(model.getProviderDisplayName()).toBe("Inception")
     })
   })
 
@@ -143,6 +143,23 @@ describe("AutocompleteModel", () => {
       })
     })
 
+    it("streams text-completion chunks", async () => {
+      const chunks = [{ choices: [{ text: "hello" }] }, { choices: [{ text: " world" }] }]
+
+      const connection = createMockConnectionService("connected")
+      mockClient.kilo.fim.mockResolvedValue({
+        stream: (async function* () {
+          for (const chunk of chunks) yield chunk
+        })(),
+      })
+
+      const model = new AutocompleteModel(connection)
+      const received: string[] = []
+      await model.generateFimResponse("prefix", "suffix", (text) => received.push(text))
+
+      expect(received).toEqual(["hello", " world"])
+    })
+
     it("passes model parameters to fim call", async () => {
       const connection = createMockConnectionService("connected")
       mockClient.kilo.fim.mockResolvedValue({
@@ -164,13 +181,23 @@ describe("AutocompleteModel", () => {
         expect.objectContaining({ signal }),
       )
     })
-  })
 
-  describe("generateResponse", () => {
-    it("throws because FIM is the primary strategy", async () => {
-      const model = new AutocompleteModel()
-      await expect(model.generateResponse("system", "user", vi.fn())).rejects.toThrow(
-        "Chat-based completions are not supported via CLI backend",
+    it("passes selected model parameters to fim call", async () => {
+      const connection = createMockConnectionService("connected")
+      mockClient.kilo.fim.mockResolvedValue({
+        stream: (async function* () {})(),
+      })
+
+      const model = new AutocompleteModel(connection)
+      model.setModel("inception/mercury-edit")
+      await model.generateFimResponse("pre", "suf", vi.fn())
+
+      expect(mockClient.kilo.fim).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: "inception/mercury-edit",
+          temperature: 0,
+        }),
+        expect.any(Object),
       )
     })
   })

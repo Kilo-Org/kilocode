@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { activeUserMessageID, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
+import {
+  activeUserMessageID,
+  messageTurns,
+  queuedUserMessageIDs,
+  stableMessageTurns,
+} from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -46,10 +51,93 @@ describe("queuedUserMessageIDs", () => {
     expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_4"])
   })
 
+  it("keeps all follow-ups queued when the active assistant arrives after them", () => {
+    const messages = [
+      user("message_1"),
+      user("message_3"),
+      user("message_4"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+    ]
+
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3", "message_4"])
+  })
+
   it("returns no queued messages while idle", () => {
     const messages = [user("message_1"), user("message_2")]
 
     expect(queuedUserMessageIDs(messages, { type: "idle" })).toEqual([])
+  })
+})
+
+describe("messageTurns", () => {
+  it("attaches assistant output to its parent turn when queued users are newer", () => {
+    const messages = [
+      user("message_1"),
+      user("message_3"),
+      user("message_4"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+    ]
+
+    expect(
+      messageTurns(messages).map((turn) => ({
+        user: turn.user.id,
+        assistant: turn.assistant.map((msg) => msg.id),
+      })),
+    ).toEqual([
+      { user: "message_1", assistant: ["message_2"] },
+      { user: "message_3", assistant: [] },
+      { user: "message_4", assistant: [] },
+    ])
+  })
+
+  it("surfaces leading assistant output as partial turns grouped by parent", () => {
+    const messages = [
+      assistant("message_2", "message_1"),
+      assistant("message_4", "message_3"),
+      assistant("message_5", "message_3"),
+      user("message_6"),
+    ]
+    const turns = messageTurns(messages)
+
+    expect(
+      turns.map((turn) => ({ id: turn.id, partial: turn.partial, assistant: turn.assistant.map((msg) => msg.id) })),
+    ).toEqual([
+      { id: "message_1", partial: true, assistant: ["message_2"] },
+      { id: "message_3", partial: true, assistant: ["message_4", "message_5"] },
+      { id: "message_6", partial: undefined, assistant: [] },
+    ])
+  })
+})
+
+describe("stableMessageTurns", () => {
+  it("keeps existing turn identities stable when older turns are prepended", () => {
+    const u1 = user("message_1")
+    const a2 = assistant("message_2", "message_1")
+    const u3 = user("message_3")
+    const prev = messageTurns([u1, a2, u3])
+    const next = stableMessageTurns(messageTurns([user("message_0"), u1, a2, u3]), prev)
+
+    expect(next[1]).toBe(prev[0])
+    expect(next[2]).toBe(prev[1])
+  })
+
+  it("replaces a turn identity when its assistant messages change", () => {
+    const u1 = user("message_1")
+    const a2 = assistant("message_2", "message_1")
+    const prev = messageTurns([u1, a2])
+    const next = stableMessageTurns(messageTurns([u1, a2, assistant("message_3", "message_1")]), prev)
+
+    expect(next[0]).not.toBe(prev[0])
+    expect(next[0]?.assistant.map((msg) => msg.id)).toEqual(["message_2", "message_3"])
+  })
+
+  it("keeps partial turn identities stable while their assistant messages are unchanged", () => {
+    const a2 = assistant("message_2", "message_1")
+    const a3 = assistant("message_3", "message_1")
+    const prev = messageTurns([a2, a3])
+    const next = stableMessageTurns(messageTurns([a2, a3, user("message_4")]), prev)
+
+    expect(next[0]).toBe(prev[0])
   })
 })
 

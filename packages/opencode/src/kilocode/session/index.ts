@@ -1,20 +1,21 @@
 // kilocode_change - new file
 import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
+import { Schema } from "effect"
 import { BusEvent } from "@/bus/bus-event"
 import { Session } from "@/session"
 import { MessageID, SessionID } from "@/session/schema"
 import { makeRuntime } from "@/effect/run-service"
 import { fn } from "@/util/fn"
-import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
+import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
 import { ProjectID } from "@/project/schema"
-import { Filesystem } from "@/util/filesystem"
+import { Filesystem } from "@/util"
 import { SessionTable } from "@/session/session.sql"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import type { ProviderMetadata } from "ai"
-import type { Provider } from "@/provider/provider"
+import type { Provider } from "@/provider"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -23,23 +24,25 @@ export namespace KiloSession {
   // Events
   // ---------------------------------------------------------------------------
 
+  const CloseReasonSchema = Schema.Literals(["completed", "error", "interrupted"])
+
   export const Event = {
     TurnOpen: BusEvent.define(
       "session.turn.open",
-      z.object({
-        sessionID: z.string(),
+      Schema.Struct({
+        sessionID: SessionID,
       }),
     ),
     TurnClose: BusEvent.define(
       "session.turn.close",
-      z.object({
-        sessionID: z.string(),
-        reason: z.enum(["completed", "error", "interrupted"]),
+      Schema.Struct({
+        sessionID: SessionID,
+        reason: CloseReasonSchema,
       }),
     ),
   }
 
-  export type CloseReason = z.infer<typeof Event.TurnClose.properties>["reason"]
+  export type CloseReason = Schema.Schema.Type<typeof CloseReasonSchema>
 
   // ---------------------------------------------------------------------------
   // Per-session platform override (telemetry attribution)
@@ -149,6 +152,14 @@ export namespace KiloSession {
   export async function removeSession(id: string): Promise<void> {
     const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
     await KiloSessions.remove(id).catch(() => {})
+  }
+
+  export async function cleanup(id: string): Promise<void> {
+    await removeSession(id)
+    clearPlatformOverride(id)
+    const [app, state] = await Promise.all([import("@/effect/app-runtime"), import("@/session/run-state")])
+    const { SessionID } = await import("@/session/schema")
+    await app.AppRuntime.runPromise(state.SessionRunState.Service.use((svc) => svc.cancel(SessionID.make(id))))
   }
 
   // ---------------------------------------------------------------------------

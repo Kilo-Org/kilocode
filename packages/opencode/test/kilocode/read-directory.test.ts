@@ -4,13 +4,13 @@ import { symlink } from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { AppFileSystem } from "../../src/filesystem"
-import { FileTime } from "../../src/file/time"
+import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { LSP } from "../../src/lsp"
 import { Instruction } from "../../src/session/instruction"
+import { Truncate } from "../../src/tool"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ReadTool } from "../../src/tool/read"
-import { Tool } from "../../src/tool/tool"
+import { Tool } from "../../src/tool"
 import { provideInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -22,7 +22,7 @@ const baseCtx = {
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
-  ask: async () => {},
+  ask: () => Effect.void,
 }
 
 const expandCtx = { ...baseCtx, extra: { includeDirectoryFiles: true } }
@@ -32,15 +32,15 @@ const it = testEffect(
     Agent.defaultLayer,
     AppFileSystem.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
-    FileTime.defaultLayer,
     Instruction.defaultLayer,
     LSP.defaultLayer,
+    Truncate.defaultLayer,
   ),
 )
 
 const init = Effect.fn("ReadDirectoryTest.init")(function* () {
   const info = yield* ReadTool
-  return yield* Effect.promise(() => info.init())
+  return yield* Tool.init(info)
 })
 
 const run = Effect.fn("ReadDirectoryTest.run")(function* (
@@ -48,7 +48,7 @@ const run = Effect.fn("ReadDirectoryTest.run")(function* (
   ctx = expandCtx,
 ) {
   const tool = yield* init()
-  return yield* Effect.promise(() => tool.execute(args, ctx))
+  return yield* tool.execute(args, ctx as any)
 })
 
 const exec = Effect.fn("ReadDirectoryTest.exec")(function* (

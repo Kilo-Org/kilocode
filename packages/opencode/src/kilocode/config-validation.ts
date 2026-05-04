@@ -1,9 +1,12 @@
 // kilocode_change - new file
 import path from "path"
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser"
+import { Schema } from "effect"
 import { ConfigProtection } from "./permission/config-paths"
-import { ConfigMarkdown } from "@/config/markdown"
-import { Config } from "@/config/config"
+import { ConfigMarkdown } from "@/config"
+import { Config } from "@/config"
+import { ConfigAgent } from "@/config"
+import { ConfigCommand } from "@/config"
 import { ConfigPaths } from "@/config/paths"
 import { Instance } from "@/project/instance"
 
@@ -14,9 +17,7 @@ export namespace ConfigValidation {
   const MODE_DIRS = new Set(["mode", "modes"])
 
   function label(filepath: string): string {
-    const rel = path.isAbsolute(filepath)
-      ? filepath.replace(process.env.HOME || "~", "~")
-      : filepath
+    const rel = path.isAbsolute(filepath) ? filepath.replace(process.env.HOME || "~", "~") : filepath
     return rel
   }
 
@@ -42,11 +43,9 @@ export namespace ConfigValidation {
       return `\n\n<config_validation>\nERROR: Config file at ${label(filepath)} is not valid JSON(C)\n  ${detail}\n</config_validation>`
     }
 
-    const result = Config.Info.safeParse(data)
+    const result = Config.Info.zod.safeParse(data)
     if (!result.success) {
-      const issues = result.error.issues
-        .map((i) => `  ${i.path.join(".")}: ${i.message}`)
-        .join("\n")
+      const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
       return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
     }
 
@@ -57,17 +56,13 @@ export namespace ConfigValidation {
     const dir = path.basename(path.dirname(filepath))
 
     // Determine schema from parent directory
-    const schema = COMMAND_DIRS.has(dir)
-      ? "command"
-      : AGENT_DIRS.has(dir) || MODE_DIRS.has(dir)
-        ? "agent"
-        : undefined
+    const schema = COMMAND_DIRS.has(dir) ? "command" : AGENT_DIRS.has(dir) || MODE_DIRS.has(dir) ? "agent" : undefined
     if (!schema) return ""
 
     let md: Awaited<ReturnType<typeof ConfigMarkdown.parse>>
     try {
       md = await ConfigMarkdown.parse(filepath)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       const msg = ConfigMarkdown.FrontmatterError.isInstance(e)
         ? e.data.message
@@ -75,20 +70,39 @@ export namespace ConfigValidation {
       return `\n\n<config_validation>\nERROR: ${label(filepath)}\n  ${msg}\n</config_validation>`
     }
 
-    const config = schema === "command"
-      ? { ...md.data, template: md.content.trim() }
-      : { ...md.data, prompt: md.content.trim() }
+    const config =
+      schema === "command" ? { ...md.data, template: md.content.trim() } : { ...md.data, prompt: md.content.trim() }
 
-    const zod = schema === "command" ? Config.Command : Config.Agent
-    const result = zod.safeParse(config)
-    if (!result.success) {
-      const issues = result.error.issues
-        .map((i) => `  ${i.path.join(".")}: ${i.message}`)
-        .join("\n")
-      return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
+    if (schema === "command") {
+      const issues = validateEffectSchema(ConfigCommand.Info, config)
+      if (issues) {
+        return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
+      }
+    } else {
+      const result = ConfigAgent.Info.safeParse(config)
+      if (!result.success) {
+        const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
+        return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
+      }
     }
 
     return `\n\n<config_validation>\nConfig file validated successfully.\n</config_validation>`
+  }
+
+  function validateEffectSchema<S extends Schema.Decoder<unknown>>(schema: S, input: unknown): string | undefined {
+    const std = Schema.toStandardSchemaV1(schema)["~standard"]
+    const outcome = std.validate(input)
+    // validate may return a Promise only when async rules exist; our schemas are sync.
+    if (outcome instanceof Promise) {
+      throw new Error("Unexpected async validation in ConfigValidation.validateEffectSchema")
+    }
+    if (!("issues" in outcome) || !outcome.issues) return undefined
+    return outcome.issues
+      .map(
+        (i) =>
+          `  ${(i.path ?? []).map((p) => (typeof p === "object" && p !== null ? p.key : p)).join(".")}: ${i.message}`,
+      )
+      .join("\n")
   }
 
   function isConfig(filepath: string): boolean {
@@ -109,9 +123,7 @@ export namespace ConfigValidation {
     try {
       const warns = await Config.warnings()
       if (!warns || warns.length === 0) return ""
-      const items = warns
-        .map((w: Config.Warning) => `  ${label(w.path)}: ${w.message}`)
-        .join("\n")
+      const items = warns.map((w: Config.Warning) => `  ${label(w.path)}: ${w.message}`).join("\n")
       return `Pre-existing config issues (from session start):\n${items}\n\n`
     } catch {
       return ""
@@ -137,11 +149,7 @@ export namespace ConfigValidation {
 
     const prefix = await existing()
 
-    const validation = JSONC_EXT.has(ext)
-      ? await jsonc(filepath)
-      : ext === ".md"
-        ? await markdown(filepath)
-        : ""
+    const validation = JSONC_EXT.has(ext) ? await jsonc(filepath) : ext === ".md" ? await markdown(filepath) : ""
 
     if (!validation) return ""
 

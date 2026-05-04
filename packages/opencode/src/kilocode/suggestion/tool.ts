@@ -1,15 +1,19 @@
 import { Command } from "../../command"
-import { Log } from "../../util/log"
-import z from "zod"
+import { Log } from "../../util"
+import { Effect, Schema } from "effect"
 import DESCRIPTION from "./tool.txt"
-import { Tool } from "../../tool/tool"
+import { Tool } from "../../tool"
 import { Suggestion } from "./index"
+import { SessionStatus } from "../../session/status"
+import { SessionID } from "../../session/schema"
 
 const log = Log.create({ service: "tool.suggest" })
 
-const Params = z.object({
-  suggest: z.string().describe("Short suggestion text shown to the user"),
-  actions: z.array(Suggestion.Action).min(1).max(2).describe("Available actions the user can take"),
+const Params = Schema.Struct({
+  suggest: Schema.String.annotate({ description: "Short suggestion text shown to the user" }),
+  actions: Schema.Array(Suggestion.ActionSchema)
+    .check(Schema.isMinLength(1), Schema.isMaxLength(2))
+    .annotate({ description: "Available actions the user can take" }),
 })
 
 type Meta = {
@@ -49,58 +53,79 @@ async function resolve(prompt: string): Promise<string> {
   }
 }
 
-export const SuggestTool = Tool.define<typeof Params, Meta>("suggest", {
-  description: DESCRIPTION,
-  parameters: Params,
-  async execute(params, ctx) {
-    const promise = Suggestion.show({
-      sessionID: ctx.sessionID,
-      text: params.suggest,
-      actions: params.actions,
-      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
-    })
+export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
+  "suggest",
+  Effect.succeed({
+    description: DESCRIPTION,
+    parameters: Params,
+    execute: (params, ctx) =>
+      Effect.promise(async () => {
+        const promise = Suggestion.show({
+          sessionID: ctx.sessionID,
+          text: params.suggest,
+          actions: params.actions.map((a) => ({ ...a })),
+          blocking: false, // render above an active input; VS Code does the same
+          tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
+        })
 
-    const listener = () =>
-      Suggestion.list().then((items: Suggestion.Request[]) => {
-        const match = items.find((item: Suggestion.Request) => item.tool?.callID === ctx.callID)
-        if (match) return Suggestion.dismiss(match.id)
-      })
-    ctx.abort.addEventListener("abort", listener, { once: true })
+        const listener = () =>
+          Suggestion.list().then((items: Suggestion.Request[]) => {
+            const match = items.find((item: Suggestion.Request) => item.tool?.callID === ctx.callID)
+            if (match) return Suggestion.dismiss(match.id)
+          })
+        ctx.abort.addEventListener("abort", listener, { once: true })
 
-    const action = await promise
-      .catch((error) => {
-        if (error instanceof Suggestion.DismissedError) return undefined
-        throw error
-      })
-      .finally(() => {
-        ctx.abort.removeEventListener("abort", listener)
-      })
+        // Mark the session as idle while waiting for user interaction so the
+        // session doesn't appear stuck/busy. The loop will set it back to busy
+        // when the suggestion resolves and processing continues.
+        await SessionStatus.set(SessionID.make(ctx.sessionID), { type: "idle" }).catch((err) => {
+          log.warn("failed to set idle status", { err })
+        })
 
-    if (!action) {
-      const metadata: Meta = {
-        accepted: undefined,
-        dismissed: true,
-        truncated: false,
-      }
-      return {
-        title: "Suggestion dismissed",
-        output: "User dismissed the suggestion.",
-        metadata,
-      }
-    }
+        const action = await promise
+          .catch((error) => {
+            if (error instanceof Suggestion.DismissedError) return undefined
+            throw error
+          })
+          .finally(() => {
+            ctx.abort.removeEventListener("abort", listener)
+          })
 
-    const resolved = await resolve(action.prompt)
+        // Restore busy immediately on accept so the session doesn't flash idle
+        // while the follow-up response is being generated. The next runLoop
+        // iteration sets busy too, but not until after the stream finalizes.
+        if (action) {
+          await SessionStatus.set(SessionID.make(ctx.sessionID), { type: "busy" }).catch((err) => {
+            log.warn("failed to restore busy status", { err })
+          })
+        }
 
-    const metadata: Meta = {
-      accepted: action,
-      dismissed: false,
-      truncated: false,
-    }
+        if (!action) {
+          const metadata: Meta = {
+            accepted: undefined,
+            dismissed: true,
+            truncated: false,
+          }
+          return {
+            title: "Suggestion dismissed",
+            output: "User dismissed the suggestion.",
+            metadata,
+          }
+        }
 
-    return {
-      title: `User accepted: ${action.label}`,
-      output: `User accepted the suggestion "${action.label}". Carry out the following request now:\n\n${resolved}`,
-      metadata,
-    }
-  },
-})
+        const resolved = await resolve(action.prompt)
+
+        const metadata: Meta = {
+          accepted: action,
+          dismissed: false,
+          truncated: false,
+        }
+
+        return {
+          title: `User accepted: ${action.label}`,
+          output: `User accepted the suggestion "${action.label}". Carry out the following request now:\n\n${resolved}`,
+          metadata,
+        }
+      }),
+  }),
+)

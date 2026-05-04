@@ -1,10 +1,10 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
 import { normalizePath } from "./git-import"
+import type { WorktreeDiffEntry } from "./types"
 
 export interface WorktreeStats {
   worktreeId: string
@@ -39,7 +39,12 @@ export interface WorktreePresenceResult {
 interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
-  getClient: () => KiloClient
+  /**
+   * Compute diff summaries locally (in the extension host) rather than over
+   * HTTP to `kilo serve`. Keeps git spawning out of the Bun process, which
+   * leaks native memory on Windows (oven-sh/bun#18265).
+   */
+  localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
   git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
@@ -142,26 +147,15 @@ export class GitStatsPoller {
   }
 
   private async fetch(): Promise<void> {
-    const client = (() => {
-      try {
-        return this.options.getClient()
-      } catch (err) {
-        this.options.log("Failed to get client for stats:", err)
-        return undefined
-      }
-    })()
-
-    await Promise.all([this.fetchWorktreeStats(client), this.fetchLocalStats(client)])
+    await Promise.all([this.fetchWorktreeStats(), this.fetchLocalStats()])
   }
 
-  private async fetchWorktreeStats(client: KiloClient | undefined): Promise<void> {
+  private async fetchWorktreeStats(): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
     const presence = await this.probeWorktreePresence(worktrees)
     this.options.onWorktreePresence?.(presence)
-
-    if (!client) return
 
     const missing = new Set(
       presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
@@ -181,23 +175,21 @@ export class GitStatsPoller {
       return
     }
 
-    // Gate the HTTP diffSummary call through the semaphore but NOT the
-    // aheadBehind call — that goes through GitOps.raw() which already
-    // acquires the same semaphore. Wrapping both would deadlock.
-    const gate = this.options.semaphore
-    const diff = (dir: string, base: string) => {
-      const invoke = () => client.worktree.diffSummary({ directory: dir, base }, { throwOnError: true })
-      return gate ? gate.run(invoke) : invoke()
-    }
+    // localDiff runs in-process via GitOps.execGit() which already acquires
+    // the shared semaphore internally; same goes for aheadBehind via
+    // GitOps.raw(). Wrapping either again here would deadlock.
     const stats = (
       await Promise.all(
         active.map(async (wt) => {
           try {
             const base = remoteRef(wt)
-            const [{ data: diffs }, ab] = await Promise.all([diff(wt.path, base), this.git.aheadBehind(wt.path, base)])
+            const [diffs, ab] = await Promise.all([
+              this.options.localDiff(wt.path, base),
+              this.git.aheadBehind(wt.path, base),
+            ])
             const files = diffs.length
-            const additions = diffs.reduce((sum: number, diff: SnapshotFileDiff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum: number, diff: SnapshotFileDiff) => sum + diff.deletions, 0)
+            const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
             return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
@@ -257,7 +249,7 @@ export class GitStatsPoller {
     return { worktrees: worktreeStatuses, degraded: false }
   }
 
-  private async fetchLocalStats(client: KiloClient | undefined): Promise<void> {
+  private async fetchLocalStats(): Promise<void> {
     const root = this.options.getWorkspaceRoot()
     if (!root) return
 
@@ -274,21 +266,16 @@ export class GitStatsPoller {
       let ahead: number
       let behind: number
       try {
-        if (base && client) {
-          this.options.log(`Local stats: using HTTP client with base=${base}`)
-          const gate = this.options.semaphore
-          const invoke = () => client.worktree.diffSummary({ directory: root, base }, { throwOnError: true })
-          const [{ data: diffs }, ab] = await Promise.all([
-            gate ? gate.run(invoke) : invoke(),
-            this.git.aheadBehind(root, base),
-          ])
+        if (base) {
+          this.options.log(`Local stats: using localDiff with base=${base}`)
+          const [diffs, ab] = await Promise.all([this.options.localDiff(root, base), this.git.aheadBehind(root, base)])
           files = diffs.length
-          additions = diffs.reduce((sum: number, d: SnapshotFileDiff) => sum + d.additions, 0)
-          deletions = diffs.reduce((sum: number, d: SnapshotFileDiff) => sum + d.deletions, 0)
+          additions = diffs.reduce((sum, d) => sum + d.additions, 0)
+          deletions = diffs.reduce((sum, d) => sum + d.deletions, 0)
           ahead = ab.ahead
           behind = ab.behind
         } else {
-          this.options.log(`Local stats: fallback to workingTreeStats (base=${base ?? "none"} client=${!!client})`)
+          this.options.log(`Local stats: fallback to workingTreeStats (no base branch)`)
           const wt = await this.git.workingTreeStats(root)
           files = wt.files
           additions = wt.additions

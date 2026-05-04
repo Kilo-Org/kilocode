@@ -4,8 +4,8 @@ import path from "path"
 import { pathToFileURL } from "url"
 
 import { tmpdir } from "../fixture/fixture"
-import { Process } from "../../src/util/process"
-import { Filesystem } from "../../src/util/filesystem"
+import { Process } from "../../src/util"
+import { Filesystem } from "../../src/util"
 
 const { PluginMeta } = await import("../../src/plugin/meta")
 const root = path.join(import.meta.dir, "../..")
@@ -50,9 +50,12 @@ describe("plugin.meta", () => {
     expect(two.state).toBe("same")
     expect(two.entry.load_count).toBe(2)
 
+    // kilocode_change start
+    // WORKAROUND: bun 1.3.11 fs.utimes produces 32-bit overflow for current-era timestamps.
+    // Use a real write after a brief sleep so the OS assigns a naturally different mtime.
+    await Bun.sleep(1100)
+    // kilocode_change end
     await Bun.write(tmp.extra.file, "export default async () => ({ ok: true })\n")
-    const stamp = new Date(Date.now() + 10_000)
-    await fs.utimes(tmp.extra.file, stamp, stamp)
 
     const three = await PluginMeta.touch(spec, spec, "demo.file")
     expect(three.state).toBe("updated")

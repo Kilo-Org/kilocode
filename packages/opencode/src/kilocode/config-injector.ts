@@ -1,4 +1,5 @@
-import { Config } from "../config/config"
+import { Config } from "../config"
+import { ConfigPermission } from "../config"
 import { ModesMigrator } from "./modes-migrator"
 import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
@@ -83,15 +84,18 @@ export namespace KilocodeConfigInjector {
    * Merge permission configs, preserving order and handling duplicates.
    * Incoming rules take precedence (kilocode patterns override).
    */
-  function mergePermissions(existing: Config.Permission | undefined, incoming: Config.Permission): Config.Permission {
+  function mergePermissions(
+    existing: ConfigPermission.Info | undefined,
+    incoming: ConfigPermission.Info,
+  ): ConfigPermission.Info {
     if (!existing) return incoming
 
-    const result: Config.Permission = { ...existing }
+    const result: ConfigPermission.Info = { ...existing }
 
     for (const [key, value] of Object.entries(incoming)) {
       if (key === "read" || key === "edit") {
-        const existingRules = (result[key] as Record<string, Config.PermissionAction>) ?? {}
-        const incomingRules = value as Record<string, Config.PermissionAction>
+        const existingRules = (result[key] as Record<string, ConfigPermission.Action>) ?? {}
+        const incomingRules = value as Record<string, ConfigPermission.Action>
         result[key] = { ...existingRules, ...incomingRules }
       } else {
         result[key] = value

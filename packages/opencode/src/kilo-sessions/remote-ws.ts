@@ -86,6 +86,7 @@ export namespace RemoteWS {
     async function open() {
       if (closed) return
       const token = await options.getToken()
+      if (closed) return
       if (!token) {
         options.log.warn("remote-ws no token, will retry")
         schedule()

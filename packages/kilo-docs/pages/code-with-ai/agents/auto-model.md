@@ -7,11 +7,11 @@ description: "Smart model routing that automatically selects the optimal AI mode
 
 Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
 
-| Tier                 | Best For                                          | Pricing |
-| -------------------- | ------------------------------------------------- | ------- |
-| `kilo-auto/frontier` | Maximum capability with the best available models | Paid    |
-| `kilo-auto/balanced` | Strong performance at a lower cost                | Paid    |
-| `kilo-auto/free`     | The best free models available                    | Free    |
+| Tier | Best For | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
+| `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
+| `kilo-auto/free` | The best free models available | Free |
 
 ## How It Works
 
@@ -30,7 +30,7 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 ## Tiers
 
 - **Frontier** — Routes to the latest and most capable paid models. Uses different models for reasoning-heavy tasks (planning, architecture, debugging) versus implementation tasks (coding, building, exploring), pairing the right capability to each type of work.
-- **Balanced** — Uses a single cost-effective model across all modes. A good default for most developers who want strong AI assistance without paying frontier prices.
+- **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
 - **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
 
 ## Benefits

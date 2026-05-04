@@ -1,4 +1,6 @@
 ---
+title: "Using Glama with Kilo Code"
+description: "Connect Glama's unified AI gateway to Kilo Code to access Claude, GPT, and other leading models through a single API key."
 sidebar_label: Glama
 ---
 

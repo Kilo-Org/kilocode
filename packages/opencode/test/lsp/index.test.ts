@@ -1,75 +1,131 @@
 import { describe, expect, spyOn, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import * as Lsp from "../../src/lsp/index"
-import * as launch from "../../src/lsp/launch"
-import { LSPServer } from "../../src/lsp/server"
-import { Instance } from "../../src/project/instance"
-import { tmpdir } from "../fixture/fixture"
+import { Effect, Layer } from "effect"
+import { LSP } from "../../src/lsp"
+import { LSPServer } from "../../src/lsp"
+import * as launch from "../../src/lsp/launch" // kilocode_change - spy on spawn
+import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { provideTmpdirInstance, tmpdir } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
+import { Instance, type InstanceContext } from "../../src/project/instance"
 import { Flag } from "../../src/flag/flag" // kilocode_change
 import { TsCheck } from "../../src/kilocode/ts-check" // kilocode_change
 
+// kilocode_change - Typescript.spawn ignores ctx, so a cast is fine here.
+const fakeCtx = {} as InstanceContext
+
+const it = testEffect(Layer.mergeAll(LSP.defaultLayer, CrossSpawnSpawner.defaultLayer))
+
 describe("lsp.spawn", () => {
-  test("does not spawn builtin LSP for files outside instance", async () => {
-    await using tmp = await tmpdir()
-    const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+  it.live("does not spawn builtin LSP for files outside instance", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        LSP.Service.use((lsp) =>
+          Effect.gen(function* () {
+            const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
 
-    try {
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          await Lsp.LSP.touchFile(path.join(tmp.path, "..", "outside.ts"))
-          await Lsp.LSP.hover({
-            file: path.join(tmp.path, "..", "hover.ts"),
-            line: 0,
-            character: 0,
-          })
+            try {
+              yield* lsp.touchFile(path.join(dir, "..", "outside.ts"))
+              yield* lsp.hover({
+                file: path.join(dir, "..", "hover.ts"),
+                line: 0,
+                character: 0,
+              })
+              expect(spy).toHaveBeenCalledTimes(0)
+            } finally {
+              spy.mockRestore()
+            }
+          }),
+        ),
+      { config: { lsp: true } },
+    ),
+  )
+
+  it.live("does not spawn builtin LSP for files inside instance when LSP is unset", () =>
+    provideTmpdirInstance((dir) =>
+      LSP.Service.use((lsp) =>
+        Effect.gen(function* () {
+          const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+          try {
+            yield* lsp.hover({
+              file: path.join(dir, "src", "inside.ts"),
+              line: 0,
+              character: 0,
+            })
+            expect(spy).toHaveBeenCalledTimes(0)
+          } finally {
+            spy.mockRestore()
+          }
+        }),
+      ),
+    ),
+  )
+
+  // kilocode_change start - enable flag so spawn() is reached past the TsClient short-circuit
+  it.live("would spawn builtin LSP for files inside instance when lsp is true", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        LSP.Service.use((lsp) =>
+          Effect.gen(function* () {
+            const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
+            Flag.KILO_EXPERIMENTAL_LSP_TOOL = true
+            const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+            try {
+              yield* lsp.hover({
+                file: path.join(dir, "src", "inside.ts"),
+                line: 0,
+                character: 0,
+              })
+              expect(spy).toHaveBeenCalledTimes(1)
+            } finally {
+              Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
+              spy.mockRestore()
+            }
+          }),
+        ),
+      { config: { lsp: true } },
+    ),
+  )
+
+  it.live("would spawn builtin LSP for files inside instance when config object is provided", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        LSP.Service.use((lsp) =>
+          Effect.gen(function* () {
+            const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
+            Flag.KILO_EXPERIMENTAL_LSP_TOOL = true
+            const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
+
+            try {
+              yield* lsp.hover({
+                file: path.join(dir, "src", "inside.ts"),
+                line: 0,
+                character: 0,
+              })
+              expect(spy).toHaveBeenCalledTimes(1)
+            } finally {
+              Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
+              spy.mockRestore()
+            }
+          }),
+        ),
+      {
+        config: {
+          lsp: {
+            eslint: { disabled: true },
+          },
         },
-      })
-
-      expect(spy).toHaveBeenCalledTimes(0)
-    } finally {
-      spy.mockRestore()
-      await Instance.disposeAll()
-    }
-  })
-
-  // kilocode_change start - enable flag so spawn() is actually reached (lightweight mode skips it)
-  test("would spawn builtin LSP for files inside instance", async () => {
-    const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
-    // @ts-expect-error - override static flag for test
-    Flag.KILO_EXPERIMENTAL_LSP_TOOL = true
-    await using tmp = await tmpdir()
-    const spy = spyOn(LSPServer.Typescript, "spawn").mockResolvedValue(undefined)
-
-    try {
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          await Lsp.LSP.hover({
-            file: path.join(tmp.path, "src", "inside.ts"),
-            line: 0,
-            character: 0,
-          })
-        },
-      })
-
-      expect(spy).toHaveBeenCalledTimes(1)
-    } finally {
-      // @ts-expect-error
-      Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
-      spy.mockRestore()
-      await Instance.disposeAll()
-    }
-  })
+      },
+    ),
+  )
   // kilocode_change end
 
   // kilocode_change start - Typescript spawn is gated behind KILO_EXPERIMENTAL_LSP_TOOL.
-  // When the flag is off (default), spawn() returns undefined immediately (lightweight
-  // TsClient mode). These tests verify the experimental tsgo LSP spawn path.
   test("spawns tsgo LSP when KILO_EXPERIMENTAL_LSP_TOOL is enabled", async () => {
     const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
-    // @ts-expect-error - override static flag for test
     Flag.KILO_EXPERIMENTAL_LSP_TOOL = true
     await using tmp = await tmpdir()
 
@@ -82,7 +138,7 @@ describe("lsp.spawn", () => {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
-          const result = await LSPServer.Typescript.spawn(tmp.path)
+          const result = await LSPServer.Typescript.spawn(tmp.path, fakeCtx)
           expect(result).toBeDefined()
           expect(tsgoSpy).toHaveBeenCalledWith(tmp.path)
           expect(spawnSpy).toHaveBeenCalled()
@@ -92,7 +148,6 @@ describe("lsp.spawn", () => {
         },
       })
     } finally {
-      // @ts-expect-error
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
       spawnSpy.mockRestore()
       tsgoSpy.mockRestore()
@@ -101,13 +156,11 @@ describe("lsp.spawn", () => {
 
   test("Typescript.spawn returns undefined when KILO_EXPERIMENTAL_LSP_TOOL is off", async () => {
     const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
-    // @ts-expect-error
     Flag.KILO_EXPERIMENTAL_LSP_TOOL = false
     try {
-      const result = await LSPServer.Typescript.spawn("/tmp/any")
+      const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx)
       expect(result).toBeUndefined()
     } finally {
-      // @ts-expect-error
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
     }
   })

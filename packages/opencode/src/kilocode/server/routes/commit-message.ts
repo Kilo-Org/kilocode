@@ -1,8 +1,9 @@
+// kilocode_change - new file
 import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { generateCommitMessage } from "../../commit-message"
-import { Config } from "../../../config/config"
+import { Config } from "../../../config"
 import { lazy } from "../../../util/lazy"
 import { errors } from "../../../server/error"
 

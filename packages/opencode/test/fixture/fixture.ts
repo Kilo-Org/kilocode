@@ -2,14 +2,15 @@ import { $ } from "bun"
 import * as fs from "fs/promises"
 import os from "os"
 import path from "path"
-import { Effect, ServiceMap } from "effect"
+import { Effect, Context } from "effect"
 import type * as PlatformError from "effect/PlatformError"
 import type * as Scope from "effect/Scope"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import type { Config } from "../../src/config/config"
+import type { Config } from "../../src/config"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { Instance } from "../../src/project/instance"
 import { TestLLMServer } from "../lib/llm-server"
+import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 // Strip null bytes from paths (defensive fix for CI environment issues)
 function sanitizePath(p: string): string {
@@ -24,12 +25,7 @@ function exists(dir: string) {
 }
 
 function clean(dir: string) {
-  return fs.rm(dir, {
-    recursive: true,
-    force: true,
-    maxRetries: 5,
-    retryDelay: 100,
-  })
+  return cleanup(dir) // kilocode_change
 }
 
 async function stop(dir: string) {
@@ -123,7 +119,7 @@ export function tmpdirScoped(options?: { git?: boolean; config?: Partial<Config.
 export const provideInstance =
   (directory: string) =>
   <A, E, R>(self: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
-    Effect.servicesWith((services: ServiceMap.ServiceMap<R>) =>
+    Effect.contextWith((services: Context.Context<R>) =>
       Effect.promise<A>(async () =>
         Instance.provide({
           directory,

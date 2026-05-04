@@ -32,6 +32,9 @@ import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { visibleError } from "../../context/session-errors"
+import type { ErrorDisplayProps } from "./ErrorDisplay"
+import type { Message as WebMessage } from "../../types/messages"
 
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
@@ -45,10 +48,17 @@ function getFilename(path: string): string {
   return idx === -1 ? path : path.slice(idx + 1)
 }
 
+export interface VscodeTurn {
+  id: string
+  user: WebMessage
+  assistant: WebMessage[]
+  partial?: boolean
+}
+
 interface VscodeSessionTurnProps {
-  sessionID: string
-  messageID: string
+  turn: VscodeTurn
   queued?: boolean
+  onForkMessage?: (sessionId: string, messageId: string) => void
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
@@ -59,51 +69,27 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
 
-  const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
   const emptyDiffs: SnapshotFileDiff[] = []
 
-  const allMessages = createMemo(() => {
-    const msgs = data.store.message?.[props.sessionID]
-    return (msgs ?? emptyMessages) as SDKMessage[]
+  createEffect(() => {
+    const turn = props.turn
+    const ids = turn.partial ? turn.assistant.map((m) => m.id) : [turn.user.id, ...turn.assistant.map((m) => m.id)]
+    session.hydrateParts(ids)
   })
 
-  const message = createMemo(() => {
-    return allMessages().find((m) => m.id === props.messageID && m.role === "user") as
-      | (SDKMessage & { role: "user" })
-      | undefined
-  })
+  const message = createMemo(() => props.turn.user as SDKMessage & { role: "user" })
 
   const parts = createMemo(() => {
     const msg = message()
-    if (!msg) return emptyParts
     return (data.store.part?.[msg.id] ?? emptyParts) as SDKPart[]
   })
 
-  const messageIndex = createMemo(() => {
-    const msgs = allMessages()
-    return msgs.findIndex((m) => m.id === props.messageID)
-  })
-
-  const assistantMessages = createMemo(() => {
-    const index = messageIndex()
-    if (index < 0) return [] as SDKAssistantMessage[]
-    const msgs = allMessages()
-    const result: SDKAssistantMessage[] = []
-    for (let i = index + 1; i < msgs.length; i++) {
-      const m = msgs[i]
-      if (!m) continue
-      if (m.role === "user") break
-      if (m.role === "assistant") result.push(m as SDKAssistantMessage)
-    }
-    return result
-  })
+  const assistantMessages = createMemo(() => props.turn.assistant as SDKAssistantMessage[])
 
   const interrupted = createMemo(() => assistantMessages().some((m) => m.error?.name === "MessageAbortedError"))
 
-  const error = createMemo(
-    () => assistantMessages().find((m) => m.error && m.error.name !== "MessageAbortedError")?.error,
-  )
+  const error = createMemo(() => visibleError(assistantMessages(), session.isErrorHidden))
 
   // Diffs from message summary
   const diffs = createMemo(() => {
@@ -154,32 +140,35 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       {(msg) => (
         <div class="vscode-session-turn" data-message={msg().id}>
           {/* User message */}
-          <div
-            class="vscode-session-turn-user"
-            data-revert-disabled={
-              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
-            }
-            title={
-              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
-                ? language.t("revert.disabled.agentBusy")
-                : undefined
-            }
-          >
-            <UserMessageDisplay
-              message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
-              parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
-              interrupted={interrupted()}
-              queued={props.queued}
-              onRevert={
-                assistantMessages().length > 0 && !session.revert()
-                  ? () => {
-                      if (session.status() !== "idle") return
-                      session.revertSession(props.messageID)
-                    }
+          <Show when={!props.turn.partial}>
+            <div
+              class="vscode-session-turn-user"
+              data-revert-disabled={
+                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
+              }
+              title={
+                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
+                  ? language.t("revert.disabled.agentBusy")
                   : undefined
               }
-            />
-          </div>
+            >
+              <UserMessageDisplay
+                message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
+                parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
+                interrupted={interrupted()}
+                queued={props.queued}
+                onFork={props.onForkMessage ? () => props.onForkMessage?.(msg().sessionID, msg().id) : undefined}
+                onRevert={
+                  assistantMessages().length > 0 && !session.revert()
+                    ? () => {
+                        if (session.status() !== "idle") return
+                        session.revertSession(msg().id)
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          </Show>
 
           {/* Assistant parts — flat list, no context grouping */}
           <Show when={assistantMessages().length > 0}>
@@ -287,7 +276,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
           {/* Error handling */}
           <Show when={error()}>
-            <ErrorDisplay error={error()!} onLogin={server.startLogin} />
+            {(err) => <ErrorDisplay error={err() as ErrorDisplayProps["error"]} onLogin={server.startLogin} />}
           </Show>
         </div>
       )}

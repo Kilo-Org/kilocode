@@ -1,4 +1,5 @@
 import { createStore } from "solid-js/store"
+import { createSimpleContext } from "./helper"
 import { batch, createEffect, createMemo } from "solid-js"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
@@ -6,19 +7,27 @@ import { uniqueBy } from "remeda"
 import path from "path"
 import { Global } from "@/global"
 import { iife } from "@/util/iife"
-import { createSimpleContext } from "./helper"
 import { useToast } from "../ui/toast"
-import { Provider } from "@/provider/provider"
 import { useArgs } from "./args"
 import { useSDK } from "./sdk"
+import { useProject } from "./project" // kilocode_change
 import { RGBA } from "@opentui/core"
-import { Filesystem } from "@/util/filesystem"
+import { Filesystem } from "@/util"
+
+export function parseModel(model: string) {
+  const [providerID, ...rest] = model.split("/")
+  return {
+    providerID: providerID,
+    modelID: rest.join("/"),
+  }
+}
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
   init: () => {
     const sync = useSync()
     const sdk = useSDK()
+    const project = useProject() // kilocode_change
     const toast = useToast()
 
     function isModelValid(model: { providerID: string; modelID: string }) {
@@ -37,10 +46,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const agent = iife(() => {
       const agents = createMemo(() => sync.data.agent.filter((x) => x.mode !== "subagent" && !x.hidden))
       const visibleAgents = createMemo(() => sync.data.agent.filter((x) => !x.hidden))
-      const [agentStore, setAgentStore] = createStore<{
-        current: string
-      }>({
-        current: agents()[0].name,
+      const [agentStore, setAgentStore] = createStore({
+        current: undefined as string | undefined,
       })
       const { theme } = useTheme()
       const colors = createMemo(() => [
@@ -60,7 +67,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           // kilocode_change start - fall back to first agent when current is removed (e.g. org switch)
           const found = agents().find((x) => x.name === agentStore.current)
           if (found) return found
-          const fallback = agents()[0]
+          const fallback = agents().at(0)
           if (fallback) setAgentStore("current", fallback.name)
           return fallback
           // kilocode_change end
@@ -76,7 +83,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         },
         move(direction: 1 | -1) {
           batch(() => {
-            let next = agents().findIndex((x) => x.name === agentStore.current) + direction
+            const current = this.current()
+            if (!current) return
+            let next = agents().findIndex((x) => x.name === current.name) + direction
             if (next < 0) next = agents().length - 1
             if (next >= agents().length) next = 0
             const value = agents()[next]
@@ -103,13 +112,24 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const model = iife(() => {
       const [modelStore, setModelStore] = createStore<{
         ready: boolean
+        // kilocode_change start - persisted picks plus process-local overrides
         model: Record<
           string,
-          {
-            providerID: string
-            modelID: string
-          }
+          | {
+              providerID: string
+              modelID: string
+            }
+          | undefined
         >
+        override: Record<
+          string,
+          | {
+              providerID: string
+              modelID: string
+            }
+          | undefined
+        >
+        // kilocode_change end
         recent: {
           providerID: string
           modelID: string
@@ -122,6 +142,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       }>({
         ready: false,
         model: {},
+        override: {}, // kilocode_change
         recent: [],
         favorite: [],
         variant: {},
@@ -131,6 +152,27 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const state = {
         pending: false,
       }
+
+      // kilocode_change start - keep configured-agent selections process-local
+      const scope = createMemo(() => project.workspace.current() ?? project.instance.directory())
+
+      function key(name: string) {
+        return [scope(), name].join(":")
+      }
+
+      function clear(name: string) {
+        setModelStore("model", name, undefined)
+      }
+
+      function apply(name: string, value: { providerID: string; modelID: string }, persist: boolean) {
+        setModelStore("override", key(name), { ...value })
+        if (persist) {
+          setModelStore("model", name, { ...value })
+          return
+        }
+        clear(name)
+      }
+      // kilocode_change end
 
       function save() {
         if (!modelStore.ready) {
@@ -162,7 +204,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const args = useArgs()
       const fallbackModel = createMemo(() => {
         if (args.model) {
-          const { providerID, modelID } = Provider.parseModel(args.model)
+          const { providerID, modelID } = parseModel(args.model)
           if (isModelValid({ providerID, modelID })) {
             return {
               providerID,
@@ -172,7 +214,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         }
 
         if (sync.data.config.model) {
-          const { providerID, modelID } = Provider.parseModel(sync.data.config.model)
+          const { providerID, modelID } = parseModel(sync.data.config.model)
           if (isModelValid({ providerID, modelID })) {
             return {
               providerID,
@@ -202,13 +244,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const currentModel = createMemo(() => {
         const a = agent.current()
         if (!a) return fallbackModel() // kilocode_change - guard against empty agent list
+        // kilocode_change start - configured models beat stale persisted picks
         return (
           getFirstValidModel(
-            () => modelStore.model[a.name],
-            () => a.model,
+            () => a && modelStore.override[key(a.name)],
+            () => a && a.model,
+            () => a && modelStore.model[a.name],
             fallbackModel,
           ) ?? undefined
         )
+        // kilocode_change end
       })
 
       return {
@@ -216,7 +261,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         get ready() {
           return modelStore.ready
         },
-        // kilocode_change start - expose saved per-agent pick for auto-apply guard
+        // kilocode_change start - expose persisted per-agent pick separately from overrides
         saved(name: string) {
           return modelStore.model[name]
         },
@@ -255,12 +300,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (next >= recent.length) next = 0
           const val = recent[next]
           if (!val) return
-          // kilocode_change start
-          const cur = agent.current()
-          if (!cur) return
-          setModelStore("model", cur.name, { ...val })
-          save()
-          // kilocode_change end
+          const a = agent.current()
+          if (!a) return
+          apply(a.name, val, !a.model) // kilocode_change
+          save() // kilocode_change
         },
         cycleFavorite(direction: 1 | -1) {
           const favorites = modelStore.favorite.filter((item) => isModelValid(item))
@@ -286,11 +329,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           }
           const next = favorites[index]
           if (!next) return
-          // kilocode_change start
-          const cur = agent.current()
-          if (!cur) return
-          setModelStore("model", cur.name, { ...next })
-          // kilocode_change end
+          const a = agent.current()
+          if (!a) return
+          apply(a.name, next, !a.model) // kilocode_change
           const uniq = uniqueBy([next, ...modelStore.recent], (x) => `${x.providerID}/${x.modelID}`)
           if (uniq.length > 10) uniq.pop()
           setModelStore(
@@ -309,11 +350,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               })
               return
             }
-            // kilocode_change start
-            const cur = agent.current()
-            if (!cur) return
-            setModelStore("model", cur.name, model)
-            // kilocode_change end
+            const a = agent.current()
+            if (!a) return
+            apply(a.name, model, !a.model) // kilocode_change
             if (options?.recent) {
               const uniq = uniqueBy([model, ...modelStore.recent], (x) => `${x.providerID}/${x.modelID}`)
               if (uniq.length > 10) uniq.pop()
@@ -412,25 +451,19 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       },
     }
 
-    // Automatically update model when agent changes
+    // kilocode_change - validate configured agent model when agent changes
     createEffect(() => {
-      // kilocode_change start - wait for persistence load and skip when a per-agent pick already exists (#9050)
+      // kilocode_change start - configured models resolve directly without persistence
       if (!model.ready) return
       const value = agent.current()
       if (!value) return // guard against empty agent list during org switch
       if (!value.model) return
-      if (model.saved(value.name)) return
-      if (isModelValid(value.model))
-        model.set({
-          providerID: value.model.providerID,
-          modelID: value.model.modelID,
-        })
-      else
-        toast.show({
-          variant: "warning",
-          message: `Agent ${value.name}'s configured model ${value.model.providerID}/${value.model.modelID} is not valid`,
-          duration: 3000,
-        })
+      if (isModelValid(value.model)) return
+      toast.show({
+        variant: "warning",
+        message: `Agent ${value.name}'s configured model ${value.model.providerID}/${value.model.modelID} is not valid`,
+        duration: 3000,
+      })
       // kilocode_change end
     })
 

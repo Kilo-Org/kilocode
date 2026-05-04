@@ -31,6 +31,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/glama", children: "Glama" },
       { href: "/ai-providers/requesty", children: "Requesty" },
       { href: "/ai-providers/unbound", children: "Unbound" },
+      { href: "/ai-providers/zenmux", children: "ZenMux" },
       {
         href: "/ai-providers/vercel-ai-gateway",
         children: "Vercel AI Gateway",
@@ -42,6 +43,8 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/vertex", children: "Google Vertex AI" },
       { href: "/ai-providers/bedrock", children: "AWS Bedrock" },
+      { href: "/ai-providers/alibaba", children: "Alibaba Cloud" },
+      { href: "/ai-providers/cloudflare", children: "Cloudflare" },
       { href: "/ai-providers/groq", children: "Groq" },
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
@@ -68,6 +71,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/moonshot", children: "Moonshot" },
       { href: "/ai-providers/ovhcloud", children: "OVHcloud" },
       { href: "/ai-providers/sap-ai-core", children: "SAP AI Core" },
+      { href: "/ai-providers/venice", children: "Venice AI" },
     ],
   },
   {

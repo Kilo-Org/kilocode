@@ -1,8 +1,22 @@
 // kilocode_change - new file
+import { Effect } from "effect"
+import path from "path"
 import { Permission } from "@/permission"
+import { Flag } from "@/flag/flag"
+import { Global } from "@/global"
+import { ModelID, ProviderID } from "@/provider/schema"
 import type { Session } from "../../session"
 import type { Agent } from "../../agent/agent"
-import type { Config } from "../../config/config"
+import type { Config } from "../../config"
+import z from "zod"
+
+// RATIONALE: Mirror narrow state slice Task tool consumes and ignore unrelated TUI fields.
+const ModelState = z
+  .object({
+    model: z.record(z.string(), z.object({ providerID: ProviderID.zod, modelID: ModelID.zod })).optional(),
+    variant: z.record(z.string(), z.string().optional()).optional(),
+  })
+  .passthrough()
 
 export namespace KiloTask {
   /** Reject primary agents used as subagents */
@@ -35,4 +49,25 @@ export namespace KiloTask {
   export function permissions(rules: Permission.Ruleset): Permission.Ruleset {
     return [{ permission: "task", pattern: "*", action: "deny" }, ...rules]
   }
+
+  /** Return saved CLI model for agent, if any. */
+  export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (name: string) {
+    if (Flag.KILO_CLIENT !== "cli") return undefined
+    const file = path.join(Global.Path.state, "model.json")
+    const state = yield* Effect.tryPromise({
+      try: () =>
+        Bun.file(file)
+          .text()
+          .then((raw) => ModelState.safeParse(JSON.parse(raw)))
+          .then((result) => (result.success ? result.data : undefined))
+          .catch(() => undefined),
+      catch: () => undefined,
+    })
+    const model = state?.model?.[name]
+    if (!model) return undefined
+    return {
+      ...model,
+      variant: state?.variant?.[`${model.providerID}/${model.modelID}`],
+    }
+  })
 }
