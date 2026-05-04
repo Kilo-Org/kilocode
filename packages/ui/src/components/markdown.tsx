@@ -7,6 +7,7 @@ import { ComponentProps, createEffect, createResource, createSignal, onCleanup, 
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
+import { hasMermaid, preserveMermaid, renderMermaid } from "../kilocode/markdown-mermaid" // kilocode_change
 
 type Entry = {
   hash: string
@@ -294,6 +295,10 @@ export function Markdown(
   const highlightState = { gen: 0, signal: { aborted: false } }
   // kilocode_change end
 
+  // kilocode_change start: Mermaid diagram rendering
+  const mermaidState = { gen: 0, signal: { aborted: false } }
+  // kilocode_change end
+
   // kilocode_change start: rAF-coalesced morphdom render.
   // During LLM token streaming, content updates arrive at 60–200Hz. Each
   // token reparses the full accumulated HTML (temp.innerHTML = content) and
@@ -323,6 +328,10 @@ export function Markdown(
       }
       // kilocode_change end
       container.innerHTML = ""
+      // kilocode_change start: Mermaid diagram rendering
+      mermaidState.signal.aborted = true
+      mermaidState.gen++
+      // kilocode_change end
       return
     }
 
@@ -343,6 +352,7 @@ export function Markdown(
         pendingLabels = undefined
       }
       copyCleanup = fast.copyCleanup
+      kickMermaid(container, local.streaming ?? false)
       kickHighlight(container, labels)
       return
     }
@@ -383,6 +393,11 @@ export function Markdown(
             setCopyState(toEl, nextLabels, true)
           }
           if (fromEl.isEqualNode(toEl)) return false
+          // kilocode_change start: preserve rendered Mermaid diagrams across
+          // normal markdown morphdom refreshes so they do not flicker back to
+          // their source code while being re-rendered.
+          if (preserveMermaid(fromEl, toEl)) return false
+          // kilocode_change end
           // Preserve Shiki-highlighted blocks — don't let morphdom revert them
           // to plain <pre><code> during streaming re-renders.
           // Note: "shiki" class is on <pre> (set by Shiki's codeToHtml output).
@@ -411,6 +426,7 @@ export function Markdown(
       })
       // kilocode_change end
 
+      kickMermaid(container, local.streaming ?? false) // kilocode_change
       kickHighlight(container, nextLabels)
     })
     // kilocode_change end
@@ -439,11 +455,32 @@ export function Markdown(
   }
   // kilocode_change end
 
+  // kilocode_change start: Mermaid diagram rendering
+  function kickMermaid(container: HTMLDivElement, streaming: boolean) {
+    mermaidState.signal.aborted = true
+    mermaidState.gen++
+    if (!hasMermaid(container)) return
+    if (streaming) return
+
+    const gen = mermaidState.gen
+    const signal = { aborted: false }
+    mermaidState.signal = signal
+    void renderMermaid(container, signal).catch((err) => {
+      if (gen !== mermaidState.gen || signal.aborted) return
+      console.warn("Mermaid render failed", err)
+    })
+  }
+  // kilocode_change end
+
   onCleanup(() => {
     // kilocode_change: cancel any in-flight deferredHighlight pass so its
     // completion callback doesn't touch the unmounted DOM.
     highlightState.signal.aborted = true
     highlightState.gen++
+    // kilocode_change start: Mermaid diagram rendering
+    mermaidState.signal.aborted = true
+    mermaidState.gen++
+    // kilocode_change end
     // kilocode_change: cancel any queued rAF parse so it doesn't touch the
     // unmounted DOM after dispose.
     if (pendingFrame !== undefined) {

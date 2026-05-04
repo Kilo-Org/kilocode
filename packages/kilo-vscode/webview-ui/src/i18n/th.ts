@@ -1394,6 +1394,7 @@ export const dict = {
     "โมเดลน้ำหนักเบาสำหรับสร้างชื่อ สร้างข้อความคอมมิต ปรับปรุงพรอมต์ และงานด่วนอื่นๆ",
   "settings.providers.disabled": "ผู้ให้บริการที่ปิดใช้งาน",
   "settings.providers.disabled.description": "ผู้ให้บริการที่จะซ่อนจากรายการ",
+  "settings.providers.disabled.enable": "เปิดใช้งาน",
   "settings.providers.enabled": "ผู้ให้บริการที่เปิดใช้งาน (รายการที่อนุญาต)",
   "settings.providers.enabled.description": "หากตั้งค่า เฉพาะผู้ให้บริการเหล่านี้เท่านั้นที่จะพร้อมใช้งาน",
   "settings.providers.notSet": "ไม่ได้ตั้งค่า (ใช้ค่าเริ่มต้นของเซิร์ฟเวอร์)",

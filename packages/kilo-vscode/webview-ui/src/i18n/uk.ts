@@ -1391,6 +1391,7 @@ export const dict = {
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
   "settings.providers.disabled": "Вимкнені провайдери",
   "settings.providers.disabled.description": "Провайдери, що будуть приховані у списку провайдерів",
+  "settings.providers.disabled.enable": "Увімкнути",
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",

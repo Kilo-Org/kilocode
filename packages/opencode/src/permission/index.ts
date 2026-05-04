@@ -21,6 +21,7 @@ import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
+import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory" // kilocode_change
 
 const log = Log.create({ service: "permission" })
 
@@ -179,7 +180,7 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
 // kilocode_change start
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
-  return evaluate(permission, pattern, ruleset).action === "deny"
+  return ExternalDirectoryPermission.evaluate(permission, pattern, ruleset).action === "deny"
 }
 
 function subset(permission: string, ruleset: Ruleset) {
@@ -229,7 +230,11 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        // kilocode_change start - external_directory allows must survive Ask/Plan hard rules
+        const rule = hardRuleset
+          ? ExternalDirectoryPermission.evaluate(request.permission, pattern, ruleset, approved, local)
+          : evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        // kilocode_change end
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {

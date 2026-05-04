@@ -1390,6 +1390,7 @@ export const dict = {
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",
   "settings.providers.disabled": "Devre Dışı Sağlayıcılar",
   "settings.providers.disabled.description": "Sağlayıcı listesinde gizlenecek sağlayıcılar",
+  "settings.providers.disabled.enable": "Etkinleştir",
   "settings.providers.enabled": "Etkin Sağlayıcılar (İzin Listesi)",
   "settings.providers.enabled.description":
     "Ayarlanırsa yalnızca bu sağlayıcılar kullanılabilir olacak (özel izin listesi)",

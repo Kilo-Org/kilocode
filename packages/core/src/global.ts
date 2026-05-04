@@ -4,6 +4,7 @@ import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 import os from "os"
 import { Context, Effect, Layer } from "effect"
 import { Flock } from "./util/flock"
+import { markNoIndex } from "./kilocode/spotlight" // kilocode_change
 
 const app = "kilo" // kilocode_change
 // kilocode_change start
@@ -44,6 +45,10 @@ await Promise.all([
   fs.mkdir(Path.log, { recursive: true }),
   fs.mkdir(Path.bin, { recursive: true }),
 ])
+
+// kilocode_change start - keep generated Kilo data out of macOS Spotlight
+await Promise.all([Path.data, Path.cache, Path.state].map(markNoIndex))
+// kilocode_change end
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Global") {}
 

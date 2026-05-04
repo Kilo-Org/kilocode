@@ -1389,6 +1389,7 @@ export const dict = {
     "نموذج خفيف لتوليد العناوين ورسائل الـ commit وتحسين المطالبات والمهام السريعة الأخرى",
   "settings.providers.disabled": "مزودون معطلون",
   "settings.providers.disabled.description": "مزودون لإخفائهم من القائمة",
+  "settings.providers.disabled.enable": "تمكين",
   "settings.providers.enabled": "مزودون مفعلون (قائمة بيضاء)",
   "settings.providers.enabled.description": "إذا تم التعيين، فقط هؤلاء المزودون سيكونون متاحين",
   "settings.providers.notSet": "غير محدد (استخدام الافتراضي)",

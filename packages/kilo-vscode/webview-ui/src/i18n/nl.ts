@@ -1401,6 +1401,7 @@ export const dict = {
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
   "settings.providers.disabled": "Uitgeschakelde Providers",
   "settings.providers.disabled.description": "Providers om te verbergen in de providerlijst",
+  "settings.providers.disabled.enable": "Inschakelen",
   "settings.providers.enabled": "Ingeschakelde Providers (Allowlist)",
   "settings.providers.enabled.description":
     "Indien ingesteld, zijn alleen deze providers beschikbaar (exclusieve allowlist)",

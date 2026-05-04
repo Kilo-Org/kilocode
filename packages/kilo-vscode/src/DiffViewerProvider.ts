@@ -10,6 +10,7 @@ import {
   openWorkspaceRelativeFile,
   resolveLocalDiffTarget,
 } from "./review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
 
 /**
  * DiffViewerProvider opens a full-screen diff viewer in an editor tab.
@@ -90,6 +91,7 @@ export class DiffViewerProvider implements vscode.Disposable {
         languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
         workspaceDirectory: getWorkspaceRoot(),
       })
+      this.post({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
       this.startDiffPolling()
       return
     }
@@ -105,6 +107,11 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     if (type === "diffViewer.setDiffStyle" && (msg.style === "unified" || msg.style === "split")) {
+      return
+    }
+
+    if (type === "diffViewer.setMarkdownRender" && typeof msg.render === "boolean") {
+      void setDiffMarkdownRender(msg.render)
       return
     }
 

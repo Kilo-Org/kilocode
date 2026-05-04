@@ -1424,6 +1424,7 @@ export const dict = {
     "Lagani model za generiranje naslova, commit poruka, poboljšanje promptova i druge brze zadatke",
   "settings.providers.disabled": "Onemogućeni pružatelji",
   "settings.providers.disabled.description": "Pružatelji za skrivanje s popisa",
+  "settings.providers.disabled.enable": "Omogući",
   "settings.providers.enabled": "Omogućeni pružatelji (bijela lista)",
   "settings.providers.enabled.description": "Ako je postavljeno, samo ovi pružatelji će biti dostupni",
   "settings.providers.notSet": "Nije postavljeno (koristi zadano servera)",

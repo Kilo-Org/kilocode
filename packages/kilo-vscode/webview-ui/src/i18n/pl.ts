@@ -1420,6 +1420,7 @@ export const dict = {
     "Lekki model do generowania tytułów, wiadomości commitów, ulepszania zapytań i innych szybkich zadań",
   "settings.providers.disabled": "Wyłączeni dostawcy",
   "settings.providers.disabled.description": "Dostawcy do ukrycia z listy",
+  "settings.providers.disabled.enable": "Włącz",
   "settings.providers.enabled": "Włączeni dostawcy (biała lista)",
   "settings.providers.enabled.description": "Jeśli ustawiono, tylko ci dostawcy będą dostępni",
   "settings.providers.notSet": "Nie ustawiono (użyj domyślnego serwera)",
