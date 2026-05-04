@@ -201,8 +201,10 @@ When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt. You
 | Option | Behavior |
 |---|---|
 | **Allow once** | Allow this specific invocation only |
-| **Allow always** | Allow this tool (or pattern) for the rest of the session |
+| **Allow always** | Save an allow rule for the matching tool or pattern in your global config |
 | **Reject** | Block this specific invocation |
+
+For shell commands, saved approvals are written under `permission.bash` and apply across CLI sessions.
 
 ## Defaults
 
