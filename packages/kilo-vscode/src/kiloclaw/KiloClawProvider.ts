@@ -10,6 +10,7 @@ import { homedir } from "os"
 import type { KiloConnectionService } from "../services/cli-backend"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildWebviewHtml } from "../utils"
+import { watchFontSizeConfig } from "../kilo-provider/font-size"
 import { connect, history, presence, type ClawChatClient } from "./chat-client"
 import type {
   KiloClawInMessage,
@@ -117,6 +118,8 @@ export class KiloClawProvider implements vscode.Disposable {
       this.post({ type: "kiloclaw.locale", locale })
     })
     this.subs.push(unsub)
+    const font = watchFontSizeConfig((msg) => this.post(msg))
+    this.subs.push(() => font.dispose())
   }
 
   private post(msg: KiloClawOutMessage): void {

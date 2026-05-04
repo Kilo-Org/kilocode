@@ -72,7 +72,7 @@ const ModeEditView: Component<Props> = (props) => {
       >
         <div style={{ display: "flex", "align-items": "center" }}>
           <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
-          <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
+          <span style={{ "font-weight": "600", "font-size": "var(--kilo-font-size-14)", "margin-left": "8px" }}>
             {language.t("settings.agentBehaviour.editMode")} — {props.name}
           </span>
         </div>
@@ -102,7 +102,7 @@ const ModeEditView: Component<Props> = (props) => {
         <Card style={{ "margin-bottom": "12px" }}>
           <div
             style={{
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               padding: "4px 0",
             }}
@@ -257,7 +257,7 @@ const ModeEditView: Component<Props> = (props) => {
             </div>
             <div
               style={{
-                "font-size": "12px",
+                "font-size": "var(--kilo-font-size-12)",
                 color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                 "line-height": "1.45",
               }}
@@ -363,7 +363,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
         <span
           style={{
             "margin-left": "8px",
-            "font-size": "11px",
+            "font-size": "var(--kilo-font-size-11)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
           }}
         >
@@ -386,7 +386,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
           <div style={{ "margin-top": "8px", "margin-bottom": "8px" }}>
             <div
               style={{
-                "font-size": "11px",
+                "font-size": "var(--kilo-font-size-11)",
                 color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                 "margin-bottom": "4px",
               }}
@@ -400,7 +400,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
                   return (
                     <span
                       style={{
-                        "font-size": "11px",
+                        "font-size": "var(--kilo-font-size-11)",
                         padding: "2px 6px",
                         "border-radius": "3px",
                         background: colors.bg,
@@ -421,7 +421,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
         <div
           style={{
             "margin-top": "8px",
-            "font-size": "11px",
+            "font-size": "var(--kilo-font-size-11)",
             "font-family": "var(--vscode-editor-font-family, monospace)",
             "max-height": "300px",
             "overflow-y": "auto",
@@ -485,7 +485,7 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
         <div
           style={{
             "margin-top": "6px",
-            "font-size": "10px",
+            "font-size": "var(--kilo-font-size-10)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
           }}
         >
