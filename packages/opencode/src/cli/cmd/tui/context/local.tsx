@@ -181,13 +181,13 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return
         }
         state.pending = false
+        // kilocode_change start - save() is intentionally fire-and-forget, but writes must stay ordered
         const data = {
-          model: modelStore.model, // kilocode_change
+          model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
         }
-        // kilocode_change start - save() is intentionally fire-and-forget, but writes must stay ordered
         state.write = state.write.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
         // kilocode_change end
       }
