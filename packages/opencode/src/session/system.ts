@@ -35,8 +35,11 @@ export function soul() {
 }
 // kilocode_change end
 
-export function provider(model: Provider.Model) {
-  // kilocode_change start
+// kilocode_change start
+// Kilo-specific prompt selection. Kept as a separate function and invoked
+// before upstream's heuristic branching so that our metadata-driven routing
+// takes priority and upstream's if-chain can evolve without merge conflicts.
+function kiloPrompt(model: Provider.Model): string[] | undefined {
   switch (model.prompt) {
     case "anthropic":
       return [PROMPT_ANTHROPIC]
@@ -55,7 +58,14 @@ export function provider(model: Provider.Model) {
     case "trinity":
       return [PROMPT_TRINITY]
   }
-  // kilocode_change end
+  if (isLing(model.api.id)) return [PROMPT_LING]
+  return undefined
+}
+// kilocode_change end
+
+export function provider(model: Provider.Model) {
+  const kilo = kiloPrompt(model) // kilocode_change
+  if (kilo) return kilo // kilocode_change
 
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
     return [PROMPT_BEAST]
@@ -69,7 +79,6 @@ export function provider(model: Provider.Model) {
   if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
   if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
   if (model.api.id.toLowerCase().includes("kimi")) return [PROMPT_KIMI]
-  if (isLing(model.api.id)) return [PROMPT_LING] // kilocode_change
   return [PROMPT_DEFAULT]
 }
 
