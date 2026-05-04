@@ -24,20 +24,29 @@ import ai.kilocode.client.session.update.SessionControllerEvent
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
+import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.registry.Registry
+import com.intellij.ui.icons.CachedImageIcon
+import com.intellij.ui.svg.SvgAttributePatcher
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.SVGLoader
 import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
 import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Rectangle
 import javax.swing.BoxLayout
 import javax.swing.BoxLayout.Y_AXIS
+import javax.swing.Icon
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -84,6 +93,7 @@ class SessionUi private constructor(
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
+        private val SCROLL_ICON = IconLoader.getIcon("/icons/scroll-bottom.svg", SessionUi::class.java)
     }
 
     private val project = project
@@ -100,6 +110,8 @@ class SessionUi private constructor(
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
         open = open,
+        beforeUpdate = ::atBottom,
+        afterUpdate = ::followBottom,
     )
 
 
@@ -114,6 +126,8 @@ class SessionUi private constructor(
     private lateinit var messageBody: SessionMessageListPanel
 
     private lateinit var scroll: JBScrollPane
+
+    private lateinit var jump: JButton
 
     private lateinit var question: QuestionPanel
     private lateinit var permission: PermissionPanel
@@ -163,6 +177,17 @@ class SessionUi private constructor(
             verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
             horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER
         }
+        jump = JButton(patchedIcon(SCROLL_ICON)).apply {
+            border = JBUI.Borders.empty()
+            isContentAreaFilled = false
+            isBorderPainted = false
+            isFocusPainted = false
+            isFocusable = false
+            isOpaque = false
+            toolTipText = KiloBundle.message("session.scroll.bottom")
+            isVisible = false
+            addActionListener { jumpBottom() }
+        }
         question = QuestionPanel(controller)
         permission = PermissionPanel(controller)
         connection = ConnectionPanel(this, controller)
@@ -184,6 +209,16 @@ class SessionUi private constructor(
             add(connection)
             add(prompt)
         }, BorderLayout.SOUTH)
+        root.addOverlay(jump) { _, child ->
+            val size = child.preferredSize
+            val gap = JBUI.scale(12)
+            Rectangle(
+                sessionContent.x + sessionContent.width - size.width - gap,
+                sessionContent.y + sessionContent.height - size.height - gap,
+                size.width,
+                size.height,
+            )
+        }
 
         add(root, BorderLayout.CENTER)
     }
@@ -195,6 +230,7 @@ class SessionUi private constructor(
         prompt.onReset = { controller.clearModelOverride() }
         prompt.model.favorites = { app.favorites.value }
         prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
+        scroll.verticalScrollBar.addAdjustmentListener { updateJump() }
 
         controller.addListener(this) { event ->
             when (event) {
@@ -257,8 +293,7 @@ class SessionUi private constructor(
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
                 is SessionModelEvent.ContentDelta,
-                is SessionModelEvent.HistoryLoaded -> scrollToBottom()
-
+                is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.TurnRemoved,
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
@@ -276,6 +311,11 @@ class SessionUi private constructor(
     private fun bindStyle() {
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
+            ApplicationManager.getApplication().invokeLater {
+                applyStyle(SessionStyle.current())
+            }
+        })
+        bus.subscribe(LafManagerListener.TOPIC, LafManagerListener {
             ApplicationManager.getApplication().invokeLater {
                 applyStyle(SessionStyle.current())
             }
@@ -310,7 +350,41 @@ class SessionUi private constructor(
             }
         }
         refresh()
+    }
+
+    internal fun atBottom(): Boolean {
+        val bar = scroll.verticalScrollBar
+        if (bar.maximum <= bar.visibleAmount) return true
+        return bar.value + bar.visibleAmount >= bar.maximum - JBUI.scale(32)
+    }
+
+    internal fun followBottom(follow: Boolean) {
+        if (!follow) return
+        showBody(messageBody)
         scrollToBottom()
+        updateJump()
+        ApplicationManager.getApplication().invokeLater {
+            scroll.viewport.view?.revalidate()
+            scroll.viewport.view?.doLayout()
+            scroll.revalidate()
+            scroll.doLayout()
+            scrollToBottom()
+            updateJump()
+        }
+    }
+
+    private fun jumpBottom() {
+        showBody(messageBody)
+        scrollToBottom()
+        updateJump()
+        ApplicationManager.getApplication().invokeLater {
+            scroll.viewport.view?.revalidate()
+            scroll.viewport.view?.doLayout()
+            scroll.revalidate()
+            scroll.doLayout()
+            scrollToBottom()
+            updateJump()
+        }
     }
 
     private fun scrollToBottom() {
@@ -318,7 +392,16 @@ class SessionUi private constructor(
         bar.value = bar.maximum
     }
 
+    private fun updateJump() {
+        val visible = scroll.viewport.view === messageBody && !atBottom()
+        if (jump.isVisible == visible) return
+        jump.isVisible = visible
+        root.overlay.revalidate()
+        root.overlay.repaint()
+    }
+
     private fun refresh() {
+        updateJump()
         root.revalidate()
         root.repaint()
     }
@@ -329,10 +412,12 @@ class SessionUi private constructor(
         scroll.viewport.setView(panel)
         scroll.revalidate()
         scroll.repaint()
+        updateJump()
     }
 
     override fun applyStyle(style: SessionStyle) {
         this.style = style
+        jump.icon = patchedIcon(SCROLL_ICON)
         loadingLabel.font = style.uiFont
         messageBody.applyStyle(style)
         prompt.applyStyle(style)
@@ -341,6 +426,32 @@ class SessionUi private constructor(
     }
 
     override fun dispose() {}
+}
+
+private fun patchedIcon(icon: Icon): Icon {
+    val cached = icon as? CachedImageIcon ?: return icon
+    return cached.createWithPatcher(object : SVGLoader.SvgElementColorPatcherProvider, SvgAttributePatcher {
+        override fun digest(): LongArray {
+            val bg = JBUI.CurrentTheme.Button.defaultButtonColorStart().rgb.toLong()
+            val fg = JBUI.CurrentTheme.Button.defaultButtonForeground().rgb.toLong()
+            return longArrayOf(bg, fg, 0x5c011b0bb17L)
+        }
+
+        override fun attributeForPath(path: String) = this
+
+        override fun patchColors(attributes: MutableMap<String, String>) {
+            when (attributes["id"]) {
+                "ScrollButton.Background" -> set(attributes, "fill", JBUI.CurrentTheme.Button.defaultButtonColorStart())
+                "ScrollButton.Foreground" -> set(attributes, "stroke", JBUI.CurrentTheme.Button.defaultButtonForeground())
+            }
+        }
+
+        private fun set(attributes: MutableMap<String, String>, key: String, color: Color) {
+            if (!attributes.containsKey(key) || attributes[key] == "none") return
+            attributes[key] = "rgb(${color.red},${color.green},${color.blue})"
+            if (color.alpha != 255) attributes["$key-opacity"] = "${color.alpha / 255f}"
+        }
+    })
 }
 
 private fun variantTitle(value: String): String = value.replaceFirstChar { it.titlecase() }

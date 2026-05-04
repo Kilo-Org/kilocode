@@ -126,7 +126,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs)
+        return controller(id, flushMs, true, displayMs = displayMs)
     }
 
     protected fun controller(
@@ -134,6 +134,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long,
         condense: Boolean,
         displayMs: Long = Long.MAX_VALUE,
+        beforeUpdate: () -> Boolean = { false },
+        afterUpdate: (Boolean) -> Unit = {},
     ): SessionController {
         val root = Root()
         val m = SessionController(
@@ -144,9 +146,11 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
           app,
           scope,
           root,
-          flushMs,
-          condense,
-          displayMs
+           flushMs,
+           condense,
+           displayMs,
+           beforeUpdate = beforeUpdate,
+           afterUpdate = afterUpdate,
         )
         controllers.add(m)
         roots[m] = root

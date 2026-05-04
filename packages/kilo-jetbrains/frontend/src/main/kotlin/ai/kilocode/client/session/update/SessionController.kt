@@ -69,6 +69,8 @@ class SessionController(
   private val condense: Boolean = true,
   private val displayMs: Long = DISPLAY_DELAY_MS,
   private val open: (SessionDto) -> Unit = {},
+  private val beforeUpdate: () -> Boolean = { false },
+  private val afterUpdate: (Boolean) -> Unit = {},
 ) : Disposable {
 
     companion object {
@@ -160,7 +162,9 @@ class SessionController(
                 LOG.warn("${ChatLogSummary.sid(sessionId ?: sid)} kind=prompt dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     val msg = e.message ?: KiloBundle.message("session.error.prompt")
-                    model.setState(SessionState.Error(msg))
+                    updateModel {
+                        model.setState(SessionState.Error(msg))
+                    }
                 }
             }
         }
@@ -386,7 +390,9 @@ class SessionController(
                 val items = sessions.messages(id, directory)
                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(items)}" }
                 runEdt {
-                    this@SessionController.model.loadHistory(items)
+                    updateModel {
+                        this@SessionController.model.loadHistory(items)
+                    }
                 }
                 recoverPending(id)
                 edt {
@@ -446,12 +452,14 @@ class SessionController(
                 "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
             }
             runEdt {
-                if (permissions.isNotEmpty()) {
-                    model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
-                } else if (questions.isNotEmpty()) {
-                    model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
-                } else if (status != null) {
-                    seedStatus(status)
+                updateModel {
+                    if (permissions.isNotEmpty()) {
+                        model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
+                    } else if (questions.isNotEmpty()) {
+                        model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
+                    } else if (status != null) {
+                        seedStatus(status)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -679,7 +687,16 @@ class SessionController(
     private fun item(key: String): ModelItem? = model.models.firstOrNull { it.key == key }
 
     private fun handle(events: List<ChatEventDto>) {
-        for (event in events) handle(event)
+        updateModel {
+            for (event in events) handle(event)
+        }
+    }
+
+    private fun updateModel(block: () -> Unit) {
+        assertEdt()
+        val follow = beforeUpdate()
+        block()
+        afterUpdate(follow)
     }
 
     private fun showMessages() {
