@@ -18,6 +18,8 @@ export interface TaskPromptOps {
   background(input: {
     parent: SessionPrompt.PromptInput
     child: SessionPrompt.PromptInput
+    messageID: MessageID
+    cost: number
     description: string
     agent: string
   }): Effect.Effect<void>
@@ -28,8 +30,10 @@ const id = "task"
 
 export const Parameters = Schema.Struct({
   description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
+  // kilocode_change start - use agent-oriented task prompt description
   prompt: Schema.String.annotate({ description: "The task for the agent to perform" }),
   subagent_type: Schema.String.annotate({ description: "The type of specialized agent to use for this task" }),
+  // kilocode_change end
   // kilocode_change start - support resuming and launching background subagents
   task_id: Schema.optional(Schema.String).annotate({
     description:
@@ -113,6 +117,7 @@ export const TaskTool = Tool.define(
                     action: "deny" as const,
                   },
                 ]),
+            // kilocode_change start - preserve primary tool restrictions for child sessions
             ...(cfg.experimental?.primary_tools?.map((item) => ({
               pattern: "*",
               action: "allow" as const,
@@ -122,7 +127,8 @@ export const TaskTool = Tool.define(
             ...KiloTask.permissions(rules),
             // kilocode_change end
           ],
-        }))
+        })) // kilocode_change
+      // kilocode_change end
 
       // kilocode_change start - keep assistant info for background parent continuation
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
@@ -169,7 +175,7 @@ export const TaskTool = Tool.define(
         }),
         // kilocode_change end
         // kilocode_change start - branch task execution for foreground/background subagents
-        () =>
+        (costBefore) =>
           Effect.gen(function* () {
             const parts = yield* ops.resolvePromptParts(params.prompt)
             // kilocode_change start - share child prompt between foreground and background paths
@@ -207,6 +213,8 @@ export const TaskTool = Tool.define(
               yield* ops.background({
                 description: params.description,
                 agent: next.name,
+                messageID: ctx.messageID,
+                cost: costBefore,
                 child,
                 parent: {
                   sessionID: ctx.sessionID,
@@ -247,6 +255,7 @@ export const TaskTool = Tool.define(
 
             const result = yield* ops.prompt(child) // kilocode_change - uses shared child prompt object
 
+            // kilocode_change start - return resumable task wrapper output
             return {
               title: params.description,
               metadata, // kilocode_change - includes background flag for UI rendering
@@ -255,15 +264,17 @@ export const TaskTool = Tool.define(
                 "",
                 "<task_result>",
                 result.parts.findLast((item) => item.type === "text")?.text ?? "",
-                "</task_result>",
+                "</task_result>", // kilocode_change - wrap task output for consumers
               ].join("\n"),
             }
+            // kilocode_change end
           }),
         // kilocode_change end
         // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)
         (costBefore) =>
           Effect.gen(function* () {
             ctx.abort.removeEventListener("abort", cancel)
+            if (params.background === true) return
             const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
             yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
           }),

@@ -375,8 +375,60 @@ describe("tool.task", () => {
       }),
     ),
   )
+
+  it.live("execute passes background cost context to prompt ops", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const child = yield* sessions.create({ parentID: chat.id, title: "existing child" })
+        yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: MessageID.ascending(),
+          sessionID: child.id,
+          mode: "general",
+          agent: "general",
+          cost: 0.1,
+          path: { cwd: "/tmp", root: "/tmp" },
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          time: { created: Date.now() },
+        })
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        let seen: Parameters<TaskPromptOps["background"]>[0] | undefined
+        const promptOps = stubOps({ onBackground: (input) => (seen = input) })
+
+        yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "continue investigation",
+            subagent_type: "general",
+            task_id: child.id,
+            background: true,
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        expect(seen?.messageID).toBe(assistant.id)
+        expect(seen?.cost).toBeCloseTo(0.1, 6)
+      }),
+    ),
+  )
   // kilocode_change end
 
+  // kilocode_change start - child permissions include Kilo task restrictions
   it.live("execute shapes child permissions for task, todowrite, and primary tools", () =>
     provideTmpdirInstance(
       () =>
@@ -445,6 +497,7 @@ describe("tool.task", () => {
       },
     ),
   )
+  // kilocode_change end
 })
 
 // kilocode_change start - subagent cost propagation coverage (#6321)

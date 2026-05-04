@@ -1380,11 +1380,15 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     const background = Effect.fn("SessionPrompt.background")(function* (input: {
       parent: PromptInput
       child: PromptInput
+      messageID: MessageID
+      cost: number
       description: string
       agent: string
     }) {
       yield* prompt(input.parent)
       const exit = yield* prompt(input.child).pipe(Effect.exit)
+      const cost = yield* KiloCostPropagation.childCost(sessions, input.child.sessionID)
+      yield* KiloCostPropagation.propagate(sessions, input.parent.sessionID, input.messageID, cost - input.cost)
       const reason = Exit.isSuccess(exit) ? "completed" : Cause.hasInterruptsOnly(exit.cause) ? "interrupted" : "error"
       const result = Exit.isSuccess(exit)
         ? (exit.value.parts.findLast((item) => item.type === "text")?.text ?? "")
@@ -1659,6 +1663,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
             // kilocode_change end
 
+            // kilocode_change start - include environment before skills in system prompt
             const [skills, env, instructions, modelMsgs] = yield* Effect.all([
               sys.skills(agent),
               Effect.sync(() => sys.environment(model, lastUser.editorContext)), // kilocode_change
@@ -1666,6 +1671,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               MessageV2.toModelMessagesEffect(msgs, model),
             ])
             const system = [...env, ...(skills ? [skills] : []), ...instructions]
+            // kilocode_change end
             const format = lastUser.format ?? { type: "text" as const }
             if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
             // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
