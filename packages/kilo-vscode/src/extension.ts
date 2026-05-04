@@ -6,7 +6,6 @@ import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
 import { DiffViewerProvider } from "./DiffViewerProvider"
 import { DiffPanelManager } from "./diff/manager/DiffPanelManager"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
-import { getWorkspaceRoot } from "./review-utils"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -199,7 +198,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(diffViewerProvider)
 
   const diffSourceCatalog = new DiffSourceCatalog(connectionService)
-  const diffPanelManager = new DiffPanelManager(context.extensionUri, connectionService, diffSourceCatalog)
+  const diffPanelManager = new DiffPanelManager(context.extensionUri, connectionService, diffSourceCatalog, {
+    sessionIdProvider: () => provider.getCurrentSessionId(),
+  })
   diffPanelManager.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
@@ -327,11 +328,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "kilo-code.new.showChanges",
       (arg?: { sessionId?: string; initialSourceId?: string }) => {
-        diffPanelManager.openPanel({
-          workspaceRoot: getWorkspaceRoot(),
-          sessionId: arg?.sessionId ?? provider.getCurrentSessionId(),
-          initialSourceId: arg?.initialSourceId,
-        })
+        diffPanelManager.openFromCommand(arg)
       },
     ),
     vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {

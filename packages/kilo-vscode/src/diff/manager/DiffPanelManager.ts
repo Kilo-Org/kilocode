@@ -15,6 +15,7 @@ type CommentHandler = (comments: unknown[], autoSend: boolean) => void
 export interface DiffPanelManagerOptions {
   scheduler?: Scheduler
   createSurface?: () => PanelSurface
+  sessionIdProvider?: () => string | undefined
 }
 
 /**
@@ -36,6 +37,7 @@ export class DiffPanelManager implements vscode.Disposable {
   private commentHandler: CommentHandler | undefined
   private readonly scheduler: Scheduler
   private readonly createSurface: () => PanelSurface
+  private readonly sessionIdProvider: () => string | undefined
   private readonly output: vscode.OutputChannel
 
   constructor(
@@ -46,6 +48,7 @@ export class DiffPanelManager implements vscode.Disposable {
   ) {
     this.scheduler = options.scheduler ?? realScheduler()
     this.createSurface = options.createSurface ?? (() => this.defaultCreateSurface())
+    this.sessionIdProvider = options.sessionIdProvider ?? (() => undefined)
     this.output = vscode.window.createOutputChannel("Kilo Diff Panel")
   }
 
@@ -78,6 +81,19 @@ export class DiffPanelManager implements vscode.Disposable {
     }
 
     this.adoptSurface(this.createSurface())
+  }
+
+  /**
+   * Entry point for the `kilo-code.new.showChanges` command. Composes the
+   * PanelContext from the arg + injected session/workspace lookups so
+   * callers don't have to know about it.
+   */
+  public openFromCommand(arg?: { sessionId?: string; initialSourceId?: string }): void {
+    this.openPanel({
+      workspaceRoot: getWorkspaceRoot(),
+      sessionId: arg?.sessionId ?? this.sessionIdProvider(),
+      initialSourceId: arg?.initialSourceId,
+    })
   }
 
   /**

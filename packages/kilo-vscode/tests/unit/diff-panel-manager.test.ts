@@ -103,6 +103,7 @@ class RecordedSource implements DiffSource {
 
 class FakeCatalog extends DiffSourceCatalog {
   private readonly sources = new Map<string, RecordedSource>()
+  seen: PanelContext | undefined
 
   constructor(private readonly descriptors: DiffSourceDescriptor[]) {
     super({} as KiloConnectionService)
@@ -117,6 +118,7 @@ class FakeCatalog extends DiffSourceCatalog {
   }
 
   override defaultSourceId(ctx: PanelContext): string | undefined {
+    this.seen = ctx
     if (ctx.initialSourceId) return ctx.initialSourceId
     if (ctx.sessionId) return `session:${ctx.sessionId}`
     return this.descriptors[0]?.id
@@ -148,6 +150,7 @@ const SESSION_DESC: DiffSourceDescriptor = {
 function harness(
   descriptors: DiffSourceDescriptor[],
   sources: Record<string, RecordedSource>,
+  opts: { sessionIdProvider?: () => string | undefined } = {},
 ): {
   manager: DiffPanelManager
   surface: InMemoryPanelSurface
@@ -166,6 +169,7 @@ function harness(
   const manager = new DiffPanelManager(uri, connection, catalog, {
     scheduler,
     createSurface: () => surface,
+    sessionIdProvider: opts.sessionIdProvider,
   })
   return { manager, surface, scheduler, catalog }
 }
@@ -273,6 +277,38 @@ describe("DiffPanelManager.openPanel", () => {
     expect(surfaceRef.disposedCount).toBe(0)
     expect(workspace.disposeCount).toBe(1)
     expect(session.initialFetchCount).toBe(1)
+  })
+
+  it("openFromCommand resolves sessionId from the injected provider", async () => {
+    const session = new RecordedSource(SESSION_DESC, [{ type: "diffs", diffs: [] }])
+    const { manager, surface, scheduler, catalog } = harness(
+      [WORKSPACE_DESC, SESSION_DESC],
+      { "session:s1": session },
+      { sessionIdProvider: () => "s1" },
+    )
+
+    manager.openFromCommand()
+    surface.emit({ type: "webviewReady" })
+    await scheduler.flush()
+
+    expect(catalog.seen?.sessionId).toBe("s1")
+    expect(catalog.seen?.workspaceRoot).toBe("/repo")
+    expect(session.initialFetchCount).toBe(1)
+  })
+
+  it("openFromCommand prefers the arg sessionId over the provider", async () => {
+    const session = new RecordedSource(SESSION_DESC, [{ type: "diffs", diffs: [] }])
+    const { manager, surface, scheduler, catalog } = harness(
+      [WORKSPACE_DESC, SESSION_DESC],
+      { "session:s1": session },
+      { sessionIdProvider: () => "fromProvider" },
+    )
+
+    manager.openFromCommand({ sessionId: "s1" })
+    surface.emit({ type: "webviewReady" })
+    await scheduler.flush()
+
+    expect(catalog.seen?.sessionId).toBe("s1")
   })
 
   it("tears down source + surface on dispose", () => {
