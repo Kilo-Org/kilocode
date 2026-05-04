@@ -122,9 +122,9 @@ wired to `FakeSessionRpcApi`, and a set of shared helpers.
 
 **Two setups:**
 
-| Setup                                                                     | When to use                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `val (m, events, modelEvents) = prompted()`                               | New-session flow — sets app/workspace to ready, creates a controller with no ID, sends an initial prompt. `model.showMessages` is `true`. Start all event-driven tests from here.                            |
+| Setup | When to use |
+|---|---|
+| `val (m, events, modelEvents) = prompted()` | New-session flow — sets app/workspace to ready, creates a controller with no ID, sends an initial prompt. `model.showMessages` is `true`. Start all event-driven tests from here. |
 | `controller("ses_test")` + manual `appRpc`/`projectRpc` setup + `flush()` | Existing-session flow — opens a specific session, triggers history load and `recoverPending()`. `model.showMessages` is `false`. Use for recovery and history tests. Pass `show = false` to `assertSession`. |
 
 **Core assertion helpers:**
@@ -163,14 +163,14 @@ flush()                                          // settle coroutines + drain ED
 
 **`FakeSessionRpcApi` configurable state:**
 
-| Field                                                              | Purpose                                                |
-| ------------------------------------------------------------------ | ------------------------------------------------------ |
-| `rpc.events` (`MutableSharedFlow`)                                 | Emit `ChatEventDto` events the controller will receive |
-| `rpc.statuses` (`MutableStateFlow<Map<String, SessionStatusDto>>`) | Seed the status map read during `recoverPending()`     |
-| `rpc.history`                                                      | Messages returned by `messages()` (history load)       |
-| `rpc.pendingPermissionList`                                        | Permissions returned during recovery                   |
-| `rpc.pendingQuestionList`                                          | Questions returned during recovery                     |
-| `rpc.prompts`, `rpc.permissionReplies`, etc.                       | Call tracking for RPC side-effects                     |
+| Field | Purpose |
+|---|---|
+| `rpc.events` (`MutableSharedFlow`) | Emit `ChatEventDto` events the controller will receive |
+| `rpc.statuses` (`MutableStateFlow<Map<String, SessionStatusDto>>`) | Seed the status map read during `recoverPending()` |
+| `rpc.history` | Messages returned by `messages()` (history load) |
+| `rpc.pendingPermissionList` | Permissions returned during recovery |
+| `rpc.pendingQuestionList` | Questions returned during recovery |
+| `rpc.prompts`, `rpc.permissionReplies`, etc. | Call tracking for RPC side-effects |
 
 **String format of `model.toString()`** (used by `assertModel` / `assertSession`):
 
@@ -221,11 +221,11 @@ Official references:
 
 ### When to Use What
 
-| Need                                                       | API                                                                                                                                         |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Need | API |
+|---|---|
 | Dialogs, settings pages, forms, any layout with components | **Preferred**: [Kotlin UI DSL v2](https://plugins.jetbrains.com/docs/intellij/kotlin-ui-dsl-version-2.html) (`com.intellij.ui.dsl.builder`) |
-| Tool window panels, action-driven UI, custom components    | Standard Swing with IntelliJ Platform component replacements (see below)                                                                    |
-| Menus and toolbars                                         | [Action System](https://plugins.jetbrains.com/docs/intellij/action-system.html)                                                             |
+| Tool window panels, action-driven UI, custom components | Standard Swing with IntelliJ Platform component replacements (see below) |
+| Menus and toolbars | [Action System](https://plugins.jetbrains.com/docs/intellij/action-system.html) |
 
 ### Kotlin UI DSL v2 (Preferred)
 
@@ -257,11 +257,11 @@ panel {
 
 Every row uses one of three layouts. Default is `LABEL_ALIGNED` when a label is provided for the row, `INDEPENDENT` otherwise.
 
-| Layout          | Behavior                                             |
-| --------------- | ---------------------------------------------------- |
-| `LABEL_ALIGNED` | Label column + content columns, aligned across rows  |
-| `INDEPENDENT`   | All cells are independent, no cross-row alignment    |
-| `PARENT_GRID`   | Cells align with the parent grid columns across rows |
+| Layout | Behavior |
+|---|---|
+| `LABEL_ALIGNED` | Label column + content columns, aligned across rows |
+| `INDEPENDENT` | All cells are independent, no cross-row alignment |
+| `PARENT_GRID` | Cells align with the parent grid columns across rows |
 
 ```kotlin
 panel {
@@ -290,37 +290,37 @@ panel {
 
 All cell factory methods available inside `row { }`:
 
-| Method                                             | Description                                                |
-| -------------------------------------------------- | ---------------------------------------------------------- |
-| `checkBox("text")`                                 | Checkbox                                                   |
-| `threeStateCheckBox("text")`                       | Three-state checkbox                                       |
-| `radioButton("text", value)`                       | Radio button (must be inside `buttonsGroup {}`)            |
-| `button("text") {}`                                | Push button                                                |
-| `actionButton(action)`                             | Icon button bound to an `AnAction`                         |
-| `actionsButton(action1, action2, ...)`             | Dropdown actions button                                    |
-| `segmentedButton(items) { text = it }`             | Segmented control                                          |
-| `tabbedPaneHeader(items)`                          | Tab header strip                                           |
-| `label("text")`                                    | Static label                                               |
-| `text("html")`                                     | Rich text with links, icons, line-width control            |
-| `link("text") {}`                                  | Focusable clickable link                                   |
-| `browserLink("text", "url")`                       | Opens URL in browser                                       |
-| `dropDownLink("default", listOf(...))`             | Dropdown link selector                                     |
-| `icon(AllIcons.*)`                                 | Icon display                                               |
-| `contextHelp("description", "title")`              | Help icon with popup                                       |
-| `textField()`                                      | Text input                                                 |
-| `passwordField()`                                  | Password input                                             |
-| `textFieldWithBrowseButton()`                      | Text field + browse dialog                                 |
-| `expandableTextField()`                            | Expandable multi-line text field                           |
-| `extendableTextField()`                            | Text field with extension icons                            |
-| `intTextField(range)`                              | Integer input with validation                              |
-| `spinner(intRange)` / `spinner(doubleRange, step)` | Numeric spinner                                            |
-| `slider(min, max, minorTick, majorTick)`           | Slider (use `.labelTable()` for tick labels)               |
-| `textArea()`                                       | Multi-line text (use `.rows(n)` and `.align(AlignX.FILL)`) |
-| `comboBox(items)`                                  | Combo box / dropdown                                       |
-| `comment("text")`                                  | Gray comment text (standalone)                             |
-| `cell(component)`                                  | Wrap any arbitrary Swing component                         |
-| `scrollCell(component)`                            | Wrap component in a scroll pane                            |
-| `cell()`                                           | Empty placeholder cell for grid alignment                  |
+| Method | Description |
+|---|---|
+| `checkBox("text")` | Checkbox |
+| `threeStateCheckBox("text")` | Three-state checkbox |
+| `radioButton("text", value)` | Radio button (must be inside `buttonsGroup {}`) |
+| `button("text") {}` | Push button |
+| `actionButton(action)` | Icon button bound to an `AnAction` |
+| `actionsButton(action1, action2, ...)` | Dropdown actions button |
+| `segmentedButton(items) { text = it }` | Segmented control |
+| `tabbedPaneHeader(items)` | Tab header strip |
+| `label("text")` | Static label |
+| `text("html")` | Rich text with links, icons, line-width control |
+| `link("text") {}` | Focusable clickable link |
+| `browserLink("text", "url")` | Opens URL in browser |
+| `dropDownLink("default", listOf(...))` | Dropdown link selector |
+| `icon(AllIcons.*)` | Icon display |
+| `contextHelp("description", "title")` | Help icon with popup |
+| `textField()` | Text input |
+| `passwordField()` | Password input |
+| `textFieldWithBrowseButton()` | Text field + browse dialog |
+| `expandableTextField()` | Expandable multi-line text field |
+| `extendableTextField()` | Text field with extension icons |
+| `intTextField(range)` | Integer input with validation |
+| `spinner(intRange)` / `spinner(doubleRange, step)` | Numeric spinner |
+| `slider(min, max, minorTick, majorTick)` | Slider (use `.labelTable()` for tick labels) |
+| `textArea()` | Multi-line text (use `.rows(n)` and `.align(AlignX.FILL)`) |
+| `comboBox(items)` | Combo box / dropdown |
+| `comment("text")` | Gray comment text (standalone) |
+| `cell(component)` | Wrap any arbitrary Swing component |
+| `scrollCell(component)` | Wrap component in a scroll pane |
+| `cell()` | Empty placeholder cell for grid alignment |
 
 Key component examples:
 
@@ -384,13 +384,13 @@ Note: when a row contains a `checkBox` or `radioButton`, the DSL automatically i
 
 Three types of comments, each with different placement and semantics:
 
-| Type                  | Method                              | Placement            |
-| --------------------- | ----------------------------------- | -------------------- |
-| Cell comment (bottom) | `cell.comment("text")`              | Below the cell       |
-| Cell comment (right)  | `cell.commentRight("text")`         | Right of the cell    |
-| Cell context help     | `cell.contextHelp("text", "title")` | Help icon with popup |
-| Row comment           | `row.rowComment("text")`            | Below the entire row |
-| Arbitrary comment     | `comment("text")`                   | Standalone gray text |
+| Type | Method | Placement |
+|---|---|---|
+| Cell comment (bottom) | `cell.comment("text")` | Below the cell |
+| Cell comment (right) | `cell.commentRight("text")` | Right of the cell |
+| Cell context help | `cell.contextHelp("text", "title")` | Help icon with popup |
+| Row comment | `row.rowComment("text")` | Below the entire row |
+| Arbitrary comment | `comment("text")` | Standalone gray text |
 
 ```kotlin
 panel {
@@ -417,16 +417,16 @@ Comments support HTML with clickable links (pass a lambda for the click handler)
 
 #### Groups and Structure
 
-| Method                         | Grid        | Description                                                |
-| ------------------------------ | ----------- | ---------------------------------------------------------- |
-| `panel {}`                     | Own grid    | Sub-panel occupying full width                             |
-| `rowsRange {}`                 | Parent grid | Grouped rows sharing parent grid — useful with `enabledIf` |
-| `group("Title") {}`            | Own grid    | Titled section with vertical spacing before/after          |
-| `groupRowsRange("Title") {}`   | Parent grid | Titled section sharing parent grid alignment               |
-| `collapsibleGroup("Title") {}` | Own grid    | Expandable section (Tab-focusable, supports mnemonics)     |
-| `buttonsGroup("Title") {}`     | —           | Groups `radioButton` or `checkBox` under a title           |
-| `separator()`                  | —           | Horizontal separator line                                  |
-| Row `panel {}`                 | Own grid    | Sub-panel inside a cell                                    |
+| Method | Grid | Description |
+|---|---|---|
+| `panel {}` | Own grid | Sub-panel occupying full width |
+| `rowsRange {}` | Parent grid | Grouped rows sharing parent grid — useful with `enabledIf` |
+| `group("Title") {}` | Own grid | Titled section with vertical spacing before/after |
+| `groupRowsRange("Title") {}` | Parent grid | Titled section sharing parent grid alignment |
+| `collapsibleGroup("Title") {}` | Own grid | Expandable section (Tab-focusable, supports mnemonics) |
+| `buttonsGroup("Title") {}` | — | Groups `radioButton` or `checkBox` under a title |
+| `separator()` | — | Horizontal separator line |
+| Row `panel {}` | Own grid | Sub-panel inside a cell |
 
 ```kotlin
 panel {
@@ -534,15 +534,15 @@ panel {
 
 Bind component values to model properties. Values are applied on `DialogPanel.apply()`, checked with `.isModified()`, and reverted with `.reset()`.
 
-| Method                                       | Component    |
-| -------------------------------------------- | ------------ |
-| `bindSelected(model::prop)`                  | checkBox     |
-| `bindText(model::prop)`                      | textField    |
-| `bindIntText(model::prop)`                   | intTextField |
-| `bindItem(model::prop.toNullableProperty())` | comboBox     |
-| `bindValue(model::prop)`                     | slider       |
-| `bindIntValue(model::prop)`                  | spinner      |
-| `buttonsGroup {}.bind(model::prop)`          | radio group  |
+| Method | Component |
+|---|---|
+| `bindSelected(model::prop)` | checkBox |
+| `bindText(model::prop)` | textField |
+| `bindIntText(model::prop)` | intTextField |
+| `bindItem(model::prop.toNullableProperty())` | comboBox |
+| `bindValue(model::prop)` | slider |
+| `bindIntValue(model::prop)` | spinner |
+| `buttonsGroup {}.bind(model::prop)` | radio group |
 
 ```kotlin
 enum class Theme { LIGHT, DARK }
@@ -609,19 +609,19 @@ Activate validators by calling `dialogPanel.registerValidators(disposable)` afte
 
 #### Tips and Common Patterns
 
-| Pattern                    | Usage                                                           |
-| -------------------------- | --------------------------------------------------------------- |
-| `.bold()`                  | Bold text on any cell                                           |
-| `.columns(COLUMNS_MEDIUM)` | Set preferred width of textField / comboBox / textArea          |
-| `.text("initial")`         | Set initial text on text components                             |
-| `.resizableColumn()`       | Column fills remaining horizontal space                         |
-| `cell()`                   | Empty placeholder cell for grid alignment                       |
-| `.widthGroup("name")`      | Equalize widths across rows (cannot combine with `AlignX.FILL`) |
-| `.align(AlignX.FILL)`      | Stretch component to fill available width                       |
-| `.align(AlignY.TOP)`       | Top-align component in its cell                                 |
-| `.applyToComponent { }`    | Direct access to the underlying Swing component                 |
-| `.selected(true)`          | Default-select a radioButton when no bound value matches        |
-| `.gap(RightGap.COLUMNS)`   | Column-level gap for multi-column layouts                       |
+| Pattern | Usage |
+|---|---|
+| `.bold()` | Bold text on any cell |
+| `.columns(COLUMNS_MEDIUM)` | Set preferred width of textField / comboBox / textArea |
+| `.text("initial")` | Set initial text on text components |
+| `.resizableColumn()` | Column fills remaining horizontal space |
+| `cell()` | Empty placeholder cell for grid alignment |
+| `.widthGroup("name")` | Equalize widths across rows (cannot combine with `AlignX.FILL`) |
+| `.align(AlignX.FILL)` | Stretch component to fill available width |
+| `.align(AlignY.TOP)` | Top-align component in its cell |
+| `.applyToComponent { }` | Direct access to the underlying Swing component |
+| `.selected(true)` | Default-select a radioButton when no bound value matches |
+| `.gap(RightGap.COLUMNS)` | Column-level gap for multi-column layouts |
 
 ```kotlin
 panel {
@@ -663,33 +663,33 @@ panel {
 
 ### Platform Components — Always Use Instead of Raw Swing
 
-| Instead of            | Use                    | Package                         |
-| --------------------- | ---------------------- | ------------------------------- |
-| `JLabel`              | `JBLabel`              | `com.intellij.ui.components`    |
-| `JTextField`          | `JBTextField`          | `com.intellij.ui.components`    |
-| `JTextArea`           | `JBTextArea`           | `com.intellij.ui.components`    |
-| `JList`               | `JBList`               | `com.intellij.ui.components`    |
-| `JScrollPane`         | `JBScrollPane`         | `com.intellij.ui.components`    |
-| `JTable`              | `JBTable`              | `com.intellij.ui.table`         |
-| `JTree`               | `Tree`                 | `com.intellij.ui.treeStructure` |
-| `JSplitPane`          | `JBSplitter`           | `com.intellij.ui`               |
-| `JTabbedPane`         | `JBTabs`               | `com.intellij.ui.tabs`          |
-| `JCheckBox`           | `JBCheckBox`           | `com.intellij.ui.components`    |
-| `Color`               | `JBColor`              | `com.intellij.ui`               |
-| `EmptyBorder`         | `JBUI.Borders.empty()` | `com.intellij.util.ui`          |
-| Hardcoded pixel sizes | `JBUI.scale(px)`       | `com.intellij.util.ui`          |
+| Instead of | Use | Package |
+|---|---|---|
+| `JLabel` | `JBLabel` | `com.intellij.ui.components` |
+| `JTextField` | `JBTextField` | `com.intellij.ui.components` |
+| `JTextArea` | `JBTextArea` | `com.intellij.ui.components` |
+| `JList` | `JBList` | `com.intellij.ui.components` |
+| `JScrollPane` | `JBScrollPane` | `com.intellij.ui.components` |
+| `JTable` | `JBTable` | `com.intellij.ui.table` |
+| `JTree` | `Tree` | `com.intellij.ui.treeStructure` |
+| `JSplitPane` | `JBSplitter` | `com.intellij.ui` |
+| `JTabbedPane` | `JBTabs` | `com.intellij.ui.tabs` |
+| `JCheckBox` | `JBCheckBox` | `com.intellij.ui.components` |
+| `Color` | `JBColor` | `com.intellij.ui` |
+| `EmptyBorder` | `JBUI.Borders.empty()` | `com.intellij.util.ui` |
+| Hardcoded pixel sizes | `JBUI.scale(px)` | `com.intellij.util.ui` |
 
 Inspection `Plugin DevKit | Code | Undesirable class usage` highlights when you use raw Swing where a platform replacement exists.
 
 ### Multi-line and Rich Text
 
-| Need                                                  | Component                                              |
-| ----------------------------------------------------- | ------------------------------------------------------ |
-| Rich HTML with modern CSS, icons, shortcuts           | `JBHtmlPane` (`com.intellij.ui.components.JBHtmlPane`) |
-| Simple multi-line label with HTML                     | `JBLabel` + `XmlStringUtil.wrapInHtml()`               |
-| Scrollable / wrapping HTML panel                      | `SwingHelper.createHtmlViewer()`                       |
-| High-perf colored text fragments (trees/lists/tables) | `SimpleColoredComponent`                               |
-| Plain-text newline splitting                          | `MultiLineLabel` — legacy, do not use in new code      |
+| Need | Component |
+|---|---|
+| Rich HTML with modern CSS, icons, shortcuts | `JBHtmlPane` (`com.intellij.ui.components.JBHtmlPane`) |
+| Simple multi-line label with HTML | `JBLabel` + `XmlStringUtil.wrapInHtml()` |
+| Scrollable / wrapping HTML panel | `SwingHelper.createHtmlViewer()` |
+| High-perf colored text fragments (trees/lists/tables) | `SimpleColoredComponent` |
+| Plain-text newline splitting | `MultiLineLabel` — legacy, do not use in new code |
 
 - Build HTML programmatically with `HtmlChunk`/`HtmlBuilder` (`com.intellij.openapi.util.text.HtmlChunk`). Avoid raw HTML string concatenation — it risks injection and breaks localization.
 - For simple wrapping/escaping: `XmlStringUtil.wrapInHtml(content)`, `XmlStringUtil.wrapInHtmlLines(lines...)`, `XmlStringUtil.escapeString(text)`.

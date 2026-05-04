@@ -27,4 +27,5 @@ data class KiloWorkspaceStateDto(
     val commands: List<CommandDto> = emptyList(),
     val skills: List<SkillDto> = emptyList(),
     val error: String? = null,
+    val errors: List<LoadErrorDto> = emptyList(),
 )

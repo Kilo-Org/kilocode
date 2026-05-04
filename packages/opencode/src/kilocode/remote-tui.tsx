@@ -4,26 +4,35 @@
  * RemoteIndicator component for the footer status bar.
  */
 
-import { createSignal, onMount, onCleanup, Show } from "solid-js"
+import type { Event } from "@kilocode/sdk/v2"
+import { createSignal, onCleanup, onMount, Show } from "solid-js"
+
+type Status = {
+  enabled: boolean
+  connected: boolean
+}
 
 /**
  * Footer indicator showing remote connection status.
- * Polls every 5 seconds. Only renders when kilo gateway is connected and remote is enabled.
+ * Uses the TUI event stream after an initial status fetch.
  */
-export function RemoteIndicator(props: { sdk: any; theme: any; kilo: boolean }) {
-  const [status, setStatus] = createSignal<{
-    enabled: boolean
-    connected: boolean
-  } | null>(null)
+export function RemoteIndicator(props: {
+  sdk: any
+  theme: any
+  kilo: boolean
+  event: { on: <Type extends Event["type"]>(type: Type, handler: (event: Extract<Event, { type: Type }>) => void) => () => void }
+}) {
+  const [status, setStatus] = createSignal<Status | null>(null)
 
   onMount(() => {
-    const poll = async () => {
-      const res = await props.sdk.client.remote.status().catch(() => null)
-      if (res?.data) setStatus(res.data)
-    }
-    poll()
-    const timer = setInterval(poll, 5000)
-    onCleanup(() => clearInterval(timer))
+    void props.sdk.client.remote
+      .status()
+      .then((res: { data?: Status }) => {
+        if (res.data) setStatus(res.data)
+      })
+      .catch(() => undefined)
+    const off = props.event.on("kilo-sessions.remote-status-changed", (evt) => setStatus(evt.properties))
+    onCleanup(off)
   })
 
   return (

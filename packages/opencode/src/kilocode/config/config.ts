@@ -3,12 +3,13 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import z from "zod"
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import { Log } from "../../util"
 import { Global } from "../../global"
 import { NamedError } from "@opencode-ai/shared/util/error"
+import type { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Bus } from "@/bus"
 import { isRecord } from "@/util/record"
 import { ConfigError } from "../../config/error"
@@ -48,6 +49,9 @@ export namespace KilocodeConfig {
   /** Directory suffixes that Kilo recognizes in addition to .opencode. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 
+  /** All config directory suffixes Kilo can update, including upstream .opencode. */
+  export const ALL_CONFIG_DIR_SUFFIXES = [".kilo", ".kilocode", ".opencode"] as const
+
   /** Path patterns for resolving kilo agent names from file paths. */
   export const AGENT_PATTERNS = ["/.kilo/agent/", "/.kilo/agents/", "/.kilocode/agent/", "/.kilocode/agents/"] as const
 
@@ -58,6 +62,53 @@ export namespace KilocodeConfig {
     "/.kilocode/command/",
     "/.kilocode/commands/",
   ] as const
+
+  /**
+   * Choose the project config file that Config.update should patch.
+   *
+   * This mirrors the Kilo project-config load chain: prefer existing config files
+   * in ancestor config directories, then existing root config files, and create
+   * `.kilo/kilo.json` when no project config exists yet.
+   */
+  export const projectConfigUpdateTarget = Effect.fn("KilocodeConfig.projectConfigUpdateTarget")(function* (input: {
+    fs: AppFileSystem.Interface
+    directory: string
+    worktree?: string
+  }) {
+    const dirs = yield* input.fs
+      .up({ targets: [...ALL_CONFIG_DIR_SUFFIXES], start: input.directory, stop: input.worktree })
+      .pipe(Effect.orDie)
+    const roots = yield* input.fs
+      .up({ targets: [...ALL_CONFIG_FILES], start: input.directory, stop: input.worktree })
+      .pipe(Effect.orDie)
+    const files = [...dirs.flatMap((dir) => ALL_CONFIG_FILES.map((file) => path.join(dir, file))), ...roots]
+    return files.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.json")
+  })
+
+  export const updateProjectConfig = Effect.fn("KilocodeConfig.updateProjectConfig")(function* (input: {
+    fs: AppFileSystem.Interface
+    directory: string
+    worktree?: string
+    config: Config.Info
+    read: (file: string) => Effect.Effect<string | undefined>
+    parse: (input: string, file: string) => Config.Info
+    patch: (input: string, config: Config.Info) => string
+    writable: (config: Config.Info) => Config.Info
+  }) {
+    const file = yield* projectConfigUpdateTarget(input)
+    const before = (yield* input.read(file)) ?? "{}"
+    const patch = input.writable(input.config)
+
+    if (file.endsWith(".jsonc")) {
+      const updated = input.patch(before, patch)
+      yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
+      return
+    }
+
+    const existing = input.parse(before, file)
+    const merged = mergeConfig(input.writable(existing), patch)
+    yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+  })
 
   // ── Warning helpers ──────────────────────────────────────────────────
 

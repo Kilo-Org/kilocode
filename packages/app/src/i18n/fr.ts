@@ -210,7 +210,7 @@ export const dict = {
   "common.saving": "Enregistrement...",
   "common.default": "Défaut",
   "common.attachment": "pièce jointe",
-  "prompt.placeholder.shell": "Entrez une commande shell...",
+  "prompt.placeholder.shell": "Entrez une commande shell... {{example}}",
   "prompt.placeholder.normal": 'Demandez n\'importe quoi... "{{example}}"',
   "prompt.placeholder.simple": "Demandez n'importe quoi...",
   "prompt.placeholder.summarizeComments": "Résumer les commentaires…",
@@ -398,8 +398,7 @@ export const dict = {
   "toast.session.unshare.failed.description": "Une erreur s'est produite lors de l'annulation du partage de la session",
   "toast.session.listFailed.title": "Échec du chargement des sessions pour {{project}}",
   "toast.update.title": "Mise à jour disponible",
-  "toast.update.description":
-    "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
+  "toast.update.description": "Une nouvelle version d'Kilo ({{version}}) est maintenant disponible pour installation.",
   "toast.update.action.installRestart": "Installer et redémarrer",
   "toast.update.action.notYet": "Pas encore",
   "error.page.title": "Quelque chose s'est mal passé",
@@ -549,8 +548,7 @@ export const dict = {
   "sidebar.workspaces.enable": "Activer les espaces de travail",
   "sidebar.workspaces.disable": "Désactiver les espaces de travail",
   "sidebar.gettingStarted.title": "Commencer",
-  "sidebar.gettingStarted.line1":
-    "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
+  "sidebar.gettingStarted.line1": "Kilo inclut des modèles gratuits pour que vous puissiez commencer immédiatement.",
   "sidebar.gettingStarted.line2":
     "Connectez n'importe quel fournisseur pour utiliser des modèles, y compris Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Sessions récentes",
@@ -579,7 +577,9 @@ export const dict = {
   "settings.general.row.theme.title": "Thème",
   "settings.general.row.theme.description": "Personnaliser le thème d'Kilo.",
   "settings.general.row.font.title": "Police de code",
-  "settings.general.row.font.description": "Personnaliser la police utilisée dans les blocs de code et les terminaux",
+  "settings.general.row.font.description": "Personnaliser la police utilisée dans les blocs de code",
+  "settings.general.row.terminalFont.title": "Terminal Font",
+  "settings.general.row.terminalFont.description": "Customise the font used in the terminal",
   "settings.general.row.uiFont.title": "Police de l'interface",
   "settings.general.row.uiFont.description": "Personnaliser la police utilisée dans toute l'interface",
   "settings.general.row.followup.title": "Comportement de suivi",
@@ -596,6 +596,9 @@ export const dict = {
   "settings.general.row.editToolPartsExpanded.title": "Développer les parties de l'outil edit",
   "settings.general.row.editToolPartsExpanded.description":
     "Afficher les parties des outils edit, write et patch développées par défaut dans la chronologie",
+  "settings.general.row.showSessionProgressBar.title": "Afficher la barre de progression de la session",
+  "settings.general.row.showSessionProgressBar.description":
+    "Afficher la barre de progression animée en haut de la session lorsque l'agent travaille",
   "settings.general.row.wayland.title": "Utiliser Wayland natif",
   "settings.general.row.wayland.description": "Désactiver le repli X11 sur Wayland. Nécessite un redémarrage.",
   "settings.general.row.wayland.tooltip":

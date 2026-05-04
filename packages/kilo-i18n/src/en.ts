@@ -83,4 +83,7 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implement in a fresh session with a clean context",
   "plan.followup.answer.continue": "Continue here",
   "plan.followup.answer.continue.description": "Implement the plan in this session",
+
+  // Edit-tool header: hover-revealed action opening the diff in a full tab.
+  "ui.messagePart.openInDiffViewer": "Open in Diff Viewer",
 }

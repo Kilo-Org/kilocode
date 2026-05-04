@@ -77,4 +77,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "깨끗한 컨텍스트의 새 세션에서 구현",
   "plan.followup.answer.continue": "여기서 계속하기",
   "plan.followup.answer.continue.description": "이 세션에서 계획 구현",
+
+  "ui.messagePart.openInDiffViewer": "Diff 뷰어에서 열기",
 }

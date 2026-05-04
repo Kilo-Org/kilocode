@@ -193,7 +193,11 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
 
       for (const message of messages) {
         if (message.info.role === "assistant") {
-          sessionCost += message.info.cost || 0
+          // kilocode_change start - count propagated subagent cost once but keep child model stats (#6321)
+          const parts = message.parts.filter((part) => part.type === "step-finish")
+          const cost = parts.length ? parts.reduce((sum, part) => sum + part.cost, 0) : message.info.cost || 0
+          if (!session.parentID) sessionCost += message.info.cost || 0
+          // kilocode_change end
 
           const modelKey = `${message.info.providerID}/${message.info.modelID}`
           if (!sessionModelUsage[modelKey]) {
@@ -204,7 +208,7 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
             }
           }
           sessionModelUsage[modelKey].messages++
-          sessionModelUsage[modelKey].cost += message.info.cost || 0
+          sessionModelUsage[modelKey].cost += cost // kilocode_change
 
           if (message.info.tokens) {
             sessionTokens.input += message.info.tokens.input || 0

@@ -515,6 +515,54 @@
   }
 }
 
+.prompt-indexing-button {
+  position: relative;
+
+  [data-slot="icon-svg"] {
+    color: currentColor;
+  }
+}
+
+.prompt-indexing-button--muted {
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-indexing-button--warning {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-indexing-button--success {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-indexing-button--error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-auto-approve-button {
+  position: relative;
+}
+
+.prompt-auto-approve-button--active {
+  color: var(--vscode-testing-iconPassed, #73c991);
+
+  [data-slot="icon-svg"] {
+    color: currentColor !important;
+  }
+}
+
+.prompt-auto-approve-button--active::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--vscode-testing-iconPassed, #73c991);
+  box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
+}
+
 /* ============================================
    Enhance Prompt Spinner
    ============================================ */

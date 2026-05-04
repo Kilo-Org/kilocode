@@ -12,6 +12,7 @@ import { useRoute } from "@tui/context/route"
 import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
 import { useEvent } from "@tui/context/event"
+import { useEditorContext } from "@tui/context/editor"
 import { MessageID, PartID } from "@/session/schema"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { useKeybind } from "@tui/context/keybind"
@@ -21,7 +22,7 @@ import { usePromptStash } from "./stash"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
 import { useCommandDialog } from "../dialog-command"
-import { useRenderer, type JSX } from "@opentui/solid"
+import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import * as Editor from "@tui/util/editor"
 import { useExit } from "../../context/exit"
 import * as Clipboard from "../../util/clipboard"
@@ -94,6 +95,7 @@ export function Prompt(props: PromptProps) {
   const local = useLocal()
   const args = useArgs()
   const sdk = useSDK()
+  const editor = useEditorContext()
   const route = useRoute()
   const project = useProject()
   const sync = useSync()
@@ -104,11 +106,34 @@ export function Prompt(props: PromptProps) {
   const stash = usePromptStash()
   const command = useCommandDialog()
   const renderer = useRenderer()
+  const dimensions = useTerminalDimensions()
   const { theme, syntax } = useTheme()
   const kv = useKV()
   const animationsEnabled = createMemo(() => kv.get("animations_enabled", true))
   const list = createMemo(() => props.placeholders?.normal ?? [])
   const shell = createMemo(() => props.placeholders?.shell ?? [])
+  const editorPath = createMemo(() => editor.selection()?.filePath)
+  const editorSelectionLabel = createMemo(() => {
+    const selection = editor.selection()?.selection
+    if (!selection) return
+    if (selection.start.line === selection.end.line && selection.start.character === selection.end.character) return
+    if (selection.start.line === selection.end.line) return `#${selection.start.line}`
+    return `#${selection.start.line}-${selection.end.line}`
+  })
+  const editorFileLabel = createMemo(() => {
+    const value = editorPath()
+    if (!value) return
+    const filename = path.basename(value)
+    const file = /^index\.[^./]+$/.test(filename)
+      ? [path.basename(path.dirname(value)), filename].filter(Boolean).join("/")
+      : filename
+    return `${file.split(path.sep).join("/")}${editorSelectionLabel() ?? ""}`
+  })
+  const editorFileLabelDisplay = createMemo(() => {
+    const file = editorFileLabel()
+    if (!file) return
+    return Locale.truncateMiddle(file, Math.max(12, Math.min(48, Math.floor(dimensions().width / 3))))
+  })
   const [auto, setAuto] = createSignal<AutocompleteRef>()
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
@@ -216,11 +241,11 @@ export function Prompt(props: PromptProps) {
     syncedKey = key
 
     // Only set agent if it's a primary agent (not a subagent)
-    const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
-    if (msg.agent && isPrimaryAgent) {
+    const primary = local.agent.list().find((x) => x.name === msg.agent)
+    if (msg.agent && primary) {
       // Keep command line --agent if specified.
       if (!args.agent) local.agent.set(msg.agent)
-      if (msg.model) {
+      if (msg.model && !primary.model && !args.agent) {
         local.model.set(msg.model)
         local.model.variant.set(msg.model.variant)
       }
@@ -731,6 +756,27 @@ export function Prompt(props: PromptProps) {
     // Capture mode before it gets reset
     const currentMode = store.mode
     const variant = local.model.variant.current()
+    const editorSelection = editor.selection()
+    const editorParts = editorSelection
+      ? [
+          {
+            id: PartID.ascending(),
+            type: "text" as const,
+            text: (() => {
+              const start = editorSelection.selection.start
+              const end = editorSelection.selection.end
+              if (start.line === end.line && start.character === end.character) {
+                return `Note: The user opened the file "${editorSelection.filePath}".`
+              }
+              if (start.line === end.line) {
+                return `Note: The user selected line ${start.line} from  "${editorSelection.filePath}": ${editorSelection.text}`
+              }
+              return `Note: The user selected lines ${start.line} to ${end.line} from "${editorSelection.filePath}": ${editorSelection.text}`
+            })(),
+            synthetic: true,
+          },
+        ]
+      : []
 
     if (store.mode === "shell") {
       void sdk.client.session.shell({
@@ -783,6 +829,7 @@ export function Prompt(props: PromptProps) {
           model: selectedModel,
           variant,
           parts: [
+            ...editorParts,
             {
               id: PartID.ascending(),
               type: "text",
@@ -1376,6 +1423,7 @@ export function Prompt(props: PromptProps) {
                 </text>
               </Show>
               {/* kilocode_change end */}
+              <Show when={editorFileLabelDisplay()}>{(file) => <text fg={theme.secondary}>{file()}</text>}</Show>
               <Switch>
                 <Match when={store.mode === "normal"}>
                   <Switch>

@@ -76,4 +76,6 @@ export const dict = {
   "plan.followup.answer.newSession.description": "在具有干净上下文的新会话中实现",
   "plan.followup.answer.continue": "在此继续",
   "plan.followup.answer.continue.description": "在本会话中实现计划",
+
+  "ui.messagePart.openInDiffViewer": "在差异查看器中打开",
 }

@@ -1,4 +1,6 @@
 ---
+title: "Using OVHcloud AI Endpoints with Kilo Code"
+description: "Connect OVHcloud's European AI Endpoints to Kilo Code for sovereign, GDPR-compliant model access. Setup guide for VS Code and the CLI."
 sidebar_label: OVHcloud AI Endpoints
 ---
 

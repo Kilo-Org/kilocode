@@ -31,14 +31,9 @@
         <action id="Kilo.Reinstall"
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
-        <action id="Kilo.StatusInfo"
-                class="ai.kilocode.client.actions.StatusInfoAction"/>
-
         <group id="Kilo.SettingsGroup">
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
-            <separator/>
-            <reference ref="Kilo.StatusInfo"/>
         </group>
 
         <action id="Kilo.Settings"

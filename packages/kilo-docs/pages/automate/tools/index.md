@@ -16,15 +16,15 @@ Kilo Code implements a sophisticated tool system that allows AI models to intera
 
 Tools are organized into logical groups based on their functionality:
 
-| Category           | Purpose                           | Tools                                                        | Common Use                              |
-| ------------------ | --------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| **Read Group**     | File system reading and searching | `read`, `glob`, `grep`                                       | Code exploration and analysis           |
-| **Edit Group**     | File system modifications         | `edit`, `multiedit`, `write`, `apply_patch`                  | Code changes and file manipulation      |
-| **Execute Group**  | Shell command execution           | `bash`                                                       | Running scripts, building projects      |
-| **Web Group**      | Fetch and search web content      | `webfetch`, `websearch`, `codesearch`                        | Research, documentation lookup          |
-| **Browser Group**  | Web browser automation            | `kilo-playwright_*` (via built-in Playwright MCP)            | Browser testing and interaction         |
-| **MCP Group**      | External tool integration         | MCP server tools (namespaced as `{server}_{tool}`)           | Specialized functionality via MCP       |
-| **Workflow Group** | Sub-agents and task management    | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` | Context switching and task organization |
+| Category | Purpose | Tools | Common Use |
+|---|---|---|---|
+| **Read Group** | File system reading and searching | `read`, `glob`, `grep` | Code exploration and analysis |
+| **Edit Group** | File system modifications | `edit`, `write`, `apply_patch` | Code changes and file manipulation |
+| **Execute Group** | Shell command execution | `bash` | Running scripts, building projects |
+| **Web Group** | Fetch and search web content | `webfetch`, `websearch`, `codesearch` | Research, documentation lookup |
+| **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
+| **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
+| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` | Context switching and task organization |
 
 ### Always Available Tools
 
@@ -49,9 +49,10 @@ These tools help Kilo Code understand your code and project:
 These tools help Kilo Code make changes to your code:
 
 - `edit` - Makes precise text replacements in a file
-- `multiedit` - Multiple edits in a single call
 - `write` - Creates new files or fully overwrites existing ones
 - `apply_patch` - Applies unified diffs (used with certain models)
+
+For multiple replacements in one file, Kilo uses repeated `edit` calls or a patch-style edit when the model supports it.
 
 ### Execute Tools
 
@@ -99,14 +100,14 @@ These tools help manage the conversation and task flow:
 
 Tools are organized into logical groups based on their functionality:
 
-| Category           | Purpose                           | Tools                                                                                                                                                                                                                                                                                     | Common Use                                         |
-| ------------------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Read Group**     | File system reading and searching | [read_file](/docs/automate/tools/read-file), [search_files](/docs/automate/tools/search-files), [list_files](/docs/automate/tools/list-files), [list_code_definition_names](/docs/automate/tools/list-code-definition-names)                                                              | Code exploration and analysis                      |
-| **Edit Group**     | File system modifications         | [apply_diff](/docs/automate/tools/apply-diff), [delete_file](/docs/automate/tools/delete-file), [write_to_file](/docs/automate/tools/write-to-file)                                                                                                                                       | Code changes and file manipulation                 |
-| **Browser Group**  | Web automation                    | [browser_action](/docs/automate/tools/browser-action)                                                                                                                                                                                                                                     | Web testing and interaction                        |
-| **Command Group**  | System command execution          | [execute_command](/docs/automate/tools/execute-command)                                                                                                                                                                                                                                   | Running scripts, building projects                 |
-| **MCP Group**      | External tool integration         | [use_mcp_tool](/docs/automate/tools/use-mcp-tool), [access_mcp_resource](/docs/automate/tools/access-mcp-resource)                                                                                                                                                                        | Specialized functionality through external servers |
-| **Workflow Group** | Mode and task management          | [switch_mode](/docs/automate/tools/switch-mode), [new_task](/docs/automate/tools/new-task), [ask_followup_question](/docs/automate/tools/ask-followup-question), [attempt_completion](/docs/automate/tools/attempt-completion), [update_todo_list](/docs/automate/tools/update-todo-list) | Context switching and task organization            |
+| Category | Purpose | Tools | Common Use |
+|---|---|---|---|
+| **Read Group** | File system reading and searching | [read_file](/docs/automate/tools/read-file), [search_files](/docs/automate/tools/search-files), [list_files](/docs/automate/tools/list-files), [list_code_definition_names](/docs/automate/tools/list-code-definition-names) | Code exploration and analysis |
+| **Edit Group** | File system modifications | [apply_diff](/docs/automate/tools/apply-diff), [delete_file](/docs/automate/tools/delete-file), [write_to_file](/docs/automate/tools/write-to-file) | Code changes and file manipulation |
+| **Browser Group** | Web automation | [browser_action](/docs/automate/tools/browser-action) | Web testing and interaction |
+| **Command Group** | System command execution | [execute_command](/docs/automate/tools/execute-command) | Running scripts, building projects |
+| **MCP Group** | External tool integration | [use_mcp_tool](/docs/automate/tools/use-mcp-tool), [access_mcp_resource](/docs/automate/tools/access-mcp-resource) | Specialized functionality through external servers |
+| **Workflow Group** | Mode and task management | [switch_mode](/docs/automate/tools/switch-mode), [new_task](/docs/automate/tools/new-task), [ask_followup_question](/docs/automate/tools/ask-followup-question), [attempt_completion](/docs/automate/tools/attempt-completion), [update_todo_list](/docs/automate/tools/update-todo-list) | Context switching and task organization |
 
 ### Always Available Tools
 

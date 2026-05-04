@@ -51,6 +51,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     override suspend fun list(directory: String): SessionListDto =
         workspaces.get(directory).sessions()
 
+    override suspend fun recent(directory: String, limit: Int): SessionListDto =
+        sessions.recent(directory, limit)
+
     override suspend fun create(directory: String): SessionDto {
         LOG.info("create session: directory=$directory")
         return workspaces.get(directory).createSession()

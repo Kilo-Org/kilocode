@@ -19,6 +19,7 @@ import type { Provider } from "@/provider"
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
+import { NotFoundError } from "@/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
 import { Log } from "@/util"
 import { isRecord } from "@/util/record"
@@ -74,6 +75,7 @@ interface ProcessorContext extends Input {
   currentText: MessageV2.TextPart | undefined
   reasoningMap: Record<string, MessageV2.ReasoningPart>
   stepStart: number // kilocode_change
+  step: { reasoning: boolean; text: boolean; tool: boolean } // kilocode_change
 }
 
 type StreamEvent = Event
@@ -125,6 +127,7 @@ export const layer: Layer.Layer<
         currentText: undefined,
         reasoningMap: {},
         stepStart: 0, // kilocode_change
+        step: { reasoning: false, text: false, tool: false }, // kilocode_change
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
@@ -156,6 +159,22 @@ export const layer: Layer.Layer<
         }
         return { call, part }
       })
+
+      // kilocode_change start - tolerate deleted sessions during subagent cost reconciliation (#6321)
+      const reconcile = Effect.fn("SessionProcessor.reconcileCost")(function* () {
+        const fresh = yield* Effect.sync(() => {
+          try {
+            return MessageV2.get({ sessionID: ctx.assistantMessage.sessionID, messageID: ctx.assistantMessage.id })
+          } catch (err) {
+            if (NotFoundError.isInstance(err)) return
+            throw err
+          }
+        })
+        if (fresh?.info.role !== "assistant") return
+        if (fresh.info.cost <= ctx.assistantMessage.cost) return
+        ctx.assistantMessage.cost = fresh.info.cost
+      })
+      // kilocode_change end
 
       const updateToolCall = Effect.fn("SessionProcessor.updateToolCall")(function* (
         toolCallID: string,
@@ -232,6 +251,7 @@ export const layer: Layer.Layer<
 
           case "reasoning-start":
             if (value.id in ctx.reasoningMap) return
+            ctx.step.reasoning = true // kilocode_change
             ctx.reasoningMap[value.id] = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -271,6 +291,7 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            ctx.step.tool = true // kilocode_change
             const part = yield* session.updatePart({
               id: ctx.toolcalls[value.id]?.partID ?? PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -299,6 +320,7 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            ctx.step.tool = true // kilocode_change
             // kilocode_change start — create tool part if tool-input-start was never emitted
             if (!ctx.toolcalls[value.toolCallId]) {
               log.warn("tool-call without prior tool-input-start", {
@@ -384,6 +406,7 @@ export const layer: Layer.Layer<
 
           case "start-step":
             ctx.stepStart = performance.now() // kilocode_change
+            ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
             if (!ctx.snapshot) ctx.snapshot = yield* snapshot.track()
             yield* session.updatePart({
               id: PartID.ascending(),
@@ -410,6 +433,9 @@ export const layer: Layer.Layer<
             })
             // kilocode_change end
             ctx.assistantMessage.finish = value.finishReason
+            // kilocode_change start - capture any subagent cost propagated by tool calls during this step (#6321)
+            yield* reconcile()
+            // kilocode_change end
             ctx.assistantMessage.cost += usage.cost
             ctx.assistantMessage.tokens = usage.tokens
             yield* session.updatePart({
@@ -422,6 +448,19 @@ export const layer: Layer.Layer<
               tokens: usage.tokens,
               cost: usage.cost,
             })
+            // kilocode_change start - surface output limit stops, with a stronger message for reasoning-only stops
+            const warn = KiloSessionProcessor.lengthWarning({ msg: ctx.assistantMessage, step: ctx.step })
+            if (warn) {
+              yield* session.updatePart({
+                id: PartID.ascending(),
+                messageID: ctx.assistantMessage.id,
+                sessionID: ctx.assistantMessage.sessionID,
+                type: "text",
+                text: warn,
+                ignored: true,
+              })
+            }
+            // kilocode_change end
             yield* session.updateMessage(ctx.assistantMessage)
             if (ctx.snapshot) {
               const patch = yield* snapshot.patch(ctx.snapshot)
@@ -468,6 +507,7 @@ export const layer: Layer.Layer<
           case "text-delta":
             if (!ctx.currentText) return
             ctx.currentText.text += value.text
+            if (value.text.trim()) ctx.step.text = true // kilocode_change
             if (value.providerMetadata) ctx.currentText.metadata = value.providerMetadata
             yield* session.updatePartDelta({
               sessionID: ctx.currentText.sessionID,
@@ -491,6 +531,7 @@ export const layer: Layer.Layer<
               },
               { text: ctx.currentText.text },
             )).text
+            if (ctx.currentText.text.trim()) ctx.step.text = true // kilocode_change
             {
               const end = Date.now()
               ctx.currentText.time = { start: ctx.currentText.time?.start ?? end, end }
@@ -567,6 +608,9 @@ export const layer: Layer.Layer<
         ctx.toolcalls = {}
         KiloSessionProcessor.guardEmptyToolCalls(ctx.assistantMessage, MessageV2.parts(ctx.assistantMessage.id)) // kilocode_change
         ctx.assistantMessage.time.completed = Date.now()
+        // kilocode_change start - reconcile cost with any subagent propagation written during tool calls (#6321)
+        yield* reconcile()
+        // kilocode_change end
         yield* session.updateMessage(ctx.assistantMessage)
       })
 
@@ -595,6 +639,7 @@ export const layer: Layer.Layer<
           yield* Effect.gen(function* () {
             ctx.currentText = undefined
             ctx.reasoningMap = {}
+            ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
             const stream = llm.stream(streamInput)
 
             yield* stream.pipe(

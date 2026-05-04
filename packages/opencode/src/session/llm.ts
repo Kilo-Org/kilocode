@@ -20,7 +20,6 @@ import { Wildcard } from "@/util"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
 // kilocode_change start
-import { Telemetry } from "@kilocode/kilo-telemetry"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { getKiloProjectId } from "@/kilocode/project-id"
 import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
@@ -430,14 +429,8 @@ const live: Layer.Layer<
             },
           ],
         }),
-        // kilocode_change start - enable telemetry by default with custom PostHog tracer
-        experimental_telemetry: {
-          isEnabled: cfg.experimental?.openTelemetry !== false,
-          recordInputs: false,
-          recordOutputs: false,
-          tracer: Telemetry.getTracer() ?? undefined,
-        },
-        // kilocode_change end
+        // kilocode_change - disable AI SDK span recording (ai.* / gen_ai.*)
+        experimental_telemetry: { isEnabled: false },
       })
     })
 

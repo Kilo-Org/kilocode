@@ -142,6 +142,67 @@ test("fromConfig - does not expand tilde in middle of path", () => {
   expect(result).toEqual([{ permission: "external_directory", pattern: "/some/~/path", action: "allow" }])
 })
 
+// Top-level wildcard-vs-specific precedence semantics.
+//
+// fromConfig sorts top-level keys so wildcard permissions (containing "*")
+// come before specific permissions. Combined with `findLast` in evaluate(),
+// this gives the intuitive semantic "specific tool rules override the `*`
+// fallback", regardless of the order the user wrote the keys in their JSON.
+//
+// Sub-pattern order inside a single permission key (e.g. `bash: { "*": "allow", "rm": "deny" }`)
+// still depends on insertion order — only top-level keys are sorted.
+
+test("fromConfig - specific key beats wildcard regardless of JSON key order", () => {
+  const wildcardFirst = Permission.fromConfig({ "*": "deny", bash: "allow" })
+  const specificFirst = Permission.fromConfig({ bash: "allow", "*": "deny" })
+
+  // Both orderings produce the same ruleset
+  expect(wildcardFirst).toEqual(specificFirst)
+
+  // And both evaluate bash → allow (bash rule wins over * fallback)
+  expect(Permission.evaluate("bash", "ls", wildcardFirst).action).toBe("allow")
+  expect(Permission.evaluate("bash", "ls", specificFirst).action).toBe("allow")
+})
+
+test("fromConfig - wildcard acts as fallback for permissions with no specific rule", () => {
+  const ruleset = Permission.fromConfig({ bash: "allow", "*": "ask" })
+  expect(Permission.evaluate("edit", "foo.ts", ruleset).action).toBe("ask")
+  expect(Permission.evaluate("bash", "ls", ruleset).action).toBe("allow")
+})
+
+test("fromConfig - top-level ordering: wildcards first, specifics after", () => {
+  const ruleset = Permission.fromConfig({
+    bash: "allow",
+    "*": "ask",
+    edit: "deny",
+    "mcp_*": "allow",
+  })
+  // wildcards (* and mcp_*) come before specifics (bash, edit)
+  const permissions = ruleset.map((r) => r.permission)
+  expect(permissions.slice(0, 2).sort()).toEqual(["*", "mcp_*"])
+  expect(permissions.slice(2)).toEqual(["bash", "edit"])
+})
+
+test("fromConfig - sub-pattern insertion order inside a tool key is preserved (only top-level sorts)", () => {
+  // Sub-patterns within a single tool key use the documented "`*` first,
+  // specific patterns after" convention (findLast picks specifics). The
+  // top-level sort must not touch sub-pattern ordering.
+  const ruleset = Permission.fromConfig({ bash: { "*": "deny", "git *": "allow" } })
+  expect(ruleset.map((r) => r.pattern)).toEqual(["*", "git *"])
+  // * fallback for unknown commands
+  expect(Permission.evaluate("bash", "rm foo", ruleset).action).toBe("deny")
+  // specific pattern wins for git commands (it's last, findLast picks it)
+  expect(Permission.evaluate("bash", "git status", ruleset).action).toBe("allow")
+})
+
+test("fromConfig - canonical documented example unchanged", () => {
+  // Regression guard for the example in docs/permissions.mdx
+  const ruleset = Permission.fromConfig({ "*": "ask", bash: "allow", edit: "deny" })
+  expect(Permission.evaluate("bash", "ls", ruleset).action).toBe("allow")
+  expect(Permission.evaluate("edit", "foo.ts", ruleset).action).toBe("deny")
+  expect(Permission.evaluate("read", "foo.ts", ruleset).action).toBe("ask")
+})
+
 test("fromConfig - expands exact tilde to home directory", () => {
   const result = Permission.fromConfig({ external_directory: { "~": "allow" } })
   expect(result).toEqual([{ permission: "external_directory", pattern: os.homedir(), action: "allow" }])
@@ -436,9 +497,9 @@ test("disabled - disables tool when denied", () => {
   expect(result.has("read")).toBe(false)
 })
 
-test("disabled - disables edit/write/apply_patch/multiedit when edit denied", () => {
+test("disabled - disables edit/write/apply_patch when edit denied", () => {
   const result = Permission.disabled(
-    ["edit", "write", "apply_patch", "multiedit", "bash"],
+    ["edit", "write", "apply_patch", "bash"],
     [
       { permission: "*", pattern: "*", action: "allow" },
       { permission: "edit", pattern: "*", action: "deny" },
@@ -447,7 +508,6 @@ test("disabled - disables edit/write/apply_patch/multiedit when edit denied", ()
   expect(result.has("edit")).toBe(true)
   expect(result.has("write")).toBe(true)
   expect(result.has("apply_patch")).toBe(true)
-  expect(result.has("multiedit")).toBe(true)
   expect(result.has("bash")).toBe(false)
 })
 
@@ -889,7 +949,8 @@ it.live("reply - always resolves matching pending requests in same session", () 
   ),
 )
 
-it.live("reply - always keeps other session pending", () =>
+// kilocode_change start
+it.live("reply - always resolves matching pending requests from other sessions", () =>
   withDir({ git: true }, () =>
     Effect.gen(function* () {
       const a = yield* ask({
@@ -916,13 +977,47 @@ it.live("reply - always keeps other session pending", () =>
       yield* reply({ requestID: PermissionID.make("per_test6a"), reply: "always" })
 
       yield* Fiber.join(a)
-      expect((yield* list()).map((item) => item.id)).toEqual([PermissionID.make("per_test6b")])
+      yield* Fiber.join(b)
+      expect(yield* list()).toHaveLength(0)
+    }),
+  ),
+)
+
+it.live("reply - always does not resolve dangerous variants from other sessions", () =>
+  withDir({ git: true }, () =>
+    Effect.gen(function* () {
+      const a = yield* ask({
+        id: PermissionID.make("per_test_safe_a"),
+        sessionID: SessionID.make("session_a"),
+        permission: "bash",
+        patterns: ["npm test"],
+        metadata: {},
+        always: ["npm test"],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+
+      const b = yield* ask({
+        id: PermissionID.make("per_test_safe_b"),
+        sessionID: SessionID.make("session_b"),
+        permission: "bash",
+        patterns: ["npm test > ~/.ssh/authorized_keys"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+
+      yield* waitForPending(2)
+      yield* reply({ requestID: PermissionID.make("per_test_safe_a"), reply: "always" })
+
+      yield* Fiber.join(a)
+      expect((yield* list()).map((item) => item.id)).toEqual([PermissionID.make("per_test_safe_b")])
 
       yield* rejectAll()
       yield* Fiber.await(b)
     }),
   ),
 )
+// kilocode_change end
 
 it.live("reply - publishes replied event", () =>
   withDir({ git: true }, () =>
@@ -1001,6 +1096,7 @@ it.live("permission requests stay isolated by directory", () =>
     const onePending = yield* waitForPending(1).pipe(runOne)
     const twoPending = yield* waitForPending(1).pipe(runTwo)
 
+    // kilocode_change start
     expect(onePending).toHaveLength(1)
     expect(twoPending).toHaveLength(1)
     expect(onePending[0].id).toBe(PermissionID.make("per_dir_a"))
@@ -1011,6 +1107,7 @@ it.live("permission requests stay isolated by directory", () =>
 
     yield* Fiber.await(a)
     yield* Fiber.await(b)
+    // kilocode_change end
   }),
 )
 
@@ -1060,14 +1157,17 @@ it.live("pending permission rejects on instance reload", () =>
   }),
 )
 
-it.live("reply - does nothing for unknown requestID", () =>
+// kilocode_change start
+it.live("reply - returns false for unknown requestID", () =>
   withDir({ git: true }, () =>
     Effect.gen(function* () {
-      yield* reply({ requestID: PermissionID.make("per_unknown"), reply: "once" })
+      const accepted = yield* reply({ requestID: PermissionID.make("per_unknown"), reply: "once" })
+      expect(accepted).toBe(false)
       expect(yield* list()).toHaveLength(0)
     }),
   ),
 )
+// kilocode_change end
 
 it.live("ask - checks all patterns and stops on first deny", () =>
   withDir({ git: true }, () =>

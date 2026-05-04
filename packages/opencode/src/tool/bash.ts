@@ -1,4 +1,4 @@
-import z from "zod"
+import { Schema } from "effect"
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -47,26 +47,25 @@ const FILES = new Set([
   "new-item",
   "rename-item",
 ])
+// kilocode_change start
+const READ = new Set(["cat", "get-content"])
+// kilocode_change end
 const FLAGS = new Set(["-destination", "-literalpath", "-path"])
 const SWITCHES = new Set(["-confirm", "-debug", "-force", "-nonewline", "-recurse", "-verbose", "-whatif"])
 
-const Parameters = z.object({
-  command: z.string().describe("The command to execute"),
-  timeout: z.number().describe("Optional timeout in milliseconds").optional(),
-  workdir: z
-    .string()
-    .describe(
-      `The working directory to run the command in. Defaults to the current directory. Use this instead of 'cd' commands.`,
-    )
-    .optional(),
-  description: z
-    .string()
-    .optional() // kilocode_change
-    .describe(
-      // kilocode_change start
+export const Parameters = Schema.Struct({
+  command: Schema.String.annotate({ description: "The command to execute" }),
+  timeout: Schema.optional(Schema.Number).annotate({ description: "Optional timeout in milliseconds" }),
+  workdir: Schema.optional(Schema.String).annotate({
+    description: `The working directory to run the command in. Defaults to the current directory. Use this instead of 'cd' commands.`,
+  }),
+  description: Schema.optional(Schema.String).annotate({
+    // kilocode_change
+    // kilocode_change start
+    description:
       "Recommended: a clear, concise description of what this command does in 5-10 words. Examples:\nInput: ls\nOutput: Lists files in current directory\n\nInput: git status\nOutput: Shows working tree status\n\nInput: npm install\nOutput: Installs package dependencies\n\nInput: mkdir foo\nOutput: Creates directory 'foo'",
-      // kilocode_change end
-    ),
+    // kilocode_change end
+  }),
 })
 
 type Part = {
@@ -74,10 +73,15 @@ type Part = {
   text: string
 }
 
+// kilocode_change start
+type Access = "read" | "unknown"
+// kilocode_change end
+
 type Scan = {
   dirs: Set<string>
   patterns: Set<string>
   always: Set<string>
+  access: Access // kilocode_change
 }
 
 type Chunk = {
@@ -125,6 +129,14 @@ function parts(node: Node) {
 function source(node: Node) {
   return (node.parent?.type === "redirected_statement" ? node.parent.text : node.text).trim()
 }
+
+// kilocode_change start
+function access(cmd: string, node: Node): Access {
+  if (!READ.has(cmd)) return "unknown"
+  if (node.parent?.type === "redirected_statement") return "unknown"
+  return "read"
+}
+// kilocode_change end
 
 function commands(node: Node) {
   return node.descendantsOfType("command").filter((child): child is Node => Boolean(child))
@@ -272,7 +284,7 @@ const ask = Effect.fn("BashTool.ask")(function* (ctx: Tool.Context, scan: Scan, 
       permission: "external_directory",
       patterns: globs,
       always: globs,
-      metadata: {},
+      metadata: scan.access === "read" ? { command, access: "read" } : {}, // kilocode_change
     })
   }
 
@@ -374,20 +386,31 @@ export const BashTool = Tool.define(
         dirs: new Set<string>(),
         patterns: new Set<string>(),
         always: new Set<string>(),
+        access: "read", // kilocode_change
       }
 
-      for (const node of commands(root)) {
+      const nodes = commands(root) // kilocode_change
+      if (root.descendantsOfType("file_redirect").length > 0) scan.access = "unknown" // kilocode_change
+      // kilocode_change start
+      if (nodes.some((node) => !READ.has((ps ? parts(node)[0]?.text.toLowerCase() : parts(node)[0]?.text) ?? ""))) {
+        scan.access = "unknown"
+      }
+      // kilocode_change end
+
+      for (const node of nodes) { // kilocode_change
         const command = parts(node)
         const tokens = command.map((item) => item.text)
         const cmd = ps ? tokens[0]?.toLowerCase() : tokens[0]
 
         if (cmd && FILES.has(cmd)) {
+          const kind = access(cmd, node) // kilocode_change
           for (const arg of pathArgs(command, ps)) {
             const resolved = yield* argPath(arg, cwd, ps, shell)
             log.info("resolved path", { arg, resolved })
             if (!resolved || Instance.containsPath(resolved)) continue
             const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
             scan.dirs.add(dir)
+            if (kind !== "read") scan.access = "unknown" // kilocode_change
           }
         }
 
@@ -424,9 +447,8 @@ export const BashTool = Tool.define(
       },
       ctx: Tool.Context,
     ) {
-      const bytes = Truncate.MAX_BYTES
-      const lines = Truncate.MAX_LINES
-      const keep = bytes * 2
+      const limits = yield* trunc.limits()
+      const keep = limits.maxBytes * 2
       let full = ""
       let last = ""
       const list: Chunk[] = []
@@ -466,7 +488,7 @@ export const BashTool = Tool.define(
                 sink?.write(chunk)
               } else {
                 full += chunk
-                if (Buffer.byteLength(full, "utf-8") > bytes) {
+                if (Buffer.byteLength(full, "utf-8") > limits.maxBytes) {
                   return trunc.write(full).pipe(
                     Effect.andThen((next) =>
                       Effect.sync(() => {
@@ -533,7 +555,7 @@ export const BashTool = Tool.define(
       }
       if (aborted) meta.push("User aborted the command")
       const raw = list.map((item) => item.text).join("")
-      const end = tail(raw, lines, bytes)
+      const end = tail(raw, limits.maxLines, limits.maxBytes)
       if (end.cut) cut = true
       if (!file && end.cut) {
         file = yield* trunc.write(raw)
@@ -574,7 +596,7 @@ export const BashTool = Tool.define(
     })
 
     return () =>
-      Effect.sync(() => {
+      Effect.gen(function* () {
         const shell = Shell.acceptable()
         const name = Shell.name(shell)
         const chain =
@@ -583,15 +605,17 @@ export const BashTool = Tool.define(
             : "If the commands depend on each other and must run sequentially, use a single Bash call with '&&' to chain them together (e.g., `git add . && git commit -m \"message\" && git push`). For instance, if one operation must complete before another starts (like mkdir before cp, Write before Bash for git operations, or git add before git commit), run these operations sequentially instead."
         log.info("bash tool using shell", { shell })
 
+        const limits = yield* trunc.limits()
+
         return {
           description: DESCRIPTION.replaceAll("${directory}", Instance.directory)
             .replaceAll("${os}", process.platform)
             .replaceAll("${shell}", name)
             .replaceAll("${chaining}", chain)
-            .replaceAll("${maxLines}", String(Truncate.MAX_LINES))
-            .replaceAll("${maxBytes}", String(Truncate.MAX_BYTES)),
+            .replaceAll("${maxLines}", String(limits.maxLines))
+            .replaceAll("${maxBytes}", String(limits.maxBytes)),
           parameters: Parameters,
-          execute: (params: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+          execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
             Effect.gen(function* () {
               const cwd = params.workdir
                 ? yield* resolvePath(params.workdir, Instance.directory, shell)
@@ -603,7 +627,12 @@ export const BashTool = Tool.define(
               const ps = PS.has(name)
               const root = yield* parse(params.command, ps)
               const scan = yield* collect(root, cwd, ps, shell)
-              if (!Instance.containsPath(cwd)) scan.dirs.add(cwd)
+              // kilocode_change start
+              if (!Instance.containsPath(cwd)) {
+                scan.dirs.add(cwd)
+                scan.access = "unknown"
+              }
+              // kilocode_change end
               yield* ask(ctx, scan, params.command) // kilocode_change
 
               return yield* run(

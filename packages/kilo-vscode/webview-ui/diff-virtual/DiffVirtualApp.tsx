@@ -32,9 +32,10 @@ const DiffVirtualContent: Component = () => {
   const [style, setStyle] = createSignal<DiffStyle>("unified")
 
   const handler = (event: MessageEvent) => {
-    const msg = event.data as { type: string; diff?: DiffVirtualFile }
+    const msg = event.data as { type: string; diff?: DiffVirtualFile; initialDiffStyle?: DiffStyle }
     if (msg?.type === "diffVirtual.data" && msg.diff) {
       setDiff(msg.diff)
+      setStyle(msg.initialDiffStyle ?? "unified")
     }
   }
 

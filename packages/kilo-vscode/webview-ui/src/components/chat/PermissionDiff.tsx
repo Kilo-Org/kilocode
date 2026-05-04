@@ -1,14 +1,37 @@
-import { type Component, createMemo } from "solid-js"
+import { Show, type Component, createMemo } from "solid-js"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { normalize, text } from "@kilocode/kilo-ui/session-diff"
+import { parsePatch } from "diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
 
 interface PermissionDiffProps {
   filediff: PermissionFileDiff
+}
+
+function patchText(patch: string) {
+  const parsed = parsePatch(patch)[0]
+  if (!parsed) return { before: "", after: "" }
+
+  const before: string[] = []
+  const after: string[] = []
+  for (const hunk of parsed.hunks) {
+    for (const line of hunk.lines) {
+      if (line.startsWith("-")) {
+        before.push(line.slice(1))
+        continue
+      }
+      if (line.startsWith("+")) {
+        after.push(line.slice(1))
+        continue
+      }
+      before.push(line.slice(1))
+      after.push(line.slice(1))
+    }
+  }
+  return { before: before.join("\n"), after: after.join("\n") }
 }
 
 export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
@@ -27,11 +50,13 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
   const resolved = createMemo(() => {
     const fd = props.filediff
     if (fd.before !== undefined || fd.after !== undefined) return { before: fd.before ?? "", after: fd.after ?? "" }
-    if (fd.patch) {
-      const view = normalize(fd)
-      return { before: text(view, "deletions"), after: text(view, "additions") }
-    }
+    if (fd.patch) return patchText(fd.patch)
     return { before: "", after: "" }
+  })
+
+  const empty = createMemo(() => {
+    const diff = resolved()
+    return diff.before === "" && diff.after === ""
   })
 
   const openInTab = () => {
@@ -39,6 +64,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     vscode.postMessage({
       type: "openDiffVirtual",
       diff: { ...props.filediff, before, after },
+      initialDiffStyle: "unified",
     })
   }
 
@@ -76,11 +102,16 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
         </div>
       </div>
       <div data-slot="permission-diff-content">
-        <Diff
-          before={{ name: props.filediff.file, contents: resolved().before }}
-          after={{ name: props.filediff.file, contents: resolved().after }}
-          diffStyle="unified"
-        />
+        <Show
+          when={!empty()}
+          fallback={<div data-slot="permission-diff-empty">Diff preview unavailable for this file.</div>}
+        >
+          <Diff
+            before={{ name: props.filediff.file, contents: resolved().before }}
+            after={{ name: props.filediff.file, contents: resolved().after }}
+            diffStyle="unified"
+          />
+        </Show>
       </div>
     </div>
   )

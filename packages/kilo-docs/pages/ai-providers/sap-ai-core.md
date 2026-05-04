@@ -1,4 +1,6 @@
 ---
+title: "Using SAP AI Core with Kilo Code"
+description: "Connect SAP AI Core to Kilo Code to use enterprise foundation models from your SAP BTP account. Setup and authentication guide."
 sidebar_label: SAP AI Core
 ---
 

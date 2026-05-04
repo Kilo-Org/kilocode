@@ -1,5 +1,6 @@
 import { BusEvent } from "@/bus/bus-event"
 import z from "zod"
+import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/shared/util/error"
 
 const SUPPORTED_IDES = [
@@ -13,8 +14,8 @@ const SUPPORTED_IDES = [
 export const Event = {
   Installed: BusEvent.define(
     "ide.installed",
-    z.object({
-      ide: z.string(),
+    Schema.Struct({
+      ide: Schema.String,
     }),
   ),
 }

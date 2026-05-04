@@ -1,5 +1,92 @@
 # kilo-code
 
+## 7.2.33
+
+### Minor Changes
+
+- [#9737](https://github.com/Kilo-Org/kilocode/pull/9737) [`d5fb9eb`](https://github.com/Kilo-Org/kilocode/commit/d5fb9eb2265c03127e776c99020b03bb770255a1) - Support starting Agent Manager local sessions and worktree sessions from an experimental agent tool.
+
+- [#9704](https://github.com/Kilo-Org/kilocode/pull/9704) [`22b5283`](https://github.com/Kilo-Org/kilocode/commit/22b5283f79e4dd8461764904b908001df969cce9) - Keep reasoning blocks expanded by default and add a setting to auto-collapse them after completion.
+
+- [#9708](https://github.com/Kilo-Org/kilocode/pull/9708) [`f2db4d1`](https://github.com/Kilo-Org/kilocode/commit/f2db4d165cacc8b52148e7fe77fd4af7ff71b7bc) - Add a Display setting to collapse terminal command blocks by default instead of keeping them expanded.
+
+### Patch Changes
+
+- [#9317](https://github.com/Kilo-Org/kilocode/pull/9317) [`ce4a595`](https://github.com/Kilo-Org/kilocode/commit/ce4a595cdcba5074b0ebdf74f24213a8322f2cc7) - Dispose autocomplete editor listeners when inline completions are disabled.
+
+- [#9651](https://github.com/Kilo-Org/kilocode/pull/9651) [`bc91af3`](https://github.com/Kilo-Org/kilocode/commit/bc91af398db6e52e4a6bbd1d26efce1b306d4697) - Center the sidebar prompt toolbar on wider sidebars and hide unavailable toolbar actions.
+
+- [#9753](https://github.com/Kilo-Org/kilocode/pull/9753) [`fb11c7b`](https://github.com/Kilo-Org/kilocode/commit/fb11c7b56d49cdd52f8ee96fdfc9ce30d2c883b7) - Center welcome notifications in wide VS Code views.
+
+- [#9460](https://github.com/Kilo-Org/kilocode/pull/9460) [`26e4c11`](https://github.com/Kilo-Org/kilocode/commit/26e4c1148f4e7a734bb8e535e02a1a9ad75be584) - Scope the custom commit message prompt to the current project. Setting it in the VS Code settings now writes to the workspace's `kilo.json` so different repositories can have different conventions, instead of silently applying globally. Also fixes the project-level config update endpoint, which previously wrote to a file that wasn't loaded.
+
+- [#9742](https://github.com/Kilo-Org/kilocode/pull/9742) [`a076e33`](https://github.com/Kilo-Org/kilocode/commit/a076e336b34f897a6b9463b48d2181d90f9dd997) - Preserve Agent Manager local sessions across panel restarts when session refreshes complete out of order.
+
+- [#9733](https://github.com/Kilo-Org/kilocode/pull/9733) [`e9f2760`](https://github.com/Kilo-Org/kilocode/commit/e9f2760d8e9a93d4b71dba6ef5aae522cb4fe263) - Support configuring custom agent tool permissions from the VS Code agent editor.
+
+- [#9669](https://github.com/Kilo-Org/kilocode/pull/9669) [`0bf14eb`](https://github.com/Kilo-Org/kilocode/commit/0bf14eb2ff5ef59f9dc98342218addc670a87481) - Stop emitting `ai.*` and `gen_ai.*` OpenTelemetry spans from AI SDK calls, and remove the PostHog bridge that forwarded them. Tool/session/indexing telemetry is unchanged.
+
+## 7.2.31
+
+### Patch Changes
+
+- [#9687](https://github.com/Kilo-Org/kilocode/pull/9687) [`9028174`](https://github.com/Kilo-Org/kilocode/commit/9028174cfd5fdd0cf2f3dd87d5ace7cfa780cc4d) - Show compact todo update cards when checking off items in long todo lists.
+
+- [#9691](https://github.com/Kilo-Org/kilocode/pull/9691) [`ae726cd`](https://github.com/Kilo-Org/kilocode/commit/ae726cdc45317a6bc6d2a77066c191dd674d0aa2) - Show apply_patch diffs in the permission prompt before approval.
+
+## 7.2.30
+
+### Patch Changes
+
+- [#9435](https://github.com/Kilo-Org/kilocode/pull/9435) [`9186cb4`](https://github.com/Kilo-Org/kilocode/commit/9186cb440afd37c43bae6c99f9b95b23db698e5c) - Fix unreadable section titles on the Auto-Approve settings page when using a light VS Code color theme. Tool headers (External Directory, Bash, Read, Edit, etc.) now follow the active VS Code theme foreground color instead of always rendering in white.
+
+- [#9662](https://github.com/Kilo-Org/kilocode/pull/9662) [`bf60cde`](https://github.com/Kilo-Org/kilocode/commit/bf60cdedd6fc4af2918d514ca513f03e18a3133d) - Show auto-approve status in the session prompt controls and keep it synced across extension sessions.
+
+- [#9575](https://github.com/Kilo-Org/kilocode/pull/9575) [`5b26cfe`](https://github.com/Kilo-Org/kilocode/commit/5b26cfe5facb8e6227cddadb259715185a82cded) - Fix switching autocomplete model back to Codestral not persisting.
+
+- [#9481](https://github.com/Kilo-Org/kilocode/pull/9481) [`a76ab95`](https://github.com/Kilo-Org/kilocode/commit/a76ab9510361ed1ac40cc40d51817006ed6eac8e) - Improve the sidebar chat toolbar so the changes button collapses cleanly and keeps diff stats visible in its tooltip.
+
+- [#9576](https://github.com/Kilo-Org/kilocode/pull/9576) [`11f2e2a`](https://github.com/Kilo-Org/kilocode/commit/11f2e2afbe0ba1691bbaadcb4a3ceec0e009c9a5) Thanks [@johnnyeric](https://github.com/johnnyeric)! - Open edit-tool diffs in side-by-side (split) mode by default; permission-dock expand stays unified.
+
+- [#9450](https://github.com/Kilo-Org/kilocode/pull/9450) [`2032fe4`](https://github.com/Kilo-Org/kilocode/commit/2032fe4c4e574aa0664a1ab91e34633ce5b261f9) - Fix a session hang that could occur when multiple Kilo panels showed the same permission prompt, or when a subagent's permission was replied to from the wrong worktree. Replies are now routed to the exact CLI instance that holds the pending permission, and stale/unknown permissions surface a clear error so the UI doesn't leave buttons permanently disabled.
+
+- [#9667](https://github.com/Kilo-Org/kilocode/pull/9667) [`7eaf059`](https://github.com/Kilo-Org/kilocode/commit/7eaf059789d74c3fd57c88929a0846f18d9f5294) - Keep Agent Manager local tab sessions scoped to the main workspace after switching from a worktree.
+
+- [#9679](https://github.com/Kilo-Org/kilocode/pull/9679) [`867be23`](https://github.com/Kilo-Org/kilocode/commit/867be234549459ca47741e998aa54af23a09d8bc) - Restore prompt focus when the model selector is dismissed with Escape.
+
+- [#9670](https://github.com/Kilo-Org/kilocode/pull/9670) [`7575dce`](https://github.com/Kilo-Org/kilocode/commit/7575dce378bd136ac5eef46321a311454c786832) - Keep checkpoint revert actions available when switching models clears a stale provider error.
+
+- [#9633](https://github.com/Kilo-Org/kilocode/pull/9633) [`0918bb4`](https://github.com/Kilo-Org/kilocode/commit/0918bb4216aef60fcefb3025a105cf6d250de52b) - Preserve "Free" when it is part of a model's name (such as "Kilo Auto Free"). The parenthesized "(free)" suffix is still stripped so the separate Free label can be shown instead.
+
+- [#9672](https://github.com/Kilo-Org/kilocode/pull/9672) [`c923625`](https://github.com/Kilo-Org/kilocode/commit/c923625ea629d4f963d80baf81862d984ae55785) - Protect Agent Manager sessions and worktrees from being reset when persisted state fails to load after IDE restart.
+
+- [#9628](https://github.com/Kilo-Org/kilocode/pull/9628) [`6130a3e`](https://github.com/Kilo-Org/kilocode/commit/6130a3ea66c6a323710fdc2d325fac87011f6b85) - Show paid Kilo models to signed-out users so selecting one prompts them to log in.
+
+- [#9481](https://github.com/Kilo-Org/kilocode/pull/9481) [`18468b8`](https://github.com/Kilo-Org/kilocode/commit/18468b8e26577087834ace8b7aaee72d3176f25b) - Expose sidebar session, worktree, and agent manager actions above the prompt, including quick and advanced worktree creation.
+
+- [#9680](https://github.com/Kilo-Org/kilocode/pull/9680) [`b99dcee`](https://github.com/Kilo-Org/kilocode/commit/b99dcee596ace9021af041629881b7e7f0e45cda) - Support opening the reasoning effort selector from `/variant` when the selected model has variants.
+
+- [#9614](https://github.com/Kilo-Org/kilocode/pull/9614) [`6908f8a`](https://github.com/Kilo-Org/kilocode/commit/6908f8ae6df201233ad75df6c000b109ecaea637) - Start Agent Manager new tasks in the selected worktree instead of the workspace root.
+
+- Updated dependencies [[`28a0eae`](https://github.com/Kilo-Org/kilocode/commit/28a0eae4b0b940482222f6671a6885b575b2ad9c)]:
+  - @kilocode/kilo-indexing@7.1.4
+
+## 7.2.26
+
+### Minor Changes
+
+- [#9310](https://github.com/Kilo-Org/kilocode/pull/9310) [`f067a90`](https://github.com/Kilo-Org/kilocode/commit/f067a908a9fe161cfb87298b593b73e7e9bdb0b6) - Support selecting Mercury Edit by Inception for autocomplete.
+
+- [#9548](https://github.com/Kilo-Org/kilocode/pull/9548) [`c5614cc`](https://github.com/Kilo-Org/kilocode/commit/c5614cc54ed16e90151cbe1ceed5213b472383ff) - Add Settings header buttons to open the project and global Kilo config files directly in VS Code.
+
+### Patch Changes
+
+- [#9552](https://github.com/Kilo-Org/kilocode/pull/9552) [`3f0bf32`](https://github.com/Kilo-Org/kilocode/commit/3f0bf322c1e2397cffaf22739df8d41e1957f5ba) - Fix clearing an agent's Model Override in Agent Behaviour settings. Previously, clearing the field and saving would repopulate the old value because the empty input was sent as `undefined` and dropped by `JSON.stringify`, so the backend never received a delete instruction. The field now reverts to the global default model as expected.
+
+- [#9551](https://github.com/Kilo-Org/kilocode/pull/9551) [`b344ac9`](https://github.com/Kilo-Org/kilocode/commit/b344ac97c6a2d7caecf85b43b8c6a07ccb352b6b) - Restore disabled provider management in the VS Code extension provider settings.
+
+## 7.2.25
+
 ## 7.2.23
 
 ### Patch Changes

@@ -1,65 +1,6 @@
 import { test, expect, describe } from "bun:test"
 import { Permission } from "../../src/permission"
-
-// Reconstruct the Ask agent's readOnlyBash allowlist (mirrors kilocode/agent/index.ts)
-// Uses an allow-list approach for git: deny by default, allow specific read-only subcommands.
-const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "deny",
-  // read-only / informational
-  "cat *": "allow",
-  "head *": "allow",
-  "tail *": "allow",
-  "less *": "allow",
-  "ls *": "allow",
-  "tree *": "allow",
-  "pwd *": "allow",
-  "echo *": "allow",
-  "wc *": "allow",
-  "which *": "allow",
-  "type *": "allow",
-  "file *": "allow",
-  "diff *": "allow",
-  "du *": "allow",
-  "df *": "allow",
-  "date *": "allow",
-  "uname *": "allow",
-  "whoami *": "allow",
-  "printenv *": "allow",
-  "man *": "allow",
-  // text processing (stdout only, no file modification)
-  "grep *": "allow",
-  "rg *": "allow",
-  "ag *": "allow",
-  "sort *": "allow",
-  "uniq *": "allow",
-  "cut *": "allow",
-  "tr *": "allow",
-  "jq *": "allow",
-  // git — allowlist of read-only subcommands, deny everything else
-  "git *": "deny",
-  "git log *": "allow",
-  "git show *": "allow",
-  "git diff *": "allow",
-  "git status *": "allow",
-  "git blame *": "allow",
-  "git rev-parse *": "allow",
-  "git rev-list *": "allow",
-  "git ls-files *": "allow",
-  "git ls-tree *": "allow",
-  "git ls-remote *": "allow",
-  "git shortlog *": "allow",
-  "git describe *": "allow",
-  "git cat-file *": "allow",
-  "git name-rev *": "allow",
-  "git stash list *": "allow",
-  "git tag -l *": "allow",
-  "git branch --list *": "allow",
-  "git branch -a *": "allow",
-  "git branch -r *": "allow",
-  "git remote -v *": "allow",
-  // gh — require user approval since commands vary widely
-  "gh *": "ask",
-}
+import { readOnlyBash } from "../../src/kilocode/agent"
 
 /** Build the Ask agent ruleset without MCP servers */
 function askRuleset() {
@@ -166,6 +107,32 @@ describe("Ask agent bash permissions", () => {
     }
   })
 
+  describe("denied output redirection and writer flags", () => {
+    const denied = [
+      "echo hi > file",
+      "echo hi >> file",
+      "echo hi | tee file",
+      "echo hi; touch file",
+      "echo hi && touch file",
+      "echo $(touch file)",
+      "echo `touch file`",
+      "cat a > b",
+      "jq . a.json > b.json",
+      "sort names.txt -o names.txt",
+      "sort --output=names.txt names.txt",
+      "sort names.txt --output=names.txt",
+      "echo ok\ntouch ask-bypass.txt",
+      "cat <(touch ask-bypass.txt)",
+    ]
+
+    for (const cmd of denied) {
+      test(`"${cmd}" → deny`, () => {
+        const result = Permission.evaluate("bash", cmd, ruleset)
+        expect(result.action).toBe("deny")
+      })
+    }
+  })
+
   describe("denied git write commands", () => {
     const denied = [
       "git commit -m 'test'",
@@ -257,7 +224,7 @@ describe("Ask agent tool disabled checks", () => {
   })
 
   test("edit tools are disabled", () => {
-    const tools = ["edit", "write", "patch", "multiedit"]
+    const tools = ["edit", "write", "patch"]
     const result = Permission.disabled(tools, ruleset)
     for (const tool of tools) {
       expect(result.has(tool)).toBe(true)
