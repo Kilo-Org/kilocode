@@ -10,6 +10,8 @@ import { Flag } from "@/flag/flag"
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
+  export const REASONING_LENGTH_WARNING =
+    "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
 
   /**
    * Track LLM completion telemetry for a finished step.
@@ -121,5 +123,17 @@ export namespace KiloSessionProcessor {
       log.warn("empty tool-calls", { messageID: msg.id })
       msg.finish = "stop"
     }
+  }
+
+  export function reasoningLengthWarning(input: {
+    msg: MessageV2.Assistant
+    step: { reasoning: boolean; text: boolean; tool: boolean }
+  }) {
+    if (input.msg.summary) return
+    if (input.msg.finish !== "length") return
+    if (!input.step.reasoning) return
+    if (input.step.text || input.step.tool) return
+    log.warn("reasoning-only length stop", { messageID: input.msg.id })
+    return REASONING_LENGTH_WARNING
   }
 }
