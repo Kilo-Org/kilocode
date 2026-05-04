@@ -6,20 +6,28 @@ import path from "path"
 import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
+import { errorMessage } from "@/util/error"
 import { withTimeout } from "@/util/timeout"
-import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
-import type { Event } from "@kilocode/sdk/v2"
-import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
+import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
-import { TuiConfig } from "@/config/tui"
-import { Instance } from "@/project/instance"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
+import { writeHeapSnapshot } from "v8"
+import { TuiConfig } from "./config/tui"
+import {
+  KILO_PROCESS_ROLE,
+  KILO_RUN_ID,
+  ensureRunID,
+  sanitizedProcessEnv,
+} from "@opencode-ai/core/util/opencode-process"
+import { validateSession } from "./validate-session"
 
 declare global {
-  const KILO_WORKER_PATH: string // kilocode_change
+  const KILO_WORKER_PATH: string
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
@@ -44,9 +52,10 @@ function createWorkerFetch(client: RpcClient): typeof fetch {
 
 function createEventSource(client: RpcClient): EventSource {
   return {
-    on: (handler) => client.on<Event>("event", handler),
-    setWorkspace: (workspaceID) => {
-      void client.call("setWorkspace", { workspaceID })
+    subscribe: async (handler) => {
+      return client.on<GlobalEvent>("global.event", (e) => {
+        handler(e)
+      })
     },
   }
 }
@@ -146,24 +155,32 @@ export const TuiThreadCommand = cmd({
         return
       }
       const cwd = Filesystem.resolve(process.cwd())
+      const env = sanitizedProcessEnv({
+        [KILO_PROCESS_ROLE]: "worker",
+        [KILO_RUN_ID]: ensureRunID(),
+      })
 
       const worker = new Worker(file, {
-        env: Object.fromEntries(
-          Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-        ),
+        env,
       })
       worker.onerror = (e) => {
-        Log.Default.error(e)
+        Log.Default.error("thread error", {
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno,
+          error: e.error,
+        })
       }
 
       const client = Rpc.client<typeof rpc>(worker)
       const error = (e: unknown) => {
-        Log.Default.error(e)
+        Log.Default.error("process error", { error: errorMessage(e) })
       }
       const reload = () => {
         client.call("reload", undefined).catch((err) => {
           Log.Default.warn("worker reload failed", {
-            error: err instanceof Error ? err.message : String(err),
+            error: errorMessage(err),
           })
         })
       }
@@ -180,7 +197,7 @@ export const TuiThreadCommand = cmd({
         process.off("SIGUSR2", reload)
         await withTimeout(client.call("shutdown", undefined), 5000).catch((error) => {
           Log.Default.warn("worker shutdown failed", {
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           })
         })
         worker.terminate()
@@ -251,12 +268,9 @@ export const TuiThreadCommand = cmd({
       // kilocode_change end
 
       const prompt = await input(args.prompt)
-      const config = await Instance.provide({
-        directory: cwd,
-        fn: () => TuiConfig.get(),
-      })
+      const config = await TuiConfig.get()
 
-      const network = await resolveNetworkOptions(args)
+      const network = resolveNetworkOptionsNoConfig(args)
       const external =
         process.argv.includes("--port") ||
         process.argv.includes("--hostname") ||
@@ -276,6 +290,19 @@ export const TuiThreadCommand = cmd({
             fetch: createWorkerFetch(client),
             events: createEventSource(client),
           }
+
+      try {
+        await validateSession({
+          url: transport.url,
+          sessionID: args.session,
+          directory: cwd,
+          fetch: transport.fetch,
+        })
+      } catch (error) {
+        UI.error(errorMessage(error))
+        process.exitCode = 1
+        return
+      }
 
       setTimeout(() => {
         client.call("checkUpgrade", { directory: cwd }).catch(() => {})
@@ -303,6 +330,11 @@ export const TuiThreadCommand = cmd({
 
         await tui({
           url: transport.url,
+          async onSnapshot() {
+            const tui = writeHeapSnapshot("tui.heapsnapshot")
+            const server = await client.call("snapshot", undefined)
+            return [tui, server]
+          },
           config,
           directory: cwd,
           fetch: transport.fetch,
@@ -326,3 +358,4 @@ export const TuiThreadCommand = cmd({
     process.exit(0)
   },
 })
+// scratch

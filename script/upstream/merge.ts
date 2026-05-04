@@ -13,6 +13,7 @@
  *   --base-branch <name> Base branch to merge into (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
+ *   --no-worktrees       Don't create reference worktrees for manual resolution
  *   --report-only        Only generate conflict report, don't merge
  *   --verbose            Enable verbose logging
  *   --author <name>      Author name for branch prefix (default: from git config)
@@ -23,6 +24,7 @@ import * as git from "./utils/git"
 import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
+import * as worktree from "./utils/worktree"
 import { defaultConfig, loadConfig, type MergeConfig } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
@@ -56,9 +58,93 @@ interface MergeOptions {
   baseBranch?: string
   dryRun: boolean
   push: boolean
+  worktrees: boolean
   reportOnly: boolean
   verbose: boolean
   author?: string
+}
+
+async function hasMergiraf(): Promise<boolean> {
+  const result = await $`mergiraf --version`.quiet().nothrow()
+  return result.exitCode === 0
+}
+
+function abortMissingMergiraf(): never {
+  logger.error("mergiraf is required but not installed.")
+  logger.info("  It provides syntax-aware resolution for imports, JSON/YAML/TOML,")
+  logger.info("  and other structural conflicts during upstream merges.")
+  logger.info("  Install via one of:")
+  logger.info("    brew install mergiraf                 # macOS / Linuxbrew")
+  logger.info("    cargo install mergiraf                # any platform with rustup")
+  logger.info("    nix profile install nixpkgs#mergiraf  # nix")
+  logger.info("  See https://mergiraf.org/installation.html for more options.")
+  process.exit(1)
+}
+
+/**
+ * Attempt syntax-aware resolution of conflicted files via mergiraf.
+ * Assumes `git merge` was invoked with `merge.conflictStyle=zdiff3`, so the
+ * working tree already contains base-aware markers that mergiraf can feed
+ * into its structural heuristics.
+ *
+ * Only runs on files whose working-tree content actually contains text
+ * conflict markers. Delete/modify (UD/DU) and similar non-textual conflicts
+ * have no markers — running `mergiraf solve` + `git add` on them would
+ * silently stage the file with our side of the conflict, losing the signal
+ * that upstream deleted (or that we deleted what upstream modified). Those
+ * are left untouched for manual review.
+ *
+ * Only stages files mergiraf resolves completely (no conflict markers
+ * remain). Partial resolutions are left unstaged so the remaining markers
+ * show up for manual review — we never auto-commit a partially-resolved
+ * file. Per-file failures are logged at debug level and skipped so the
+ * overall merge continues to the next transform pass.
+ */
+async function runMergiraf(files: string[]): Promise<{ solved: number; partial: number; skipped: number }> {
+  let solved = 0
+  let partial = 0
+  let skipped = 0
+  for (const file of files) {
+    const before = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    if (!before) {
+      logger.debug(`skipping ${file}: file missing from working tree (likely delete/modify conflict)`)
+      skipped++
+      continue
+    }
+    if (!before.includes("<<<<<<< ")) {
+      // No text conflict markers — this is a non-textual conflict (UD/DU,
+      // add/add with identical content, submodule, binary, etc.). Running
+      // mergiraf + git add here would silently stage our side as resolved.
+      logger.debug(`skipping ${file}: no conflict markers (non-textual conflict, needs manual review)`)
+      skipped++
+      continue
+    }
+    const mg = await $`mergiraf solve --keep-backup=false ${file}`.quiet().nothrow()
+    const after = await Bun.file(file)
+      .text()
+      .catch(() => "")
+    if (!after) {
+      logger.debug(`skipping ${file}: empty after mergiraf (exit ${mg.exitCode})`)
+      continue
+    }
+    if (after.includes("<<<<<<< ")) {
+      // exit 2 = mergiraf reduced but didn't fully resolve; exit 1 = no change.
+      // Either way the working tree still has markers, so leave it unstaged
+      // for manual review rather than silently staging a half-resolved file.
+      logger.debug(`${file}: mergiraf left conflict markers (exit ${mg.exitCode}) — unstaged for manual review`)
+      if (mg.exitCode === 2) partial++
+      continue
+    }
+    const add = await $`git add ${file}`.quiet().nothrow()
+    if (add.exitCode !== 0) {
+      logger.debug(`${file}: git add failed (exit ${add.exitCode}) — leaving for next transform pass`)
+      continue
+    }
+    solved++
+  }
+  return { solved, partial, skipped }
 }
 
 function parseArgs(): MergeOptions {
@@ -67,6 +153,7 @@ function parseArgs(): MergeOptions {
   const options: MergeOptions = {
     dryRun: args.includes("--dry-run"),
     push: !args.includes("--no-push"),
+    worktrees: !args.includes("--no-worktrees"),
     reportOnly: args.includes("--report-only"),
     verbose: args.includes("--verbose"),
   }
@@ -94,6 +181,29 @@ function parseArgs(): MergeOptions {
   return options
 }
 
+function logWorktrees(refs: worktree.RefInfo, input: worktree.RefInput, baseName: string): void {
+  logger.divider()
+  logger.info("Reference worktrees:")
+  logger.info(`  opencode:   ${refs.opencode} (${input.tag}, ${input.upstream.slice(0, 8)})`)
+  logger.info(`  kilo-main:  ${refs.main} (${baseName}, ${input.base.slice(0, 8)})`)
+  logger.info(`  auto-merge: ${refs.auto} (${refs.branch}, ${refs.snapshot.slice(0, 8)})`)
+  logger.info("")
+  logger.info("Agent prompt:")
+  logger.info("  Use these references while resolving the merge:")
+  logger.info(`  - upstream opencode: ${refs.opencode}`)
+  logger.info(`  - Kilo base main: ${refs.main}`)
+  logger.info(`  - automated merge snapshot: ${refs.auto}`)
+}
+
+async function prepareWorktrees(options: MergeOptions, input: worktree.RefInput, baseName: string) {
+  if (!options.worktrees) return null
+
+  logger.info("Preparing reference worktrees...")
+  const refs = await worktree.prepare(input)
+  logWorktrees(refs, input, baseName)
+  return refs
+}
+
 async function getAuthor(): Promise<string> {
   const result = await $`git config user.name`.text()
   return result
@@ -115,6 +225,12 @@ async function createBackupBranch(baseBranch: string): Promise<string> {
 }
 
 async function main() {
+  // Ensure all relative paths resolve against the repo root, not whichever
+  // directory the user invoked the script from. Transforms feed git-reported
+  // paths (repo-relative) straight into Bun.file() and Glob.scan(), so running
+  // from script/upstream/ would silently break every file lookup.
+  process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
+
   const options = parseArgs()
   const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
@@ -133,6 +249,10 @@ async function main() {
     process.exit(1)
   }
 
+  if (!(await hasMergiraf())) {
+    abortMissingMergiraf()
+  }
+
   if (await git.hasUncommittedChanges()) {
     logger.error("Working directory has uncommitted changes. Please commit or stash them first.")
     process.exit(1)
@@ -148,8 +268,12 @@ async function main() {
 
     // Train rerere from past upstream merge commits so the cache is populated
     // even on a fresh clone. This replays past merges to learn their resolutions.
+    // The grep covers both the current convention ("merge: upstream vX.Y.Z") and the
+    // historical convention used by older upstream merges ("[Rr]esolve merge conflicts").
+    // Without the lowercase alternative, ~70 past merges are dropped from training on
+    // this repo, since most older resolution commits use a lowercase "resolve".
     logger.info("Training rerere cache from past merge history...")
-    const learned = await git.trainRerere("merge: upstream\\|Resolve merge conflict")
+    const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
     if (learned > 0) {
       logger.success(`Learned ${learned} conflict resolution(s) from history`)
     } else {
@@ -269,10 +393,16 @@ async function main() {
 
   const author = options.author || (await getAuthor())
   const kiloVersion = await version.getCurrentKiloVersion()
+  const dirs = ["packages/ui/src/assets/icons/provider", "packages/ui/src/components/provider-icons"]
+
+  logger.info("Resetting generated provider icons before checkout...")
+  await git.restoreDirectories(dirs)
+  await git.cleanDirectories(dirs)
 
   // Create backup branch
   await git.checkout(config.baseBranch)
   await git.pull(config.originRemote)
+  const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
 
@@ -302,6 +432,13 @@ async function main() {
   // Step 6: Apply ALL transformations to opencode branch (pre-merge)
   // This reduces conflicts by transforming upstream code to Kilo conventions BEFORE merging
   logger.step(6, 8, "Applying transformations to opencode branch (pre-merge)...")
+
+  logger.info("Removing files skipped in Kilo...")
+  const skips = await skipFiles({ dryRun: false, verbose: options.verbose, force: true })
+  const count = skips.filter((r) => r.action === "removed").length
+  if (count > 0) {
+    logger.success(`Removed ${count} skipped file(s) from opencode branch`)
+  }
 
   // 6a. Transform package names (opencode-ai -> @kilocode/cli)
   logger.info("Transforming package names...")
@@ -436,6 +573,29 @@ async function main() {
 
     if (conflictedFiles.length > 0) {
       logger.info("Attempting to auto-resolve remaining conflicts...")
+
+      // Step 7c-pre: syntax-aware resolution via mergiraf.
+      // Handles the common pattern of neighbouring import additions around
+      // kilocode_change markers, plus JSON/YAML/TOML key merges and other
+      // structural conflicts. Presence is enforced at startup.
+      logger.info("Running mergiraf on remaining conflicts...")
+      const mgResult = await runMergiraf(conflictedFiles)
+      if (mgResult.solved > 0) {
+        logger.success(`mergiraf auto-resolved ${mgResult.solved} conflict(s)`)
+        conflictedFiles = await git.getConflictedFiles()
+      } else {
+        logger.info("mergiraf did not fully resolve any conflicts")
+      }
+      if (mgResult.partial > 0) {
+        logger.info(
+          `mergiraf partially resolved ${mgResult.partial} file(s) — remaining markers left unstaged for manual review`,
+        )
+      }
+      if (mgResult.skipped > 0) {
+        logger.info(
+          `mergiraf skipped ${mgResult.skipped} file(s) with non-textual conflicts (delete/modify, binary, etc.) — left for manual review`,
+        )
+      }
 
       // Transform i18n files
       const i18nResults = await transformConflictedI18n(conflictedFiles, { dryRun: false, verbose: options.verbose })
@@ -609,6 +769,17 @@ async function main() {
       await report.saveReport(conflictReport, reportPath)
       logger.success(`Report saved to ${reportPath}`)
 
+      await prepareWorktrees(
+        options,
+        {
+          tag: targetVersion.tag,
+          upstream: targetVersion.commit,
+          base: await git.getCommitHash("HEAD"),
+          merge: await git.getCommitHash(opencodeBranch),
+        },
+        config.baseBranch,
+      )
+
       logger.divider()
       logger.info("Next steps:")
       logger.info("  1. Resolve remaining conflicts manually")
@@ -635,6 +806,8 @@ async function main() {
       await git.commit(`merge: upstream ${targetVersion.tag}`)
     }
   }
+
+  const autoSha = await git.getCommitHash("HEAD")
 
   // Step 8: Regenerate lock files and finalize
   logger.step(8, 8, "Regenerating lock files and finalizing...")
@@ -691,6 +864,18 @@ async function main() {
   logger.info(`Opencode branch: ${opencodeBranch}`)
   logger.info(`Backup branch: ${backupBranch}`)
   logger.info(`Report: ${reportPath}`)
+
+  await prepareWorktrees(
+    options,
+    {
+      tag: targetVersion.tag,
+      upstream: targetVersion.commit,
+      base: baseSha,
+      merge: opencodeBranch,
+      snapshot: autoSha,
+    },
+    config.baseBranch,
+  )
 
   const remainingConflicts = await git.getConflictedFiles()
   if (remainingConflicts.length > 0) {

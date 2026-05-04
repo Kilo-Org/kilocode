@@ -1,7 +1,7 @@
 import { createRoot, getOwner, onCleanup, runWithOwner, type Owner } from "solid-js"
 import { createStore, type SetStoreFunction, type Store } from "solid-js/store"
 import { Persist, persisted } from "@/utils/persist"
-import type { VcsInfo } from "@kilocode/sdk/v2/client"
+import type { KiloClient, VcsInfo } from "@kilocode/sdk/v2/client"
 import {
   DIR_IDLE_TTL_MS,
   MAX_DIR_STORES,
@@ -14,6 +14,9 @@ import {
   type VcsCache,
 } from "./types"
 import { canDisposeDirectory, pickDirectoriesToEvict } from "./eviction"
+import { useQueries } from "@tanstack/solid-query"
+import { loadPathQuery, loadProvidersQuery } from "./bootstrap"
+import { loadLspQuery, loadMcpQuery } from "../global-sync"
 
 export function createChildStoreManager(input: {
   owner: Owner
@@ -21,6 +24,8 @@ export function createChildStoreManager(input: {
   isLoadingSessions: (directory: string) => boolean
   onBootstrap: (directory: string) => void
   onDispose: (directory: string) => void
+  translate: (key: string, vars?: Record<string, string | number>) => string
+  getSdk: (directory: string) => KiloClient
 }) {
   const children: Record<string, [Store<State>, SetStoreFunction<State>]> = {}
   const vcsCache = new Map<string, VcsCache>()
@@ -129,7 +134,7 @@ export function createChildStoreManager(input: {
           createStore({ value: undefined as VcsInfo | undefined }),
         ),
       )
-      if (!vcs) throw new Error("Failed to create persisted cache")
+      if (!vcs) throw new Error(input.translate("error.childStore.persistedCacheCreateFailed"))
       const vcsStore = vcs[0]
       vcsCache.set(directory, { store: vcsStore, setStore: vcs[1], ready: vcs[3] })
 
@@ -139,7 +144,7 @@ export function createChildStoreManager(input: {
           createStore({ value: undefined as ProjectMeta | undefined }),
         ),
       )
-      if (!meta) throw new Error("Failed to create persisted project metadata")
+      if (!meta) throw new Error(input.translate("error.childStore.persistedProjectMetadataCreateFailed"))
       metaCache.set(directory, { store: meta[0], setStore: meta[1], ready: meta[3] })
 
       const icon = runWithOwner(input.owner, () =>
@@ -148,20 +153,39 @@ export function createChildStoreManager(input: {
           createStore({ value: undefined as string | undefined }),
         ),
       )
-      if (!icon) throw new Error("Failed to create persisted project icon")
+      if (!icon) throw new Error(input.translate("error.childStore.persistedProjectIconCreateFailed"))
       iconCache.set(directory, { store: icon[0], setStore: icon[1], ready: icon[3] })
 
       const init = () =>
         createRoot((dispose) => {
+          const sdk = input.getSdk(directory)
+
           const initialMeta = meta[0].value
           const initialIcon = icon[0].value
+
+          const [pathQuery, mcpQuery, lspQuery, providerQuery] = useQueries(() => ({
+            queries: [
+              loadPathQuery(directory, sdk),
+              loadMcpQuery(directory, sdk),
+              loadLspQuery(directory, sdk),
+              loadProvidersQuery(directory, sdk),
+            ],
+          }))
+
           const child = createStore<State>({
             project: "",
             projectMeta: initialMeta,
             icon: initialIcon,
+            get provider_ready() {
+              return providerQuery.isLoading
+            },
             provider: { all: [], connected: [], default: {} },
             config: {},
-            path: { state: "", config: "", worktree: "", directory: "", home: "" },
+            get path() {
+              if (pathQuery.isLoading || !pathQuery.data)
+                return { state: "", config: "", worktree: "", directory: "", home: "" }
+              return pathQuery.data
+            },
             status: "loading" as const,
             agent: [],
             command: [],
@@ -172,8 +196,18 @@ export function createChildStoreManager(input: {
             todo: {},
             permission: {},
             question: {},
-            mcp: {},
-            lsp: [],
+            get mcp_ready() {
+              return mcpQuery.isLoading
+            },
+            get mcp() {
+              return mcpQuery.isLoading ? {} : (mcpQuery.data ?? {})
+            },
+            get lsp_ready() {
+              return lspQuery.isLoading
+            },
+            get lsp() {
+              return lspQuery.isLoading ? [] : (lspQuery.data ?? [])
+            },
             vcs: vcsStore.value,
             limit: 5,
             message: {},
@@ -211,7 +245,7 @@ export function createChildStoreManager(input: {
     }
     mark(directory)
     const childStore = children[directory]
-    if (!childStore) throw new Error("Failed to create store")
+    if (!childStore) throw new Error(input.translate("error.childStore.storeCreateFailed"))
     return childStore
   }
 
@@ -225,13 +259,22 @@ export function createChildStoreManager(input: {
     return childStore
   }
 
+  function peek(directory: string, options: ChildOptions = {}) {
+    const childStore = ensureChild(directory)
+    const shouldBootstrap = options.bootstrap ?? true
+    if (shouldBootstrap && childStore[0].status === "loading") {
+      input.onBootstrap(directory)
+    }
+    return childStore
+  }
+
   function projectMeta(directory: string, patch: ProjectMeta) {
     const [store, setStore] = ensureChild(directory)
     const cached = metaCache.get(directory)
     if (!cached) return
     const previous = store.projectMeta ?? {}
-    const icon = patch.icon ? { ...(previous.icon ?? {}), ...patch.icon } : previous.icon
-    const commands = patch.commands ? { ...(previous.commands ?? {}), ...patch.commands } : previous.commands
+    const icon = patch.icon ? { ...previous.icon, ...patch.icon } : previous.icon
+    const commands = patch.commands ? { ...previous.commands, ...patch.commands } : previous.commands
     const next = {
       ...previous,
       ...patch,
@@ -255,6 +298,7 @@ export function createChildStoreManager(input: {
     children,
     ensureChild,
     child,
+    peek,
     projectMeta,
     projectIcon,
     mark,

@@ -21,9 +21,63 @@
       devShells = forEachSystem (pkgs: {
         default =
           let
+            # Pin bun to the version declared in package.json (packageManager: "bun@1.3.13").
+            # nixpkgs-unstable currently ships 1.3.11, so we fetch the official release directly.
+            bun =
+              let
+                sources = {
+                  "aarch64-linux" = {
+                    name = "bun-linux-aarch64";
+                    hash = "sha256-cLrkGzkIsKEg4eWMXIrzDnSvrjuNEbDT/djnh937SyI=";
+                  };
+                  "x86_64-linux" = {
+                    name = "bun-linux-x64";
+                    hash = "sha256-ecB3H6i5LDOq5B4VoODTB+qZ0OLwAxfHHGxTI3p44lo=";
+                  };
+                  "aarch64-darwin" = {
+                    name = "bun-darwin-aarch64";
+                    hash = "sha256-VGfj9l26Umuf6pjwzOBO+vwMY+Fpcz7Ce4dqOtMtoZA=";
+                  };
+                  "x86_64-darwin" = {
+                    name = "bun-darwin-x64";
+                    hash = "sha256-5abItk9BmSUjLREeyxPiXwq/VeVPeSNB+YdiP9B3gAk=";
+                  };
+                };
+                source =
+                  sources.${pkgs.stdenv.hostPlatform.system}
+                    or (throw "Unsupported system for bun: ${pkgs.stdenv.hostPlatform.system}");
+              in
+              pkgs.stdenv.mkDerivation rec {
+                pname = "bun";
+                version = "1.3.13";
+                src = pkgs.fetchurl {
+                  url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/${source.name}.zip";
+                  inherit (source) hash;
+                };
+                nativeBuildInputs = [
+                  pkgs.unzip
+                ] ++ pkgs.lib.optional pkgs.stdenv.isLinux pkgs.autoPatchelfHook;
+                buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.stdenv.cc.cc.lib ];
+                dontConfigure = true;
+                dontBuild = true;
+                installPhase = ''
+                  runHook preInstall
+                  install -Dm755 bun $out/bin/bun
+                  ln -s $out/bin/bun $out/bin/bunx
+                  runHook postInstall
+                '';
+                meta = {
+                  description = "Fast all-in-one JavaScript runtime";
+                  homepage = "https://bun.sh";
+                  license = pkgs.lib.licenses.mit;
+                  mainProgram = "bun";
+                  platforms = builtins.attrNames sources;
+                };
+              };
+
             kilo-dev = pkgs.writeShellScriptBin "kilo-dev" ''
-              cd "$KILO_ROOT"
-              exec ${pkgs.bun}/bin/bun dev "$@"
+                cd "$KILO_ROOT"
+              exec ${bun}/bin/bun dev "$@"
             '';
 
             kilo-install-bin = pkgs.writeShellScriptBin "kilo-install" ''
@@ -150,28 +204,55 @@
             '';
           in
           pkgs.mkShell {
-            packages = with pkgs; [
-              bun
-              nodejs_20
-              pkg-config
-              openssl
-              git
-              gh
-              playwright-driver.browsers
-              vsce
-              unzip
-              gnutar
-              gzip
-              patchelf
-              ripgrep
-              kilo-dev
-              kilo-install-bin
-              kilo-bin
-            ];
+            packages =
+              with pkgs;
+              [
+                bun
+                nodejs_20
+                python3
+                pkg-config
+                openssl
+                git
+                gh
+                playwright-driver.browsers
+                vsce
+                unzip
+                gnutar
+                gzip
+                patchelf
+                ripgrep
+                jetbrains.jdk
+                jdk21
+                kilo-dev
+                kilo-install-bin
+                kilo-bin
+              ]
+              ++ lib.optionals stdenv.isLinux [
+                libX11
+                libXext
+                libXrender
+                libXtst
+                libXi
+                fontconfig
+                freetype
+              ];
             shellHook = ''
               export KILO_ROOT="$PWD"
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+            ''
+            + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+              export LD_LIBRARY_PATH="${
+                pkgs.lib.makeLibraryPath [
+                  pkgs.libX11
+                  pkgs.libXext
+                  pkgs.libXrender
+                  pkgs.libXtst
+                  pkgs.libXi
+                  pkgs.fontconfig
+                  pkgs.freetype
+                ]
+              }:$LD_LIBRARY_PATH"
             '';
           };
       });

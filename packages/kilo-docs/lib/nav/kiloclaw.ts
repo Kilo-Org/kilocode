@@ -7,6 +7,7 @@ export const KiloClawNav: NavSection[] = [
       { href: "/kiloclaw/overview", children: "Overview" },
       { href: "/kiloclaw/dashboard", children: "Dashboard" },
       { href: "/kiloclaw/pre-installed-software", children: "Pre-installed Software" },
+      { href: "/kiloclaw/end-to-end", children: "End to End Config" },
       {
         href: "/kiloclaw/control-ui/overview",
         children: "Control UI",
@@ -37,6 +38,15 @@ export const KiloClawNav: NavSection[] = [
         ],
       },
       {
+        href: "/kiloclaw/triggers",
+        children: "Triggers",
+        subLinks: [
+          { href: "/kiloclaw/triggers", children: "Overview" },
+          { href: "/kiloclaw/triggers/webhooks", children: "Webhooks" },
+          { href: "/kiloclaw/triggers/scheduled", children: "Scheduled" },
+        ],
+      },
+      {
         href: "/kiloclaw/tools",
         children: "Tools",
         subLinks: [
@@ -44,6 +54,7 @@ export const KiloClawNav: NavSection[] = [
           { href: "/kiloclaw/tools/1password", children: "1Password" },
           { href: "/kiloclaw/tools/brave-search", children: "Brave Search" },
           { href: "/kiloclaw/tools/agentcard", children: "AgentCard" },
+          { href: "/kiloclaw/tools/other-tools", children: "Other Tools" },
         ],
       },
       {

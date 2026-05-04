@@ -1,7 +1,8 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import { Config } from "../config/config"
-import { Log } from "../util/log"
+import { ConfigMCP } from "../config/mcp"
+import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
@@ -33,7 +34,7 @@ export namespace McpMigrator {
   }
 
   export interface MigrationResult {
-    mcp: Record<string, Config.Mcp>
+    mcp: Record<string, ConfigMCP.Info>
     warnings: string[]
     skipped: Array<{ name: string; reason: string }>
   }
@@ -50,19 +51,17 @@ export namespace McpMigrator {
     }
   }
 
-  export function convertServer(name: string, server: KilocodeMcpServer): Config.Mcp | null {
-    // Skip disabled servers
-    if (server.disabled) return null
-
+  export function convertServer(name: string, server: KilocodeMcpServer): ConfigMCP.Info | null {
     if (isRemote(server)) {
       if (!server.url) {
         log.warn("remote MCP server missing url, skipping", { name })
         return null
       }
-      const config: Config.Mcp = {
+      const config: ConfigMCP.Info = {
         type: "remote",
         url: server.url,
         ...(server.headers && Object.keys(server.headers).length > 0 && { headers: server.headers }),
+        ...(server.disabled && { enabled: false }),
       }
       return config
     }
@@ -76,10 +75,11 @@ export namespace McpMigrator {
     const command = [server.command, ...(server.args ?? [])]
 
     // Build the MCP config object
-    const config: Config.Mcp = {
+    const config: ConfigMCP.Info = {
       type: "local",
       command,
       ...(server.env && Object.keys(server.env).length > 0 && { environment: server.env }),
+      ...(server.disabled && { enabled: false }),
     }
 
     return config
@@ -91,7 +91,7 @@ export namespace McpMigrator {
   }): Promise<MigrationResult> {
     const warnings: string[] = []
     const skipped: Array<{ name: string; reason: string }> = []
-    const mcp: Record<string, Config.Mcp> = {}
+    const mcp: Record<string, ConfigMCP.Info> = {}
 
     const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
@@ -130,11 +130,6 @@ export namespace McpMigrator {
 
     // Convert each server
     for (const [name, server] of serversByName) {
-      if (server.disabled) {
-        skipped.push({ name, reason: "Server is disabled" })
-        continue
-      }
-
       // Warn about alwaysAllow permissions that cannot be migrated
       if (server.alwaysAllow && server.alwaysAllow.length > 0) {
         warnings.push(
@@ -155,9 +150,12 @@ export namespace McpMigrator {
    * Load Kilocode MCP servers and return them as an opencode config partial.
    * This function handles all logging internally, so callers just need to merge the result.
    */
-  export async function loadMcpConfig(projectDir: string): Promise<Record<string, Config.Mcp>> {
+  export async function loadMcpConfig(
+    projectDir: string,
+    skipGlobalPaths?: boolean,
+  ): Promise<Record<string, ConfigMCP.Info>> {
     try {
-      const result = await migrate({ projectDir })
+      const result = await migrate({ projectDir, skipGlobalPaths })
 
       if (Object.keys(result.mcp).length > 0) {
         log.debug("loaded kilocode MCP servers", {

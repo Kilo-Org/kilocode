@@ -19,7 +19,7 @@ Checkpoints let you:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Checkpoints (called **snapshots** in the new extension) are configured via the `snapshot` key in your config file (`kilo.jsonc` or `~/.config/kilo/kilo.jsonc`):
+Checkpoints (called **snapshots** in the new extension) are enabled by default. They are configured via the `snapshot` key in your config file (`kilo.jsonc` or `~/.config/kilo/kilo.jsonc`):
 
 ```json
 {
@@ -30,8 +30,12 @@ Checkpoints (called **snapshots** in the new extension) are configured via the `
 You can also toggle this in Settings:
 
 1. Open Settings by clicking the gear icon {% codicon name="gear" /%}
-2. Go to the `Checkpoints` tab
-3. Toggle the snapshot setting
+2. Go to the **Checkpoints** tab
+3. Toggle the snapshot setting on or off
+
+{% callout type="info" %}
+Unlike the legacy extension which used a separate shadow Git repository, the new extension uses a dedicated snapshot Git repository stored outside your project. Your project's `.git` history is never modified by the snapshot system.
+{% /callout %}
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -64,11 +68,24 @@ Access checkpoint settings in Kilo Code settings under the "Checkpoints" section
 {% tabs %}
 {% tab label="VSCode" %}
 
-The new extension uses **git-based snapshots** of your working directory. Snapshots are taken before and after agent edits. They integrate with your existing Git repository — no separate shadow repository is created.
+The new extension uses **git-based snapshots** to track your workspace state. A dedicated Git repository (with a detached work tree pointing at your project) is created outside your project directory to store snapshot data — your project's own `.git` history is never touched.
 
-**Reverting changes:**
+Snapshots are captured automatically at the boundaries of each model call within an agent turn:
 
-You can revert any message's changes from the chat. A **Revert Banner** appears at the top of the chat when the session is in a reverted state, making it clear that you are viewing an earlier state. Use the banner to unrevert and return to the latest state.
+1. **Before** the model starts generating (step start)
+2. **After** the model finishes and its tool calls have been executed (step finish)
+
+A single user message can produce **multiple steps**. For example, if the agent edits a file, runs a command, sees the output, and then edits another file, each model call in that sequence gets its own snapshot pair. The system records which files changed in each step.
+
+However, while snapshots are taken at each step boundary, **the revert UI operates at the user message level**. You can only revert to the point just before a user message was sent — you cannot revert to an intermediate step within a single agent response.
+
+{% callout type="warning" %}
+Revert granularity is **per user message**, not per individual step or file edit. If the agent makes changes across multiple steps within a single response, reverting will undo all of those changes at once.
+{% /callout %}
+
+{% callout type="info" %}
+Snapshots respect your `.gitignore` rules. Files ignored by Git (such as `node_modules/`, `dist/`, or `.env`) are excluded from snapshots.
+{% /callout %}
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -102,12 +119,50 @@ Checkpoints are stored as Git commits in the shadow repository, capturing:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Checkpoints are integrated directly into your workflow through the chat interface. Each message that caused file changes shows a diff summary. You can:
+Checkpoints are integrated directly into your chat interface. Each agent turn that modified files shows a collapsible diff summary listing the changed files with addition/deletion counts.
 
-- Click the diff badge on a message to open the **Diff Viewer** and review what changed
-- Click **Revert** on any message to restore the workspace to its state before that message
+### Viewing Changes
 
-A **Revert Banner** is shown at the top of the chat whenever you are in a reverted state, with an option to return to the current state.
+Click the diff summary on any agent turn to expand it and see which files were modified. Click an individual file to open a side-by-side diff in the VS Code editor.
+
+### Reverting with "Revert to here"
+
+Every user message in the chat that has a corresponding agent response shows a **Revert to here** button (a left-arrow icon) when you hover over it:
+
+{% image src="/docs/img/checkpoints/revert-to-here-button.png" alt="Revert to here button shown on hover over a user message" width="350" /%}
+
+The revert button appears on **user messages only** — these are the revert points in the conversation. You revert to the state your workspace was in just before a given user message was sent. There is no way to revert to a point partway through an agent response.
+
+Clicking **Revert to here** does two things:
+
+1. **Restores your workspace files** to the state they were in just before that message was sent
+2. **Hides all subsequent messages** in the chat so you see the conversation as it was at that point
+
+The button is only active when the agent is idle. While the agent is running, the button is disabled to prevent reverting mid-operation.
+
+### The Revert Banner
+
+After reverting, a **Revert Banner** appears at the bottom of the chat. The banner shows:
+
+- The number of messages that were reverted (e.g. "1 message reverted" or "3 messages reverted")
+- A per-file breakdown of the changes that were undone, with addition/deletion counts
+- A hint: "Send a new message to make this permanent"
+
+The banner provides two actions:
+
+- **Redo** — Steps forward one message at a time, re-applying changes from the next reverted message
+- **Redo All** — Restores the workspace to the latest state and un-hides all messages (only shown when more than one message is reverted)
+
+### Making a Revert Permanent
+
+While in a reverted state, you have two choices:
+
+- **Redo / Redo All** to return to where you were
+- **Send a new message** to branch off from the reverted point. When you send a new message while reverted, the reverted messages are permanently deleted from the session and the agent continues from the restored state. This is how you "undo" the agent's work and try a different approach.
+
+{% callout type="tip" %}
+Reverting is non-destructive until you send a new message. You can freely revert and redo to compare different states of your code without losing anything.
+{% /callout %}
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -183,7 +238,38 @@ To restore a project to a previous checkpoint state:
 {% tabs %}
 {% tab label="VSCode" %}
 
-The new extension uses the underlying Git repository in your workspace to create snapshot commits. No shadow repository is used.
+### Snapshot Architecture
+
+The snapshot system consists of:
+
+1. **Snapshot Git Repository**: A dedicated Git repository created outside your project at `~/.local/share/kilo/snapshot/<project-id>/<worktree-hash>/`. This stores all snapshot tree objects without affecting your project's Git history. Each worktree gets its own snapshot repository, identified by a hash of the worktree path.
+
+2. **Step-level Snapshots**: The agent runtime automatically runs `git write-tree` against your workspace before and after each agent step. The resulting tree hashes are stored alongside the conversation messages.
+
+3. **Patch Records**: After each step, the system records which files were modified. These patch records enable targeted file-level reverts rather than full-workspace restores.
+
+### How Revert Works
+
+When you click "Revert to here" on a message:
+
+1. The system collects all patch records (file change lists) from messages after the revert point
+2. A snapshot of the current workspace is taken so the operation can be undone
+3. For each changed file, the system checks out the version from the pre-change snapshot using the stored tree hash
+4. Files that were created by the agent (and didn't exist before) are deleted
+5. The session records the revert state so the UI can show the Revert Banner
+
+When you click "Redo All" (unrevert):
+
+1. The workspace is fully restored from the snapshot taken in step 2 above using `git checkout-index`
+2. The revert state is cleared from the session
+
+### Storage and Cleanup
+
+Snapshot data is stored per-project and is periodically cleaned up. A background process runs `git gc --prune=7.days` every hour, which removes unreachable snapshot objects older than 7 days. Because snapshots are stored as raw tree hashes (not refs or commits), older snapshots may be pruned by garbage collection even if a session still references them.
+
+### Worktree Isolation
+
+When using the Agent Manager with git worktrees, each worktree gets its own isolated snapshot repository. This prevents snapshot data from one worktree interfering with another while sharing underlying Git objects for storage efficiency.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}

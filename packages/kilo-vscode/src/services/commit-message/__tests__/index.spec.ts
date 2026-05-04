@@ -54,7 +54,7 @@ describe("commit-message service", () => {
     }
 
     mockConnectionService = {
-      getClient: vi.fn().mockReturnValue(mockClient),
+      getClientAsync: vi.fn().mockResolvedValue(mockClient),
     } as any
   })
 
@@ -115,7 +115,7 @@ describe("commit-message service", () => {
       expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("No Git repository found")
     })
 
-    it("shows error when backend is not connected", async () => {
+    it("shows error when backend fails to connect", async () => {
       ;(vscode.extensions.getExtension as Mock).mockReturnValue({
         isActive: true,
         activate: vi.fn().mockResolvedValue(undefined),
@@ -125,15 +125,36 @@ describe("commit-message service", () => {
           }),
         },
       })
-      ;(mockConnectionService.getClient as Mock).mockImplementation(() => {
-        throw new Error("Not connected")
-      })
+      ;(mockConnectionService.getClientAsync as Mock).mockRejectedValue(new Error("Connect failed"))
 
       await commandCallback()
 
       expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-        "Kilo backend is not connected. Please wait for the connection to establish.",
+        "Failed to connect to Kilo backend. Please try again.",
       )
+    })
+
+    it("auto-connects backend and generates message when client not yet ready", async () => {
+      const mockInputBox = { value: "" }
+      ;(vscode.extensions.getExtension as Mock).mockReturnValue({
+        isActive: true,
+        activate: vi.fn().mockResolvedValue(undefined),
+        exports: {
+          getAPI: () => ({
+            repositories: [{ inputBox: mockInputBox, rootUri: { fsPath: "/auto-connect-repo" } }],
+          }),
+        },
+      })
+
+      const mockToken = { onCancellationRequested: vi.fn() }
+      ;(vscode.window.withProgress as Mock).mockImplementation(async (_options: any, task: any) => {
+        await task({}, mockToken)
+      })
+
+      await commandCallback()
+
+      expect(mockConnectionService.getClientAsync).toHaveBeenCalled()
+      expect(mockInputBox.value).toBe("feat: add new feature")
     })
 
     it("calls commitMessage.generate on the SDK client with repository root path", async () => {
@@ -229,7 +250,7 @@ describe("commit-message service", () => {
       } as any)
 
       vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
-        await task({} as any, {} as any)
+        await task({} as any, { onCancellationRequested: vi.fn() } as any)
       })
 
       // Simulate SCM title/input passing the SourceControl for the worktree repo
@@ -254,7 +275,7 @@ describe("commit-message service", () => {
       } as any)
 
       vi.mocked(vscode.window.withProgress).mockImplementation(async (_options, task) => {
-        await task({} as any, {} as any)
+        await task({} as any, { onCancellationRequested: vi.fn() } as any)
       })
 
       const scmArg = { rootUri: { fsPath: "/nonexistent-repo" } } as vscode.SourceControl

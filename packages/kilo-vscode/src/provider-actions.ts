@@ -4,14 +4,23 @@
  */
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
-import { sanitizeCustomProviderConfig } from "./shared/custom-provider"
+import {
+  resolveCustomProviderAuth,
+  sanitizeCustomProviderConfig,
+  withCustomProviderDeletions,
+} from "./shared/custom-provider"
 import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { configFeatures } from "./features"
 
 /**
  * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
  * Pure function — takes cachedConfig and vscode settings as parameters.
  */
 type AuthState = "api" | "oauth" | "wellknown"
+
+function disabledWithout(list: string[] | undefined, id: string) {
+  return (list ?? []).filter((item) => item !== id)
+}
 
 /** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
 export async function fetchProviderData(client: KiloClient, dir: string) {
@@ -28,7 +37,17 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
     authRequest,
   ])
   const authStates: Record<string, AuthState> = {}
-  return { response, authMethods, authStates }
+  const all = response.all.map((item) => {
+    const raw = item as Record<string, unknown>
+    if (typeof raw.id === "string" && typeof raw.key === "string" && raw.key) {
+      authStates[raw.id] = "api"
+    }
+    if (!("key" in raw)) return item
+    const next = { ...raw }
+    delete next.key
+    return next as (typeof response.all)[number]
+  })
+  return { response: { ...response, all }, authMethods, authStates }
 }
 
 export function buildActionContext(
@@ -44,6 +63,9 @@ export function buildActionContext(
     getErrorMessage: errFn,
     workspaceDir: dir,
     disposeGlobal: async (reason: string) => {
+      // Wait for the server to finish disposing before refreshing providers.
+      // Shared State.dispose() now has a hard per-disposer timeout, so this
+      // wait is bounded without needing a client-side timeout here.
       await client.global.dispose().catch((error: unknown) => {
         console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
       })
@@ -68,6 +90,24 @@ export function validateRecents(raw: unknown): Array<{ providerID: string; model
     .filter(isModelSelection)
     .slice(0, 5)
     .map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
+}
+
+/** Validate and sanitize favorite model selections from untrusted sources. */
+export function validateFavorites(raw: unknown): Array<{ providerID: string; modelID: string }> {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
+}
+
+/** Validate and sanitize per-mode model selections from untrusted sources. */
+export function validateModelSelections(raw: unknown): Record<string, { providerID: string; modelID: string }> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  const result: Record<string, { providerID: string; modelID: string }> = {}
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (isModelSelection(val)) {
+      result[key] = { providerID: val.providerID, modelID: val.modelID }
+    }
+  }
+  return result
 }
 
 export function computeDefaultSelection(
@@ -197,6 +237,9 @@ export async function disconnectProvider(
   try {
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const configured = !!globalConfig.provider?.[id]
+    const { response } = await fetchProviderData(ctx.client, ctx.workspaceDir)
+    const active = response.all.find((item) => item.id === id)
+    const oauth = active?.source === "custom" && configured
 
     // Remove auth store entry. Config-sourced providers may not have an auth
     // store entry (credentials come from config or env), so failure is non-fatal.
@@ -216,7 +259,7 @@ export async function disconnectProvider(
     // server rebuilds state from config. Add to disabled_providers so the server
     // excludes them. The config entry is preserved (user may re-enable later).
     // This matches the desktop app's disableProvider() pattern.
-    if (configured) {
+    if (configured && !oauth) {
       const disabled = globalConfig.disabled_providers ?? []
       if (!disabled.includes(id)) {
         const merged = (
@@ -224,6 +267,19 @@ export async function disconnectProvider(
             { config: { disabled_providers: [...disabled, id] } },
             { throwOnError: true },
           )
+        ).data
+        if (merged) {
+          setCachedConfig({ type: "configLoaded", config: merged, features: configFeatures(merged) })
+          ctx.postMessage({ type: "configUpdated", config: merged, features: configFeatures(merged) })
+        }
+      }
+    }
+
+    if (oauth) {
+      const disabled = disabledWithout(globalConfig.disabled_providers, id)
+      if (disabled.length !== (globalConfig.disabled_providers ?? []).length) {
+        const merged = (
+          await ctx.client.global.config.update({ config: { disabled_providers: disabled } }, { throwOnError: true })
         ).data
         if (merged) {
           setCachedConfig({ type: "configLoaded", config: merged })
@@ -246,6 +302,7 @@ export async function saveCustomProvider(
   providerID: string,
   provider: Record<string, unknown>,
   apiKey: string | undefined,
+  apiKeyChanged: boolean,
   cachedConfigMessage: unknown,
   setCachedConfig: (msg: unknown) => void,
 ) {
@@ -267,24 +324,29 @@ export async function saveCustomProvider(
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const disabled = globalConfig.disabled_providers ?? []
     const nextDisabled = disabled.filter((item: string) => item !== id)
+    const existing = (globalConfig.provider as Record<string, unknown> | undefined)?.[id]
+    const patch = withCustomProviderDeletions(existing, sanitized.value)
     const { data: updated } = await ctx.client.global.config.update(
       {
         config: {
-          provider: { [id]: sanitized.value },
+          provider: { [id]: patch },
           disabled_providers: nextDisabled,
         },
       },
       { throwOnError: true },
     )
 
-    const msg = { type: "configLoaded", config: updated }
+    const msg = { type: "configLoaded", config: updated, features: configFeatures(updated) }
     setCachedConfig(msg)
-    ctx.postMessage({ type: "configUpdated", config: updated })
+    ctx.postMessage({ type: "configUpdated", config: updated, features: configFeatures(updated) })
+
+    const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
 
     try {
-      if (apiKey) {
-        await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
-      } else {
+      if (auth.mode === "set") {
+        await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: auth.key } }, { throwOnError: true })
+      }
+      if (auth.mode === "clear") {
         await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
       }
     } catch (error) {

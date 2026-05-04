@@ -1,4 +1,6 @@
 ---
+title: "Using Ollama with Kilo Code | Run Local Models"
+description: "Run local AI models with Ollama in Kilo Code for offline, private coding. Setup guide for VS Code and the CLI."
 sidebar_label: Ollama
 ---
 
@@ -115,6 +117,32 @@ Then set your default model:
 
 {% /tab %}
 {% /tabs %}
+
+## Using Custom or Unlisted Models
+
+If your Ollama model doesn't appear in the Kilo model picker, register it as a custom model in your config file:
+
+```jsonc
+{
+  "model": "ollama/my-finetune:latest",
+  "provider": {
+    "ollama": {
+      "models": {
+        "my-finetune:latest": {
+          "name": "My Fine-tuned Model",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+See [Custom Models](/docs/code-with-ai/agents/custom-models) for the full list of configuration fields and more examples.
 
 ## Further Reading
 

@@ -1,4 +1,6 @@
 ---
+title: "Using LM Studio with Kilo Code | Local LLMs"
+description: "Run local LLMs in Kilo Code by connecting to LM Studio's OpenAI-compatible server. Setup guide for VS Code and the CLI."
 sidebar_label: LM Studio
 ---
 
@@ -48,13 +50,15 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 
 LM Studio runs locally, so no API key is needed. Configure the base URL if LM Studio is running on a different host or port:
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
 
 ```jsonc
 {
   "provider": {
     "lmstudio": {
-      "baseURL": "http://localhost:1234/v1",
+      "options": {
+        "baseURL": "http://localhost:1234/v1",
+      },
     },
   },
 }
@@ -70,6 +74,44 @@ Then set your default model:
 
 {% /tab %}
 {% /tabs %}
+
+## Using Custom or Unlisted Models
+
+If the model you loaded in LM Studio doesn't appear in the Kilo model picker, you can register it as a custom model in your config file:
+
+```jsonc
+{
+  "model": "lmstudio/my-custom-model",
+  "provider": {
+    "lmstudio": {
+      "models": {
+        "my-custom-model": {
+          "name": "My Custom Model",
+        },
+      },
+    },
+  },
+}
+```
+
+The model key (`my-custom-model`) must match the model identifier that LM Studio serves. If the display name you want differs from the API identifier, use the `id` field to set the API-facing name separately:
+
+```jsonc
+{
+  "provider": {
+    "lmstudio": {
+      "models": {
+        "my-llama": {
+          "id": "meta-llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B (Local)",
+        },
+      },
+    },
+  },
+}
+```
+
+See [Custom Models](/docs/code-with-ai/agents/custom-models) for the full list of configuration fields and more examples.
 
 ## Tips and Notes
 

@@ -13,8 +13,8 @@ Some description of HOW you achieved it. Perhaps give a high level description o
 ## Screenshots
 
 | before | after |
-| ------ | ----- |
-|        |       |
+|---|---|
+|  |  |
 
 ## How to Test
 

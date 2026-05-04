@@ -39,6 +39,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/tauri\.localhost/,
   // Example/placeholder URLs
   /^https?:\/\/example\.com/,
+  /^https?:\/\/api\.example\.com/,
   /^https?:\/\/api\.myprovider\.com/,
   /^https?:\/\/synthetic\.new/,
   // API endpoints (not user-facing)
@@ -46,6 +47,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/ingest\.kilosessions\.ai/,
   /^https?:\/\/api\.openai\.com/,
   /^https?:\/\/api\.github\.com/,
+  /^https?:\/\/api\.githubcopilot\.com/,
   /^https?:\/\/api\.cloudflare\.com/,
   /^https?:\/\/api\.releases\.hashicorp\.com/,
   /^https?:\/\/auth\.openai\.com/,
@@ -82,7 +84,7 @@ const SKIP_DIRS = ["node_modules", ".storybook", "stories", "test", "tests", "__
 const SKIP_PATH_SEGMENTS = ["continuedev"]
 
 // Individual files to skip (data files full of non-user-facing URLs)
-const SKIP_FILES = ["models-snapshot.ts"]
+const SKIP_FILES = ["models-snapshot.ts", "models-snapshot.js"]
 
 function shouldExclude(url: string): boolean {
   return EXCLUDE_PATTERNS.some((re) => re.test(url))
@@ -96,11 +98,17 @@ function shouldSkipFile(filepath: string): boolean {
   if (/\.test\.[jt]sx?$/.test(filepath)) return true
   if (/\.spec\.[jt]sx?$/.test(filepath)) return true
   if (/\.stories\.[jt]sx?$/.test(filepath)) return true
-  if (/\/i18n\//.test(filepath) && !filepath.endsWith("en.ts")) return true
+  if (parts.includes("i18n") && path.basename(filepath) !== "en.ts") return true // kilocode_change
   const basename = path.basename(filepath)
   if (SKIP_FILES.includes(basename)) return true
   return false
 }
+
+// kilocode_change start
+function source(filepath: string): string {
+  return path.relative(ROOT, filepath).replaceAll(path.sep, "/")
+}
+// kilocode_change end
 
 function clean(url: string): string {
   return url.replace(/[.),:;]+$/, "").replace(/<\/?\w+>$/, "")
@@ -113,16 +121,19 @@ async function extract(): Promise<Map<string, Set<string>>> {
     for (const ext of EXTENSIONS) {
       const glob = new Glob(`**/*.${ext}`)
       for await (const entry of glob.scan({ cwd: dir, absolute: true })) {
-        if (shouldSkipFile(entry)) continue
+        // kilocode_change start
+        const file = source(entry)
+        if (shouldSkipFile(file)) continue
         const content = await Bun.file(entry).text()
         for (const line of content.split("\n")) {
           for (const match of line.matchAll(URL_RE)) {
             const url = clean(match[0])
             if (shouldExclude(url)) continue
             if (!links.has(url)) links.set(url, new Set())
-            links.get(url)!.add(path.relative(ROOT, entry))
+            links.get(url)!.add(file)
           }
         }
+        // kilocode_change end
       }
     }
   }

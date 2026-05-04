@@ -53,9 +53,26 @@ export namespace KilocodePaths {
   }): Promise<string[]> {
     const directories: string[] = []
 
-    // 1. Walk up from project dir to worktree root for .kilocode/ and .kilo/
+    if (!opts.skipGlobalPaths) {
+      // 1. Global ~/.kilocode/ and ~/.kilo/ (loaded first so project-level overrides)
+      for (const global of globalDirs()) {
+        const globalSkills = path.join(global, "skills")
+        if (!(await Filesystem.isDir(globalSkills))) continue
+        directories.push(global) // Return parent, not skills/
+      }
+
+      // 2. VSCode extension global storage (marketplace-installed skills)
+      const vscode = vscodeGlobalStorage()
+      const vscodeSkills = path.join(vscode, "skills")
+      if (await Filesystem.isDir(vscodeSkills)) {
+        directories.push(vscode) // Return parent, not skills/
+      }
+    }
+
+    // 3. Walk up from project dir to worktree root for .kilocode/ and .kilo/
     // Returns parent directories (not skills/) because
     // the glob pattern "skills/[*]/SKILL.md" is applied from the parent
+    // Loaded last so project-level skills take precedence over global
     for (const target of [".kilocode", ".kilo"] as const) {
       const projectDirs = await Array.fromAsync(
         Filesystem.up({
@@ -69,22 +86,6 @@ export namespace KilocodePaths {
         if ((await Filesystem.isDir(skillsDir)) && !directories.includes(dir)) {
           directories.push(dir)
         }
-      }
-    }
-
-    if (!opts.skipGlobalPaths) {
-      // 2. Global ~/.kilocode/ and ~/.kilo/
-      for (const global of globalDirs()) {
-        const globalSkills = path.join(global, "skills")
-        if (!(await Filesystem.isDir(globalSkills))) continue
-        directories.push(global) // Return parent, not skills/
-      }
-
-      // 3. VSCode extension global storage (marketplace-installed skills)
-      const vscode = vscodeGlobalStorage()
-      const vscodeSkills = path.join(vscode, "skills")
-      if (await Filesystem.isDir(vscodeSkills)) {
-        directories.push(vscode) // Return parent, not skills/
       }
     }
 
