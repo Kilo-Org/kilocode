@@ -29,7 +29,7 @@ import { ProjectID } from "../../src/project/schema"
 import { Filesystem } from "@/util/filesystem"
 import { ConfigPlugin } from "@/config/plugin"
 import { Npm } from "@opencode-ai/core/npm"
-import { toIndexingConfigInput } from "@kilocode/kilo-indexing/config"
+import { toIndexingConfigInput } from "@kilocode/kilo-indexing/config" // kilocode_change
 
 const emptyAccount = Layer.mock(Account.Service)({
   active: () => Effect.succeed(Option.none()),
@@ -244,6 +244,7 @@ test("updates global config and omits empty shell key in jsonc", async () => {
   }
 })
 
+// kilocode_change start
 test("does not inherit global indexing enabled into project config", async () => {
   await using globalTmp = await tmpdir()
   await using tmp = await tmpdir()
@@ -275,6 +276,7 @@ test("does not inherit global indexing enabled into project config", async () =>
     await clear(true)
   }
 })
+// kilocode_change end
 
 test("loads formatter boolean config", async () => {
   await using tmp = await tmpdir({
