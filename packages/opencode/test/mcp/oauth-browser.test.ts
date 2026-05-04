@@ -14,10 +14,15 @@ void mock.module("open", () => ({
     // Return a mock subprocess that emits an error if openShouldFail is true
     const subprocess = new EventEmitter()
     if (openShouldFail) {
-      // Emit error asynchronously like a real subprocess would
-      setTimeout(() => {
-        subprocess.emit("error", new Error("spawn xdg-open ENOENT"))
-      }, 10)
+      // kilocode_change start - emit after the consumer attaches its error
+      // listener. The previous setTimeout(10) raced listener attachment on
+      // slow Windows CI, losing the error and leaving BrowserOpenFailed
+      // unpublished.
+      subprocess.once("newListener", (event) => {
+        if (event !== "error") return
+        queueMicrotask(() => subprocess.emit("error", new Error("spawn xdg-open ENOENT")))
+      })
+      // kilocode_change end
     }
     return subprocess
   },
