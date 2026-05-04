@@ -359,13 +359,11 @@ const AgentManagerContent: Component = () => {
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
-  // Full-screen review state (in-memory, per sidebar context: local/worktree)
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
   const markdown = createMarkdownRender(vscode)
-
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
 
@@ -3104,7 +3102,8 @@ const AgentManagerContent: Component = () => {
                         sessionKey={diffSessionKey()}
                         diffStyle={reviewDiffStyle()}
                         onDiffStyleChange={setSharedDiffStyle}
-                        markdownRender={markdown.render()} onMarkdownRenderChange={markdown.update}
+                        markdownRender={markdown.render()}
+                        onMarkdownRenderChange={markdown.update}
                         comments={reviewComments()}
                         onCommentsChange={setReviewCommentsForSelection}
                         onClose={() => setSidePanel(null)}
@@ -3138,7 +3137,8 @@ const AgentManagerContent: Component = () => {
                   onSendAll={closeReviewTab}
                   diffStyle={reviewDiffStyle()}
                   onDiffStyleChange={setSharedDiffStyle}
-                  markdownRender={markdown.render()} onMarkdownRenderChange={markdown.update}
+                  markdownRender={markdown.render()}
+                  onMarkdownRenderChange={markdown.update}
                   onRequestDiff={requestDiffFile}
                   onOpenFile={(file, line) => {
                     const id = currentDiffSessionId()

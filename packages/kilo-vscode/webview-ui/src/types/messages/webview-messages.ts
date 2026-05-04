@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation } from "./agent-manager"
+import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -750,6 +750,36 @@ export interface OpenDiffVirtualRequest {
   initialDiffStyle: "unified" | "split"
 }
 
+export interface DiffViewerSendCommentsRequest {
+  type: "diffViewer.sendComments"
+  comments: ReviewComment[]
+  autoSend: boolean
+}
+
+export interface DiffViewerSetDiffStyleRequest {
+  type: "diffViewer.setDiffStyle"
+  style: "unified" | "split"
+}
+
+export interface DiffViewerSetMarkdownRenderRequest {
+  type: "diffViewer.setMarkdownRender"
+  render: boolean
+}
+
+export interface DiffViewerRevertFileRequest {
+  type: "diffViewer.revertFile"
+  file: string
+}
+
+export interface DiffViewerCloseRequest {
+  type: "diffViewer.close"
+}
+
+export interface DiffVirtualSetMarkdownRenderRequest {
+  type: "diffVirtual.setMarkdownRender"
+  render: boolean
+}
+
 export interface RetryConnectionRequest {
   type: "retryConnection"
 }
@@ -1080,6 +1110,12 @@ export type WebviewMessage =
   | EnhancePromptRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
+  | DiffViewerSendCommentsRequest
+  | DiffViewerSetDiffStyleRequest
+  | DiffViewerSetMarkdownRenderRequest
+  | DiffViewerRevertFileRequest
+  | DiffViewerCloseRequest
+  | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest

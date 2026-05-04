@@ -14,11 +14,11 @@ import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
 import { LanguageProvider } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
-import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
+import type { ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 
 type DiffStyle = "unified" | "split"
 
-const post = (message: Record<string, unknown>) => getVSCodeAPI().postMessage(message as never)
+const post = (message: WebviewMessage) => getVSCodeAPI().postMessage(message)
 
 const DiffViewerContent: Component = () => {
   const vscode = useVSCode()
