@@ -1,11 +1,13 @@
 ---
 name: kilocode-merge-minimizer
-description: Use when changing shared upstream-owned files, editing or reviewing `kilocode_change` markers, resolving upstream merge conflicts, or moving Kilo-specific behavior into Kilo-owned code to reduce future merge conflicts.
+description: Use when changing shared upstream-owned files, editing or reviewing `kilocode_change` markers, or moving additive Kilo-specific behavior into Kilo-owned code to reduce future merge conflicts.
 ---
 
 # Kilo Merge Minimizer
 
-Use this skill whenever a task touches shared upstream-owned code and includes Kilo-specific behavior, especially for upstream merges, conflict resolution, marker cleanup, extraction work, or `kilocode_change` annotations.
+Use this skill whenever a normal development task touches shared upstream-owned code and includes Kilo-specific behavior, especially for marker cleanup, extraction work, or `kilocode_change` annotations.
+
+Do not use this as the primary guide for upstream merge resolution. Upstream merges have their own instructions and should not duplicate that workflow here.
 
 ## Goal
 
@@ -23,14 +25,24 @@ For changes to existing upstream behavior, prefer the smallest in-place shared-f
 ## Core Rules
 
 - Use `script/check-opencode-annotations.ts` as the source of truth for current shared scopes and exempt paths.
+- Use `script/upstream/fix-kilocode-markers.ts` for stale or broad markers, inspecting `--dry-run` output before applying changes.
 - Treat upstream-owned files as shared unless the checker or repo ownership rules exempt them.
 - Put Kilo-owned UI, CLI, runtime logic, and tests in Kilo-owned paths where practical.
 - Avoid adding Kilo business logic directly to shared files.
 - Keep shared-file edits as close as possible to upstream shape.
 - Do not change shared files unless the change is required for Kilo functionality, fixes a Kilo bug, or is a minimal targeted upstream-quality fix.
-- Do not refactor, rename, reformat, split files, extract helpers, or reorganize imports in shared files just to improve readability or make Kilo extraction cleaner.
 - Do not create a large Kilo-only fork for a general upstream-quality improvement. Prefer a minimal targeted fix, or leave the broader change for upstream.
 - Do not duplicate upstream logic unless there is a concrete reason. If duplication is unavoidable, isolate the Kilo delta and keep the upstream dependency obvious.
+
+## Shared File Structure
+
+- Do not refactor, rename, split files, or extract helpers in shared files just to improve readability or make Kilo extraction cleaner.
+- Avoid structural changes that make upstream behavior harder to compare or hide semantic dependency on upstream code.
+
+## Shared File Style
+
+- Preserve upstream formatting and import style in shared files, even when it differs from Kilo style.
+- Put Kilo-only imports on separate marked lines instead of reorganizing upstream imports.
 
 ## Decision Rules
 
@@ -48,6 +60,7 @@ Keep the change inline when:
 - Extraction would reshape upstream code more than the Kilo change itself.
 - The change modifies an upstream algorithm, ordering, heuristic, control flow, or bug fix.
 - Extraction would duplicate upstream logic or hide semantic dependency on upstream behavior.
+- The Kilo helper closes over upstream-local state. Keep closure-scoped helpers inline and contiguous in one narrow marker block.
 - The shared file owns the only route table, enum, schema, switch, or registry where the hook must exist.
 - The change restores upstream shape or removes a stale Kilo divergence.
 
@@ -69,16 +82,6 @@ registerKiloFeature(app)
 - Do not add markers in checker-exempt Kilo-owned paths.
 - Remove stale markers when upstream already contains the behavior or when touching Kilo-owned files that still have old markers.
 - Use `// kilocode_change - new file` only for unavoidable new Kilo-specific files inside shared upstream paths.
-
-## Conflict Review
-
-When resolving upstream merges or reviewing existing Kilo diffs, classify each change:
-
-1. Upstream behavior imported as-is. Do not create a Kilo-only fix unless Kilo-specific behavior breaks or there is an explicit product decision.
-2. Kilo behavior lost during conflict resolution. Reapply it through the smallest hook, preferably backed by Kilo-owned logic.
-3. Upstream converged with old Kilo behavior. Remove stale markers and prefer upstream code.
-
-Use `git blame`, upstream commits, the change that introduced the marker, and current review context to decide which case applies.
 
 ## Tests
 
