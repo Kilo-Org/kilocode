@@ -1,14 +1,16 @@
 [data-component="markdown"] {
   [data-component="markdown-code"][data-kind="mermaid"] {
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 6px;
+    background: var(--surface-base);
     overflow: hidden;
   }
 
   [data-component="markdown-mermaid"] {
-    margin: 12px 0 32px;
+    margin: 0;
     padding: 12px;
-    border: 0.5px solid var(--border-weak-base);
-    border-radius: 6px;
-    background: var(--surface-base);
+    border: 0;
+    background: transparent;
     overflow: auto;
   }
 

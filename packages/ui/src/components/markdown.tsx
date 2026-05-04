@@ -457,9 +457,9 @@ export function Markdown(
 
   // kilocode_change start: Mermaid diagram rendering
   function kickMermaid(container: HTMLDivElement, streaming: boolean) {
-    if (!hasMermaid(container)) return
     mermaidState.signal.aborted = true
     mermaidState.gen++
+    if (!hasMermaid(container)) return
     if (streaming) return
 
     const gen = mermaidState.gen
