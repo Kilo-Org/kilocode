@@ -16,7 +16,7 @@ export function normalizeEnhancePromptErrorMessage(raw: string): string {
   const details = base === "Failed to enhance prompt" ? "" : ` Provider response: ${base}`
   return (
     "Enhance Prompt failed due to provider quota/billing limits. " +
-    "Check API billing/quota for the selected provider profile (API quota is separate from ChatGPT subscription), then retry." +
+    "Check your provider account billing/quota and API access, then retry." +
     details
   )
 }
