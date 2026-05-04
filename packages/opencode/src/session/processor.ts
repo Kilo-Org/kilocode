@@ -448,8 +448,8 @@ export const layer: Layer.Layer<
               tokens: usage.tokens,
               cost: usage.cost,
             })
-            // kilocode_change start - surface local reasoning models that hit length before producing output
-            const warn = KiloSessionProcessor.reasoningLengthWarning({ msg: ctx.assistantMessage, step: ctx.step })
+            // kilocode_change start - surface output limit stops, with a stronger message for reasoning-only stops
+            const warn = KiloSessionProcessor.lengthWarning({ msg: ctx.assistantMessage, step: ctx.step })
             if (warn) {
               yield* session.updatePart({
                 id: PartID.ascending(),
