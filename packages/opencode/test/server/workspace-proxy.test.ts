@@ -79,16 +79,16 @@ describe("HttpApi workspace proxy", () => {
       const request = HttpServerRequest.fromWeb(
         new Request("http://localhost/test", {
           headers: {
-            "x-opencode-directory": "/secret/path",
-            "x-opencode-workspace": "ws_123",
+            "x-kilo-directory": "/secret/path",
+            "x-kilo-workspace": "ws_123",
             "x-custom": "preserved",
           },
         }),
       )
       yield* HttpApiProxy.http(`${url}/test`, { "x-injected": "extra" }, request)
 
-      expect(forwarded["x-opencode-directory"]).toBeUndefined()
-      expect(forwarded["x-opencode-workspace"]).toBeUndefined()
+      expect(forwarded["x-kilo-directory"]).toBeUndefined()
+      expect(forwarded["x-kilo-workspace"]).toBeUndefined()
       expect(forwarded["x-custom"]).toBe("preserved")
       expect(forwarded["x-injected"]).toBe("extra")
     }),

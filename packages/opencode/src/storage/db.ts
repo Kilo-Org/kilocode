@@ -16,7 +16,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
 
-declare const OPENCODE_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
+declare const KILO_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
 
 export const NotFoundError = NamedError.create(
   "NotFoundError",
@@ -28,16 +28,16 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export function getChannelPath() {
-  if (["latest", "beta", "prod"].includes(InstallationChannel) || Flag.OPENCODE_DISABLE_CHANNEL_DB)
-    return path.join(Global.Path.data, "opencode.db")
+  if (["latest", "beta", "prod"].includes(InstallationChannel) || Flag.KILO_DISABLE_CHANNEL_DB)
+    return path.join(Global.Path.data, "kilo.db")
   const safe = InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
   return path.join(Global.Path.data, `opencode-${safe}.db`)
 }
 
 export const Path = iife(() => {
-  if (Flag.OPENCODE_DB) {
-    if (Flag.OPENCODE_DB === ":memory:" || path.isAbsolute(Flag.OPENCODE_DB)) return Flag.OPENCODE_DB
-    return path.join(Global.Path.data, Flag.OPENCODE_DB)
+  if (Flag.KILO_DB) {
+    if (Flag.KILO_DB === ":memory:" || path.isAbsolute(Flag.KILO_DB)) return Flag.KILO_DB
+    return path.join(Global.Path.data, Flag.KILO_DB)
   }
   return getChannelPath()
 })
@@ -95,15 +95,15 @@ export const Client = lazy(() => {
 
   // Apply schema migrations
   const entries =
-    typeof OPENCODE_MIGRATIONS !== "undefined"
-      ? OPENCODE_MIGRATIONS
+    typeof KILO_MIGRATIONS !== "undefined"
+      ? KILO_MIGRATIONS
       : migrations(path.join(import.meta.dirname, "../../migration"))
   if (entries.length > 0) {
     log.info("applying migrations", {
       count: entries.length,
-      mode: typeof OPENCODE_MIGRATIONS !== "undefined" ? "bundled" : "dev",
+      mode: typeof KILO_MIGRATIONS !== "undefined" ? "bundled" : "dev",
     })
-    if (Flag.OPENCODE_SKIP_MIGRATIONS) {
+    if (Flag.KILO_SKIP_MIGRATIONS) {
       for (const item of entries) {
         item.sql = "select 1;"
       }

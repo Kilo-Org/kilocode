@@ -18,13 +18,13 @@ import { WorkspaceRef } from "../../src/effect/instance-ref"
 
 void Log.init({ print: false })
 
-const originalWorkspaces = Flag.OPENCODE_EXPERIMENTAL_WORKSPACES
-const originalHttpApi = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
+const originalWorkspaces = Flag.KILO_EXPERIMENTAL_WORKSPACES
+const originalHttpApi = Flag.KILO_EXPERIMENTAL_HTTPAPI
 
 function request(path: string, directory: string, init: RequestInit = {}) {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = true
   const headers = new Headers(init.headers)
-  headers.set("x-opencode-directory", directory)
+  headers.set("x-kilo-directory", directory)
   return Server.Default().app.request(path, { ...init, headers })
 }
 
@@ -127,8 +127,8 @@ function eventStreamResponse() {
 
 afterEach(async () => {
   mock.restore()
-  Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = originalWorkspaces
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = originalHttpApi
+  Flag.KILO_EXPERIMENTAL_WORKSPACES = originalWorkspaces
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = originalHttpApi
   await Instance.disposeAll()
   await resetDatabase()
 })
@@ -162,7 +162,7 @@ describe("workspace HttpApi", () => {
   })
 
   test("serves mutation endpoints", async () => {
-    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+    Flag.KILO_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({
       directory: tmp.path,
@@ -201,7 +201,7 @@ describe("workspace HttpApi", () => {
   })
 
   test("routes local workspace requests through the workspace target directory", async () => {
-    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+    Flag.KILO_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true })
     const workspaceDir = path.join(tmp.path, ".workspace-local")
     const workspace = await Instance.provide({
@@ -231,7 +231,7 @@ describe("workspace HttpApi", () => {
   })
 
   test("proxies remote workspace HTTP requests with sanitized forwarding", async () => {
-    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+    Flag.KILO_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true })
     const proxied: ProxiedRequest[] = []
     const remote = listenRemoteHttp((request) => {
@@ -287,7 +287,7 @@ describe("workspace HttpApi", () => {
         headers: {
           "accept-encoding": "br",
           "content-type": "application/json",
-          "x-opencode-workspace": "internal",
+          "x-kilo-workspace": "internal",
         },
         body: JSON.stringify({ $schema: "https://opencode.ai/config.json" }),
       })
@@ -309,8 +309,8 @@ describe("workspace HttpApi", () => {
           body: JSON.stringify({ $schema: "https://opencode.ai/config.json" }),
         },
       ])
-      expect(forwarded[0]?.headers).not.toHaveProperty("x-opencode-directory")
-      expect(forwarded[0]?.headers).not.toHaveProperty("x-opencode-workspace")
+      expect(forwarded[0]?.headers).not.toHaveProperty("x-kilo-directory")
+      expect(forwarded[0]?.headers).not.toHaveProperty("x-kilo-workspace")
     } finally {
       remote.stop(true)
       await Workspace.remove(workspace.id)
@@ -318,7 +318,7 @@ describe("workspace HttpApi", () => {
   })
 
   test("proxies remote workspace requests selected from session ownership", async () => {
-    Flag.OPENCODE_EXPERIMENTAL_WORKSPACES = true
+    Flag.KILO_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true })
     const proxied: ProxiedRequest[] = []
     const remote = listenRemoteHttp((request) => {

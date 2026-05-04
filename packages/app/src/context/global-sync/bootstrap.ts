@@ -1,6 +1,6 @@
 import type {
   Config,
-  OpencodeClient,
+  KiloClient,
   Path,
   PermissionRequest,
   Project,
@@ -9,7 +9,7 @@ import type {
   QuestionRequest,
   Session,
   Todo,
-} from "@opencode-ai/sdk/v2/client"
+} from "@kilocode/sdk/v2/client"
 import { showToast } from "@opencode-ai/ui/toast"
 import { getFilename } from "@opencode-ai/core/util/path"
 import { retry } from "@opencode-ai/core/util/retry"
@@ -84,8 +84,8 @@ function showErrors(input: {
 }
 
 export const loadGlobalConfigQuery = (
-  sdk?: OpencodeClient,
-  transform?: (x: Awaited<ReturnType<OpencodeClient["global"]["config"]["get"]>>) => void,
+  sdk?: KiloClient,
+  transform?: (x: Awaited<ReturnType<KiloClient["global"]["config"]["get"]>>) => void,
 ) =>
   queryOptions({
     queryKey: ["config"],
@@ -101,8 +101,8 @@ export const loadGlobalConfigQuery = (
   })
 
 export const loadProjectsQuery = (
-  sdk?: OpencodeClient,
-  transform?: (x: Awaited<ReturnType<OpencodeClient["project"]["list"]>>["data"]) => void,
+  sdk?: KiloClient,
+  transform?: (x: Awaited<ReturnType<KiloClient["project"]["list"]>>["data"]) => void,
 ) =>
   queryOptions({
     queryKey: ["project"],
@@ -124,7 +124,7 @@ export const loadProjectsQuery = (
   })
 
 export async function bootstrapGlobal(input: {
-  globalSDK: OpencodeClient
+  globalSDK: KiloClient
   requestFailedTitle: string
   translate: (key: string, vars?: Record<string, string | number>) => string
   formatMoreCount: (count: number) => string
@@ -181,7 +181,7 @@ function warmSessions(input: {
   ids: string[]
   store: Store<State>
   setStore: SetStoreFunction<State>
-  sdk: OpencodeClient
+  sdk: KiloClient
 }) {
   const known = new Set(input.store.session.map((item) => item.id))
   const ids = [...new Set(input.ids)].filter((id) => !!id && !known.has(id))
@@ -197,7 +197,7 @@ function warmSessions(input: {
   ).then(() => undefined)
 }
 
-export const loadProvidersQuery = (directory: string | null, sdk?: OpencodeClient) =>
+export const loadProvidersQuery = (directory: string | null, sdk?: KiloClient) =>
   queryOptions({
     queryKey: [directory, "providers"],
     queryFn: sdk ? () => retry(() => sdk.provider.list().then((x) => normalizeProviderList(x.data!))) : skipToken,
@@ -205,8 +205,8 @@ export const loadProvidersQuery = (directory: string | null, sdk?: OpencodeClien
 
 export const loadAgentsQuery = (
   directory: string | null,
-  sdk?: OpencodeClient,
-  transform?: (x: Awaited<ReturnType<OpencodeClient["app"]["agents"]>>) => void,
+  sdk?: KiloClient,
+  transform?: (x: Awaited<ReturnType<KiloClient["app"]["agents"]>>) => void,
 ) =>
   queryOptions({
     queryKey: [directory, "agents"],
@@ -223,8 +223,8 @@ export const loadAgentsQuery = (
 
 export const loadPathQuery = (
   directory: string | null,
-  sdk?: OpencodeClient,
-  transform?: (x: Awaited<ReturnType<OpencodeClient["path"]["get"]>>) => void,
+  sdk?: KiloClient,
+  transform?: (x: Awaited<ReturnType<KiloClient["path"]["get"]>>) => void,
 ) =>
   queryOptions<Path>({
     queryKey: [directory, "path"],
@@ -241,7 +241,7 @@ export const loadPathQuery = (
 
 export async function bootstrapDirectory(input: {
   directory: string
-  sdk: OpencodeClient
+  sdk: KiloClient
   store: Store<State>
   setStore: SetStoreFunction<State>
   vcsCache: VcsCache

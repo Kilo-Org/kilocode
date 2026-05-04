@@ -49,7 +49,7 @@ test("installs plugin without loading it", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  process.env.KILO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
   const config: TuiConfig.Info = {
     plugin: [],
     plugin_origins: undefined,
@@ -82,6 +82,6 @@ test("installs plugin without loading it", async () => {
     await TuiPluginRuntime.dispose()
     cwd.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.KILO_PLUGIN_META_FILE
   }
 })

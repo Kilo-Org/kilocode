@@ -17,7 +17,7 @@ import { FileIgnore } from "./ignore"
 import { Protected } from "./protected"
 import * as Log from "@opencode-ai/core/util/log"
 
-declare const OPENCODE_LIBC: string | undefined
+declare const KILO_LIBC: string | undefined
 
 const log = Log.create({ service: "file.watcher" })
 const SUBSCRIBE_TIMEOUT_MS = 10_000
@@ -35,7 +35,7 @@ export const Event = {
 const watcher = lazy((): typeof import("@parcel/watcher") | undefined => {
   try {
     const binding = require(
-      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${OPENCODE_LIBC || "glibc"}` : ""}`,
+      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${KILO_LIBC || "glibc"}` : ""}`,
     )
     return createWrapper(binding) as typeof import("@parcel/watcher")
   } catch (error) {
@@ -74,7 +74,7 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("FileWatcher.state")(
         function* () {
-          if (yield* Flag.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER) return
+          if (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER) return
 
           log.info("init", { directory: Instance.directory })
 
@@ -121,7 +121,7 @@ export const layer = Layer.effect(
           const cfg = yield* config.get()
           const cfgIgnores = cfg.watcher?.ignore ?? []
 
-          if (yield* Flag.OPENCODE_EXPERIMENTAL_FILEWATCHER) {
+          if (yield* Flag.KILO_EXPERIMENTAL_FILEWATCHER) {
             yield* subscribe(Instance.directory, [
               ...FileIgnore.PATTERNS,
               ...cfgIgnores,

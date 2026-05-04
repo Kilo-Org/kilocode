@@ -490,7 +490,7 @@ export const SettingsGeneral: Component = () => {
           description={
             <>
               {language.t("settings.general.row.theme.description")}{" "}
-              <Link href="https://opencode.ai/docs/themes/">{language.t("common.learnMore")}</Link>
+              <Link href="https://kilo.ai/docs/themes/">{language.t("common.learnMore")}</Link>
             </>
           }
         >
@@ -774,7 +774,7 @@ export const SettingsGeneral: Component = () => {
           </div>
         </Show>
 
-        <Show when={desktop() && import.meta.env.VITE_OPENCODE_CHANNEL === "beta"}>
+        <Show when={desktop() && import.meta.env.VITE_KILO_CHANNEL === "beta"}>
           <AdvancedSection />
         </Show>
       </div>

@@ -13,10 +13,10 @@ import { tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
-const original = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
+const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 
 function app() {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = true
   return Server.Default().app
 }
 
@@ -31,7 +31,7 @@ async function expectTrue(path: string, headers: Record<string, string>, body?: 
 }
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = original
   await Instance.disposeAll()
   await resetDatabase()
 })
@@ -48,7 +48,7 @@ describe("tui HttpApi bridge", () => {
 
   test("serves TUI command and event routes through experimental Effect routes", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
-    const headers = { "x-opencode-directory": tmp.path }
+    const headers = { "x-kilo-directory": tmp.path }
 
     await expectTrue(TuiPaths.appendPrompt, headers, { text: "hello" })
     await expectTrue(TuiPaths.openHelp, headers)
@@ -75,7 +75,7 @@ describe("tui HttpApi bridge", () => {
   test("serves TUI control queue through experimental Effect routes", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const pending = callTui({ req: { json: async () => ({ value: 1 }), path: "/demo" } } as unknown as Context)
-    const headers = { "x-opencode-directory": tmp.path }
+    const headers = { "x-kilo-directory": tmp.path }
 
     const next = await app().request(TuiPaths.controlNext, { headers })
     expect(next.status).toBe(200)

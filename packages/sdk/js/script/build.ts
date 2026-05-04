@@ -9,7 +9,7 @@ import path from "path"
 
 import { createClient } from "@hey-api/openapi-ts"
 
-const openapiSource = process.env.OPENCODE_SDK_OPENAPI === "httpapi" ? "httpapi" : "hono"
+const openapiSource = process.env.KILO_SDK_OPENAPI === "httpapi" ? "httpapi" : "hono"
 const opencode = path.resolve(dir, "../../opencode")
 
 if (openapiSource === "httpapi") {
@@ -32,7 +32,7 @@ await createClient({
     },
     {
       name: "@hey-api/sdk",
-      instance: "OpencodeClient",
+      instance: "KiloClient",
       exportFromIndex: false,
       auth: false,
       paramsStructure: "flat",

@@ -12,13 +12,13 @@ Plan for replacing instance Hono route implementations with Effect `HttpApi` whi
 
 ## Current State
 
-- `OPENCODE_EXPERIMENTAL_HTTPAPI` gates the bridge. Default behavior still uses Hono.
+- `KILO_EXPERIMENTAL_HTTPAPI` gates the bridge. Default behavior still uses Hono.
 - The bridge mounts selected paths in `server/routes/instance/index.ts` before legacy Hono routes.
 - Legacy Hono routes remain for default behavior and for `hono-openapi` SDK generation.
 - `HttpApi` auth is independent of Hono auth.
 - `Authorization` is attached in each route module, not centrally wrapped in `server.ts`.
 - Auth supports Basic auth and the legacy `auth_token` query parameter through `HttpApiSecurity.apiKey`.
-- Instance context is provided by `httpapi/server.ts` using `directory`, `workspace`, and `x-opencode-directory`.
+- Instance context is provided by `httpapi/server.ts` using `directory`, `workspace`, and `x-kilo-directory`.
 - `Observability.layer` is provided in the Effect route layer and deduplicated through the shared `memoMap`.
 
 ## Migration Rules
@@ -36,7 +36,7 @@ Use this checklist for each small HttpApi migration PR:
 
 1. Read the legacy Hono route and copy behavior exactly, including default values, headers, operation IDs, response schemas, and status codes.
 2. Put the new `HttpApiGroup`, route paths, DTO schemas, and handlers in `src/server/routes/instance/httpapi/*`.
-3. Mount the new paths in `src/server/routes/instance/index.ts` only inside the `OPENCODE_EXPERIMENTAL_HTTPAPI` block.
+3. Mount the new paths in `src/server/routes/instance/index.ts` only inside the `KILO_EXPERIMENTAL_HTTPAPI` block.
 4. Use `InstanceState.context` / `InstanceState.directory` inside HttpApi handlers instead of `Instance.directory`, `Instance.worktree`, or `Instance.project` ALS globals.
 5. Reuse existing services directly. If a service returns plain objects, use `Schema.Struct`; use `Schema.Class` only when handlers return actual class instances.
 6. Keep legacy Hono routes and `.zod` compatibility in place for SDK/OpenAPI generation.
@@ -48,7 +48,7 @@ Use this checklist for each small HttpApi migration PR:
 Use this checklist before deleting any Hono route implementation. A route being `bridged` is not enough.
 
 1. `HttpApi` parity is complete for the route path, method, auth behavior, query parameters, request body, response status, response headers, and error status.
-2. The route is mounted by default, not only behind `OPENCODE_EXPERIMENTAL_HTTPAPI`.
+2. The route is mounted by default, not only behind `KILO_EXPERIMENTAL_HTTPAPI`.
 3. If a fallback flag exists, tests cover both the default `HttpApi` path and the fallback Hono path until the fallback is removed.
 4. OpenAPI generation uses the Effect `HttpApi` route as the source for that path.
 5. Generated SDK output is unchanged from the Hono-generated contract, or the SDK diff is intentionally reviewed and accepted.
@@ -85,7 +85,7 @@ Before porting more routes, cover the bridge behavior that every route depends o
 
 - Add tests that hit the Hono-mounted `HttpApi` bridge, not just `HttpApiBuilder.layer` directly.
 - Cover auth disabled, Basic auth success, `auth_token` success, missing credentials, and bad credentials.
-- Cover `directory` and `x-opencode-directory` instance selection.
+- Cover `directory` and `x-kilo-directory` instance selection.
 - Verify generated SDK output remains unchanged for non-SDK work.
 - Fix or remove any implemented-but-unmounted `HttpApi` groups.
 
@@ -374,7 +374,7 @@ Prefer smaller PRs from here so route behavior and SDK/OpenAPI fallout stays rev
 ## Checklist
 
 - [x] Add first `HttpApi` JSON route slices.
-- [x] Bridge selected `HttpApi` routes into Hono behind `OPENCODE_EXPERIMENTAL_HTTPAPI`.
+- [x] Bridge selected `HttpApi` routes into Hono behind `KILO_EXPERIMENTAL_HTTPAPI`.
 - [x] Reuse existing Effect services in handlers.
 - [x] Provide auth, instance lookup, and observability in the Effect route layer.
 - [x] Attach auth middleware in route modules.

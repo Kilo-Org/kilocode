@@ -16,10 +16,10 @@ import { it } from "../lib/effect"
 
 void Log.init({ print: false })
 
-const original = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
+const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 
 function app() {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = true
   return Server.Default().app
 }
 
@@ -98,7 +98,7 @@ function withTmp<A, E, R>(
 }
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = original
   await Instance.disposeAll()
   await resetDatabase()
 })
@@ -108,7 +108,7 @@ describe("session HttpApi", () => {
     "serves read routes through Hono bridge",
     withTmp({ git: true, config: { formatter: false, lsp: false } }, (tmp) =>
       Effect.gen(function* () {
-        const headers = { "x-opencode-directory": tmp.path }
+        const headers = { "x-kilo-directory": tmp.path }
         const parent = yield* createSession(tmp.path, { title: "parent" })
         const child = yield* createSession(tmp.path, { title: "child", parentID: parent.id })
         const message = yield* createTextMessage(tmp.path, parent.id, "hello")
@@ -171,7 +171,7 @@ describe("session HttpApi", () => {
     "serves lifecycle mutation routes through Hono bridge",
     withTmp({ git: true, config: { formatter: false, lsp: false, share: "disabled" } }, (tmp) =>
       Effect.gen(function* () {
-        const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
+        const headers = { "x-kilo-directory": tmp.path, "content-type": "application/json" }
 
         const createdEmpty = yield* requestJson<Session.Info>(SessionPaths.create, {
           method: "POST",
@@ -221,7 +221,7 @@ describe("session HttpApi", () => {
     "serves message mutation routes through Hono bridge",
     withTmp({ git: true, config: { formatter: false, lsp: false } }, (tmp) =>
       Effect.gen(function* () {
-        const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
+        const headers = { "x-kilo-directory": tmp.path, "content-type": "application/json" }
         const session = yield* createSession(tmp.path, { title: "messages" })
         const first = yield* createTextMessage(tmp.path, session.id, "first")
         const second = yield* createTextMessage(tmp.path, session.id, "second")
@@ -265,7 +265,7 @@ describe("session HttpApi", () => {
     "serves remaining non-LLM session mutation routes through Hono bridge",
     withTmp({ git: true, config: { formatter: false, lsp: false } }, (tmp) =>
       Effect.gen(function* () {
-        const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
+        const headers = { "x-kilo-directory": tmp.path, "content-type": "application/json" }
         const session = yield* createSession(tmp.path, { title: "remaining" })
 
         expect(

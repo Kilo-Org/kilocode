@@ -14,11 +14,11 @@ import { tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
-const original = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
+const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 const testWorktreeMutations = process.platform === "win32" ? test.skip : test
 
 function app() {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = true
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = true
   return Server.Default().app
 }
 
@@ -49,7 +49,7 @@ async function waitReady(directory: string) {
 }
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = original
   await Instance.disposeAll()
   await resetDatabase()
 })
@@ -70,7 +70,7 @@ describe("experimental HttpApi", () => {
       },
     })
 
-    const headers = { "x-opencode-directory": tmp.path }
+    const headers = { "x-kilo-directory": tmp.path }
     const [consoleState, consoleOrgs, toolList, toolIDs, worktrees, resources] = await Promise.all([
       app().request(ExperimentalPaths.console, { headers }),
       app().request(ExperimentalPaths.consoleOrgs, { headers }),
@@ -126,7 +126,7 @@ describe("experimental HttpApi", () => {
 
     const switched = await app().request(ExperimentalPaths.consoleSwitch, {
       method: "POST",
-      headers: { "x-opencode-directory": tmp.path, "content-type": "application/json" },
+      headers: { "x-kilo-directory": tmp.path, "content-type": "application/json" },
       body: JSON.stringify({ accountID: "account-test", orgID: "org-test" }),
     })
 
@@ -147,7 +147,7 @@ describe("experimental HttpApi", () => {
       fn: async () => createSession({ title: "page-two" }),
     })
 
-    const headers = { "x-opencode-directory": tmp.path }
+    const headers = { "x-kilo-directory": tmp.path }
     const page = await app().request(
       `${ExperimentalPaths.session}?${new URLSearchParams({ directory: tmp.path, limit: "1" })}`,
       { headers },
@@ -174,7 +174,7 @@ describe("experimental HttpApi", () => {
   testWorktreeMutations("serves worktree mutations through Hono bridge", async () => {
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
 
-    const headers = { "x-opencode-directory": tmp.path, "content-type": "application/json" }
+    const headers = { "x-kilo-directory": tmp.path, "content-type": "application/json" }
     const created = await app().request(ExperimentalPaths.worktree, {
       method: "POST",
       headers,

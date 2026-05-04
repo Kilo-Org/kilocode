@@ -21,7 +21,7 @@ const app = (upgrade: UpgradeWebSocket) =>
   new Hono().get(
     "/__workspace_ws",
     upgrade((c) => {
-      const url = c.req.header("x-opencode-proxy-url")
+      const url = c.req.header("x-kilo-proxy-url")
       const queue: Msg[] = []
       let remote: WebSocket | undefined
       return {
@@ -128,7 +128,7 @@ export function websocket(
   proxy.pathname = "/__workspace_ws"
   proxy.search = ""
   const next = new Headers(req.headers)
-  next.set("x-opencode-proxy-url", ProxyUtil.websocketTargetURL(target))
+  next.set("x-kilo-proxy-url", ProxyUtil.websocketTargetURL(target))
   for (const [key, value] of new Headers(extra).entries()) {
     next.set(key, value)
   }

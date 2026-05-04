@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/app",
-  "version": "1.14.30",
+  "version": "7.2.34",
   "description": "",
   "type": "module",
   "exports": {
@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
-    "@opencode-ai/sdk": "workspace:*",
+    "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@opencode-ai/core": "workspace:*",
     "@shikijs/transformers": "3.9.2",
@@ -72,6 +72,9 @@
     "solid-list": "catalog:",
     "tailwindcss": "catalog:",
     "virtua": "catalog:",
-    "zod": "catalog:"
-  }
+    "zod": "catalog:",
+    "@kilocode/kilo-ui": "workspace:*",
+    "@kilocode/kilo-i18n": "workspace:*"
+  },
+  "peerDependencies": {}
 }

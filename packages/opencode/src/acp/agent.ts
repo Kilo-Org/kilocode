@@ -48,7 +48,7 @@ import { ConfigMCP } from "@/config/mcp"
 import { Todo } from "@/session/todo"
 import { Result, Schema } from "effect"
 import { LoadAPIKeyError } from "ai"
-import type { AssistantMessage, Event, OpencodeClient, SessionMessageResponse, ToolPart } from "@opencode-ai/sdk/v2"
+import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
@@ -61,7 +61,7 @@ const DEFAULT_VARIANT_VALUE = "default"
 const log = Log.create({ service: "acp-agent" })
 
 async function getContextLimit(
-  sdk: OpencodeClient,
+  sdk: KiloClient,
   providerID: ProviderID,
   modelID: ModelID,
   directory: string,
@@ -81,7 +81,7 @@ async function getContextLimit(
 
 async function sendUsageUpdate(
   connection: AgentSideConnection,
-  sdk: OpencodeClient,
+  sdk: KiloClient,
   sessionID: string,
   directory: string,
 ): Promise<void> {
@@ -129,7 +129,7 @@ async function sendUsageUpdate(
     })
 }
 
-export async function init({ sdk: _sdk }: { sdk: OpencodeClient }) {
+export async function init({ sdk: _sdk }: { sdk: KiloClient }) {
   return {
     create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
       return new Agent(connection, fullConfig)
@@ -140,7 +140,7 @@ export async function init({ sdk: _sdk }: { sdk: OpencodeClient }) {
 export class Agent implements ACPAgent {
   private connection: AgentSideConnection
   private config: ACPConfig
-  private sdk: OpencodeClient
+  private sdk: KiloClient
   private sessionManager: ACPSessionManager
   private eventAbort = new AbortController()
   private eventStarted = false

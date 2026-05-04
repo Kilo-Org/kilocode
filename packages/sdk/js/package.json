@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@opencode-ai/sdk",
-  "version": "1.14.30",
+  "name": "@kilocode/sdk",
+  "version": "7.2.34",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -30,5 +30,11 @@
   },
   "dependencies": {
     "cross-spawn": "catalog:"
+  },
+  "peerDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilocode",
+    "directory": "packages/sdk/js"
   }
 }

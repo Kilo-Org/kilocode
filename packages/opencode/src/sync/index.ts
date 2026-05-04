@@ -136,7 +136,7 @@ function process<Def extends Definition>(def: Def, event: Event<Def>, options: {
   Database.transaction((tx) => {
     projector(tx, event.data)
 
-    if (Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+    if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
       tx.insert(EventSequenceTable)
         .values({
           aggregate_id: event.aggregateID,

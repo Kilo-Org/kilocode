@@ -11,7 +11,7 @@ export type Selection = {
 export type Attributes = ReturnType<typeof attributes>
 
 export function select(): Selection {
-  if (Flag.OPENCODE_EXPERIMENTAL_HTTPAPI) return { backend: "effect-httpapi", reason: "env" }
+  if (Flag.KILO_EXPERIMENTAL_HTTPAPI) return { backend: "effect-httpapi", reason: "env" }
   return { backend: "hono", reason: "stable" }
 }
 

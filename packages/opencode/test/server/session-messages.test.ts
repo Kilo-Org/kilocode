@@ -36,13 +36,13 @@ afterEach(async () => {
 
 async function withoutWatcher<T>(fn: () => Promise<T>) {
   if (process.platform !== "win32") return fn()
-  const prev = process.env.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
-  process.env.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER = "true"
+  const prev = process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER
+  process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER = "true"
   try {
     return await fn()
   } finally {
-    if (prev === undefined) delete process.env.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER
-    else process.env.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER = prev
+    if (prev === undefined) delete process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER
+    else process.env.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER = prev
   }
 }
 

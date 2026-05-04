@@ -129,7 +129,7 @@ export const Vue: Info = {
     let binary = which("vue-language-server")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("@vue/language-server")
       if (!resolved) return
       binary = resolved
@@ -160,7 +160,7 @@ export const ESLint: Info = {
     log.info("spawning eslint server")
     const serverPath = path.join(Global.Path.bin, "vscode-eslint", "server", "out", "eslintServer.js")
     if (!(await Filesystem.exists(serverPath))) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading and building VS Code ESLint server")
       const response = await fetch("https://github.com/microsoft/vscode-eslint/archive/refs/heads/main.zip")
       if (!response.ok) return
@@ -354,7 +354,7 @@ export const Gopls: Info = {
     let bin = which("gopls")
     if (!bin) {
       if (!which("go")) return
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
 
       log.info("installing gopls")
       const proc = Process.spawn(["go", "install", "golang.org/x/tools/gopls@latest"], {
@@ -394,7 +394,7 @@ export const Rubocop: Info = {
         log.info("Ruby not found, please install Ruby first")
         return
       }
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("installing rubocop")
       const proc = Process.spawn(["gem", "install", "rubocop", "--bindir", Global.Path.bin], {
         stdout: "pipe",
@@ -432,7 +432,7 @@ export const Ty: Info = {
     "pyrightconfig.json",
   ]),
   async spawn(root) {
-    if (!Flag.OPENCODE_EXPERIMENTAL_LSP_TY) {
+    if (!Flag.KILO_EXPERIMENTAL_LSP_TY) {
       return undefined
     }
 
@@ -489,7 +489,7 @@ export const Pyright: Info = {
     let binary = which("pyright-langserver")
     const args = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("pyright", "pyright-langserver")
       if (!resolved) return
       binary = resolved
@@ -547,7 +547,7 @@ export const ElixirLS: Info = {
           return
         }
 
-        if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading elixir-ls from GitHub releases")
 
         const response = await fetch("https://github.com/elixir-lsp/elixir-ls/archive/refs/heads/master.zip")
@@ -602,7 +602,7 @@ export const Zls: Info = {
         return
       }
 
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading zls from GitHub releases")
 
       const releaseResponse = await fetch("https://api.github.com/repos/zigtools/zls/releases/latest")
@@ -771,7 +771,7 @@ async function installRoslynLanguageServer() {
     return
   }
 
-  if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+  if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
   log.info("installing roslyn-language-server via dotnet tool")
   const proc = Process.spawn(["dotnet", "tool", "install", "--global", "roslyn-language-server", "--prerelease"], {
     stdout: "pipe",
@@ -857,7 +857,7 @@ export const FSharp: Info = {
         return
       }
 
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("installing fsautocomplete via dotnet tool")
       const proc = Process.spawn(["dotnet", "tool", "install", "fsautocomplete", "--tool-path", Global.Path.bin], {
         stdout: "pipe",
@@ -1001,7 +1001,7 @@ export const Clangd: Info = {
       }
     }
 
-    if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+    if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
     log.info("downloading clangd from GitHub releases")
 
     const releaseResponse = await fetch("https://api.github.com/repos/clangd/clangd/releases/latest")
@@ -1116,7 +1116,7 @@ export const Svelte: Info = {
     let binary = which("svelteserver")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("svelte-language-server")
       if (!resolved) return
       binary = resolved
@@ -1150,7 +1150,7 @@ export const Astro: Info = {
     let binary = which("astro-ls")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("@astrojs/language-server")
       if (!resolved) return
       binary = resolved
@@ -1218,7 +1218,7 @@ export const JDTLS: Info = {
     const launcherDir = path.join(distPath, "plugins")
     const installed = await pathExists(launcherDir)
     if (!installed) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("Downloading JDTLS LSP server.")
       await fs.mkdir(distPath, { recursive: true })
       const releaseURL =
@@ -1316,7 +1316,7 @@ export const KotlinLS: Info = {
       process.platform === "win32" ? path.join(distPath, "kotlin-lsp.cmd") : path.join(distPath, "kotlin-lsp.sh")
     const installed = await Filesystem.exists(launcherScript)
     if (!installed) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("Downloading Kotlin Language Server from GitHub.")
 
       const releaseResponse = await fetch("https://api.github.com/repos/Kotlin/kotlin-lsp/releases/latest")
@@ -1401,7 +1401,7 @@ export const YamlLS: Info = {
     let binary = which("yaml-language-server")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("yaml-language-server")
       if (!resolved) return
       binary = resolved
@@ -1435,7 +1435,7 @@ export const LuaLS: Info = {
     let bin = which("lua-language-server")
 
     if (!bin) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading lua-language-server from GitHub releases")
 
       const releaseResponse = await fetch("https://api.github.com/repos/LuaLS/lua-language-server/releases/latest")
@@ -1568,7 +1568,7 @@ export const PHPIntelephense: Info = {
     let binary = which("intelephense")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("intelephense")
       if (!resolved) return
       binary = resolved
@@ -1652,7 +1652,7 @@ export const BashLS: Info = {
     let binary = which("bash-language-server")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("bash-language-server")
       if (!resolved) return
       binary = resolved
@@ -1678,7 +1678,7 @@ export const TerraformLS: Info = {
     let bin = which("terraform-ls")
 
     if (!bin) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading terraform-ls from HashiCorp releases")
 
       const releaseResponse = await fetch("https://api.releases.hashicorp.com/v1/releases/terraform-ls/latest")
@@ -1759,7 +1759,7 @@ export const TexLab: Info = {
     let bin = which("texlab")
 
     if (!bin) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading texlab from GitHub releases")
 
       const response = await fetch("https://api.github.com/repos/latex-lsp/texlab/releases/latest")
@@ -1847,7 +1847,7 @@ export const DockerfileLS: Info = {
     let binary = which("docker-langserver")
     const args: string[] = []
     if (!binary) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       const resolved = await Npm.which("dockerfile-language-server-nodejs")
       if (!resolved) return
       binary = resolved
@@ -1943,7 +1943,7 @@ export const Tinymist: Info = {
     let bin = which("tinymist")
 
     if (!bin) {
-      if (Flag.OPENCODE_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading tinymist from GitHub releases")
 
       const response = await fetch("https://api.github.com/repos/Myriad-Dreamin/tinymist/releases/latest")

@@ -33,18 +33,18 @@ process.env["XDG_DATA_HOME"] = path.join(dir, "share")
 process.env["XDG_CACHE_HOME"] = path.join(dir, "cache")
 process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
-process.env["OPENCODE_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
+process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
 const testHome = path.join(dir, "home")
 await fs.mkdir(testHome, { recursive: true })
-process.env["OPENCODE_TEST_HOME"] = testHome
+process.env["KILO_TEST_HOME"] = testHome
 
 // Set test managed config directory to isolate tests from system managed settings
 const testManagedConfigDir = path.join(dir, "managed")
-process.env["OPENCODE_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
-process.env["OPENCODE_DISABLE_DEFAULT_PLUGINS"] = "true"
+process.env["KILO_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
+process.env["KILO_DISABLE_DEFAULT_PLUGINS"] = "true"
 
 // Write the cache version file to prevent global/index.ts from clearing the cache
 const cacheDir = path.join(dir, "cache", "opencode")
@@ -72,11 +72,11 @@ delete process.env["DEEPSEEK_API_KEY"]
 delete process.env["FIREWORKS_API_KEY"]
 delete process.env["CEREBRAS_API_KEY"]
 delete process.env["SAMBANOVA_API_KEY"]
-delete process.env["OPENCODE_SERVER_PASSWORD"]
-delete process.env["OPENCODE_SERVER_USERNAME"]
+delete process.env["KILO_SERVER_PASSWORD"]
+delete process.env["KILO_SERVER_USERNAME"]
 
 // Use in-memory sqlite
-process.env["OPENCODE_DB"] = ":memory:"
+process.env["KILO_DB"] = ":memory:"
 
 // Now safe to import from src/
 const Log = await import("@opencode-ai/core/util/log")

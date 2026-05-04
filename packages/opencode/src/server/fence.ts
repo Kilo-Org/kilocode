@@ -6,7 +6,7 @@ import { Workspace } from "@/control-plane/workspace"
 import type { WorkspaceID } from "@/control-plane/schema"
 import * as Log from "@opencode-ai/core/util/log"
 
-const HEADER = "x-opencode-sync"
+const HEADER = "x-kilo-sync"
 type State = Record<string, number>
 const log = Log.create({ service: "fence" })
 

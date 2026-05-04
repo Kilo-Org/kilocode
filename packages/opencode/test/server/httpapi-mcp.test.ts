@@ -13,19 +13,19 @@ import { testEffect } from "../lib/effect"
 
 void Log.init({ print: false })
 
-const original = Flag.OPENCODE_EXPERIMENTAL_HTTPAPI
+const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 const context = Context.empty() as Context.Context<unknown>
 const it = testEffect(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer))
 
 function app(experimental: boolean) {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = experimental
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = experimental
   return experimental ? Server.Default().app : Server.Legacy().app
 }
 type TestApp = ReturnType<typeof app>
 
 function request(route: string, directory: string, init?: RequestInit) {
   const headers = new Headers(init?.headers)
-  headers.set("x-opencode-directory", directory)
+  headers.set("x-kilo-directory", directory)
   return ExperimentalHttpApiServer.webHandler().handler(
     new Request(`http://localhost${route}`, {
       ...init,
@@ -75,7 +75,7 @@ const readResponse = Effect.fnUntraced(function* (input: { app: TestApp; path: s
 })
 
 afterEach(async () => {
-  Flag.OPENCODE_EXPERIMENTAL_HTTPAPI = original
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = original
   await Instance.disposeAll()
   await resetDatabase()
 })
@@ -164,7 +164,7 @@ describe("mcp HttpApi", () => {
     "matches legacy unsupported OAuth error responses",
     withMcpProject((dir) =>
       Effect.gen(function* () {
-        const headers = { "x-opencode-directory": dir }
+        const headers = { "x-kilo-directory": dir }
         const legacy = app(false)
         const httpapi = app(true)
 

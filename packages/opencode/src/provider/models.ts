@@ -102,7 +102,7 @@ export const Provider = Schema.Struct({
 export type Provider = Schema.Schema.Type<typeof Provider>
 
 function url() {
-  return Flag.OPENCODE_MODELS_URL || "https://models.dev"
+  return Flag.KILO_MODELS_URL || "https://models.dev"
 }
 
 function fresh() {
@@ -122,16 +122,16 @@ const fetchApi = async () => {
 }
 
 export const Data = lazy(async () => {
-  const result = await Filesystem.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).catch(() => {})
+  const result = await Filesystem.readJson(Flag.KILO_MODELS_PATH ?? filepath).catch(() => {})
   if (result) return result
   // @ts-ignore
   const snapshot = await import("./models-snapshot.js")
     .then((m) => m.snapshot as Record<string, unknown>)
     .catch(() => undefined)
   if (snapshot) return snapshot
-  if (Flag.OPENCODE_DISABLE_MODELS_FETCH) return {}
+  if (Flag.KILO_DISABLE_MODELS_FETCH) return {}
   return Flock.withLock(`models-dev:${filepath}`, async () => {
-    const result = await Filesystem.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).catch(() => {})
+    const result = await Filesystem.readJson(Flag.KILO_MODELS_PATH ?? filepath).catch(() => {})
     if (result) return result
     const result2 = await fetchApi()
     if (result2.ok) {
@@ -163,7 +163,7 @@ export async function refresh(force = false) {
   })
 }
 
-if (!Flag.OPENCODE_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
+if (!Flag.KILO_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
   void refresh()
   setInterval(
     async () => {
