@@ -308,8 +308,16 @@ After running the merge script, you may have remaining conflicts. To resolve:
 3. Review `script/upstream/reports/manual-decisions-<version>.md`; each file
    section shows the original diff3 conflict (ours/base/theirs) that remained
    after automation stopped.
-4. Resolve conflicts, keeping Kilo-specific changes
-5. Record each manual decision with rationale:
+4. From the merge branch worktree, optionally start the project slash command:
+   ```bash
+   kilo run --command upstream-manual-merge v1.1.50
+   ```
+   The command is defined in `.kilo/command/upstream-manual-merge.md` and is
+   discovered from the repository root. It is available when Kilo is started in
+   the merge worktree; it will not appear if Kilo is started from one of the
+   reference worktrees under `.worktrees/opencode-merge/`.
+5. Resolve conflicts, keeping Kilo-specific changes
+6. Record each manual decision with rationale:
    ```bash
    bun script/upstream/decisions.ts add --version v1.1.50 \
      --file packages/opencode/src/config/config.ts \
@@ -321,12 +329,12 @@ After running the merge script, you may have remaining conflicts. To resolve:
      --alternative "keep ours: rejected because upstream validation changes would be lost" \
      --verification "bun turbo typecheck"
    ```
-6. Check the ledger is complete:
+7. Check the ledger is complete:
    ```bash
    git add -A
    bun script/upstream/decisions.ts check --version v1.1.50
    ```
-7. Commit:
+8. Commit:
    ```bash
    git commit -m "resolve merge conflicts"
    ```
@@ -374,6 +382,11 @@ Use `/upstream-manual-merge v1.1.50` after `merge.ts` stops. The command asks
 the agent to inspect the generated ledger, plan the remaining resolutions,
 resolve each conflict, record the rationale with `decisions.ts add`, and finish
 with `decisions.ts check`.
+
+If the command does not appear in Kilo, make sure the active session was started
+from the merge branch worktree that contains `.kilo/command/upstream-manual-merge.md`.
+You can also invoke the same command non-interactively from that directory with
+`kilo run --command upstream-manual-merge v1.1.50`.
 
 ## Rollback
 
