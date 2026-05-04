@@ -742,7 +742,7 @@ export const layer = Layer.effect(
       return mcpConfig
     })
 
-    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string) {
+    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) {
       const mcpConfig = yield* getMcpConfig(mcpName)
       if (!mcpConfig) throw new Error(`MCP server ${mcpName} not found or disabled`)
       if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
@@ -751,8 +751,11 @@ export const layer = Layer.effect(
       // OAuth config is optional - if not provided, we'll use auto-discovery
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
 
-      // Start the callback server with custom redirectUri if configured
-      yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
+      // kilocode_change start - authenticate() defers binding the callback port until a redirect is needed
+      if (opts?.callback !== false) {
+        yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
+      }
+      // kilocode_change end
 
       const oauthState = Array.from(crypto.getRandomValues(new Uint8Array(32)))
         .map((b) => b.toString(16).padStart(2, "0"))
@@ -798,7 +801,7 @@ export const layer = Layer.effect(
     })
 
     const authenticate = Effect.fn("MCP.authenticate")(function* (mcpName: string) {
-      const result = yield* startAuth(mcpName)
+      const result = yield* startAuth(mcpName, { callback: false })
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* getMcpConfig(mcpName)
@@ -819,6 +822,12 @@ export const layer = Layer.effect(
       }
 
       log.info("opening browser for oauth", { mcpName, url: result.authorizationUrl, state: result.oauthState })
+
+      const mcpConfig = yield* getMcpConfig(mcpName)
+      if (!mcpConfig) return { status: "failed", error: "MCP config not found after auth" } as Status
+      if (mcpConfig.type !== "remote") return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
+      const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
+      yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
 
       const callbackPromise = McpOAuthCallback.waitForCallback(result.oauthState, mcpName)
 
