@@ -22,6 +22,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocod
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
 import { ReadPermission } from "@/kilocode/permission/read" // kilocode_change
+import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory" // kilocode_change
 
 const log = Log.create({ service: "permission" })
 
@@ -179,8 +180,9 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
 
 // kilocode_change start
 export function resolve(permission: string, pattern: string, ruleset: Ruleset, ...overrides: Ruleset[]): Rule {
-  const base = ReadPermission.harden(permission, pattern, evaluate(permission, pattern, ruleset))
-  const saved = evaluate(permission, pattern, ...overrides)
+  const evalFn = permission === "external_directory" ? ExternalDirectoryPermission.evaluate : evaluate
+  const base = ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset))
+  const saved = evalFn(permission, pattern, ...overrides)
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
@@ -195,7 +197,7 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
 // kilocode_change start
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
-  return evaluate(permission, pattern, ruleset).action === "deny"
+  return ExternalDirectoryPermission.evaluate(permission, pattern, ruleset).action === "deny"
 }
 
 function subset(permission: string, ruleset: Ruleset) {

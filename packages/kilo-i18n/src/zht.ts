@@ -77,5 +77,14 @@ export const dict = {
   "plan.followup.answer.continue": "在此繼續",
   "plan.followup.answer.continue.description": "在本工作階段中實作計畫",
 
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "快照速度較慢",
+  "snapshot.slowRepo.question": "初始化快照系統耗時較長，可能是由於儲存庫的大小。\n\n是否要為此儲存庫停用快照？",
+  "snapshot.slowRepo.answer.continue": "繼續使用快照",
+  "snapshot.slowRepo.answer.continue.description": "等待快照完成。初始快照建立後，後續回合會很快。",
+  "snapshot.slowRepo.answer.disable": "為此專案停用",
+  "snapshot.slowRepo.answer.disable.description":
+    "關閉本專案的 Kilo 快照。你將失去對 Kilo 變更的撤銷/重做，但 git 仍會追蹤所有內容。",
+
   "ui.messagePart.openInDiffViewer": "在差異檢視器中開啟",
 }

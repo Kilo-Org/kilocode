@@ -1260,7 +1260,24 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     return props.turnDiffSummary
   })
 
+  // Assistant message is still in-flight when `time.completed` hasn't been set.
+  // Used as a render guard for synthetic status parts so stale ones don't
+  // linger in the scrollback after a hard-kill of the host process.
+  const streaming = createMemo(
+    () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
+  )
+
+  // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
+  // guard) are transient status indicators. Hide them once the owning message
+  // stops streaming so a hard-killed turn doesn't leave a stuck spinner line
+  // in the chat history on the next reload.
+  const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
+
   const showCopy = createMemo(() => {
+    // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
+    // guard) are transient status indicators, not assistant output — they
+    // must never carry the copy button.
+    if (part().synthetic) return false
     if (props.message.role !== "assistant") return false
     if (props.showAssistantCopyPartID === null) return false
     return props.showAssistantCopyPartID === part().id
@@ -1304,7 +1321,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   return (
-    <Show when={throttledText()}>
+    <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />

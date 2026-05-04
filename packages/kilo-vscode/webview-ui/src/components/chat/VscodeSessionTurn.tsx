@@ -119,7 +119,11 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     ),
   )
 
-  // Copy part ID — the last text part from the last assistant message
+  // Copy part ID — the last text part from the last assistant message.
+  // Synthetic parts (e.g. "Initializing snapshot…" from the slow-repo guard)
+  // are transient status lines, not assistant output: they must never win
+  // this lookup, otherwise the copy button renders beside the spinner
+  // instead of the real response.
   const showAssistantCopyPartID = createMemo(() => {
     const msgs = assistantMessages()
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -129,6 +133,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       for (let j = msgParts.length - 1; j >= 0; j--) {
         const part = msgParts[j]
         if (!part || part.type !== "text") continue
+        if ((part as SDKPart & { synthetic?: boolean }).synthetic) continue
         if ((part as SDKPart & { text: string }).text?.trim()) return part.id
       }
     }
