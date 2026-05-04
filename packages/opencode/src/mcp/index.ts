@@ -742,7 +742,7 @@ export const layer = Layer.effect(
       return mcpConfig
     })
 
-    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) {
+    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) { // kilocode_change
       const mcpConfig = yield* getMcpConfig(mcpName)
       if (!mcpConfig) throw new Error(`MCP server ${mcpName} not found or disabled`)
       if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
@@ -801,7 +801,7 @@ export const layer = Layer.effect(
     })
 
     const authenticate = Effect.fn("MCP.authenticate")(function* (mcpName: string) {
-      const result = yield* startAuth(mcpName, { callback: false })
+      const result = yield* startAuth(mcpName, { callback: false }) // kilocode_change
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* getMcpConfig(mcpName)
@@ -823,11 +823,29 @@ export const layer = Layer.effect(
 
       log.info("opening browser for oauth", { mcpName, url: result.authorizationUrl, state: result.oauthState })
 
+      // kilocode_change start - bind only after redirect exists, and clean up if binding fails
       const mcpConfig = yield* getMcpConfig(mcpName)
       if (!mcpConfig) return { status: "failed", error: "MCP config not found after auth" } as Status
       if (mcpConfig.type !== "remote") return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
-      yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
+      const err = yield* Effect.tryPromise({
+        try: () => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.match({
+          onFailure: (err) => err,
+          onSuccess: () => undefined,
+        }),
+      )
+      if (err) {
+        const transport = pendingOAuthTransports.get(mcpName)
+        pendingOAuthTransports.delete(mcpName)
+        yield* auth.clearOAuthState(mcpName)
+        yield* auth.clearCodeVerifier(mcpName)
+        yield* Effect.tryPromise(() => transport?.close() ?? Promise.resolve()).pipe(Effect.ignore)
+        return { status: "failed", error: err.message } as Status
+      }
+      // kilocode_change end
 
       const callbackPromise = McpOAuthCallback.waitForCallback(result.oauthState, mcpName)
 

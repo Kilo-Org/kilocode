@@ -1,6 +1,6 @@
 import { test, expect, mock, beforeEach } from "bun:test"
 import { Effect } from "effect"
-import { createServer } from "http"
+import { createServer } from "http" // kilocode_change
 
 // Mock UnauthorizedError to match the SDK's class
 class MockUnauthorizedError extends Error {
@@ -110,6 +110,7 @@ beforeEach(() => {
   connectSucceedsImmediately = false
 })
 
+// kilocode_change start
 async function occupy(port: number) {
   const srv = createServer()
   const bound = await new Promise<boolean>((resolve, reject) => {
@@ -136,12 +137,13 @@ async function occupy(port: number) {
     },
   }
 }
+// kilocode_change end
 
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
 const { Instance } = await import("../../src/project/instance")
 const { tmpdir } = await import("../fixture/fixture")
-const { OAUTH_CALLBACK_PORT } = await import("../../src/mcp/oauth-provider")
+const { OAUTH_CALLBACK_PORT } = await import("../../src/mcp/oauth-provider") // kilocode_change
 
 test("first connect to OAuth server shows needs_auth instead of failed", async () => {
   await using tmp = await tmpdir({
@@ -280,8 +282,10 @@ test("authenticate() stores a connected client when auth completes without redir
       )
     },
   })
+  // kilocode_change start
   await using port = await occupy(OAUTH_CALLBACK_PORT)
   void port
+  // kilocode_change end
 
   await Instance.provide({
     directory: tmp.path,
