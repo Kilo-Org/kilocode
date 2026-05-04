@@ -756,7 +756,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.handlePreviewImage(message.dataUrl, message.filename)
           break
         case "saveImage":
-          return void saveImage(this.getWorkspaceDirectory(this.currentSession?.id), message.dataUrl, message.filename).catch((err) => console.error("[Kilo New] KiloProvider: Failed to save image:", err))
+          return saveImage(this.getWorkspaceDirectory(this.currentSession?.id), message)
         case "openFile":
           if (message.filePath) {
             this.handleOpenFile(message.filePath, message.line, message.column)
