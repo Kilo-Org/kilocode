@@ -414,6 +414,18 @@ function writableGlobal(info: Info) {
   return next
 }
 
+// kilocode_change start
+function stripGlobalIndexing(info: Info): Info {
+  // Indexing provider/storage settings can be global, but enablement is a per-project decision.
+  if (info.indexing?.enabled === undefined) return info
+  const indexing = Object.fromEntries(Object.entries(info.indexing).filter(([key]) => key !== "enabled"))
+  if (Object.keys(indexing).length > 0) return { ...info, indexing }
+  const copy = { ...info }
+  delete copy.indexing
+  return copy
+}
+// kilocode_change end
+
 export const ConfigDirectoryTypoError = NamedError.create(
   "ConfigDirectoryTypoError",
   z.object({
@@ -600,10 +612,12 @@ export const layer = Layer.effect(
           result.plugin_origins = plugins
         })
 
-        const merge = (source: string, next: Info, kind?: ConfigPlugin.Scope) => {
-          result = mergeConfigConcatArrays(result, next)
-          return mergePluginOrigins(source, next.plugin, kind)
-        }
+        const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
+          const scope = kind ?? (yield* pluginScopeForSource(source))
+          const scoped = scope === "global" ? stripGlobalIndexing(next) : next // kilocode_change
+          result = mergeConfigConcatArrays(result, scoped)
+          return yield* mergePluginOrigins(source, scoped.plugin, scope)
+        })
 
         for (const [key, value] of Object.entries(auth)) {
           if (value.type === "wellknown") {
@@ -838,12 +852,13 @@ export const layer = Layer.effect(
         // macOS managed preferences (.mobileconfig deployed via MDM) override everything
         const managed = yield* Effect.promise(() => ConfigManaged.readManagedPreferences())
         if (managed) {
-          result = mergeConfigConcatArrays(
-            result,
+          yield* merge(
+            managed.source,
             yield* loadConfig(managed.text, {
               dir: path.dirname(managed.source),
               source: managed.source,
             }),
+            "global",
           )
         }
 
