@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, Show } from "solid-js"
+import { createEffect, createSignal, on, onCleanup, Show } from "solid-js"
 import type { Component } from "solid-js"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
@@ -75,6 +75,19 @@ const DiffViewerContent: Component = () => {
     post({ type: "selectSource", id })
   }
 
+  // Reset transient UI state when the active source changes. Comments are
+  // discarded without confirmation; diff style goes back to
+  // unified; in-flight revert indicators are cleared. The diffs list itself
+  // is reset by the extension sending `diffs: []` before the new fetch.
+  createEffect(
+    on(currentSourceId, (id, prev) => {
+      if (prev === undefined || id === prev) return
+      setComments([])
+      setDiffStyle("unified")
+      setReverting(new Set())
+    }),
+  )
+
   const handler = (event: MessageEvent) => {
     const msg = event.data
     if (msg?.type !== "appendReviewComments" || !Array.isArray(msg.comments)) return
@@ -95,7 +108,7 @@ const DiffViewerContent: Component = () => {
       <FullScreenDiffView
         diffs={diffs()}
         loading={loading()}
-        sessionKey="local"
+        sessionKey={currentSourceId() ?? "local"}
         comments={comments()}
         onCommentsChange={setComments}
         onSendAll={() => {}}
@@ -112,6 +125,8 @@ const DiffViewerContent: Component = () => {
           post({ type: "diffViewer.revertFile", file })
         }}
         revertingFiles={reverting()}
+        canRevert={capabilities()?.revert ?? true}
+        canComment={capabilities()?.comments ?? true}
         onClose={() => {
           post({ type: "diffViewer.close" })
         }}
