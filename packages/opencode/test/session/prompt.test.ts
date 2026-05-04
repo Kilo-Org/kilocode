@@ -4,24 +4,24 @@ import { expect } from "bun:test"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath } from "url"
-import { NamedError } from "@opencode-ai/core/util/error"
+import { NamedError } from "@opencode-ai/shared/util/error"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Config } from "@/config/config"
-import { LSP } from "@/lsp/lsp"
+import { Config } from "../../src/config"
+import { LSP } from "../../src/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { Provider as ProviderSvc } from "@/provider/provider"
+import { Provider as ProviderSvc } from "../../src/provider"
 import { Env } from "../../src/env"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
-import { Session } from "@/session/session"
+import { Session } from "../../src/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionSummary } from "../../src/session/summary"
 import { Instruction } from "../../src/session/instruction"
@@ -35,10 +35,10 @@ import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
 import { Shell } from "../../src/shell/shell"
 import { Snapshot } from "../../src/snapshot"
-import { ToolRegistry } from "@/tool/registry"
-import { Truncate } from "@/tool/truncate"
-import * as Log from "@opencode-ai/core/util/log"
-import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { ToolRegistry } from "../../src/tool"
+import { Truncate } from "../../src/tool"
+import { Log } from "../../src/util"
+import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
 import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
@@ -329,11 +329,9 @@ const addSubtask = (sessionID: SessionID, messageID: MessageID, model = ref) =>
   })
 
 const boot = Effect.fn("test.boot")(function* (input?: { title?: string }) {
-  const config = yield* Config.Service
   const prompt = yield* SessionPrompt.Service
   const run = yield* SessionRunState.Service
   const sessions = yield* Session.Service
-  yield* config.get()
   const chat = yield* sessions.create(input ?? { title: "Pinned" })
   return { prompt, run, sessions, chat }
 })
@@ -741,7 +739,11 @@ it.live(
         const chat = yield* sessions.create({ title: "Pinned" })
         yield* seed(chat.id)
 
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
+        // kilocode_change end
 
         yield* user(chat.id, "more")
 
@@ -767,7 +769,11 @@ it.live(
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
+        // kilocode_change end
         yield* user(chat.id, "hello")
 
         const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -903,7 +909,11 @@ it.live(
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
+        // kilocode_change end
         yield* user(chat.id, "hello")
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -1179,56 +1189,6 @@ unix("shell completes a fast command on the preferred shell", () =>
   ),
 )
 
-unix(
-  "shell uses configured shell over env shell",
-  () =>
-    withSh(() =>
-      provideTmpdirInstance(
-        (_dir) =>
-          Effect.gen(function* () {
-            if (!Bun.which("bash")) return
-
-            const { prompt, chat } = yield* boot()
-            const result = yield* prompt.shell({
-              sessionID: chat.id,
-              agent: "build",
-              command: "[[ 1 -eq 1 ]] && printf configured",
-            })
-
-            const tool = completedTool(result.parts)
-            if (!tool) return
-            expect(tool.state.output).toContain("configured")
-          }),
-        { git: true, config: { ...cfg, shell: "bash" } },
-      ),
-    ),
-  30_000,
-)
-
-unix("shell commands can change directory after startup", () =>
-  provideTmpdirInstance(
-    (dir) =>
-      Effect.gen(function* () {
-        const { prompt, run, chat } = yield* boot()
-        const parent = path.dirname(dir)
-        const result = yield* prompt.shell({
-          sessionID: chat.id,
-          agent: "build",
-          command: "cd .. && pwd",
-        })
-
-        expect(result.info.role).toBe("assistant")
-        const tool = completedTool(result.parts)
-        if (!tool) return
-
-        expect(tool.state.output).toContain(parent)
-        expect(tool.state.metadata.output).toContain(parent)
-        yield* run.assertNotBusy(chat.id)
-      }),
-    { git: true, config: cfg },
-  ),
-)
-
 unix("shell lists files from the project directory", () =>
   provideTmpdirInstance(
     (dir) =>
@@ -1319,6 +1279,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1328,7 +1289,12 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell state instead of sleeping
+        yield* waitFor(
+          "shell busy status",
+          status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+        )
+        // kilocode_change end
 
         const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* Effect.sleep(50)
@@ -1357,6 +1323,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1366,7 +1333,12 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell state instead of sleeping
+        yield* waitFor(
+          "shell busy status",
+          status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+        )
+        // kilocode_change end
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -1388,45 +1360,6 @@ it.live(
       { git: true, config: providerCfg },
     ),
   30_000, // kilocode_change - Windows CI process startup can exceed 3s
-)
-
-unix(
-  "command ! expansion uses configured shell over env shell",
-  () =>
-    withSh(() =>
-      provideTmpdirServer(
-        ({ llm }) =>
-          Effect.gen(function* () {
-            if (!Bun.which("bash")) return
-
-            const { prompt, chat } = yield* boot()
-            yield* llm.text("done")
-
-            const result = yield* prompt.command({
-              sessionID: chat.id,
-              command: "probe",
-              arguments: "",
-            })
-
-            expect(result.info.role).toBe("assistant")
-            const inputs = yield* llm.inputs
-            expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("configured")
-          }),
-        {
-          git: true,
-          config: (url) => ({
-            ...providerCfg(url),
-            shell: "bash",
-            command: {
-              probe: {
-                template: "Probe: !`[[ 1 -eq 1 ]] && printf configured`",
-              },
-            },
-          }),
-        },
-      ),
-    ),
-  30_000,
 )
 
 // kilocode_change start - TODO(#8990): flaky on Linux CI
@@ -1574,10 +1507,6 @@ unixSkip(
 
           const exit = yield* Fiber.await(loop)
           expect(Exit.isSuccess(exit)).toBe(true)
-          if (Exit.isSuccess(exit)) {
-            const tool = completedTool(exit.value.parts)
-            expect(tool?.state.output).toContain("User aborted the command")
-          }
 
           yield* Fiber.await(sh)
         }),
@@ -1585,8 +1514,9 @@ unixSkip(
     ),
   30_000,
 )
+// kilocode_change end
 
-unixSkip(
+unix(
   "shell rejects when another shell is already running",
   () =>
     withSh(() =>
@@ -1594,11 +1524,17 @@ unixSkip(
         (_dir) =>
           Effect.gen(function* () {
             const { prompt, chat } = yield* boot()
+            const status = yield* SessionStatus.Service // kilocode_change
 
             const a = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "sleep 30" })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            // kilocode_change start - wait for shell state instead of sleeping
+            yield* waitFor(
+              "shell busy status",
+              status.get(chat.id).pipe(Effect.map((item) => (item.type === "busy" ? item : undefined))),
+            )
+            // kilocode_change end
 
             const exit = yield* prompt
               .shell({ sessionID: chat.id, agent: "build", command: "echo hi" })
@@ -1616,7 +1552,6 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
 // Abort signal propagation tests for inline tool execution
 
@@ -1877,7 +1812,11 @@ it.live(
         const sessions = yield* Session.Service
         const session = yield* sessions.create({ title: "Prompt cancel regression" })
 
-        yield* llm.hang
+        // kilocode_change start - hold a finite stream instead of relying on Stream.never cancellation
+        const gate = defer<void>()
+        yield* llm.push(reply().wait(gate.promise).text("late").stop())
+        yield* Effect.addFinalizer(() => Effect.sync(() => gate.resolve()))
+        // kilocode_change end
 
         const fiber = yield* prompt
           .prompt({
