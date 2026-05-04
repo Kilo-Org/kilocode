@@ -11,12 +11,14 @@ Use this skill whenever a task touches shared upstream-owned code and includes K
 
 Minimize Kilo's long-term diff against upstream OpenCode while preserving behavior.
 
-Prefer this shape:
+Prefer this shape for Kilo-specific additions:
 
 1. Shared upstream file contains only a minimal hook, import, call, registration, or config entry.
 2. Kilo-specific behavior lives in Kilo-owned code.
 3. Unavoidable shared-file changes have narrow `kilocode_change` markers.
 4. The annotation checker passes.
+
+For changes to existing upstream behavior, prefer the smallest in-place shared-file diff with narrow markers. Do not move changed upstream logic into Kilo-owned code just to avoid textual conflicts, because that can create harder semantic merge conflicts.
 
 ## Core Rules
 
@@ -25,7 +27,8 @@ Prefer this shape:
 - Put Kilo-owned UI, CLI, runtime logic, and tests in Kilo-owned paths where practical.
 - Avoid adding Kilo business logic directly to shared files.
 - Keep shared-file edits as close as possible to upstream shape.
-- Do not refactor upstream code only to make Kilo extraction cleaner.
+- Do not change shared files unless the change is required for Kilo functionality, fixes a Kilo bug, or is a minimal targeted upstream-quality fix.
+- Do not refactor, rename, reformat, split files, extract helpers, or reorganize imports in shared files just to improve readability or make Kilo extraction cleaner.
 - Do not create a large Kilo-only fork for a general upstream-quality improvement. Prefer a minimal targeted fix, or leave the broader change for upstream.
 - Do not duplicate upstream logic unless there is a concrete reason. If duplication is unavoidable, isolate the Kilo delta and keep the upstream dependency obvious.
 
@@ -33,15 +36,18 @@ Prefer this shape:
 
 Extract Kilo logic when:
 
-- The shared-file change has meaningful behavior, not just a tiny condition, import, registration, or field.
+- The change is an additive Kilo feature or integration, not a modification of existing upstream behavior.
+- The shared-file change has meaningful Kilo-owned behavior, not just a tiny condition, import, registration, or field.
 - The code has loops, branching, error handling, async workflows, storage access, network calls, UI rendering, or telemetry.
 - The shared file can become a small orchestrator that calls Kilo helpers.
-- Future upstream changes would likely overlap with the Kilo block or require copying fixes into duplicated Kilo code.
+- The Kilo code is independent enough that extraction will not hide future upstream fixes or behavior changes.
 
 Keep the change inline when:
 
 - The Kilo delta is a single field, import, call, simple condition, or small registry entry.
 - Extraction would reshape upstream code more than the Kilo change itself.
+- The change modifies an upstream algorithm, ordering, heuristic, control flow, or bug fix.
+- Extraction would duplicate upstream logic or hide semantic dependency on upstream behavior.
 - The shared file owns the only route table, enum, schema, switch, or registry where the hook must exist.
 - The change restores upstream shape or removes a stale Kilo divergence.
 
@@ -101,4 +107,10 @@ For stale or broad markers in one shared file, inspect the dry run before applyi
 bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> --dry-run
 ```
 
-Before finishing, confirm shared files contain minimal integration points, Kilo logic/tests live in Kilo-owned paths where practical, markers are narrow, stale markers are removed, and the annotation checker passed or the reason it could not run is reported.
+Before finishing, confirm:
+
+- Shared files contain minimal integration points only.
+- Kilo logic and tests live in Kilo-owned paths where practical.
+- Markers are narrow.
+- Stale markers are removed.
+- The annotation checker passed, or the reason it could not run is reported.
