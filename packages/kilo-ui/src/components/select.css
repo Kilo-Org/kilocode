@@ -57,6 +57,11 @@
   }
 }
 
+[data-component="select"][data-trigger-style="settings"] [data-slot="select-select-trigger"] {
+  box-sizing: border-box;
+  width: 100%;
+}
+
 /* Select dropdown content */
 [data-component="select-content"] {
   min-width: 200px !important;
