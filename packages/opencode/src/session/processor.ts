@@ -413,7 +413,7 @@ export const layer: Layer.Layer<
           case "start-step":
             ctx.stepStart = performance.now() // kilocode_change
             ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
-            if (!ctx.snapshot) ctx.snapshot = yield* snapshot.track()
+            if (!ctx.snapshot) ctx.snapshot = yield* snapshot.track() // kilocode_change
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -455,7 +455,7 @@ export const layer: Layer.Layer<
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,
-              snapshot: yield* snapshot.track(),
+              snapshot: yield* snapshot.track(), // kilocode_change
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
