@@ -35,6 +35,7 @@ export class DiffPanelManager implements vscode.Disposable {
   private delayDisposable: vscode.Disposable | undefined
   private surfaceDisposables: vscode.Disposable[] = []
   private webviewReady = false
+  private epoch = 0
   private commentHandler: CommentHandler | undefined
   private readonly scheduler: Scheduler
   private readonly createSurface: () => PanelSurface
@@ -136,6 +137,7 @@ export class DiffPanelManager implements vscode.Disposable {
   }
 
   private disposeCurrentSource(): void {
+    this.epoch++
     this.delayDisposable?.dispose()
     this.delayDisposable = undefined
     this.startDisposable?.dispose()
@@ -220,14 +222,15 @@ export class DiffPanelManager implements vscode.Disposable {
     this.surface.post({ type: "diffViewer.loading", loading: true })
     this.surface.post({ type: "diffViewer.diffs", diffs: [] })
     this.surface.post({ type: "diffViewer.notice", notice: undefined })
+    const epoch = this.epoch
 
     this.delayDisposable = this.scheduler.delay(SWAP_LOADING_MS, () => {
       this.delayDisposable = undefined
-      void this.activateSource(id)
+      void this.activateSource(id, epoch)
     })
   }
 
-  private async activateSource(id: string): Promise<void> {
+  private async activateSource(id: string, epoch: number): Promise<void> {
     if (!this.ctx || !this.surface) return
     if (this.currentSourceId !== id) return
 
@@ -255,8 +258,9 @@ export class DiffPanelManager implements vscode.Disposable {
 
     const post = this.createSourcePost()
     await source.initialFetch(post)
-    if (this.currentSourceId !== id) {
-      source.dispose()
+    // Prevents source polling from starting after teardown or source swap.
+    if (this.epoch !== epoch || !this.surface || this.currentSourceId !== id) {
+      if (this.currentSource === source) source.dispose()
       return
     }
     this.startDisposable = source.start?.(post)

@@ -78,15 +78,22 @@ class RecordedSource implements DiffSource {
   startCount = 0
   startDisposed = false
   disposeCount = 0
+  private release: (() => void) | undefined
 
   constructor(
     readonly descriptor: DiffSourceDescriptor,
     private readonly initial: DiffSourceMessage[] = [],
+    private readonly deferred = false,
   ) {}
 
   async initialFetch(post: DiffSourcePost): Promise<void> {
     this.initialFetchCount++
+    if (this.deferred) await new Promise<void>((resolve) => (this.release = resolve))
     for (const msg of this.initial) post(msg)
+  }
+
+  resolve(): void {
+    this.release?.()
   }
 
   start(_post: DiffSourcePost): vscode.Disposable {
@@ -322,5 +329,23 @@ describe("DiffPanelManager.openPanel", () => {
 
     // At minimum, surface was disposed; source may or may not exist yet.
     expect(surface.disposedCount >= 0).toBe(true)
+  })
+
+  it("does not start polling after dispose during initial fetch", async () => {
+    const session = new RecordedSource(SESSION_DESC, [], true)
+    const { manager, surface, scheduler } = harness([SESSION_DESC], { "session:s1": session })
+
+    manager.openPanel({ workspaceRoot: "/repo", sessionId: "s1" })
+    surface.emit({ type: "webviewReady" })
+    await scheduler.flush()
+
+    expect(session.initialFetchCount).toBe(1)
+
+    manager.dispose()
+    session.resolve()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(session.startCount).toBe(0)
+    expect(session.disposeCount).toBe(1)
   })
 })
