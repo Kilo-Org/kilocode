@@ -2,7 +2,7 @@ import type { Component } from "solid-js"
 import { Show } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { useLanguage } from "../src/context/language"
-import type { DiffSourceDescriptor } from "../src/types/messages/extension-messages"
+import type { DiffSourceDescriptor } from "../../src/diff/sources/types"
 
 interface DiffPickerHeaderProps {
   descriptors: DiffSourceDescriptor[]

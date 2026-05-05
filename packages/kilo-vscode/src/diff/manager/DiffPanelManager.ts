@@ -145,54 +145,43 @@ export class DiffPanelManager implements vscode.Disposable {
   }
 
   private onMessage(msg: Record<string, unknown>): void {
-    const type = msg.type as string
+    const handler = this.messageHandlers[msg.type as string]
+    handler?.(msg)
+  }
 
-    if (type === "webviewReady") {
-      this.webviewReady = true
-      this.surface?.post({
-        type: "ready",
-        vscodeLanguage: vscode.env.language,
-        languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
-        workspaceDirectory: getWorkspaceRoot(),
-      })
-      this.surface?.post({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
-      const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
-      if (initial) this.selectSource(initial)
-      return
-    }
-
-    if (type === "selectSource" && typeof msg.id === "string") {
-      this.selectSource(msg.id)
-      return
-    }
-
-    if (type === "diffViewer.sendComments" && Array.isArray(msg.comments)) {
-      this.commentHandler?.(msg.comments, !!msg.autoSend)
-      return
-    }
-
-    if (type === "diffViewer.close") {
-      this.surface?.dispose()
-      return
-    }
-
-    if (type === "diffViewer.setDiffStyle") {
-      return
-    }
-
-    if (type === "diffViewer.setMarkdownRender" && typeof msg.render === "boolean") {
-      void setDiffMarkdownRender(msg.render)
-      return
-    }
-
-    if (type === "diffViewer.revertFile" && typeof msg.file === "string") {
-      void this.revertFile(msg.file)
-      return
-    }
-
-    if (type === "openFile" && typeof msg.filePath === "string") {
+  private readonly messageHandlers: Record<string, (msg: Record<string, unknown>) => void> = {
+    webviewReady: () => this.onWebviewReady(),
+    selectSource: (msg) => {
+      if (typeof msg.id === "string") this.selectSource(msg.id)
+    },
+    "diffViewer.sendComments": (msg) => {
+      if (Array.isArray(msg.comments)) this.commentHandler?.(msg.comments, !!msg.autoSend)
+    },
+    "diffViewer.close": () => this.surface?.dispose(),
+    "diffViewer.setDiffStyle": () => {},
+    "diffViewer.setMarkdownRender": (msg) => {
+      if (typeof msg.render === "boolean") void setDiffMarkdownRender(msg.render)
+    },
+    "diffViewer.revertFile": (msg) => {
+      if (typeof msg.file === "string") void this.revertFile(msg.file)
+    },
+    openFile: (msg) => {
+      if (typeof msg.filePath !== "string") return
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
-    }
+    },
+  }
+
+  private onWebviewReady(): void {
+    this.webviewReady = true
+    this.surface?.post({
+      type: "ready",
+      vscodeLanguage: vscode.env.language,
+      languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+      workspaceDirectory: getWorkspaceRoot(),
+    })
+    this.surface?.post({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
+    const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
+    if (initial) this.selectSource(initial)
   }
 
   private async revertFile(file: string): Promise<void> {

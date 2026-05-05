@@ -16,11 +16,8 @@ import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
-import type {
-  DiffSourceCapabilities,
-  DiffSourceDescriptor,
-  DiffViewerNotice,
-} from "../src/types/messages/extension-messages"
+import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
+import type { DiffViewerNotice } from "../src/types/messages/extension-messages"
 import { DiffPickerHeader } from "./DiffPickerHeader"
 
 const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
@@ -111,7 +108,7 @@ const DiffViewerContent: Component = () => {
       if (prev === undefined || id === prev) return
       setComments([])
       setDiffStyle("unified")
-      setReverting(new Set())
+      setReverting(new Set<string>())
       setNotice(undefined)
     }),
   )
