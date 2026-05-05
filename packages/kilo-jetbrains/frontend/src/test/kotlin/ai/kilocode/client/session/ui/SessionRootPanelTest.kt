@@ -1,10 +1,10 @@
 package ai.kilocode.client.session.ui
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
 import java.awt.Rectangle
 import javax.swing.JLayeredPane
-import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class SessionRootPanelTest : BasePlatformTestCase() {
@@ -55,7 +55,7 @@ class SessionRootPanelTest : BasePlatformTestCase() {
         assertTrue(child.laid)
     }
 
-    private class Probe : JPanel() {
+    private class Probe : BorderLayoutPanel() {
         var laid = false
 
         init {

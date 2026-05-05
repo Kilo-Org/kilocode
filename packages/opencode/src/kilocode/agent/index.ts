@@ -1,14 +1,14 @@
 // kilocode_change - new file
 import { Permission } from "@/permission"
-import { NamedError } from "@opencode-ai/shared/util/error"
-import { Glob } from "@opencode-ai/shared/util/glob"
+import { NamedError } from "@opencode-ai/core/util/error"
+import { Glob } from "@opencode-ai/core/util/glob"
 import * as Truncate from "../../tool/truncate"
-import { Config } from "../../config"
+import { Config } from "../../config/config"
 import { Instance } from "../../project/instance"
 import { makeRuntime } from "@/effect/run-service"
 import z from "zod"
 import path from "path"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -142,6 +142,7 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     grep: "allow",
     glob: "allow",
     list: "allow",
+    skill: "allow",
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
@@ -160,6 +161,7 @@ function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     "*": "deny",
     question: "allow",
     suggest: "allow",
+    skill: "allow",
     plan_exit: "allow",
     bash: readOnlyBash,
     read: {
@@ -281,7 +283,12 @@ export function patchAgents(
     agents.code = {
       ...agents.build,
       name: "code",
-      permission: Permission.merge(defaults, Permission.fromConfig({ semantic_search: "allow" }), user),
+      permission: Permission.merge(
+        defaults,
+        agents.build.permission,
+        user,
+        Permission.fromConfig({ semantic_search: "allow" }),
+      ),
     }
     delete agents.build
   }
@@ -312,6 +319,7 @@ export function patchAgents(
           glob: "allow",
           list: "allow",
           bash: "allow",
+          skill: "allow",
           webfetch: "allow",
           websearch: "allow",
           codesearch: "allow",
@@ -366,6 +374,7 @@ export function patchAgents(
         glob: "allow",
         list: "allow",
         question: "allow",
+        skill: "allow",
         suggest: "allow", // kilocode_change
         task: "allow",
         todoread: "allow",
@@ -434,7 +443,7 @@ export async function remove(name: string) {
   let found = false
 
   // 1. Delete .md files from config directories
-  const { Config } = await import("../../config")
+  const { Config } = await import("../../config/config")
   const dirs = await Config.directories()
   const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
   for (const dir of dirs) {

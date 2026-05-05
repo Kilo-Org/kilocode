@@ -27,8 +27,10 @@ export function drainCovered(
       // Never auto-resolve config file edit permissions
       if (ConfigProtection.isRequest(entry.info)) continue
       const actions = entry.info.patterns.map((pattern: string) => {
-        const rule = Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved)
-        const hard = entry.hardRuleset ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset) : undefined
+        const rule = Permission.resolve(entry.info.permission, pattern, entry.ruleset, approved)
+        const hard = entry.hardRuleset
+          ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset)
+          : undefined
         if (hard?.action === "deny") return hard
         return rule
       })

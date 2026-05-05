@@ -1406,6 +1406,8 @@ export const dict = {
   "settings.display.layout.description": "Tryb układu interfejsu czatu",
   "settings.display.layout.auto": "Automatyczny",
   "settings.display.layout.stretch": "Rozciągnij",
+  "settings.display.fontSize.title": "Rozmiar czcionki",
+  "settings.display.fontSize.description": "Dostosuj rozmiar czcionki webview UI Kilo niezależnie od VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
@@ -1420,6 +1422,7 @@ export const dict = {
     "Lekki model do generowania tytułów, wiadomości commitów, ulepszania zapytań i innych szybkich zadań",
   "settings.providers.disabled": "Wyłączeni dostawcy",
   "settings.providers.disabled.description": "Dostawcy do ukrycia z listy",
+  "settings.providers.disabled.enable": "Włącz",
   "settings.providers.enabled": "Włączeni dostawcy (biała lista)",
   "settings.providers.enabled.description": "Jeśli ustawiono, tylko ci dostawcy będą dostępni",
   "settings.providers.notSet": "Nie ustawiono (użyj domyślnego serwera)",

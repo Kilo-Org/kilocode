@@ -36,7 +36,7 @@
   [data-slot="suggest-bar-text"] {
     min-width: 0;
     color: var(--text-base);
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     line-height: 1.4;
   }
 

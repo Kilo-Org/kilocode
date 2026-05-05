@@ -4,7 +4,7 @@ import { useTheme } from "@tui/context/theme"
 import { MouseButton, Renderable, RGBA } from "@opentui/core"
 import { createStore } from "solid-js/store"
 import { useToast } from "./toast"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Selection from "@tui/util/selection"
 
 export function Dialog(
@@ -169,7 +169,9 @@ export function DialogProvider(props: ParentProps) {
           evt.preventDefault()
           evt.stopPropagation()
         }}
-        onMouseUp={!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? () => Selection.copy(renderer, toast) : undefined}
+        onMouseUp={
+          !Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? () => Selection.copy(renderer, toast) : undefined
+        }
       >
         <Show when={value.stack.length}>
           <Dialog onClose={() => value.clear()} size={value.size}>

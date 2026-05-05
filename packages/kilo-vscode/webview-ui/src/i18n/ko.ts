@@ -1381,6 +1381,8 @@ export const dict = {
   "settings.display.layout.description": "채팅 인터페이스의 레이아웃 모드",
   "settings.display.layout.auto": "자동",
   "settings.display.layout.stretch": "늘리기",
+  "settings.display.fontSize.title": "글꼴 크기",
+  "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
   "settings.display.reasoningAutoCollapse.description":
     "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
@@ -1395,6 +1397,7 @@ export const dict = {
     "제목 생성, 커밋 메시지 생성, 프롬프트 개선 및 기타 빠른 작업을 위한 경량 모델",
   "settings.providers.disabled": "비활성화된 공급자",
   "settings.providers.disabled.description": "공급자 목록에서 숨길 공급자",
+  "settings.providers.disabled.enable": "활성화",
   "settings.providers.enabled": "활성화된 공급자 (허용 목록)",
   "settings.providers.enabled.description": "설정된 경우 이 공급자만 사용 가능 (배타적 허용 목록)",
   "settings.providers.notSet": "설정되지 않음 (서버 기본값 사용)",

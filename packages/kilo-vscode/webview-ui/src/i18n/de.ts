@@ -1428,6 +1428,8 @@ export const dict = {
   "settings.display.layout.description": "Layout-Modus für die Chat-Oberfläche",
   "settings.display.layout.auto": "Automatisch",
   "settings.display.layout.stretch": "Gestreckt",
+  "settings.display.fontSize.title": "Schriftgröße",
+  "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
@@ -1442,6 +1444,7 @@ export const dict = {
     "Leichtgewichtiges Modell für Titelgenerierung, Commit-Nachrichten, Prompt-Verbesserung und andere schnelle Aufgaben",
   "settings.providers.disabled": "Deaktivierte Anbieter",
   "settings.providers.disabled.description": "Anbieter aus der Anbieterliste ausblenden",
+  "settings.providers.disabled.enable": "Aktivieren",
   "settings.providers.enabled": "Aktivierte Anbieter (Whitelist)",
   "settings.providers.enabled.description": "Wenn gesetzt, sind nur diese Anbieter verfügbar (exklusive Whitelist)",
   "settings.providers.notSet": "Nicht festgelegt (Server-Standard verwenden)",

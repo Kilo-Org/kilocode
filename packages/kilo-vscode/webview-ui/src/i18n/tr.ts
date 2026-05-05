@@ -1372,6 +1372,8 @@ export const dict = {
   "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
+  "settings.display.fontSize.title": "Yazı Tipi Boyutu",
+  "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
@@ -1390,6 +1392,7 @@ export const dict = {
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",
   "settings.providers.disabled": "Devre Dışı Sağlayıcılar",
   "settings.providers.disabled.description": "Sağlayıcı listesinde gizlenecek sağlayıcılar",
+  "settings.providers.disabled.enable": "Etkinleştir",
   "settings.providers.enabled": "Etkin Sağlayıcılar (İzin Listesi)",
   "settings.providers.enabled.description":
     "Ayarlanırsa yalnızca bu sağlayıcılar kullanılabilir olacak (özel izin listesi)",

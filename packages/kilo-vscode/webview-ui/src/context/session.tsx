@@ -175,6 +175,7 @@ interface SessionContextValue {
   mcpLoading: Accessor<string | null>
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
+  authenticateMcp: (name: string) => void
   refreshMcpStatus: () => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
@@ -354,6 +355,13 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!server.isConnected()) return
     setMcpLoading(name)
     vscode.postMessage({ type: "disconnectMcp", name })
+  }
+
+  const authenticateMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "authenticateMcp", name })
   }
 
   const refreshMcpStatus = () => {
@@ -754,6 +762,11 @@ export const SessionProvider: ParentComponent = (props) => {
       return true
     }
 
+    if (message.type === "partRemoved") {
+      handlePartRemoved(message.sessionID, message.messageID, message.partID)
+      return true
+    }
+
     return false
   }
 
@@ -1144,6 +1157,21 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   }
 
+  function handlePartRemoved(sessionID: string | undefined, messageID: string, partID: string) {
+    if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+
+    setStore(
+      "parts",
+      produce((parts) => {
+        const list = parts[messageID]
+        if (!list) return
+        const idx = list.findIndex((p) => p.id === partID)
+        if (idx < 0) return
+        list.splice(idx, 1)
+      }),
+    )
+  }
+
   function handleSessionStatus(
     sessionID: string,
     newStatus: SessionStatus,
@@ -1495,7 +1523,6 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  // Matches desktop app's event-reducer.ts: message.removed handler.
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
@@ -2219,6 +2246,7 @@ export const SessionProvider: ParentComponent = (props) => {
     mcpLoading,
     connectMcp,
     disconnectMcp,
+    authenticateMcp,
     refreshMcpStatus,
     selectedAgent: selectedAgentName,
     selectAgent,

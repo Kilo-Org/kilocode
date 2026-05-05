@@ -13,6 +13,7 @@
 @import "./prompt-input.css";
 @import "./prompt-dropdowns.css";
 @import "./model-selector.css";
+@import "./diff.css";
 @import "./permission-dock.css";
 @import "./dialogs.css";
 @import "./history.css";

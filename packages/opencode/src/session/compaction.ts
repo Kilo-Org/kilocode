@@ -2,22 +2,23 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import * as Session from "./session"
 import { SessionID, MessageID, PartID } from "./schema"
-import { Provider } from "../provider"
+import { Provider } from "@/provider/provider"
 import { MessageV2 } from "./message-v2"
 import z from "zod"
-import { Token } from "../util"
-import { Log } from "../util"
+import { Token } from "@/util/token"
+import * as Log from "@opencode-ai/core/util/log"
 import { SessionProcessor } from "./processor"
 import { Agent } from "@/agent/agent"
 import { Plugin } from "@/plugin"
-import { Config } from "@/config"
-import { NotFoundError } from "@/storage"
+import { Config } from "@/config/config"
+import { NotFoundError } from "@/storage/storage"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { Effect, Layer, Context, Schema } from "effect"
-import { InstanceState } from "@/effect"
+import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
 import { fn } from "@/util/fn"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -37,8 +38,8 @@ const PRUNE_PROTECTED_TOOLS = ["skill"]
 const DEFAULT_TAIL_TURNS = 2
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
 const MAX_PRESERVE_RECENT_TOKENS = 8_000
-const SUMMARY_TEMPLATE = `Output exactly this Markdown structure and keep the section order unchanged:
----
+const SUMMARY_TEMPLATE = `Output exactly the Markdown structure shown inside <template> and keep the section order unchanged. Do not include the <template> tags in your response.
+<template>
 ## Goal
 - [single-sentence task summary]
 
@@ -66,7 +67,7 @@ const SUMMARY_TEMPLATE = `Output exactly this Markdown structure and keep the se
 
 ## Relevant Files
 - [file or directory path: why it matters, or "(none)"]
----
+</template>
 
 Rules:
 - Keep every section, even when empty.
@@ -583,6 +584,9 @@ export const layer: Layer.Layer<
         auto: input.auto,
         overflow: input.overflow,
       })
+      // kilocode_change start - keep auto-compaction markers visible during queued turns
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      // kilocode_change end
     })
 
     return Service.of({

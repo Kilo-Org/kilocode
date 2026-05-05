@@ -1350,6 +1350,8 @@ export const dict = {
   "settings.display.layout.description": "聊天界面的布局模式",
   "settings.display.layout.auto": "自动",
   "settings.display.layout.stretch": "拉伸",
+  "settings.display.fontSize.title": "字体大小",
+  "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
   "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
   "settings.display.reasoningAutoCollapse.description":
     "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",
@@ -1363,6 +1365,7 @@ export const dict = {
   "settings.providers.smallModel.description": "用于标题生成、提交信息生成、提示词增强和其他快速任务的轻量模型",
   "settings.providers.disabled": "已禁用的提供者",
   "settings.providers.disabled.description": "从提供者列表中隐藏的提供者",
+  "settings.providers.disabled.enable": "启用",
   "settings.providers.enabled": "已启用的提供者（白名单）",
   "settings.providers.enabled.description": "如果设置，只有这些提供者可用（排他性白名单）",
   "settings.providers.notSet": "未设置（使用服务器默认值）",

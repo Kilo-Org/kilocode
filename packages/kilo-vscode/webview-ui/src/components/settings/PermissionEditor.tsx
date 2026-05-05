@@ -4,7 +4,21 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 
 import { useLanguage } from "../../context/language"
 import type { PermissionConfig, PermissionLevel, PermissionRule, PermissionRuleItem } from "../../types/messages"
-import { effectiveRuleLevel } from "./permission-utils"
+import {
+  addExceptionPatch,
+  clearGroupedPatch,
+  clearWildcardPatch,
+  effectiveRuleLevel,
+  inheritedWildcard,
+  mostRestrictive,
+  permissionExceptions,
+  removeExceptionPatch,
+  setExceptionPatch,
+  setGroupedPatch,
+  setWildcardPatch,
+  wildcardAction,
+  type PermissionPatch,
+} from "./permission-utils"
 
 type LevelValue = PermissionLevel | "inherit"
 
@@ -109,38 +123,6 @@ const TRAILING_TOOLS: ToolDef[] = [
   { id: "doom_loop", descriptionKey: "settings.autoApprove.tool.doom_loop" },
 ]
 
-const RESTRICTION_ORDER: Record<PermissionLevel, number> = { allow: 0, ask: 1, deny: 2 }
-
-type PermissionPatch = PermissionConfig
-
-function mostRestrictive(levels: PermissionLevel[]): PermissionLevel {
-  return levels.reduce<PermissionLevel>(
-    (best, level) => (RESTRICTION_ORDER[level] > RESTRICTION_ORDER[best] ? level : best),
-    levels[0] ?? "allow",
-  )
-}
-
-function wildcardAction(rule: PermissionRule | undefined, fallback: PermissionLevel): PermissionLevel {
-  if (!rule) return fallback
-  if (typeof rule === "string") return rule
-  if (rule === null) return fallback
-  return rule["*"] ?? fallback
-}
-
-function inheritedWildcard(rule: PermissionRule | undefined): boolean {
-  if (!rule) return true
-  if (typeof rule === "string") return false
-  if (rule === null) return true
-  return rule["*"] === undefined || rule["*"] === null
-}
-
-function exceptions(rule: PermissionRule | undefined): Array<{ pattern: string; action: PermissionLevel }> {
-  if (!rule || typeof rule === "string") return []
-  return Object.entries(rule)
-    .filter(([key, action]) => key !== "*" && action !== null)
-    .map(([pattern, action]) => ({ pattern, action: action as PermissionLevel }))
-}
-
 function toolTitle(id: string): string {
   return id
     .split("_")
@@ -175,57 +157,32 @@ const PermissionEditor: Component<{
   }
 
   const setGrouped = (ids: string[], level: PermissionLevel) => {
-    const patch: PermissionPatch = {}
-    for (const id of ids) patch[id] = level
-    props.onChange(patch)
+    props.onChange(setGroupedPatch(ids, level))
   }
 
   const clearGrouped = (ids: string[]) => {
-    const patch: PermissionPatch = {}
-    for (const id of ids) patch[id] = null
-    props.onChange(patch)
+    props.onChange(clearGroupedPatch(ids))
   }
 
   const setWildcard = (tool: string, level: PermissionLevel) => {
-    const excs = exceptions(ruleFor(tool))
-    if (excs.length === 0) {
-      props.onChange({ [tool]: level })
-      return
-    }
-    const obj: Record<string, PermissionLevel | null> = { "*": level }
-    for (const exc of excs) obj[exc.pattern] = exc.action
-    props.onChange({ [tool]: obj })
+    props.onChange(setWildcardPatch(ruleFor(tool), tool, level))
   }
 
   const clearWildcard = (tool: string) => {
-    const excs = exceptions(ruleFor(tool))
-    if (excs.length === 0) {
-      props.onChange({ [tool]: null })
-      return
-    }
-    props.onChange({ [tool]: { "*": null } })
+    props.onChange(clearWildcardPatch(ruleFor(tool), tool))
   }
 
   const setException = (tool: string, pattern: string, level: PermissionLevel) => {
-    const current = ruleFor(tool)
-    const base: Record<string, PermissionLevel | null> =
-      typeof current === "string" || current === null ? { "*": current } : { ...(current ?? {}) }
-    base[pattern] = level
-    props.onChange({ [tool]: base })
+    props.onChange(setExceptionPatch(ruleFor(tool), tool, pattern, level))
   }
 
   const addException = (tool: string, pattern: string) => {
-    const current = ruleFor(tool)
-    const base: Record<string, PermissionLevel | null> =
-      typeof current === "string" || current === null ? { "*": current } : { ...(current ?? {}) }
-    base[pattern] = "allow"
-    props.onChange({ [tool]: base })
+    props.onChange(addExceptionPatch(ruleFor(tool), tool, pattern))
   }
 
   const removeException = (tool: string, pattern: string) => {
-    const current = ruleFor(tool)
-    if (!current || typeof current === "string") return
-    props.onChange({ [tool]: { [pattern]: null } })
+    const patch = removeExceptionPatch(ruleFor(tool), tool, pattern)
+    if (patch) props.onChange(patch)
   }
 
   return (
@@ -233,7 +190,7 @@ const PermissionEditor: Component<{
       <Show when={props.description}>
         <div
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "12px",
             "border-bottom": "1px solid var(--border-weak-base)",
@@ -323,12 +280,12 @@ const SimpleToolRow: Component<{
       }}
     >
       <div style={{ flex: 1, "min-width": 0 }}>
-        <div style={{ "font-size": "13px", color: "var(--text-base, var(--vscode-foreground))" }}>
+        <div style={{ "font-size": "var(--kilo-font-size-13)", color: "var(--text-base, var(--vscode-foreground))" }}>
           {toolTitle(props.id)}
         </div>
         <div
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "margin-top": "6px",
           }}
@@ -367,7 +324,7 @@ const GranularToolRow: Component<{
     if (adding()) ref?.focus()
   })
 
-  const excs = createMemo(() => exceptions(props.rule))
+  const excs = createMemo(() => permissionExceptions(props.rule))
   const level = createMemo(() => wildcardAction(props.rule, props.fallback))
 
   const submit = () => {
@@ -388,12 +345,12 @@ const GranularToolRow: Component<{
     <div style={{ padding: "12px 0", "border-bottom": "1px solid var(--border-weak-base)" }}>
       <div style={{ display: "flex", gap: "24px", "align-items": "flex-start", "justify-content": "space-between" }}>
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "13px", color: "var(--text-base, var(--vscode-foreground))" }}>
+          <div style={{ "font-size": "var(--kilo-font-size-13)", color: "var(--text-base, var(--vscode-foreground))" }}>
             {toolTitle(props.tool.id)}
           </div>
           <div
             style={{
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-top": "6px",
             }}
@@ -413,7 +370,7 @@ const GranularToolRow: Component<{
         }}
       >
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "12px", color: "var(--text-base, #ccc)" }}>
+          <div style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-base, #ccc)" }}>
             {language.t(props.tool.granular.wildcardKey)}
           </div>
         </div>
@@ -429,7 +386,7 @@ const GranularToolRow: Component<{
         <div style={{ "margin-top": "4px" }}>
           <div
             style={{
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-bottom": "4px",
             }}
@@ -452,7 +409,7 @@ const GranularToolRow: Component<{
                   style={{
                     flex: "1 1 0%",
                     "min-width": 0,
-                    "font-size": "13px",
+                    "font-size": "var(--kilo-font-size-13)",
                     "font-family": "var(--vscode-editor-font-family, monospace)",
                     color: "var(--text-base, #ccc)",
                     overflow: "hidden",
@@ -493,14 +450,14 @@ const GranularToolRow: Component<{
               background: "none",
               border: "none",
               cursor: "pointer",
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-link-base, #3794ff)",
               "font-family": "inherit",
               "margin-top": "4px",
             }}
             onClick={() => setAdding(true)}
           >
-            <span style={{ "font-size": "14px" }}>+</span>
+            <span style={{ "font-size": "var(--kilo-font-size-14)" }}>+</span>
             {language.t(props.tool.granular.addKey)}
           </button>
         }
@@ -526,7 +483,7 @@ const GranularToolRow: Component<{
               border: "1px solid var(--border-base, #434443)",
               "border-radius": "2px",
               color: "var(--text-base, #ccc)",
-              "font-size": "13px",
+              "font-size": "var(--kilo-font-size-13)",
               "font-family": "var(--vscode-editor-font-family, monospace)",
               padding: "4px 8px",
               outline: "none",

@@ -8,7 +8,7 @@
  */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
 import { createMemo, createSignal, Match, onCleanup, onMount, Show, Switch } from "solid-js"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { indexingEnabled } from "../indexing-feature"
 import { formatIndexingLabel } from "../indexing-label"
 import { useSync } from "@/cli/cmd/tui/context/sync"

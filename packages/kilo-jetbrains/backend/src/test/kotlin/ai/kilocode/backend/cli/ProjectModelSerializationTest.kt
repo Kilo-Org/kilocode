@@ -52,7 +52,7 @@ class ProjectModelSerializationTest {
                             "toolcall": true,
                             "input": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
                             "output": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
-                            "interleaved": false
+                            "interleaved": {"field":"reasoning_content"}
                         },
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
                         "limit": {"context": 200000, "output": 16000},
@@ -102,7 +102,7 @@ class ProjectModelSerializationTest {
                             "toolcall": false,
                             "input": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
                             "output": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
-                            "interleaved": false
+                            "interleaved": {"field":"reasoning_content"}
                         },
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
                         "limit": {"context": 8000, "output": 4000},

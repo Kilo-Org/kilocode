@@ -6,16 +6,15 @@ import z from "zod"
 import { Effect, Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { mergeDeep } from "remeda"
-import { Log } from "../../util"
-import { Global } from "../../global"
-import { NamedError } from "@opencode-ai/shared/util/error"
-import type { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import * as Log from "@opencode-ai/core/util/log"
+import { Global } from "@opencode-ai/core/global"
+import { NamedError } from "@opencode-ai/core/util/error"
+import type { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "@/bus"
 import { isRecord } from "@/util/record"
 import { ConfigError } from "../../config/error"
-import { Filesystem } from "@/util"
-import type { Config } from "../../config"
-import type { ConfigAgent } from "../../config"
+import type { Config } from "../../config/config"
+import type { ConfigAgent } from "../../config/agent"
 import { ModesMigrator } from "../modes-migrator"
 import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
@@ -110,6 +109,21 @@ export namespace KilocodeConfig {
     yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
   })
 
+  export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {
+    if (scope !== "global") return info
+    return stripGlobalIndexing(info)
+  }
+
+  function stripGlobalIndexing(info: Config.Info): Config.Info {
+    // Indexing provider/storage settings can be global, but enablement is a per-project decision.
+    if (info.indexing?.enabled === undefined) return info
+    const indexing = Object.fromEntries(Object.entries(info.indexing).filter(([key]) => key !== "enabled"))
+    if (Object.keys(indexing).length > 0) return { ...info, indexing }
+    const copy = { ...info }
+    delete copy.indexing
+    return copy
+  }
+
   // ── Warning helpers ──────────────────────────────────────────────────
 
   /** Convert known config-loading error types into a Warning.  Returns undefined for unknown errors. */
@@ -156,7 +170,7 @@ export namespace KilocodeConfig {
     const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
     if (warnings) warnings.push({ path: item, message, detail: text || undefined })
     try {
-      const { Session } = await import("@/session")
+      const { Session } = await import("@/session/session")
       Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
     } catch (e) {
       log.warn("could not publish session error", { message, err: e })

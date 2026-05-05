@@ -10,16 +10,17 @@ import iconv from "iconv-lite"
  * Supported:
  *  - UTF-8 (with or without BOM)
  *  - UTF-16 LE/BE with BOM (detected by jschardet)
+ *  - UTF-32 LE/BE with BOM (detected by jschardet)
  *  - Legacy Latin and CJK encodings (detected by jschardet)
  *
  * Not supported:
- *  - UTF-16 without BOM (ambiguous, rare)
- *  - UTF-32 (extremely rare)
+ *  - UTF-16 or UTF-32 without BOM (ambiguous, rare)
  *
  * Detection strategy:
  *  1. If the bytes are valid UTF-8, treat as UTF-8 (tracking the presence of a
  *     BOM so it can be written back).
- *  2. Otherwise, trust jschardet.
+ *  2. Otherwise, trust jschardet. jschardet only reports the wide UTF variants
+ *     when a BOM is present, which aligns with the contract above.
  *
  * iconv-lite's UTF codecs strip BOMs on decode and do not emit them on encode,
  * so UTF BOMs are handled explicitly in {@link encode} to round-trip cleanly.
@@ -41,7 +42,17 @@ export namespace Encoding {
   /** True if `bytes[0..limit]` starts with a UTF-16 LE or BE byte-order mark. */
   export function hasUtf16Bom(bytes: Buffer, limit = bytes.length): boolean {
     if (limit < 2) return false
+    // UTF-32 LE starts with FF FE 00 00, so exclude that to avoid misclassifying it as UTF-16 LE.
+    if (hasUtf32Bom(bytes, limit)) return false
     return (bytes[0] === 0xff && bytes[1] === 0xfe) || (bytes[0] === 0xfe && bytes[1] === 0xff)
+  }
+
+  /** True if `bytes[0..limit]` starts with a UTF-32 LE or BE byte-order mark. */
+  export function hasUtf32Bom(bytes: Buffer, limit = bytes.length): boolean {
+    if (limit < 4) return false
+    const le = bytes[0] === 0xff && bytes[1] === 0xfe && bytes[2] === 0x00 && bytes[3] === 0x00
+    const be = bytes[0] === 0x00 && bytes[1] === 0x00 && bytes[2] === 0xfe && bytes[3] === 0xff
+    return le || be
   }
 
   /** Remap jschardet labels to iconv-lite compatible names. */
@@ -51,6 +62,8 @@ export namespace Encoding {
       utf8: "utf-8",
       utf16le: "utf-16le",
       utf16be: "utf-16be",
+      utf32le: "utf-32le",
+      utf32be: "utf-32be",
       ascii: "utf-8",
       iso88591: "iso-8859-1",
       iso88592: "iso-8859-2",
@@ -95,8 +108,6 @@ export namespace Encoding {
     const result = jschardet.detect(bytes)
     if (!result.encoding) return DEFAULT
     const enc = normalize(result.encoding)
-    // Reject unsupported Unicode encodings (UTF-32 and anything iconv-lite cannot decode)
-    if (enc.toLowerCase().startsWith("utf-32")) return DEFAULT
     if (!iconv.encodingExists(enc)) return DEFAULT
     return enc
   }
@@ -117,6 +128,10 @@ export namespace Encoding {
     const lower = encoding.toLowerCase()
     if (lower === "utf-16le") return Buffer.concat([Buffer.from([0xff, 0xfe]), iconv.encode(body, encoding)])
     if (lower === "utf-16be") return Buffer.concat([Buffer.from([0xfe, 0xff]), iconv.encode(body, encoding)])
+    if (lower === "utf-32le")
+      return Buffer.concat([Buffer.from([0xff, 0xfe, 0x00, 0x00]), iconv.encode(body, encoding)])
+    if (lower === "utf-32be")
+      return Buffer.concat([Buffer.from([0x00, 0x00, 0xfe, 0xff]), iconv.encode(body, encoding)])
     return iconv.encode(text, encoding)
   }
 

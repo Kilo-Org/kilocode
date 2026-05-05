@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ProviderTransform } from "../../src/provider"
+import { ProviderTransform } from "../../src/provider/transform"
 
 function mockModel(overrides: Partial<any> = {}): any {
   return {

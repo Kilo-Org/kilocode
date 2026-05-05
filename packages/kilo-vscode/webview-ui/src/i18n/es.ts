@@ -1419,6 +1419,9 @@ export const dict = {
   "settings.display.layout.description": "Modo de diseño para la interfaz de chat",
   "settings.display.layout.auto": "Automático",
   "settings.display.layout.stretch": "Estirar",
+  "settings.display.fontSize.title": "Tamaño de fuente",
+  "settings.display.fontSize.description":
+    "Ajusta el tamaño de fuente de la webview UI de Kilo de forma independiente a VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
@@ -1433,6 +1436,7 @@ export const dict = {
     "Modelo ligero para generación de títulos, mensajes de commit, mejora de prompts y otras tareas rápidas",
   "settings.providers.disabled": "Proveedores deshabilitados",
   "settings.providers.disabled.description": "Proveedores a ocultar de la lista de proveedores",
+  "settings.providers.disabled.enable": "Habilitar",
   "settings.providers.enabled": "Proveedores habilitados (lista blanca)",
   "settings.providers.enabled.description": "Si se establece, solo estos proveedores estarán disponibles",
   "settings.providers.notSet": "No establecido (usar predeterminado del servidor)",

@@ -28,7 +28,7 @@
 
   [data-slot="question-header-title"] {
     font-family: var(--font-family-sans);
-    font-size: 11px;
+    font-size: var(--kilo-font-size-11);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-weak);
@@ -37,7 +37,7 @@
   /* Shown only when collapsed — truncated question preview */
   [data-slot="question-collapsed-preview"] {
     font-family: var(--font-family-sans);
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-strong);
@@ -123,7 +123,7 @@
   /* ── Body content ── */
   [data-slot="question-text"] {
     font-family: var(--font-family-sans);
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-strong);
@@ -132,7 +132,7 @@
 
   [data-slot="question-hint"] {
     font-family: var(--font-family-sans);
-    font-size: 11px;
+    font-size: var(--kilo-font-size-11);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-large);
     color: var(--text-weak);
@@ -142,7 +142,7 @@
   [data-slot="question-options"] {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 4px;
     padding: 2px 4px;
     max-height: 40vh;
     overflow-y: auto;
@@ -164,6 +164,7 @@
     text-align: left;
     width: 100%;
     cursor: pointer;
+    outline: none;
     transition: background-color 0.15s ease;
 
     &:hover:not([data-picked="true"]) {
@@ -172,6 +173,11 @@
 
     &[data-picked="true"] {
       background-color: var(--surface-interactive-weak);
+    }
+
+    &:focus-visible {
+      outline: 1px solid var(--border-focus);
+      outline-offset: 1px;
     }
 
     &:disabled {
@@ -249,7 +255,7 @@
 
   [data-slot="option-label"] {
     font-family: var(--font-family-sans);
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-strong);
@@ -257,7 +263,7 @@
 
   [data-slot="option-description"] {
     font-family: var(--font-family-sans);
-    font-size: 11px;
+    font-size: var(--kilo-font-size-11);
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-large);
     color: var(--text-base);
@@ -287,7 +293,7 @@
     border: none;
     outline: none;
     font-family: var(--font-family-sans);
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     color: var(--text-base);
     line-height: var(--line-height-large);
 

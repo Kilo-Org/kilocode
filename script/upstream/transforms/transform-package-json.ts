@@ -186,10 +186,6 @@ const KILO_DEPENDENCIES: Record<string, Record<string, string>> = {
     "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/kilo-telemetry": "workspace:*",
   },
-  // packages/app/package.json needs these
-  "packages/app/package.json": {
-    "@kilocode/kilo-i18n": "workspace:*",
-  },
 }
 
 // Kilo-specific bin entries to set on specific packages

@@ -5,9 +5,9 @@ import type { Permission } from "../../src/permission"
 import { Instance } from "../../src/project/instance"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { assertExternalDirectory } from "../../src/tool/external-directory"
-import type { Tool } from "../../src/tool"
-import { Filesystem } from "../../src/util"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import type { Tool } from "../../src/tool/tool"
+import { Filesystem } from "../../src/util/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { tmpdir } from "../fixture/fixture"
 
 const base: Omit<Tool.Context, "ask"> = {

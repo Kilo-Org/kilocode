@@ -1375,6 +1375,8 @@ export const dict = {
   "settings.display.layout.description": "وضع التخطيط لواجهة الدردشة",
   "settings.display.layout.auto": "تلقائي",
   "settings.display.layout.stretch": "تمديد",
+  "settings.display.fontSize.title": "حجم الخط",
+  "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
@@ -1389,6 +1391,7 @@ export const dict = {
     "نموذج خفيف لتوليد العناوين ورسائل الـ commit وتحسين المطالبات والمهام السريعة الأخرى",
   "settings.providers.disabled": "مزودون معطلون",
   "settings.providers.disabled.description": "مزودون لإخفائهم من القائمة",
+  "settings.providers.disabled.enable": "تمكين",
   "settings.providers.enabled": "مزودون مفعلون (قائمة بيضاء)",
   "settings.providers.enabled.description": "إذا تم التعيين، فقط هؤلاء المزودون سيكونون متاحين",
   "settings.providers.notSet": "غير محدد (استخدام الافتراضي)",

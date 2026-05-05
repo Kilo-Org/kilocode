@@ -72,6 +72,9 @@ export function syncMentionedPaths(prev: Set<string>, text: string): Set<string>
 
 /**
  * Replace the @mention pattern before the cursor with the selected path.
+ * Appends a trailing space after the inserted @mention unless the text
+ * immediately after the cursor already starts with whitespace, so the user
+ * can keep typing without breaking the attachment parsing.
  * Returns the new text string.
  */
 export function buildTextAfterMentionSelect(before: string, after: string, path: string): string {
@@ -79,7 +82,8 @@ export function buildTextAfterMentionSelect(before: string, after: string, path:
     const prefix = match.startsWith(" ") ? " " : ""
     return `${prefix}@${path}`
   })
-  return replaced + after
+  const suffix = /^\s/.test(after) ? "" : " "
+  return replaced + suffix + after
 }
 
 /**

@@ -4,7 +4,7 @@
 
 import { test, expect, mock } from "bun:test"
 import path from "path"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
 

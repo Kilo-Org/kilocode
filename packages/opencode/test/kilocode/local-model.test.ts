@@ -157,7 +157,7 @@ mock.module("@tui/ui/toast", () => ({
 await import("@tui/context/local")
 
 // Import the real Global to get the state path (set by test preload via XDG_STATE_HOME)
-const { Global } = await import("@/global")
+const { Global } = await import("@opencode-ai/core/global")
 const modelJsonPath = path.join(Global.Path.state, "model.json")
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

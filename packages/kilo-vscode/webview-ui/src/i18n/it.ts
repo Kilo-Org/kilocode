@@ -1225,6 +1225,9 @@ export const dict = {
   "settings.display.layout.description": "Modalità layout per l'interfaccia chat",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Esteso",
+  "settings.display.fontSize.title": "Dimensione font",
+  "settings.display.fontSize.description":
+    "Regola la dimensione del font della webview Kilo indipendentemente da VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Comprimi automaticamente ragionamento",
   "settings.display.reasoningAutoCollapse.description": "Comprimi i blocchi di ragionamento dopo che l'agente ha finito di scriverli. Lascia disattivato per tenerli espansi finché non li comprimi manualmente.",
   "settings.display.terminalCommand.title": "Blocchi comando terminale",
@@ -1239,6 +1242,7 @@ export const dict = {
   "settings.providers.modeModels.description": "Sovrascrivi il modello predefinito per modalità specifiche. Se non impostato, viene usato il modello globale predefinito.",
   "settings.providers.disabled": "Provider disabilitati",
   "settings.providers.disabled.description": "Provider da nascondere dalla lista provider",
+  "settings.providers.disabled.enable": "Abilita",
   "settings.providers.enabled": "Provider abilitati (allowlist)",
   "settings.providers.enabled.description": "Se impostato, saranno disponibili solo questi provider (allowlist esclusiva)",
   "settings.providers.notSet": "Non impostato (usa default server)",
