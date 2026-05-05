@@ -31,88 +31,6 @@
     padding-right: 32px;
   }
 
-  [data-slot="markdown-mermaid-action"] {
-    align-items: center;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: transparent;
-    color: var(--text-strong);
-    cursor: pointer;
-    display: flex;
-    gap: 8px;
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-    justify-content: flex-start;
-    letter-spacing: var(--letter-spacing-normal);
-    line-height: var(--line-height-large);
-    min-width: 100%;
-    padding: 4px 8px;
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  [data-slot="markdown-mermaid-action"]:hover {
-    background: var(--surface-raised-base-hover, var(--surface-base-hover));
-  }
-
-  [data-slot="markdown-mermaid-action"][data-copied="true"] {
-    color: var(--text-interactive-base);
-  }
-
-  [data-slot="markdown-mermaid-menu"] {
-    position: relative;
-  }
-
-  [data-slot="markdown-mermaid-menu-trigger"] {
-    align-items: center;
-    border: 1px solid var(--border-weak-base);
-    border-radius: var(--radius-md);
-    background: var(--surface-raised-base, var(--surface-base));
-    box-shadow: none;
-    color: var(--text-strong);
-    cursor: pointer;
-    display: inline-flex;
-    gap: 6px;
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-small);
-    font-weight: var(--font-weight-medium);
-    height: 28px;
-    justify-content: center;
-    letter-spacing: var(--letter-spacing-normal);
-    line-height: 28px;
-    list-style: none;
-    min-width: 0;
-    padding: 0 9px 0 10px;
-    position: relative;
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease,
-      color 0.15s ease;
-    user-select: none;
-  }
-
-  [data-slot="markdown-mermaid-menu-trigger"]:hover,
-  [data-slot="markdown-mermaid-menu"][open] [data-slot="markdown-mermaid-menu-trigger"] {
-    background: var(--surface-raised-base-hover, var(--surface-base-hover));
-    border-color: var(--border-base, var(--border-weak-base));
-  }
-
-  [data-slot="markdown-mermaid-menu-trigger"]:focus-visible {
-    outline: 1px solid var(--text-interactive-base);
-    outline-offset: 2px;
-  }
-
-  [data-slot="markdown-mermaid-menu-trigger"]::-webkit-details-marker {
-    display: none;
-  }
-
-  [data-slot="markdown-mermaid-menu-label"] {
-    max-width: 16ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   [data-slot="markdown-mermaid-menu-chevron"] {
     align-items: center;
     color: var(--text-weak);
@@ -131,46 +49,8 @@
     width: 12px;
   }
 
-  [data-slot="markdown-mermaid-menu"][open] [data-slot="markdown-mermaid-menu-chevron"] {
+  [data-expanded] [data-slot="markdown-mermaid-menu-chevron"] {
     transform: rotate(180deg);
-  }
-
-  [data-slot="markdown-mermaid-menu-content"] {
-    animation: dropdown-menu-open 0.15s ease-out;
-    background: var(--surface-raised-stronger-non-alpha, var(--surface-float-base));
-    border: 1px solid color-mix(in oklch, var(--border-base, var(--border-weak-base)) 50%, transparent);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    display: none;
-    flex-direction: column;
-    min-width: max(180px, 100%);
-    padding: 4px;
-    position: absolute;
-    top: calc(100% + 4px);
-    z-index: 50;
-  }
-
-  [data-slot="markdown-mermaid-menu-content"]::before {
-    content: "";
-    height: 4px;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: -4px;
-  }
-
-  [data-slot="markdown-mermaid-menu"][open] [data-slot="markdown-mermaid-menu-content"] {
-    display: flex;
-  }
-
-  [data-slot="markdown-mermaid-menu-content"] [data-slot="markdown-mermaid-action"] {
-    border-radius: var(--radius-sm);
-  }
-
-  [data-slot="markdown-mermaid-menu-content"] [data-slot="markdown-mermaid-action"]:hover,
-  [data-slot="markdown-mermaid-menu-content"] [data-slot="markdown-mermaid-action"]:focus-visible {
-    background: var(--surface-raised-base-hover);
-    outline: none;
   }
 
   [data-component="markdown-mermaid"][data-state="rendered"] > svg {

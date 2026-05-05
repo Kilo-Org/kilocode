@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify"
 import { fnv1a } from "../context/marked"
+import { mountMermaidActions } from "./markdown-mermaid-actions"
 
 const svgConfig = {
   USE_PROFILES: { html: true, svg: true, svgFilters: true },
@@ -44,6 +45,8 @@ const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = 
   id: 0,
   queue: Promise.resolve(),
 }
+
+const actions = new WeakMap<HTMLElement, () => void>()
 
 async function load() {
   if (!cache.promise) {
@@ -220,81 +223,11 @@ function fail(wrapper: HTMLElement, pre: HTMLPreElement, err: unknown, labels: M
   pre.hidden = false
 }
 
-function button(label: string, onClick: (button: HTMLButtonElement) => Promise<void> | void) {
-  const item = document.createElement("button")
-  item.type = "button"
-  item.setAttribute("data-slot", "markdown-mermaid-action")
-  item.setAttribute("aria-label", label)
-  item.setAttribute("title", label)
-  item.setAttribute("role", "menuitem")
-  item.textContent = label
-  item.addEventListener("click", (event) => {
-    event.preventDefault()
-    event.stopPropagation()
-    void Promise.resolve(onClick(item)).catch((err) => console.warn("Mermaid action failed", err))
-  })
-  return item
-}
-
-function menu(label: string, items: HTMLElement[]) {
-  const root = document.createElement("details")
-  root.setAttribute("data-slot", "markdown-mermaid-menu")
-
-  const trigger = document.createElement("summary")
-  trigger.setAttribute("data-slot", "markdown-mermaid-menu-trigger")
-  trigger.setAttribute("aria-label", label)
-  trigger.setAttribute("title", label)
-  const text = document.createElement("span")
-  text.setAttribute("data-slot", "markdown-mermaid-menu-label")
-  text.textContent = label
-  const icon = document.createElement("span")
-  icon.setAttribute("data-slot", "markdown-mermaid-menu-chevron")
-  icon.setAttribute("aria-hidden", "true")
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-  svg.setAttribute("viewBox", "0 0 16 16")
-  svg.setAttribute("fill", "none")
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
-  path.setAttribute("d", "M4 6L8 10L12 6")
-  path.setAttribute("stroke", "currentColor")
-  path.setAttribute("stroke-linecap", "round")
-  path.setAttribute("stroke-linejoin", "round")
-  path.setAttribute("stroke-width", "1.6")
-  svg.appendChild(path)
-  icon.appendChild(svg)
-  trigger.append(text, icon)
-
-  const content = document.createElement("div")
-  content.setAttribute("data-slot", "markdown-mermaid-menu-content")
-  content.setAttribute("role", "menu")
-  content.append(...items)
-
-  root.addEventListener("toggle", () => {
-    if (!root.open) return
-    const parent = root.parentElement
-    const menus = parent?.querySelectorAll('[data-slot="markdown-mermaid-menu"]') ?? []
-    for (const menu of menus) {
-      if (menu instanceof HTMLDetailsElement && menu !== root) menu.open = false
-    }
-  })
-  root.append(trigger, content)
-  root.addEventListener("click", (event) => event.stopPropagation())
-  for (const item of items) {
-    item.addEventListener("click", () => {
-      root.open = false
-    })
-  }
-  return root
-}
-
-function setDone(item: HTMLButtonElement, labels: MermaidLabels) {
-  const text = item.textContent
-  item.textContent = labels.copied
-  item.setAttribute("data-copied", "true")
-  setTimeout(() => {
-    if (!item.isConnected) return
-    item.textContent = text
-    item.removeAttribute("data-copied")
-  }, 1500)
+function cleanupActions(el: HTMLElement) {
+  const dispose = actions.get(el)
+  if (!dispose) return
+  dispose()
+  actions.delete(el)
 }
 
 function serialize(svg: SVGSVGElement) {
@@ -355,48 +288,42 @@ function save(url: string, filename: string) {
   download(url, filename)
 }
 
-async function copyText(text: string, item: HTMLButtonElement, labels: MermaidLabels) {
+async function copyText(text: string) {
   await navigator.clipboard.writeText(text)
-  setDone(item, labels)
 }
 
-async function copyPng(svg: SVGSVGElement, item: HTMLButtonElement, labels: MermaidLabels) {
+async function copyPng(svg: SVGSVGElement) {
   const url = await png(svg)
   const blob = await (await fetch(url)).blob()
   if (typeof ClipboardItem === "undefined") {
     await navigator.clipboard.writeText(serialize(svg))
-    setDone(item, labels)
     return
   }
   await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
-  setDone(item, labels)
 }
 
-function actions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels: MermaidLabels) {
+function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels: MermaidLabels) {
   const svg = el.querySelector("svg")
   if (!(svg instanceof SVGSVGElement)) return
 
-  const old = el.querySelector('[data-slot="markdown-mermaid-actions"]')
+  cleanupActions(el)
+  const old = el.querySelector('[data-slot="markdown-mermaid-actions-root"]')
   old?.remove()
-
-  const bar = document.createElement("div")
-  bar.setAttribute("data-slot", "markdown-mermaid-actions")
   const sourceText = pre.querySelector("code")?.textContent ?? source
   const sourceSvg = () => serialize(svg)
   const sourceSvgUrl = () => dataUrl("image/svg+xml", sourceSvg())
 
-  bar.append(
-    menu(labels.copy, [
-      button(labels.copySource, (button) => copyText(sourceText, button, labels)),
-      button(labels.copySvg, (button) => copyText(sourceSvg(), button, labels)),
-      button(labels.copyPng, (button) => copyPng(svg, button, labels)),
-    ]),
-    menu(labels.download, [
-      button(labels.downloadSvg, () => save(sourceSvgUrl(), "mermaid-diagram.svg")),
-      button(labels.downloadPng, async () => save(await png(svg), "mermaid-diagram.png")),
-    ]),
+  actions.set(
+    el,
+    mountMermaidActions(el, {
+      labels,
+      onCopySource: () => copyText(sourceText),
+      onCopySvg: () => copyText(sourceSvg()),
+      onCopyPng: () => copyPng(svg),
+      onDownloadSvg: () => save(sourceSvgUrl(), "mermaid-diagram.svg"),
+      onDownloadPng: async () => save(await png(svg), "mermaid-diagram.png"),
+    }),
   )
-  el.insertBefore(bar, el.firstChild)
 }
 
 export function preserveMermaid(fromEl: Element, toEl: Element) {
@@ -492,9 +419,10 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
       const safe = sanitize(result.svg)
       if (!safe) throw new Error(label.errorEmpty)
 
+      cleanupActions(el)
       el.setAttribute("data-state", "rendered")
       el.innerHTML = safe
-      actions(el, pre, source, label)
+      renderActions(el, pre, source, label)
       wrapper.setAttribute("data-mermaid-state", "rendered")
       pre.hidden = true
     } catch (err) {
