@@ -26,7 +26,7 @@ You have three options for configuring AWS credentials:
 
 1.  **Bedrock API Key:**
     - Create a Bedrock-specific API key in the AWS Console. This is a simple service-specific authentication method.
-    - See the [AWS documentation on Bedrock credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_bedrock.html) for instructions on creating an API key.
+    - See the [AWS documentation on Bedrock API keys](https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html) for instructions on creating an API key.
 2.  **AWS Access Keys (Recommended for Development):**
     - Create an IAM user with the necessary permissions (at least `bedrock:InvokeModel`).
     - Generate an access key ID and secret access key for that user.

@@ -1262,6 +1262,7 @@ export const dict = {
     "This mode uses the default provider-specific prompt (varies by model).",
   "settings.agentBehaviour.editMode.defaultPrompt.copy": "Copy to clipboard",
   "settings.agentBehaviour.editMode.defaultPrompt.copied": "Copied!",
+  "settings.agentBehaviour.editMode.defaultPrompt.resolvedFrom": "Resolved from {{model}}",
   "settings.agentBehaviour.editMode.subagents": "Sub-Agents",
   "settings.agentBehaviour.editMode.subagents.description":
     "Specialized agents that this mode can delegate tasks to via the Task tool.",

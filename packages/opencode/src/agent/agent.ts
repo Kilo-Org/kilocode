@@ -21,7 +21,7 @@ import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
-import { Effect, Context, Layer, Schema } from "effect"
+import { Effect, Context, Exit, Layer, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { zod } from "@/util/effect-zod"
 import { withStatics, type DeepMutable } from "@/util/schema"
