@@ -9,7 +9,7 @@
  * - Simpler flat structure without overflow containers
  */
 
-import { Component, createMemo, For, Show, createSignal, createEffect, on } from "solid-js"
+import { Component, createMemo, For, Show, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
@@ -32,6 +32,7 @@ import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import { visibleError } from "../../context/session-errors"
 import type { ErrorDisplayProps } from "./ErrorDisplay"
 import type { Message as WebMessage } from "../../types/messages"
@@ -68,6 +69,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const server = useServer()
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
 
   const emptyParts: SDKPart[] = []
   const emptyDiffs: SnapshotFileDiff[] = []
@@ -108,6 +110,16 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
   const [open, setOpen] = createSignal(false)
   const [expanded, setExpanded] = createSignal<string[]>([])
+  const [metrics, setMetrics] = createSignal(true)
+
+  const handler = (e: MessageEvent<import("../../types/messages").ExtensionMessage>) => {
+    if (e.data.type === "timelineSettingLoaded") setMetrics(e.data.showTokenThroughput)
+  }
+  onMount(() => {
+    window.addEventListener("message", handler)
+    vscode.postMessage({ type: "requestTimelineSetting" })
+  })
+  onCleanup(() => window.removeEventListener("message", handler))
 
   createEffect(
     on(
@@ -179,7 +191,13 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={assistantMessages().length > 0}>
             <div class="vscode-session-turn-assistant">
               <For each={assistantMessages()}>
-                {(msg) => <AssistantMessage message={msg} showAssistantCopyPartID={showAssistantCopyPartID()} />}
+                {(msg) => (
+                  <AssistantMessage
+                    message={msg}
+                    showAssistantCopyPartID={showAssistantCopyPartID()}
+                    showTokenThroughput={metrics()}
+                  />
+                )}
               </For>
             </div>
           </Show>

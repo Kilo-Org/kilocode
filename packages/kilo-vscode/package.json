@@ -848,6 +848,11 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.showTokenThroughput": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show token processing speed on assistant messages and in the chat header"
+        },
         "kilo-code.new.diff.renderMarkdown": {
           "type": "boolean",
           "default": false,

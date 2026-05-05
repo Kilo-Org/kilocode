@@ -77,7 +77,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     }
     return undefined
   })
-  const rates = createMemo(() => session.throughput())
+  const rates = createMemo(() => (showMetrics() ? session.throughput() : undefined))
 
   const fmtNum = (n: number): string => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -88,10 +88,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
 
-  // Read initial value from VS Code settings
+  // Read initial values from VS Code settings
+  const [showMetrics, setShowMetrics] = createSignal(true)
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
   const handler = (e: MessageEvent<ExtensionMessage>) => {
-    if (e.data.type === "timelineSettingLoaded") setExpanded(e.data.visible)
+    if (e.data.type === "timelineSettingLoaded") {
+      setExpanded(e.data.visible)
+      setShowMetrics(e.data.showTokenThroughput)
+    }
   }
   window.addEventListener("message", handler)
   onCleanup(() => window.removeEventListener("message", handler))

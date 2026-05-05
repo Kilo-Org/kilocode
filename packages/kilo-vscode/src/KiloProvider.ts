@@ -2293,6 +2293,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "timelineSettingLoaded",
       visible: config.get<boolean>("showTaskTimeline", true),
+      showTokenThroughput: config.get<boolean>("showTokenThroughput", false),
     })
   }
 

@@ -109,6 +109,19 @@ export function latestRates(
   return { prompt: rate.prompt, generation, output: rate.output }
 }
 
+export function messageRates(
+  msg: { id?: string; parts?: Array<{ type?: string; metrics?: StepMetrics }> },
+  all?: Record<string, Array<{ type?: string; metrics?: StepMetrics }>>,
+) {
+  const parts = msg.parts ?? (msg.id ? all?.[msg.id] : undefined) ?? []
+  const part = [...parts].reverse().find((item) => item.type === "step-finish" && item.metrics)
+  if (!part?.metrics) return undefined
+  const rate = part.metrics.rate
+  const generation = rate.generation ?? rate.output
+  if (!rate.prompt && !generation && !rate.output) return undefined
+  return { prompt: rate.prompt, generation, output: rate.output, duration: part.metrics.duration }
+}
+
 /**
  * Build a map of session ID → total cost for each session in the family
  * that has non-zero cost. Pure function — no store dependency.

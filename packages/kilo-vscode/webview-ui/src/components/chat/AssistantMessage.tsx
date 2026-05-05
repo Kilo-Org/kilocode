@@ -9,6 +9,8 @@
 
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
@@ -22,6 +24,7 @@ import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
+import { formatRate, messageRates } from "../../context/session-utils"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -62,6 +65,7 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 interface AssistantMessageProps {
   message: SDKAssistantMessage
   showAssistantCopyPartID?: string | null
+  showTokenThroughput?: boolean
 }
 
 function TodoToolCard(props: { part: ToolPart }) {
@@ -116,6 +120,26 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const display = useDisplay()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const rates = createMemo(() =>
+    props.showTokenThroughput ? messageRates(props.message, session.allParts()) : undefined,
+  )
+  const tooltip = createMemo(() => {
+    const rate = rates()
+    if (!rate) return undefined
+    const rows = [
+      rate.prompt ? `Prompt: ${formatRate(rate.prompt)}` : undefined,
+      rate.generation ? `Generation: ${formatRate(rate.generation)}` : undefined,
+      rate.output ? `Output: ${formatRate(rate.output)}` : undefined,
+    ].filter(Boolean)
+    if (rate.duration) rows.push(`Duration: ${(rate.duration / 1000).toFixed(1)}s`)
+    return (
+      <div class="assistant-message-metrics-tooltip">
+        {rows.map((row) => (
+          <div>{row}</div>
+        ))}
+      </div>
+    )
+  })
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
@@ -125,6 +149,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
 
   return (
     <>
+      <Show when={rates()}>
+        {(rate) => (
+          <div data-component="assistant-message-metrics">
+            <Tooltip value={tooltip()} placement="top">
+              <button data-slot="assistant-message-metrics-trigger" aria-label="Message token throughput">
+                <Icon name="status" size="small" />
+                <span>{formatRate(rate().generation ?? rate().output)}</span>
+              </button>
+            </Tooltip>
+          </div>
+        )}
+      </Show>
       <For each={parts()}>
         {(part) => {
           // Upstream PART_MAPPING["tool"] returns null for todowrite/todoread,

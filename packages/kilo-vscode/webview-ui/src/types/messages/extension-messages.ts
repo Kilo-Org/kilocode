@@ -437,6 +437,7 @@ export interface NotificationSettingsLoadedMessage {
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
   visible: boolean
+  showTokenThroughput: boolean
 }
 
 export interface NotificationsLoadedMessage {
