@@ -123,7 +123,7 @@ Set the API key as an environment variable:
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-Or use `kilo auth login` for providers that support OAuth (like GitHub Copilot).
+Or use `kilo auth login` for providers that support OAuth, such as GitHub Copilot or ChatGPT Plus/Pro.
 
 To set a default model:
 

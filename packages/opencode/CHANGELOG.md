@@ -1,5 +1,25 @@
 # @kilocode/cli
 
+## 7.2.36
+
+### Patch Changes
+
+- [#9869](https://github.com/Kilo-Org/kilocode/pull/9869) [`d5fd42c`](https://github.com/Kilo-Org/kilocode/commit/d5fd42c3d736329c27de06d52154701f6f4608fb) - Fix question tool being unavailable in code mode
+
+- [#9838](https://github.com/Kilo-Org/kilocode/pull/9838) [`f499257`](https://github.com/Kilo-Org/kilocode/commit/f499257c3287274473db801edba1852dbcdbd92a) - Honor approved external directory read access in Ask and Plan modes.
+
+- [#9778](https://github.com/Kilo-Org/kilocode/pull/9778) [`33476e5`](https://github.com/Kilo-Org/kilocode/commit/33476e50508f39c232731613fd9d74a7aa19e748) - Show an "Initializing snapshot…" line in the chat while the initial snapshot is running on very large repositories, and add an interactive prompt when it stalls. After 10 seconds (configurable via `KILO_SNAPSHOT_TRACK_TIMEOUT_MS`) the prompt asks whether to keep waiting or disable snapshots for the project; choosing to disable writes `"snapshot": false` to `.kilo/kilo.json` so future sessions skip snapshots entirely.
+
+- [#9833](https://github.com/Kilo-Org/kilocode/pull/9833) [`614bca7`](https://github.com/Kilo-Org/kilocode/commit/614bca7cff862ec96e4707a97f43b540210ab699) - Prevent macOS Spotlight from indexing Kilo-generated data directories.
+
+## 7.2.35
+
+### Patch Changes
+
+- [#9820](https://github.com/Kilo-Org/kilocode/pull/9820) [`a858f00`](https://github.com/Kilo-Org/kilocode/commit/a858f001ba8b2de561c69ba8a42d9d3347b1e66f) - Warn when a model hits its output limit before finishing a response.
+
+- [#8910](https://github.com/Kilo-Org/kilocode/pull/8910) [`8472f90`](https://github.com/Kilo-Org/kilocode/commit/8472f9052883d9acf643e0786e3819936c44a61a) Thanks [@eolbrych](https://github.com/eolbrych)! - Restore the Sign in action for MCP servers that require OAuth authentication in VS Code settings.
+
 ## 7.2.33
 
 ### Minor Changes

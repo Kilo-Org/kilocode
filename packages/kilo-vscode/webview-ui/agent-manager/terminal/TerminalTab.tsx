@@ -70,11 +70,8 @@ function cssVar(name: string, fallback: string): string {
  * that's the signal VS Code uses to flip `vscode-light` ↔ `vscode-dark`
  * / `vscode-high-contrast`.
  *
- * Matches the intent of opencode desktop's
- * `packages/app/src/components/terminal.tsx:236-255` approach (memo on
- * theme mode + `setOptionIfSupported(term, "theme", colors)`), just
- * driven by a MutationObserver because VS Code is the source of truth
- * here rather than their own Solid theme signal.
+ * Driven by a MutationObserver because VS Code is the source of truth here
+ * rather than a Solid theme signal.
  */
 function readTheme() {
   return {

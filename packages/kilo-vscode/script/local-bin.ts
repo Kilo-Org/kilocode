@@ -135,7 +135,8 @@ async function ensureBuiltBinary(): Promise<string> {
   await $`bun install --frozen-lockfile`.cwd(opencodeDir)
 
   // Build using the opencode package script.
-  await $`bun run build --single`.cwd(opencodeDir)
+  // --skip-embed-web-ui avoids bundling packages/app; the extension uses its own webview.
+  await $`bun run build --single --skip-embed-web-ui`.cwd(opencodeDir)
 
   const built = await findKiloBinaryInOpencodeDist()
   if (!built) {

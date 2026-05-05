@@ -36,14 +36,6 @@ export {
 } from "./transforms/transform-take-theirs"
 
 export {
-  transformConflictedTauri,
-  transformTauriFile,
-  transformAllTauri,
-  isTauriFile,
-  applyTauriTransforms,
-} from "./transforms/transform-tauri"
-
-export {
   transformConflictedPackageJson,
   transformPackageJson,
   transformAllPackageJson,

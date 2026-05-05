@@ -13,6 +13,7 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -125,7 +126,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs)
+        return controller(id, flushMs, true, displayMs = displayMs)
     }
 
     protected fun controller(
@@ -133,6 +134,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long,
         condense: Boolean,
         displayMs: Long = Long.MAX_VALUE,
+        beforeUpdate: () -> Boolean = { false },
+        afterUpdate: (Boolean) -> Unit = {},
     ): SessionController {
         val root = Root()
         val m = SessionController(
@@ -143,9 +146,11 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
           app,
           scope,
           root,
-          flushMs,
-          condense,
-          displayMs
+           flushMs,
+           condense,
+           displayMs,
+           beforeUpdate = beforeUpdate,
+           afterUpdate = afterUpdate,
         )
         controllers.add(m)
         roots[m] = root
@@ -238,7 +243,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
 
     /** Create a controller, attach both listeners, send initial prompt, and flush. */
     protected fun prompted(): Triple<SessionController, MutableList<SessionControllerEvent>, MutableList<SessionModelEvent>> {
-        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller()
         val events = collect(m)
@@ -321,7 +326,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             ),
         ),
         connected: List<String> = listOf("kilo"),
-        defaults: Map<String, String> = mapOf("kilo" to "gpt-5"),
+        defaults: Map<String, String> = emptyMap(),
     ) = KiloWorkspaceStateDto(
         status = KiloWorkspaceStatusDto.READY,
         agents = AgentsDto(agents = agents, all = agents, default = default),

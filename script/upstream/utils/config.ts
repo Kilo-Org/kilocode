@@ -21,9 +21,6 @@ export interface MergeConfig {
   /** Files that should take upstream version and apply Kilo branding transforms */
   takeTheirsAndTransform: string[]
 
-  /** Tauri/Desktop config files with predictable branding patterns */
-  tauriFiles: string[]
-
   /** Script files with GitHub API references */
   scriptFiles: string[]
 
@@ -142,6 +139,9 @@ export const defaultConfig: MergeConfig = {
     "packages/function/**",
     "packages/docs/**",
     "packages/identity/**",
+    "packages/app/**",
+    "packages/desktop/**",
+    "packages/desktop-electron/**",
     // GitHub Action - Kilo version is fully ported and complete
     "github/index.ts",
     "github/package.json",
@@ -153,27 +153,9 @@ export const defaultConfig: MergeConfig = {
   // Files that should take upstream version and apply Kilo branding transforms
   // These are files with only branding differences, no logic changes
   takeTheirsAndTransform: [
-    // App components with branding only
-    "packages/app/src/components/**/*.tsx",
-    "packages/app/src/context/**/*.tsx",
-    "packages/app/src/pages/**/*.tsx",
     // UI components
     "packages/ui/src/components/**/*.tsx",
     "packages/ui/src/context/**/*.tsx",
-    // Desktop TypeScript files (not Rust)
-    "packages/desktop/src/**/*.ts",
-    // E2E and test fixtures
-    "packages/app/e2e/**/*.ts",
-    "packages/app/script/**/*.ts",
-  ],
-
-  // Tauri/Desktop config files with predictable branding patterns
-  tauriFiles: [
-    "packages/desktop/src-tauri/tauri.conf.json",
-    "packages/desktop/src-tauri/tauri.prod.conf.json",
-    "packages/desktop/src-tauri/Cargo.toml",
-    "packages/desktop/src-tauri/Cargo.lock",
-    "packages/desktop/src-tauri/src/*.rs",
   ],
 
   // Script files with GitHub API references
@@ -228,7 +210,7 @@ export const defaultConfig: MergeConfig = {
   originRemote: "origin",
 
   // i18n translation files that need Kilo branding transforms
-  i18nPatterns: ["packages/*/src/i18n/*.ts", "packages/desktop/src/i18n/*.ts"],
+  i18nPatterns: ["packages/*/src/i18n/*.ts"],
 }
 
 export function loadConfig(overrides?: Partial<MergeConfig>): MergeConfig {

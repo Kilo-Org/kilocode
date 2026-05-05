@@ -52,7 +52,7 @@ async function withRepo(run: (dir: string, base: string) => Promise<void>): Prom
 describe("generatedLike", () => {
   it("matches files in ignored folders", () => {
     expect(generatedLike("node_modules/foo.js")).toBe(true)
-    expect(generatedLike("packages/app/node_modules/foo/index.js")).toBe(true)
+    expect(generatedLike("packages/opencode/node_modules/foo/index.js")).toBe(true)
     expect(generatedLike("dist/bundle.js")).toBe(true)
     expect(generatedLike("build/out.js")).toBe(true)
     expect(generatedLike(".git/HEAD")).toBe(true)
