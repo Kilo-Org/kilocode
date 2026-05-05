@@ -762,6 +762,11 @@ export const SessionProvider: ParentComponent = (props) => {
       return true
     }
 
+    if (message.type === "partRemoved") {
+      handlePartRemoved(message.sessionID, message.messageID, message.partID)
+      return true
+    }
+
     return false
   }
 
@@ -1152,6 +1157,21 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   }
 
+  function handlePartRemoved(sessionID: string | undefined, messageID: string, partID: string) {
+    if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+
+    setStore(
+      "parts",
+      produce((parts) => {
+        const list = parts[messageID]
+        if (!list) return
+        const idx = list.findIndex((p) => p.id === partID)
+        if (idx < 0) return
+        list.splice(idx, 1)
+      }),
+    )
+  }
+
   function handleSessionStatus(
     sessionID: string,
     newStatus: SessionStatus,
@@ -1503,7 +1523,6 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  // Matches desktop app's event-reducer.ts: message.removed handler.
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))

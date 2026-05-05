@@ -59,6 +59,7 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
             val manager = SessionSidePanelManager(project, workspace)
             val content = ContentFactory.getInstance().createContent(manager.component, "", false)
             content.setDisposer(manager)
+            content.setPreferredFocusedComponent { manager.defaultFocusedComponent }
             toolWindow.contentManager.addContent(content)
             toolWindow.contentManager.setSelectedContent(content)
             manager.newSession()

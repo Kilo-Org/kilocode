@@ -26,8 +26,7 @@ const KEY = "enabled"
 /**
  * Runtime auto-accept toggle for permissions.
  *
- * Mirrors the desktop app pattern (packages/app/src/context/permission.tsx):
- * instead of writing to the config file, we intercept `permission.asked` SSE
+ * Instead of writing to the config file, we intercept `permission.asked` SSE
  * events and auto-reply "once" to each. This avoids config-layer issues
  * (merged vs global, sparse defaults) and works even when the sidebar is closed.
  */

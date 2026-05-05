@@ -21,6 +21,8 @@ import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
+import { ReadPermission } from "@/kilocode/permission/read" // kilocode_change
+import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory" // kilocode_change
 
 const log = Log.create({ service: "permission" })
 
@@ -177,13 +179,37 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
 }
 
 // kilocode_change start
+export function resolve(permission: string, pattern: string, ruleset: Ruleset, ...overrides: Ruleset[]): Rule {
+  const evalFn = permission === "external_directory" ? ExternalDirectoryPermission.evaluate : evaluate
+  const base = ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset))
+  const saved = evalFn(permission, pattern, ...overrides)
+  if (base.action === "deny") return base
+  if (saved.action === "deny") return saved
+  if (base.action === "ask") {
+    if (saved.action === "allow" && Wildcard.match(saved.pattern, base.pattern)) return saved
+    return base
+  }
+  if (saved.action === "allow") return saved
+  return base
+}
+// kilocode_change end
+
+// kilocode_change start
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
-  return evaluate(permission, pattern, ruleset).action === "deny"
+  return ExternalDirectoryPermission.evaluate(permission, pattern, ruleset).action === "deny"
 }
 
 function subset(permission: string, ruleset: Ruleset) {
   return ruleset.filter((rule) => Wildcard.match(permission, rule.permission))
+}
+
+function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
+  if (ConfigProtection.isRequest(entry.info)) return false
+  return entry.info.patterns.every((pattern) => {
+    if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
+    return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
+  })
 }
 // kilocode_change end
 
@@ -229,7 +255,7 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
@@ -407,9 +433,7 @@ export const layer = Layer.effect(
 
       if (input.requestID) {
         const entry = s.pending.get(PermissionID.make(input.requestID))
-        const ok = entry
-          ? entry.info.patterns.every((pattern) => !veto(entry.info.permission, pattern, entry.hardRuleset))
-          : false // kilocode_change
+        const ok = entry ? covered(entry, s.approved, s.session[entry.info.sessionID] ?? []) : false // kilocode_change
         if (entry && ok && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
           s.pending.delete(PermissionID.make(input.requestID))
           yield* bus.publish(Event.Replied, {
@@ -423,8 +447,7 @@ export const layer = Layer.effect(
 
       for (const [id, entry] of s.pending) {
         if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
-        if (ConfigProtection.isRequest(entry.info)) continue
-        if (entry.info.patterns.some((pattern) => veto(entry.info.permission, pattern, entry.hardRuleset))) continue // kilocode_change
+        if (!covered(entry, s.approved, s.session[entry.info.sessionID] ?? [])) continue // kilocode_change
         s.pending.delete(id)
         yield* bus.publish(Event.Replied, {
           sessionID: entry.info.sessionID,
