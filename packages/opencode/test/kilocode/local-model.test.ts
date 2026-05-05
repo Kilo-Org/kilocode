@@ -303,6 +303,7 @@ describe("model.set persists per-agent model", () => {
 
       // recent() reads the store directly (not a memo), so it reflects the loaded file
       expect(local.model.recent()).toEqual([OPUS])
+      local.agent.set("code")
 
       // Setting a new model on top of loaded data should produce correct file
       local.model.set(SONNET, { recent: true })
