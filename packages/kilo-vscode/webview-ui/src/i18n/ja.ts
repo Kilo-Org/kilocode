@@ -1531,7 +1531,7 @@ export const dict = {
   "notifications.action.tryModelGeneric": "モデルを試す",
   "diffViewer.source.workspace.label": "ローカルの変更",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
   "diffViewer.source.session.label": "現在のセッション",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",

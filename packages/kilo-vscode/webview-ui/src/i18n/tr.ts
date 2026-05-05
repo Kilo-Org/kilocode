@@ -1557,7 +1557,7 @@ export const dict = {
   "settings.agentBehaviour.editMode.save": "Tamam",
   "diffViewer.source.workspace.label": "Yerel değişiklikler",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "Bu daldaki tüm değişiklikler, temel dal ile karşılaştırıldığında. Commitlenmemiş dosyaları (staged, unstaged, izlenmeyen) ve temelde henüz bulunmayan yerel commitleri içerir.",
   "diffViewer.source.session.label": "Geçerli oturum",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",

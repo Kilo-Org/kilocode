@@ -1546,7 +1546,7 @@ export const dict = {
   "notifications.action.tryModelGeneric": "Probaj model",
   "diffViewer.source.workspace.label": "Lokalne izmjene",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "Sve promjene na ovoj grani u poređenju s osnovnom granom. Uključuje nekomitovane datoteke (staged, unstaged, nepraćene) i lokalne commitove koji još nisu u osnovi.",
   "diffViewer.source.session.label": "Trenutna sesija",
   "diffViewer.group.session": "Sesija",
   "diffViewer.group.git": "Git",

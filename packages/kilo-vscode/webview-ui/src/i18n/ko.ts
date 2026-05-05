@@ -1516,7 +1516,7 @@ export const dict = {
   "notifications.action.tryModelGeneric": "모델 시도",
   "diffViewer.source.workspace.label": "로컬 변경 사항",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "베이스 브랜치와 비교한 이 브랜치의 모든 변경 사항. 커밋되지 않은 파일(staged, unstaged, 추적되지 않음)과 아직 베이스에 반영되지 않은 로컬 커밋을 포함합니다.",
   "diffViewer.source.session.label": "현재 세션",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",

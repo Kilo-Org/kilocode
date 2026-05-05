@@ -1558,7 +1558,7 @@ export const dict = {
   "settings.agentBehaviour.editMode.save": "Готово",
   "diffViewer.source.workspace.label": "Локальні зміни",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
   "diffViewer.source.session.label": "Поточна сесія",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",

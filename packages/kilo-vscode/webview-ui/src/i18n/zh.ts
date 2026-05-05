@@ -1482,7 +1482,7 @@ export const dict = {
   "notifications.action.tryModelGeneric": "尝试模型",
   "diffViewer.source.workspace.label": "本地更改",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "此分支相对于基础分支的所有更改。包括未提交的文件（已暂存、未暂存、未跟踪）以及尚未合入基础分支的本地提交。",
   "diffViewer.source.session.label": "当前会话",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",

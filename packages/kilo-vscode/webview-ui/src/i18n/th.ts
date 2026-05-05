@@ -1515,7 +1515,7 @@ export const dict = {
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
   "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
   "diffViewer.source.session.label": "เซสชันปัจจุบัน",
   "diffViewer.group.session": "เซสชัน",
   "diffViewer.group.git": "Git",

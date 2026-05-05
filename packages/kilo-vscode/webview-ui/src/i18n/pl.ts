@@ -1541,7 +1541,7 @@ export const dict = {
   "notifications.action.tryModelGeneric": "Wypróbuj model",
   "diffViewer.source.workspace.label": "Lokalne zmiany",
   "diffViewer.source.workspace.tooltip":
-    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+    "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
   "diffViewer.source.session.label": "Bieżąca sesja",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
