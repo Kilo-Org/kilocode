@@ -76,6 +76,7 @@ interface ProcessorContext extends Input {
   currentText: MessageV2.TextPart | undefined
   reasoningMap: Record<string, MessageV2.ReasoningPart>
   stepStart: number // kilocode_change
+  step: { reasoning: boolean; text: boolean; tool: boolean } // kilocode_change
 }
 
 type StreamEvent = Event
@@ -132,6 +133,7 @@ export const layer: Layer.Layer<
         currentText: undefined,
         reasoningMap: {},
         stepStart: 0, // kilocode_change
+        step: { reasoning: false, text: false, tool: false }, // kilocode_change
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
@@ -255,6 +257,7 @@ export const layer: Layer.Layer<
 
           case "reasoning-start":
             if (value.id in ctx.reasoningMap) return
+            ctx.step.reasoning = true // kilocode_change
             ctx.reasoningMap[value.id] = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -294,6 +297,7 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            ctx.step.tool = true // kilocode_change
             const part = yield* session.updatePart({
               id: ctx.toolcalls[value.id]?.partID ?? PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -322,6 +326,7 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            ctx.step.tool = true // kilocode_change
             // kilocode_change start — create tool part if tool-input-start was never emitted
             if (!ctx.toolcalls[value.toolCallId]) {
               log.warn("tool-call without prior tool-input-start", {
@@ -397,28 +402,26 @@ export const layer: Layer.Layer<
             return
           }
 
-          case "tool-error": {
+          case "tool-error": { // kilocode_change
             yield* failToolCall(value.toolCallId, value.error)
             return
           }
 
-          // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
-          case "error":
+          case "error": // kilocode_change
             throw value.error
 
           case "start-step":
-            ctx.stepStart = performance.now()
-            if (!ctx.snapshot)
-              ctx.snapshot = yield* snapshot.track({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id })
+            ctx.stepStart = performance.now() // kilocode_change
+            ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
+            if (!ctx.snapshot) ctx.snapshot = yield* snapshot.track()
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
-              sessionID: ctx.sessionID,
+              sessionID: ctx.sessionID, // kilocode_change
               snapshot: ctx.snapshot,
               type: "step-start",
             })
-            // kilocode_change end
-            return
+            return // kilocode_change
 
           case "finish-step": {
             // kilocode_change start - guard against finish-step without start-step
@@ -452,12 +455,7 @@ export const layer: Layer.Layer<
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,
-              // kilocode_change start - pass sessionID + messageID
-              snapshot: yield* snapshot.track({
-                sessionID: ctx.sessionID,
-                messageID: ctx.assistantMessage.id,
-              }),
-              // kilocode_change end
+              snapshot: yield* snapshot.track(),
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
@@ -465,6 +463,17 @@ export const layer: Layer.Layer<
               cost: usage.cost,
               metrics, // kilocode_change
             })
+            const warn = KiloSessionProcessor.lengthWarning({ msg: ctx.assistantMessage, step: ctx.step }) // kilocode_change
+            if (warn) {
+              yield* session.updatePart({
+                id: PartID.ascending(),
+                messageID: ctx.assistantMessage.id,
+                sessionID: ctx.assistantMessage.sessionID,
+                type: "text",
+                text: warn,
+                ignored: true,
+              })
+            }
             yield* session.updateMessage(ctx.assistantMessage)
             if (ctx.snapshot) {
               const patch = yield* snapshot.patch(ctx.snapshot)
@@ -511,6 +520,7 @@ export const layer: Layer.Layer<
           case "text-delta":
             if (!ctx.currentText) return
             ctx.currentText.text += value.text
+            if (value.text.trim()) ctx.step.text = true // kilocode_change
             if (value.providerMetadata) ctx.currentText.metadata = value.providerMetadata
             yield* session.updatePartDelta({
               sessionID: ctx.currentText.sessionID,
