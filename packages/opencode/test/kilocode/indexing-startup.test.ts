@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
-import type { Config } from "../../src/config"
+import type { Config } from "../../src/config/config"
 import { GlobalBus } from "../../src/bus/global"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 const timeout = { timeout: 60000 }
