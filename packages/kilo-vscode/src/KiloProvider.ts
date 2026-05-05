@@ -104,7 +104,6 @@ import {
   fetchAndSendPendingQuestions,
 } from "./kilo-provider/handlers/question"
 import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
-
 import {
   buildActionContext,
   computeDefaultSelection,
