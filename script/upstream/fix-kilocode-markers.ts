@@ -12,15 +12,8 @@ import { $ } from "bun"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { compareVersions, parseVersion, type VersionInfo } from "./utils/version"
-import { isAncestor } from "./utils/git"
 import { error, header, info, success, warn } from "./utils/logger"
-import { transformI18nContent } from "./transforms/transform-i18n"
-import { applyBrandingTransforms } from "./transforms/transform-take-theirs"
-import { applyScriptTransforms } from "./transforms/transform-scripts"
-import { applyExtensionTransforms } from "./transforms/transform-extensions"
-import { applyWebTransforms } from "./transforms/transform-web"
-import { applyPackageNameTransforms } from "./transforms/package-names"
+import { last, normalize, root, translate, upstream } from "./utils/upstream"
 
 interface Args {
   file?: string
@@ -86,8 +79,6 @@ const styles = new Map<string, Style>([
   [".bash", "hash"],
   [".zsh", "hash"],
 ])
-const workflows = [".github/workflows/publish.yml", ".github/workflows/beta.yml"]
-const url = "https://github.com/anomalyco/opencode.git"
 const exempt = ["script/upstream/"]
 
 function usage() {
@@ -113,21 +104,6 @@ function args(): Args {
   }
 }
 
-async function root() {
-  return (await $`git rev-parse --show-toplevel`.text()).trim()
-}
-
-function normalize(root: string, file: string) {
-  if (path.isAbsolute(file)) throw new Error("File must be relative to the repo root")
-  if (file.includes("\0")) throw new Error("File path contains a null byte")
-
-  const abs = path.resolve(root, file)
-  const rel = path.relative(root, abs).replaceAll(path.sep, "/")
-
-  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) throw new Error("File must stay inside the repo")
-  return rel
-}
-
 function ext(file: string) {
   return path.extname(file).toLowerCase()
 }
@@ -141,29 +117,6 @@ function supported(file: string, text: string) {
 
 function annotates(file: string) {
   return !exempt.some((scope) => file.startsWith(scope))
-}
-
-async function translate(file: string, text: string) {
-  const names = applyPackageNameTransforms(text).result
-  const script = applyScriptTransforms(names).result
-  const branded = applyBrandingTransforms(script).result
-  const i18n = transformI18nContent(branded).result
-  const ext = applyExtensionTransforms(i18n, file).result
-  const web = applyWebTransforms(ext).result
-
-  return workflow(file, web)
-}
-
-function workflow(file: string, text: string) {
-  if (!workflows.includes(file)) return text
-  return text
-    .replace(/github\.repository == 'anomalyco\/opencode'/g, "github.repository == 'Kilo-Org/kilocode'")
-    .replace(/github\.repository == "anomalyco\/opencode"/g, 'github.repository == "Kilo-Org/kilocode"')
-    .replace(/\bopencode-ai\b/g, "@kilocode/cli")
-    .replace(
-      /GH_REPO:\s*\$\{\{ \(github\.ref_name == 'beta' && 'anomalyco\/opencode-beta'\) \|\| github\.repository \}\}/g,
-      "GH_REPO: ${{ github.repository }}",
-    )
 }
 
 function split(text: string): Text {
@@ -261,62 +214,6 @@ function clean(file: string, text: string): Clean {
   }
 
   return { text: { ...parsed, lines }, marks }
-}
-
-async function last(): Promise<VersionInfo> {
-  const source = await remote()
-
-  info(`Fetching upstream tags from ${source}...`)
-  const fetch = await $`git fetch ${source} --tags --force`.quiet().nothrow()
-  if (fetch.exitCode !== 0) throw new Error(`Failed to fetch upstream: ${fetch.stderr.toString()}`)
-
-  const versions = await list(source)
-  for (const version of versions) {
-    if (await isAncestor(version.commit, "HEAD")) return version
-  }
-
-  throw new Error("Could not find a merged upstream tag in HEAD")
-}
-
-async function remote() {
-  const result = await $`git remote get-url upstream`.quiet().nothrow()
-  if (result.exitCode === 0) return "upstream"
-
-  warn(`No 'upstream' remote found; using ${url}`)
-  return url
-}
-
-async function list(source: string): Promise<VersionInfo[]> {
-  const result = await $`git ls-remote --tags ${source}`.quiet().nothrow()
-  if (result.exitCode !== 0) throw new Error(`Failed to list upstream tags: ${result.stderr.toString()}`)
-
-  const found = new Map<string, string>()
-  for (const line of result.stdout.toString().trim().split("\n")) {
-    const match = line.match(/^([a-f0-9]+)\s+refs\/tags\/([^^]+)(\^\{\})?$/)
-    if (!match) continue
-
-    const commit = match[1]
-    const tag = match[2]
-    const peeled = Boolean(match[3])
-    if (commit && tag && (peeled || !found.has(tag))) found.set(tag, commit)
-  }
-
-  return [...found]
-    .flatMap(([tag, commit]) => {
-      const version = parseVersion(tag)
-      return version ? [{ version, tag, commit }] : []
-    })
-    .sort((a, b) => compareVersions(b.version, a.version))
-}
-
-async function upstream(ref: string, file: string) {
-  const spec = `${ref}:${file}`
-  const result = await $`git show ${spec}`.quiet().nothrow()
-  if (result.exitCode === 0) return result.stdout.toString()
-
-  const stderr = result.stderr.toString()
-  if (stderr.includes("exists on disk") || stderr.includes("does not exist") || stderr.includes("Path")) return null
-  throw new Error(`Failed to read ${file} from ${ref}: ${stderr}`)
 }
 
 function style(file: string): Style {

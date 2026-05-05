@@ -1,21 +1,10 @@
 import { evaluate as evalRule } from "@/permission/evaluate"
-
-type Rule = {
-  permission: string
-  pattern: string
-  action: "allow" | "deny" | "ask"
-}
-
-type Ruleset = Rule[]
-
-function mode(rule: Rule) {
-  return rule.permission === "*" && rule.pattern === "*" && rule.action === "deny"
-}
+import { PermissionRule, type Ruleset } from "@/kilocode/permission/rule"
 
 function rules(permission: string, ruleset?: Ruleset) {
   if (!ruleset) return []
   if (permission !== "external_directory") return ruleset
-  return ruleset.filter((rule) => !mode(rule))
+  return ruleset.filter((rule) => !PermissionRule.mode(rule))
 }
 
 export namespace ExternalDirectoryPermission {

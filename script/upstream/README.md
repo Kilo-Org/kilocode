@@ -35,6 +35,7 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `list-versions.ts` | List available upstream versions |
 | `analyze.ts` | Analyze changes without merging |
 | `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
+| `reset-to-upstream.ts` | Reset one file to the transformed last merged upstream version |
 
 ### Transform Scripts
 
@@ -242,6 +243,18 @@ Options:
 ```
 
 The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+
+### reset-to-upstream.ts
+
+```
+Usage:
+  bun run script/upstream/reset-to-upstream.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation for text files, and writes the result to the working tree. Binary files are restored as raw upstream bytes without text transforms. If the file does not exist upstream, the local file is deleted.
 
 ## Using Custom Base Branches
 
