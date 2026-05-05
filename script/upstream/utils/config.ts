@@ -83,7 +83,6 @@ export const defaultConfig: MergeConfig = {
     // GitHub Action - Kilo version is fully ported and complete
     "github/action.yml",
     "github/README.md",
-    "github/.gitignore",
     "github/script/release",
     "github/script/publish",
   ],
@@ -115,11 +114,26 @@ export const defaultConfig: MergeConfig = {
     "README.zht.md",
     // Stats file
     "STATS.md",
+    // Team members file (Kilo doesn't maintain this upstream list)
+    ".github/TEAM_MEMBERS",
     // Workflows that don't exist in Kilo
     ".github/workflows/update-nix-hashes.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/docs-update.yml",
     ".github/workflows/docs-locale-sync.yml",
+    // Workflows deleted in Kilo (replaced or no longer needed)
+    ".github/workflows/opencode.yml",
+    ".github/workflows/publish-vscode.yml",
+    // VS Code example configs (Kilo ships real .vscode/* files)
+    ".vscode/launch.example.json",
+    ".vscode/settings.example.json",
+    // Nix files for packages Kilo has removed / replaced with nix/kilo.nix
+    "nix/desktop.nix",
+    "nix/opencode.nix",
+    // opencode CLI bin (Kilo uses its own build output)
+    "packages/opencode/bin/opencode",
+    // Removed prompt file
+    "packages/opencode/src/session/prompt/build-switch.txt",
     // Vouch files (Kilo doesn't use Vouch).
     // Upstream currently ships VOUCHED.td (typo extension). The glob covers both
     // the current .td file and any future .md rename without another merge breaking.
@@ -148,6 +162,7 @@ export const defaultConfig: MergeConfig = {
     "github/tsconfig.json",
     "github/bun.lock",
     "github/sst-env.d.ts",
+    "github/.gitignore",
   ],
 
   // Files that should take upstream version and apply Kilo branding transforms
