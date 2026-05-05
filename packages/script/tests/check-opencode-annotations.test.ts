@@ -8,9 +8,6 @@ const SCOPES = [
   "packages/opencode",
   "packages/extensions",
   "packages/ui",
-  "packages/app",
-  "packages/desktop",
-  "packages/desktop-electron",
   "packages/shared",
   "packages/script",
   "packages/storybook",
@@ -178,9 +175,6 @@ describe("isExempt", () => {
     ["packages/opencode/src/config/config.ts", false],
     ["packages/opencode/src/indexing/search-service.ts", false],
     ["packages/ui/src/components/icon.tsx", false],
-    ["packages/app/src/index.ts", false],
-    ["packages/desktop/src/main.ts", false],
-    ["packages/desktop-electron/src/main/index.ts", false],
     ["sdks/vscode/src/extension.ts", false],
     ["packages/extensions/zed/extension.toml", false],
     ["github/script/release", false],
@@ -199,9 +193,6 @@ describe("isChecked", () => {
   const cases: Array<[string, boolean]> = [
     ["packages/opencode/src/index.ts", true],
     ["packages/ui/src/components/icon.tsx", true],
-    ["packages/app/src/index.ts", true],
-    ["packages/desktop/src/main.ts", true],
-    ["packages/desktop-electron/src/main/index.ts", true],
     ["sdks/vscode/src/extension.ts", true],
     ["packages/extensions/zed/extension.toml", true],
     ["packages/shared/src/index.ts", true],
@@ -295,7 +286,7 @@ describe("coveredLines", () => {
   })
 
   test("whole-file shell annotation after shebang", () => {
-    const covered = coveredLines('#!/usr/bin/env bash\n# kilocode_change - new file\nset -euo pipefail')
+    const covered = coveredLines("#!/usr/bin/env bash\n# kilocode_change - new file\nset -euo pipefail")
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
@@ -350,7 +341,7 @@ describe("coveredLines", () => {
   })
 
   test("TOML block markers", () => {
-    const text = ['# kilocode_change start', 'id = "opencode"', '# kilocode_change end'].join("\n")
+    const text = ["# kilocode_change start", 'id = "opencode"', "# kilocode_change end"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
   })

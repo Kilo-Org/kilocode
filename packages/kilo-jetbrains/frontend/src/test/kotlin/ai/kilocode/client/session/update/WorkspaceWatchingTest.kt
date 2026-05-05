@@ -1,5 +1,7 @@
 package ai.kilocode.client.session.update
 
+import ai.kilocode.rpc.dto.AgentDto
+
 class WorkspaceWatchingTest : SessionControllerTestBase() {
 
     fun `test workspace ready populates agents and models`() {
@@ -40,5 +42,30 @@ class WorkspaceWatchingTest : SessionControllerTestBase() {
 
         assertEquals("code", m.model.agent)
         assertEquals("kilo/gpt-5", m.model.model)
+    }
+
+    fun `test workspace ready preserves agent metadata`() {
+        val m = controller()
+        collect(m)
+        flush()
+
+        projectRpc.state.value = workspaceReady(
+            agents = listOf(
+                AgentDto(
+                    name = "debug-mode",
+                    description = "Diagnose issues",
+                    mode = "primary",
+                    deprecated = true,
+                ),
+            ),
+            default = "debug-mode",
+        )
+        flush()
+
+        val item = m.model.agents.single()
+        assertEquals("debug-mode", item.name)
+        assertEquals("Debug Mode", item.display)
+        assertEquals("Diagnose issues", item.description)
+        assertTrue(item.deprecated)
     }
 }

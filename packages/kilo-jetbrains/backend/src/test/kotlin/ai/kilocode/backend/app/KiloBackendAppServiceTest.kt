@@ -2,6 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.rpc.appStateDto
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
@@ -65,6 +66,22 @@ class KiloBackendAppServiceTest {
 
         assertNotNull(svc.config)
         assertEquals("claude-4", svc.config!!.model)
+    }
+
+    @Test
+    fun `ready dto maps model config`() = runBlocking {
+        mock.config = """{"model":"openai/gpt","agent":{"plan":{"model":"anthropic/claude","variant":"high"}}}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val dto = appStateDto(svc.appState.value)
+        assertEquals("openai/gpt", dto.config?.model)
+        assertEquals("anthropic/claude", dto.config?.agent?.get("plan")?.model)
+        assertEquals("high", dto.config?.agent?.get("plan")?.variant)
     }
 
     @Test

@@ -2,7 +2,7 @@
 export { Tips } from "@/kilocode/components/tips"
 // kilocode_change end
 
-import { For } from "solid-js"
+import { createMemo, For } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
 
 const themeCount = Object.keys(DEFAULT_THEMES).length
@@ -34,9 +34,14 @@ function parse(tip: string): TipPart[] {
   return parts
 }
 
-function _Tips() {
+const NO_MODELS_TIP = "Run {highlight}/connect{/highlight} to add an AI provider and start coding"
+
+// kilocode_change - renamed Tips -> _Tips so the upstream implementation stays
+// as shadowed dead code while we re-export the real Tips from @/kilocode/components/tips
+function _Tips(props: { connected?: boolean }) {
   const theme = useTheme().theme
-  const parts = parse(TIPS[Math.floor(Math.random() * TIPS.length)])
+  const randomTip = TIPS[Math.floor(Math.random() * TIPS.length)]
+  const parts = createMemo(() => parse(props.connected === false ? NO_MODELS_TIP : randomTip))
 
   return (
     <box flexDirection="row" maxWidth="100%">
@@ -44,7 +49,7 @@ function _Tips() {
         ● Tip{" "}
       </text>
       <text flexShrink={1}>
-        <For each={parts}>
+        <For each={parts()}>
           {(part) => <span style={{ fg: part.highlight ? theme.text : theme.textMuted }}>{part.text}</span>}
         </For>
       </text>

@@ -66,6 +66,7 @@ import {
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
+import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -138,6 +139,10 @@ const mapAgent = (a: Agent) => ({
   permission: a.permission,
   model: a.model,
 })
+
+// message.part.* events are always session-scoped; drop them when the session is unknown.
+const SESSION_SCOPED_PART_EVENTS = new Set(["message.part.updated", "message.part.delta", "message.part.removed"])
+const isSessionScopedPartEvent = (type: string) => SESSION_SCOPED_PART_EVENTS.has(type)
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
@@ -796,14 +801,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestMcpStatus":
           this.fetchAndSendMcpStatus().catch((e) => console.error("[Kilo New] fetchAndSendMcpStatus failed:", e))
           break
-        case "connectMcp":
-          this.handleConnectMcp(message.name).catch((e) => console.error("[Kilo New] handleConnectMcp failed:", e))
+        case "connectMcp": {
+          const c1 = this.client
+          if (c1) {
+            void McpOAuth.connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] connectMcpServer failed:", e))
+          }
           break
-        case "disconnectMcp":
-          this.handleDisconnectMcp(message.name).catch((e) =>
-            console.error("[Kilo New] handleDisconnectMcp failed:", e),
-          )
+        }
+        case "disconnectMcp": {
+          const c2 = this.client
+          if (c2) {
+            void McpOAuth.disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] disconnectMcpServer failed:", e))
+          }
           break
+        }
+        case "authenticateMcp": {
+          const c = this.client
+          if (c) {
+            void McpOAuth.authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] authenticateMcpServer failed:", e))
+          }
+          break
+        }
 
         case "questionReply":
           this.noteFollowup(message.answers, message.sessionID)
@@ -1124,10 +1148,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (event.type === "kilo-sessions.remote-status-changed") return true
           const sessionId = this.connectionService.resolveEventSessionId(event)
 
-          // message.part.updated and message.part.delta are always session-scoped; drop if session unknown.
-          if (!sessionId) {
-            return event.type !== "message.part.updated" && event.type !== "message.part.delta"
-          }
+          // message.part.* events are always session-scoped; drop if session unknown.
+          if (!sessionId) return !isSessionScopedPartEvent(event.type)
 
           if (event.type === "session.created" && this.matchesPendingFollowup(event.properties.info)) {
             return true
@@ -1947,30 +1969,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch MCP status:", error)
-    }
-  }
-
-  private async handleConnectMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      await this.client.mcp.connect({ name, directory })
-      await this.fetchAndSendMcpStatus()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to connect MCP:", name, error)
-      await this.fetchAndSendMcpStatus()
-    }
-  }
-
-  private async handleDisconnectMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      await this.client.mcp.disconnect({ name, directory })
-      await this.fetchAndSendMcpStatus()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to disconnect MCP:", name, error)
-      await this.fetchAndSendMcpStatus()
     }
   }
 
@@ -2978,6 +2976,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.permissionDirectories.delete(event.properties.requestID)
     }
 
+    if (event.type === "mcp.browser.open.failed") {
+      McpOAuth.openMcpOAuthUrlOnce(event.properties.url)
+      return
+    }
+
     if (event.type === "message.updated") {
       this.confirmations.confirm(event.properties.info.id)
     }
@@ -3007,10 +3010,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Events without sessionID (server.connected, server.heartbeat, indexing.status) → always forward
     // Events with sessionID → only forward if this webview tracks that session
-    // message.part.updated and message.part.delta are always session-scoped; drop if session unknown.
-    if (!sessionID && (event.type === "message.part.updated" || event.type === "message.part.delta")) {
-      return
-    }
+    // message.part.* events are always session-scoped; drop if session unknown.
+    if (!sessionID && isSessionScopedPartEvent(event.type)) return
     if (event.type !== "indexing.status" && sessionID && !this.trackedSessionIds.has(sessionID)) {
       return
     }

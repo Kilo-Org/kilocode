@@ -45,8 +45,8 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/shared/util/path"
-import { checksum } from "@opencode-ai/shared/util/encode"
+import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/core/util/path"
+import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { Spinner } from "./spinner"
@@ -1471,13 +1471,27 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
   )
   const text = () => (part().text ?? "").trim()
+  // kilocode_change start
+  // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo guard)
+  // are transient status indicators, not assistant output — they must never
+  // carry the copy button, and they must not "steal" last-part status from
+  // the actual assistant response that precedes them.
+  //
+  // On a clean turn the backend removes the part via `removePart` once the
+  // snapshot finishes, so it never reaches this branch. But if the host
+  // process is hard-killed mid-snapshot the part stays in storage and
+  // re-appears on session reload; hiding it when the owning message is no
+  // longer streaming keeps the scrollback clean in that edge case.
+  const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
+  // kilocode_change end
   const isLastTextPart = createMemo(() => {
     const last = (data.store.part?.[props.message.id] ?? [])
-      .filter((item): item is TextPart => item?.type === "text" && !!item.text?.trim())
+      .filter((item): item is TextPart => item?.type === "text" && !!item.text?.trim() && !item.synthetic) // kilocode_change
       .at(-1)
     return last?.id === part().id
   })
   const showCopy = createMemo(() => {
+    if (part().synthetic) return false // kilocode_change
     if (props.message.role !== "assistant") return isLastTextPart()
     if (props.showAssistantCopyPartID === null) return false
     if (typeof props.showAssistantCopyPartID === "string") return props.showAssistantCopyPartID === part().id
@@ -1494,7 +1508,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   return (
-    <Show when={text()}>
+    <Show when={text() && showSyntheticPart() /* kilocode_change */}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Show when={streaming()} fallback={<Markdown text={text()} cacheKey={part().id} streaming={false} />}>

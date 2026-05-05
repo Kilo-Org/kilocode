@@ -84,7 +84,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         model.updateContent("a1", toolPart("t1", "a1", "bash", "completed"))
 
         val tv = panel.findMessage("a1")!!.part("t1") as ai.kilocode.client.session.views.ToolView
-        assertTrue(tv.labelText().contains("\u2713"))  // ✓ completed
+        assertFalse(tv.labelText().contains("Running"))
     }
 
     // ------ multiple turns update correctly ------

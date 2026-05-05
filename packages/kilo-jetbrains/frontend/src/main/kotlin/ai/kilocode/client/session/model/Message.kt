@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.PartTimeDto
 
 /** A single message with its typed contents. */
 class Message(
@@ -20,12 +21,18 @@ class Text(id: String) : Content(id) {
 /** Model reasoning / chain-of-thought. */
 class Reasoning(id: String) : Content(id) {
     val content = StringBuilder()
+    var done: Boolean = true
 }
 
 /** Tool invocation with lifecycle state. */
 class Tool(id: String, val name: String) : Content(id) {
     var state: ToolExecState = ToolExecState.PENDING
     var title: String? = null
+    var input: Map<String, String> = emptyMap()
+    var metadata: Map<String, String> = emptyMap()
+    var output: String? = null
+    var error: String? = null
+    var time: PartTimeDto? = null
 }
 
 /** Context compaction marker. */

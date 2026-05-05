@@ -94,6 +94,19 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         assertEquals(listOf(true), loading)
     }
 
+    fun `test default focused component tracks active session`() {
+        val manager = manager()
+
+        assertNull(manager.defaultFocusedComponent)
+        manager.newSession()
+        val first = active(manager) as SessionUi
+        manager.openSession(session("ses_1"))
+        val second = active(manager) as SessionUi
+
+        assertSame(second.defaultFocusedComponent, manager.defaultFocusedComponent)
+        assertNotSame(first.defaultFocusedComponent, manager.defaultFocusedComponent)
+    }
+
     fun `test opening same existing session reuses component`() {
         val manager = manager()
         val session = session("ses_1")
@@ -145,6 +158,20 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
 
         assertEquals(listOf("/repo" to "ses_1"), created)
         assertEquals(listOf(false), loading)
+    }
+
+    fun `test inactive sessions keep queued style updates`() {
+        val manager = manager()
+        manager.openSession(session("ses_1"))
+        val first = active(manager) as SessionUi
+        manager.openSession(session("ses_2"))
+        val style = ai.kilocode.client.session.ui.SessionStyle.create(family = "Courier New", size = 24)
+
+        first.applyStyle(style)
+        manager.openSession(session("ses_1"))
+
+        assertSame(first, active(manager))
+        assertSame(style, first.currentStyle())
     }
 
     fun `test dispose removes active component`() {

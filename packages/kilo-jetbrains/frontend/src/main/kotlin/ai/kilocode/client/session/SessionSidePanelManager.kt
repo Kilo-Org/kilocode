@@ -9,6 +9,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import java.awt.BorderLayout
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 class SessionSidePanelManager(
@@ -29,6 +30,8 @@ class SessionSidePanelManager(
     private val opened = mutableMapOf<String, SessionUi>()
     private val all = mutableSetOf<SessionUi>()
     private var current: SessionUi? = null
+
+    val defaultFocusedComponent: JComponent? get() = current?.defaultFocusedComponent
 
     override fun newSession() {
         val active = current

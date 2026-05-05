@@ -8,12 +8,15 @@ import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { File } from "@kilocode/kilo-ui/file"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { normalize, text } from "@kilocode/kilo-ui/session-diff"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
-import { VSCodeProvider } from "../src/context/vscode"
+import { getVSCodeAPI, VSCodeProvider } from "../src/context/vscode"
+import { isMarkdownFile, MarkdownDiffView } from "../agent-manager/MarkdownDiffView"
 
 type DiffStyle = "unified" | "split"
 
@@ -30,12 +33,19 @@ const DiffVirtualContent: Component = () => {
   const { t } = useLanguage()
   const [diff, setDiff] = createSignal<DiffVirtualFile | null>(null)
   const [style, setStyle] = createSignal<DiffStyle>("unified")
+  const [markdown, setMarkdown] = createSignal(false)
 
   const handler = (event: MessageEvent) => {
-    const msg = event.data as { type: string; diff?: DiffVirtualFile; initialDiffStyle?: DiffStyle }
+    const msg = event.data as {
+      type: string
+      diff?: DiffVirtualFile
+      initialDiffStyle?: DiffStyle
+      markdownRender?: boolean
+    }
     if (msg?.type === "diffVirtual.data" && msg.diff) {
       setDiff(msg.diff)
       setStyle(msg.initialDiffStyle ?? "unified")
+      setMarkdown(msg.markdownRender === true)
     }
   }
 
@@ -93,13 +103,35 @@ const DiffVirtualContent: Component = () => {
                   <span class="am-review-toolbar-dels">-{d().deletions}</span>
                 </span>
               </div>
+              <Show when={isMarkdownFile(d().file)}>
+                <Tooltip value={markdown() ? "Show raw Markdown" : "Render Markdown"} placement="bottom">
+                  <IconButton
+                    icon={markdown() ? "code" : "eye"}
+                    size="small"
+                    variant="ghost"
+                    label={markdown() ? "Show raw Markdown" : "Render Markdown"}
+                    onClick={() => {
+                      const next = !markdown()
+                      setMarkdown(next)
+                      getVSCodeAPI().postMessage({ type: "diffVirtual.setMarkdownRender", render: next })
+                    }}
+                  />
+                </Tooltip>
+              </Show>
             </div>
             <div class="am-review-diff" style={{ width: "100%" }}>
-              <Diff
-                before={{ name: d().file, contents: resolved().before }}
-                after={{ name: d().file, contents: resolved().after }}
-                diffStyle={style()}
-              />
+              <Show
+                when={markdown() && isMarkdownFile(d().file)}
+                fallback={
+                  <Diff
+                    before={{ name: d().file, contents: resolved().before }}
+                    after={{ name: d().file, contents: resolved().after }}
+                    diffStyle={style()}
+                  />
+                }
+              >
+                <MarkdownDiffView diff={{ file: d().file, before: resolved().before, after: resolved().after }} />
+              </Show>
             </div>
           </>
         )}

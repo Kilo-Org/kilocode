@@ -203,10 +203,11 @@ const ModeEditView: Component<Props> = (props) => {
           <Switch
             checked={cfg().hidden ?? false}
             onChange={(val) => {
-              update({ hidden: val || undefined })
-              // Clear default_agent if hiding the current default
+              // Send explicit `false` (not `undefined`) so deepMerge can overwrite a previously-saved `true`.
+              update({ hidden: val })
+              // Clear default_agent if hiding the current default (null = delete sentinel).
               if (val && config().default_agent === props.name) {
-                updateConfig({ default_agent: undefined })
+                updateConfig({ default_agent: null })
               }
             }}
             hideLabel
@@ -223,10 +224,11 @@ const ModeEditView: Component<Props> = (props) => {
           <Switch
             checked={cfg().disable ?? false}
             onChange={(val) => {
-              update({ disable: val || undefined })
-              // Clear default_agent if disabling the current default
+              // Send explicit `false` (not `undefined`) so deepMerge can overwrite a previously-saved `true`.
+              update({ disable: val })
+              // Clear default_agent if disabling the current default (null = delete sentinel).
               if (val && config().default_agent === props.name) {
-                updateConfig({ default_agent: undefined })
+                updateConfig({ default_agent: null })
               }
             }}
             hideLabel

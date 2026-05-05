@@ -150,6 +150,7 @@ import type {
   PtyListResponses,
   PtyRemoveErrors,
   PtyRemoveResponses,
+  PtyShellsResponses,
   PtyUpdateErrors,
   PtyUpdateResponses,
   QuestionAnswer,
@@ -911,12 +912,12 @@ export class Session extends HeyApiClient {
       workspace?: string
       projectID?: string
       worktrees?: boolean
-      roots?: boolean
+      roots?: boolean | "true" | "false"
       start?: number
       cursor?: number
       search?: string
       limit?: number
-      archived?: boolean
+      archived?: boolean | "true" | "false"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1146,6 +1147,36 @@ export class Project extends HeyApiClient {
 }
 
 export class Pty extends HeyApiClient {
+  /**
+   * List available shells
+   *
+   * Get a list of available shells on the system.
+   */
+  public shells<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<PtyShellsResponses, unknown, ThrowOnError>({
+      url: "/pty/shells",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * List PTY sessions
    *
@@ -1810,7 +1841,7 @@ export class Session2 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      roots?: boolean
+      roots?: boolean | "true" | "false"
       start?: number
       search?: string
       limit?: number

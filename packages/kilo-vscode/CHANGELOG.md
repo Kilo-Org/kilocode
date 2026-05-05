@@ -1,5 +1,57 @@
 # kilo-code
 
+## 7.2.36
+
+### Minor Changes
+
+- [#9850](https://github.com/Kilo-Org/kilocode/pull/9850) [`712371e`](https://github.com/Kilo-Org/kilocode/commit/712371e2315ea2da9a75c06b88b3745ad78ce980) - Render Mermaid diagrams in chat Markdown responses.
+
+### Patch Changes
+
+- [#7835](https://github.com/Kilo-Org/kilocode/pull/7835) [`b4a7de7`](https://github.com/Kilo-Org/kilocode/commit/b4a7de70bbbce3f9991e0725ecda6f2ba18dc7a7) Thanks [@sainzs](https://github.com/sainzs)! - Fix Agents Behavior settings not persisting the Hidden and Disable toggles when turning them off after a previous save.
+
+- [#9778](https://github.com/Kilo-Org/kilocode/pull/9778) [`33476e5`](https://github.com/Kilo-Org/kilocode/commit/33476e50508f39c232731613fd9d74a7aa19e748) - Pin the VS Code sidebar question dock above the prompt input so standalone follow-up questions no longer float in the middle of the viewport when the message list is short.
+
+- [#9839](https://github.com/Kilo-Org/kilocode/pull/9839) [`a5bb938`](https://github.com/Kilo-Org/kilocode/commit/a5bb938dbd68d577951102e5fd56559e3e985dc0) - Label disabled provider actions as enabling providers instead of deleting them.
+
+- [#9846](https://github.com/Kilo-Org/kilocode/pull/9846) [`01b5424`](https://github.com/Kilo-Org/kilocode/commit/01b54248660f0d68e107d18a7093767430df7c7a) - Support rendering Markdown files in diff viewers with a persisted toggle.
+
+- [#9833](https://github.com/Kilo-Org/kilocode/pull/9833) [`614bca7`](https://github.com/Kilo-Org/kilocode/commit/614bca7cff862ec96e4707a97f43b540210ab699) - Prevent macOS Spotlight from indexing Kilo-generated data directories.
+
+## 7.2.35
+
+### Patch Changes
+
+- [#9816](https://github.com/Kilo-Org/kilocode/pull/9816) [`c8494f2`](https://github.com/Kilo-Org/kilocode/commit/c8494f2f25c17f68455230feec146775d6707090) - Remember the main auto-approve toggle preference across VS Code reloads and extension restarts.
+
+- [#8910](https://github.com/Kilo-Org/kilocode/pull/8910) [`8472f90`](https://github.com/Kilo-Org/kilocode/commit/8472f9052883d9acf643e0786e3819936c44a61a) Thanks [@eolbrych](https://github.com/eolbrych)! - Restore the Sign in action for MCP servers that require OAuth authentication in VS Code settings.
+
+## 7.2.33
+
+### Minor Changes
+
+- [#9737](https://github.com/Kilo-Org/kilocode/pull/9737) [`d5fb9eb`](https://github.com/Kilo-Org/kilocode/commit/d5fb9eb2265c03127e776c99020b03bb770255a1) - Support starting Agent Manager local sessions and worktree sessions from an experimental agent tool.
+
+- [#9704](https://github.com/Kilo-Org/kilocode/pull/9704) [`22b5283`](https://github.com/Kilo-Org/kilocode/commit/22b5283f79e4dd8461764904b908001df969cce9) - Keep reasoning blocks expanded by default and add a setting to auto-collapse them after completion.
+
+- [#9708](https://github.com/Kilo-Org/kilocode/pull/9708) [`f2db4d1`](https://github.com/Kilo-Org/kilocode/commit/f2db4d165cacc8b52148e7fe77fd4af7ff71b7bc) - Add a Display setting to collapse terminal command blocks by default instead of keeping them expanded.
+
+### Patch Changes
+
+- [#9317](https://github.com/Kilo-Org/kilocode/pull/9317) [`ce4a595`](https://github.com/Kilo-Org/kilocode/commit/ce4a595cdcba5074b0ebdf74f24213a8322f2cc7) - Dispose autocomplete editor listeners when inline completions are disabled.
+
+- [#9651](https://github.com/Kilo-Org/kilocode/pull/9651) [`bc91af3`](https://github.com/Kilo-Org/kilocode/commit/bc91af398db6e52e4a6bbd1d26efce1b306d4697) - Center the sidebar prompt toolbar on wider sidebars and hide unavailable toolbar actions.
+
+- [#9753](https://github.com/Kilo-Org/kilocode/pull/9753) [`fb11c7b`](https://github.com/Kilo-Org/kilocode/commit/fb11c7b56d49cdd52f8ee96fdfc9ce30d2c883b7) - Center welcome notifications in wide VS Code views.
+
+- [#9460](https://github.com/Kilo-Org/kilocode/pull/9460) [`26e4c11`](https://github.com/Kilo-Org/kilocode/commit/26e4c1148f4e7a734bb8e535e02a1a9ad75be584) - Scope the custom commit message prompt to the current project. Setting it in the VS Code settings now writes to the workspace's `kilo.json` so different repositories can have different conventions, instead of silently applying globally. Also fixes the project-level config update endpoint, which previously wrote to a file that wasn't loaded.
+
+- [#9742](https://github.com/Kilo-Org/kilocode/pull/9742) [`a076e33`](https://github.com/Kilo-Org/kilocode/commit/a076e336b34f897a6b9463b48d2181d90f9dd997) - Preserve Agent Manager local sessions across panel restarts when session refreshes complete out of order.
+
+- [#9733](https://github.com/Kilo-Org/kilocode/pull/9733) [`e9f2760`](https://github.com/Kilo-Org/kilocode/commit/e9f2760d8e9a93d4b71dba6ef5aae522cb4fe263) - Support configuring custom agent tool permissions from the VS Code agent editor.
+
+- [#9669](https://github.com/Kilo-Org/kilocode/pull/9669) [`0bf14eb`](https://github.com/Kilo-Org/kilocode/commit/0bf14eb2ff5ef59f9dc98342218addc670a87481) - Stop emitting `ai.*` and `gen_ai.*` OpenTelemetry spans from AI SDK calls, and remove the PostHog bridge that forwarded them. Tool/session/indexing telemetry is unchanged.
+
 ## 7.2.31
 
 ### Patch Changes

@@ -1,5 +1,9 @@
 # AGENTS.md — Kilo JetBrains Plugin
 
+## Skills
+
+- Use `packages/kilo-jetbrains/.kilo/skills/jetbrains-ui-style/SKILL.md` when creating, modifying, or reviewing Kotlin/Swing UI code for this plugin. It covers IntelliJ UI conventions, platform components, theme-aware colors/fonts, spacing, manual Swing vs Kotlin UI DSL, session transcript styling, and retained Swing component-state patterns for hover/expand/update flows.
+
 ## Architecture (Split Mode)
 
 - **Split-mode plugin** with three Gradle modules: `shared/`, `frontend/`, `backend/`. The module descriptors are `kilo.jetbrains.shared.xml`, `kilo.jetbrains.frontend.xml`, `kilo.jetbrains.backend.xml` — these must stay in sync with `plugin.xml`'s `<content>` block.
