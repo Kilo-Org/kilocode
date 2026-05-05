@@ -12,7 +12,6 @@ import { Log } from "@/util"
 import { FileWatcher } from "@/file/watcher"
 import { KilocodeBootstrap } from "@/kilocode/bootstrap" // kilocode_change
 import * as Effect from "effect/Effect"
-import * as ToolRegistry from "../tool/registry" // kilocode_change — warm up tool registry on bootstrap
 import { Config } from "@/config"
 
 export const InstanceBootstrap = Effect.gen(function* () {
@@ -43,6 +42,4 @@ export const InstanceBootstrap = Effect.gen(function* () {
       }
     }),
   )
-
-  ToolRegistry.warmup() // kilocode_change — fire-and-forget: warm tool registry (custom tool scan + Tool.init caches) in background
 }).pipe(Effect.withSpan("InstanceBootstrap"))

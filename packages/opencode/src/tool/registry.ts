@@ -364,18 +364,4 @@ export const defaultLayer = Layer.suspend(() =>
 // kilocode_change start
 const { runPromise } = makeRuntime(Service, defaultLayer)
 export const ids = () => runPromise((svc) => svc.ids())
-
-export async function tools(input: {
-  providerID: ProviderID
-  modelID: ModelID
-  agent: Agent.Info
-}): Promise<(Tool.Def & { id: string })[]> {
-  return runPromise((svc) => svc.tools(input))
-}
-
-export function warmup(): void {
-  runPromise((svc) => svc.all()).catch((err) => {
-    log.warn("warmup failed", { error: err?.message ?? String(err) })
-  })
-}
 // kilocode_change end
