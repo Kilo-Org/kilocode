@@ -1140,6 +1140,7 @@ const layer: Layer.Layer<
 
         // extend database from config
         for (const [providerID, provider] of configProviders) {
+          if (!provider) continue // kilocode_change - null entries are transient delete sentinels
           const existing = database[providerID]
           const parsed: Info = {
             id: ProviderID.make(providerID),
@@ -1316,6 +1317,7 @@ const layer: Layer.Layer<
 
         // load config - re-apply with updated data
         for (const [id, provider] of configProviders) {
+          if (!provider) continue // kilocode_change - null entries are transient delete sentinels
           const providerID = ProviderID.make(id)
           // kilocode_change start - keep OAuth plugin source when config and Codex auth coexist
           const oauth =
