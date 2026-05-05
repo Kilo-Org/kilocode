@@ -87,6 +87,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title: description() })
   }
 
+  const stop = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = childSessionId()
+    if (!id) return
+    data.abortSession?.(id)
+  }
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
@@ -116,7 +123,24 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   return (
     <div data-component="tool-part-wrapper">
-      <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
+      <BasicTool
+        icon="task"
+        status={props.status}
+        trigger={trigger()}
+        defaultOpen
+        actions={
+          <Show when={running() && data.abortSession && childSessionId()}>
+            <IconButton
+              icon="stop"
+              size="small"
+              variant="secondary"
+              aria-label={i18n.t("prompt.action.stop")}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={stop}
+            />
+          </Show>
+        }
+      >
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
             <Show when={running() && childToolParts().length === 0}>
