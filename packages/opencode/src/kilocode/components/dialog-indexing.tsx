@@ -19,6 +19,7 @@ import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { reconcile } from "solid-js/store"
 import type { IndexingConfig, Config } from "@kilocode/sdk/v2"
+import { hasKiloIndexingAuth, resolveKiloIndexingAuth, shouldDefaultIndexingToKilo } from "../indexing-auth"
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
@@ -84,16 +85,14 @@ function getIndexing(sync: ReturnType<typeof useSync>): IndexingConfig {
 
 function hasKiloAuth(sync: ReturnType<typeof useSync>): boolean {
   const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
-  if (provider?.key) return true
-  const token = provider?.options?.kilocodeToken
-  if (typeof token === "string" && token.length > 0) return true
-  const cfg = (sync.data.config.provider?.kilo?.options ?? {}) as Record<string, unknown>
-  return typeof cfg.apiKey === "string" && cfg.apiKey.length > 0
+  return hasKiloIndexingAuth({ config: sync.data.config, provider })
 }
 
 function defaultIndexing(sync: ReturnType<typeof useSync>): IndexingConfig {
   const indexing = getIndexing(sync)
-  if (indexing.provider || !hasKiloAuth(sync)) return indexing
+  const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
+  const auth = resolveKiloIndexingAuth({ config: sync.data.config, provider })
+  if (!shouldDefaultIndexingToKilo(indexing, auth)) return indexing
   return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL }
 }
 

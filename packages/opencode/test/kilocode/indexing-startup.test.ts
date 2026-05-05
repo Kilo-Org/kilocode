@@ -51,6 +51,19 @@ const kilo: Partial<Config.Info> = {
     vectorStore: "qdrant",
   },
 }
+const implicitOpenAi: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: true,
+    vectorStore: "qdrant",
+    openai: {
+      apiKey: "openai-token",
+    },
+  },
+}
 const configDir = process.env["KILO_CONFIG_DIR"]
 const error = new Error("test indexing initialization failed")
 
@@ -287,6 +300,33 @@ describe("indexing startup degradation", () => {
       else process.env.KILO_API_KEY = key
       if (org === undefined) delete process.env.KILO_ORG_ID
       else process.env.KILO_ORG_ID = org
+      init.mockRestore()
+    }
+  })
+
+  test("does not default to Kilo when an existing provider config is present", async () => {
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+
+    await using tmp = await tmpdir({ git: true, config: implicitOpenAi })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await Instance.provide({
+        directory: tmp.path,
+        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "openai",
+            openAiKey: "openai-token",
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
       init.mockRestore()
     }
   })
