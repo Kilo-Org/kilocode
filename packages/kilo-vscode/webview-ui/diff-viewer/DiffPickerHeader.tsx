@@ -23,25 +23,25 @@ export const DiffPickerHeader: Component<DiffPickerHeaderProps> = (props) => {
   const current = () => props.descriptors.find((d) => d.id === props.currentId)
   const [highlight, setHighlight] = createSignal<string | undefined>(undefined)
 
-  const label = (d: DiffSourceDescriptor): string => {
-    if (d.id === "workspace") return t("diffViewer.source.workspace.label")
-    if (d.id.startsWith("session:")) return t("diffViewer.source.session.label")
-    return d.label
+  const label = (desc: DiffSourceDescriptor): string => {
+    if (desc.id === "workspace") return t("diffViewer.source.workspace.label")
+    if (desc.id.startsWith("session:")) return t("diffViewer.source.session.label")
+    return desc.label
   }
 
-  const tooltip = (d: DiffSourceDescriptor): string | undefined => {
-    if (d.id === "workspace") return t("diffViewer.source.workspace.tooltip")
+  const tooltip = (desc: DiffSourceDescriptor): string | undefined => {
+    if (desc.id === "workspace") return t("diffViewer.source.workspace.tooltip")
     return undefined
   }
 
-  const group = (d: DiffSourceDescriptor): string => t(GROUP_KEYS[d.group])
+  const group = (desc: DiffSourceDescriptor): string => t(GROUP_KEYS[desc.group])
 
-  const onHighlight = (d: DiffSourceDescriptor | undefined) => {
-    if (!d || !tooltip(d)) {
+  const onHighlight = (desc: DiffSourceDescriptor | undefined) => {
+    if (!desc || !tooltip(desc)) {
       setHighlight(undefined)
       return
     }
-    const timer = setTimeout(() => setHighlight(d.id), TOOLTIP_OPEN_DELAY_MS)
+    const timer = setTimeout(() => setHighlight(desc.id), TOOLTIP_OPEN_DELAY_MS)
     return () => {
       clearTimeout(timer)
       setHighlight(undefined)
@@ -73,13 +73,13 @@ export const DiffPickerHeader: Component<DiffPickerHeaderProps> = (props) => {
           }}
           onHighlight={onHighlight}
         >
-          {(d) => {
-            if (!d) return ""
-            const text = tooltip(d)
-            if (!text) return label(d)
+          {(desc) => {
+            if (!desc) return ""
+            const text = tooltip(desc)
+            if (!text) return label(desc)
             return (
-              <Tooltip value={text} placement="right" forceOpen={highlight() === d.id}>
-                <span data-slot="diff-picker-option-label">{label(d)}</span>
+              <Tooltip value={text} placement="right" forceOpen={highlight() === desc.id}>
+                <span data-slot="diff-picker-option-label">{label(desc)}</span>
               </Tooltip>
             )
           }}
