@@ -1,8 +1,8 @@
 import * as path from "path"
 import os from "os"
-import { Log } from "../util"
-import type { Config } from "../config"
-import type { ConfigPermission } from "../config"
+import * as Log from "@opencode-ai/core/util/log"
+import type { Config } from "../config/config"
+import type { ConfigPermission } from "../config/permission"
 
 export namespace IgnoreMigrator {
   const log = Log.create({ service: "kilocode.ignore-migrator" })
@@ -200,7 +200,10 @@ export namespace IgnoreMigrator {
    * Load .kilocodeignore and return permission config.
    * Handles all logging internally.
    */
-  export async function loadIgnoreConfig(projectDir: string, skipGlobalPaths?: boolean): Promise<ConfigPermission.Info> {
+  export async function loadIgnoreConfig(
+    projectDir: string,
+    skipGlobalPaths?: boolean,
+  ): Promise<ConfigPermission.Info> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 

@@ -4,56 +4,62 @@ import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
+import { Question } from "@/question" // kilocode_change
 import z from "zod"
+import * as EffectZod from "@/util/effect-zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import * as Session from "./session"
 import { Agent } from "../agent/agent"
-import { Provider } from "../provider"
+import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import { SessionCompaction } from "./compaction"
 import { Bus } from "../bus"
-import { ProviderTransform } from "../provider"
+import { ProviderTransform } from "@/provider/transform"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
 import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
-import { ToolRegistry } from "../tool"
+import { ToolRegistry } from "@/tool/registry"
 import { MCP } from "../mcp"
-import { LSP } from "../lsp"
-import { Flag } from "../flag/flag"
+import { LSP } from "@/lsp/lsp"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { ulid } from "ulid"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Stream from "effect/Stream"
 import { Command } from "../command"
 import { pathToFileURL, fileURLToPath } from "url"
-import { ConfigMarkdown } from "../config"
+import { Config } from "@/config/config"
+import { ConfigMarkdown } from "@/config/markdown"
 import { SessionSummary } from "./summary"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { SessionProcessor } from "./processor"
-import { Tool } from "@/tool"
+import { Tool } from "@/tool/tool"
 import { Permission } from "@/permission"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
 import { Shell } from "@/shell/shell"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { Truncate } from "@/tool"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Truncate } from "@/tool/truncate"
 import { decodeDataUrl } from "@/util/data-url"
-import { Process } from "@/util"
-import { Cause, Effect, Exit, Layer, Option, Scope, Context } from "effect"
-import { EffectLogger } from "@/effect"
-import { InstanceState } from "@/effect"
+import { Process } from "@/util/process"
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema } from "effect"
+import { zod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
+import * as EffectLogger from "@opencode-ai/core/effect/logger"
+import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
-import { EffectBridge } from "@/effect"
+import { EffectBridge } from "@/effect/bridge"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -77,7 +83,7 @@ const elog = EffectLogger.create({ service: "session.prompt" })
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
   readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts>
-  readonly loop: (input: z.infer<typeof LoopInput>) => Effect.Effect<MessageV2.WithParts>
+  readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
   readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts>
   readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts>
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
@@ -97,6 +103,7 @@ export const layer = Layer.effect(
     const compaction = yield* SessionCompaction.Service
     const plugin = yield* Plugin.Service
     const commands = yield* Command.Service
+    const config = yield* Config.Service
     const permission = yield* Permission.Service
     const fsys = yield* AppFileSystem.Service
     const mcp = yield* MCP.Service
@@ -399,7 +406,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               ...req,
               sessionID: input.session.id,
               tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-              ruleset: Permission.merge(input.agent.permission, input.session.permission ?? []),
+              // kilocode_change start - reapply Ask/Plan mode guards after session permissions
+              ruleset: Permission.merge(
+                input.agent.permission,
+                KiloSessionPrompt.guardPermissions({ agent: input.agent, session: input.session }),
+              ),
+              hardRuleset: KiloSessionPrompt.hardPermissions({ agent: input.agent }),
+              // kilocode_change end
             })
             .pipe(Effect.orDie),
       })
@@ -409,7 +422,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         providerID: input.model.providerID,
         agent: input.agent,
       })) {
-        const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
+        const schema = ProviderTransform.schema(input.model, EffectZod.toJsonSchema(item.parameters))
         tools[item.id] = tool({
           description: item.description,
           inputSchema: jsonSchema(schema),
@@ -597,6 +610,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       let error: Error | undefined
       const taskAbort = new AbortController()
+      // kilocode_change start - shared reader for the child session id written by task.ts ctx.metadata (#6321)
+      const childID = () => {
+        const meta = part.state.status !== "pending" ? part.state.metadata : undefined
+        return (meta as { sessionId?: string } | undefined)?.sessionId
+      }
+      // kilocode_change end
       const result = yield* taskTool
         .execute(taskArgs, {
           agent: task.agent,
@@ -618,8 +637,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             permission
               .ask({
                 ...req,
+                // kilocode_change start - reapply Ask/Plan subagent guards after session permissions
                 sessionID,
-                ruleset: Permission.merge(taskAgent.permission, session.permission ?? []),
+                ruleset: Permission.merge(
+                  taskAgent.permission,
+                  KiloSessionPrompt.guardPermissions({ agent: taskAgent, session }),
+                ),
+                hardRuleset: KiloSessionPrompt.hardPermissions({ agent: taskAgent }),
+                // kilocode_change end
               })
               .pipe(Effect.orDie),
         })
@@ -635,6 +660,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               taskAbort.abort()
               assistantMessage.finish = "tool-calls"
               assistantMessage.time.completed = Date.now()
+              // kilocode_change start - propagate partial subagent cost on cancel (#6321)
+              const cid = childID()
+              if (cid) {
+                assistantMessage.cost = yield* KiloCostPropagation.childCost(sessions, SessionID.make(cid))
+              }
+              // kilocode_change end
               yield* sessions.updateMessage(assistantMessage)
               if (part.state.status === "running") {
                 yield* sessions.updatePart({
@@ -667,6 +698,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       assistantMessage.finish = "tool-calls"
       assistantMessage.time.completed = Date.now()
+      // kilocode_change start - include subagent total cost on the wrapper message (#6321)
+      const cid = result?.metadata?.sessionId ?? childID()
+      if (cid) {
+        assistantMessage.cost = yield* KiloCostPropagation.childCost(sessions, SessionID.make(cid))
+      }
+      // kilocode_change end
       yield* sessions.updateMessage(assistantMessage)
 
       if (result && part.state.status === "running") {
@@ -722,181 +759,145 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       } satisfies MessageV2.TextPart)
     })
 
-    const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput) {
-      const ctx = yield* InstanceState.context
-      const run = yield* runner()
-      const session = yield* sessions.get(input.sessionID)
-      if (session.revert) {
-        yield* revert.cleanup(session)
-      }
-      const agent = yield* agents.get(input.agent)
-      if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
-      }
-      const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
-      const userMsg: MessageV2.User = {
-        id: input.messageID ?? MessageID.ascending(),
-        sessionID: input.sessionID,
-        time: { created: Date.now() },
-        role: "user",
-        agent: input.agent,
-        model: { providerID: model.providerID, modelID: model.modelID },
-      }
-      yield* sessions.updateMessage(userMsg)
-      const userPart: MessageV2.Part = {
-        type: "text",
-        id: PartID.ascending(),
-        messageID: userMsg.id,
-        sessionID: input.sessionID,
-        text: "The following tool was executed by the user",
-        synthetic: true,
-      }
-      yield* sessions.updatePart(userPart)
-
-      const msg: MessageV2.Assistant = {
-        id: MessageID.ascending(),
-        sessionID: input.sessionID,
-        parentID: userMsg.id,
-        mode: input.agent,
-        agent: input.agent,
-        cost: 0,
-        path: { cwd: ctx.directory, root: ctx.worktree },
-        time: { created: Date.now() },
-        role: "assistant",
-        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-        modelID: model.modelID,
-        providerID: model.providerID,
-      }
-      yield* sessions.updateMessage(msg)
-      const part: MessageV2.ToolPart = {
-        type: "tool",
-        id: PartID.ascending(),
-        messageID: msg.id,
-        sessionID: input.sessionID,
-        tool: "bash",
-        callID: ulid(),
-        state: {
-          status: "running",
-          time: { start: Date.now() },
-          input: { command: input.command },
-        },
-      }
-      yield* sessions.updatePart(part)
-
-      const sh = Shell.preferred()
-      const shellName = (
-        process.platform === "win32" ? path.win32.basename(sh, ".exe") : path.basename(sh)
-      ).toLowerCase()
-      const invocations: Record<string, { args: string[] }> = {
-        nu: { args: ["-c", input.command] },
-        fish: { args: ["-c", input.command] },
-        zsh: {
-          args: [
-            "-l",
-            "-c",
-            `
-              __oc_cwd=$PWD
-              [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
-              [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
-              cd "$__oc_cwd"
-              eval ${JSON.stringify(input.command)}
-            `,
-          ],
-        },
-        bash: {
-          args: [
-            "-l",
-            "-c",
-            `
-              __oc_cwd=$PWD
-              shopt -s expand_aliases
-              [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
-              cd "$__oc_cwd"
-              eval ${JSON.stringify(input.command)}
-            `,
-          ],
-        },
-        cmd: { args: ["/c", input.command] },
-        powershell: { args: ["-NoProfile", "-Command", input.command] },
-        pwsh: { args: ["-NoProfile", "-Command", input.command] },
-        "": { args: ["-c", input.command] },
-      }
-
-      const args = (invocations[shellName] ?? invocations[""]).args
-      const cwd = ctx.directory
-      const shellEnv = yield* plugin.trigger(
-        "shell.env",
-        { cwd, sessionID: input.sessionID, callID: part.callID },
-        { env: {} },
-      )
-
-      const cmd = ChildProcess.make(sh, args, {
-        cwd,
-        extendEnv: true,
-        env: { ...shellEnv.env, TERM: "dumb" },
-        stdin: "ignore",
-        forceKillAfter: "3 seconds",
-      })
-
-      let output = ""
-      let aborted = false
-
-      const finish = Effect.uninterruptible(
+    const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput, ready?: Latch.Latch) {
+      return yield* Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
-          if (aborted) {
-            output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
-          }
-          if (!msg.time.completed) {
-            msg.time.completed = Date.now()
+          const markReady = ready ? ready.open.pipe(Effect.asVoid) : Effect.void
+          const { msg, part, cwd } = yield* Effect.gen(function* () {
+            const ctx = yield* InstanceState.context
+            const session = yield* sessions.get(input.sessionID)
+            if (session.revert) {
+              yield* revert.cleanup(session)
+            }
+            const agent = yield* agents.get(input.agent)
+            if (!agent) {
+              const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+              const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
+              yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+              throw error
+            }
+            const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
+            const userMsg: MessageV2.User = {
+              id: input.messageID ?? MessageID.ascending(),
+              sessionID: input.sessionID,
+              time: { created: Date.now() },
+              role: "user",
+              agent: input.agent,
+              model: { providerID: model.providerID, modelID: model.modelID },
+            }
+            yield* sessions.updateMessage(userMsg)
+            const userPart: MessageV2.Part = {
+              type: "text",
+              id: PartID.ascending(),
+              messageID: userMsg.id,
+              sessionID: input.sessionID,
+              text: "The following tool was executed by the user",
+              synthetic: true,
+            }
+            yield* sessions.updatePart(userPart)
+
+            const msg: MessageV2.Assistant = {
+              id: MessageID.ascending(),
+              sessionID: input.sessionID,
+              parentID: userMsg.id,
+              mode: input.agent,
+              agent: input.agent,
+              cost: 0,
+              path: { cwd: ctx.directory, root: ctx.worktree },
+              time: { created: Date.now() },
+              role: "assistant",
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: model.modelID,
+              providerID: model.providerID,
+            }
             yield* sessions.updateMessage(msg)
-          }
-          if (part.state.status === "running") {
-            part.state = {
-              status: "completed",
-              time: { ...part.state.time, end: Date.now() },
-              input: part.state.input,
-              title: "",
-              metadata: { output, description: "" },
-              output,
+            const part: MessageV2.ToolPart = {
+              type: "tool",
+              id: PartID.ascending(),
+              messageID: msg.id,
+              sessionID: input.sessionID,
+              tool: "bash",
+              callID: ulid(),
+              state: {
+                status: "running",
+                time: { start: Date.now() },
+                input: { command: input.command },
+              },
             }
             yield* sessions.updatePart(part)
+            return { msg, part, cwd: ctx.directory }
+          }).pipe(Effect.ensuring(markReady))
+
+          const cfg = yield* config.get()
+          const sh = Shell.preferred(cfg.shell)
+          const args = Shell.args(sh, input.command, cwd)
+          let output = ""
+          let aborted = false
+
+          const finish = Effect.uninterruptible(
+            Effect.gen(function* () {
+              if (aborted) {
+                output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
+              }
+              if (!msg.time.completed) {
+                msg.time.completed = Date.now()
+                yield* sessions.updateMessage(msg)
+              }
+              if (part.state.status === "running") {
+                part.state = {
+                  status: "completed",
+                  time: { ...part.state.time, end: Date.now() },
+                  input: part.state.input,
+                  title: "",
+                  metadata: { output, description: "" },
+                  output,
+                }
+                yield* sessions.updatePart(part)
+              }
+            }),
+          )
+
+          const exit = yield* restore(
+            Effect.gen(function* () {
+              const shellEnv = yield* plugin.trigger(
+                "shell.env",
+                { cwd, sessionID: input.sessionID, callID: part.callID },
+                { env: {} },
+              )
+              const cmd = ChildProcess.make(sh, args, {
+                cwd,
+                extendEnv: true,
+                env: { ...shellEnv.env, TERM: "dumb" },
+                stdin: "ignore",
+                forceKillAfter: "3 seconds",
+              })
+              const handle = yield* spawner.spawn(cmd)
+              yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+                Effect.gen(function* () {
+                  output += chunk
+                  if (part.state.status === "running") {
+                    part.state.metadata = { output, description: "" }
+                    yield* sessions.updatePart(part)
+                  }
+                }),
+              )
+              yield* handle.exitCode
+            }).pipe(Effect.scoped, Effect.orDie),
+          ).pipe(Effect.exit)
+
+          if (Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause) && !Cause.hasDies(exit.cause)) {
+            aborted = true
           }
+          yield* finish
+
+          if (Exit.isFailure(exit) && !aborted && !Cause.hasInterruptsOnly(exit.cause)) {
+            return yield* Effect.failCause(exit.cause)
+          }
+
+          return { info: msg, parts: [part] }
         }),
       )
-
-      const exit = yield* Effect.gen(function* () {
-        const handle = yield* spawner.spawn(cmd)
-        yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
-          Effect.sync(() => {
-            output += chunk
-            if (part.state.status === "running") {
-              part.state.metadata = { output, description: "" }
-              void run.fork(sessions.updatePart(part))
-            }
-          }),
-        )
-        yield* handle.exitCode
-      }).pipe(
-        Effect.scoped,
-        Effect.onInterrupt(() =>
-          Effect.sync(() => {
-            aborted = true
-          }),
-        ),
-        Effect.orDie,
-        Effect.ensuring(finish),
-        Effect.exit,
-      )
-
-      if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)) {
-        return yield* Effect.failCause(exit.cause)
-      }
-
-      return { info: msg, parts: [part] }
     })
 
     const getModel = Effect.fn("SessionPrompt.getModel")(function* (
@@ -1251,7 +1252,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         { message: info, parts },
       )
 
-      const parsed = MessageV2.Info.safeParse(info)
+      const parsed = MessageV2.Info.zod.safeParse(info)
       if (!parsed.success) {
         log.error("invalid user message before save", {
           sessionID: input.sessionID,
@@ -1262,7 +1263,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         })
       }
       parts.forEach((part, index) => {
-        const p = MessageV2.Part.safeParse(part)
+        const p = MessageV2.Part.zod.safeParse(part)
         if (p.success) return
         log.error("invalid user part before save", {
           sessionID: input.sessionID,
@@ -1285,6 +1286,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       function* (input: PromptInput) {
         const session = yield* sessions.get(input.sessionID)
         yield* revert.cleanup(session)
+        // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
@@ -1297,12 +1299,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
         }
 
-        if (input.noReply === true) return message
-        // kilocode_change start — dismiss pending suggestions so a previous loop
-        // blocked on a suggestion can settle before the queue runs the next prompt
+        // kilocode_change start — unblock tools waiting on user input so any in-flight
+        // handle.process can return. Adding a new user message is the signal that any
+        // pending tool prompt is superseded, so we dismiss even on the noReply path.
+        // Critically we never cancel the in-flight fiber here — that would abort the
+        // streamText call mid-tokens and cut off the assistant reply. The enqueue call
+        // below serializes this prompt after the current turn's current LLM step, and
+        // runLoop checks hasFollowup between steps to break out once it has been
+        // enqueued during the turn.
         yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
-        // kilocode_change end
-        // kilocode_change start - serialize follow-up loops via queue
+        yield* Effect.promise(() => Question.dismissAll(input.sessionID))
+        if (input.noReply === true) return message
         return yield* KiloSessionPromptQueue.enqueue(
           input.sessionID,
           message.info.id,
@@ -1312,6 +1319,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         // kilocode_change end
       },
     )
+    // kilocode_change end
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
       // kilocode_change start - retry when cancel races before shellImpl writes messages
@@ -1347,6 +1355,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
           let msgs = yield* MessageV2.filterCompactedEffect(sessionID)
           msgs = KiloSessionPromptQueue.scope(sessionID, msgs) // kilocode_change - hide later queued prompts
+          msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs) // kilocode_change - trim on any completed summary (e.g. manual /compact against a text user)
 
           let lastUser: MessageV2.User | undefined
           let lastAssistant: MessageV2.Assistant | undefined
@@ -1367,12 +1376,31 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
           )
+          // kilocode_change start - keep provider-executed tools from forcing a re-loop
           // Some providers return "stop" even when the assistant message contains tool calls.
           // Keep the loop running so tool results can be sent back to the model.
           // Skip provider-executed tool parts — those were fully handled within the
           // provider's stream (e.g. DWS Agent Platform) and don't need a re-loop.
           const hasToolCalls =
             lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
+          // kilocode_change end
+
+          // kilocode_change start - plan_exit is a hard stop before another model call
+          if (
+            lastAssistant?.finish &&
+            hasToolCalls &&
+            lastAssistant.parentID === lastUser.id &&
+            lastUser.id < lastAssistant.id &&
+            KiloSessionPrompt.shouldAskPlanFollowup({ messages: msgs, abort: AbortSignal.any([]) })
+          ) {
+            const action = yield* Effect.promise((signal) =>
+              KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal }),
+            )
+            if (action === "continue") continue
+            yield* slog.info("exiting loop")
+            break
+          }
+          // kilocode_change end
 
           if (
             lastAssistant?.finish &&
@@ -1531,8 +1559,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
             yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
-            // kilocode_change — ephemerally inject dynamic editor context into last user message
+            // kilocode_change start — ephemeral context injection + post-summary
+            // media strip (keeps outgoing body under the gateway body-size limit
+            // even when filterCompacted couldn't trim the pre-summary history).
             KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+            msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
+            // kilocode_change end
 
             const [skills, env, instructions, modelMsgs] = yield* Effect.all([
               sys.skills(agent),
@@ -1542,11 +1574,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             ])
             const system = [...env, ...(skills ? [skills] : []), ...instructions]
             const format = lastUser.format ?? { type: "text" as const }
-            if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
+            if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
             const result = yield* handle.process({
+              // kilocode_change
+              // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
               user: lastUser,
               agent,
-              permission: session.permission,
+              permission: KiloSessionPrompt.guardPermissions({ agent, session }),
+              // kilocode_change end
               sessionID,
               parentSessionID: session.parentID,
               system,
@@ -1604,6 +1639,15 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 overflow: !handle.message.finish,
               })
             }
+            // kilocode_change start — break out so a newer queued prompt can take over
+            // instead of starting another LLM step for the now-superseded turn. The
+            // current handle.process has fully drained (tokens + inline tool calls) by
+            // the time we get here, so nothing is cut off.
+            if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
+              closeReasons.set(sessionID, "interrupted")
+              return "break" as const
+            }
+            // kilocode_change end
             return "continue" as const
           }).pipe(Effect.ensuring(instruction.clear(handle.message.id)))
           if (outcome === "break") break
@@ -1615,9 +1659,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       },
     )
 
-    const loop: (input: z.infer<typeof LoopInput>) => Effect.Effect<MessageV2.WithParts> = Effect.fn(
-      "SessionPrompt.loop",
-    )(function* (input: z.infer<typeof LoopInput>) {
+    const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.loop")(function* (
+      input: LoopInput,
+    ) {
       // kilocode_change start
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
@@ -1638,7 +1682,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
       function* (input: ShellInput) {
-        return yield* state.startShell(input.sessionID, lastAssistant(input.sessionID), shellImpl(input))
+        const ready = yield* Latch.make()
+        return yield* state.startShell(input.sessionID, lastAssistant(input.sessionID), shellImpl(input, ready), ready)
       },
     )
 
@@ -1681,7 +1726,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       const shellMatches = ConfigMarkdown.shell(template)
       if (shellMatches.length > 0) {
-        const sh = Shell.preferred()
+        const cfg = yield* config.get()
+        const sh = Shell.preferred(cfg.shell)
         const results = yield* Effect.promise(() =>
           Promise.all(
             shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
@@ -1782,6 +1828,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(ToolRegistry.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
     Layer.provide(Provider.defaultLayer),
+    Layer.provide(Config.defaultLayer),
     Layer.provide(Instruction.defaultLayer),
     Layer.provide(AppFileSystem.defaultLayer),
     Layer.provide(Plugin.defaultLayer),
@@ -1799,121 +1846,92 @@ export const defaultLayer = Layer.suspend(() =>
     ),
   ),
 )
-export const PromptInput = z.object({
-  sessionID: SessionID.zod,
-  messageID: MessageID.zod.optional(),
-  model: z
-    .object({
-      providerID: ProviderID.zod,
-      modelID: ModelID.zod,
-    })
-    .optional(),
-  agent: z.string().optional(),
-  noReply: z.boolean().optional(),
-  tools: z
-    .record(z.string(), z.boolean())
-    .optional()
-    .describe("@deprecated tools and permissions have been merged, you can set permissions on the session itself now"),
-  format: MessageV2.Format.optional(),
-  system: z.string().optional(),
-  variant: z.string().optional(),
-  // kilocode_change start
-  editorContext: z
-    .object({
-      visibleFiles: z.array(z.string()).optional(),
-      openTabs: z.array(z.string()).optional(),
-      activeFile: z.string().optional(),
-      shell: z.string().optional(),
-    })
-    .optional(),
+const ModelRef = Schema.Struct({
+  providerID: ProviderID,
+  modelID: ModelID,
+})
+
+export const PromptInput = Schema.Struct({
+  sessionID: SessionID,
+  messageID: Schema.optional(MessageID),
+  model: Schema.optional(ModelRef),
+  agent: Schema.optional(Schema.String),
+  noReply: Schema.optional(Schema.Boolean),
+  tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
+    description:
+      "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
+  }),
+  format: Schema.optional(MessageV2.Format),
+  system: Schema.optional(Schema.String),
+  variant: Schema.optional(Schema.String),
+  // kilocode_change start - reuse shared editor context schema
+  editorContext: Schema.optional(MessageV2.EditorContext),
   // kilocode_change end
-  parts: z.array(
-    z.discriminatedUnion("type", [
-      MessageV2.TextPart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "TextPartInput",
-        }),
-      MessageV2.FilePart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "FilePartInput",
-        }),
-      MessageV2.AgentPart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "AgentPartInput",
-        }),
-      MessageV2.SubtaskPart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "SubtaskPartInput",
-        }),
-    ]),
+  parts: Schema.Array(
+    Schema.Union([
+      MessageV2.TextPartInput,
+      MessageV2.FilePartInput,
+      MessageV2.AgentPartInput,
+      MessageV2.SubtaskPartInput,
+    ]).annotate({ discriminator: "type" }),
   ),
-})
-export type PromptInput = z.infer<typeof PromptInput>
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+// `z.discriminatedUnion` erases the discriminated members' shapes back to
+// `{}` when walked from the generic `z.ZodType` input. Restore the precise
+// `parts` type from the exported Schema input types so callers see a proper
+// tagged union.
+type PartInputUnion =
+  | MessageV2.TextPartInput
+  | MessageV2.FilePartInput
+  | MessageV2.AgentPartInput
+  | MessageV2.SubtaskPartInput
+export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
+  parts: PartInputUnion[]
+  editorContext?: MessageV2.EditorContext
+}
 
-export const LoopInput = z.object({
-  sessionID: SessionID.zod,
-})
+export class LoopInput extends Schema.Class<LoopInput>("SessionPrompt.LoopInput")({
+  sessionID: SessionID,
+}) {
+  static readonly zod = zod(this)
+}
 
-export const ShellInput = z.object({
-  sessionID: SessionID.zod,
-  messageID: MessageID.zod.optional(),
-  agent: z.string(),
-  model: z
-    .object({
-      providerID: ProviderID.zod,
-      modelID: ModelID.zod,
-    })
-    .optional(),
-  command: z.string(),
-})
-export type ShellInput = z.infer<typeof ShellInput>
+export const ShellInput = Schema.Struct({
+  sessionID: SessionID,
+  messageID: Schema.optional(MessageID),
+  agent: Schema.String,
+  model: Schema.optional(ModelRef),
+  command: Schema.String,
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export type ShellInput = Schema.Schema.Type<typeof ShellInput>
 
-export const CommandInput = z.object({
-  messageID: MessageID.zod.optional(),
-  sessionID: SessionID.zod,
-  agent: z.string().optional(),
-  model: z.string().optional(),
-  arguments: z.string(),
-  command: z.string(),
-  variant: z.string().optional(),
-  parts: z
-    .array(
-      z.discriminatedUnion("type", [
-        MessageV2.FilePart.omit({
-          messageID: true,
-          sessionID: true,
-        }).partial({
-          id: true,
+export const CommandInput = Schema.Struct({
+  messageID: Schema.optional(MessageID),
+  sessionID: SessionID,
+  agent: Schema.optional(Schema.String),
+  model: Schema.optional(Schema.String),
+  arguments: Schema.String,
+  command: Schema.String,
+  variant: Schema.optional(Schema.String),
+  // Inlined (no identifier annotation) to keep the original SDK output — the
+  // PromptInput call site below references FilePartInput by ref via the
+  // Schema export in message-v2.ts.
+  parts: Schema.optional(
+    Schema.Array(
+      Schema.Union([
+        Schema.Struct({
+          id: Schema.optional(PartID),
+          type: Schema.Literal("file"),
+          mime: Schema.String,
+          filename: Schema.optional(Schema.String),
+          url: Schema.String,
+          source: Schema.optional(MessageV2.FilePartSource),
         }),
-      ]),
-    )
-    .optional(),
-})
-export type CommandInput = z.infer<typeof CommandInput>
+      ]).annotate({ discriminator: "type" }),
+    ),
+  ),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export type CommandInput = Schema.Schema.Type<typeof CommandInput>
 
 /** @internal Exported for testing */
 export function createStructuredOutputTool(input: {
@@ -1952,7 +1970,7 @@ const quoteTrimRegex = /^["']|["']$/g
 // kilocode_change start - legacy promise helpers for Kilo callsites
 const { runPromise } = makeRuntime(Service, defaultLayer)
 export const prompt = (input: PromptInput) => runPromise((svc) => svc.prompt(input))
-export const loop = (input: z.infer<typeof LoopInput>) => runPromise((svc) => svc.loop(input))
+export const loop = (input: LoopInput) => runPromise((svc) => svc.loop(input))
 export const cancel = (sessionID: SessionID) => runPromise((svc) => svc.cancel(sessionID))
 // kilocode_change end
 

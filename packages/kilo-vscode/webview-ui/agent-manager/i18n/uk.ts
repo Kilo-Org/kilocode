@@ -78,7 +78,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Наступний елемент",
   "agentManager.shortcuts.newWorktree": "Нове робоче дерево",
   "agentManager.shortcuts.openWorktree": "Відкрити робоче дерево",
-  "agentManager.shortcuts.advancedWorktree": "Розширене робоче дерево",
+  "agentManager.shortcuts.advancedWorktree": "Налаштувати нове worktree",
   "agentManager.shortcuts.deleteWorktree": "Видалити робоче дерево",
   "agentManager.shortcuts.previousTab": "Попередня вкладка",
   "agentManager.shortcuts.nextTab": "Наступна вкладка",
@@ -101,6 +101,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Видалити застаріле робоче дерево",
 
   "agentManager.dialog.openWorktree": "Нове робоче дерево",
+  "agentManager.dialog.configureWorktree": "Налаштувати нове Worktree...",
   "agentManager.dialog.tab.new": "Нове",
   "agentManager.dialog.tab.import": "Імпортувати",
   "agentManager.dialog.namePlaceholder": "Назва робочого дерева (необов'язково)",

@@ -1,10 +1,12 @@
 import z from "zod"
-import { and, Database, eq } from "../storage"
+import { and } from "drizzle-orm"
+import { Database } from "@/storage/db"
+import { eq } from "drizzle-orm"
 import { ProjectTable } from "./project.sql"
 import { SessionTable } from "../session/session.sql"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global"
 import { which } from "../util/which"
@@ -12,8 +14,8 @@ import { ProjectID } from "./schema"
 import { Effect, Layer, Path, Scope, Context, Stream, Types, Schema } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { NodePath } from "@effect/platform-node"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { zod } from "@/util/effect-zod"
 import { withStatics } from "@/util/schema"
 
@@ -54,14 +56,20 @@ export const Info = Schema.Struct({
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
 export const Event = {
-  Updated: BusEvent.define("project.updated", Info.zod),
+  Updated: BusEvent.define("project.updated", Info),
 }
 
 type Row = typeof ProjectTable.$inferSelect
 
 export function fromRow(row: Row): Info {
   const icon =
-    row.icon_url || row.icon_color ? { url: row.icon_url ?? undefined, color: row.icon_color ?? undefined } : undefined
+    row.icon_url || row.icon_url_override || row.icon_color
+      ? {
+          url: row.icon_url ?? undefined,
+          override: row.icon_url_override ?? undefined,
+          color: row.icon_color ?? undefined,
+        }
+      : undefined
   return {
     id: row.id,
     worktree: row.worktree,
@@ -85,6 +93,15 @@ export const UpdateInput = z.object({
   commands: zod(ProjectCommands).optional(),
 })
 export type UpdateInput = z.infer<typeof UpdateInput>
+
+export const UpdatePayload = Schema.Struct({
+  name: Schema.optional(Schema.String),
+  icon: Schema.optional(ProjectIcon),
+  commands: Schema.optional(ProjectCommands),
+})
+  .annotate({ identifier: "ProjectUpdateInput" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type UpdatePayload = Types.DeepMutable<Schema.Schema.Type<typeof UpdatePayload>>
 
 // ---------------------------------------------------------------------------
 // Effect service
@@ -160,8 +177,8 @@ export const layer: Layer.Layer<
     const scope = yield* Scope.Scope
 
     const readCachedProjectId = Effect.fnUntraced(function* (dir: string) {
-        // kilocode change start
-        return yield* fs.readFileString(pathSvc.join(dir, "kilo")).pipe(
+      // kilocode change start
+      return yield* fs.readFileString(pathSvc.join(dir, "kilo")).pipe(
         // kilocode change end
         Effect.map((x) => x.trim()),
         Effect.map(ProjectID.make),
@@ -210,13 +227,13 @@ export const layer: Layer.Layer<
             vcs: fakeVcs,
           }
         }
-        const worktree = (() => {
-          const common = resolveGitPath(sandbox, commonDir.text.trim())
-          return common === sandbox ? sandbox : pathSvc.dirname(common)
-        })()
+        const common = resolveGitPath(sandbox, commonDir.text.trim())
+        const bareCheck = yield* git(["config", "--bool", "core.bare"], { cwd: sandbox })
+        const isBareRepo = bareCheck.code === 0 && bareCheck.text.trim() === "true"
+        const worktree = common === sandbox ? sandbox : isBareRepo ? common : pathSvc.dirname(common)
 
         if (id == null) {
-          id = yield* readCachedProjectId(pathSvc.join(worktree, ".git"))
+          id = yield* readCachedProjectId(common)
         }
 
         if (!id) {
@@ -229,9 +246,7 @@ export const layer: Layer.Layer<
 
           id = roots[0] ? ProjectID.make(roots[0]) : undefined
           if (id) {
-            // kilocode_change start
-            yield* fs.writeFileString(pathSvc.join(worktree, ".git", "kilo"), id).pipe(Effect.ignore)
-            // kilocode_change end
+            yield* fs.writeFileString(pathSvc.join(common, "kilo"), id).pipe(Effect.ignore) // kilocode_change
           }
         }
 
@@ -294,6 +309,7 @@ export const layer: Layer.Layer<
             vcs: result.vcs ?? null,
             name: result.name,
             icon_url: result.icon?.url,
+            icon_url_override: result.icon?.override,
             icon_color: result.icon?.color,
             time_created: result.time.created,
             time_updated: result.time.updated,
@@ -308,6 +324,7 @@ export const layer: Layer.Layer<
               vcs: result.vcs ?? null,
               name: result.name,
               icon_url: result.icon?.url,
+              icon_url_override: result.icon?.override,
               icon_color: result.icon?.color,
               time_updated: result.time.updated,
               time_initialized: result.time.initialized,
@@ -370,6 +387,7 @@ export const layer: Layer.Layer<
           .set({
             name: input.name,
             icon_url: input.icon?.url,
+            icon_url_override: input.icon?.override,
             icon_color: input.icon?.color,
             commands: input.commands,
             time_updated: Date.now(),
@@ -497,3 +515,5 @@ const { runPromise } = makeRuntime(Service, defaultLayer)
 export const fromDirectory = (directory: string) => runPromise((svc) => svc.fromDirectory(directory))
 export const sandboxes = (id: ProjectID) => runPromise((svc) => svc.sandboxes(id))
 // kilocode_change end
+
+export * as Project from "./project"

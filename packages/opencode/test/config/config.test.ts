@@ -1,19 +1,20 @@
 import { test, expect, describe, mock, afterEach, beforeEach } from "bun:test"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
-import { Config, ConfigManaged } from "../../src/config"
+import { Config } from "@/config/config"
+import { ConfigManaged } from "@/config/managed"
 import { ConfigParse } from "../../src/config/parse"
-import { EffectFlock } from "@opencode-ai/shared/util/effect-flock"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 
 import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { AccessToken, AccountID, OrgID } from "../../src/account/schema"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Env } from "../../src/env"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { tmpdir } from "../fixture/fixture"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
 /** Infra layer that provides FileSystem, Path, ChildProcessSpawner for test fixtures */
@@ -23,11 +24,11 @@ const infra = CrossSpawnSpawner.defaultLayer.pipe(
 import path from "path"
 import fs from "fs/promises"
 import { pathToFileURL } from "url"
-import { Global } from "../../src/global"
+import { Global } from "@opencode-ai/core/global"
 import { ProjectID } from "../../src/project/schema"
-import { Filesystem } from "../../src/util"
+import { Filesystem } from "@/util/filesystem"
 import { ConfigPlugin } from "@/config/plugin"
-import { Npm } from "@opencode-ai/shared/npm"
+import { Npm } from "@opencode-ai/core/npm"
 
 const emptyAccount = Layer.mock(Account.Service)({
   active: () => Effect.succeed(Option.none()),
@@ -55,6 +56,8 @@ const it = testEffect(layer)
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
 const save = (config: Config.Info) =>
   Effect.runPromise(Config.Service.use((svc) => svc.update(config)).pipe(Effect.scoped, Effect.provide(layer)))
+const saveGlobal = (config: Config.Info) =>
+  Effect.runPromise(Config.Service.use((svc) => svc.updateGlobal(config)).pipe(Effect.scoped, Effect.provide(layer)))
 const clear = (wait = false) =>
   Effect.runPromise(Config.Service.use((svc) => svc.invalidate(wait)).pipe(Effect.scoped, Effect.provide(layer)))
 const listDirs = () =>
@@ -140,6 +143,104 @@ test("loads JSON config file", async () => {
       expect(config.username).toBe("testuser")
     },
   })
+})
+
+test("loads shell config field", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://opencode.ai/config.json",
+        shell: "bash",
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(config.shell).toBe("bash")
+    },
+  })
+})
+
+test("updates config and preserves empty shell sentinel", async () => {
+  // kilocode_change - upstream hardcodes project config to config.json; Kilo writes to kilo.json
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://opencode.ai/config.json",
+        shell: "bash",
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ shell: "" })
+
+      const writtenConfig = await Filesystem.readJson<{ shell?: string }>(path.join(tmp.path, "kilo.json"))
+      expect(writtenConfig.shell).toBe("")
+    },
+  })
+})
+
+test("updates global config and omits empty shell key in json", async () => {
+  // kilocode_change - globalConfigFile() prefers kilo.json over opencode.json
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://opencode.ai/config.json",
+        shell: "bash",
+      })
+    },
+  })
+
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = tmp.path
+  await clear(true)
+
+  try {
+    await saveGlobal({ shell: "" })
+
+    const writtenConfig = await Filesystem.readJson<{ shell?: string }>(path.join(tmp.path, "kilo.json"))
+    expect("shell" in writtenConfig).toBe(false)
+  } finally {
+    ;(Global.Path as { config: string }).config = prev
+    await clear(true)
+  }
+})
+
+test("updates global config and omits empty shell key in jsonc", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "opencode.jsonc"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          shell: "bash",
+          model: "test/model",
+        }),
+      )
+    },
+  })
+
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = tmp.path
+  await clear(true)
+
+  try {
+    await saveGlobal({ shell: "" })
+
+    const file = path.join(tmp.path, "opencode.jsonc")
+    const writtenConfig = await Filesystem.readText(file)
+    const parsed = ConfigParse.schema(Config.Info.zod, ConfigParse.jsonc(writtenConfig, file), file)
+    expect(writtenConfig).not.toContain('"shell"')
+    expect(parsed.shell).toBeUndefined()
+    expect(parsed.model).toBe("test/model")
+  } finally {
+    ;(Global.Path as { config: string }).config = prev
+    await clear(true)
+  }
 })
 
 test("loads formatter boolean config", async () => {
@@ -679,6 +780,33 @@ Test agent prompt`,
   })
 })
 
+test("agent markdown permission config preserves user key order", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const agentDir = path.join(dir, ".opencode", "agent")
+      await fs.mkdir(agentDir, { recursive: true })
+
+      await Filesystem.write(
+        path.join(agentDir, "ordered.md"),
+        `---
+permission:
+  bash: allow
+  "*": deny
+  edit: ask
+---
+Ordered permissions`,
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(Object.keys(config.agent?.ordered?.permission ?? {})).toEqual(["bash", "*", "edit"])
+    },
+  })
+})
+
 test("loads agents from .kilo/agents (plural)", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -853,20 +981,6 @@ Hello from new command`,
   })
 })
 
-test("updates config and writes to file", async () => {
-  await using tmp = await tmpdir()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const newConfig = { model: "updated/model" }
-      await save(newConfig as any)
-
-      const writtenConfig = await Filesystem.readJson<{ model: string }>(path.join(tmp.path, "config.json"))
-      expect(writtenConfig.model).toBe("updated/model")
-    },
-  })
-})
-
 test("gets config directories", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
@@ -926,7 +1040,6 @@ test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
   const noopNpm = Layer.mock(Npm.Service)({
     install: () => Effect.void,
     add: () => Effect.die("not implemented"),
-    outdated: () => Effect.succeed(false),
     which: () => Effect.succeed(Option.none()),
   })
   const testLayer = Config.layer.pipe(
@@ -962,7 +1075,7 @@ test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
 })
 
 // Note: deduplication and serialization of npm installs is now handled by the
-// shared Npm.Service (via EffectFlock). Those behaviors are tested in the shared
+// core Npm.Service (via EffectFlock). Those behaviors are tested in the core
 // package's npm tests, not here.
 
 test("resolves scoped npm plugins in config", async () => {
@@ -1494,35 +1607,6 @@ test("migrates legacy patch tool to edit permission", async () => {
   })
 })
 
-test("migrates legacy multiedit tool to edit permission", async () => {
-  await using tmp = await tmpdir({
-    init: async (dir) => {
-      await Filesystem.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          agent: {
-            test: {
-              tools: {
-                multiedit: false,
-              },
-            },
-          },
-        }),
-      )
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const config = await load()
-      expect(config.agent?.["test"]?.permission).toEqual({
-        edit: "deny",
-      })
-    },
-  })
-})
-
 test("migrates mixed legacy tools config", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -1591,11 +1675,19 @@ test("merges legacy tools with existing permission config", async () => {
   })
 })
 
-// kilocode_change start — isolate from global config to prevent cross-test contamination
-// (migrateBashPermission may write permission.bash to a global config file created by other
-// test files running in parallel, which mergeDeep then prepends to the project permission keys)
-test("permission config preserves key order", async () => {
+test("permission config preserves user key order", async () => {
+  // ConfigPermission.Info is a StructWithRest schema — the decoder reorders
+  // keys into declaration-order for known permission names (edit, read,
+  // todowrite, external_directory are declared in `config/permission.ts`),
+  // followed by rest keys in the user's insertion order.
+  //
+  // Rule precedence is NOT affected by this reordering: `Permission.fromConfig`
+  // sorts wildcards before specifics before iterating. See the
+  // "fromConfig - specific key beats wildcard regardless of JSON key order"
+  // test in test/permission/next.test.ts for the behavioural guarantee.
   // kilocode_change start — isolate from global config to prevent cross-test contamination
+  // (migrateBashPermission may write permission.bash to a global config file created by other
+  // test files running in parallel, which mergeDeep then prepends to the project permission keys)
   await using globalTmp = await tmpdir()
   const prev = Global.Path.config
   ;(Global.Path as { config: string }).config = globalTmp.path
@@ -1649,7 +1741,29 @@ test("permission config preserves key order", async () => {
   }
   // kilocode_change end
 })
-// kilocode_change end
+
+test("Effect config parser preserves permission order while rejecting unknown top-level keys", () => {
+  const config = ConfigParse.effectSchema(
+    Config.Info,
+    {
+      permission: {
+        bash: "allow",
+        "*": "deny",
+        edit: "ask",
+      },
+    },
+    "test",
+  )
+
+  expect(Object.keys(config.permission!)).toEqual(["bash", "*", "edit"])
+  try {
+    ConfigParse.effectSchema(Config.Info, { invalid_field: true }, "test")
+    throw new Error("expected config parse to fail")
+  } catch (err) {
+    const error = err as { data?: { issues?: Array<{ code?: string; keys?: string[]; path?: string[] }> } }
+    expect(error.data?.issues?.[0]).toMatchObject({ code: "unrecognized_keys", keys: ["invalid_field"], path: [] })
+  }
+})
 
 // MCP config merging tests
 
@@ -2338,7 +2452,7 @@ describe("KILO_CONFIG_CONTENT token substitution", () => {
 // parseManagedPlist unit tests — pure function, no OS interaction
 
 test("parseManagedPlist strips MDM metadata keys", async () => {
-  const config = ConfigParse.schema(
+  const config = ConfigParse.effectSchema(
     Config.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
@@ -2366,7 +2480,7 @@ test("parseManagedPlist strips MDM metadata keys", async () => {
 })
 
 test("parseManagedPlist parses server settings", async () => {
-  const config = ConfigParse.schema(
+  const config = ConfigParse.effectSchema(
     Config.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
@@ -2386,7 +2500,7 @@ test("parseManagedPlist parses server settings", async () => {
 })
 
 test("parseManagedPlist parses permission rules", async () => {
-  const config = ConfigParse.schema(
+  const config = ConfigParse.effectSchema(
     Config.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
@@ -2416,7 +2530,7 @@ test("parseManagedPlist parses permission rules", async () => {
 })
 
 test("parseManagedPlist parses enabled_providers", async () => {
-  const config = ConfigParse.schema(
+  const config = ConfigParse.effectSchema(
     Config.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
@@ -2433,7 +2547,7 @@ test("parseManagedPlist parses enabled_providers", async () => {
 })
 
 test("parseManagedPlist handles empty config", async () => {
-  const config = ConfigParse.schema(
+  const config = ConfigParse.effectSchema(
     Config.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(JSON.stringify({ $schema: "https://opencode.ai/config.json" })),

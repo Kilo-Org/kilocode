@@ -8,9 +8,10 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { AgentConfig, AgentInfo, PermissionRuleItem } from "../../types/messages"
+import type { AgentConfig, AgentInfo, PermissionConfig, PermissionRuleItem } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 import { buildExport } from "./mode-io"
+import PermissionEditor from "./PermissionEditor"
 
 interface Props {
   name: string
@@ -41,6 +42,10 @@ const ModeEditView: Component<Props> = (props) => {
         [props.name]: { ...current, ...partial },
       },
     })
+  }
+
+  const updatePermission = (patch: PermissionConfig) => {
+    updateConfig({ agent: { [props.name]: { permission: patch } } })
   }
 
   const exportMode = () => {
@@ -145,7 +150,7 @@ const ModeEditView: Component<Props> = (props) => {
           <TextField
             value={cfg().model ?? ""}
             placeholder="e.g. anthropic/claude-sonnet-4-20250514"
-            onChange={(val) => update({ model: val || undefined })}
+            onChange={(val) => update({ model: val || null })}
           />
         </SettingsRow>
 
@@ -198,10 +203,11 @@ const ModeEditView: Component<Props> = (props) => {
           <Switch
             checked={cfg().hidden ?? false}
             onChange={(val) => {
-              update({ hidden: val || undefined })
-              // Clear default_agent if hiding the current default
+              // Send explicit `false` (not `undefined`) so deepMerge can overwrite a previously-saved `true`.
+              update({ hidden: val })
+              // Clear default_agent if hiding the current default (null = delete sentinel).
               if (val && config().default_agent === props.name) {
-                updateConfig({ default_agent: undefined })
+                updateConfig({ default_agent: null })
               }
             }}
             hideLabel
@@ -218,10 +224,11 @@ const ModeEditView: Component<Props> = (props) => {
           <Switch
             checked={cfg().disable ?? false}
             onChange={(val) => {
-              update({ disable: val || undefined })
-              // Clear default_agent if disabling the current default
+              // Send explicit `false` (not `undefined`) so deepMerge can overwrite a previously-saved `true`.
+              update({ disable: val })
+              // Clear default_agent if disabling the current default (null = delete sentinel).
               if (val && config().default_agent === props.name) {
-                updateConfig({ default_agent: undefined })
+                updateConfig({ default_agent: null })
               }
             }}
             hideLabel
@@ -230,6 +237,48 @@ const ModeEditView: Component<Props> = (props) => {
           </Switch>
         </SettingsRow>
       </Card>
+
+      <Show when={!native()}>
+        <Card
+          style={{
+            "margin-bottom": "12px",
+            padding: "0",
+            overflow: "hidden",
+            border: "1px solid var(--border-base, var(--vscode-panel-border))",
+          }}
+        >
+          <div
+            style={{
+              padding: "14px 16px 12px",
+              "border-bottom": "1px solid var(--border-weak-base, var(--vscode-panel-border))",
+              background: "var(--bg-subtle-base, var(--vscode-editorWidget-background))",
+            }}
+          >
+            <div data-slot="settings-row-label-title" style={{ "margin-bottom": "6px" }}>
+              Per-Agent Permissions
+            </div>
+            <div
+              style={{
+                "font-size": "12px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                "line-height": "1.45",
+              }}
+            >
+              These settings only apply to this custom agent. Change a dropdown from Default to create an override, or
+              use Add path/Add command for tool-specific exceptions.
+            </div>
+          </div>
+          <div style={{ padding: "0 16px 4px" }}>
+            <PermissionEditor
+              permissions={cfg().permission}
+              rules={agent()?.permission}
+              component="agent-permission-settings"
+              inherited
+              onChange={updatePermission}
+            />
+          </div>
+        </Card>
+      </Show>
 
       {/* Calculated permissions (read-only, collapsible) */}
       <Show when={agent()?.permission} keyed>

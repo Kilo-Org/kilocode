@@ -6,16 +6,18 @@ import { registerAdaptor } from "../../src/control-plane/adaptors"
 import type { WorkspaceAdaptor } from "../../src/control-plane/types"
 import { Workspace } from "../../src/control-plane/workspace"
 import { AppRuntime } from "../../src/effect/app-runtime"
-import { Flag } from "../../src/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
-import { Session as SessionNs } from "../../src/session"
+import { Session as SessionNs } from "@/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, type SessionID } from "../../src/session/schema"
-import { Database, asc, eq } from "../../src/storage"
+import { Database } from "@/storage/db"
+import { asc } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { SyncEvent } from "../../src/sync"
 import { EventTable } from "../../src/sync/event.sql"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 
@@ -141,8 +143,11 @@ describe("Workspace.sessionRestore", () => {
       Object.assign(
         async (input: URL | RequestInfo, init?: BunFetchRequestInit | RequestInit) => {
           const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url)
-          if (url.pathname !== "/base/sync/replay") {
+          if (url.pathname === "/base/global/event") {
             return eventStreamResponse()
+          }
+          if (url.pathname === "/base/sync/history") {
+            return Response.json([])
           }
           const body = JSON.parse(String(init?.body))
           posts.push({

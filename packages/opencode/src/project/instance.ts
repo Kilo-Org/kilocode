@@ -1,10 +1,10 @@
 import { GlobalBus } from "@/bus/global"
 import { disposeInstance } from "@/effect/instance-registry"
 import { makeRuntime } from "@/effect/run-service"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { iife } from "@/util/iife"
-import { Log } from "@/util"
-import { LocalContext } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
+import { LocalContext } from "@/util/local-context"
 import * as Project from "./project"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 
@@ -96,7 +96,7 @@ export const Instance = {
     if (AppFileSystem.contains(instance.directory, filepath)) return true
     // Non-git projects set worktree to "/" which would match ANY absolute path.
     // Skip worktree check in this case to preserve external_directory permissions.
-    if (Instance.worktree === "/") return false
+    if (instance.worktree === "/") return false
     return AppFileSystem.contains(instance.worktree, filepath)
   },
   /**

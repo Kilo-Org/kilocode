@@ -279,6 +279,22 @@ class MdViewTest : BasePlatformTestCase() {
         assertTrue(view.overrideSheet().contains("18pt"))
     }
 
+    fun `test italic font override appears in override sheet`() {
+        view.font = Font("Arial", Font.ITALIC, 18)
+        view.set("text")
+        assertTrue(view.overrideSheet().contains("font-style: italic"))
+    }
+
+    fun `test font override targets markdown elements`() {
+        view.font = Font("Courier New", Font.PLAIN, 14)
+        view.set("# title\n\ntext\n\n`code`")
+        val sheet = view.overrideSheet()
+
+        assertTrue(sheet.contains("p {"))
+        assertTrue(sheet.contains("h1 {"))
+        assertTrue(sheet.contains("code {"))
+    }
+
     fun `test style change re-renders and override sheet reflects change`() {
         view.set("hello")
         view.foreground = Color(0xDE, 0xAD, 0x00)

@@ -6,7 +6,7 @@ import { GlobalBus } from "@/bus/global"
 // app-runtime → Worktree. Static import here caused Worktree.defaultLayer to be
 // undefined when app-runtime evaluated during tests that import Worktree.
 import { Instance } from "@/project/instance"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
@@ -15,8 +15,9 @@ import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
+import { zodObject } from "@/util/effect-zod"
 
 const QuestionData = z.object({
   requestID: z.string(),
@@ -36,9 +37,9 @@ const SuggestionData = z.object({
 
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
-let _remotePromptInput: ReturnType<typeof SessionPrompt.PromptInput.extend> | undefined
+let _remotePromptInput: z.ZodObject<any> | undefined
 function getRemotePromptInput() {
-  return (_remotePromptInput ??= SessionPrompt.PromptInput.extend({
+  return (_remotePromptInput ??= zodObject(SessionPrompt.PromptInput).extend({
     model: z.string().optional(),
   }))
 }
@@ -265,7 +266,7 @@ export namespace RemoteSender {
           })
           return
         }
-        const input = SessionPrompt.PromptInput.safeParse(
+        const input = SessionPrompt.PromptInput.zod.safeParse(
           normalizePrompt(parsed.data as SessionPrompt.PromptInput & { model?: string }),
         )
         if (!input.success) {
@@ -277,7 +278,7 @@ export namespace RemoteSender {
           return
         }
         dispatchLongRunning(msg, directoryFor(input.data.sessionID), async () => {
-          await SessionPrompt.prompt(input.data)
+          await SessionPrompt.prompt(input.data as SessionPrompt.PromptInput)
         })
         return
       }

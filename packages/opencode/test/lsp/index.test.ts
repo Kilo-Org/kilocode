@@ -2,15 +2,18 @@ import { describe, expect, spyOn, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { Effect, Layer } from "effect"
-import { LSP } from "../../src/lsp"
-import { LSPServer } from "../../src/lsp"
+import { LSP } from "@/lsp/lsp"
+import * as LSPServer from "@/lsp/server"
 import * as launch from "../../src/lsp/launch" // kilocode_change - spy on spawn
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import { Instance } from "../../src/project/instance"
-import { Flag } from "../../src/flag/flag" // kilocode_change
+import { Instance, type InstanceContext } from "../../src/project/instance"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { TsCheck } from "../../src/kilocode/ts-check" // kilocode_change
+
+// kilocode_change - Typescript.spawn ignores ctx, so a cast is fine here.
+const fakeCtx = {} as InstanceContext
 
 const it = testEffect(Layer.mergeAll(LSP.defaultLayer, CrossSpawnSpawner.defaultLayer))
 
@@ -135,7 +138,7 @@ describe("lsp.spawn", () => {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
-          const result = await LSPServer.Typescript.spawn(tmp.path)
+          const result = await LSPServer.Typescript.spawn(tmp.path, fakeCtx)
           expect(result).toBeDefined()
           expect(tsgoSpy).toHaveBeenCalledWith(tmp.path)
           expect(spawnSpy).toHaveBeenCalled()
@@ -155,7 +158,7 @@ describe("lsp.spawn", () => {
     const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
     Flag.KILO_EXPERIMENTAL_LSP_TOOL = false
     try {
-      const result = await LSPServer.Typescript.spawn("/tmp/any")
+      const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx)
       expect(result).toBeUndefined()
     } finally {
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved

@@ -9,14 +9,14 @@ Comparing REST APIs to the Model Context Protocol (MCP) is a category error. The
 
 ## Architectural Differences
 
-| Feature              | MCP                                                  | REST APIs                                         |
-| -------------------- | ---------------------------------------------------- | ------------------------------------------------- |
-| State Management     | **Stateful** - maintains context across interactions | **Stateless** - each request is independent       |
-| Connection Type      | Persistent, bidirectional connections                | One-way request/response                          |
-| Communication Style  | JSON-RPC based with ongoing sessions                 | HTTP-based with discrete requests                 |
-| Context Handling     | Context is intrinsic to the protocol                 | Context must be manually managed                  |
-| Tool Discovery       | Runtime discovery of available tools                 | Design-time integration requiring prior knowledge |
-| Integration Approach | Runtime integration with dynamic capabilities        | Design-time integration requiring code changes    |
+| Feature | MCP | REST APIs |
+|---|---|---|
+| State Management | **Stateful** - maintains context across interactions | **Stateless** - each request is independent |
+| Connection Type | Persistent, bidirectional connections | One-way request/response |
+| Communication Style | JSON-RPC based with ongoing sessions | HTTP-based with discrete requests |
+| Context Handling | Context is intrinsic to the protocol | Context must be manually managed |
+| Tool Discovery | Runtime discovery of available tools | Design-time integration requiring prior knowledge |
+| Integration Approach | Runtime integration with dynamic capabilities | Design-time integration requiring code changes |
 
 ## Different Layers, Different Purposes
 

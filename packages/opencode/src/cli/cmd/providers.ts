@@ -3,16 +3,16 @@ import { AppRuntime } from "../../effect/app-runtime"
 import { cmd } from "./cmd"
 import * as prompts from "@clack/prompts"
 import { UI } from "../ui"
-import { ModelsDev } from "../../provider"
+import { ModelsDev } from "@/provider/models"
 import { map, pipe, sortBy, values } from "remeda"
 import path from "path"
 import os from "os"
-import { Config } from "../../config"
-import { Global } from "../../global"
+import { Config } from "@/config/config"
+import { Global } from "@opencode-ai/core/global"
 import { Plugin } from "../../plugin"
 import { Instance } from "../../project/instance"
 import type { Hooks } from "@kilocode/plugin"
-import { Process } from "../../util"
+import { Process } from "@/util/process"
 import { text } from "node:stream/consumers"
 import { Effect } from "effect"
 
@@ -391,7 +391,7 @@ export const ProvidersLoginCommand = cmd({
               hint: {
                 kilo: "recommended", // kilocode_change
                 opencode: "recommended",
-                openai: "ChatGPT Plus/Pro or API key",
+                openai: "ChatGPT login or API key", // kilocode_change
               }[x.id],
             })),
           ),
@@ -407,7 +407,10 @@ export const ProvidersLoginCommand = cmd({
           const input = args.provider
           const byID = options.find((x) => x.value === input)
           const byName = options.find((x) => x.label.toLowerCase() === input.toLowerCase())
-          const match = byID ?? byName
+          // kilocode_change start - accept codex as an alias for OpenAI ChatGPT auth
+          const alias = input.toLowerCase() === "codex" ? options.find((x) => x.value === "openai") : undefined
+          const match = byID ?? byName ?? alias
+          // kilocode_change end
           if (!match) {
             prompts.log.error(`Unknown provider "${input}"`)
             process.exit(1)

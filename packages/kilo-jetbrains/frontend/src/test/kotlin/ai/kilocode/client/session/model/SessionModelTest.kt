@@ -9,6 +9,7 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
@@ -123,6 +124,16 @@ class SessionModelTest : UsefulTestCase() {
         val p = model.message("m1")!!.parts["p1"]
         assertTrue(p is Reasoning)
         assertEquals("thinking", (p as Reasoning).content.toString())
+        assertTrue(p.done)
+    }
+
+    fun `test updateContent reasoning tracks done state`() {
+        model.addMessage(msg("m1", "assistant"))
+
+        model.updateContent("m1", part("p1", "m1", "reasoning", text = "thinking", time = PartTimeDto(1.0, 2.0)))
+
+        val p = model.message("m1")!!.parts["p1"] as Reasoning
+        assertTrue(p.done)
     }
 
     fun `test updateContent tool creates Tool content and tracks state`() {
@@ -136,6 +147,34 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals("ls", p.title)
     }
 
+    fun `test updateContent tool stores rich fields`() {
+        model.addMessage(msg("m1", "assistant"))
+
+        model.updateContent(
+            "m1",
+            part(
+                "p1", "m1", "tool",
+                tool = "bash",
+                state = "completed",
+                title = "Show history",
+                input = mapOf("command" to "git log", "description" to "Show history"),
+                metadata = mapOf("source" to "state"),
+                output = "abc123 init",
+                error = "failed",
+                time = PartTimeDto(1.0, 2.0),
+            ),
+        )
+
+        val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals("git log", p.input["command"])
+        assertEquals("Show history", p.input["description"])
+        assertEquals("state", p.metadata["source"])
+        assertEquals("abc123 init", p.output)
+        assertEquals("failed", p.error)
+        assertEquals(1.0, p.time?.start)
+        assertEquals(2.0, p.time?.end)
+    }
+
     fun `test updateContent tool updates lifecycle`() {
         model.addMessage(msg("m1", "assistant"))
         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "pending"))
@@ -145,6 +184,22 @@ class SessionModelTest : UsefulTestCase() {
 
         val p = model.message("m1")!!.parts["p1"] as Tool
         assertEquals(ToolExecState.COMPLETED, p.state)
+        assertTrue(events.single() is SessionModelEvent.ContentUpdated)
+    }
+
+    fun `test updateContent tool updates rich fields`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "pending"))
+        events.clear()
+
+        model.updateContent(
+            "m1",
+            part("p1", "m1", "tool", tool = "bash", state = "completed", input = mapOf("command" to "git remote -v"), output = "origin"),
+        )
+
+        val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals("git remote -v", p.input["command"])
+        assertEquals("origin", p.output)
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
     }
 
@@ -362,6 +417,24 @@ class SessionModelTest : UsefulTestCase() {
         assertTrue(events.single() is SessionModelEvent.HistoryLoaded)
     }
 
+    fun `test loadHistory preserves rich tool fields and reasoning done`() {
+        model.loadHistory(listOf(
+            MessageWithPartsDto(
+                msg("m1", "assistant"),
+                listOf(
+                    part("r1", "m1", "reasoning", text = "done", time = PartTimeDto(1.0, 2.0)),
+                    part("t1", "m1", "tool", tool = "read", state = "completed", input = mapOf("filePath" to "README.MD"), output = "content"),
+                ),
+            ),
+        ))
+
+        val reasoning = model.message("m1")!!.parts["r1"] as Reasoning
+        val tool = model.message("m1")!!.parts["t1"] as Tool
+        assertTrue(reasoning.done)
+        assertEquals("README.MD", tool.input["filePath"])
+        assertEquals("content", tool.output)
+    }
+
     fun `test loadHistory stores unknown content types as Generic`() {
         val text = PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "text", text = "visible")
         val snapshot = PartDto(id = "p2", sessionID = "s1", messageID = "m1", type = "snapshot")
@@ -576,6 +649,11 @@ class SessionModelTest : UsefulTestCase() {
         tool: String? = null,
         state: String? = null,
         title: String? = null,
+        input: Map<String, String> = emptyMap(),
+        metadata: Map<String, String> = emptyMap(),
+        output: String? = null,
+        error: String? = null,
+        time: PartTimeDto? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
@@ -585,6 +663,11 @@ class SessionModelTest : UsefulTestCase() {
         tool = tool,
         state = state,
         title = title,
+        input = input,
+        metadata = metadata,
+        output = output,
+        error = error,
+        time = time,
     )
 
     private fun question(id: String) = Question(

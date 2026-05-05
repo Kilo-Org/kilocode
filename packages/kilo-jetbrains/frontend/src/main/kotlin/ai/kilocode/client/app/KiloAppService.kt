@@ -6,8 +6,13 @@ import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
-import com.intellij.openapi.components.Service
+import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
+import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.log.KiloLog
+import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -45,6 +50,10 @@ class KiloAppService internal constructor(
 
     internal val _state = MutableStateFlow(init)
     val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
+    private val _models = MutableStateFlow(ModelStateDto())
+    val models: StateFlow<ModelStateDto> = _models.asStateFlow()
+    private val _favorites = MutableStateFlow<List<ModelSelectionDto>>(emptyList())
+    val favorites: StateFlow<List<ModelSelectionDto>> = _favorites.asStateFlow()
 
     // ------ RPC helper ------
 
@@ -60,9 +69,14 @@ class KiloAppService internal constructor(
         cs.launch { call { connect() } }
         cs.launch {
             val api = rpc
-            if (api != null) api.state().collect { _state.value = it }
-            else durable { KiloAppRpcApi.getInstance().state().collect { _state.value = it } }
+            if (api != null) api.state().collect { onState(it) }
+            else durable { KiloAppRpcApi.getInstance().state().collect { onState(it) } }
         }
+    }
+
+    private fun onState(state: KiloAppStateDto) {
+        _state.value = state
+        if (state.status == KiloAppStatusDto.READY) refreshModelFavoritesAsync()
     }
 
     /** One-shot health check. Returns null on failure. */
@@ -71,6 +85,11 @@ class KiloAppService internal constructor(
     } catch (e: Exception) {
         LOG.warn("health check failed", e)
         null
+    }
+
+    suspend fun retry() {
+        LOG.info("retry: sending RPC")
+        call { retry() }
     }
 
     /** Kill the CLI process and restart it. */
@@ -97,6 +116,11 @@ class KiloAppService internal constructor(
         cs.launch { restart() }
     }
 
+    fun retryAsync() {
+        LOG.info("retryAsync: launching retry")
+        cs.launch { retry() }
+    }
+
     /** Fire-and-forget reinstall from non-suspend context (e.g. action handlers). */
     fun reinstallAsync() {
         LOG.info("reinstallAsync: launching reinstall")
@@ -115,6 +139,81 @@ class KiloAppService internal constructor(
             version = dto.version
             LOG.info("fetchVersion: CLI version is ${dto.version}")
         }
+    }
+
+    fun refreshModelFavoritesAsync() {
+        cs.launch {
+            try {
+                setModelState(call { modelState() })
+            } catch (e: Exception) {
+                LOG.warn("model favorites refresh failed", e)
+            }
+        }
+    }
+
+    fun toggleModelFavorite(providerID: String, modelID: String) {
+        val key = providerID to modelID
+        val prev = _favorites.value
+        val exists = prev.any { it.providerID to it.modelID == key }
+        val action = if (exists) "remove" else "add"
+        val next = if (exists) {
+            _models.value.copy(favorite = prev.filterNot { it.providerID to it.modelID == key })
+        } else {
+            _models.value.copy(favorite = listOf(ModelSelectionDto(providerID, modelID)) + prev)
+        }
+        setModelState(next)
+        cs.launch {
+            try {
+                setModelState(call { updateModelFavorite(ModelFavoriteUpdateDto(action, providerID, modelID)) })
+            } catch (e: Exception) {
+                LOG.warn("model favorite update failed", e)
+                setModelState(_models.value.copy(favorite = prev))
+            }
+        }
+    }
+
+    fun selectModel(agent: String, providerID: String, modelID: String) {
+        val prev = _models.value
+        setModelState(prev.copy(model = prev.model + (agent to ModelSelectionDto(providerID, modelID))))
+        cs.launch {
+            try {
+                setModelState(call { updateModelSelection(ModelSelectionUpdateDto(agent, providerID, modelID)) })
+            } catch (e: Exception) {
+                LOG.warn("model selection update failed", e)
+                setModelState(prev)
+            }
+        }
+    }
+
+    fun clearModel(agent: String) {
+        val prev = _models.value
+        setModelState(prev.copy(model = prev.model - agent))
+        cs.launch {
+            try {
+                setModelState(call { clearModelSelection(agent) })
+            } catch (e: Exception) {
+                LOG.warn("model selection clear failed", e)
+                setModelState(prev)
+            }
+        }
+    }
+
+    fun selectVariant(key: String, value: String) {
+        val prev = _models.value
+        setModelState(prev.copy(variant = prev.variant + (key to value)))
+        cs.launch {
+            try {
+                setModelState(call { updateModelVariant(ModelVariantUpdateDto(key, value)) })
+            } catch (e: Exception) {
+                LOG.warn("model variant update failed", e)
+                setModelState(prev)
+            }
+        }
+    }
+
+    private fun setModelState(state: ModelStateDto) {
+        _models.value = state
+        _favorites.value = state.favorite
     }
 
     /**

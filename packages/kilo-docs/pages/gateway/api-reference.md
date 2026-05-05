@@ -324,16 +324,16 @@ No authentication required.
 
 ## Error codes
 
-| HTTP Status | Description                                             |
-| ----------- | ------------------------------------------------------- |
-| 400         | Bad request -- invalid parameters or model ID           |
-| 401         | Unauthorized -- invalid or missing API key              |
-| 402         | Insufficient balance -- add credits to continue         |
-| 403         | Forbidden -- model not allowed by organization policy   |
-| 429         | Rate limited -- too many requests                       |
-| 500         | Internal server error                                   |
-| 502         | Provider error -- upstream provider returned an error   |
-| 503         | Service unavailable -- provider temporarily unavailable |
+| HTTP Status | Description |
+|---|---|
+| 400 | Bad request -- invalid parameters or model ID |
+| 401 | Unauthorized -- invalid or missing API key |
+| 402 | Insufficient balance -- add credits to continue |
+| 403 | Forbidden -- model not allowed by organization policy |
+| 429 | Rate limited -- too many requests |
+| 500 | Internal server error |
+| 502 | Provider error -- upstream provider returned an error |
+| 503 | Service unavailable -- provider temporarily unavailable |
 
 ### Error response format
 

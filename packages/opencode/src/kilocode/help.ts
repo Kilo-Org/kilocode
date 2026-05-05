@@ -1,6 +1,6 @@
 import yargs from "yargs"
 import type { CommandModule } from "yargs"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 
 type Cmd = CommandModule<any, any>
 

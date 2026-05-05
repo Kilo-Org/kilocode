@@ -32,6 +32,14 @@ describe("deepMerge", () => {
     const source: Partial<Config> = { instructions: ["c"] }
     expect(deepMerge(target, source)).toEqual({ instructions: ["c"] })
   })
+
+  it("preserves explicit false values in nested agent config", () => {
+    const target: Config = { agent: { code: { disable: true, hidden: true } } }
+    const source: Partial<Config> = { agent: { code: { disable: false, hidden: false } } }
+    const result = deepMerge(target, source)
+    expect(result.agent?.code?.disable).toBe(false)
+    expect(result.agent?.code?.hidden).toBe(false)
+  })
 })
 
 describe("stripNulls", () => {
@@ -99,6 +107,43 @@ describe("ConfigState", () => {
       expect(s.config.agent?.code?.steps).toBe(5)
       expect(s.config.agent?.code?.temperature).toBe(0.9)
     })
+
+    it("preserves explicit false agent flags across configLoaded pushes", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { code: { disable: true, hidden: true } } })
+      s.updateConfig({ agent: { code: { disable: false, hidden: false } } })
+
+      s.handleConfigLoaded({ agent: { code: { disable: true, hidden: true } } })
+
+      expect(s.config.agent?.code?.disable).toBe(false)
+      expect(s.config.agent?.code?.hidden).toBe(false)
+    })
+
+    it("preserves clearing default_agent when the current default is hidden", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ default_agent: "code", agent: { code: { hidden: false } } })
+
+      s.updateConfig({ agent: { code: { hidden: true } } })
+      s.updateConfig({ default_agent: null })
+
+      s.handleConfigLoaded({ default_agent: "code", agent: { code: { hidden: false } } })
+
+      expect(s.config.agent?.code?.hidden).toBe(true)
+      expect(s.config.default_agent).toBeUndefined()
+    })
+
+    it("preserves clearing default_agent when the current default is disabled", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ default_agent: "code", agent: { code: { disable: false } } })
+
+      s.updateConfig({ agent: { code: { disable: true } } })
+      s.updateConfig({ default_agent: null })
+
+      s.handleConfigLoaded({ default_agent: "code", agent: { code: { disable: false } } })
+
+      expect(s.config.agent?.code?.disable).toBe(true)
+      expect(s.config.default_agent).toBeUndefined()
+    })
   })
 
   describe("configUpdated while draft is pending", () => {
@@ -129,6 +174,86 @@ describe("ConfigState", () => {
       expect(s.saving).toBe(false)
       expect(Object.keys(s.draft).length).toBe(0)
     })
+
+    it("clears default_agent when update confirms a null-sentinel save", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ default_agent: "code" })
+      s.updateConfig({ default_agent: null })
+      s.saveConfig()
+
+      // Server confirms the write by returning config without default_agent.
+      s.handleConfigUpdated({})
+
+      expect(s.config.default_agent).toBeUndefined()
+      expect(s.dirty).toBe(false)
+      expect(s.saving).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(0)
+    })
+
+    it("preserves the null delete sentinel in the pending save payload", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ default_agent: "code" })
+      s.updateConfig({ default_agent: null })
+
+      expect(s.draft.default_agent).toBeNull()
+
+      s.saveConfig()
+
+      expect(s.saving).toBe(true)
+      expect(s.draft.default_agent).toBeNull()
+    })
+  })
+
+  describe("configSaved while a save is in-flight", () => {
+    it("clears the draft after a confirmed write even if merged refresh is pending", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { code: { prompt: "Review" } } })
+      s.updateConfig({ agent: { code: { prompt: null } } })
+      s.saveConfig()
+
+      s.handleConfigSaved()
+
+      expect(s.saving).toBe(false)
+      expect(s.dirty).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(0)
+      expect(s.saved.agent?.code?.prompt).toBeUndefined()
+      expect(s.config.agent?.code?.prompt).toBeUndefined()
+    })
+  })
+
+  describe("configSaveFailed while a save is in-flight", () => {
+    it("preserves pending null-sentinel clears so the user can retry", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { code: { prompt: "Review", temperature: 0.7 } }, default_agent: "code" })
+      s.updateConfig({ agent: { code: { prompt: null, temperature: null } } })
+      s.updateConfig({ default_agent: null })
+      s.saveConfig()
+
+      s.handleConfigSaveFailed({ agent: { code: { prompt: "Review", temperature: 0.7 } }, default_agent: "code" })
+
+      expect(s.saving).toBe(false)
+      expect(s.dirty).toBe(true)
+      expect(s.draft.agent?.code?.prompt).toBeNull()
+      expect(s.draft.agent?.code?.temperature).toBeNull()
+      expect(s.draft.default_agent).toBeNull()
+      expect(s.config.agent?.code?.prompt).toBeUndefined()
+      expect(s.config.agent?.code?.temperature).toBeUndefined()
+      expect(s.config.default_agent).toBeUndefined()
+    })
+  })
+
+  it("ignores repeated save attempts while a save is already in-flight", () => {
+    const s = new ConfigState()
+    s.handleConfigLoaded({ snapshot: true })
+    s.updateConfig({ snapshot: false })
+
+    s.saveConfig()
+    s.saveConfig()
+    s.handleConfigUpdated({ snapshot: false })
+
+    expect(s.saving).toBe(false)
+    expect(s.dirty).toBe(false)
+    expect(s.config.snapshot).toBe(false)
   })
 
   it("configLoaded is ignored while save is in-flight", () => {
@@ -154,5 +279,122 @@ describe("ConfigState", () => {
 
     expect(s.config.snapshot).toBe(true)
     expect(s.dirty).toBe(false)
+  })
+
+  // -------------------------------------------------------------------------
+  // Issue #9527: clearing an agent model override must unset it, not repopulate
+  // -------------------------------------------------------------------------
+  describe("clearing an agent model override (issue #9527)", () => {
+    it("keeps null in the draft so the backend receives a delete sentinel", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { explore: { model: "anthropic/claude-sonnet-4-20250514" } } })
+
+      // User clears the Model Override field. ModeEditView now sends `null`
+      // instead of `undefined` (the fix). null is the delete sentinel that
+      // patchJsonc maps to jsonc-parser's remove operation.
+      s.updateConfig({ agent: { explore: { model: null } } })
+
+      // Optimistic UI: stripNulls removes the key so the field renders empty.
+      expect(s.config.agent?.explore?.model).toBeUndefined()
+      expect(s.dirty).toBe(true)
+
+      // Draft must retain the null so it survives JSON.stringify on the wire
+      // and reaches patchJsonc as an explicit delete.
+      expect(s.draft.agent?.explore?.model).toBeNull()
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { explore: { model: null } },
+      })
+    })
+
+    it("undefined (the old buggy behavior) is dropped by JSON.stringify", () => {
+      // Reproduction of the pre-fix bug: sending `undefined` results in an
+      // empty patch on the wire, so the backend never deletes the override
+      // and the next configUpdated pushes the stale model back into the UI.
+      const draft = { agent: { explore: { model: undefined } } }
+      expect(JSON.parse(JSON.stringify(draft))).toEqual({ agent: { explore: {} } })
+    })
+
+    it("confirms the save and drops the draft once the backend acks", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ agent: { explore: { model: "anthropic/claude-sonnet-4-20250514" } } })
+      s.updateConfig({ agent: { explore: { model: null } } })
+      s.saveConfig()
+
+      // Backend removed the override and pushes the stripped config back.
+      s.handleConfigUpdated({ agent: { explore: {} } })
+
+      expect(s.config.agent?.explore?.model).toBeUndefined()
+      expect(s.dirty).toBe(false)
+      expect(s.saving).toBe(false)
+      expect(Object.keys(s.draft).length).toBe(0)
+    })
+  })
+
+  describe("agent permission patches", () => {
+    it("merges nested per-agent permission patches into existing rules", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          reviewer: {
+            permission: {
+              read: "allow",
+              edit: "deny",
+            },
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { reviewer: { permission: { bash: "ask" } } } })
+
+      expect(s.config.agent?.reviewer?.permission).toEqual({
+        read: "allow",
+        edit: "deny",
+        bash: "ask",
+      })
+      expect(s.draft.agent?.reviewer?.permission).toEqual({ bash: "ask" })
+    })
+
+    it("keeps nested permission delete sentinels in the draft", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          docs: {
+            permission: {
+              edit: { "*": "deny", "**/*.md": "allow" },
+            },
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { docs: { permission: { edit: { "**/*.md": null } } } } })
+
+      expect(s.config.agent?.docs?.permission).toEqual({ edit: { "*": "deny" } })
+      expect(s.draft.agent?.docs?.permission).toEqual({ edit: { "**/*.md": null } })
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { docs: { permission: { edit: { "**/*.md": null } } } },
+      })
+    })
+
+    it("keeps tool-level permission delete sentinels in the draft", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          reviewer: {
+            permission: {
+              read: "allow",
+              bash: "deny",
+            },
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { reviewer: { permission: { bash: null } } } })
+
+      expect(s.config.agent?.reviewer?.permission).toEqual({ read: "allow" })
+      expect(s.draft.agent?.reviewer?.permission).toEqual({ bash: null })
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { reviewer: { permission: { bash: null } } },
+      })
+    })
   })
 })

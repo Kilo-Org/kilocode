@@ -101,6 +101,7 @@ export class WorktreeStateManager {
 
   private readonly root: string
   private migrated = false
+  private loadFailed = false
 
   constructor(root: string, log: (msg: string) => void) {
     this.root = root
@@ -515,63 +516,70 @@ export class WorktreeStateManager {
     }
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
-      const data = JSON.parse(content) as StateFile
-      this.worktrees.clear()
-      this.sessions.clear()
-      this.sections.clear()
-      this.tabOrder = {}
-      this.worktreeOrder = []
-      this.reviewDiffStyle = "unified"
-
-      for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        // Rewrite stale .kilocode paths while preserving the separator style already stored.
-        const fixed =
-          wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
-            return `${leadingSep}.kilo${trailingSep}`
-          }) ?? wt.path
-        this.worktrees.set(id, { id, ...wt, path: fixed })
-      }
-      let pruned = 0
-      for (const [id, s] of Object.entries(data.sessions ?? {})) {
-        const ref = s.worktreeId
-        if (ref === null) {
-          this.sessions.set(id, { id, ...s })
-          continue
-        }
-        // Skip orphaned sessions referencing a deleted worktree.
-        if (!ref || !this.worktrees.has(ref)) {
-          pruned++
-          continue
-        }
-        this.sessions.set(id, { id, ...s })
-      }
-      for (const [id, sec] of Object.entries(data.sections ?? {})) {
-        this.sections.set(id, { id, ...sec })
-      }
-      if (data.tabOrder) {
-        this.tabOrder = data.tabOrder
-      }
-      if (data.worktreeOrder) {
-        this.worktreeOrder = data.worktreeOrder
-      }
-      const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
-      this.collapsed = data.sessionsCollapsed ?? false
-      if (data.reviewDiffStyle === "split") {
-        this.reviewDiffStyle = "split"
-      }
-      this.defaultBase = data.defaultBaseBranch
-      this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
-      if (pruned > 0 || repaired) {
-        if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
-        void this.save()
-      }
+      this.apply(content)
+      this.loadFailed = false
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") this.loadFailed = false
       if (code !== "ENOENT") {
         this.log(`Failed to load state: ${error}`)
+        this.loadFailed = true
       }
     }
     return migration
+  }
+
+  private apply(content: string): void {
+    const data = JSON.parse(content) as StateFile
+    this.worktrees.clear()
+    this.sessions.clear()
+    this.sections.clear()
+    this.tabOrder = {}
+    this.worktreeOrder = []
+    this.reviewDiffStyle = "unified"
+
+    for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
+      // Rewrite stale .kilocode paths while preserving the separator style already stored.
+      const fixed =
+        wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
+          return `${leadingSep}.kilo${trailingSep}`
+        }) ?? wt.path
+      this.worktrees.set(id, { id, ...wt, path: fixed })
+    }
+    let pruned = 0
+    for (const [id, s] of Object.entries(data.sessions ?? {})) {
+      const ref = s.worktreeId
+      if (ref === null) {
+        this.sessions.set(id, { id, ...s })
+        continue
+      }
+      // Skip orphaned sessions referencing a deleted worktree.
+      if (!ref || !this.worktrees.has(ref)) {
+        pruned++
+        continue
+      }
+      this.sessions.set(id, { id, ...s })
+    }
+    for (const [id, sec] of Object.entries(data.sections ?? {})) {
+      this.sections.set(id, { id, ...sec })
+    }
+    if (data.tabOrder) {
+      this.tabOrder = data.tabOrder
+    }
+    if (data.worktreeOrder) {
+      this.worktreeOrder = data.worktreeOrder
+    }
+    const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    this.collapsed = data.sessionsCollapsed ?? false
+    if (data.reviewDiffStyle === "split") {
+      this.reviewDiffStyle = "split"
+    }
+    this.defaultBase = data.defaultBaseBranch
+    this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
+    if (pruned > 0 || repaired) {
+      if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
+      void this.save()
+    }
   }
 
   /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
@@ -606,6 +614,11 @@ export class WorktreeStateManager {
   }
 
   async save(): Promise<void> {
+    if (this.loadFailed) {
+      this.log("Skipping save because state failed to load")
+      return
+    }
+
     // Serialize concurrent saves — if a save is in-flight, queue one follow-up
     if (this.saving) {
       this.pendingSave = true
@@ -663,11 +676,15 @@ export class WorktreeStateManager {
       data.defaultBaseBranch = this.defaultBase
     }
 
+    const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`
     try {
       const dir = path.dirname(this.file)
       if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-      await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+      const content = JSON.stringify(data, null, 2)
+      await fs.promises.writeFile(tmp, content, "utf-8")
+      await fs.promises.rename(tmp, this.file)
     } catch (error) {
+      await fs.promises.rm(tmp, { force: true }).catch((err) => this.log(`Failed to remove temp state file: ${err}`))
       const code = (error as NodeJS.ErrnoException).code
       if (code === "ENOENT") {
         this.log("State directory was removed, skipping save")

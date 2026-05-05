@@ -1,36 +1,41 @@
-import { Slug } from "@opencode-ai/shared/util/slug"
+import { Slug } from "@opencode-ai/core/util/slug"
 import path from "path"
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Decimal } from "decimal.js"
 import z from "zod"
 import { type ProviderMetadata, type LanguageModelUsage } from "ai"
-import { Flag } from "../flag/flag"
-import { InstallationVersion } from "../installation/version"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
-import { Database, NotFoundError, eq, and, gte, isNull, desc, like } from "../storage" // kilocode_change - listGlobal delegated to KiloSession
+import { Database } from "@/storage/db"
+import { NotFoundError } from "@/storage/storage"
+// kilocode_change - drop unused inArray/lt (listGlobal delegated to KiloSession)
+import { eq, and, gte, isNull, desc, like } from "drizzle-orm"
 import { SyncEvent } from "../sync"
 import { PartTable, SessionTable } from "./session.sql"
-import { Storage } from "@/storage"
-import { Log } from "../util"
-import { updateSchema } from "../util/update-schema"
+// kilocode_change - ProjectTable removed (unused)
+import { Storage } from "@/storage/storage"
+import * as Log from "@opencode-ai/core/util/log"
 import { MessageV2 } from "./message-v2"
 import { Instance } from "../project/instance"
-import { InstanceState } from "@/effect"
+import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
 import { SessionID, MessageID, PartID } from "./schema"
 
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { Permission } from "@/permission"
-import { Global } from "@/global"
-import { Effect, Layer, Option, Context } from "effect"
+import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - legacy promise helpers + kilocode extensions
 import { makeRuntime } from "@/effect/run-service"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
 import { fn } from "@/util/fn"
 // kilocode_change end
+import { Effect, Layer, Option, Context, Schema, Types } from "effect"
+import { zod } from "@/util/effect-zod"
+import { optionalOmitUndefined, withStatics } from "@/util/schema"
 
 const log = Log.create({ service: "session" })
 
@@ -67,6 +72,7 @@ export function fromRow(row: SessionRow): Info {
     projectID: row.project_id,
     workspaceID: row.workspace_id ?? undefined,
     directory: row.directory,
+    path: row.path ?? undefined,
     parentID: row.parent_id ?? undefined,
     title: row.title,
     version: row.version,
@@ -91,6 +97,7 @@ export function toRow(info: Info) {
     parent_id: info.parentID,
     slug: info.slug,
     directory: info.directory,
+    path: info.path,
     title: info.title,
     version: info.version,
     share_url: info.share?.url,
@@ -117,151 +124,184 @@ function getForkedTitle(title: string): string {
   return `${title} (fork #1)`
 }
 
-export const Info = z
-  .object({
-    id: SessionID.zod,
-    slug: z.string(),
-    projectID: ProjectID.zod,
-    workspaceID: WorkspaceID.zod.optional(),
-    directory: z.string(),
-    parentID: SessionID.zod.optional(),
-    summary: z
-      .object({
-        additions: z.number(),
-        deletions: z.number(),
-        files: z.number(),
-        // kilocode_change start - use lightweight diff schema (without before/after file contents)
-        diffs: z
-          .object({
-            file: z.string(),
-            additions: z.number(),
-            deletions: z.number(),
-            status: z.enum(["added", "deleted", "modified"]).optional(),
-          })
-          .array()
-          .optional(),
-        // kilocode_change end
-      })
-      .optional(),
-    share: z
-      .object({
-        url: z.string(),
-      })
-      .optional(),
-    title: z.string(),
-    version: z.string(),
-    time: z.object({
-      created: z.number(),
-      updated: z.number(),
-      compacting: z.number().optional(),
-      archived: z.number().optional(),
-    }),
-    permission: Permission.Ruleset.zod.optional(),
-    revert: z
-      .object({
-        messageID: MessageID.zod,
-        partID: PartID.zod.optional(),
-        snapshot: z.string().optional(),
-        diff: z.string().optional(),
-      })
-      .optional(),
-  })
-  .meta({
-    ref: "Session",
-  })
-export type Info = z.output<typeof Info>
+function sessionPath(worktree: string, cwd: string) {
+  return path.relative(path.resolve(worktree), cwd).replaceAll("\\", "/")
+}
 
-export const ProjectInfo = z
-  .object({
-    id: ProjectID.zod,
-    name: z.string().optional(),
-    worktree: z.string(),
-  })
-  .meta({
-    ref: "ProjectSummary",
-  })
-export type ProjectInfo = z.output<typeof ProjectInfo>
-
-export const GlobalInfo = Info.extend({
-  project: ProjectInfo.nullable(),
-  worktreeName: z.string().optional(), // kilocode_change - basename of the specific worktree directory
-}).meta({
-  ref: "GlobalSession",
+const Summary = Schema.Struct({
+  additions: Schema.Number,
+  deletions: Schema.Number,
+  files: Schema.Number,
+  diffs: optionalOmitUndefined(Schema.Array(Snapshot.SummaryFileDiff)), // kilocode_change - lightweight diff without patch
 })
-export type GlobalInfo = z.output<typeof GlobalInfo>
 
-export const CreateInput = z
-  .object({
-    parentID: SessionID.zod.optional(),
-    title: z.string().optional(),
-    permission: Info.shape.permission,
-    platform: z.string().optional(), // kilocode_change - per-session platform override for telemetry attribution
-    workspaceID: WorkspaceID.zod.optional(),
-  })
-  .optional()
-export type CreateInput = z.output<typeof CreateInput>
-
-export const ForkInput = z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() })
-export const GetInput = SessionID.zod
-export const ChildrenInput = SessionID.zod
-export const RemoveInput = SessionID.zod
-export const SetTitleInput = z.object({ sessionID: SessionID.zod, title: z.string() })
-export const SetArchivedInput = z.object({ sessionID: SessionID.zod, time: z.number().optional() })
-export const SetPermissionInput = z.object({ sessionID: SessionID.zod, permission: Permission.Ruleset.zod })
-export const SetRevertInput = z.object({
-  sessionID: SessionID.zod,
-  revert: Info.shape.revert,
-  summary: Info.shape.summary,
+const Share = Schema.Struct({
+  url: Schema.String,
 })
-export const MessagesInput = z.object({ sessionID: SessionID.zod, limit: z.number().optional() })
+
+const Time = Schema.Struct({
+  created: Schema.Number,
+  updated: Schema.Number,
+  compacting: optionalOmitUndefined(Schema.Number),
+  archived: optionalOmitUndefined(Schema.Number),
+})
+
+const Revert = Schema.Struct({
+  messageID: MessageID,
+  partID: optionalOmitUndefined(PartID),
+  snapshot: optionalOmitUndefined(Schema.String),
+  diff: optionalOmitUndefined(Schema.String),
+})
+
+export const Info = Schema.Struct({
+  id: SessionID,
+  slug: Schema.String,
+  projectID: ProjectID,
+  workspaceID: optionalOmitUndefined(WorkspaceID),
+  directory: Schema.String,
+  path: optionalOmitUndefined(Schema.String),
+  parentID: optionalOmitUndefined(SessionID),
+  summary: optionalOmitUndefined(Summary),
+  share: optionalOmitUndefined(Share),
+  title: Schema.String,
+  version: Schema.String,
+  time: Time,
+  permission: optionalOmitUndefined(Permission.Ruleset),
+  revert: optionalOmitUndefined(Revert),
+})
+  .annotate({ identifier: "Session" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
+
+export const ProjectInfo = Schema.Struct({
+  id: ProjectID,
+  name: optionalOmitUndefined(Schema.String),
+  worktree: Schema.String,
+})
+  .annotate({ identifier: "ProjectSummary" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type ProjectInfo = Types.DeepMutable<Schema.Schema.Type<typeof ProjectInfo>>
+
+export const GlobalInfo = Schema.Struct({
+  ...Info.fields,
+  project: Schema.NullOr(ProjectInfo),
+  worktreeName: Schema.optional(Schema.String), // kilocode_change - basename of the specific worktree directory
+})
+  .annotate({ identifier: "GlobalSession" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type GlobalInfo = Types.DeepMutable<Schema.Schema.Type<typeof GlobalInfo>>
+
+export const CreateInput = Schema.optional(
+  Schema.Struct({
+    parentID: Schema.optional(SessionID),
+    title: Schema.optional(Schema.String),
+    permission: Schema.optional(Permission.Ruleset),
+    platform: Schema.optional(Schema.String), // kilocode_change - per-session platform override for telemetry attribution
+    workspaceID: Schema.optional(WorkspaceID),
+  }),
+).pipe(withStatics((s) => ({ zod: zod(s) })))
+export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInput>>
+
+export const ForkInput = Schema.Struct({
+  sessionID: SessionID,
+  messageID: Schema.optional(MessageID),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export const GetInput = SessionID
+export const ChildrenInput = SessionID
+export const RemoveInput = SessionID
+export const SetTitleInput = Schema.Struct({ sessionID: SessionID, title: Schema.String }).pipe(
+  withStatics((s) => ({ zod: zod(s) })),
+)
+export const SetArchivedInput = Schema.Struct({
+  sessionID: SessionID,
+  time: Schema.optional(Schema.Number),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export const SetPermissionInput = Schema.Struct({
+  sessionID: SessionID,
+  permission: Permission.Ruleset,
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export const SetRevertInput = Schema.Struct({
+  sessionID: SessionID,
+  revert: Schema.optional(Revert),
+  summary: Schema.optional(Summary),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export const MessagesInput = Schema.Struct({
+  sessionID: SessionID,
+  limit: Schema.optional(Schema.Number),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+
+const CreatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  info: Info,
+})
+
+const UpdatedShare = Schema.Struct({
+  url: Schema.optional(Schema.NullOr(Schema.String)),
+})
+
+const UpdatedTime = Schema.Struct({
+  created: Schema.optional(Schema.NullOr(Schema.Number)),
+  updated: Schema.optional(Schema.NullOr(Schema.Number)),
+  compacting: Schema.optional(Schema.NullOr(Schema.Number)),
+  archived: Schema.optional(Schema.NullOr(Schema.Number)),
+})
+
+const UpdatedInfo = Schema.Struct({
+  id: Schema.optional(Schema.NullOr(SessionID)),
+  slug: Schema.optional(Schema.NullOr(Schema.String)),
+  projectID: Schema.optional(Schema.NullOr(ProjectID)),
+  workspaceID: Schema.optional(Schema.NullOr(WorkspaceID)),
+  directory: Schema.optional(Schema.NullOr(Schema.String)),
+  path: Schema.optional(Schema.NullOr(Schema.String)),
+  parentID: Schema.optional(Schema.NullOr(SessionID)),
+  summary: Schema.optional(Schema.NullOr(Summary)),
+  share: Schema.optional(UpdatedShare),
+  title: Schema.optional(Schema.NullOr(Schema.String)),
+  version: Schema.optional(Schema.NullOr(Schema.String)),
+  time: Schema.optional(UpdatedTime),
+  permission: Schema.optional(Schema.NullOr(Permission.Ruleset)),
+  revert: Schema.optional(Schema.NullOr(Revert)),
+})
+
+const UpdatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  info: UpdatedInfo,
+})
 
 export const Event = {
   Created: SyncEvent.define({
     type: "session.created",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: CreatedEventSchema,
   }),
   Updated: SyncEvent.define({
     type: "session.updated",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: updateSchema(Info).extend({
-        share: updateSchema(Info.shape.share.unwrap()).optional(),
-        time: updateSchema(Info.shape.time).optional(),
-      }),
-    }),
-    busSchema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: UpdatedEventSchema,
+    busSchema: CreatedEventSchema,
   }),
   Deleted: SyncEvent.define({
     type: "session.deleted",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: Info,
-    }),
+    schema: CreatedEventSchema,
   }),
   Diff: BusEvent.define(
     "session.diff",
-    z.object({
-      sessionID: SessionID.zod,
-      diff: Snapshot.FileDiff.array(),
+    Schema.Struct({
+      sessionID: SessionID,
+      diff: Schema.Array(Snapshot.FileDiff),
     }),
   ),
   Error: BusEvent.define(
     "session.error",
-    z.object({
-      sessionID: SessionID.zod.optional(),
-      error: MessageV2.Assistant.shape.error,
+    Schema.Struct({
+      sessionID: Schema.optional(SessionID),
+      // Reuses MessageV2.Assistant.fields.error (already Schema.optional) so
+      // the derived zod keeps the same discriminated-union shape on the bus.
+      error: MessageV2.Assistant.fields.error,
     }),
   ),
   // kilocode_change start
@@ -412,7 +452,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Session") {}
 
-type Patch = z.infer<typeof Event.Updated.schema>["info"]
+export type Patch = Types.DeepMutable<SyncEvent.Event<typeof Event.Updated>["data"]["info"]>
 
 const db = <T>(fn: (d: Parameters<typeof Database.use>[0] extends (trx: infer D) => any ? D : never) => T) =>
   Effect.sync(() => Database.use(fn))
@@ -429,6 +469,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       parentID?: SessionID
       workspaceID?: WorkspaceID
       directory: string
+      path?: string
       permission?: Permission.Ruleset
     }) {
       const ctx = yield* InstanceState.context
@@ -438,6 +479,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
         version: InstallationVersion,
         projectID: ctx.project.id,
         directory: input.directory,
+        path: input.path,
         workspaceID: input.workspaceID,
         parentID: input.parentID,
         title: input.title ?? createDefaultTitle(!!input.parentID),
@@ -581,11 +623,12 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
       workspaceID?: WorkspaceID
     }) {
-      const directory = yield* InstanceState.directory
+      const ctx = yield* InstanceState.context
       const workspace = yield* InstanceState.workspaceID
       const session = yield* createNext({
         parentID: input?.parentID,
-        directory,
+        directory: ctx.directory,
+        path: sessionPath(ctx.worktree, ctx.directory),
         title: input?.title,
         permission: input?.permission,
         workspaceID: input?.workspaceID ?? workspace, // kilocode_change - allow explicit override
@@ -599,11 +642,12 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
     })
 
     const fork = Effect.fn("Session.fork")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
-      const directory = yield* InstanceState.directory
+      const ctx = yield* InstanceState.context
       const original = yield* get(input.sessionID)
       const title = getForkedTitle(original.title)
       const session = yield* createNext({
-        directory,
+        directory: ctx.directory,
+        path: sessionPath(ctx.worktree, ctx.directory),
         workspaceID: original.workspaceID,
         title,
       })
@@ -717,7 +761,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       return input.partID
     })
 
-    const updatePartDelta = Effect.fn("Session.updatePartDelta")(function* (input: {
+    const updatePartDelta = Effect.fnUntraced(function* (input: {
       sessionID: SessionID
       messageID: MessageID
       partID: PartID
@@ -780,7 +824,6 @@ export function* list(input?: {
   if (input?.workspaceID) {
     conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
   }
-
   // kilocode_change start - directory filtering handled by KiloSession.filters above
   // if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
   //   if (input?.directory) {
@@ -834,20 +877,39 @@ export function* listGlobal(input?: {
 // kilocode_change start - keep legacy promise helpers for Kilo callsites
 const { runPromise } = makeRuntime(Service, defaultLayer)
 
-export const create = fn(CreateInput, (input) => runPromise((svc) => svc.create(input)))
+const decodeCreate = Schema.decodeUnknownSync(CreateInput)
+const decodeGet = Schema.decodeUnknownSync(GetInput)
+const decodeSetTitle = Schema.decodeUnknownSync(SetTitleInput)
+const decodeSetArchived = Schema.decodeUnknownSync(SetArchivedInput)
+const decodeSetPermission = Schema.decodeUnknownSync(SetPermissionInput)
+const decodeSetRevert = Schema.decodeUnknownSync(SetRevertInput)
+const decodeMessages = Schema.decodeUnknownSync(MessagesInput)
+const decodeChildren = Schema.decodeUnknownSync(ChildrenInput)
+const decodeRemove = Schema.decodeUnknownSync(RemoveInput)
+
+export const create = (input?: CreateInput) => runPromise((svc) => svc.create(decodeCreate(input) as CreateInput))
 export const fork = kiloSessionFork
-export const get = fn(GetInput, (id) => runPromise((svc) => svc.get(id)))
-export const setTitle = fn(SetTitleInput, (input) => runPromise((svc) => svc.setTitle(input)))
-export const setArchived = fn(SetArchivedInput, (input) => runPromise((svc) => svc.setArchived(input)))
-export const setPermission = fn(SetPermissionInput, (input) => runPromise((svc) => svc.setPermission(input)))
-export const setRevert = fn(SetRevertInput, (input) =>
-  runPromise((svc) => svc.setRevert({ sessionID: input.sessionID, revert: input.revert, summary: input.summary })),
-)
-export const messages = fn(MessagesInput, (input) => runPromise((svc) => svc.messages(input)))
-export const children = fn(ChildrenInput, (id) => runPromise((svc) => svc.children(id)))
-export const remove = fn(RemoveInput, (id) => runPromise((svc) => svc.remove(id)))
+export const get = (id: SessionID) => runPromise((svc) => svc.get(decodeGet(id)))
+export const setTitle = (input: { sessionID: SessionID; title: string }) =>
+  runPromise((svc) => svc.setTitle(decodeSetTitle(input)))
+export const setArchived = (input: { sessionID: SessionID; time?: number }) =>
+  runPromise((svc) => svc.setArchived(decodeSetArchived(input)))
+export const setPermission = (input: { sessionID: SessionID; permission: Permission.Ruleset }) =>
+  runPromise((svc) =>
+    svc.setPermission(decodeSetPermission(input) as { sessionID: SessionID; permission: Permission.Ruleset }),
+  )
+export const setRevert = (input: { sessionID: SessionID; revert?: Info["revert"]; summary?: Info["summary"] }) => {
+  const parsed = decodeSetRevert(input) as { sessionID: SessionID; revert?: Info["revert"]; summary?: Info["summary"] }
+  return runPromise((svc) =>
+    svc.setRevert({ sessionID: parsed.sessionID, revert: parsed.revert, summary: parsed.summary }),
+  )
+}
+export const messages = (input: { sessionID: SessionID; limit?: number }) =>
+  runPromise((svc) => svc.messages(decodeMessages(input)))
+export const children = (id: SessionID) => runPromise((svc) => svc.children(decodeChildren(id)))
+export const remove = (id: SessionID) => runPromise((svc) => svc.remove(decodeRemove(id)))
 export async function updateMessage<T extends MessageV2.Info>(msg: T): Promise<T> {
-  MessageV2.Info.parse(msg)
+  MessageV2.Info.zod.parse(msg) // kilocode_change
   return runPromise((svc) => svc.updateMessage(msg))
 }
 
@@ -861,7 +923,7 @@ export const removePart = fn(
 )
 
 export async function updatePart<T extends MessageV2.Part>(part: T): Promise<T> {
-  MessageV2.Part.parse(part)
+  MessageV2.Part.zod.parse(part) // kilocode_change
   return runPromise((svc) => svc.updatePart(part))
 }
 
@@ -876,3 +938,5 @@ export const updatePartDelta = fn(
   (input) => runPromise((svc) => svc.updatePartDelta(input)),
 )
 // kilocode_change end
+
+export * as Session from "./session"

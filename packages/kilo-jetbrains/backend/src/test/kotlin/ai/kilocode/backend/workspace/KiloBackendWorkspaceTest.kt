@@ -179,6 +179,23 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers"))
+        assertTrue(err.errors.any { it.resource == "providers" })
+        assertTrue(log.messages.any { it.contains("Workspace error [/test/project]: Failed to load:") && it.contains("providers") })
+    }
+
+    @Test
+    fun `providers decode failure includes detail`() = runBlocking {
+        mock.providers = """{"all":[false],"default":{},"connected":[]}"""
+        val app = setup()
+        val ws = ready(app)
+
+        withTimeout(15_000) {
+            ws.state.first { it is KiloWorkspaceState.Error }
+        }
+
+        val err = ws.state.value as KiloWorkspaceState.Error
+        val detail = err.errors.single { it.resource == "providers" }.detail
+        assertTrue(detail?.isNotBlank() == true)
     }
 
     @Test
@@ -236,6 +253,7 @@ class KiloBackendWorkspaceTest {
 
         val err = ws.state.value as KiloWorkspaceState.Error
         assertTrue(err.message.contains("providers") || err.message.contains("skills"))
+        assertTrue(err.errors.any { it.resource == "providers" } || err.errors.any { it.resource == "skills" })
     }
 
     // ------ Reload ------
@@ -277,6 +295,8 @@ class KiloBackendWorkspaceTest {
         assertTrue(model.attachment)
         assertTrue(model.reasoning)
         assertTrue(model.toolCall)
+        assertEquals(2.0, model.recommendedIndex)
+        assertEquals(listOf("low", "medium", "high"), model.variants)
     }
 
     @Test
@@ -495,6 +515,8 @@ class KiloBackendWorkspaceTest {
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
                         "limit": {"context": 200000, "output": 16000},
                         "status": "active",
+                        "recommendedIndex": 2,
+                        "variants": {"high": {}, "low": {}, "medium": {}},
                         "options": {},
                         "headers": {},
                         "release_date": "2025-05-01"

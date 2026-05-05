@@ -40,11 +40,11 @@ The Kilo Code dev container is pre-configured with named volumes to preserve you
 
 ## Storage Locations
 
-| Data Type    | Container Path                                                            |
-| ------------ | ------------------------------------------------------------------------- |
-| Threads      | `/root/.vscode-remote/data/User/globalStorage/kilocode.kilo-code/tasks/`  |
-| Settings     | `/root/.vscode-remote/data/User/settings/`                                |
-| Cache        | `/root/.vscode-remote/data/User/globalStorage/kilocode.kilo-code/cache/`  |
+| Data Type | Container Path |
+|---|---|
+| Threads | `/root/.vscode-remote/data/User/globalStorage/kilocode.kilo-code/tasks/` |
+| Settings | `/root/.vscode-remote/data/User/settings/` |
+| Cache | `/root/.vscode-remote/data/User/globalStorage/kilocode.kilo-code/cache/` |
 | Vector Store | `/root/.vscode-remote/data/User/globalStorage/kilocode.kilo-code/vector/` |
 
 ## Troubleshooting

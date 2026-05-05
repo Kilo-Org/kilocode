@@ -3,6 +3,9 @@ import { retry } from "../services/cli-backend/retry"
 
 export const MESSAGE_PAGE_LIMIT = 80
 
+// Bound assistant-boundary backfill so corrupt histories cannot load an entire session.
+const FILL_LIMIT = 2
+
 /**
  * Build the same base64url-encoded cursor format the server emits so a
  * synthesized cursor round-trips through `session.messages({ before })`.
@@ -46,12 +49,13 @@ export async function fetchMessagePage(
     return { items, cursor }
   }
 
-  const fill = async (page: Awaited<ReturnType<typeof read>>): Promise<Awaited<ReturnType<typeof read>>> => {
+  const fill = async (page: Awaited<ReturnType<typeof read>>, depth = 0): Promise<Awaited<ReturnType<typeof read>>> => {
     if (page.items[0]?.info.role !== "assistant") return page
+    if (depth >= FILL_LIMIT) return page
     if (!page.cursor || input.signal?.aborted) return page
     const next = await read(page.cursor)
     const items = [...next.items, ...page.items]
-    return fill({ items, cursor: next.cursor })
+    return fill({ items, cursor: next.cursor }, depth + 1)
   }
 
   return fill(await read(input.before))

@@ -24,7 +24,7 @@ import { createStore, produce, reconcile } from "solid-js/store"
 import { useProject } from "@tui/context/project"
 import { useEvent } from "@tui/context/event"
 import { useSDK } from "@tui/context/sdk"
-import { Binary } from "@opencode-ai/shared/util/binary"
+import { Binary } from "@opencode-ai/core/util/binary"
 import { createSimpleContext } from "./helper"
 import type { Snapshot } from "@/snapshot"
 import { useExit } from "./exit"
@@ -32,8 +32,10 @@ import { useArgs } from "./args"
 import { batch, createEffect, on, onMount } from "solid-js" // kilocode_change - add createEffect/on for workspace re-bootstrap
 import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { useToast } from "@tui/ui/toast" // kilocode_change
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { emptyConsoleState, type ConsoleState } from "@/config/console-state"
+import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode_change
+import { KiloIndexing } from "@/kilocode/indexing" // kilocode_change
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -87,6 +89,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       }
       formatter: FormatterStatus[]
       vcs: VcsInfo | undefined
+      indexing: IndexingStatus // kilocode_change
     }>({
       provider_next: {
         all: [],
@@ -118,6 +121,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       mcp_resource: {},
       formatter: [],
       vcs: undefined,
+      indexing: { state: "Disabled", message: "Indexing disabled.", processedFiles: 0, totalFiles: 0, percent: 0 }, // kilocode_change
     })
 
     const event = useEvent()
@@ -469,6 +473,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           })
           break
         }
+        case "indexing.status": {
+          setStore("indexing", reconcile(event.properties.status))
+          break
+        }
         // kilocode_change end
       }
     })
@@ -587,6 +595,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
                 })
               })
               .catch(() => {}),
+            KiloIndexing.current().then((x) => setStore("indexing", reconcile(x))),
             // kilocode_change end
           ]).then(() => {
             setStore("status", "complete")
@@ -630,7 +639,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         return store.status
       },
       get ready() {
-        return true
+        // return true // kilocode_change - upstream #23037 left this debug path enabled; keep it commented so future merges do not restore eager ready state.
         if (process.env.KILO_FAST_BOOT) return true
         return store.status !== "loading"
       },

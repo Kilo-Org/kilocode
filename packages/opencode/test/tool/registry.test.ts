@@ -3,8 +3,8 @@ import path from "path"
 import fs from "fs/promises"
 import { Effect, Layer } from "effect"
 import { Instance } from "../../src/project/instance"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { ToolRegistry } from "../../src/tool"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { ToolRegistry } from "@/tool/registry"
 import { provideTmpdirInstance, tmpdir } from "../fixture/fixture" // kilocode_change
 import { testEffect } from "../lib/effect"
 

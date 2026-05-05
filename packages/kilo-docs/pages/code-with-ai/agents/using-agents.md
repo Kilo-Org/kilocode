@@ -58,18 +58,18 @@ Four ways to switch modes:
 
 Users often confuse `/newtask` and `/smol`. Here's the key difference:
 
-| Command    | Purpose                                               | When to Use                                                             |
-| ---------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
-| `/newtask` | Creates a new task with context from the current task | When you want to start something new while carrying over context        |
-| `/smol`    | Condenses your current context window                 | When your conversation is getting too long and you want to summarize it |
+| Command | Purpose | When to Use |
+|---|---|---|
+| `/newtask` | Creates a new task with context from the current task | When you want to start something new while carrying over context |
+| `/smol` | Condenses your current context window | When your conversation is getting too long and you want to summarize it |
 
 3. **Toggle command/Keyboard shortcut:** Use the keyboard shortcut below, applicable to your operating system. Each press cycles through the available modes in sequence, wrapping back to the first mode after reaching the end.
 
    | Operating System | Shortcut |
-   | ---------------- | -------- |
-   | macOS            | ⌘ + .    |
-   | Windows          | Ctrl + . |
-   | Linux            | Ctrl + . |
+   |---|---|
+   | macOS | ⌘ + . |
+   | Windows | Ctrl + . |
+   | Linux | Ctrl + . |
 
 You can hold `shift` to move backwards through the list of modes, for example ⌘ + shift + on macOS.
 
@@ -87,48 +87,48 @@ You can hold `shift` to move backwards through the list of modes, for example �
 
 ### code (Default)
 
-| Aspect               | Details                                                                                                           |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Description**      | A skilled software engineer with expertise in programming languages, design patterns, and best practices          |
-| **Tool Access**      | Full access to all tools: `read`, `edit`, `glob`, `grep`, `bash`, `task`, `webfetch`, plus tools from MCP servers |
-| **Ideal For**        | Writing code, implementing features, debugging, and general development                                           |
-| **Special Features** | No tool restrictions — full flexibility for all coding tasks                                                      |
+| Aspect | Details |
+|---|---|
+| **Description** | A skilled software engineer with expertise in programming languages, design patterns, and best practices |
+| **Tool Access** | Full access to all tools: `read`, `edit`, `glob`, `grep`, `bash`, `task`, `webfetch`, plus tools from MCP servers |
+| **Ideal For** | Writing code, implementing features, debugging, and general development |
+| **Special Features** | No tool restrictions — full flexibility for all coding tasks |
 
 ### ask
 
-| Aspect               | Details                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| **Description**      | A knowledgeable technical assistant focused on answering questions without changing your codebase |
-| **Tool Access**      | Read-only tools only (cannot edit files or run commands)                                          |
-| **Ideal For**        | Code explanation, concept exploration, and technical learning                                     |
-| **Special Features** | Optimized for informative responses without modifying your project                                |
+| Aspect | Details |
+|---|---|
+| **Description** | A knowledgeable technical assistant focused on answering questions without changing your codebase |
+| **Tool Access** | Read-only tools only (cannot edit files or run commands) |
+| **Ideal For** | Code explanation, concept exploration, and technical learning |
+| **Special Features** | Optimized for informative responses without modifying your project |
 
 ### plan
 
-| Aspect               | Details                                                                                              |
-| -------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Description**      | An experienced technical leader and planner who helps design systems and create implementation plans |
-| **Tool Access**      | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only)                     |
-| **Ideal For**        | System design, high-level planning, and architecture discussions                                     |
-| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach                 |
+| Aspect | Details |
+|---|---|
+| **Description** | An experienced technical leader and planner who helps design systems and create implementation plans |
+| **Tool Access** | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only) |
+| **Ideal For** | System design, high-level planning, and architecture discussions |
+| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach |
 
 ### debug
 
-| Aspect               | Details                                                                             |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| **Description**      | An expert problem solver specializing in systematic troubleshooting and diagnostics |
-| **Tool Access**      | Full access to all tools                                                            |
-| **Ideal For**        | Tracking down bugs, diagnosing errors, and resolving complex issues                 |
+| Aspect | Details |
+|---|---|
+| **Description** | An expert problem solver specializing in systematic troubleshooting and diagnostics |
+| **Tool Access** | Full access to all tools |
+| **Ideal For** | Tracking down bugs, diagnosing errors, and resolving complex issues |
 | **Special Features** | Uses a methodical approach of analyzing, narrowing possibilities, and fixing issues |
 
 ### orchestrator (Deprecated)
 
-| Aspect               | Details                                                                                                              |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Description**      | A strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized agents |
-| **Tool Access**      | Limited access to create new tasks and coordinate workflows                                                          |
-| **Ideal For**        | Breaking down complex projects into manageable subtasks assigned to specialized agents                               |
-| **Special Features** | Delegates work to other agents; also has access to the **explore** subagent for codebase exploration                 |
+| Aspect | Details |
+|---|---|
+| **Description** | A strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized agents |
+| **Tool Access** | Limited access to create new tasks and coordinate workflows |
+| **Ideal For** | Breaking down complex projects into manageable subtasks assigned to specialized agents |
+| **Special Features** | Delegates work to other agents; also has access to the **explore** subagent for codebase exploration |
 
 {% callout type="warning" %}
 Orchestrator is deprecated and will be removed in a future release. Agents with full tool access (Code, Plan, Debug) now support subagents natively — there's no need for a dedicated orchestrator. See [Orchestrator Mode (Deprecated)](/docs/code-with-ai/agents/orchestrator-mode) for migration details.
@@ -143,48 +143,48 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 
 ### code (Default)
 
-| Aspect               | Details                                                                                                           |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Description**      | A skilled software engineer with expertise in programming languages, design patterns, and best practices          |
-| **Tool Access**      | Full access to all tools: `read`, `edit`, `glob`, `grep`, `bash`, `task`, `webfetch`, plus tools from MCP servers |
-| **Ideal For**        | Writing code, implementing features, debugging, and general development                                           |
-| **Special Features** | No tool restrictions — full flexibility for all coding tasks                                                      |
+| Aspect | Details |
+|---|---|
+| **Description** | A skilled software engineer with expertise in programming languages, design patterns, and best practices |
+| **Tool Access** | Full access to all tools: `read`, `edit`, `glob`, `grep`, `bash`, `task`, `webfetch`, plus tools from MCP servers |
+| **Ideal For** | Writing code, implementing features, debugging, and general development |
+| **Special Features** | No tool restrictions — full flexibility for all coding tasks |
 
 ### ask
 
-| Aspect               | Details                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| **Description**      | A knowledgeable technical assistant focused on answering questions without changing your codebase |
-| **Tool Access**      | Read-only tools only (cannot edit files or run commands)                                          |
-| **Ideal For**        | Code explanation, concept exploration, and technical learning                                     |
-| **Special Features** | Optimized for informative responses without modifying your project                                |
+| Aspect | Details |
+|---|---|
+| **Description** | A knowledgeable technical assistant focused on answering questions without changing your codebase |
+| **Tool Access** | Read-only tools only (cannot edit files or run commands) |
+| **Ideal For** | Code explanation, concept exploration, and technical learning |
+| **Special Features** | Optimized for informative responses without modifying your project |
 
 ### plan
 
-| Aspect               | Details                                                                                              |
-| -------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Description**      | An experienced technical leader and planner who helps design systems and create implementation plans |
-| **Tool Access**      | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only)                     |
-| **Ideal For**        | System design, high-level planning, and architecture discussions                                     |
-| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach                 |
+| Aspect | Details |
+|---|---|
+| **Description** | An experienced technical leader and planner who helps design systems and create implementation plans |
+| **Tool Access** | Read-only tools plus restricted file editing (plan files in `.kilo/plans/` only) |
+| **Ideal For** | System design, high-level planning, and architecture discussions |
+| **Special Features** | Similar to the legacy extension's "Architect" mode, with a planning-focused approach |
 
 ### debug
 
-| Aspect               | Details                                                                             |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| **Description**      | An expert problem solver specializing in systematic troubleshooting and diagnostics |
-| **Tool Access**      | Full access to all tools                                                            |
-| **Ideal For**        | Tracking down bugs, diagnosing errors, and resolving complex issues                 |
+| Aspect | Details |
+|---|---|
+| **Description** | An expert problem solver specializing in systematic troubleshooting and diagnostics |
+| **Tool Access** | Full access to all tools |
+| **Ideal For** | Tracking down bugs, diagnosing errors, and resolving complex issues |
 | **Special Features** | Uses a methodical approach of analyzing, narrowing possibilities, and fixing issues |
 
 ### orchestrator (Deprecated)
 
-| Aspect               | Details                                                                                                              |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Description**      | A strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized agents |
-| **Tool Access**      | Limited access to create new tasks and coordinate workflows                                                          |
-| **Ideal For**        | Breaking down complex projects into manageable subtasks assigned to specialized agents                               |
-| **Special Features** | Delegates work to other agents; also has access to the **explore** subagent for codebase exploration                 |
+| Aspect | Details |
+|---|---|
+| **Description** | A strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized agents |
+| **Tool Access** | Limited access to create new tasks and coordinate workflows |
+| **Ideal For** | Breaking down complex projects into manageable subtasks assigned to specialized agents |
+| **Special Features** | Delegates work to other agents; also has access to the **explore** subagent for codebase exploration |
 
 {% callout type="warning" %}
 Orchestrator is deprecated and will be removed in a future release. Agents with full tool access (Code, Plan, Debug) now support subagents natively — there's no need for a dedicated orchestrator. See [Orchestrator Mode (Deprecated)](/docs/code-with-ai/agents/orchestrator-mode) for migration details.
@@ -199,38 +199,38 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 
 ### Code Mode (Default)
 
-| Aspect               | Details                                                                                                  |
-| -------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Description**      | A skilled software engineer with expertise in programming languages, design patterns, and best practices |
-| **Tool Access**      | Full access to all tool groups: `read`, `edit`, `browser`, `command`, `mcp`                              |
-| **Ideal For**        | Writing code, implementing features, debugging, and general development                                  |
-| **Special Features** | No tool restrictions—full flexibility for all coding tasks                                               |
+| Aspect | Details |
+|---|---|
+| **Description** | A skilled software engineer with expertise in programming languages, design patterns, and best practices |
+| **Tool Access** | Full access to all tool groups: `read`, `edit`, `browser`, `command`, `mcp` |
+| **Ideal For** | Writing code, implementing features, debugging, and general development |
+| **Special Features** | No tool restrictions—full flexibility for all coding tasks |
 
 ### Ask Mode
 
-| Aspect               | Details                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| **Description**      | A knowledgeable technical assistant focused on answering questions without changing your codebase |
-| **Tool Access**      | Limited access: `read`, `browser`, `mcp` only (cannot edit files or run commands)                 |
-| **Ideal For**        | Code explanation, concept exploration, and technical learning                                     |
-| **Special Features** | Optimized for informative responses without modifying your project                                |
+| Aspect | Details |
+|---|---|
+| **Description** | A knowledgeable technical assistant focused on answering questions without changing your codebase |
+| **Tool Access** | Limited access: `read`, `browser`, `mcp` only (cannot edit files or run commands) |
+| **Ideal For** | Code explanation, concept exploration, and technical learning |
+| **Special Features** | Optimized for informative responses without modifying your project |
 
 ### Architect Mode
 
-| Aspect               | Details                                                                                              |
-| -------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Description**      | An experienced technical leader and planner who helps design systems and create implementation plans |
-| **Tool Access**      | Access to `read`, `browser`, `mcp`, and restricted `edit` (markdown files only)                      |
-| **Ideal For**        | System design, high-level planning, and architecture discussions                                     |
-| **Special Features** | Follows a structured approach from information gathering to detailed planning                        |
+| Aspect | Details |
+|---|---|
+| **Description** | An experienced technical leader and planner who helps design systems and create implementation plans |
+| **Tool Access** | Access to `read`, `browser`, `mcp`, and restricted `edit` (markdown files only) |
+| **Ideal For** | System design, high-level planning, and architecture discussions |
+| **Special Features** | Follows a structured approach from information gathering to detailed planning |
 
 ### Debug Mode
 
-| Aspect               | Details                                                                             |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| **Description**      | An expert problem solver specializing in systematic troubleshooting and diagnostics |
-| **Tool Access**      | Full access to all tool groups: `read`, `edit`, `browser`, `command`, `mcp`         |
-| **Ideal For**        | Tracking down bugs, diagnosing errors, and resolving complex issues                 |
+| Aspect | Details |
+|---|---|
+| **Description** | An expert problem solver specializing in systematic troubleshooting and diagnostics |
+| **Tool Access** | Full access to all tool groups: `read`, `edit`, `browser`, `command`, `mcp` |
+| **Ideal For** | Tracking down bugs, diagnosing errors, and resolving complex issues |
 | **Special Features** | Uses a methodical approach of analyzing, narrowing possibilities, and fixing issues |
 
 {% callout type="tip" %}
@@ -239,21 +239,21 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 
 ### Orchestrator Mode
 
-| Aspect               | Details                                                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Description**      | A strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized modes |
-| **Tool Access**      | Limited access to create new tasks and coordinate workflows                                                         |
-| **Ideal For**        | Breaking down complex projects into manageable subtasks assigned to specialized modes                               |
-| **Special Features** | Uses the new_task tool to delegate work to other modes                                                              |
+| Aspect | Details |
+|---|---|
+| **Description** | A strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized modes |
+| **Tool Access** | Limited access to create new tasks and coordinate workflows |
+| **Ideal For** | Breaking down complex projects into manageable subtasks assigned to specialized modes |
+| **Special Features** | Uses the new_task tool to delegate work to other modes |
 
 ### Review Mode
 
-| Aspect               | Details                                                                                                                           |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Description**      | An expert code reviewer specializing in analyzing changes to provide structured feedback on quality, security, and best practices |
-| **Tool Access**      | Access to `read`, `browser`, `mcp`, and when permitted, `edit`                                                                    |
-| **Ideal For**        | Catching issues early, enforcing code standards, accelerating PR turnaround                                                       |
-| **Special Features** | Code review before committing, surfacing feedback across performance, security, style, and test coverage                          |
+| Aspect | Details |
+|---|---|
+| **Description** | An expert code reviewer specializing in analyzing changes to provide structured feedback on quality, security, and best practices |
+| **Tool Access** | Access to `read`, `browser`, `mcp`, and when permitted, `edit` |
+| **Ideal For** | Catching issues early, enforcing code standards, accelerating PR turnaround |
+| **Special Features** | Code review before committing, surfacing feedback across performance, security, style, and test coverage |
 
 {% /tab %}
 {% /tabs %}

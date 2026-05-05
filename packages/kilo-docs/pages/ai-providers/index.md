@@ -22,6 +22,10 @@ Major AI companies offering powerful models via API:
 - **[Anthropic](/docs/ai-providers/anthropic)** - Claude models (Claude 4, Claude 3.5 Sonnet, etc.)
 - **[OpenAI](/docs/ai-providers/openai)** - GPT-4, GPT-4o, o1, and more
 - **[Google Gemini](/docs/ai-providers/gemini)** - Gemini Pro, Gemini Ultra
+- **[Google Vertex AI](/docs/ai-providers/vertex)** - Google Cloud-hosted Gemini and partner models
+- **[AWS Bedrock](/docs/ai-providers/bedrock)** - AWS-hosted foundation models
+- **[Alibaba Cloud](/docs/ai-providers/alibaba)** - DashScope and Qwen models through Model Studio
+- **[Cloudflare](/docs/ai-providers/cloudflare)** - Workers AI and Cloudflare AI Gateway
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 
@@ -40,15 +44,16 @@ Route requests through unified APIs with additional features:
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
 - **[Glama](/docs/ai-providers/glama)** - Enterprise AI gateway
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
+- **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 
 ## Choosing a Provider
 
-| Priority        | Recommended Provider                                |
-| --------------- | --------------------------------------------------- |
-| Ease of use     | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
-| Best value      | Zhipu AI or Mistral                                 |
-| Privacy/Offline | Ollama or LM Studio                                 |
-| Enterprise      | AWS Bedrock or Google Vertex                        |
+| Priority | Recommended Provider |
+|---|---|
+| Ease of use | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
+| Best value | Zhipu AI or Mistral |
+| Privacy/Offline | Ollama or LM Studio |
+| Enterprise | AWS Bedrock or Google Vertex |
 
 ## Why Use Multiple Providers?
 

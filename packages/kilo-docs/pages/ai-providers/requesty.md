@@ -1,4 +1,6 @@
 ---
+title: "Using Requesty with Kilo Code"
+description: "Route AI model requests through Requesty in Kilo Code for cost optimization and access to multiple providers from one API key."
 sidebar_label: Requesty
 ---
 

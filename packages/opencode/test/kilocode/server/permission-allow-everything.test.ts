@@ -4,7 +4,7 @@ import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { Instance } from "../../../src/project/instance"
 import { Server } from "../../../src/server/server"
-import { Session } from "../../../src/session"
+import { Session } from "../../../src/session/session"
 import { tmpdir } from "../../fixture/fixture"
 
 describe("permission.allowEverything endpoint", () => {

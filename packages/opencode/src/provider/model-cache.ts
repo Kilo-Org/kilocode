@@ -1,8 +1,8 @@
 // kilocode_change new file
 import { fetchKiloModels } from "@kilocode/kilo-gateway"
-import { Config } from "../config"
+import { Config } from "../config/config"
 import { Auth } from "../auth"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })

@@ -15,6 +15,7 @@ import * as Clipboard from "@tui/util/clipboard"
 import { useToast } from "../ui/toast"
 import { isConsoleManagedProvider } from "@tui/util/provider-origin"
 import * as KiloProvider from "@/kilocode/cli/cmd/tui/component/dialog-provider" // kilocode_change
+import { useConnected } from "./use-connected"
 
 const PROVIDER_PRIORITY: Record<string, number> = KiloProvider.PROVIDER_PRIORITY // kilocode_change
 
@@ -24,6 +25,7 @@ export function createDialogProviderOptions() {
   const sdk = useSDK()
   const toast = useToast()
   const { theme } = useTheme()
+  const onboarded = useConnected()
   const options = createMemo(() => {
     return pipe(
       sync.data.provider_next.all,
@@ -33,12 +35,12 @@ export function createDialogProviderOptions() {
         const connected = sync.data.provider_next.connected.includes(provider.id)
 
         return {
-          title: provider.name,
+          title: KiloProvider.PROVIDER_TITLES[provider.id] ?? provider.name, // kilocode_change
           value: provider.id,
           description: KiloProvider.PROVIDER_DESCRIPTIONS[provider.id], // kilocode_change
           footer: consoleManaged ? sync.data.console_state.activeOrgName : undefined,
           category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Other",
-          gutter: connected ? <text fg={theme.success}>✓</text> : undefined,
+          gutter: connected && onboarded() ? <text fg={theme.success}>✓</text> : undefined,
           async onSelect() {
             if (consoleManaged) return
 

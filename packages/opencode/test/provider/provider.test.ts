@@ -1,19 +1,20 @@
 import { test, expect } from "bun:test"
 import { mkdir, unlink } from "fs/promises"
 import path from "path"
-import { Global } from "../../src/global"
-import { Filesystem } from "../../src/util"
 
 import { tmpdir } from "../fixture/fixture"
+import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/project/instance"
 import { Plugin } from "../../src/plugin/index"
-import { ModelsDev } from "../../src/provider"
-import { Provider } from "../../src/provider"
+import { ModelsDev } from "@/provider/models"
+import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
+import { Filesystem } from "@/util/filesystem"
 import { Env } from "../../src/env"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
+import { Auth } from "../../src/auth" // kilocode_change
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
@@ -55,6 +56,16 @@ async function defaultModel() {
   return run((provider) => provider.defaultModel())
 }
 
+// kilocode_change start - upstream #24416 fixture adapted for @kilocode/plugin
+async function markPluginDependenciesReady(dir: string) {
+  await mkdir(path.join(dir, "node_modules"), { recursive: true })
+  await Bun.write(
+    path.join(dir, "package-lock.json"),
+    JSON.stringify({ packages: { "": { dependencies: { "@kilocode/plugin": "0.0.0" } } } }),
+  )
+}
+// kilocode_change end
+
 function paid(providers: Awaited<ReturnType<typeof list>>) {
   const item = providers[ProviderID.make("opencode")]
   if (!item) return 0 // kilocode_change - Kilo drops opencode provider without apiKey/auth
@@ -87,6 +98,50 @@ test("provider loaded from env variable", async () => {
     },
   })
 })
+
+// kilocode_change start
+test("provider OAuth auth overrides inherited env variable", async () => {
+  await Auth.remove("openai")
+  await Auth.set("openai", {
+    type: "oauth",
+    refresh: "test-refresh-token",
+    access: "test-access-token",
+    expires: Date.now() + 60_000,
+  })
+
+  try {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      init: async () => {
+        set("OPENAI_API_KEY", "test-openai-key")
+      },
+      fn: async () => {
+        const providers = await list()
+        const provider = providers[ProviderID.openai]
+        expect(provider).toBeDefined()
+        if (!provider) throw new Error("Expected OpenAI provider")
+        expect(provider.source).toBe("custom")
+        expect(provider.key).toBeUndefined()
+        expect(Object.values(provider.models).every((model) => model.cost.input === 0 && model.cost.output === 0)).toBe(
+          true,
+        )
+      },
+    })
+  } finally {
+    await Auth.remove("openai")
+  }
+})
+// kilocode_change end
 
 test("provider loaded from config with apiKey option", async () => {
   await using tmp = await tmpdir({
@@ -300,6 +355,67 @@ test("custom provider with npm package", async () => {
       expect(providers[ProviderID.make("custom-provider")]).toBeDefined()
       expect(providers[ProviderID.make("custom-provider")].name).toBe("Custom Provider")
       expect(providers[ProviderID.make("custom-provider")].models["custom-model"]).toBeDefined()
+    },
+  })
+})
+
+test("custom DeepSeek openai-compatible model defaults interleaved reasoning field", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          provider: {
+            "custom-provider": {
+              name: "Custom Provider",
+              npm: "@ai-sdk/openai-compatible",
+              api: "https://api.custom.com/v1",
+              models: {
+                "deepseek-r1": {
+                  name: "DeepSeek R1",
+                },
+                "deepseek-details": {
+                  name: "DeepSeek Details",
+                  interleaved: { field: "reasoning_details" },
+                },
+                "custom-model": {
+                  name: "Custom Model",
+                },
+              },
+              options: {
+                apiKey: "custom-key",
+              },
+            },
+            "custom-anthropic-provider": {
+              name: "Custom Anthropic Provider",
+              npm: "@ai-sdk/anthropic",
+              api: "https://api.custom.com/v1",
+              models: {
+                "deepseek-r1": {
+                  name: "DeepSeek R1",
+                },
+              },
+              options: {
+                apiKey: "custom-key",
+              },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const providers = await list()
+      const provider = providers[ProviderID.make("custom-provider")]
+      expect(provider.models["deepseek-r1"].capabilities.interleaved).toEqual({ field: "reasoning_content" })
+      expect(provider.models["deepseek-details"].capabilities.interleaved).toEqual({ field: "reasoning_details" })
+      expect(provider.models["custom-model"].capabilities.interleaved).toBe(false)
+      expect(
+        providers[ProviderID.make("custom-anthropic-provider")].models["deepseek-r1"].capabilities.interleaved,
+      ).toBe(false)
     },
   })
 })
@@ -1916,7 +2032,7 @@ test("mode cost preserves over-200k pricing from base model", () => {
         },
       },
     },
-  } as ModelsDev.Provider
+  } as unknown as ModelsDev.Provider
 
   const model = Provider.fromModelsDevProvider(provider).models["gpt-5.4-fast"]
   expect(model.cost.input).toEqual(5)
@@ -1932,6 +2048,38 @@ test("mode cost preserves over-200k pricing from base model", () => {
       write: 0,
     },
   })
+})
+
+test("models.dev normalization fills required response fields", () => {
+  const provider = {
+    id: "gateway",
+    name: "Gateway",
+    env: [],
+    models: {
+      "gpt-5.4": {
+        id: "gpt-5.4",
+        name: "GPT-5.4",
+        family: "gpt",
+        cost: {
+          input: 2.5,
+          output: 15,
+        },
+        limit: {
+          context: 1_050_000,
+          input: 922_000,
+          output: 128_000,
+        },
+      },
+    },
+  } as unknown as ModelsDev.Provider
+
+  const model = Provider.fromModelsDevProvider(provider).models["gpt-5.4"]
+  expect(model.api.url).toBe("")
+  expect(model.capabilities.temperature).toBe(false)
+  expect(model.capabilities.reasoning).toBe(false)
+  expect(model.capabilities.attachment).toBe(false)
+  expect(model.capabilities.toolcall).toBe(true)
+  expect(model.release_date).toBe("")
 })
 
 test("model variants are generated for reasoning models", async () => {
@@ -2407,8 +2555,13 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
 test("plugin config providers persist after instance dispose", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      const root = path.join(dir, ".opencode", "plugin")
+      // kilocode_change start - upstream #24416 avoids real plugin dependency installs
+      const configDir = path.join(dir, ".opencode")
+      const root = path.join(configDir, "plugin")
       await mkdir(root, { recursive: true })
+      await markPluginDependenciesReady(configDir)
+      await markPluginDependenciesReady(Global.Path.config)
+      // kilocode_change end
       await Bun.write(
         path.join(root, "demo-provider.ts"),
         [
@@ -2453,7 +2606,12 @@ test("plugin config providers persist after instance dispose", async () => {
   expect(first[ProviderID.make("demo")]).toBeDefined()
   expect(first[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
 
-  await Instance.disposeAll()
+  // kilocode_change start
+  await Instance.provide({
+    directory: tmp.path,
+    fn: () => Instance.dispose(),
+  })
+  // kilocode_change end
 
   const second = await Instance.provide({
     directory: tmp.path,

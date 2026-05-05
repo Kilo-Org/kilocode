@@ -2,10 +2,18 @@ import z from "zod"
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import { SyncEvent } from "@/sync"
-import { Database, asc, and, not, or, lte, eq } from "@/storage"
+import { Database } from "@/storage/db"
+import { asc } from "drizzle-orm"
+import { and } from "drizzle-orm"
+import { not } from "drizzle-orm"
+import { or } from "drizzle-orm"
+import { lte } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { EventTable } from "@/sync/event.sql"
 import { lazy } from "@/util/lazy"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
+import { startWorkspaceSyncing } from "@/control-plane/workspace"
+import { Instance } from "@/project/instance"
 import { errors } from "../../error"
 
 const ReplayEvent = z.object({
@@ -20,6 +28,28 @@ const log = Log.create({ service: "server.sync" })
 
 export const SyncRoutes = lazy(() =>
   new Hono()
+    .post(
+      "/start",
+      describeRoute({
+        summary: "Start workspace sync",
+        description: "Start sync loops for workspaces in the current project that have active sessions.",
+        operationId: "sync.start",
+        responses: {
+          200: {
+            description: "Workspace sync started",
+            content: {
+              "application/json": {
+                schema: resolver(z.boolean()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        startWorkspaceSyncing(Instance.project.id)
+        return c.json(true)
+      },
+    )
     .post(
       "/replay",
       describeRoute({
@@ -75,7 +105,7 @@ export const SyncRoutes = lazy(() =>
         })
       },
     )
-    .get(
+    .post(
       "/history",
       describeRoute({
         summary: "List sync events",

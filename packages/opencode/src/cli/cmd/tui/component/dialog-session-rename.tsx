@@ -21,11 +21,12 @@ export function DialogSessionRename(props: DialogSessionRenameProps) {
       title="Rename Session"
       value={session()?.title ?? props.title} // kilocode_change
       onConfirm={(value) => {
-        void sdk.client.session.update({
-          sessionID: props.session,
-          title: value,
-        })
-        .then(() => props.onConfirm?.()) // kilocode_change
+        void sdk.client.session
+          .update({
+            sessionID: props.session,
+            title: value,
+          })
+          .then(() => props.onConfirm?.()) // kilocode_change
         dialog.clear()
       }}
       onCancel={() => dialog.clear()}

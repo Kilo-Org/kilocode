@@ -4,13 +4,14 @@ import { getAdaptor } from "@/control-plane/adaptors"
 import { WorkspaceID } from "@/control-plane/schema"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 import { Workspace } from "@/control-plane/workspace"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstanceBootstrap } from "@/project/bootstrap"
 import { Instance } from "@/project/instance"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
 import { AppRuntime } from "@/effect/app-runtime"
-import { Log } from "@/util"
+import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
 import { ServerProxy } from "./proxy"
 
 type Rule = { method?: string; path: string; exact?: boolean; action: "local" | "forward" }
@@ -42,7 +43,9 @@ async function getSessionWorkspace(url: URL) {
   const id = getSessionID(url)
   if (!id) return null
 
-  const session = await AppRuntime.runPromise(Session.Service.use((svc) => svc.get(id))).catch(() => undefined)
+  const session = await AppRuntime.runPromise(
+    Session.Service.use((svc) => svc.get(id)).pipe(Effect.withSpan("WorkspaceRouter.lookup")),
+  ).catch(() => undefined)
   return session?.workspaceID
 }
 

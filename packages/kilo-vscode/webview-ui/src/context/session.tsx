@@ -46,7 +46,7 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
-import { queuedUserMessageIDs } from "./session-queue"
+import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
@@ -122,6 +122,10 @@ interface SessionContextValue {
   // Parts for a specific message
   getParts: (messageID: string) => Part[]
 
+  // Hidden after model changes so switching models can clear stale provider errors
+  // without removing messages and their checkpoint restore actions.
+  isErrorHidden: (messageID: string) => boolean
+
   // Move stashed parts into the reactive store for the given message IDs.
   // Called by VscodeSessionTurn when the virtualizer renders a turn.
   hydrateParts: (messageIDs: string[]) => void
@@ -171,6 +175,7 @@ interface SessionContextValue {
   mcpLoading: Accessor<string | null>
   connectMcp: (name: string) => void
   disconnectMcp: (name: string) => void
+  authenticateMcp: (name: string) => void
   refreshMcpStatus: () => void
   selectedAgent: Accessor<string>
   selectAgent: (name: string) => void
@@ -199,7 +204,14 @@ interface SessionContextValue {
   // Actions
   revertSession: (messageID: string) => void
   unrevertSession: () => void
-  sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[], draftID?: string) => void
+  sendMessage: (
+    text: string,
+    providerID?: string,
+    modelID?: string,
+    files?: FileAttachment[],
+    draftID?: string,
+    context?: string,
+  ) => void
   sendCommand: (
     command: string,
     args: string,
@@ -207,6 +219,7 @@ interface SessionContextValue {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    context?: string,
   ) => void
   abort: () => void
   compact: () => void
@@ -344,6 +357,13 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "disconnectMcp", name })
   }
 
+  const authenticateMcp = (name: string) => {
+    if (mcpLoading()) return
+    if (!server.isConnected()) return
+    setMcpLoading(name)
+    vscode.postMessage({ type: "authenticateMcp", name })
+  }
+
   const refreshMcpStatus = () => {
     vscode.postMessage({ type: "requestMcpStatus" })
   }
@@ -353,6 +373,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Cloud session preview state
   const [cloudPreviewId, setCloudPreviewId] = createSignal<string | null>(null)
+  const [hiddenErrors, setHiddenErrors] = createSignal<Set<string>>(new Set())
 
   // Live worktree diff stats from extension polling
   const [worktreeStats, setWorktreeStats] = createSignal<
@@ -463,8 +484,28 @@ export const SessionProvider: ParentComponent = (props) => {
     applyModel(selectedAgentName(), { providerID, modelID })
     const sid = currentSessionID()
     if (sid) {
-      setStore("messages", sid, (msgs = []) => msgs.filter((m) => !m.error))
+      hideErrors(sid)
     }
+  }
+
+  function hideErrors(sid: string) {
+    const ids = errorIDs(store.messages[sid] ?? [])
+    if (ids.length === 0) return
+    setHiddenErrors((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) next.add(id)
+      return next
+    })
+  }
+
+  function clearHiddenErrors(ids: string[]) {
+    if (ids.length === 0) return
+    setHiddenErrors((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) next.delete(id)
+      if (next.size === prev.size) return prev
+      return next
+    })
   }
 
   /** The config/default model for the current mode (what settings says). */
@@ -506,6 +547,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete overrides[sid]
         }),
       )
+      hideErrors(sid)
     }
   }
 
@@ -582,7 +624,7 @@ export const SessionProvider: ParentComponent = (props) => {
         handlePermissionResolved(message.permissionID)
         break
       case "permissionError":
-        handlePermissionError(message.permissionID)
+        handlePermissionError(message.permissionID, message.stale)
         break
     }
   })
@@ -717,6 +759,11 @@ export const SessionProvider: ParentComponent = (props) => {
           handlePartUpdated(update.sessionID, update.messageID, update.part, update.delta)
         }
       })
+      return true
+    }
+
+    if (message.type === "partRemoved") {
+      handlePartRemoved(message.sessionID, message.messageID, message.partID)
       return true
     }
 
@@ -1110,6 +1157,21 @@ export const SessionProvider: ParentComponent = (props) => {
     )
   }
 
+  function handlePartRemoved(sessionID: string | undefined, messageID: string, partID: string) {
+    if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+
+    setStore(
+      "parts",
+      produce((parts) => {
+        const list = parts[messageID]
+        if (!list) return
+        const idx = list.findIndex((p) => p.id === partID)
+        if (idx < 0) return
+        list.splice(idx, 1)
+      }),
+    )
+  }
+
   function handleSessionStatus(
     sessionID: string,
     newStatus: SessionStatus,
@@ -1157,14 +1219,17 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function handlePermissionError(permissionID: string) {
-    // Remove from responding set so buttons re-enable (permission prompt is still visible)
+  function handlePermissionError(permissionID: string, stale?: boolean) {
     setRespondingPermissions((prev) => {
       if (!prev.has(permissionID)) return prev
       const next = new Set(prev)
       next.delete(permissionID)
       return next
     })
+    if (stale) {
+      setPermissions((prev) => prev.filter((p) => p.id !== permissionID))
+      return
+    }
     showToast({
       variant: "error",
       title: language.t("settings.permissions.toast.updateFailed.title"),
@@ -1370,6 +1435,7 @@ export const SessionProvider: ParentComponent = (props) => {
       const msgs = store.messages[sessionID] ?? []
       const msgIds = msgs.map((m) => m.id)
       for (const id of msgIds) stash.remove(id)
+      clearHiddenErrors(msgIds)
 
       setStore(
         "sessions",
@@ -1457,10 +1523,10 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  // Matches desktop app's event-reducer.ts: message.removed handler.
   // Splices the message from the store and deletes its parts.
   function handleMessageRemoved(sessionID: string, messageID: string) {
     setStore("messages", sessionID, (msgs = []) => msgs.filter((m) => m.id !== messageID))
+    clearHiddenErrors([messageID])
     setStore(
       "parts",
       produce((parts) => {
@@ -1632,6 +1698,7 @@ export const SessionProvider: ParentComponent = (props) => {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    context?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
@@ -1678,6 +1745,7 @@ export const SessionProvider: ParentComponent = (props) => {
       agent,
       variant: currentVariant(),
       files,
+      agentManagerContext: context,
     })
   }
 
@@ -1688,6 +1756,7 @@ export const SessionProvider: ParentComponent = (props) => {
     modelID?: string,
     files?: FileAttachment[],
     draftID?: string,
+    context?: string,
   ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
@@ -1738,6 +1807,7 @@ export const SessionProvider: ParentComponent = (props) => {
       agent,
       variant: currentVariant(),
       files,
+      agentManagerContext: context,
     })
   }
 
@@ -1748,12 +1818,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    const queuedMessageIDs = queuedUserMessageIDs(messages(), statusInfo())
-
     vscode.postMessage({
       type: "abort",
       sessionID,
-      queuedMessageIDs,
     })
   }
 
@@ -2149,6 +2216,7 @@ export const SessionProvider: ParentComponent = (props) => {
     messages,
     userMessages,
     getParts,
+    isErrorHidden: (messageID: string) => hiddenErrors().has(messageID),
     hydrateParts,
     todos,
     permissions,
@@ -2178,6 +2246,7 @@ export const SessionProvider: ParentComponent = (props) => {
     mcpLoading,
     connectMcp,
     disconnectMcp,
+    authenticateMcp,
     refreshMcpStatus,
     selectedAgent: selectedAgentName,
     selectAgent,

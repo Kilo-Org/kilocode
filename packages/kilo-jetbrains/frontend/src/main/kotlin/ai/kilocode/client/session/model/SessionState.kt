@@ -15,4 +15,9 @@ sealed class SessionState {
     data class Offline(val message: String, val requestId: String) : SessionState()
 
     data class Error(val message: String, val kind: String? = null) : SessionState()
+
+    fun isBusy(): Boolean = when (this) {
+        is Idle, is Error -> false
+        else -> true
+    }
 }

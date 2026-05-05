@@ -24,17 +24,14 @@ export const SessionTable = sqliteTable(
     parent_id: text().$type<SessionID>(),
     slug: text().notNull(),
     directory: text().notNull(),
+    path: text(),
     title: text().notNull(),
     version: text().notNull(),
     share_url: text(),
     summary_additions: integer(),
     summary_deletions: integer(),
     summary_files: integer(),
-    // kilocode_change start - lightweight diff type (no file contents)
-    summary_diffs: text({ mode: "json" }).$type<
-      { file: string; additions: number; deletions: number; status?: "added" | "deleted" | "modified" }[]
-    >(),
-    // kilocode_change end
+    summary_diffs: text({ mode: "json" }).$type<Snapshot.SummaryFileDiff[]>(), // kilocode_change
     revert: text({ mode: "json" }).$type<{ messageID: MessageID; partID?: PartID; snapshot?: string; diff?: string }>(),
     permission: text({ mode: "json" }).$type<Permission.Ruleset>(),
     ...Timestamps,
