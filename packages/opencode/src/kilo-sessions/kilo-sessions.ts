@@ -1,14 +1,14 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { Provider } from "@/provider"
-import { Session } from "@/session"
+import { Provider } from "@/provider/provider"
+import { Session } from "@/session/session"
 import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
-import { Storage } from "@/storage"
-import { Log } from "@/util"
+import { Storage } from "@/storage/storage"
+import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
@@ -16,9 +16,9 @@ import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
 import { Schema } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { Instance } from "@/project/instance"
-import { Vcs } from "@/project"
+import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
@@ -308,6 +308,7 @@ export namespace KiloSessions {
     if (ingestDisabled) return
     if (enabling) return enabling
     const seq = ++remoteSeq
+    void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: false })
     enabling = (async () => {
       const token = await kilocodeToken()
       if (!token) {
@@ -399,17 +400,27 @@ export namespace KiloSessions {
       log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
       void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
-    })().finally(() => {
-      if (remoteSeq === seq) enabling = undefined
-    })
+    })()
+      .catch((err) => {
+        if (remoteSeq === seq && !remote)
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+        throw err
+      })
+      .finally(() => {
+        if (remoteSeq === seq) enabling = undefined
+      })
 
     return enabling
   }
 
   export function disableRemote() {
     remoteSeq += 1
+    const pending = !!enabling
     enabling = undefined
-    if (!remote) return
+    if (!remote) {
+      if (pending) void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+      return
+    }
     remote.sender.dispose()
     remote.conn.close()
     remote = undefined
@@ -419,7 +430,7 @@ export namespace KiloSessions {
 
   export function remoteStatus() {
     return {
-      enabled: !!remote,
+      enabled: !!remote || !!enabling,
       connected: remote?.conn.connected ?? false,
     }
   }

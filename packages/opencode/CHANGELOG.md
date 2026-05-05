@@ -1,5 +1,82 @@
 # @kilocode/cli
 
+## 7.2.39
+
+### Patch Changes
+
+- [#9840](https://github.com/Kilo-Org/kilocode/pull/9840) [`db26be6`](https://github.com/Kilo-Org/kilocode/commit/db26be6b5d3ac77a729ea5242c8330b9146352a7) - Restore the `KILO=1` environment variable so plugins and tooling can distinguish the Kilo CLI from upstream OpenCode.
+
+## 7.2.36
+
+### Patch Changes
+
+- [#9869](https://github.com/Kilo-Org/kilocode/pull/9869) [`d5fd42c`](https://github.com/Kilo-Org/kilocode/commit/d5fd42c3d736329c27de06d52154701f6f4608fb) - Fix question tool being unavailable in code mode
+
+- [#9838](https://github.com/Kilo-Org/kilocode/pull/9838) [`f499257`](https://github.com/Kilo-Org/kilocode/commit/f499257c3287274473db801edba1852dbcdbd92a) - Honor approved external directory read access in Ask and Plan modes.
+
+- [#9778](https://github.com/Kilo-Org/kilocode/pull/9778) [`33476e5`](https://github.com/Kilo-Org/kilocode/commit/33476e50508f39c232731613fd9d74a7aa19e748) - Show an "Initializing snapshot…" line in the chat while the initial snapshot is running on very large repositories, and add an interactive prompt when it stalls. After 10 seconds (configurable via `KILO_SNAPSHOT_TRACK_TIMEOUT_MS`) the prompt asks whether to keep waiting or disable snapshots for the project; choosing to disable writes `"snapshot": false` to `.kilo/kilo.json` so future sessions skip snapshots entirely.
+
+- [#9833](https://github.com/Kilo-Org/kilocode/pull/9833) [`614bca7`](https://github.com/Kilo-Org/kilocode/commit/614bca7cff862ec96e4707a97f43b540210ab699) - Prevent macOS Spotlight from indexing Kilo-generated data directories.
+
+## 7.2.35
+
+### Patch Changes
+
+- [#9820](https://github.com/Kilo-Org/kilocode/pull/9820) [`a858f00`](https://github.com/Kilo-Org/kilocode/commit/a858f001ba8b2de561c69ba8a42d9d3347b1e66f) - Warn when a model hits its output limit before finishing a response.
+
+- [#8910](https://github.com/Kilo-Org/kilocode/pull/8910) [`8472f90`](https://github.com/Kilo-Org/kilocode/commit/8472f9052883d9acf643e0786e3819936c44a61a) Thanks [@eolbrych](https://github.com/eolbrych)! - Restore the Sign in action for MCP servers that require OAuth authentication in VS Code settings.
+
+## 7.2.33
+
+### Minor Changes
+
+- [#9737](https://github.com/Kilo-Org/kilocode/pull/9737) [`d5fb9eb`](https://github.com/Kilo-Org/kilocode/commit/d5fb9eb2265c03127e776c99020b03bb770255a1) - Support starting Agent Manager local sessions and worktree sessions from an experimental agent tool.
+
+### Patch Changes
+
+- [#9746](https://github.com/Kilo-Org/kilocode/pull/9746) [`80535d4`](https://github.com/Kilo-Org/kilocode/commit/80535d4ed6266888988a66ca28706260ee89e533) - Avoid repeated command approval prompts when multiple sessions request the same saved command permission, without widening bash permission matching.
+
+- [#9460](https://github.com/Kilo-Org/kilocode/pull/9460) [`26e4c11`](https://github.com/Kilo-Org/kilocode/commit/26e4c1148f4e7a734bb8e535e02a1a9ad75be584) - Scope the custom commit message prompt to the current project. Setting it in the VS Code settings now writes to the workspace's `kilo.json` so different repositories can have different conventions, instead of silently applying globally. Also fixes the project-level config update endpoint, which previously wrote to a file that wasn't loaded.
+
+- [#9626](https://github.com/Kilo-Org/kilocode/pull/9626) [`5dbf91c`](https://github.com/Kilo-Org/kilocode/commit/5dbf91cc167c16e04bb41e8af68108f8865a18c8) - Honor allowed read-only external-directory access to Kilo config paths without repeated permission prompts.
+
+- [#9745](https://github.com/Kilo-Org/kilocode/pull/9745) [`da3d79a`](https://github.com/Kilo-Org/kilocode/commit/da3d79a6886944b4ad311211e3f67c350958a6ca) - Use a GPT-5.5-specific coding prompt that improves autonomous task handling while keeping older Codex generations on their existing prompt.
+
+- [#9729](https://github.com/Kilo-Org/kilocode/pull/9729) [`1493d65`](https://github.com/Kilo-Org/kilocode/commit/1493d656c9afcafd41a13b45bdf734fb881536df) - Keep Remote status visible in the TUI while remote control is connecting.
+
+- [#9669](https://github.com/Kilo-Org/kilocode/pull/9669) [`0bf14eb`](https://github.com/Kilo-Org/kilocode/commit/0bf14eb2ff5ef59f9dc98342218addc670a87481) - Stop emitting `ai.*` and `gen_ai.*` OpenTelemetry spans from AI SDK calls, and remove the PostHog bridge that forwarded them. Tool/session/indexing telemetry is unchanged.
+
+## 7.2.31
+
+### Patch Changes
+
+- [#9687](https://github.com/Kilo-Org/kilocode/pull/9687) [`9028174`](https://github.com/Kilo-Org/kilocode/commit/9028174cfd5fdd0cf2f3dd87d5ace7cfa780cc4d) - Show compact todo update cards when checking off items in long todo lists.
+
+## 7.2.30
+
+### Patch Changes
+
+- [#9625](https://github.com/Kilo-Org/kilocode/pull/9625) [`1e01ac3`](https://github.com/Kilo-Org/kilocode/commit/1e01ac3ce09070a42c079daf0ff8f07a0e6f7b23) - Respect configured agent models when reopening the CLI or switching projects.
+
+- [#9434](https://github.com/Kilo-Org/kilocode/pull/9434) [`a995b94`](https://github.com/Kilo-Org/kilocode/commit/a995b94d311a4ff8c49437369d4a0a468fc5f74f) - Fix sessions with large image attachments becoming unusable after compaction. When a conversation includes big inline images, the outgoing request can exceed the gateway's body-size limit even after a successful summary. The CLI now trims pre-summary messages for all successful summaries (including manual `/compact`) and strips media attachments from older turns once a summary exists, so follow-up prompts stay under the gateway limit and the session keeps working.
+
+- [#9450](https://github.com/Kilo-Org/kilocode/pull/9450) [`2032fe4`](https://github.com/Kilo-Org/kilocode/commit/2032fe4c4e574aa0664a1ab91e34633ce5b261f9) - Fix a session hang that could occur when multiple Kilo panels showed the same permission prompt, or when a subagent's permission was replied to from the wrong worktree. Replies are now routed to the exact CLI instance that holds the pending permission, and stale/unknown permissions surface a clear error so the UI doesn't leave buttons permanently disabled.
+
+- [#9635](https://github.com/Kilo-Org/kilocode/pull/9635) [`cbe5510`](https://github.com/Kilo-Org/kilocode/commit/cbe55103b10cda881ab39f2932a856f4ea36fce3) - Rename the published Docker image from `ghcr.io/kilo-org/kilo` to `ghcr.io/kilo-org/kilocode` so it lives alongside the active `kilocode` repo instead of the archived `kilo` one.
+
+- [#9628](https://github.com/Kilo-Org/kilocode/pull/9628) [`6130a3e`](https://github.com/Kilo-Org/kilocode/commit/6130a3ea66c6a323710fdc2d325fac87011f6b85) - Show paid Kilo models to signed-out users so selecting one prompts them to log in.
+
+- [#9556](https://github.com/Kilo-Org/kilocode/pull/9556) [`eae081a`](https://github.com/Kilo-Org/kilocode/commit/eae081a0c7404aa8a2516739c3f6725e8c4ff115) - Prevent Ask and Plan modes, including saved or allow-all approvals, from editing files before an explicit implementation step.
+
+- [#9615](https://github.com/Kilo-Org/kilocode/pull/9615) [`0907c6f`](https://github.com/Kilo-Org/kilocode/commit/0907c6f46e2e3d8f7601dcaac9de60dd8c0e02ee) - Keep interactive tools available when semantic indexing fails to load.
+
+- [#9603](https://github.com/Kilo-Org/kilocode/pull/9603) [`4145e48`](https://github.com/Kilo-Org/kilocode/commit/4145e48e82d862178102386cd8a1c874b9415696) - Improve Windows worktree cleanup reliability when file handles are released slowly.
+
+- Updated dependencies [[`28a0eae`](https://github.com/Kilo-Org/kilocode/commit/28a0eae4b0b940482222f6671a6885b575b2ad9c), [`6130a3e`](https://github.com/Kilo-Org/kilocode/commit/6130a3ea66c6a323710fdc2d325fac87011f6b85)]:
+  - @kilocode/kilo-indexing@7.1.4
+  - @kilocode/kilo-gateway@7.2.27
+  - @kilocode/kilo-telemetry@7.2.27
+
 ## 7.2.26
 
 ### Patch Changes

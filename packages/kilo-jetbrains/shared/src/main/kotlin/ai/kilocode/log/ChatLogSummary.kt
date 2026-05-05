@@ -58,6 +58,7 @@ object ChatLogSummary {
             ?.let { out += "types=${it.joinToString(",")}" }
         prompt.agent?.takeIf { it.isNotBlank() }?.let { out += "agent=$it" }
         model(prompt.providerID, prompt.modelID)?.let { out += "model=$it" }
+        prompt.variant?.takeIf { it.isNotBlank() }?.let { out += "variant=$it" }
         preview(text)?.let { out += "preview=\"$it\"" }
         return out.joinToString(" ")
     }

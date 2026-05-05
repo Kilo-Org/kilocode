@@ -34,6 +34,8 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `merge.ts` | Main orchestration script for upstream merges |
 | `list-versions.ts` | List available upstream versions |
 | `analyze.ts` | Analyze changes without merging |
+| `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
+| `reset-to-upstream.ts` | Reset one file to the transformed last merged upstream version |
 
 ### Transform Scripts
 
@@ -45,7 +47,6 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 | `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
 | `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
 | `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
-| `transforms/transform-tauri.ts` | Transform Tauri/Desktop config files |
 | `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection |
 | `transforms/transform-scripts.ts` | Transform script files with GitHub API references |
 | `transforms/transform-extensions.ts` | Transform extension files (Zed, etc.) |
@@ -76,11 +77,11 @@ The merge automation follows this process, applying **all transformations BEFORE
    - `<author>/opencode-<version>` - Transformed upstream branch
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
+   - Remove files that should not exist in Kilo (`skipFiles`)
    - Transform package names (opencode-ai -> @kilocode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
    - Transform branding-only files (UI components, configs)
-   - Transform Tauri/Desktop config files
    - Transform package.json files (names, deps, Kilo injections)
    - Transform script files (GitHub API references)
    - Transform extension files (Zed, etc.)
@@ -130,16 +131,7 @@ Configuration is defined in `utils/config.ts`:
 
   // Files to take upstream + apply Kilo branding transforms
   takeTheirsAndTransform: [
-    "packages/app/src/components/**/*.tsx",
-    "packages/app/src/context/**/*.tsx",
     "packages/ui/src/**/*.tsx",
-    // ...
-  ],
-
-  // Tauri/Desktop config files
-  tauriFiles: [
-    "packages/desktop/src-tauri/*.json",
-    "packages/desktop/src-tauri/src/*.rs",
     // ...
   ],
 
@@ -161,11 +153,11 @@ Configuration is defined in `utils/config.ts`:
 
 The following transforms are applied to the opencode branch before merging:
 
-1. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
-2. **Versions** - Preserve Kilo's version numbers
-3. **i18n files** - OpenCode -> Kilo in user-visible strings
-4. **Branding files** - UI components, configs with branding only
-5. **Tauri configs** - Desktop app identifiers, names
+1. **Skip files** - Remove upstream-only packages/files that should not exist in Kilo
+2. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
+3. **Versions** - Preserve Kilo's version numbers
+4. **i18n files** - OpenCode -> Kilo in user-visible strings
+5. **Branding files** - UI components, configs with branding only
 6. **package.json** - Names, dependencies, Kilo injections
 7. **Scripts** - GitHub API references
 8. **Extensions** - Zed, etc.
@@ -178,8 +170,7 @@ After merging, any remaining conflicts are handled based on file type:
 | File Type | Strategy | Description |
 |---|---|---|
 | i18n files | `i18n-transform` | Take upstream, apply Kilo branding |
-| App components | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
-| Tauri configs | `tauri-transform` | Take upstream, transform identifiers/names |
+| UI components | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
 | package.json | `package-transform` | Take upstream, transform names, inject Kilo deps |
 | Script files | `script-transform` | Take upstream, transform GitHub references |
 | Extensions | `extension-transform` | Take upstream, apply branding |
@@ -215,10 +206,21 @@ Options:
   --base-branch <name>   Base branch to merge into (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
+  --no-worktrees         Don't create reference worktrees
   --report-only          Only generate conflict report
   --verbose              Enable verbose logging
   --author <name>        Author name for branch prefix
 ```
+
+By default, `merge.ts` also prepares prompt-friendly reference worktrees under `.worktrees/opencode-merge/`:
+
+| Path | Snapshot |
+|---|---|
+| `.worktrees/opencode-merge/opencode` | Pristine upstream opencode at the requested version or commit |
+| `.worktrees/opencode-merge/kilo-main` | The Kilo base branch snapshot used for the merge |
+| `.worktrees/opencode-merge/auto-merge` | The automated merge result before final lockfile or SDK regeneration |
+
+If conflicts remain after automation, `auto-merge` is a committed local snapshot branch that may intentionally contain conflict markers as normal file content. The real merge branch remains unresolved so manual resolution can continue with accurate git conflict state.
 
 ### analyze.ts
 
@@ -229,6 +231,30 @@ Options:
   --base-branch <name>   Base branch to analyze from (default: main)
   --output <file>        Output file for report
 ```
+
+### fix-kilocode-markers.ts
+
+```
+Usage:
+  bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+
+### reset-to-upstream.ts
+
+```
+Usage:
+  bun run script/upstream/reset-to-upstream.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation for text files, and writes the result to the working tree. Binary files are restored as raw upstream bytes without text transforms. If the file does not exist upstream, the local file is deleted.
 
 ## Using Custom Base Branches
 

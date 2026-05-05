@@ -2,13 +2,15 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
-import com.intellij.ui.JBColor
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import com.intellij.util.ui.JBDimension
+import com.intellij.util.ui.JBUI
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 
@@ -24,23 +26,21 @@ import javax.swing.SwingConstants
 class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : PartView() {
 
     override val contentId: String = compaction.id
+    private val text = JBLabel(KiloBundle.message("session.part.compaction")).apply {
+        foreground = UiStyle.Colors.weak()
+        horizontalAlignment = SwingConstants.CENTER
+        border = JBUI.Borders.empty(0, UiStyle.Gap.regular())
+    }
 
     init {
         layout = BorderLayout()
         isOpaque = false
-        border = JBUI.Borders.empty(JBUI.scale(6), 0)
-
-        val text = JBLabel("context compacted").apply {
-            foreground = UIUtil.getContextHelpForeground()
-            font = JBUI.Fonts.smallFont()
-            horizontalAlignment = SwingConstants.CENTER
-            border = JBUI.Borders.empty(0, JBUI.scale(8))
-        }
+        applyStyle(SessionStyle.current())
 
         val line = { JPanel().apply {
-            background = JBColor.border()
+            background = UiStyle.Colors.line()
             isOpaque = true
-            preferredSize = java.awt.Dimension(0, JBUI.scale(1))
+            preferredSize = JBDimension(0, JBUI.scale(1))
         } }
 
         val row = JPanel(GridBagLayout()).apply {
@@ -64,6 +64,13 @@ class CompactionView(@Suppress("UNUSED_PARAMETER") compaction: Compaction) : Par
     }
 
     override fun update(content: Content) {}  // compaction has no mutable state
+
+    override fun applyStyle(style: SessionStyle) {
+        if (text.font == style.smallUiFont) return
+        text.font = style.smallUiFont
+        revalidate()
+        repaint()
+    }
 
     override fun dumpLabel() = "CompactionView#$contentId"
 }

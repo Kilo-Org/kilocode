@@ -25,7 +25,7 @@ import { ConfigCommand as ConfigCLICommand } from "../cli/cmd/config"
 import { PluginCommand } from "../cli/cmd/plug"
 import { DevSetupCommand, DevAliasCommand } from "./cli/dev-setup"
 import { HelpCommand } from "./help-command"
-import { InstallationBuildKind } from "../installation/version"
+import { InstallationBuildKind } from "@opencode-ai/core/installation/version"
 
 // Synthetic entry for the yargs built-in .completion() command so that
 // generateHelp --all and cli-reference.md include it automatically.

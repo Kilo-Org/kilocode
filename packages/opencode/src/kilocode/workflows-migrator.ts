@@ -1,9 +1,9 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
-import type { Config } from "../config"
-import type { ConfigCommand } from "../config"
-import { Filesystem } from "../util"
+import type { Config } from "../config/config"
+import type { ConfigCommand } from "../config/command"
+import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {

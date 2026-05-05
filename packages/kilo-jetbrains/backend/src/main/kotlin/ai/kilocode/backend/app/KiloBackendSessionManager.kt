@@ -4,6 +4,7 @@ import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
+import ai.kilocode.jetbrains.api.model.GlobalSession
 import ai.kilocode.jetbrains.api.model.SessionStatus
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -89,7 +91,22 @@ class KiloBackendSessionManager(
 
     fun list(dir: String): SessionListDto {
         seed(dir)
-        val raw = requireClient().sessionList(directory = dir, roots = true)
+        val raw = requireClient().sessionList(directory = dir, roots = JsonPrimitive(true))
+        val mapped = raw.map(::dto)
+        val ids = mapped.map { it.id }.toSet()
+        val relevant = _statuses.value.filterKeys { it in ids }
+        return SessionListDto(mapped, relevant)
+    }
+
+    fun recent(dir: String, limit: Int): SessionListDto {
+        seed(dir)
+        val raw = requireClient().experimentalSessionList(
+            directory = dir,
+            worktrees = true,
+            roots = JsonPrimitive(true),
+            limit = limit.toDouble(),
+            archived = JsonPrimitive(false),
+        )
         val mapped = raw.map(::dto)
         val ids = mapped.map { it.id }.toSet()
         val relevant = _statuses.value.filterKeys { it in ids }
@@ -182,8 +199,32 @@ class KiloBackendSessionManager(
         },
     )
 
+    private fun dto(s: GlobalSession) = SessionDto(
+        id = s.id,
+        projectID = s.projectID,
+        directory = s.directory,
+        parentID = s.parentID,
+        title = s.title,
+        version = s.version,
+        time = SessionTimeDto(
+            created = s.time.created,
+            updated = s.time.updated,
+            archived = s.time.archived,
+        ),
+        summary = s.summary?.let {
+            SessionSummaryDto(
+                additions = it.additions.toInt(),
+                deletions = it.deletions.toInt(),
+                files = it.files.toInt(),
+            )
+        },
+    )
+
     private fun statusDto(s: SessionStatus) = SessionStatusDto(
         type = s.type.value,
         message = s.message.ifBlank { null },
+        attempt = s.attempt.toInt(),
+        next = s.next.toLong(),
+        requestID = s.requestID.ifBlank { null },
     )
 }
