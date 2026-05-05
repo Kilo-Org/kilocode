@@ -250,7 +250,17 @@ function menu(label: string, items: HTMLElement[]) {
   const icon = document.createElement("span")
   icon.setAttribute("data-slot", "markdown-mermaid-menu-chevron")
   icon.setAttribute("aria-hidden", "true")
-  icon.textContent = "⌄"
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+  svg.setAttribute("viewBox", "0 0 16 16")
+  svg.setAttribute("fill", "none")
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+  path.setAttribute("d", "M4 6L8 10L12 6")
+  path.setAttribute("stroke", "currentColor")
+  path.setAttribute("stroke-linecap", "round")
+  path.setAttribute("stroke-linejoin", "round")
+  path.setAttribute("stroke-width", "1.6")
+  svg.appendChild(path)
+  icon.appendChild(svg)
   trigger.append(text, icon)
 
   const content = document.createElement("div")

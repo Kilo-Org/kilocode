@@ -114,16 +114,25 @@
   }
 
   [data-slot="markdown-mermaid-menu-chevron"] {
+    align-items: center;
     color: var(--text-weak);
     display: inline-flex;
-    font-size: 13px;
-    line-height: 1;
-    transform: translateY(-1px) rotate(0deg);
+    flex: 0 0 12px;
+    height: 12px;
+    justify-content: center;
+    transform: rotate(0deg);
     transition: transform 0.15s ease;
+    width: 12px;
+  }
+
+  [data-slot="markdown-mermaid-menu-chevron"] > svg {
+    display: block;
+    height: 12px;
+    width: 12px;
   }
 
   [data-slot="markdown-mermaid-menu"][open] [data-slot="markdown-mermaid-menu-chevron"] {
-    transform: translateY(1px) rotate(180deg);
+    transform: rotate(180deg);
   }
 
   [data-slot="markdown-mermaid-menu-content"] {
