@@ -2,7 +2,7 @@ import { Cause, Deferred, Effect, Layer, Context, Scope } from "effect"
 import * as Stream from "effect/Stream"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
-import { Config } from "@/config"
+import { Config } from "@/config/config" // kilocode_change
 import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import { Snapshot } from "@/snapshot"
@@ -15,14 +15,14 @@ import type { SessionID } from "./schema"
 import { SessionRetry } from "./retry"
 import { SessionStatus } from "./status"
 import { SessionSummary } from "./summary"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider" // kilocode_change
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { KiloSessionMetrics } from "@/kilocode/session/metrics" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
-import { NotFoundError } from "@/storage" // kilocode_change
+import { NotFoundError } from "@/storage/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { isRecord } from "@/util/record"
 
 const DOOM_LOOP_THRESHOLD = 3
@@ -114,7 +114,12 @@ export const layer: Layer.Layer<
       // Pre-capture snapshot before the LLM stream starts. The AI SDK
       // may execute tools internally before emitting start-step events,
       // so capturing inside the event handler can be too late.
-      const initialSnapshot = yield* snapshot.track()
+      // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
+      const initialSnapshot = yield* snapshot.track({
+        sessionID: input.sessionID,
+        messageID: input.assistantMessage.id,
+      })
+      // kilocode_change end
       const ctx: ProcessorContext = {
         assistantMessage: input.assistantMessage,
         sessionID: input.sessionID,
@@ -397,12 +402,14 @@ export const layer: Layer.Layer<
             return
           }
 
+          // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
           case "error":
             throw value.error
 
           case "start-step":
-            ctx.stepStart = performance.now() // kilocode_change
-            if (!ctx.snapshot) ctx.snapshot = yield* snapshot.track()
+            ctx.stepStart = performance.now()
+            if (!ctx.snapshot)
+              ctx.snapshot = yield* snapshot.track({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id })
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -410,18 +417,17 @@ export const layer: Layer.Layer<
               snapshot: ctx.snapshot,
               type: "step-start",
             })
+            // kilocode_change end
             return
 
           case "finish-step": {
             // kilocode_change start - guard against finish-step without start-step
             const elapsed = Math.round(performance.now() - (ctx.stepStart || performance.now()))
-            // kilocode_change end
             const usage = Session.getUsage({
               model: ctx.model,
               usage: value.usage,
               metadata: value.providerMetadata,
             })
-            // kilocode_change start
             const metrics = KiloSessionMetrics.create({
               elapsed,
               tokens: usage.tokens,
