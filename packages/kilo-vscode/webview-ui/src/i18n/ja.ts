@@ -1199,6 +1199,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
+  "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
+  "settings.experimental.agentManagerTool.description":
+    "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
@@ -1407,6 +1410,7 @@ export const dict = {
     "タイトル生成、コミットメッセージ生成、プロンプト改善、およびその他の高速タスク用の軽量モデル",
   "settings.providers.disabled": "無効化されたプロバイダー",
   "settings.providers.disabled.description": "プロバイダーリストから非表示にするプロバイダー",
+  "settings.providers.disabled.enable": "有効化",
   "settings.providers.enabled": "有効化されたプロバイダー（ホワイトリスト）",
   "settings.providers.enabled.description": "設定された場合、これらのプロバイダーのみが利用可能",
   "settings.providers.notSet": "未設定（サーバーのデフォルトを使用）",

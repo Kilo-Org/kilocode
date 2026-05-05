@@ -1,21 +1,16 @@
-# Mermaid Diagram Features
+# Mermaid Diagrams
 
-**Priority:** P2
+Chat Markdown renders fenced `mermaid` code blocks as diagrams after a response finishes streaming.
 
-No mermaid rendering exists in the VS Code extension or kilo-ui.
+## Behavior
 
-## Location (kilocode-legacy)
+- Valid `mermaid` fences render inline as SVG diagrams.
+- The original Mermaid source remains available through the existing code-block copy button.
+- Invalid Mermaid syntax shows a contained error state and keeps the source visible.
+- Diagrams are not rendered while a message is streaming, which avoids repeated parse/render work on every token.
+- Diagram colors are derived from the active VS Code/Kilo CSS variables so light, dark, and high-contrast themes can render with matching backgrounds, text, borders, and link colors.
 
-These components exist in the [kilocode-legacy](https://github.com/Kilo-Org/kilocode-legacy) repo, not in this extension:
+## Limitations
 
-- `webview-ui/src/components/common/MermaidBlock.tsx`
-- `webview-ui/src/components/common/MermaidButton.tsx`
-
-## Remaining Work
-
-- Mermaid diagram rendering in chat messages (code blocks with `mermaid` language tag)
-- "Fix with AI" button for mermaid syntax errors — route to CLI
-- Copy button for diagram code
-- Click to open rendered diagram as PNG in editor
-- Error expansion with original code display
-- Loading states during processing
+- Mermaid is bundled by the current webview build, so bundle splitting remains a future optimization.
+- Advanced legacy actions are not restored yet: AI syntax fixing, PNG open/save, export, and zoom modal.

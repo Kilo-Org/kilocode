@@ -80,7 +80,6 @@ const DiffViewerContent: Component = () => {
       setMarkdown(msg.render)
       return
     }
-
     if (msg.type === "setAvailableSources") {
       setAvailableSources(msg.descriptors)
       setCurrentSourceId(msg.currentId)

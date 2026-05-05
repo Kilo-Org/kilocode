@@ -1,7 +1,7 @@
 import path from "path"
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
-import { Session } from "../session"
+import { Session } from "@/session/session"
 import { Instance } from "../project/instance"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
 

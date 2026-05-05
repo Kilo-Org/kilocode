@@ -84,6 +84,19 @@ export const dict = {
   "plan.followup.answer.continue": "Continue here",
   "plan.followup.answer.continue.description": "Implement the plan in this session",
 
+  // Slow-repo snapshot prompt. The English strings here are the canonical
+  // labels sent by the backend and must stay in sync with
+  // packages/opencode/src/kilocode/snapshot/track.ts.
+  "snapshot.slowRepo.header": "Snapshot is slow",
+  "snapshot.slowRepo.question":
+    "It is taking a long time to initialize the snapshot system, likely due to the size of the repository.\n\nDo you want to disable Snapshots for this repository?",
+  "snapshot.slowRepo.answer.continue": "Continue with snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Keep waiting for the snapshot to complete. Subsequent turns are fast once the initial snapshot is built.",
+  "snapshot.slowRepo.answer.disable": "Disable for this project",
+  "snapshot.slowRepo.answer.disable.description":
+    "Turn off Kilo's snapshots for this project. You will lose undo/redo of Kilo file changes, but git still tracks everything.",
+
   // Edit-tool header: hover-revealed action opening the diff in a full tab.
   "ui.messagePart.openInDiffViewer": "Open in Diff Viewer",
 }

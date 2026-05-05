@@ -1210,6 +1210,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
+  "settings.experimental.agentManagerTool.title": "Agent Manager alat",
+  "settings.experimental.agentManagerTool.description":
+    "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1421,6 +1424,7 @@ export const dict = {
     "Lagani model za generiranje naslova, commit poruka, poboljšanje promptova i druge brze zadatke",
   "settings.providers.disabled": "Onemogućeni pružatelji",
   "settings.providers.disabled.description": "Pružatelji za skrivanje s popisa",
+  "settings.providers.disabled.enable": "Omogući",
   "settings.providers.enabled": "Omogućeni pružatelji (bijela lista)",
   "settings.providers.enabled.description": "Ako je postavljeno, samo ovi pružatelji će biti dostupni",
   "settings.providers.notSet": "Nije postavljeno (koristi zadano servera)",

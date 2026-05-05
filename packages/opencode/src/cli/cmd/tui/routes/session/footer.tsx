@@ -2,7 +2,7 @@ import { createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js"
 import { useTheme } from "../../context/theme"
 import { useSync } from "../../context/sync"
 import { useDirectory } from "../../context/directory"
-import { useConnected } from "../../component/dialog-model"
+import { useConnected } from "../../component/use-connected"
 import { useSDK } from "../../context/sdk" // kilocode_change
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
@@ -77,7 +77,12 @@ export function Footer() {
       <text fg={theme.textMuted}>{directory()}</text>
       <box gap={2} flexDirection="row" flexShrink={0}>
         {/* kilocode_change start */}
-        <RemoteIndicator sdk={sdk} theme={theme} kilo={sync.data.provider_next.connected.includes("kilo")} event={event} />
+        <RemoteIndicator
+          sdk={sdk}
+          theme={theme}
+          kilo={sync.data.provider_next.connected.includes("kilo")}
+          event={event}
+        />
         {/* kilocode_change end */}
         <Switch>
           <Match when={store.welcome}>

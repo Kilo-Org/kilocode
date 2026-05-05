@@ -1180,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
+  "settings.experimental.agentManagerTool.title": "Narzędzie Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Zezwól agentom na uruchamianie lokalnych sesji Agent Manager i sesji worktree z wywołania narzędzia",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
@@ -1417,6 +1420,7 @@ export const dict = {
     "Lekki model do generowania tytułów, wiadomości commitów, ulepszania zapytań i innych szybkich zadań",
   "settings.providers.disabled": "Wyłączeni dostawcy",
   "settings.providers.disabled.description": "Dostawcy do ukrycia z listy",
+  "settings.providers.disabled.enable": "Włącz",
   "settings.providers.enabled": "Włączeni dostawcy (biała lista)",
   "settings.providers.enabled.description": "Jeśli ustawiono, tylko ci dostawcy będą dostępni",
   "settings.providers.notSet": "Nie ustawiono (użyj domyślnego serwera)",

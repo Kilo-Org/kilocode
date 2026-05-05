@@ -1,16 +1,17 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import * as CrossSpawnSpawner from "../../../src/effect/cross-spawn-spawner"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Global } from "@opencode-ai/core/global"
 import { Agent } from "../../../src/agent/agent"
-import { Global } from "../../../src/global"
+import { Config } from "../../../src/config/config"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { Instance } from "../../../src/project/instance"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Shell } from "../../../src/shell/shell"
-import { Truncate } from "../../../src/tool"
+import { Truncate } from "../../../src/tool/truncate"
 import { BashTool } from "../../../src/tool/bash"
 import { Plugin } from "../../../src/plugin"
 import { tmpdir } from "../../fixture/fixture"
@@ -20,6 +21,7 @@ const runtime = ManagedRuntime.make(
   Layer.mergeAll(
     CrossSpawnSpawner.defaultLayer,
     AppFileSystem.defaultLayer,
+    Config.defaultLayer,
     Plugin.defaultLayer,
     Truncate.defaultLayer,
     Agent.defaultLayer,

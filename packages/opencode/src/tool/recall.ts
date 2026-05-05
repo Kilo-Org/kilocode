@@ -2,8 +2,8 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { Instance } from "../project/instance"
-import { Locale } from "../util"
-import { Filesystem } from "../util" // kilocode_change
+import { Locale } from "../util/locale"
+import { Filesystem } from "../util/filesystem" // kilocode_change
 import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change
 import DESCRIPTION from "./recall.txt"
 
@@ -56,7 +56,7 @@ async function search(params: { query?: string; limit?: number }, ctx: Tool.Cont
 
   const limit = Math.min(params.limit ?? 20, 50)
   const dirs = await WorktreeFamily.list() // kilocode_change
-  const { Session } = await import("../session/index") // kilocode_change
+  const { Session } = await import("../session/session") // kilocode_change
 
   const results: Array<{
     id: string
@@ -102,7 +102,7 @@ async function read(params: { sessionID?: string }, ctx: Tool.Context) {
     throw new Error("The 'sessionID' parameter is required when mode is 'read'")
   }
 
-  const { Session } = await import("../session/index") // kilocode_change
+  const { Session } = await import("../session/session") // kilocode_change
   const { SessionID } = await import("../session/schema") // kilocode_change
   const session = await Session.get(SessionID.make(params.sessionID)).catch(() => {
     throw new Error(`Session "${params.sessionID}" not found. Use search mode first to find valid session IDs.`)

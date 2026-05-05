@@ -1208,6 +1208,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
@@ -1388,6 +1391,7 @@ export const dict = {
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
   "settings.providers.disabled": "Вимкнені провайдери",
   "settings.providers.disabled.description": "Провайдери, що будуть приховані у списку провайдерів",
+  "settings.providers.disabled.enable": "Увімкнути",
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",

@@ -1180,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
+  "settings.experimental.agentManagerTool.description":
+    "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
@@ -1409,6 +1412,7 @@ export const dict = {
     "Lettvektsmodell for titelgenerering, generering av commit-meldinger, prompt-forbedring og andre raske oppgaver",
   "settings.providers.disabled": "Deaktiverte leverandører",
   "settings.providers.disabled.description": "Leverandører å skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverte leverandører (hvitliste)",
   "settings.providers.enabled.description": "Hvis angitt, er bare disse leverandørene tilgjengelige",
   "settings.providers.notSet": "Ikke angitt (bruk serverstandard)",

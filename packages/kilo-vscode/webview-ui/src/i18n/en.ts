@@ -1197,6 +1197,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
+  "settings.experimental.agentManagerTool.description":
+    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1408,6 +1411,7 @@ export const dict = {
     "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
+  "settings.providers.disabled.enable": "Enable",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",

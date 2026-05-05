@@ -1207,6 +1207,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.agentManagerTool.title": "Инструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Разрешить агентам запускать локальные сеансы Agent Manager и сеансы worktree через вызов инструмента",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
@@ -1417,6 +1420,7 @@ export const dict = {
     "Лёгкая модель для генерации заголовков, сообщений коммитов, улучшения промптов и других быстрых задач",
   "settings.providers.disabled": "Отключённые провайдеры",
   "settings.providers.disabled.description": "Провайдеры для скрытия из списка",
+  "settings.providers.disabled.enable": "Включить",
   "settings.providers.enabled": "Включённые провайдеры (белый список)",
   "settings.providers.enabled.description": "Если установлено, только эти провайдеры будут доступны",
   "settings.providers.notSet": "Не задано (использовать значение сервера по умолчанию)",

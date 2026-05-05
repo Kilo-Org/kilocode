@@ -1193,6 +1193,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
+  "settings.experimental.agentManagerTool.description":
+    "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
@@ -1392,6 +1395,7 @@ export const dict = {
     "제목 생성, 커밋 메시지 생성, 프롬프트 개선 및 기타 빠른 작업을 위한 경량 모델",
   "settings.providers.disabled": "비활성화된 공급자",
   "settings.providers.disabled.description": "공급자 목록에서 숨길 공급자",
+  "settings.providers.disabled.enable": "활성화",
   "settings.providers.enabled": "활성화된 공급자 (허용 목록)",
   "settings.providers.enabled.description": "설정된 경우 이 공급자만 사용 가능 (배타적 허용 목록)",
   "settings.providers.notSet": "설정되지 않음 (서버 기본값 사용)",

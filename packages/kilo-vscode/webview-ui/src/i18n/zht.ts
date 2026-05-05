@@ -1153,6 +1153,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
+  "settings.experimental.agentManagerTool.description":
+    "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
@@ -1340,6 +1343,7 @@ export const dict = {
   "settings.providers.smallModel.description": "用於標題產生、提交訊息產生、提示增強和其他快速任務的輕量模型",
   "settings.providers.disabled": "已停用的供應商",
   "settings.providers.disabled.description": "從供應商清單中隱藏的供應商",
+  "settings.providers.disabled.enable": "啟用",
   "settings.providers.enabled": "已啟用的供應商（白名單）",
   "settings.providers.enabled.description": "如果設定，只有這些供應商可用（排他性白名單）",
   "settings.providers.notSet": "未設定（使用伺服器預設值）",

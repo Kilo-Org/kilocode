@@ -22,9 +22,13 @@ import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -37,6 +41,7 @@ import com.intellij.openapi.util.Disposer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import java.awt.Component
 
@@ -64,6 +69,8 @@ class SessionController(
   private val condense: Boolean = true,
   private val displayMs: Long = DISPLAY_DELAY_MS,
   private val open: (SessionDto) -> Unit = {},
+  private val beforeUpdate: () -> Boolean = { false },
+  private val afterUpdate: (Boolean) -> Unit = {},
 ) : Disposable {
 
     companion object {
@@ -134,6 +141,7 @@ class SessionController(
     fun prompt(text: String) {
         assertEdt()
         val sid = sessionId ?: "pending"
+        val dto = promptDto(text)
         LOG.debug { "${ChatLogSummary.sid(sid)} ${ChatLogSummary.prompt(text)} ${ChatLogSummary.dir(directory)}" }
         showMessages()
         cs.launch {
@@ -148,13 +156,15 @@ class SessionController(
                     subscribeEvents()
                     session.id
                 }
-                sessions.prompt(id, directory, text)
+                sessions.prompt(id, directory, dto)
                 LOG.debug { "${ChatLogSummary.sid(id)} kind=prompt dispatched=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sessionId ?: sid)} kind=prompt dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     val msg = e.message ?: KiloBundle.message("session.error.prompt")
-                    model.setState(SessionState.Error(msg))
+                    updateModel {
+                        model.setState(SessionState.Error(msg))
+                    }
                 }
             }
         }
@@ -208,22 +218,38 @@ class SessionController(
         }
         fire(SessionControllerEvent.WorkspaceReady) {
             model.agent = name
+            syncModelSelection()
         }
     }
 
     fun selectModel(provider: String, id: String) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=config model=$provider/$id" }
-        cs.launch {
-            try {
-                sessions.updateConfig(directory, ConfigUpdateDto(model = "$provider/$id"))
-            } catch (e: Exception) {
-                LOG.warn("${ChatLogSummary.sid(sessionId ?: "pending")} kind=config model=$provider/$id dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
-            }
-        }
-        fire(SessionControllerEvent.WorkspaceReady) {
-            model.model = "$provider/$id"
-        }
+        val agent = model.agent ?: return
+        val key = "$provider/$id"
+        if (item(key) == null && model.workspace.providers != null) return
+        app.selectModel(agent, provider, id)
+        selectResolvedModel(key)
+        model.modelOverride = model.defaultModel != model.model
+    }
+
+    fun clearModelOverride() {
+        assertEdt()
+        val agent = model.agent ?: return
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=config model-reset agent=$agent" }
+        app.clearModel(agent)
+        val auto = configModel(agent) ?: providerModel(agent)
+        selectResolvedModel(auto)
+        model.modelOverride = false
+    }
+
+    fun selectVariant(value: String) {
+        assertEdt()
+        val key = model.model ?: return
+        if (value !in model.variants) return
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=config variant=$key/$value" }
+        app.selectVariant(key, value)
+        model.variant = value
     }
 
     // ------ permission / question resolution ------
@@ -285,7 +311,16 @@ class SessionController(
                 fire(SessionControllerEvent.AppChanged) {
                     model.app = state
                     model.version = app.version
+                    syncModelSelection()
                     syncConnectionState()
+                }
+            }
+        }
+
+        cs.launch {
+            app.models.drop(1).collect {
+                fire(SessionControllerEvent.WorkspaceReady) {
+                    syncModelSelection()
                 }
             }
         }
@@ -299,23 +334,36 @@ class SessionController(
                     if (state.status != KiloWorkspaceStatusDto.READY) return@fire
 
                     model.agents = state.agents?.agents?.map {
-                        AgentItem(it.name, it.displayName ?: it.name)
+                        AgentItem(
+                            it.name,
+                            it.displayName ?: title(it.name),
+                            it.description,
+                            it.deprecated == true,
+                        )
                     } ?: emptyList()
 
                     model.models = state.providers?.let { providers ->
                         providers.providers
-                            .filter { it.id in providers.connected }
+                            .filter { it.id == KILO_PROVIDER || it.id in providers.connected }
                             .flatMap { provider ->
                                 provider.models.map { (id, info) ->
-                                    ModelItem(id, info.name, provider.id)
+                                    ModelItem(
+                                        id,
+                                        info.name,
+                                        provider.id,
+                                        provider.name,
+                                        info.recommendedIndex,
+                                        info.free,
+                                        info.variants,
+                                    )
                                 }
                             }
                     } ?: emptyList()
 
-                    if (this@SessionController.model.agent == null) this@SessionController.model.agent = state.agents?.default
-                    if (this@SessionController.model.model == null) {
-                        this@SessionController.model.model = state.providers?.defaults?.entries?.firstOrNull()?.let { "${it.key}/${it.value}" }
+                    if (this@SessionController.model.agent == null) {
+                        this@SessionController.model.agent = state.agents?.default
                     }
+                    syncModelSelection()
                 }
 
                 if (state.status == KiloWorkspaceStatusDto.READY) {
@@ -342,7 +390,9 @@ class SessionController(
                 val items = sessions.messages(id, directory)
                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(items)}" }
                 runEdt {
-                    this@SessionController.model.loadHistory(items)
+                    updateModel {
+                        this@SessionController.model.loadHistory(items)
+                    }
                 }
                 recoverPending(id)
                 edt {
@@ -402,12 +452,14 @@ class SessionController(
                 "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
             }
             runEdt {
-                if (permissions.isNotEmpty()) {
-                    model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
-                } else if (questions.isNotEmpty()) {
-                    model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
-                } else if (status != null) {
-                    seedStatus(status)
+                updateModel {
+                    if (permissions.isNotEmpty()) {
+                        model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
+                    } else if (questions.isNotEmpty()) {
+                        model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
+                    } else if (status != null) {
+                        seedStatus(status)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -567,8 +619,84 @@ class SessionController(
         }
     }
 
+    private fun promptDto(text: String): PromptDto {
+        val full = model.model
+        val sel = full?.let(::parseModel)
+        val variant = model.variant?.takeIf { it in model.variants }
+        return PromptDto(
+            parts = listOf(PromptPartDto(type = "text", text = text)),
+            providerID = sel?.first,
+            modelID = sel?.second,
+            agent = model.agent,
+            variant = variant,
+        )
+    }
+
+    private fun syncModelSelection() {
+        val agent = model.agent ?: return
+        val auto = configModel(agent) ?: providerModel(agent)
+        val selected = selectedModel(agent, auto)
+        model.defaultModel = auto
+        selectResolvedModel(selected)
+        model.modelOverride = selected != auto
+    }
+
+    private fun selectedModel(agent: String, auto: String?): String? {
+        val saved = app.models.value.model[agent]
+        val cfg = model.app.config
+        if (cfg != null) return resolveModelSelection(
+            providers = model.workspace.providers,
+            override = saved,
+            mode = cfg.agent[agent]?.model?.let(::selection),
+            global = cfg.model?.let(::selection),
+            recent = app.models.value.recent,
+        )?.key
+        if (saved != null) return valid(model.workspace.providers, saved)?.key ?: auto
+        return auto
+    }
+
+    private fun configModel(agent: String): String? {
+        if (model.app.status != KiloAppStatusDto.READY) return null
+        val cfg = model.app.config
+        return resolveModelSelection(
+            providers = model.workspace.providers,
+            mode = cfg?.agent?.get(agent)?.model?.let(::selection),
+            global = cfg?.model?.let(::selection),
+            recent = app.models.value.recent,
+        )?.key
+    }
+
+    private fun providerModel(agent: String): String? {
+        val providers = model.workspace.providers ?: return null
+        return resolveModelSelection(
+            providers = providers,
+            mode = providers.defaults[agent]?.let(::selection),
+            global = providers.defaults.values.firstNotNullOfOrNull(::selection),
+            fallback = null,
+        )?.key ?: model.models.firstOrNull()?.key
+    }
+
+    private fun selectResolvedModel(key: String?) {
+        model.model = key
+        val item = key?.let(::item)
+        model.variants = item?.variants ?: emptyList()
+        val saved = key?.let { app.models.value.variant[it] }
+        model.variant = saved?.takeIf { it in model.variants } ?: model.variants.firstOrNull()
+    }
+
+    private fun item(key: String): ModelItem? = model.models.firstOrNull { it.key == key }
+
     private fun handle(events: List<ChatEventDto>) {
-        for (event in events) handle(event)
+        updateModel {
+            for (event in events) handle(event)
+        }
+    }
+
+    private fun updateModel(block: () -> Unit) {
+        assertEdt()
+        val follow = beforeUpdate()
+        block()
+        afterUpdate(follow)
     }
 
     private fun showMessages() {
@@ -822,6 +950,53 @@ private fun summary(count: Int): String {
     val base = KiloBundle.message("session.connection.warning.config")
     if (count <= 1) return base
     return "$base ($count)"
+}
+
+private fun title(name: String): String = name
+    .split('-', '_')
+    .filter { it.isNotEmpty() }
+    .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
+    .ifEmpty { name }
+
+private const val KILO_PROVIDER = "kilo"
+private const val KILO_AUTO_MODEL = "kilo-auto/free"
+
+private fun resolveModelSelection(
+    providers: ProvidersDto?,
+    override: ModelSelectionDto? = null,
+    mode: ModelSelectionDto? = null,
+    global: ModelSelectionDto? = null,
+    recent: List<ModelSelectionDto> = emptyList(),
+    fallback: ModelSelectionDto? = ModelSelectionDto(KILO_PROVIDER, KILO_AUTO_MODEL),
+): ModelSelectionDto? {
+    valid(providers, override)?.let { return it }
+    valid(providers, mode)?.let { return it }
+    valid(providers, global)?.let { return it }
+    recent.firstNotNullOfOrNull { valid(providers, it) }?.let { return it }
+    return fallback
+}
+
+private fun valid(providers: ProvidersDto?, item: ModelSelectionDto?): ModelSelectionDto? {
+    if (item == null) return null
+    val list = providers?.providers ?: return item
+    if (list.isEmpty()) return item
+    val provider = list.firstOrNull { it.id == item.providerID } ?: return null
+    if (item.providerID != KILO_PROVIDER && item.providerID !in providers.connected) return null
+    if (item.modelID !in provider.models) return null
+    return item
+}
+
+private val ModelSelectionDto.key: String get() = "$providerID/$modelID"
+
+private fun selection(value: String): ModelSelectionDto? {
+    val parsed = parseModel(value) ?: return null
+    return ModelSelectionDto(parsed.first, parsed.second)
+}
+
+private fun parseModel(value: String): Pair<String, String>? {
+    val slash = value.indexOf('/')
+    if (slash <= 0 || slash >= value.length - 1) return null
+    return value.substring(0, slash) to value.substring(slash + 1)
 }
 
 private sealed interface RecentsState {

@@ -1225,6 +1225,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-Werkzeug",
+  "settings.experimental.agentManagerTool.description":
+    "Agenten erlauben, lokale Agent Manager-Sitzungen und Worktree-Sitzungen per Werkzeugaufruf zu starten",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
@@ -1439,6 +1442,7 @@ export const dict = {
     "Leichtgewichtiges Modell für Titelgenerierung, Commit-Nachrichten, Prompt-Verbesserung und andere schnelle Aufgaben",
   "settings.providers.disabled": "Deaktivierte Anbieter",
   "settings.providers.disabled.description": "Anbieter aus der Anbieterliste ausblenden",
+  "settings.providers.disabled.enable": "Aktivieren",
   "settings.providers.enabled": "Aktivierte Anbieter (Whitelist)",
   "settings.providers.enabled.description": "Wenn gesetzt, sind nur diese Anbieter verfügbar (exklusive Whitelist)",
   "settings.providers.notSet": "Nicht festgelegt (Server-Standard verwenden)",

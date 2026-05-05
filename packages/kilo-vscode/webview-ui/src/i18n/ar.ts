@@ -1184,6 +1184,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
+  "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
@@ -1386,6 +1389,7 @@ export const dict = {
     "نموذج خفيف لتوليد العناوين ورسائل الـ commit وتحسين المطالبات والمهام السريعة الأخرى",
   "settings.providers.disabled": "مزودون معطلون",
   "settings.providers.disabled.description": "مزودون لإخفائهم من القائمة",
+  "settings.providers.disabled.enable": "تمكين",
   "settings.providers.enabled": "مزودون مفعلون (قائمة بيضاء)",
   "settings.providers.enabled.description": "إذا تم التعيين، فقط هؤلاء المزودون سيكونون متاحين",
   "settings.providers.notSet": "غير محدد (استخدام الافتراضي)",
