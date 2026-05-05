@@ -1,4 +1,4 @@
-import { test, expect, mock, beforeEach, afterEach } from "bun:test"
+import { test, expect, mock, beforeEach, afterEach } from "bun:test" // kilocode_change
 import { EventEmitter } from "events"
 import { Effect } from "effect"
 import type { MCP as MCPNS } from "../../src/mcp/index"
@@ -108,9 +108,11 @@ beforeEach(() => {
   transportCalls.length = 0
 })
 
+// kilocode_change start
 afterEach(async () => {
   await Instance.disposeAll()
 })
+// kilocode_change end
 
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
