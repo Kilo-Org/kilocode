@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-indexing",
-  "version": "7.2.39",
+  "version": "7.2.40",
   "type": "module",
   "license": "MIT",
   "description": "Standalone indexing engine and host helpers for Kilo Code",
