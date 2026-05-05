@@ -227,7 +227,7 @@ export async function generateCommandTable(options?: { commands?: Cmd[] }) {
     })
   }
 
-  const lines = ["| Command | Description |", "| --- | --- |"]
+  const lines = ["| Command | Description |", "|---|---|"]
 
   for (const row of rows) {
     lines.push(`| \`${row.display}\` | ${row.description} |`)
