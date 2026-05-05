@@ -48,7 +48,7 @@ import { resolveModelSelection } from "./model-selection"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { getVariant, transferVariants, variantKey } from "./session-variant-store"
+import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
@@ -501,6 +501,11 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   }
 
+  function promptAgent(sessionID?: string) {
+    const name = agentForScope(sessionID)
+    return name !== defaultAgent() ? name : undefined
+  }
+
   function hideErrors(sid: string) {
     const ids = errorIDs(store.messages[sid] ?? [])
     if (ids.length === 0) return
@@ -928,6 +933,24 @@ export const SessionProvider: ParentComponent = (props) => {
         }
         if (pendingAgent) setStore("agentSelections", session.id, pendingAgent)
         if (pendingModel) setStore("sessionOverrides", session.id, pendingModel)
+        setStore(
+          "agentSelections",
+          produce((agents) => {
+            delete agents[draftID]
+          }),
+        )
+        setStore(
+          "sessionOverrides",
+          produce((models) => {
+            delete models[draftID]
+          }),
+        )
+        setStore(
+          "variantSelections",
+          produce((variants) => {
+            for (const key of sessionVariantKeys(variants, draftID)) delete variants[key]
+          }),
+        )
       } else if (pendingAgent && !store.agentSelections[session.id]) {
         setStore("agentSelections", session.id, pendingAgent)
         setPendingAgentSelection(null)
@@ -1733,7 +1756,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const preview = cloudPreviewId()
     if (preview) {
-      const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+      const scope = draftID ?? currentSessionID()
+      const agent = promptAgent(scope)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
@@ -1742,7 +1766,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(draftID ?? currentSessionID()),
+        variant: currentVariant(scope),
         files,
       })
       return
@@ -1756,7 +1780,8 @@ export const SessionProvider: ParentComponent = (props) => {
     }
     if (sid) addOptimistic(sid, messageID, text, files)
 
-    const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+    const scope = draftID ?? sid
+    const agent = promptAgent(scope)
 
     vscode.postMessage({
       type: "sendMessage",
@@ -1767,7 +1792,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(draftID ?? sid),
+      variant: currentVariant(scope),
       files,
       agentManagerContext: context,
     })
@@ -1790,7 +1815,8 @@ export const SessionProvider: ParentComponent = (props) => {
     // Cloud previews need import-then-command; post importAndSend with command metadata
     const preview = cloudPreviewId()
     if (preview) {
-      const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+      const scope = draftID ?? currentSessionID()
+      const agent = promptAgent(scope)
       vscode.postMessage({
         type: "importAndSend",
         cloudSessionId: preview,
@@ -1799,7 +1825,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(draftID ?? currentSessionID()),
+        variant: currentVariant(scope),
         files,
         command,
         commandArgs: args,
@@ -1817,7 +1843,8 @@ export const SessionProvider: ParentComponent = (props) => {
 
     if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
 
-    const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
+    const scope = draftID ?? sid
+    const agent = promptAgent(scope)
 
     vscode.postMessage({
       type: "sendCommand",
@@ -1829,7 +1856,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(draftID ?? sid),
+      variant: currentVariant(scope),
       files,
       agentManagerContext: context,
     })
@@ -2272,7 +2299,7 @@ export const SessionProvider: ParentComponent = (props) => {
     disconnectMcp,
     authenticateMcp,
     refreshMcpStatus,
-      selectedAgent: agentForScope,
+    selectedAgent: agentForScope,
     selectAgent,
     getSessionAgent: (sessionID: string) => store.agentSelections[sessionID] ?? defaultAgent(),
     getSessionModel: (sessionID: string) => {

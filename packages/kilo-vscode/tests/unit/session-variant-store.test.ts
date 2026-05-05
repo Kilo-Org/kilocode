@@ -1,5 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { getVariant, sessionVariants, transferVariants, variantKey } from "../../webview-ui/src/context/session-variant-store"
+import {
+  getVariant,
+  sessionVariantKeys,
+  sessionVariants,
+  transferVariants,
+  variantKey,
+} from "../../webview-ui/src/context/session-variant-store"
 import type { ModelSelection } from "../../webview-ui/src/types/messages"
 
 const model: ModelSelection = { providerID: "anthropic", modelID: "claude-sonnet-4" }
@@ -75,5 +81,14 @@ describe("per-session variant selection", () => {
     store[variantKey(model, "code", "session-b")] = "high"
 
     expect(sessionVariants(store, "session-a")).toEqual({ "anthropic/claude-sonnet-4": "medium" })
+  })
+
+  it("finds only variant keys for the requested session", () => {
+    const store: Record<string, string> = {}
+
+    store[variantKey(model, "code", "pending-local-1")] = "medium"
+    store[variantKey(model, "code", "pending-local-2")] = "high"
+
+    expect(sessionVariantKeys(store, "pending-local-1")).toEqual(["session/pending-local-1/anthropic/claude-sonnet-4"])
   })
 })

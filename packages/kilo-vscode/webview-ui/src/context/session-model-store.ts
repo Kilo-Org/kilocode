@@ -96,7 +96,9 @@ export function applyModel(
   selection: ModelSelection,
   sessionID: string | undefined,
 ): ApplyResult {
-  const modelSelections = sessionID ? { ...store.modelSelections } : { ...store.modelSelections, [agentName]: selection }
+  const modelSelections = sessionID
+    ? { ...store.modelSelections }
+    : { ...store.modelSelections, [agentName]: selection }
   const sessionOverrides = { ...store.sessionOverrides }
 
   if (sessionID) {

@@ -33,6 +33,11 @@ export function transferVariants(store: Record<string, string>, from: string, to
   )
 }
 
+export function sessionVariantKeys(store: Record<string, string>, session: string) {
+  const prefix = `session/${session}/`
+  return Object.keys(store).filter((key) => key.startsWith(prefix))
+}
+
 export function sessionVariants(store: Record<string, string>, session: string) {
   const prefix = `session/${session}/`
   return Object.fromEntries(
