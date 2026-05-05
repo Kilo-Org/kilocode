@@ -1617,10 +1617,17 @@ export type AgentConfig = {
     | null
     | string
     | number
+    | null
+    | number
+    | null
+    | string
+    | null
     | {
         [key: string]: boolean
       }
     | boolean
+    | string
+    | null
     | "subagent"
     | "primary"
     | "all"
@@ -1635,6 +1642,8 @@ export type AgentConfig = {
     | "warning"
     | "error"
     | "info"
+    | number
+    | null
     | number
     | PermissionConfig
     | undefined
