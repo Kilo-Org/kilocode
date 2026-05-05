@@ -1,10 +1,5 @@
 import { Wildcard } from "@/util/wildcard"
-
-type Rule = {
-  permission: string
-  pattern: string
-  action: "allow" | "deny" | "ask"
-}
+import { PermissionRule, type Rule } from "@/kilocode/permission/rule"
 
 function guard(pattern: string) {
   if (Wildcard.match(pattern, "*.env.example")) return
@@ -18,7 +13,7 @@ export namespace ReadPermission {
     if (rule.action !== "allow") return rule
     const match = guard(pattern)
     if (!match) return rule
-    if (rule.pattern !== "*" && rule.permission !== "*") return rule
+    if (!PermissionRule.broad(rule)) return rule
     return { permission, pattern: match, action: "ask" }
   }
 }
