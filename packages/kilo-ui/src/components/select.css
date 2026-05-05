@@ -76,6 +76,7 @@
 
   /* Section headers */
   [data-slot="select-section"] {
+    padding: 4px 12px;
     font-size: 11px;
     font-weight: 500;
     color: var(--text-weak);
