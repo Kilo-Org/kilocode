@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import { Database } from "../../src/storage"
+import { Database } from "../../src/storage/db"
 import { SessionImportService } from "../../src/kilocode/session-import/service"
 
 let spy: ReturnType<typeof spyOn>

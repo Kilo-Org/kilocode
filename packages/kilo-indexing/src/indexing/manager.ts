@@ -36,6 +36,7 @@ export class CodeIndexManager {
   private _retryAttempt = 0
   private _retryMaxAttempts = MAX_MANAGER_RECOVERY_ATTEMPTS
   private _retryInitialDelayMs = INITIAL_MANAGER_RECOVERY_DELAY_MS
+  private _disposed = false
 
   constructor(
     public readonly workspacePath: string,
@@ -146,6 +147,8 @@ export class CodeIndexManager {
   }
 
   private async runRecovery(trigger: IndexingTelemetryTrigger, attempt: number): Promise<void> {
+    if (this._disposed) return
+
     this._isRecoveringFromError = true
     this._retryAttempt = attempt
 
@@ -168,9 +171,12 @@ export class CodeIndexManager {
 
     try {
       await this._recreateServices()
+      if (this._disposed) return
       this.emitStart(trigger)
       await this._orchestrator!.startIndexing(trigger)
+      if (this._disposed) return
     } catch (err) {
+      if (this._disposed) return
       log.error("indexing recovery attempt failed", {
         err,
         attempt,
@@ -205,6 +211,7 @@ export class CodeIndexManager {
 
     const delay = this._retryInitialDelayMs * Math.pow(2, attempt - 1)
     await this.waitForRetry(delay)
+    if (this._disposed) return
     this._isRecoveringFromError = false
     return this.runRecovery(trigger, attempt + 1)
   }
@@ -239,6 +246,8 @@ export class CodeIndexManager {
   }
 
   public async initialize(input: IndexingConfigInput): Promise<{ requiresRestart: boolean }> {
+    if (this._disposed) return { requiresRestart: false }
+
     if (!this._configManager) {
       this._configManager = new CodeIndexConfigManager(input)
       log.info("created indexing config manager", { workspacePath: this.workspacePath })
@@ -283,6 +292,7 @@ export class CodeIndexManager {
       log.info("initializing indexing cache", { cacheDirectory: this.cacheDirectory })
       this._cacheManager = new CacheManager(this.cacheDirectory, this.workspacePath)
       await this._cacheManager.initialize()
+      if (this._disposed) return { requiresRestart }
       log.info("indexing cache initialized", { cacheDirectory: this.cacheDirectory })
     }
 
@@ -297,6 +307,12 @@ export class CodeIndexManager {
       try {
         log.info("recreating indexing services", { workspacePath: this.workspacePath })
         await this._recreateServices()
+        if (this._disposed) {
+          this._orchestrator?.cancelIndexing()
+          this._orchestrator = undefined
+          this._searchService = undefined
+          return { requiresRestart }
+        }
         log.info("indexing services recreated", { workspacePath: this.workspacePath })
       } catch (err) {
         log.error("failed to recreate services", { err })
@@ -312,7 +328,7 @@ export class CodeIndexManager {
     const shouldStartOrRestart =
       requiresRestart || (needsServiceRecreation && (!this._orchestrator || this._orchestrator.state !== "Indexing"))
 
-    if (shouldStartOrRestart) {
+    if (shouldStartOrRestart && !this._disposed) {
       log.info("starting background indexing", {
         workspacePath: this.workspacePath,
         requiresRestart,
@@ -327,6 +343,7 @@ export class CodeIndexManager {
   }
 
   public async startIndexing(): Promise<void> {
+    if (this._disposed) return
     if (!this.isFeatureEnabled) return
 
     log.info("manual indexing start requested", { workspacePath: this.workspacePath })
@@ -363,6 +380,7 @@ export class CodeIndexManager {
   }
 
   public async recoverFromError(trigger: IndexingTelemetryTrigger = "background"): Promise<void> {
+    if (this._disposed) return
     if (this._retryTask) {
       await this._retryTask
       return
@@ -388,6 +406,8 @@ export class CodeIndexManager {
   }
 
   public dispose(): void {
+    if (this._disposed) return
+    this._disposed = true
     this.clearRetryTimer()
     this._retryTask = undefined
     // RATIONALE: cancelIndexing() sets _cancelRequested and calls stopWatcher() +

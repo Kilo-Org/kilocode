@@ -91,7 +91,11 @@ function fromFileUrl(value: string): string {
 }
 
 function stem(value: string): string {
-  const part = value.split(/[\\/]+/).filter(Boolean).at(-1) ?? value
+  const part =
+    value
+      .split(/[\\/]+/)
+      .filter(Boolean)
+      .at(-1) ?? value
   const dot = part.lastIndexOf(".")
   if (dot <= 0) return part
   return part.slice(0, dot)

@@ -92,8 +92,6 @@ if (Script.release) {
   // kilocode_change end
 
   // kilocode_change start
-  // await import(`../packages/desktop/scripts/finalize-latest-json.ts`)
-  // await import(`../packages/desktop-electron/scripts/finalize-latest-yml.ts`)
   // kilocode_change end
 
   // kilocode_change start - mark prerelease GitHub releases accordingly

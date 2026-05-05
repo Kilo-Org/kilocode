@@ -260,6 +260,11 @@ export const dict = {
   "prompt.action.send.blocked": "Сначала ответьте на ожидающий вопрос или отклоните его",
   "prompt.action.stop": "Остановить",
   "prompt.action.enhance": "Улучшить промпт",
+  "prompt.action.autoApprove.enable": "Включить автоодобрение",
+  "prompt.action.autoApprove.disable": "Отключить автоодобрение",
+  "prompt.action.autoApprove.enabled": "Автоодобрение включено. Запросы разрешений будут одобряться автоматически.",
+  "prompt.action.autoApprove.disabled":
+    "Автоодобрение отключено. Нажмите, чтобы автоматически одобрять запросы разрешений.",
   "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
   "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
@@ -539,7 +544,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Основная ветка ({{branch}})",
   "session.new.worktree.create": "Создать новый worktree",
   "session.new.lastModified": "Последнее изменение",
-
+  "sidebar.session.newSession": "Новая сессия",
+  "sidebar.session.newSession.tooltip": "Начать новую беседу, сохранив текущую сессию нетронутой.",
+  "sidebar.session.newSession.disabled": "Эта сессия уже новая. Начните чат или создайте worktree.",
+  "sidebar.session.newWorktree": "Новое Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Создайте изолированное git worktree для безопасных экспериментов, разделения изменений и запуска параллельных сессий без прерывания вашей текущей ветки.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Откройте диалоговое окно worktree в Agent Manager, чтобы настроить новое worktree перед созданием.",
+  "sidebar.session.newWorktree.from": "Новое Worktree из",
+  "sidebar.session.currentBranch": "текущей ветки",
+  "sidebar.session.moveToWorktree": "Перенести в Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Перенесите эту беседу и ваши текущие локальные изменения в выделенное worktree для изолированной последующей работы.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Переместить этот разговор и 1 измененный файл в выделенный worktree для изолированной дальнейшей работы.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Переместить этот разговор и {{files}} измененных файлов в выделенный worktree для изолированной дальнейшей работы.",
+  "sidebar.session.showChanges.tooltip.empty": "Откройте просмотр изменений, чтобы изучить текущее рабочее дерево.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 файл изменен · +{{additions}} -{{deletions}}. Открыть просмотр изменений.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} файлов изменено · +{{additions}} -{{deletions}}. Открыть просмотр изменений.",
+  "sidebar.session.agentManager.tooltip":
+    "Откройте Agent Manager для полного обзора параллельных сессий и worktree, чтобы координировать длительные задачи в одном месте.",
+  "sidebar.session.openAgentManager": "Открыть Agent Manager",
+  "sidebar.session.progress.capturing": "Захват изменений...",
+  "sidebar.session.progress.creating": "Создание worktree...",
+  "sidebar.session.progress.setup": "Выполнение настройки...",
+  "sidebar.session.progress.transferring": "Перенос изменений...",
+  "sidebar.session.progress.forking": "Запуск сессии...",
+  "sidebar.session.progress.failed": "Не удалось продолжить в worktree",
   "session.header.search.placeholder": "Поиск {{project}}",
   "session.header.searchFiles": "Поиск файлов",
   "session.header.openIn": "Открыть в",
@@ -718,8 +753,7 @@ export const dict = {
 
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
-  "settings.indexing.enable.description":
-    "Включить или отключить семантическую индексацию кодовой базы для этого рабочего пространства.",
+  "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.provider.title": "Провайдер эмбеддингов",
   "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",
@@ -1173,6 +1207,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.agentManagerTool.title": "Инструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Разрешить агентам запускать локальные сеансы Agent Manager и сеансы worktree через вызов инструмента",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
@@ -1369,6 +1406,13 @@ export const dict = {
   "settings.display.layout.description": "Режим макета для интерфейса чата",
   "settings.display.layout.auto": "Авто",
   "settings.display.layout.stretch": "Растянуть",
+  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
+  "settings.display.reasoningAutoCollapse.description":
+    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",
@@ -1376,6 +1420,7 @@ export const dict = {
     "Лёгкая модель для генерации заголовков, сообщений коммитов, улучшения промптов и других быстрых задач",
   "settings.providers.disabled": "Отключённые провайдеры",
   "settings.providers.disabled.description": "Провайдеры для скрытия из списка",
+  "settings.providers.disabled.enable": "Включить",
   "settings.providers.enabled": "Включённые провайдеры (белый список)",
   "settings.providers.enabled.description": "Если установлено, только эти провайдеры будут доступны",
   "settings.providers.notSet": "Не задано (использовать значение сервера по умолчанию)",

@@ -1,4 +1,6 @@
 ---
+title: "Using Ollama with Kilo Code | Run Local Models"
+description: "Run local AI models with Ollama in Kilo Code for offline, private coding. Setup guide for VS Code and the CLI."
 sidebar_label: Ollama
 ---
 

@@ -35,7 +35,7 @@ export interface SlashCommand {
   close: () => void
 }
 
-export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): SlashCommand {
+export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | Accessor<Set<string>>): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
@@ -76,6 +76,14 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       },
     },
     {
+      name: "variant",
+      description: "Switch the reasoning effort",
+      hints: ["variants", "reasoning", "thinking"],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("openVariantPicker"))
+      },
+    },
+    {
       name: "help",
       description: "Open help documentation",
       hints: [],
@@ -109,28 +117,40 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     },
   ]
 
-  const client = exclude ? all.filter((c) => !exclude.has(c.name)) : all
+  const excluded = () => {
+    if (typeof exclude === "function") return exclude()
+    return exclude
+  }
+
+  const client = () => {
+    const set = excluded()
+    if (!set) return all
+    return all.filter((c) => !set.has(c.name))
+  }
 
   const commands = (): SlashCommandEntry[] => {
-    const names = new Set(client.map((c) => c.name))
+    const list = client()
+    const names = new Set(list.map((c) => c.name))
+    const set = excluded()
     // Hide the `/skill:<name>` alias when the bare `/<name>` is actually shown as a skill.
     // Skills register both forms server-side; showing both would duplicate entries. But if
     // a client action shadows the bare name, we must keep the alias so the skill stays
     // reachable.
     const bareSkillsShown = new Set(
       server()
-        .filter((c) => c.source === "skill" && !c.name.startsWith("skill:") && !names.has(c.name))
+        .filter((c) => c.source === "skill" && !c.name.startsWith("skill:") && !names.has(c.name) && !set?.has(c.name))
         .map((c) => c.name),
     )
     const filtered = server().filter((c) => {
       if (names.has(c.name)) return false
+      if (set?.has(c.name)) return false
       if (c.source === "skill" && c.name.startsWith("skill:")) {
         const bare = c.name.slice("skill:".length)
         if (bareSkillsShown.has(bare)) return false
       }
       return true
     })
-    return [...client, ...filtered]
+    return [...list, ...filtered]
   }
 
   const show = () => query() !== null

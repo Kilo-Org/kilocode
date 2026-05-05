@@ -79,4 +79,17 @@ export const dict = {
   "plan.followup.answer.newSession.description": "نفّذ في جلسة جديدة بسياق نظيف",
   "plan.followup.answer.continue": "المتابعة هنا",
   "plan.followup.answer.continue.description": "نفّذ الخطة في هذه الجلسة",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "اللقطة بطيئة",
+  "snapshot.slowRepo.question":
+    "يستغرق تهيئة نظام اللقطات وقتًا طويلاً، غالبًا بسبب حجم المستودع.\n\nهل تريد تعطيل اللقطات لهذا المستودع؟",
+  "snapshot.slowRepo.answer.continue": "المتابعة مع اللقطات",
+  "snapshot.slowRepo.answer.continue.description":
+    "استمر في الانتظار حتى تكتمل اللقطة. تكون الدورات اللاحقة سريعة بعد إنشاء اللقطة الأولى.",
+  "snapshot.slowRepo.answer.disable": "تعطيل لهذا المشروع",
+  "snapshot.slowRepo.answer.disable.description":
+    "أوقف لقطات Kilo لهذا المشروع. ستفقد ميزة التراجع/الإعادة لتعديلات Kilo، لكن git سيستمر في تتبع كل شيء.",
+
+  "ui.messagePart.openInDiffViewer": "فتح في عارض الفروقات",
 }

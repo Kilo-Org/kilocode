@@ -4,6 +4,7 @@ import { Bus } from "../../src/bus"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import { SessionNetwork } from "../../src/session/network"
+import { SessionID } from "../../src/session/schema"
 
 describe("session.network", () => {
   test("detects common network disconnect codes", () => {
@@ -45,7 +46,7 @@ describe("session.network", () => {
       directory: tmp.path,
       fn: async () => {
         const { promise } = await SessionNetwork.ask({
-          sessionID: "ses_test",
+          sessionID: SessionID.make("ses_test"),
           message: "Connection refused",
           abort: new AbortController().signal,
         })
@@ -64,7 +65,7 @@ describe("session.network", () => {
       directory: tmp.path,
       fn: async () => {
         const { promise } = await SessionNetwork.ask({
-          sessionID: "ses_test",
+          sessionID: SessionID.make("ses_test"),
           message: "Connection timed out",
           abort: new AbortController().signal,
         })
@@ -90,7 +91,7 @@ describe("session.network", () => {
 
         try {
           const { promise } = await SessionNetwork.ask({
-            sessionID: "ses_test",
+            sessionID: SessionID.make("ses_test"),
             message: "Connection timed out",
             abort: abort.signal,
           })
@@ -115,7 +116,7 @@ describe("session.network", () => {
       fn: async () => {
         const abort = new AbortController()
         const { promise } = await SessionNetwork.ask({
-          sessionID: "ses_test",
+          sessionID: SessionID.make("ses_test"),
           message: "Connection refused",
           abort: abort.signal,
         })

@@ -1,18 +1,18 @@
 import { Bus } from "@/bus"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Installation } from "@/installation"
-import { InstallationVersion } from "@/installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
 export async function upgrade() {
   const config = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
   if (config.autoupdate === false || Flag.KILO_DISABLE_AUTOUPDATE) return
-  const method = await AppRuntime.runPromise(Installation.Service.use((svc) => svc.method()))
+  const method = await Installation.method()
   // kilocode_change start - only auto-upgrade for npm/pnpm/bun (we only publish @kilocode/cli via npm registry)
   if (method !== "npm" && method !== "pnpm" && method !== "bun") return
   // kilocode_change end
-  const latest = await AppRuntime.runPromise(Installation.Service.use((svc) => svc.latest(method))).catch(() => {})
+  const latest = await Installation.latest(method).catch(() => {})
   if (!latest) return
 
   if (Flag.KILO_ALWAYS_NOTIFY_UPDATE) {
@@ -29,7 +29,7 @@ export async function upgrade() {
     return
   }
 
-  await AppRuntime.runPromise(Installation.Service.use((svc) => svc.upgrade(method, latest)))
+  await Installation.upgrade(method, latest)
     .then(() => Bus.publish(Installation.Event.Updated, { version: latest }))
     .catch(() => {})
 }

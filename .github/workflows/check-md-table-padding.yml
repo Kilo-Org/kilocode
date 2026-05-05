@@ -1,0 +1,24 @@
+name: Check markdown table padding
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+      - "script/check-md-table-padding.ts"
+      - ".github/workflows/check-md-table-padding.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check markdown table padding
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Run check
+        run: bun run script/check-md-table-padding.ts

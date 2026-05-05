@@ -80,6 +80,10 @@ abstract class MdView private constructor() {
     private class HtmlImpl : MdView() {
         companion object {
             private val LOG = KiloLog.create(HtmlImpl::class.java)
+            private val TAGS = listOf(
+                "body", "p", "div", "span", "ul", "ol", "li", "table", "thead", "tbody", "tr", "th", "td",
+                "blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "a", "tt", "code", "samp", "pre",
+            )
 
             private fun hex(c: Color): String = String.format("#%02x%02x%02x", c.red, c.green, c.blue)
 
@@ -153,15 +157,24 @@ abstract class MdView private constructor() {
 
         override var font: Font
             get() = fontOverride ?: JBUI.Fonts.label()
-            set(value) { fontOverride = value; markDirty() }
+            set(value) {
+                if (fontOverride == value) return
+                fontOverride = value
+                markDirty()
+            }
 
         override var foreground: Color
             get() = foregroundOverride ?: UIUtil.getLabelForeground()
-            set(value) { foregroundOverride = value; markDirty() }
+            set(value) {
+                if (foregroundOverride == value) return
+                foregroundOverride = value
+                markDirty()
+            }
 
         override var background: Color
             get() = backgroundOverride ?: pane.background
             set(value) {
+                if (backgroundOverride == value) return
                 backgroundOverride = value
                 if (opaqueState) pane.background = value
                 markDirty()
@@ -169,40 +182,73 @@ abstract class MdView private constructor() {
 
         override var linkColor: Color
             get() = linkColorOverride ?: Color(0x58, 0x9D, 0xF6)
-            set(value) { linkColorOverride = value; markDirty() }
+            set(value) {
+                if (linkColorOverride == value) return
+                linkColorOverride = value
+                markDirty()
+            }
 
         override var codeBg: Color
             get() = codeBgOverride ?: Color(0x3C, 0x3F, 0x41)
-            set(value) { codeBgOverride = value; markDirty() }
+            set(value) {
+                if (codeBgOverride == value) return
+                codeBgOverride = value
+                markDirty()
+            }
 
         override var preBg: Color
             get() = preBgOverride ?: Color(0x2B, 0x2B, 0x2B)
-            set(value) { preBgOverride = value; markDirty() }
+            set(value) {
+                if (preBgOverride == value) return
+                preBgOverride = value
+                markDirty()
+            }
 
         override var preFg: Color
             get() = preFgOverride ?: Color(0xA9, 0xB7, 0xC6)
-            set(value) { preFgOverride = value; markDirty() }
+            set(value) {
+                if (preFgOverride == value) return
+                preFgOverride = value
+                markDirty()
+            }
 
         override var codeFont: String
             // _EditorFontNoLigatures_ is resolved by EditorCssFontResolver to the global editor font
             get() = codeFontOverride ?: "_EditorFontNoLigatures_"
-            set(value) { codeFontOverride = value; markDirty() }
+            set(value) {
+                if (codeFontOverride == value) return
+                codeFontOverride = value
+                markDirty()
+            }
 
         override var quoteBorder: Color
             get() = quoteBorderOverride ?: Color(0x55, 0x55, 0x55)
-            set(value) { quoteBorderOverride = value; markDirty() }
+            set(value) {
+                if (quoteBorderOverride == value) return
+                quoteBorderOverride = value
+                markDirty()
+            }
 
         override var quoteFg: Color
             get() = quoteFgOverride ?: Color(0x99, 0x99, 0x99)
-            set(value) { quoteFgOverride = value; markDirty() }
+            set(value) {
+                if (quoteFgOverride == value) return
+                quoteFgOverride = value
+                markDirty()
+            }
 
         override var tableBorder: Color
             get() = tableBorderOverride ?: Color(0x55, 0x55, 0x55)
-            set(value) { tableBorderOverride = value; markDirty() }
+            set(value) {
+                if (tableBorderOverride == value) return
+                tableBorderOverride = value
+                markDirty()
+            }
 
         override var opaque: Boolean
             get() = opaqueState
             set(value) {
+                if (opaqueState == value) return
                 opaqueState = value
                 pane.isOpaque = value
                 if (value) pane.background = backgroundOverride ?: UIUtil.getPanelBackground()
@@ -230,17 +276,20 @@ abstract class MdView private constructor() {
         // -- content API ---------------------------------------------------
 
         override fun set(text: String) {
+            if (source.toString() == text) return
             source.clear()
             source.append(text)
-            render()
+            syncHtml()
         }
 
         override fun append(delta: String) {
+            if (delta.isEmpty()) return
             source.append(delta)
-            render()
+            syncHtml()
         }
 
         override fun clear() {
+            if (source.isEmpty() && rendered.isEmpty() && pane.text.isEmpty()) return
             source.clear()
             rendered = ""
             pane.text = ""
@@ -260,11 +309,12 @@ abstract class MdView private constructor() {
 
         private fun markDirty() {
             pane.reloadCssStylesheets()
-            if (source.isNotEmpty()) render()
+            if (source.isNotEmpty()) syncHtml()
         }
 
-        private fun render() {
+        private fun syncHtml() {
             val body = renderer.render(parser.parse(source.toString()))
+            if (rendered == body && pane.text == "<html><body>$body</body></html>") return
             rendered = body
             pane.text = "<html><body>$body</body></html>"
             pane.caretPosition = 0
@@ -286,13 +336,21 @@ abstract class MdView private constructor() {
         private fun buildOverrideRulesString(): String {
             val rules = StringBuilder()
 
-            val body = mutableListOf<String>()
-            foregroundOverride?.let { body.add("color: ${hex(it)}") }
-            if (!opaqueState) body.add("background: transparent")
+            val text = mutableListOf<String>()
+            foregroundOverride?.let { text.add("color: ${hex(it)}") }
             fontOverride?.let {
-                body.add("font-family: '${css(it.family)}', sans-serif")
-                body.add("font-size: ${it.size}pt")
+                text.add("font-family: '${css(it.name)}', sans-serif")
+                text.add("font-size: ${it.size}pt")
+                if (it.isItalic) text.add("font-style: italic")
+                if (it.isBold) text.add("font-weight: bold")
             }
+            if (text.isNotEmpty()) {
+                val rule = text.joinToString("; ")
+                for (tag in TAGS) rules.append("$tag { $rule } ")
+            }
+
+            val body = mutableListOf<String>()
+            if (!opaqueState) body.add("background: transparent")
             if (body.isNotEmpty()) rules.append("body { ${body.joinToString("; ")} } ")
 
             linkColorOverride?.let { rules.append("a { color: ${hex(it)} } ") }

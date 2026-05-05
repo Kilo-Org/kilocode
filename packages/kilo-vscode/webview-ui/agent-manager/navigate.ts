@@ -129,6 +129,35 @@ export function restoreLocalSessions(
   return changed ? merged : undefined
 }
 
+export function reconcileLocalSessions(
+  current: string[],
+  loaded: string[],
+  managed: { id: string; worktreeId: string | null }[],
+  isPending: (id: string) => boolean,
+): { ids: string[]; forget: string[] } | undefined {
+  const seen = new Set(loaded)
+  const local = new Set(managed.filter((s) => !s.worktreeId).map((s) => s.id))
+  const worktree = new Set(managed.filter((s) => s.worktreeId).map((s) => s.id))
+  const ids: string[] = []
+  const forget: string[] = []
+
+  for (const id of current) {
+    if (isPending(id)) {
+      ids.push(id)
+      continue
+    }
+    if (worktree.has(id)) continue
+    if (seen.has(id) || local.has(id)) {
+      ids.push(id)
+      continue
+    }
+    forget.push(id)
+  }
+
+  if (ids.length === current.length && forget.length === 0) return undefined
+  return { ids, forget }
+}
+
 /**
  * After removing a worktree, pick the nearest remaining sidebar neighbor.
  * Order: the worktree just below → the one above → LOCAL.

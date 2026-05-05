@@ -15,10 +15,10 @@ This means newly added models and providers are automatically available to your 
 
 ## How It Works
 
-| Scenario               | Behavior                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| No blocks configured   | All models and providers are available (default)                                      |
-| Provider blocked       | All current and future models from that provider are unavailable                      |
+| Scenario | Behavior |
+|---|---|
+| No blocks configured | All models and providers are available (default) |
+| Provider blocked | All current and future models from that provider are unavailable |
 | Specific model blocked | Only that model is unavailable; other models from the same provider remain accessible |
 
 ## Managing Model Access
@@ -53,13 +53,13 @@ A status bar appears at the bottom of the page whenever you have unsaved changes
 
 Use filters to find the models or providers you want to block:
 
-| Filter              | Tab                | Description                                           |
-| ------------------- | ------------------ | ----------------------------------------------------- |
-| **Search**          | Models & Providers | Filter by name, ID, or provider slug                  |
-| **Enabled only**    | Models & Providers | Show only currently allowed items                     |
-| **Trains on data**  | Providers          | Filter by whether the provider trains on user prompts |
-| **Retains prompts** | Providers          | Filter by whether the provider retains user prompts   |
-| **Location**        | Providers          | Filter by provider headquarters or datacenter country |
+| Filter | Tab | Description |
+|---|---|---|
+| **Search** | Models & Providers | Filter by name, ID, or provider slug |
+| **Enabled only** | Models & Providers | Show only currently allowed items |
+| **Trains on data** | Providers | Filter by whether the provider trains on user prompts |
+| **Retains prompts** | Providers | Filter by whether the provider retains user prompts |
+| **Location** | Providers | Filter by provider headquarters or datacenter country |
 
 ## Example Use Cases
 

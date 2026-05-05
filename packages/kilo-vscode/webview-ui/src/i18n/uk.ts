@@ -263,6 +263,11 @@ export const dict = {
   "prompt.action.stop": "Зупинити",
   "prompt.action.enhance": "Покращити запит",
   "prompt.action.indexing": "Налаштування індексування",
+  "prompt.action.autoApprove.enable": "Увімкнути автоматичне схвалення",
+  "prompt.action.autoApprove.disable": "Вимкнути автоматичне схвалення",
+  "prompt.action.autoApprove.enabled": "Автоматичне схвалення увімкнено. Запити дозволів схвалюватимуться автоматично.",
+  "prompt.action.autoApprove.disabled":
+    "Автоматичне схвалення вимкнено. Натисніть, щоб автоматично схвалювати запити дозволів.",
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
@@ -543,7 +548,36 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Основна гілка ({{branch}})",
   "session.new.worktree.create": "Створити нове робоче дерево",
   "session.new.lastModified": "Останнє змінення",
-
+  "sidebar.session.newSession": "Нова сесія",
+  "sidebar.session.newSession.tooltip": "Почати нову розмову, зберігши поточну сесію незмінною.",
+  "sidebar.session.newSession.disabled": "Ця сесія вже нова. Почніть спілкуватися або створіть worktree.",
+  "sidebar.session.newWorktree": "Нове Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Створіть ізольоване git worktree для безпечних експериментів, розділення змін та запуску паралельних сесій без переривання поточної гілки.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Відкрийте діалогове вікно worktree в Agent Manager, щоб налаштувати нове worktree перед створенням.",
+  "sidebar.session.newWorktree.from": "Нове Worktree з",
+  "sidebar.session.currentBranch": "поточна гілка",
+  "sidebar.session.moveToWorktree": "Перенести у Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Перенесіть цю розмову та ваші поточні локальні зміни до виділеного worktree для ізольованої подальшої роботи.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Перемістити цю розмову та 1 змінений файл у виділений worktree для ізольованої подальшої роботи.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Перемістити цю розмову та {{files}} змінених файлів у виділений worktree для ізольованої подальшої роботи.",
+  "sidebar.session.showChanges.tooltip.empty": "Відкрийте перегляд змін, щоб оглянути поточне робоче дерево.",
+  "sidebar.session.showChanges.tooltip.one": "1 файл змінено · +{{additions}} -{{deletions}}. Відкрити перегляд змін.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} файлів змінено · +{{additions}} -{{deletions}}. Відкрити перегляд змін.",
+  "sidebar.session.agentManager.tooltip":
+    "Відкрийте Agent Manager для повного огляду паралельних сесій та worktree, щоб координивати тривалі завдання в одному місці.",
+  "sidebar.session.openAgentManager": "Відкрити Agent Manager",
+  "sidebar.session.progress.capturing": "Захоплення змін...",
+  "sidebar.session.progress.creating": "Створення worktree...",
+  "sidebar.session.progress.setup": "Виконання налаштування...",
+  "sidebar.session.progress.transferring": "Перенесення змін...",
+  "sidebar.session.progress.forking": "Запуск сесії...",
+  "sidebar.session.progress.failed": "Не вдалося продовжити у worktree",
   "session.header.search.placeholder": "Пошук {{project}}",
   "session.header.searchFiles": "Пошук файлів",
   "session.header.openIn": "Відкрити в",
@@ -1006,8 +1040,7 @@ export const dict = {
   "settings.indexing.title": "Індексування",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
-  "settings.indexing.enable.description":
-    "Увімкніть або вимкніть семантичне індексування кодової бази для цього робочого простору.",
+  "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
   "settings.indexing.provider.title": "Провайдер ембедингів",
   "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
   "settings.indexing.model.title": "Модель ембедингів",
@@ -1175,6 +1208,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
@@ -1337,6 +1373,13 @@ export const dict = {
   "settings.display.layout.description": "Режим макету для інтерфейсу чату",
   "settings.display.layout.auto": "Автоматично",
   "settings.display.layout.stretch": "Розтягнути",
+  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
+  "settings.display.reasoningAutoCollapse.description":
+    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",
@@ -1348,6 +1391,7 @@ export const dict = {
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
   "settings.providers.disabled": "Вимкнені провайдери",
   "settings.providers.disabled.description": "Провайдери, що будуть приховані у списку провайдерів",
+  "settings.providers.disabled.enable": "Увімкнути",
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",

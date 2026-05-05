@@ -4,7 +4,7 @@ import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
-import { Global } from "../../src/global"
+import { Global } from "@opencode-ai/core/global"
 
 afterEach(async () => {
   await Instance.disposeAll()

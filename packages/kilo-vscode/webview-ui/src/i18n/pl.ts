@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
   "prompt.action.stop": "Zatrzymaj",
   "prompt.action.enhance": "Ulepsz prompt",
+  "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
+  "prompt.action.autoApprove.disable": "Wyłącz automatyczne zatwierdzanie",
+  "prompt.action.autoApprove.enabled":
+    "Automatyczne zatwierdzanie jest włączone. Prośby o uprawnienia będą zatwierdzane automatycznie.",
+  "prompt.action.autoApprove.disabled":
+    "Automatyczne zatwierdzanie jest wyłączone. Kliknij, aby automatycznie zatwierdzać prośby o uprawnienia.",
   "prompt.action.resetModel": "Zresetuj model do domyślnego",
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
@@ -538,7 +544,36 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Główna gałąź ({{branch}})",
   "session.new.worktree.create": "Utwórz nowe drzewo robocze",
   "session.new.lastModified": "Ostatnio zmodyfikowano",
-
+  "sidebar.session.newSession": "Nowa Sesja",
+  "sidebar.session.newSession.tooltip": "Rozpocznij nową konwersację, zachowując obecną sesję bez zmian.",
+  "sidebar.session.newSession.disabled": "Ta sesja jest już nowa. Rozpocznij czat lub zamiast tego utwórz worktree.",
+  "sidebar.session.newWorktree": "Nowe Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Utwórz odizolowane git worktree, aby bezpiecznie eksperymentować, oddzielać zmiany i uruchamiać równoległe sesje bez zakłócania obecnej gałęzi.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Otwórz okno dialogowe worktree w Agent Manager, aby skonfigurować nowe worktree przed jego utworzeniem.",
+  "sidebar.session.newWorktree.from": "Nowe Worktree z",
+  "sidebar.session.currentBranch": "obecna gałąź",
+  "sidebar.session.moveToWorktree": "Przenieś do Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Przenieś tę konwersację i obecne lokalne zmiany do dedykowanego worktree w celu izolowanej dalszej pracy.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Przenieś tę rozmowę i 1 zmieniony plik do dedykowanego worktree w celu izolowanej dalszej pracy.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Przenieś tę rozmowę i {{files}} zmienionych plików do dedykowanego worktree w celu izolowanej dalszej pracy.",
+  "sidebar.session.showChanges.tooltip.empty": "Otwórz widok zmian, aby sprawdzić obecne drzewo robocze.",
+  "sidebar.session.showChanges.tooltip.one": "1 plik zmieniony · +{{additions}} -{{deletions}}. Otwórz widok zmian.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} zmienionych plików · +{{additions}} -{{deletions}}. Otwórz widok zmian.",
+  "sidebar.session.agentManager.tooltip":
+    "Otwórz Agent Manager, aby uzyskać pełny przegląd równoległych sesji i worktree, ułatwiając koordynację długotrwałych zadań w jednym miejscu.",
+  "sidebar.session.openAgentManager": "Otwórz Agent Manager",
+  "sidebar.session.progress.capturing": "Przechwytywanie zmian...",
+  "sidebar.session.progress.creating": "Tworzenie worktree...",
+  "sidebar.session.progress.setup": "Uruchamianie konfiguracji...",
+  "sidebar.session.progress.transferring": "Przesyłanie zmian...",
+  "sidebar.session.progress.forking": "Uruchamianie sesji...",
+  "sidebar.session.progress.failed": "Nie udało się kontynuować w worktree",
   "session.header.search.placeholder": "Szukaj {{project}}",
   "session.header.searchFiles": "Szukaj plików",
   "session.header.openIn": "Otwórz w",
@@ -1145,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
+  "settings.experimental.agentManagerTool.title": "Narzędzie Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Zezwól agentom na uruchamianie lokalnych sesji Agent Manager i sesji worktree z wywołania narzędzia",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
@@ -1162,8 +1200,7 @@ export const dict = {
   "settings.indexing.dimension.description": "Pozostaw puste, aby automatycznie wykryć wymiar osadzania z modelu.",
   "settings.indexing.dimension.placeholder": "Automatycznie",
   "settings.indexing.dimension.title": "Wymiar wektora",
-  "settings.indexing.enable.description":
-    "Włącz lub wyłącz semantyczne indeksowanie bazy kodu dla tego obszaru roboczego.",
+  "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
   "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",
@@ -1369,6 +1406,13 @@ export const dict = {
   "settings.display.layout.description": "Tryb układu interfejsu czatu",
   "settings.display.layout.auto": "Automatyczny",
   "settings.display.layout.stretch": "Rozciągnij",
+  "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
+  "settings.display.reasoningAutoCollapse.description":
+    "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Domyślny model",
   "settings.providers.defaultModel.description": "Główny model do rozmów",
   "settings.providers.smallModel.title": "Mały model",
@@ -1376,6 +1420,7 @@ export const dict = {
     "Lekki model do generowania tytułów, wiadomości commitów, ulepszania zapytań i innych szybkich zadań",
   "settings.providers.disabled": "Wyłączeni dostawcy",
   "settings.providers.disabled.description": "Dostawcy do ukrycia z listy",
+  "settings.providers.disabled.enable": "Włącz",
   "settings.providers.enabled": "Włączeni dostawcy (biała lista)",
   "settings.providers.enabled.description": "Jeśli ustawiono, tylko ci dostawcy będą dostępni",
   "settings.providers.notSet": "Nie ustawiono (użyj domyślnego serwera)",

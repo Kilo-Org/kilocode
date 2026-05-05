@@ -17,7 +17,18 @@ type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: 
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
 
-// Poll /global/health at the same interval as packages/app/src/context/server.tsx.
+function isNotFound(err: unknown) {
+  if (!err || typeof err !== "object") return false
+  const obj = err as Record<string, unknown>
+  if (obj.name === "NotFoundError") return true
+  if (obj.status === 404) return true
+  if (obj.data && typeof obj.data === "object") {
+    return (obj.data as Record<string, unknown>).name === "NotFoundError"
+  }
+  return false
+}
+
+// Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
@@ -385,7 +396,7 @@ export class KiloConnectionService {
       if (perms) {
         for (const perm of perms) {
           const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
-          if (error) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
+          if (error && !isNotFound(error)) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
         }
       }
       const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })
@@ -503,7 +514,6 @@ export class KiloConnectionService {
 
   /**
    * Start polling GET /global/health every 10 seconds.
-   * Ported from packages/app/src/context/server.tsx (HEALTH_POLL_INTERVAL_MS).
    * Provides a second detection channel for server death independent of the SSE heartbeat.
    * If the health check fails while we believe we are connected, the SSE client is
    * disconnected so its reconnect loop kicks in immediately.

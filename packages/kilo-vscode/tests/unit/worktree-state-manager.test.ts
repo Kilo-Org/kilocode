@@ -185,6 +185,32 @@ describe("WorktreeStateManager", () => {
 
       expect(fs.existsSync(path.join(fresh, ".kilo", "agent-manager.json"))).toBe(true)
     })
+
+    it("does not overwrite a corrupt state file after load fails", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(file, "{", "utf-8")
+
+      await manager.load()
+      manager.addSession("local-after-failure", null)
+      await manager.flush()
+      await manager.save()
+
+      expect(fs.readFileSync(file, "utf-8")).toBe("{")
+      expect(logs.some((l) => l.includes("Skipping save because state failed to load"))).toBe(true)
+    })
+
+    it("allows saves after a later missing-file reload", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(file, "{", "utf-8")
+
+      await manager.load()
+      fs.rmSync(file)
+      await manager.load()
+      manager.addSession("local-after-missing", null)
+      await manager.flush()
+
+      expect(JSON.parse(fs.readFileSync(file, "utf-8")).sessions["local-after-missing"].worktreeId).toBeNull()
+    })
   })
 
   describe("tab order", () => {

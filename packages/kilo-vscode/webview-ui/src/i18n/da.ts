@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Besvar eller afvis det afventende spørgsmål først",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Forbedr prompt",
+  "prompt.action.autoApprove.enable": "Aktiver automatisk godkendelse",
+  "prompt.action.autoApprove.disable": "Deaktiver automatisk godkendelse",
+  "prompt.action.autoApprove.enabled":
+    "Automatisk godkendelse er aktiveret. Tilladelsesanmodninger godkendes automatisk.",
+  "prompt.action.autoApprove.disabled":
+    "Automatisk godkendelse er deaktiveret. Klik for at godkende tilladelsesanmodninger automatisk.",
   "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
@@ -536,7 +542,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
   "session.new.worktree.create": "Opret nyt worktree",
   "session.new.lastModified": "Sidst ændret",
-
+  "sidebar.session.newSession": "Ny Session",
+  "sidebar.session.newSession.tooltip": "Start en frisk samtale, mens den nuværende session holdes intakt.",
+  "sidebar.session.newSession.disabled":
+    "Denne session er allerede ny. Start med at chatte eller opret et worktree i stedet.",
+  "sidebar.session.newWorktree": "Nyt Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Opret et isoleret git worktree for at eksperimentere sikkert, holde ændringer adskilt og køre parallelle sessioner uden at forstyrre din nuværende branch.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Åbn Agent Manager worktree-dialogen for at konfigurere et nyt worktree før oprettelse.",
+  "sidebar.session.newWorktree.from": "Nyt Worktree fra",
+  "sidebar.session.currentBranch": "nuværende branch",
+  "sidebar.session.moveToWorktree": "Flyt til Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Flyt denne samtale og dine nuværende lokale ændringer til et dedikeret worktree for isoleret opfølgningsarbejde.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Flyt denne samtale og 1 ændret fil til et dedikeret worktree for isoleret opfølgende arbejde.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Flyt denne samtale og {{files}} ændrede filer til et dedikeret worktree for isoleret opfølgende arbejde.",
+  "sidebar.session.showChanges.tooltip.empty": "Åbn ændringsvisningen for at inspicere det nuværende worktree.",
+  "sidebar.session.showChanges.tooltip.one": "1 fil ændret · +{{additions}} -{{deletions}}. Åbn ændringsvisningen.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} filer ændret · +{{additions}} -{{deletions}}. Åbn ændringsvisningen.",
+  "sidebar.session.agentManager.tooltip":
+    "Åbn Agent Manager for et komplet overblik over parallelle sessioner og worktrees, så du kan koordinere langvarige opgaver ét sted.",
+  "sidebar.session.openAgentManager": "Åbn Agent Manager",
+  "sidebar.session.progress.capturing": "Fanger ændringer...",
+  "sidebar.session.progress.creating": "Opretter worktree...",
+  "sidebar.session.progress.setup": "Kører opsætning...",
+  "sidebar.session.progress.transferring": "Overfører ændringer...",
+  "sidebar.session.progress.forking": "Starter session...",
+  "sidebar.session.progress.failed": "Kunne ikke fortsætte i worktree",
   "session.header.search.placeholder": "Søg {{project}}",
   "session.header.searchFiles": "Søg efter filer",
   "session.header.openIn": "Åbn i",
@@ -731,7 +767,7 @@ export const dict = {
 
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
-  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra for dette arbejdsområde.",
+  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
@@ -1167,6 +1203,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-værktøj",
+  "settings.experimental.agentManagerTool.description":
+    "Tillad agenter at starte lokale Agent Manager-sessioner og worktree-sessioner fra et værktøjskald",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
@@ -1360,6 +1399,13 @@ export const dict = {
   "settings.display.layout.description": "Layouttilstand for chatgrænsefladen",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Stræk",
+  "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
+  "settings.display.reasoningAutoCollapse.description":
+    "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodel",
   "settings.providers.defaultModel.description": "Primær model til samtaler",
   "settings.providers.smallModel.title": "Lille model",
@@ -1367,6 +1413,7 @@ export const dict = {
     "Letvægtsmodel til titelgenerering, generering af commit-beskeder, prompt-forbedring og andre hurtige opgaver",
   "settings.providers.disabled": "Deaktiverede udbydere",
   "settings.providers.disabled.description": "Udbydere at skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverede udbydere (hvidliste)",
   "settings.providers.enabled.description": "Hvis angivet, er kun disse udbydere tilgængelige",
   "settings.providers.notSet": "Ikke angivet (brug serverstandard)",
