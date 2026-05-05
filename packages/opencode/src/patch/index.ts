@@ -310,14 +310,20 @@ interface ApplyPatchFileUpdate {
   encoding: string // kilocode_change
 }
 
-export function deriveNewContentsFromChunks(filePath: string, chunks: UpdateFileChunk[]): ApplyPatchFileUpdate {
+// kilocode_change start - async (was sync) to avoid blocking the event loop on large files.
+export async function deriveNewContentsFromChunks(
+  filePath: string,
+  chunks: UpdateFileChunk[],
+): Promise<ApplyPatchFileUpdate> {
+  // kilocode_change end
   // Read original file content
   let originalContent: ReturnType<typeof Bom.split>
   let encoding: string // kilocode_change - track detected encoding for round-trip write
   try {
     // kilocode_change start - encoding-aware read replaces readFileSync(filePath, "utf-8").
-    // Encoding.readSync strips UTF-8 BOMs so the BOM flag is derived from the encoding label.
-    const result = Encoding.readSync(filePath)
+    // Encoding.read strips UTF-8 BOMs so the BOM flag is derived from the encoding label.
+    // Async variant avoids blocking the event loop on large files.
+    const result = await Encoding.read(filePath)
     originalContent = { bom: result.encoding === "utf-8-bom", text: result.text }
     encoding = result.encoding
     // kilocode_change end
@@ -550,7 +556,7 @@ export async function applyHunksToFiles(hunks: Hunk[]): Promise<AffectedPaths> {
         break
 
       case "update":
-        const fileUpdate = deriveNewContentsFromChunks(hunk.path, hunk.chunks)
+        const fileUpdate = await deriveNewContentsFromChunks(hunk.path, hunk.chunks) // kilocode_change - now async
 
         if (hunk.move_path) {
           // Handle file move
@@ -641,7 +647,7 @@ export async function maybeParseApplyPatchVerified(
           case "update":
             const updatePath = path.resolve(effectiveCwd, hunk.path)
             try {
-              const fileUpdate = deriveNewContentsFromChunks(updatePath, hunk.chunks)
+              const fileUpdate = await deriveNewContentsFromChunks(updatePath, hunk.chunks) // kilocode_change - now async
               changes.set(resolvedPath, {
                 type: "update",
                 unified_diff: fileUpdate.unified_diff,

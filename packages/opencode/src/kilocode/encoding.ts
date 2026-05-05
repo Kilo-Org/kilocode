@@ -34,6 +34,12 @@ export namespace Encoding {
    */
   export const UTF8_BOM = "utf-8-bom"
   const UTF8_BOM_BYTES = Buffer.from([0xef, 0xbb, 0xbf])
+  /**
+   * Cap jschardet input to a 64 KB prefix. jschardet's statistical detection
+   * only needs a sample; running it over multi-GB buffers wastes CPU and
+   * memory without improving accuracy.
+   */
+  const DETECT_SAMPLE_BYTES = 64 * 1024
 
   function hasUtf8Bom(bytes: Buffer): boolean {
     return bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf
@@ -105,7 +111,8 @@ export namespace Encoding {
   export function detect(bytes: Buffer): string {
     if (bytes.length === 0) return DEFAULT
     if (isUtf8(bytes)) return hasUtf8Bom(bytes) ? UTF8_BOM : DEFAULT
-    const result = jschardet.detect(bytes)
+    const sample = bytes.length > DETECT_SAMPLE_BYTES ? bytes.subarray(0, DETECT_SAMPLE_BYTES) : bytes
+    const result = jschardet.detect(sample)
     if (!result.encoding) return DEFAULT
     const enc = normalize(result.encoding)
     if (!iconv.encodingExists(enc)) return DEFAULT

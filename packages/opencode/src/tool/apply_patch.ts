@@ -122,14 +122,15 @@ export const ApplyPatchTool = Tool.define(
             let encoding: string // kilocode_change - filled in by the patch helper below
 
             // Apply the update chunks to get new content
-            try {
-              const fileUpdate = Patch.deriveNewContentsFromChunks(filePath, hunk.chunks)
-              newContent = fileUpdate.content
-              bom = fileUpdate.bom
-              encoding = fileUpdate.encoding // kilocode_change
-            } catch (error) {
-              return yield* Effect.fail(new Error(`apply_patch verification failed: ${error}`))
-            }
+            // kilocode_change start - deriveNewContentsFromChunks is now async (non-blocking I/O)
+            const fileUpdate = yield* Effect.tryPromise({
+              try: () => Patch.deriveNewContentsFromChunks(filePath, hunk.chunks),
+              catch: (error) => new Error(`apply_patch verification failed: ${error}`),
+            })
+            newContent = fileUpdate.content
+            bom = fileUpdate.bom
+            encoding = fileUpdate.encoding
+            // kilocode_change end
 
             const diff = trimDiff(createTwoFilesPatch(filePath, filePath, oldContent, newContent))
 

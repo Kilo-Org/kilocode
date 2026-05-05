@@ -23,6 +23,12 @@ const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const DIRECTORY_CONCURRENCY = 8 // kilocode_change
+// kilocode_change start - guard against whole-file reads of huge files.
+// Encoding.read buffers the entire file for BOM-aware decoding, so cap the
+// input size to avoid 3-4x memory blowup on multi-GB files.
+const MAX_FILE_BYTES = 10 * 1024 * 1024
+const MAX_FILE_LABEL = `${MAX_FILE_BYTES / (1024 * 1024)} MB`
+// kilocode_change end
 
 // `offset` and `limit` were originally `z.coerce.number()` — the runtime
 // coercion was useful when the tool was called from a shell but serves no
@@ -298,6 +304,14 @@ export const ReadTool = Tool.define(
       if (isBinaryFile(filepath, sample)) {
         return yield* Effect.fail(new Error(`Cannot read binary file: ${filepath}`))
       }
+
+      // kilocode_change start - reject files over MAX_FILE_BYTES up front.
+      if (Number(stat.size) > MAX_FILE_BYTES) {
+        return yield* Effect.fail(
+          new Error(`File too large to read: ${filepath} (${Number(stat.size)} bytes, limit ${MAX_FILE_LABEL})`),
+        )
+      }
+      // kilocode_change end
 
       const file = yield* Effect.promise(() =>
         lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset ?? 1 }),
