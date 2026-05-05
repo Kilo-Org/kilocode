@@ -1530,4 +1530,11 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
+  "diffViewer.source.workspace.label": "Lokalt arbejdsområde",
+  "diffViewer.source.session.label": "Nuværende session",
+  "diffViewer.group.workspace": "Arbejdsområde",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 }

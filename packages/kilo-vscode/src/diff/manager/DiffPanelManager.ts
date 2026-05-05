@@ -223,7 +223,7 @@ export class DiffPanelManager implements vscode.Disposable {
     this.currentSourceId = id
     this.surface.post({ type: "diffViewer.loading", loading: true })
     this.surface.post({ type: "diffViewer.diffs", diffs: [] })
-    this.surface.post({ type: "diffViewer.notice", message: "" })
+    this.surface.post({ type: "diffViewer.notice", notice: undefined })
 
     this.delayDisposable = this.scheduler.delay(SWAP_LOADING_MS, () => {
       this.delayDisposable = undefined
@@ -277,7 +277,7 @@ export class DiffPanelManager implements vscode.Disposable {
         this.log("Source error:", msg.message)
         this.surface.post({ type: "diffViewer.loading", loading: false })
       } else if (msg.type === "notice") {
-        this.surface.post({ type: "diffViewer.notice", message: msg.message })
+        this.surface.post({ type: "diffViewer.notice", notice: msg.notice })
       }
     }
   }

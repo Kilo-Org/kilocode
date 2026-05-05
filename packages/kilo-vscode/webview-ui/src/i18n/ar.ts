@@ -1505,4 +1505,11 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
+  "diffViewer.source.workspace.label": "مساحة العمل المحلية",
+  "diffViewer.source.session.label": "الجلسة الحالية",
+  "diffViewer.group.workspace": "مساحة العمل",
+  "diffViewer.group.session": "الجلسة",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 }

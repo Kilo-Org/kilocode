@@ -3,7 +3,6 @@ import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import {
   POLL_INTERVAL_MS,
   SessionDiffSource,
-  SNAPSHOTS_DISABLED_NOTICE,
   type SessionDiffFetch,
   type SnapshotEnabledCheck,
 } from "../../src/diff/sources/session"
@@ -190,7 +189,7 @@ describe("SessionDiffSource lifecycle", () => {
     expect(calls).toEqual([])
     expect(messages).toEqual([
       { type: "loading", loading: true },
-      { type: "notice", message: SNAPSHOTS_DISABLED_NOTICE },
+      { type: "notice", notice: "snapshots-disabled" },
       { type: "diffs", diffs: [] },
       { type: "loading", loading: false },
     ])

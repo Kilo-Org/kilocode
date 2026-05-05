@@ -1510,4 +1510,11 @@ export const dict = {
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
   "notifications.action.tryModelGeneric": "모델 시도",
+  "diffViewer.source.workspace.label": "로컬 워크스페이스",
+  "diffViewer.source.session.label": "현재 세션",
+  "diffViewer.group.workspace": "워크스페이스",
+  "diffViewer.group.session": "세션",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 }

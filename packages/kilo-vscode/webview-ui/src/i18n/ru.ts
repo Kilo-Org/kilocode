@@ -1535,4 +1535,11 @@ export const dict = {
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
   "notifications.action.tryModelGeneric": "Попробовать модель",
+  "diffViewer.source.workspace.label": "Локальное рабочее пространство",
+  "diffViewer.source.session.label": "Текущая сессия",
+  "diffViewer.group.workspace": "Рабочее пространство",
+  "diffViewer.group.session": "Сессия",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 }

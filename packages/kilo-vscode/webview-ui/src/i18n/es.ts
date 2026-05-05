@@ -1548,4 +1548,11 @@ export const dict = {
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
   "notifications.action.tryModelGeneric": "Probar modelo",
+  "diffViewer.source.workspace.label": "Espacio de trabajo local",
+  "diffViewer.source.session.label": "Sesión actual",
+  "diffViewer.group.workspace": "Espacio de trabajo",
+  "diffViewer.group.session": "Sesión",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
 }

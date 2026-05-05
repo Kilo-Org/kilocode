@@ -1562,4 +1562,11 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
+  "diffViewer.source.workspace.label": "Lokale werkruimte",
+  "diffViewer.source.session.label": "Huidige sessie",
+  "diffViewer.group.workspace": "Werkruimte",
+  "diffViewer.group.session": "Sessie",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 }

@@ -12,12 +12,20 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
-import { LanguageProvider } from "../src/context/language"
+import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
 import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
-import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../src/types/messages/extension-messages"
+import type {
+  DiffSourceCapabilities,
+  DiffSourceDescriptor,
+  DiffViewerNotice,
+} from "../src/types/messages/extension-messages"
 import { DiffPickerHeader } from "./DiffPickerHeader"
+
+const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
+  "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
+}
 
 type DiffStyle = "unified" | "split"
 
@@ -25,6 +33,7 @@ const post = (message: Record<string, unknown>) => getVSCodeAPI().postMessage(me
 
 const DiffViewerContent: Component = () => {
   const vscode = useVSCode()
+  const { t } = useLanguage()
   const [diffs, setDiffs] = createSignal<WorktreeFileDiff[]>([])
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
@@ -33,7 +42,13 @@ const DiffViewerContent: Component = () => {
   const [availableSources, setAvailableSources] = createSignal<DiffSourceDescriptor[]>([])
   const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
   const [capabilities, setCapabilities] = createSignal<DiffSourceCapabilities | undefined>(undefined)
-  const [notice, setNotice] = createSignal<string>("")
+  const [notice, setNotice] = createSignal<DiffViewerNotice | undefined>(undefined)
+
+  const noticeText = () => {
+    const n = notice()
+    if (!n) return ""
+    return t(NOTICE_KEYS[n])
+  }
 
   const markReverting = (file: string, active: boolean) => {
     setReverting((prev) => {
@@ -72,7 +87,7 @@ const DiffViewerContent: Component = () => {
     }
 
     if (msg.type === "diffViewer.notice") {
-      setNotice(msg.message)
+      setNotice(msg.notice)
       return
     }
   })
@@ -92,7 +107,7 @@ const DiffViewerContent: Component = () => {
       setComments([])
       setDiffStyle("unified")
       setReverting(new Set())
-      setNotice("")
+      setNotice(undefined)
     }),
   )
 
@@ -113,12 +128,12 @@ const DiffViewerContent: Component = () => {
       <Show when={availableSources().length > 0}>
         <DiffPickerHeader descriptors={availableSources()} currentId={currentSourceId()} onSelect={selectSource} />
       </Show>
-      <Show when={notice()}>
+      <Show when={noticeText()}>
         <div class="diff-viewer-notice" role="status">
           <span class="diff-viewer-notice-icon">
             <Icon name="warning" size="small" />
           </span>
-          <span class="diff-viewer-notice-text">{notice()}</span>
+          <span class="diff-viewer-notice-text">{noticeText()}</span>
         </div>
       </Show>
       <FullScreenDiffView

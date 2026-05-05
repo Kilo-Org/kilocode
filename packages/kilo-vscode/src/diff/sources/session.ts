@@ -13,9 +13,6 @@ export const SESSION_PREFIX = "session:"
 
 export const POLL_INTERVAL_MS = 2500
 
-export const SNAPSHOTS_DISABLED_NOTICE =
-  "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes."
-
 export function sessionSourceId(sessionId: string): string {
   return `${SESSION_PREFIX}${sessionId}`
 }
@@ -59,7 +56,7 @@ export class SessionDiffSource implements DiffSource {
         if (this.disposed) return
         if (!enabled) {
           this.snapshotsDisabled = true
-          post({ type: "notice", message: SNAPSHOTS_DISABLED_NOTICE })
+          post({ type: "notice", notice: "snapshots-disabled" })
           post({ type: "diffs", diffs: [] })
           return
         }

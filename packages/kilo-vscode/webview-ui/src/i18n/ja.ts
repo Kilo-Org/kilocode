@@ -1525,4 +1525,11 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
+  "diffViewer.source.workspace.label": "ローカルワークスペース",
+  "diffViewer.source.session.label": "現在のセッション",
+  "diffViewer.group.workspace": "ワークスペース",
+  "diffViewer.group.session": "セッション",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 }

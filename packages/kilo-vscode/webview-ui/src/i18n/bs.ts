@@ -1540,4 +1540,11 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
+  "diffViewer.source.workspace.label": "Lokalni radni prostor",
+  "diffViewer.source.session.label": "Trenutna sesija",
+  "diffViewer.group.workspace": "Radni prostor",
+  "diffViewer.group.session": "Sesija",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
 }

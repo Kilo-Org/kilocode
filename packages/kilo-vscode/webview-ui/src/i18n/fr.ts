@@ -1566,4 +1566,11 @@ export const dict = {
   "notifications.action.close": "Fermer",
   "notifications.action.tryModel": "Essayer {{model}}",
   "notifications.action.tryModelGeneric": "Essayer le modèle",
+  "diffViewer.source.workspace.label": "Espace de travail local",
+  "diffViewer.source.session.label": "Session actuelle",
+  "diffViewer.group.workspace": "Espace de travail",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 }

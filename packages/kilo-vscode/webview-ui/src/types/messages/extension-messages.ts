@@ -729,10 +729,15 @@ export interface DiffViewerCapabilitiesMessage {
   capabilities: DiffSourceCapabilities
 }
 
+/**
+ * Well-known notice kinds surfaced by a diff source. The webview maps these
+ * to translated user-facing messages. `undefined` clears any active notice.
+ */
+export type DiffViewerNotice = "snapshots-disabled"
+
 export interface DiffViewerNoticeMessage {
   type: "diffViewer.notice"
-  /** Non-empty string shows a banner in the diff viewer. Empty string clears it. */
-  message: string
+  notice: DiffViewerNotice | undefined
 }
 
 export interface ClearPendingPromptsMessage {

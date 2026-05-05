@@ -1525,4 +1525,11 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
+  "diffViewer.source.workspace.label": "Lokalt arbeidsområde",
+  "diffViewer.source.session.label": "Gjeldende økt",
+  "diffViewer.group.workspace": "Arbeidsområde",
+  "diffViewer.group.session": "Økt",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 } satisfies Partial<Record<Keys, string>>

@@ -1533,4 +1533,12 @@ export const dict = {
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
   "notifications.action.tryModelGeneric": "Try Model",
+
+  "diffViewer.source.workspace.label": "Workspace local",
+  "diffViewer.source.session.label": "Current session",
+  "diffViewer.group.workspace": "Workspace",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
 }

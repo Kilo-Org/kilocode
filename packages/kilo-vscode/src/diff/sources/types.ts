@@ -16,11 +16,17 @@ export interface DiffSourceDescriptor {
   capabilities: DiffSourceCapabilities
 }
 
+/**
+ * Well-known notice kinds that a source can surface to the diff viewer.
+ * The webview maps these to translated messages.
+ */
+export type DiffSourceNotice = "snapshots-disabled"
+
 export type DiffSourceMessage =
   | { type: "diffs"; diffs: DiffFile[] }
   | { type: "loading"; loading: boolean }
   | { type: "error"; message: string }
-  | { type: "notice"; message: string }
+  | { type: "notice"; notice: DiffSourceNotice | undefined }
 
 export type DiffSourcePost = (msg: DiffSourceMessage) => void
 

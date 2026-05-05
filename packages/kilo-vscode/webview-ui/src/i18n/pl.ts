@@ -1535,4 +1535,11 @@ export const dict = {
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
   "notifications.action.tryModelGeneric": "Wypróbuj model",
+  "diffViewer.source.workspace.label": "Lokalny obszar roboczy",
+  "diffViewer.source.session.label": "Bieżąca sesja",
+  "diffViewer.group.workspace": "Obszar roboczy",
+  "diffViewer.group.session": "Sesja",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 }

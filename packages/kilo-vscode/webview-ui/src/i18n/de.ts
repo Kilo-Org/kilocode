@@ -1560,4 +1560,11 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
+  "diffViewer.source.workspace.label": "Lokaler Arbeitsbereich",
+  "diffViewer.source.session.label": "Aktuelle Sitzung",
+  "diffViewer.group.workspace": "Arbeitsbereich",
+  "diffViewer.group.session": "Sitzung",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
 } satisfies Partial<Record<Keys, string>>
