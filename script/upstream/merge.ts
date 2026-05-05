@@ -248,9 +248,10 @@ async function main() {
   const currentBranch = await git.getCurrentBranch()
   logger.info(`Current branch: ${currentBranch}`)
 
-  const base = options.baseBranch === "HEAD" ? currentBranch : options.baseBranch
+  const useCurrentHead = options.baseBranch === "HEAD"
+  const base = useCurrentHead ? currentBranch : options.baseBranch
   const config = loadConfig(base ? { baseBranch: base } : undefined)
-  if (options.baseBranch === "HEAD") logger.info(`Using current branch as base: ${currentBranch}`)
+  if (useCurrentHead) logger.info(`Using current branch as base: ${currentBranch}`)
 
   // Enable git rerere so conflict resolutions are recorded and reused across merges
   if (!options.dryRun) {
@@ -397,7 +398,11 @@ async function main() {
 
   // Create backup branch
   await git.checkout(config.baseBranch)
-  await git.pull(config.originRemote)
+  if (useCurrentHead) {
+    logger.info("Skipping pull for --base-branch HEAD; using current local branch state")
+  } else {
+    await git.pull(config.originRemote, config.baseBranch)
+  }
   const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
