@@ -729,6 +729,12 @@ export interface DiffViewerCapabilitiesMessage {
   capabilities: DiffSourceCapabilities
 }
 
+export interface DiffViewerNoticeMessage {
+  type: "diffViewer.notice"
+  /** Non-empty string shows a banner in the diff viewer. Empty string clears it. */
+  message: string
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -931,6 +937,7 @@ export type ExtensionMessage =
   | DiffViewerRevertFileResultMessage
   | SetAvailableSourcesMessage
   | DiffViewerCapabilitiesMessage
+  | DiffViewerNoticeMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage

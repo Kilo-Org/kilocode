@@ -20,6 +20,7 @@ export type DiffSourceMessage =
   | { type: "diffs"; diffs: DiffFile[] }
   | { type: "loading"; loading: boolean }
   | { type: "error"; message: string }
+  | { type: "notice"; message: string }
 
 export type DiffSourcePost = (msg: DiffSourceMessage) => void
 

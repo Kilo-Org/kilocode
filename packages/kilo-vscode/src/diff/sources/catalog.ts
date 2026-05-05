@@ -2,7 +2,14 @@ import type { KiloConnectionService } from "../../services/cli-backend"
 import type { PanelContext } from "../types"
 import type { DiffSource, DiffSourceDescriptor } from "./types"
 import { WorktreeDiffSource, WORKSPACE_DESCRIPTOR, WORKSPACE_SOURCE_ID } from "./worktree"
-import { SESSION_PREFIX, SessionDiffSource, sessionDescriptor, sessionSourceId, type SessionDiffFetch } from "./session"
+import {
+  SESSION_PREFIX,
+  SessionDiffSource,
+  sessionDescriptor,
+  sessionSourceId,
+  type SessionDiffFetch,
+  type SnapshotEnabledCheck,
+} from "./session"
 
 /**
  * Enumerates and constructs diff sources for a PanelContext.
@@ -12,6 +19,13 @@ export class DiffSourceCatalog {
     const client = this.connection.getClient()
     const { data } = await client.session.diff({ sessionID, directory }, { throwOnError: true })
     return data ?? []
+  }
+
+  private readonly checkSnapshotsEnabled: SnapshotEnabledCheck = async (directory) => {
+    const client = this.connection.getClient()
+    const { data } = await client.config.get({ directory }, { throwOnError: true })
+    // Snapshot tracking defaults to true when omitted.
+    return data?.snapshot !== false
   }
 
   constructor(private readonly connection: KiloConnectionService) {}
@@ -36,7 +50,7 @@ export class DiffSourceCatalog {
     if (id.startsWith(SESSION_PREFIX)) {
       const sessionId = id.slice(SESSION_PREFIX.length)
       if (!sessionId) throw new Error(`DiffSourceCatalog.build: empty session id in "${id}"`)
-      return new SessionDiffSource(sessionId, this.sessionFetch, ctx.workspaceRoot)
+      return new SessionDiffSource(sessionId, this.sessionFetch, ctx.workspaceRoot, this.checkSnapshotsEnabled)
     }
 
     throw new Error(`DiffSourceCatalog.build: unknown source id "${id}"`)

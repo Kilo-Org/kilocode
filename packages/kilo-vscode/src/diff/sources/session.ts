@@ -7,9 +7,14 @@ import { patchToBeforeAfter } from "./patch-to-before-after"
 
 export type SessionDiffFetch = (params: { sessionID: string; directory?: string }) => Promise<SnapshotFileDiff[]>
 
+export type SnapshotEnabledCheck = (directory?: string) => Promise<boolean>
+
 export const SESSION_PREFIX = "session:"
 
 export const POLL_INTERVAL_MS = 2500
+
+export const SNAPSHOTS_DISABLED_NOTICE =
+  "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes."
 
 export function sessionSourceId(sessionId: string): string {
   return `${SESSION_PREFIX}${sessionId}`
@@ -34,10 +39,13 @@ export class SessionDiffSource implements DiffSource {
   private interval: ReturnType<typeof setInterval> | undefined
   private disposed = false
 
+  private snapshotsDisabled = false
+
   constructor(
     private readonly sessionId: string,
     private readonly fetch: SessionDiffFetch,
     private readonly workspaceRoot?: string,
+    private readonly checkSnapshotsEnabled?: SnapshotEnabledCheck,
   ) {
     this.descriptor = sessionDescriptor(sessionId)
   }
@@ -46,6 +54,17 @@ export class SessionDiffSource implements DiffSource {
     post({ type: "loading", loading: true })
 
     try {
+      if (this.checkSnapshotsEnabled) {
+        const enabled = await this.checkSnapshotsEnabled(this.workspaceRoot)
+        if (this.disposed) return
+        if (!enabled) {
+          this.snapshotsDisabled = true
+          post({ type: "notice", message: SNAPSHOTS_DISABLED_NOTICE })
+          post({ type: "diffs", diffs: [] })
+          return
+        }
+      }
+
       const diffs = await this.fetchDiffs()
       if (this.disposed) return
       this.lastHash = hashFileDiffs(diffs as never)
@@ -61,6 +80,8 @@ export class SessionDiffSource implements DiffSource {
 
   start(post: DiffSourcePost): vscode.Disposable {
     this.stopPolling()
+    // Skip polling entirely when snapshots are disabled — nothing to fetch.
+    if (this.snapshotsDisabled) return new vscode.Disposable(() => {})
     this.interval = setInterval(() => {
       void this.poll(post)
     }, POLL_INTERVAL_MS)

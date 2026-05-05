@@ -1,6 +1,12 @@
 import { describe, it, expect } from "bun:test"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
-import { POLL_INTERVAL_MS, SessionDiffSource, type SessionDiffFetch } from "../../src/diff/sources/session"
+import {
+  POLL_INTERVAL_MS,
+  SessionDiffSource,
+  SNAPSHOTS_DISABLED_NOTICE,
+  type SessionDiffFetch,
+  type SnapshotEnabledCheck,
+} from "../../src/diff/sources/session"
 import type { DiffSourceMessage } from "../../src/diff/sources/types"
 
 type FetchCall = { sessionID: string; directory?: string }
@@ -169,6 +175,51 @@ describe("SessionDiffSource lifecycle", () => {
     expect(source.descriptor.id).toBe("session:abc")
     expect(source.descriptor.group).toBe("Session")
     expect(source.descriptor.capabilities).toEqual({ revert: false, comments: true })
+  })
+
+  it("posts the snapshots-disabled notice and skips fetch when the check returns false", async () => {
+    const { fetch, calls } = recording([
+      { file: "foo.ts", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" },
+    ])
+    const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => false
+    const source = new SessionDiffSource("s-disabled", fetch, "/repo", checkSnapshotsEnabled)
+    const { post, messages } = collect()
+
+    await source.initialFetch(post)
+
+    expect(calls).toEqual([])
+    expect(messages).toEqual([
+      { type: "loading", loading: true },
+      { type: "notice", message: SNAPSHOTS_DISABLED_NOTICE },
+      { type: "diffs", diffs: [] },
+      { type: "loading", loading: false },
+    ])
+  })
+
+  it("fetches normally when snapshots are enabled", async () => {
+    const { fetch, calls } = recording([])
+    const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => true
+    const source = new SessionDiffSource("s-enabled", fetch, "/repo", checkSnapshotsEnabled)
+    const { post, messages } = collect()
+
+    await source.initialFetch(post)
+
+    expect(calls).toEqual([{ sessionID: "s-enabled", directory: "/repo" }])
+    expect(messages.some((m) => m.type === "notice")).toBe(false)
+    expect(messages.filter((m) => m.type === "diffs")).toHaveLength(1)
+  })
+
+  it("start() is a no-op when snapshots are disabled", async () => {
+    const { fetch } = recording([])
+    const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => false
+    const source = new SessionDiffSource("s-disabled-2", fetch, "/repo", checkSnapshotsEnabled)
+    const { post } = collect()
+
+    await source.initialFetch(post)
+    const disposable = source.start(post)
+    expect(typeof disposable.dispose).toBe("function")
+    // Disposing must not throw even though no interval was scheduled.
+    disposable.dispose()
   })
 })
 

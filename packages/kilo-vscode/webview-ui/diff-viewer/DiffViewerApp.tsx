@@ -8,6 +8,7 @@ import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { File } from "@kilocode/kilo-ui/file"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
@@ -32,6 +33,7 @@ const DiffViewerContent: Component = () => {
   const [availableSources, setAvailableSources] = createSignal<DiffSourceDescriptor[]>([])
   const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
   const [capabilities, setCapabilities] = createSignal<DiffSourceCapabilities | undefined>(undefined)
+  const [notice, setNotice] = createSignal<string>("")
 
   const markReverting = (file: string, active: boolean) => {
     setReverting((prev) => {
@@ -68,6 +70,11 @@ const DiffViewerContent: Component = () => {
       setCapabilities(msg.capabilities)
       return
     }
+
+    if (msg.type === "diffViewer.notice") {
+      setNotice(msg.message)
+      return
+    }
   })
 
   const selectSource = (id: string) => {
@@ -85,6 +92,7 @@ const DiffViewerContent: Component = () => {
       setComments([])
       setDiffStyle("unified")
       setReverting(new Set())
+      setNotice("")
     }),
   )
 
@@ -104,6 +112,14 @@ const DiffViewerContent: Component = () => {
     <>
       <Show when={availableSources().length > 0}>
         <DiffPickerHeader descriptors={availableSources()} currentId={currentSourceId()} onSelect={selectSource} />
+      </Show>
+      <Show when={notice()}>
+        <div class="diff-viewer-notice" role="status">
+          <span class="diff-viewer-notice-icon">
+            <Icon name="warning" size="small" />
+          </span>
+          <span class="diff-viewer-notice-text">{notice()}</span>
+        </div>
       </Show>
       <FullScreenDiffView
         diffs={diffs()}
