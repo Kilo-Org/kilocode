@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, expect, it } from "bun:test"
 import { escapeWindowsPaths } from "./marked"
 
