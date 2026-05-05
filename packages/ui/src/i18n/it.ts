@@ -124,8 +124,8 @@ export const dict: Record<string, string> = {
   "ui.tool.questions": "Domande",
   "ui.tool.task": "Task",
   "ui.tool.skill": "Skill",
-  "ui.tool.agent": "Agent {{type}}",
-  "ui.tool.agent.default": "Agent",
+  "ui.tool.agent": "Agente {{type}}",
+  "ui.tool.agent.default": "Agente",
 
   "ui.common.file.one": "file",
   "ui.common.file.other": "file",
