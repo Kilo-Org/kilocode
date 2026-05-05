@@ -1548,6 +1548,8 @@ export const dict = {
   "diffViewer.source.workspace.tooltip":
     "Sve promjene na ovoj grani u poređenju s osnovnom granom. Uključuje nekomitovane datoteke (staged, unstaged, nepraćene) i lokalne commitove koji još nisu u osnovi.",
   "diffViewer.source.session.label": "Trenutna sesija",
+  "diffViewer.source.session.tooltip":
+    "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
   "diffViewer.group.session": "Sesija",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

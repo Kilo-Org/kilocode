@@ -142,14 +142,14 @@ class FakeCatalog extends DiffSourceCatalog {
 
 const WORKSPACE_DESC: DiffSourceDescriptor = {
   id: "workspace",
-  label: "Local Changes",
+  type: "workspace",
   group: "Git",
   capabilities: { revert: true, comments: true },
 }
 
 const SESSION_DESC: DiffSourceDescriptor = {
   id: "session:s1",
-  label: "Current session",
+  type: "session",
   group: "Session",
   capabilities: { revert: false, comments: true },
 }

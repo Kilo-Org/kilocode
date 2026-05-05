@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test"
 import type { KiloConnectionService } from "../../src/services/cli-backend"
 import { DiffSourceCatalog } from "../../src/diff/sources/catalog"
-import { SessionDiffSource } from "../../src/diff/sources/session"
-import { WorktreeDiffSource } from "../../src/diff/sources/worktree"
+import { SessionDiffSource, sessionDescriptor } from "../../src/diff/sources/session"
+import { WORKSPACE_DESCRIPTOR, WorktreeDiffSource } from "../../src/diff/sources/worktree"
 
 // Minimal stand-in for the connection service — the catalog only holds a
 // reference and passes it to the source constructors, so we never exercise
@@ -82,5 +82,17 @@ describe("DiffSourceCatalog.build", () => {
 
   it("throws on an unknown source id", () => {
     expect(() => makeCatalog().build("bogus", { workspaceRoot: "/repo" })).toThrow(/unknown source id/)
+  })
+})
+
+// The webview composes i18n keys from `type`. Keep the type values stable
+// so a rename here doesn't silently break existing translation dicts.
+describe("descriptor types", () => {
+  it("workspace descriptor has type 'workspace'", () => {
+    expect(WORKSPACE_DESCRIPTOR.type).toBe("workspace")
+  })
+
+  it("session descriptor has type 'session'", () => {
+    expect(sessionDescriptor("s1").type).toBe("session")
   })
 })

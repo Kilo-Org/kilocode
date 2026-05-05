@@ -1560,6 +1560,8 @@ export const dict = {
   "diffViewer.source.workspace.tooltip":
     "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
   "diffViewer.source.session.label": "Поточна сесія",
+  "diffViewer.source.session.tooltip":
+    "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

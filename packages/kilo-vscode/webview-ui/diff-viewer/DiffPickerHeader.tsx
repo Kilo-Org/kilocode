@@ -23,21 +23,14 @@ export const DiffPickerHeader: Component<DiffPickerHeaderProps> = (props) => {
   const current = () => props.descriptors.find((d) => d.id === props.currentId)
   const [highlight, setHighlight] = createSignal<string | undefined>(undefined)
 
-  const label = (desc: DiffSourceDescriptor): string => {
-    if (desc.id === "workspace") return t("diffViewer.source.workspace.label")
-    if (desc.id.startsWith("session:")) return t("diffViewer.source.session.label")
-    return desc.label
-  }
+  const label = (desc: DiffSourceDescriptor): string => t(`diffViewer.source.${desc.type}.label`)
 
-  const tooltip = (desc: DiffSourceDescriptor): string | undefined => {
-    if (desc.id === "workspace") return t("diffViewer.source.workspace.tooltip")
-    return undefined
-  }
+  const tooltip = (desc: DiffSourceDescriptor): string => t(`diffViewer.source.${desc.type}.tooltip`)
 
   const group = (desc: DiffSourceDescriptor): string => t(GROUP_KEYS[desc.group])
 
   const onHighlight = (desc: DiffSourceDescriptor | undefined) => {
-    if (!desc || !tooltip(desc)) {
+    if (!desc) {
       setHighlight(undefined)
       return
     }
@@ -75,10 +68,8 @@ export const DiffPickerHeader: Component<DiffPickerHeaderProps> = (props) => {
         >
           {(desc) => {
             if (!desc) return ""
-            const text = tooltip(desc)
-            if (!text) return label(desc)
             return (
-              <Tooltip value={text} placement="right" forceOpen={highlight() === desc.id}>
+              <Tooltip value={tooltip(desc)} placement="right" forceOpen={highlight() === desc.id}>
                 <span data-slot="diff-picker-option-label">{label(desc)}</span>
               </Tooltip>
             )

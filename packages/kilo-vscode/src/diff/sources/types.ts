@@ -6,10 +6,16 @@ export interface DiffSourceCapabilities {
   comments: boolean
 }
 
+/**
+ * Closed enum of diff source kinds. Drives i18n key composition:
+ * `diffViewer.source.<type>.label` and `diffViewer.source.<type>.tooltip`.
+ */
+export type DiffSourceType = "workspace" | "session"
+
 export interface DiffSourceDescriptor {
   /** Unique within a panel context. E.g. "workspace", "session:<sessionId>". */
   id: string
-  label: string
+  type: DiffSourceType
   group: "Session" | "Git"
   /** kilo-ui icon name. */
   icon?: string

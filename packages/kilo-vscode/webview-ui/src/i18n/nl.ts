@@ -1570,6 +1570,8 @@ export const dict = {
   "diffViewer.source.workspace.tooltip":
     "Alle wijzigingen in deze branch vergeleken met de base branch. Inclusief niet-gecommitte bestanden (staged, unstaged, ungetrackt) en lokale commits die nog niet in de base zitten.",
   "diffViewer.source.session.label": "Huidige sessie",
+  "diffViewer.source.session.tooltip":
+    "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

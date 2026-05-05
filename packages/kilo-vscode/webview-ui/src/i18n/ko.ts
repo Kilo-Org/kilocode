@@ -1518,6 +1518,8 @@ export const dict = {
   "diffViewer.source.workspace.tooltip":
     "베이스 브랜치와 비교한 이 브랜치의 모든 변경 사항. 커밋되지 않은 파일(staged, unstaged, 추적되지 않음)과 아직 베이스에 반영되지 않은 로컬 커밋을 포함합니다.",
   "diffViewer.source.session.label": "현재 세션",
+  "diffViewer.source.session.tooltip":
+    "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

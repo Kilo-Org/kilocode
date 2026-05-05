@@ -14,7 +14,7 @@ export const WORKSPACE_SOURCE_ID = "workspace"
 
 export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
   id: WORKSPACE_SOURCE_ID,
-  label: "Local Changes",
+  type: "workspace",
   group: "Git",
   capabilities: { revert: true, comments: true },
 }

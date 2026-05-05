@@ -1513,6 +1513,8 @@ export const dict = {
   "diffViewer.source.workspace.tooltip":
     "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
   "diffViewer.source.session.label": "الجلسة الحالية",
+  "diffViewer.source.session.tooltip":
+    "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
