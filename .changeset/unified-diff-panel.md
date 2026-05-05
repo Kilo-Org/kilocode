@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Unify the Changes panel so it hosts multiple diff sources (workspace local and current session) and lets you switch between them from a dropdown. The panel is a single global tab that swaps context instead of opening a new tab per source.
+Unify the Changes panel into a single tab with a source dropdown to switch between workspace and current-session diffs. Show the session's additions and deletions on the sidebar changes badge, and warn in the panel when snapshots are disabled for the repository.
