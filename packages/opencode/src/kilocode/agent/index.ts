@@ -142,6 +142,7 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     grep: "allow",
     glob: "allow",
     list: "allow",
+    skill: "allow",
     question: "allow",
     webfetch: "allow",
     websearch: "allow",
@@ -160,6 +161,7 @@ function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
     "*": "deny",
     question: "allow",
     suggest: "allow",
+    skill: "allow",
     plan_exit: "allow",
     bash: readOnlyBash,
     read: {
@@ -317,6 +319,7 @@ export function patchAgents(
           glob: "allow",
           list: "allow",
           bash: "allow",
+          skill: "allow",
           webfetch: "allow",
           websearch: "allow",
           codesearch: "allow",
@@ -371,6 +374,7 @@ export function patchAgents(
         glob: "allow",
         list: "allow",
         question: "allow",
+        skill: "allow",
         suggest: "allow", // kilocode_change
         task: "allow",
         todoread: "allow",
