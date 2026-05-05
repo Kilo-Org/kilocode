@@ -167,8 +167,7 @@ export class ServerManager {
 
   /**
    * Kill a process and its entire process group.
-   * On Unix, we send the signal to -pid (negative) to reach the whole group,
-   * mirroring the desktop app's ProcessGroup::leader() + start_kill() pattern.
+   * On Unix, we send the signal to -pid (negative) to reach the whole group.
    * On Windows, process.kill() on the child handle is sufficient.
    */
   private static killProcess(proc: ChildProcess, signal: NodeJS.Signals = "SIGTERM"): void {
@@ -197,8 +196,7 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")
 
-    // SIGKILL fallback after 5s: mirrors the desktop app going straight to
-    // start_kill(). Ensures the process tree dies even if SIGTERM is ignored
+    // SIGKILL fallback after 5s. Ensures the process tree dies even if SIGTERM is ignored
     // or Instance.disposeAll() hangs past the serve.ts shutdown timeout.
     const timer = setTimeout(() => {
       if (proc.exitCode === null) {

@@ -258,7 +258,7 @@ export async function disconnectProvider(
     // Config-sourced providers stay "connected" after auth.remove because the
     // server rebuilds state from config. Add to disabled_providers so the server
     // excludes them. The config entry is preserved (user may re-enable later).
-    // This matches the desktop app's disableProvider() pattern.
+    // This mirrors the server's disabled provider config behavior.
     if (configured && !oauth) {
       const disabled = globalConfig.disabled_providers ?? []
       if (!disabled.includes(id)) {
