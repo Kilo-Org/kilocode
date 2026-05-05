@@ -1567,7 +1567,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Lokale Änderungen",
   "diffViewer.source.workspace.tooltip":
     "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
-  "diffViewer.source.session.label": "Aktuelle Sitzung",
+  "diffViewer.source.session.label": "Sitzung",
   "diffViewer.source.session.tooltip":
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
   "diffViewer.group.session": "Sitzung",

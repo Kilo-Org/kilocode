@@ -1532,7 +1532,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Lokale endringer",
   "diffViewer.source.workspace.tooltip":
     "Alle endringer på denne grenen sammenlignet med basegrenen. Inkluderer ikke-committede filer (staged, unstaged, usporede) og lokale commits som ennå ikke er i basen.",
-  "diffViewer.source.session.label": "Gjeldende økt",
+  "diffViewer.source.session.label": "Økt",
   "diffViewer.source.session.tooltip":
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",

@@ -1542,7 +1542,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Lokalne zmiany",
   "diffViewer.source.workspace.tooltip":
     "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
-  "diffViewer.source.session.label": "Bieżąca sesja",
+  "diffViewer.source.session.label": "Sesja",
   "diffViewer.source.session.tooltip":
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",

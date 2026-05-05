@@ -1573,7 +1573,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Modifications locales",
   "diffViewer.source.workspace.tooltip":
     "Toutes les modifications de cette branche par rapport à la branche de base. Inclut les fichiers non commités (staged, unstaged, non suivis) et les commits locaux qui ne sont pas encore dans la branche de base.",
-  "diffViewer.source.session.label": "Session actuelle",
+  "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",

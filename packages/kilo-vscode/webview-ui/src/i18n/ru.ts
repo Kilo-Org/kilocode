@@ -1542,7 +1542,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Локальные изменения",
   "diffViewer.source.workspace.tooltip":
     "Все изменения в этой ветке по сравнению с базовой. Включает незакоммиченные файлы (staged, unstaged, неотслеживаемые) и локальные коммиты, которых ещё нет в базе.",
-  "diffViewer.source.session.label": "Текущая сессия",
+  "diffViewer.source.session.label": "Сессия",
   "diffViewer.source.session.tooltip":
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
   "diffViewer.group.session": "Сессия",

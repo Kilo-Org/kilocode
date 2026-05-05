@@ -1532,7 +1532,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "ローカルの変更",
   "diffViewer.source.workspace.tooltip":
     "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
-  "diffViewer.source.session.label": "現在のセッション",
+  "diffViewer.source.session.label": "セッション",
   "diffViewer.source.session.tooltip":
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
   "diffViewer.group.session": "セッション",

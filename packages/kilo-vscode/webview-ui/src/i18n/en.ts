@@ -1541,7 +1541,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Local Changes",
   "diffViewer.source.workspace.tooltip":
     "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
-  "diffViewer.source.session.label": "Current session",
+  "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
   "diffViewer.group.session": "Session",

@@ -1490,7 +1490,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "本機變更",
   "diffViewer.source.workspace.tooltip":
     "此分支相對於基礎分支的所有變更。包含未提交的檔案（已暫存、未暂存、未追蹤）以及尚未合入基礎分支的本機提交。",
-  "diffViewer.source.session.label": "目前工作階段",
+  "diffViewer.source.session.label": "工作階段",
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",

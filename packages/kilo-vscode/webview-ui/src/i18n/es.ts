@@ -1555,7 +1555,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Cambios locales",
   "diffViewer.source.workspace.tooltip":
     "Todos los cambios de esta rama respecto a la rama base. Incluye archivos sin commitear (staged, unstaged y no rastreados) y commits locales que todavía no están en la base.",
-  "diffViewer.source.session.label": "Sesión actual",
+  "diffViewer.source.session.label": "Sesión",
   "diffViewer.source.session.tooltip":
     "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
   "diffViewer.group.session": "Sesión",

@@ -1516,7 +1516,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
   "diffViewer.source.workspace.tooltip":
     "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
-  "diffViewer.source.session.label": "เซสชันปัจจุบัน",
+  "diffViewer.source.session.label": "เซสชัน",
   "diffViewer.source.session.tooltip":
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
   "diffViewer.group.session": "เซสชัน",

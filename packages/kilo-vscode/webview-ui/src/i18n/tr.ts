@@ -1558,7 +1558,7 @@ export const dict = {
   "diffViewer.source.workspace.label": "Yerel değişiklikler",
   "diffViewer.source.workspace.tooltip":
     "Bu daldaki tüm değişiklikler, temel dal ile karşılaştırıldığında. Commitlenmemiş dosyaları (staged, unstaged, izlenmeyen) ve temelde henüz bulunmayan yerel commitleri içerir.",
-  "diffViewer.source.session.label": "Geçerli oturum",
+  "diffViewer.source.session.label": "Oturum",
   "diffViewer.source.session.tooltip":
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
   "diffViewer.group.session": "Oturum",
