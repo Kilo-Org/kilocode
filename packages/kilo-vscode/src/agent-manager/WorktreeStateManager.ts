@@ -75,6 +75,12 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
+export type StateLoadStatus = "loaded" | "missing" | "failed"
+
+export interface StateLoadResult extends MigrationResult {
+  status: StateLoadStatus
+}
+
 import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
@@ -97,7 +103,8 @@ export class WorktreeStateManager {
   private defaultBase: string | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
-  private pendingSave = false
+  private dirty = false
+  private failed = false
 
   private readonly root: string
   private migrated = false
@@ -184,6 +191,31 @@ export class WorktreeStateManager {
     this.log(
       `Added worktree ${id}: ${params.branch}${params.label ? ` (label=${params.label})` : ""}${params.groupId ? ` (group=${params.groupId})` : ""}`,
     )
+    void this.save()
+    return wt
+  }
+
+  restoreWorktree(params: {
+    branch: string
+    path: string
+    parentBranch: string
+    remote?: string
+    createdAt: string
+  }): Worktree {
+    const existing = this.findWorktreeByPath(params.path)
+    if (existing) return existing
+    const id = generateId("wt")
+    const wt: Worktree = {
+      id,
+      branch: params.branch,
+      path: params.path,
+      parentBranch: params.parentBranch,
+      createdAt: params.createdAt,
+    }
+    if (params.remote) wt.remote = params.remote
+    this.worktrees.set(id, wt)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    this.log(`Restored worktree ${id}: ${params.branch} (${params.path})`)
     void this.save()
     return wt
   }
@@ -507,7 +539,7 @@ export class WorktreeStateManager {
   // Persistence
   // ---------------------------------------------------------------------------
 
-  async load(): Promise<MigrationResult> {
+  async load(): Promise<StateLoadResult> {
     // Migrate Agent Manager data from .kilocode → .kilo before first read
     let migration: MigrationResult = { refsFixed: 0 }
     if (!this.migrated) {
@@ -518,15 +550,34 @@ export class WorktreeStateManager {
       const content = await fs.promises.readFile(this.file, "utf-8")
       this.apply(content)
       this.loadFailed = false
+      return { ...migration, status: "loaded" }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
-      if (code === "ENOENT") this.loadFailed = false
+      if (code === "ENOENT") {
+        this.loadFailed = false
+        return { ...migration, status: "missing" }
+      }
       if (code !== "ENOENT") {
         this.log(`Failed to load state: ${error}`)
         this.loadFailed = true
       }
     }
-    return migration
+    return { ...migration, status: "failed" }
+  }
+
+  async prepareRecovery(): Promise<boolean> {
+    if (!this.loadFailed) return true
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+    const backup = `${this.file}.corrupt-${stamp}`
+    try {
+      await fs.promises.rename(this.file, backup)
+      this.loadFailed = false
+      this.log(`Backed up unreadable state to ${backup}`)
+      return true
+    } catch (error) {
+      this.log(`Failed to back up unreadable state: ${error}`)
+      return false
+    }
   }
 
   private apply(content: string): void {
@@ -610,7 +661,9 @@ export class WorktreeStateManager {
 
   /** Wait for any in-flight save to complete without triggering a new one. */
   async flush(): Promise<void> {
-    if (this.saving) await this.saving
+    const active = this.saving
+    if (active) await active
+    if (this.dirty) await this.save()
   }
 
   async save(): Promise<void> {
@@ -619,27 +672,32 @@ export class WorktreeStateManager {
       return
     }
 
-    // Serialize concurrent saves — if a save is in-flight, queue one follow-up
-    if (this.saving) {
-      this.pendingSave = true
-      await this.saving
-      // The in-flight save finished but our data may not have been written yet.
-      // If there's a new save already running (the pendingSave follow-up), wait for it.
-      if (this.saving) await this.saving
-      return
+    this.dirty = true
+    this.failed = false
+    while (this.dirty && !this.failed) {
+      await (this.saving ?? this.startSave())
     }
+  }
 
-    this.saving = this.writeToDisk()
-    try {
-      await this.saving
-    } finally {
-      this.saving = undefined
-    }
+  private startSave(): Promise<void> {
+    const run = this.drain().finally(() => {
+      if (this.saving === run) this.saving = undefined
+    })
+    this.saving = run
+    return run
+  }
 
-    // If another save was requested while we were writing, flush it now
-    if (this.pendingSave) {
-      this.pendingSave = false
-      await this.save()
+  private async drain(): Promise<void> {
+    while (this.dirty) {
+      this.dirty = false
+      try {
+        await this.writeToDisk()
+      } catch (error) {
+        this.dirty = true
+        this.failed = true
+        this.log(`Failed to save state: ${error}`)
+        return
+      }
     }
   }
 

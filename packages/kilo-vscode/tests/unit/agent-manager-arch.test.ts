@@ -149,6 +149,34 @@ describe("Agent Manager Provider Messages", () => {
     const body = getMethodBody("onAddSessionToWorktree")
     expect(body).toContain("agentManager.sessionAdded")
   })
+
+  it("state-mutating messages wait for state initialization", () => {
+    const body = getMethodBody("shouldWaitForState")
+    const messages = [
+      "agentManager.setTabOrder",
+      "agentManager.setWorktreeOrder",
+      "agentManager.persistSession",
+      "agentManager.forgetSession",
+      "agentManager.importFromBranch",
+      "agentManager.importFromPR",
+      "agentManager.importExternalWorktree",
+      "agentManager.importAllExternalWorktrees",
+      "agentManager.createSection",
+      "agentManager.moveToSection",
+    ]
+
+    for (const message of messages) {
+      expect(body, `${message} should wait for loaded state`).toContain(message)
+    }
+
+    expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+  })
+
+  it("async shutdown waits for terminal router cleanup", () => {
+    const body = getMethodBody("disposeAsync")
+    expect(body).toContain("await this.terminalRouter.dispose()")
+    expect(body).not.toContain("void this.terminalRouter.dispose()")
+  })
 })
 
 // ---------------------------------------------------------------------------
