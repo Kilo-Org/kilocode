@@ -164,36 +164,6 @@
     outline: none;
   }
 
-  [data-slot="markdown-mermaid-menu-trigger"]::after {
-    background: var(--surface-float-base);
-    border: 1px solid var(--border-weak-base);
-    border-radius: var(--radius-sm);
-    bottom: calc(100% + 6px);
-    box-shadow: var(--shadow-md);
-    color: var(--text-strong);
-    content: attr(data-tooltip);
-    font-size: var(--font-size-small);
-    left: 50%;
-    line-height: var(--line-height-large);
-    opacity: 0;
-    padding: 2px 8px;
-    pointer-events: none;
-    position: absolute;
-    transform: translateX(-50%);
-    transition: opacity 0.15s ease;
-    white-space: nowrap;
-    z-index: 60;
-  }
-
-  [data-slot="markdown-mermaid-menu-trigger"]:hover::after,
-  [data-slot="markdown-mermaid-menu-trigger"]:focus-visible::after {
-    opacity: 1;
-  }
-
-  [data-slot="markdown-mermaid-menu"][open] [data-slot="markdown-mermaid-menu-trigger"]::after {
-    opacity: 0;
-  }
-
   [data-component="markdown-mermaid"][data-state="rendered"] > svg {
     display: block;
     margin: 0 auto;

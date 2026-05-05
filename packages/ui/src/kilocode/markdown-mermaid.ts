@@ -244,7 +244,6 @@ function menu(label: string, items: HTMLElement[]) {
   trigger.setAttribute("data-slot", "markdown-mermaid-menu-trigger")
   trigger.setAttribute("aria-label", label)
   trigger.setAttribute("title", label)
-  trigger.setAttribute("data-tooltip", label)
   const text = document.createElement("span")
   text.setAttribute("data-slot", "markdown-mermaid-menu-label")
   text.textContent = label
@@ -259,23 +258,13 @@ function menu(label: string, items: HTMLElement[]) {
   content.setAttribute("role", "menu")
   content.append(...items)
 
-  const close = (event: Event) => {
-    if (!(event.target instanceof Node)) return
-    if (root.contains(event.target)) return
-    root.open = false
-  }
-
   root.addEventListener("toggle", () => {
-    if (!root.open) {
-      document.removeEventListener("pointerdown", close, true)
-      return
-    }
+    if (!root.open) return
     const parent = root.parentElement
     const menus = parent?.querySelectorAll('[data-slot="markdown-mermaid-menu"]') ?? []
     for (const menu of menus) {
       if (menu instanceof HTMLDetailsElement && menu !== root) menu.open = false
     }
-    document.addEventListener("pointerdown", close, true)
   })
   root.append(trigger, content)
   root.addEventListener("click", (event) => event.stopPropagation())
