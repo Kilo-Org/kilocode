@@ -1,16 +1,16 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.update.SessionController
 import ai.kilocode.client.session.model.Question
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.QuestionReplyDto
-import com.intellij.ui.JBColor
+import com.intellij.icons.AllIcons
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
-import javax.swing.JPanel
-import javax.swing.border.MatteBorder
 
 /**
  * Docked question panel — shown above the prompt when the session is in
@@ -30,16 +30,12 @@ import javax.swing.border.MatteBorder
  */
 class QuestionPanel(
     private val controller: SessionController,
-) : JPanel(BorderLayout()) {
+) : BorderLayoutPanel() {
 
     private var requestId: String? = null
 
     init {
-        isOpaque = false
-        border = JBUI.Borders.compound(
-            MatteBorder(JBUI.scale(1), 0, 0, 0, JBColor.border()),
-            JBUI.Borders.empty(JBUI.scale(6), JBUI.scale(8)),
-        )
+        border = UiStyle.Dock.neutral()
         isVisible = false
     }
 
@@ -54,7 +50,8 @@ class QuestionPanel(
         removeAll()
         add(panel {
             row {
-                label("\u2753 ${item.header}").bold()
+                icon(AllIcons.General.QuestionDialog).gap(RightGap.SMALL)
+                label(item.header).bold()
             }
             row {
                 label(item.question)
@@ -65,7 +62,7 @@ class QuestionPanel(
                         .gap(RightGap.SMALL)
                         .applyToComponent { toolTipText = opt.description }
                 }
-                button("Dismiss") { reject() }
+                button(KiloBundle.message("session.question.dismiss")) { reject() }
             }.layout(RowLayout.INDEPENDENT)
         }, BorderLayout.CENTER)
 

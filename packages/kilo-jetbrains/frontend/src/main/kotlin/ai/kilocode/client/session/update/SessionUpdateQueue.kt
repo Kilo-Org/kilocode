@@ -94,7 +94,7 @@ internal class SessionUpdateQueue(
 
     private fun flushNow(forced: Boolean, source: String) {
         if (hold) return
-        if (!visible.get()) return
+        if (!forced && !visible.get()) return
         val now = System.currentTimeMillis()
         if (!forced && now - last < flushMs) return
         val batch = synchronized(lock) {

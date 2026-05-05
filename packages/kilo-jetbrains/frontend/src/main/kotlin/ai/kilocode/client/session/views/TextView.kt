@@ -2,6 +2,7 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.ui.SessionStyle
 import ai.kilocode.client.ui.md.MdView
 import java.awt.BorderLayout
 
@@ -19,6 +20,7 @@ class TextView(text: Text) : PartView() {
     init {
         layout = BorderLayout()
         isOpaque = false
+        applyStyle(SessionStyle.current())
         add(md.component, BorderLayout.CENTER)
         if (text.content.isNotEmpty()) md.set(text.content.toString())
     }
@@ -34,6 +36,15 @@ class TextView(text: Text) : PartView() {
 
     /** Current markdown source — used by tests to assert rendered content. */
     fun markdown(): String = md.markdown()
+
+    override fun applyStyle(style: SessionStyle) {
+        val changed = md.font != style.transcriptFont || md.codeFont != style.editorFamily
+        if (md.font != style.transcriptFont) md.font = style.transcriptFont
+        if (md.codeFont != style.editorFamily) md.codeFont = style.editorFamily
+        if (!changed) return
+        revalidate()
+        repaint()
+    }
 
     override fun dumpLabel() = "TextView#$contentId"
 }

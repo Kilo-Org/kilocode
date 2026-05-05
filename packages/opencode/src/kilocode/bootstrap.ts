@@ -1,5 +1,5 @@
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 

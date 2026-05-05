@@ -8,7 +8,8 @@ import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import type { Permission } from "../../src/permission"
 import { SessionID, MessageID } from "../../src/session/schema"
-import { Tool, Truncate } from "../../src/tool"
+import { Tool } from "../../src/tool/tool"
+import { Truncate } from "../../src/tool/truncate"
 
 const rt = ManagedRuntime.make(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
 

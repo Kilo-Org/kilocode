@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 
-import { Global } from "../global" // kilocode_change
+import { Global } from "@opencode-ai/core/global" // kilocode_change
 import { Instance } from "../project/instance"
 
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
@@ -14,7 +14,7 @@ import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 
 import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
@@ -37,24 +37,30 @@ export function soul() {
 
 export function provider(model: Provider.Model) {
   // kilocode_change start
-  switch (model.prompt) {
-    case "anthropic":
-      return [PROMPT_ANTHROPIC]
-    case "anthropic_without_todo":
-      return [PROMPT_DEFAULT]
-    case "beast":
-      return [PROMPT_BEAST]
-    case "codex":
-      return [PROMPT_CODEX]
-    case "gemini":
-      return [PROMPT_GEMINI]
-    case "gpt55":
-      return [PROMPT_GPT55]
-    case "ling":
-      return [PROMPT_LING]
-    case "trinity":
-      return [PROMPT_TRINITY]
+  function prompt() {
+    switch (model.prompt) {
+      case "anthropic":
+        return [PROMPT_ANTHROPIC]
+      case "anthropic_without_todo":
+        return [PROMPT_DEFAULT]
+      case "beast":
+        return [PROMPT_BEAST]
+      case "codex":
+        return [PROMPT_CODEX]
+      case "gemini":
+        return [PROMPT_GEMINI]
+      case "gpt55":
+        return [PROMPT_GPT55]
+      case "ling":
+        return [PROMPT_LING]
+      case "trinity":
+        return [PROMPT_TRINITY]
+    }
+    return undefined
   }
+
+  const kilo = prompt()
+  if (kilo) return kilo
   // kilocode_change end
 
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))

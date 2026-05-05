@@ -33,13 +33,13 @@ mock.module("@kilocode/kilo-gateway", () => ({
 }))
 
 import { tmpdir } from "../fixture/fixture"
-import { Global } from "../../src/global"
+import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider"
+import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
-import { Filesystem } from "../../src/util"
+import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider"
+import { ModelsDev } from "../../src/provider/models"
 import { Auth } from "../../src/auth"
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {

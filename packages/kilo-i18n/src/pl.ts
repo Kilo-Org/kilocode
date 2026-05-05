@@ -80,5 +80,16 @@ export const dict = {
   "plan.followup.answer.continue": "Kontynuuj tutaj",
   "plan.followup.answer.continue.description": "Wdróż plan w tej sesji",
 
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot jest wolny",
+  "snapshot.slowRepo.question":
+    "Inicjalizacja systemu snapshotów trwa długo, prawdopodobnie ze względu na rozmiar repozytorium.\n\nCzy chcesz wyłączyć snapshoty dla tego repozytorium?",
+  "snapshot.slowRepo.answer.continue": "Kontynuuj ze snapshotami",
+  "snapshot.slowRepo.answer.continue.description":
+    "Poczekaj, aż snapshot się zakończy. Kolejne tury są szybkie, gdy początkowy snapshot jest już zbudowany.",
+  "snapshot.slowRepo.answer.disable": "Wyłącz dla tego projektu",
+  "snapshot.slowRepo.answer.disable.description":
+    "Wyłącz snapshoty Kilo dla tego projektu. Stracisz cofanie/przywracanie zmian Kilo, ale git nadal śledzi wszystko.",
+
   "ui.messagePart.openInDiffViewer": "Otwórz w podglądzie różnic",
 }

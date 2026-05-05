@@ -1,11 +1,13 @@
 import path from "path"
+import { access, constants } from "fs/promises" // kilocode_change
 import { type ParseError as JsoncParseError, applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { unique } from "remeda"
 import z from "zod"
 import { TuiInfo, TuiOptions } from "./tui-schema"
-import { Flag } from "@/flag/flag"
-import { Global } from "@/global"
-import { Filesystem, Log } from "@/util"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
+import { Filesystem } from "@/util/filesystem"
+import * as Log from "@opencode-ai/core/util/log"
 import * as ConfigPaths from "@/config/paths"
 
 const log = Log.create({ service: "tui.migrate" })
@@ -97,6 +99,16 @@ function normalizeTui(data: Record<string, unknown>) {
 }
 
 async function backupAndStripLegacy(file: string, source: string) {
+  // kilocode_change start
+  // On POSIX, `rename()` can overwrite a read-only file when the parent directory is
+  // writable, bypassing file-level write permissions. Check write access explicitly so
+  // that callers can distinguish "strip succeeded" from "strip skipped" correctly.
+  const writable = await access(file, constants.W_OK)
+    .then(() => true)
+    .catch(() => false)
+  if (!writable) return false
+  // kilocode_change end
+
   const backup = file + ".tui-migration.bak"
   const hasBackup = await Filesystem.exists(backup)
   const backed = hasBackup
