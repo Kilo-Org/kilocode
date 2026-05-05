@@ -101,13 +101,6 @@ export interface ManagedSessionState {
   id: string
   worktreeId: string | null
   createdAt: string
-  prefs?: AgentManagerSessionPrefs
-}
-
-export interface AgentManagerSessionPrefs {
-  agent?: string
-  model?: { providerID: string; modelID: string }
-  variants?: Record<string, string>
 }
 
 export interface BranchInfo {

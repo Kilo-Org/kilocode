@@ -115,7 +115,6 @@ import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
-import { restoreSessionPrefs } from "./session-prefs"
 import { createMarkdownRender } from "./review-preferences"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
@@ -1308,7 +1307,6 @@ const AgentManagerContent: Component = () => {
         const state = msg as AgentManagerStateMessage
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
-        restoreSessionPrefs(session, state.sessions)
         setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)

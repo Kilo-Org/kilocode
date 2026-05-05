@@ -62,13 +62,6 @@ export interface ManagedSession {
   id: string
   worktreeId: string | null
   createdAt: string
-  prefs?: SessionPrefs
-}
-
-export interface SessionPrefs {
-  agent?: string
-  model?: { providerID: string; modelID: string }
-  variants?: Record<string, string>
 }
 
 interface StateFile {
@@ -246,19 +239,12 @@ export class WorktreeStateManager {
     return orphaned
   }
 
-  addSession(sessionId: string, worktreeId: string | null, prefs?: SessionPrefs): ManagedSession {
-    const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString(), prefs }
+  addSession(sessionId: string, worktreeId: string | null): ManagedSession {
+    const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString() }
     this.sessions.set(sessionId, session)
     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
     void this.save()
     return session
-  }
-
-  setSessionPrefs(sessionId: string, prefs: SessionPrefs): void {
-    const session = this.sessions.get(sessionId)
-    if (!session) return
-    session.prefs = prefs
-    void this.save()
   }
 
   /** Move an existing session to a worktree (or back to local when null). */
@@ -563,8 +549,9 @@ export class WorktreeStateManager {
     let pruned = 0
     for (const [id, s] of Object.entries(data.sessions ?? {})) {
       const ref = s.worktreeId
+      const session: ManagedSession = { id, worktreeId: s.worktreeId, createdAt: s.createdAt }
       if (ref === null) {
-        this.sessions.set(id, { id, ...s })
+        this.sessions.set(id, session)
         continue
       }
       // Skip orphaned sessions referencing a deleted worktree.
@@ -572,7 +559,7 @@ export class WorktreeStateManager {
         pruned++
         continue
       }
-      this.sessions.set(id, { id, ...s })
+      this.sessions.set(id, session)
     }
     for (const [id, sec] of Object.entries(data.sections ?? {})) {
       this.sections.set(id, { id, ...sec })

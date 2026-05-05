@@ -75,24 +75,25 @@ describe("WorktreeStateManager", () => {
       expect(s.worktreeId).toBeNull()
     })
 
-    it("persists session preferences", async () => {
-      manager.addSession("local-1", null)
-      manager.setSessionPrefs("local-1", {
-        agent: "code",
-        model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-        variants: { "anthropic/claude-sonnet-4": "medium" },
-      })
-      await manager.flush()
+    it("drops obsolete session prefs while loading state", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(
+        file,
+        JSON.stringify({
+          worktrees: {},
+          sessions: {
+            "local-1": {
+              worktreeId: null,
+              createdAt: new Date().toISOString(),
+              prefs: { agent: "code" },
+            },
+          },
+        }),
+      )
 
-      const next = new WorktreeStateManager(root, (msg) => logs.push(msg))
-      await next.load()
+      await manager.load()
 
-      expect(next.getSession("local-1")?.prefs).toEqual({
-        agent: "code",
-        model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-        variants: { "anthropic/claude-sonnet-4": "medium" },
-      })
-      await next.flush()
+      expect(manager.getSession("local-1")).not.toHaveProperty("prefs")
     })
 
     it("filters sessions by worktreeId", () => {

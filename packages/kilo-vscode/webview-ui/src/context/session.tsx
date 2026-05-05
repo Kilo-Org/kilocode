@@ -28,7 +28,6 @@ import type {
   ContextUsage,
   AgentInfo,
   SkillInfo,
-  AgentManagerSessionPrefs,
   ExtensionMessage,
   FileAttachment,
   SendMessageFailedMessage,
@@ -46,10 +45,10 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
-import { resolveSessionAgent } from "./session-agent"
+import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
-import { getVariant, sessionVariants, transferVariants, variantKey } from "./session-variant-store"
+import { getVariant, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
@@ -186,7 +185,6 @@ interface SessionContextValue {
   setSessionModel: (sessionID: string, providerID: string, modelID: string) => void
   setSessionAgent: (sessionID: string, name: string) => void
   setSessionVariant: (sessionID: string, providerID: string, modelID: string, value: string, agent?: string) => void
-  setSessionPrefs: (sessionID: string, prefs: AgentManagerSessionPrefs) => void
 
   // Thinking variant for the selected model
   variantList: (sessionID?: string) => string[]
@@ -476,25 +474,10 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "persistRecents", recents: updated })
   }
 
-  function persistPrefs(sessionID: string, prefs?: Partial<AgentManagerSessionPrefs>) {
-    const variants = sessionVariants(store.variantSelections, sessionID)
-    vscode.postMessage({
-      type: "agentManager.persistSessionPrefs",
-      sessionId: sessionID,
-      prefs: {
-        agent: store.agentSelections[sessionID],
-        model: store.sessionOverrides[sessionID],
-        variants: Object.keys(variants).length > 0 ? variants : undefined,
-        ...prefs,
-      },
-    })
-  }
-
   function applyModel(agentName: string, selection: ModelSelection, sessionID?: string) {
     pushRecent(selection)
     if (sessionID) {
       setStore("sessionOverrides", sessionID, selection)
-      persistPrefs(sessionID, { model: selection })
       return
     }
     // Always remember the per-mode model choice so switching modes restores
@@ -561,7 +544,6 @@ export const SessionProvider: ParentComponent = (props) => {
           delete overrides[sid]
         }),
       )
-      persistPrefs(sid, { model: undefined })
       hideErrors(sid)
       return
     }
@@ -615,9 +597,7 @@ export const SessionProvider: ParentComponent = (props) => {
     // backfilled now that we know the valid agent names.
     batch(() => {
       for (const [sid, msgs] of Object.entries(store.messages)) {
-        if (store.agentSelections[sid]) continue
-        const agent = resolveSessionAgent(msgs, names)
-        if (agent) setStore("agentSelections", sid, agent)
+        recoverPrefs(sid, msgs, names)
       }
     })
   })
@@ -715,14 +695,14 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!sel) return
     const key = variantKey(sel, agentForScope(sid), sid)
     setStore("variantSelections", key, value)
-    vscode.postMessage({ type: "persistVariant", key, value })
-    if (sid) persistPrefs(sid, { variants: { ...sessionVariants(store.variantSelections, sid), [`${sel.providerID}/${sel.modelID}`]: value } })
+    if (!sid) vscode.postMessage({ type: "persistVariant", key, value })
   }
 
   // Load persisted variants from extension globalState
   const unsubVariants = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "variantsLoaded") return
     for (const [k, v] of Object.entries(message.variants)) {
+      if (k.startsWith("session/")) continue
       setStore("variantSelections", k, v)
     }
   })
@@ -948,14 +928,6 @@ export const SessionProvider: ParentComponent = (props) => {
         }
         if (pendingAgent) setStore("agentSelections", session.id, pendingAgent)
         if (pendingModel) setStore("sessionOverrides", session.id, pendingModel)
-        const variants = Object.fromEntries(
-          Object.entries(entries).map(([key, value]) => [key.split("/").slice(2).join("/"), value]),
-        )
-        persistPrefs(session.id, {
-          agent: pendingAgent ?? undefined,
-          model: pendingModel,
-          variants,
-        })
       } else if (pendingAgent && !store.agentSelections[session.id]) {
         setStore("agentSelections", session.id, pendingAgent)
         setPendingAgentSelection(null)
@@ -994,6 +966,21 @@ export const SessionProvider: ParentComponent = (props) => {
       seen.add(msg.id)
       return true
     })
+  }
+
+  function recoverPrefs(sessionID: string, messages: Message[], names = agentNames()) {
+    const prefs = resolveMessagePrefs(messages, names)
+    if (prefs.agent && !store.agentSelections[sessionID]) {
+      setStore("agentSelections", sessionID, prefs.agent)
+    }
+    if (prefs.model && !store.sessionOverrides[sessionID]) {
+      setStore("sessionOverrides", sessionID, prefs.model)
+    }
+    if (prefs.model && prefs.variant) {
+      const agent = prefs.agent ?? store.agentSelections[sessionID] ?? defaultAgent()
+      const key = variantKey(prefs.model, agent, sessionID)
+      if (!store.variantSelections[key]) setStore("variantSelections", key, prefs.variant)
+    }
   }
 
   function withPending(sessionID: string, messages: Message[]) {
@@ -1092,10 +1079,7 @@ export const SessionProvider: ParentComponent = (props) => {
         })
       }
 
-      const agent = resolveSessionAgent(merged, agentNames())
-      if (agent) {
-        setStore("agentSelections", sessionID, agent)
-      }
+      recoverPrefs(sessionID, merged)
     })
     if (reset) requestAnimationFrame(() => patchPage(sessionID, { lastMutation: undefined }))
   }
@@ -1133,13 +1117,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
     patchPage(message.sessionID, { initialLoaded: true, lastMutation: exists ? "update" : "append" })
 
-    // Sync mode picker from any message role (user or assistant).
-    // agentNames() already excludes subagent/hidden agents, so subtask
-    // assistant messages (e.g. "task" agent) are silently ignored.
-    const agent = message.agent?.trim()
-    if (agent && agentNames().has(agent)) {
-      setStore("agentSelections", message.sessionID, agent)
-    }
+    recoverPrefs(message.sessionID, [message])
 
     if (message.parts && message.parts.length > 0) {
       stash.remove(message.id)
@@ -1684,7 +1662,6 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = sessionID ?? currentSessionID()
     if (id) {
       setStore("agentSelections", id, name)
-      persistPrefs(id, { agent: name, model: undefined })
       // Clear per-session model override so the new mode's configured/default
       // model takes effect instead of the previous mode's override.
       setStore(
@@ -2313,35 +2290,14 @@ export const SessionProvider: ParentComponent = (props) => {
       // corrupt the default mode's model for later sessions.
       const model = { providerID, modelID }
       setStore("sessionOverrides", sessionID, model)
-      persistPrefs(sessionID, { model })
     },
     setSessionAgent: (sessionID: string, name: string) => {
       setStore("agentSelections", sessionID, name)
-      persistPrefs(sessionID, { agent: name })
     },
     setSessionVariant: (sessionID: string, providerID: string, modelID: string, value: string, agent?: string) => {
       const name = agent ?? store.agentSelections[sessionID] ?? defaultAgent()
       const key = variantKey({ providerID, modelID }, name, sessionID)
       setStore("variantSelections", key, value)
-      vscode.postMessage({ type: "persistVariant", key, value })
-      persistPrefs(sessionID, { variants: { ...sessionVariants(store.variantSelections, sessionID), [`${providerID}/${modelID}`]: value } })
-    },
-    setSessionPrefs: (sessionID: string, prefs: AgentManagerSessionPrefs) => {
-      if ("agent" in prefs) {
-        if (prefs.agent) setStore("agentSelections", sessionID, prefs.agent)
-        else setStore("agentSelections", produce((agents) => {
-          delete agents[sessionID]
-        }))
-      }
-      if ("model" in prefs) {
-        if (prefs.model) setStore("sessionOverrides", sessionID, prefs.model)
-        else setStore("sessionOverrides", produce((models) => {
-          delete models[sessionID]
-        }))
-      }
-      for (const [key, value] of Object.entries(prefs.variants ?? {})) {
-        setStore("variantSelections", `session/${sessionID}/${key}`, value)
-      }
     },
     allMessages,
     allParts,

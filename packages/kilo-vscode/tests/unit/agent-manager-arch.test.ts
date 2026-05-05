@@ -202,7 +202,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.forkSession",
       "agentManager.closeSession",
       "agentManager.persistSession",
-      "agentManager.persistSessionPrefs",
       "agentManager.forgetSession",
       "agentManager.configureSetupScript",
       "agentManager.configureRunScript",
