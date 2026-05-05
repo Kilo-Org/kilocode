@@ -15,7 +15,7 @@ import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
-import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
+import type { ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 import type {
   DiffSourceCapabilities,
   DiffSourceDescriptor,
@@ -29,7 +29,7 @@ const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
 
 type DiffStyle = "unified" | "split"
 
-const post = (message: Record<string, unknown>) => getVSCodeAPI().postMessage(message as never)
+const post = (message: WebviewMessage) => getVSCodeAPI().postMessage(message)
 
 const DiffViewerContent: Component = () => {
   const vscode = useVSCode()
@@ -38,6 +38,7 @@ const DiffViewerContent: Component = () => {
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
   const [availableSources, setAvailableSources] = createSignal<DiffSourceDescriptor[]>([])
   const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
@@ -72,6 +73,11 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.revertFileResult") {
       markReverting(msg.file, false)
+      return
+    }
+
+    if (msg.type === "diffViewer.markdownRender") {
+      setMarkdown(msg.render)
       return
     }
 
@@ -147,6 +153,11 @@ const DiffViewerContent: Component = () => {
         onDiffStyleChange={(style) => {
           setDiffStyle(style)
           post({ type: "diffViewer.setDiffStyle", style })
+        }}
+        markdownRender={markdown()}
+        onMarkdownRenderChange={(render) => {
+          setMarkdown(render)
+          post({ type: "diffViewer.setMarkdownRender", render })
         }}
         onOpenFile={(relativePath) => {
           post({ type: "openFile", filePath: relativePath })

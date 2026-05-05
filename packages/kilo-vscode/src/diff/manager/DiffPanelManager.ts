@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../../services/cli-backend"
 import { appendOutput, getWorkspaceRoot, openWorkspaceRelativeFile } from "../../review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "../../review-settings"
 import { buildWebviewHtml } from "../../utils"
 import type { DiffSourceCatalog } from "../sources/catalog"
 import type { DiffSource, DiffSourceMessage, DiffSourcePost } from "../sources/types"
@@ -154,6 +155,7 @@ export class DiffPanelManager implements vscode.Disposable {
         languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
         workspaceDirectory: getWorkspaceRoot(),
       })
+      this.surface?.post({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
       const initial = this.ctx ? this.catalog.defaultSourceId(this.ctx) : undefined
       if (initial) this.selectSource(initial)
       return
@@ -175,6 +177,11 @@ export class DiffPanelManager implements vscode.Disposable {
     }
 
     if (type === "diffViewer.setDiffStyle") {
+      return
+    }
+
+    if (type === "diffViewer.setMarkdownRender" && typeof msg.render === "boolean") {
+      void setDiffMarkdownRender(msg.render)
       return
     }
 

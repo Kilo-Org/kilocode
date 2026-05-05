@@ -1661,6 +1661,46 @@ body.am-wt-dragging-active * {
   gap: 8px;
 }
 
+.am-markdown-diff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--border-weak-base);
+  border-top: 1px solid var(--border-weak-base);
+  cursor: auto;
+}
+
+.am-markdown-diff[data-split="true"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.am-markdown-pane {
+  min-width: 0;
+  padding: 16px 20px 24px;
+  background: var(--vscode-editor-background, var(--surface-base));
+  color: var(--vscode-editor-foreground, var(--text-base));
+  overflow-x: auto;
+}
+
+.am-markdown-pane-title {
+  margin: -4px 0 12px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.am-markdown-pane [data-component="markdown"] {
+  max-width: 900px;
+}
+
+@media (max-width: 840px) {
+  .am-markdown-diff[data-split="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Keep +N/-N indicators at consistent size across side/fullscreen views */
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-additions"],
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-deletions"],

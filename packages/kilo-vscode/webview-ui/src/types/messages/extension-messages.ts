@@ -499,6 +499,7 @@ export interface AgentManagerStateMessage {
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  reviewMarkdownRender?: boolean
   isGitRepo?: boolean
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
@@ -716,6 +717,11 @@ export interface DiffViewerRevertFileResultMessage {
   file: string
   status: "success" | "error"
   message: string
+}
+
+export interface DiffViewerMarkdownRenderMessage {
+  type: "diffViewer.markdownRender"
+  render: boolean
 }
 
 export interface SetAvailableSourcesMessage {
@@ -940,6 +946,7 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | DiffViewerMarkdownRenderMessage
   | SetAvailableSourcesMessage
   | DiffViewerCapabilitiesMessage
   | DiffViewerNoticeMessage
