@@ -911,6 +911,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "Schlussfolgerung",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "Varianten",
   "provider.custom.models.variants.add": "Variante hinzufügen",
   "provider.custom.models.variants.remove": "Variante entfernen",

@@ -16,10 +16,7 @@ import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
-import {
-  CUSTOM_PROVIDER_INTERFACE_IDS,
-  customProviderInterface,
-} from "../../../../src/shared/provider-model"
+import { CUSTOM_PROVIDER_INTERFACE_IDS, customProviderInterface } from "../../../../src/shared/provider-model"
 import type { CustomProviderInterface } from "../../../../src/shared/provider-model"
 import { ModelCard } from "./CustomProviderModelCard"
 import type {
@@ -53,6 +50,13 @@ function fuzzy(query: string, target: string) {
 
 type FetchedModel = { id: string; name: string }
 
+function hasImageInput(model: unknown) {
+  if (!model || typeof model !== "object") return false
+  const raw = model as { attachment?: unknown; modalities?: { input?: unknown } }
+  const input = raw.modalities?.input
+  return raw.attachment === true || (Array.isArray(input) && input.includes("image"))
+}
+
 export interface CustomProviderDialogProps {
   onBack?: () => void
   /** When set, the dialog opens in edit mode with pre-filled values. */
@@ -77,13 +81,15 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   function initModels(): ModelEntry[] {
     const cfg = props.existing?.config
     if (!cfg?.models || typeof cfg.models !== "object")
-      return [{ id: "", name: "", context: "", reasoning: false, variants: [] }]
+      return [{ id: "", name: "", context: "", reasoning: false, vision: false, variants: [] }]
     const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "", context: "", reasoning: false, variants: [] }]
+    if (entries.length === 0) return [{ id: "", name: "", context: "", reasoning: false, vision: false, variants: [] }]
     return entries.map(([id, m]) => {
       const raw = m as {
         name?: string
         reasoning?: boolean
+        attachment?: boolean
+        modalities?: { input?: string[] }
         limit?: { context?: number }
         variants?: Record<string, Record<string, unknown>>
       }
@@ -106,6 +112,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         name: raw?.name ?? id,
         context: typeof raw?.limit?.context === "number" && raw.limit.context > 0 ? String(raw.limit.context) : "",
         reasoning: raw?.reasoning ?? false,
+        vision: hasImageInput(raw),
         variants,
       }
     })
@@ -319,7 +326,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, context: "", reasoning: false, variants: [] })
+    const defaults = (m: FetchedModel): ModelEntry => ({
+      ...m,
+      context: "",
+      reasoning: false,
+      vision: false,
+      variants: [],
+    })
     const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
 
     setForm("models", merged)
@@ -348,7 +361,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "", context: "", reasoning: false, variants: [] }])
+    setForm("models", (v) => [...v, { id: "", name: "", context: "", reasoning: false, vision: false, variants: [] }])
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
@@ -582,6 +595,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeName={(v) => setForm("models", i(), "name", v)}
                   onChangeContext={(v) => setForm("models", i(), "context", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                  onChangeVision={(v) => setForm("models", i(), "vision", v)}
                   onRemove={() => removeModel(i())}
                   onAddVariant={() => addVariant(i())}
                   onRemoveVariant={(vi) => removeVariant(i(), vi)}

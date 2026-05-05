@@ -864,6 +864,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "Rozumowanie",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "Warianty",
   "provider.custom.models.variants.add": "Dodaj wariant",
   "provider.custom.models.variants.remove": "Usuń wariant",

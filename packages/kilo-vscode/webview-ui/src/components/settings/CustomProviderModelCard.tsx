@@ -26,6 +26,7 @@ export type ModelEntry = {
   name: string
   context: string
   reasoning: boolean
+  vision: boolean
   variants: VariantEntry[]
 }
 
@@ -227,6 +228,7 @@ type ModelCardProps = {
   onChangeName: (val: string) => void
   onChangeContext: (val: string) => void
   onChangeReasoning: (val: boolean) => void
+  onChangeVision: (val: boolean) => void
   onRemove: () => void
   onAddVariant: () => void
   onRemoveVariant: (vi: number) => void
@@ -293,24 +295,50 @@ export function ModelCard(props: ModelCardProps) {
         />
       </div>
 
-      {/* Reasoning toggle */}
-      <label
+      {/* Capability toggles */}
+      <div
         style={{
           display: "flex",
-          "align-items": "center",
           gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
+          "align-items": "center",
+          "flex-wrap": "wrap",
         }}
       >
-        <input
-          type="checkbox"
-          checked={props.m.reasoning}
-          onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.reasoning.label")}
-      </label>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.reasoning}
+            onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.reasoning.label")}
+        </label>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.vision}
+            onChange={(e) => props.onChangeVision(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.vision.label")}
+        </label>
+      </div>
 
       {/* Variants — only available when reasoning is enabled */}
       <Show when={props.m.reasoning}>

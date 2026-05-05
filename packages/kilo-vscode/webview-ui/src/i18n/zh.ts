@@ -876,6 +876,7 @@ export const dict = {
   "provider.custom.models.context.label": "上下文",
   "provider.custom.models.context.placeholder": "例如 128000",
   "provider.custom.models.reasoning.label": "推理",
+  "provider.custom.models.vision.label": "视觉/图像输入",
   "provider.custom.models.variants.label": "变体",
   "provider.custom.models.variants.add": "添加变体",
   "provider.custom.models.variants.remove": "移除变体",

@@ -172,6 +172,35 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("accepts image input capabilities for custom models", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Vision Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          attachment: true,
+          modalities: { input: ["text", "image"], output: ["text"] },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Vision Provider",
+        options: { baseURL: "https://example.com/v1", interfaceType: "openai-compatible" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            attachment: true,
+            modalities: { input: ["text", "image"], output: ["text"] },
+          },
+        },
+      },
+    })
+  })
+
   it("accepts models with chat_template_args variant", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Thinking Provider",

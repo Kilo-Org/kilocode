@@ -74,7 +74,9 @@ function checkModel(m: ModelEntry, seenModels: Set<string>, t: Translator) {
   const nameErr = !m.name.trim() ? t("provider.custom.error.required") : undefined
   const raw = m.context.trim()
   const contextErr =
-    raw && (!Number.isSafeInteger(Number(raw)) || Number(raw) <= 0) ? t("provider.custom.error.positiveInteger") : undefined
+    raw && (!Number.isSafeInteger(Number(raw)) || Number(raw) <= 0)
+      ? t("provider.custom.error.positiveInteger")
+      : undefined
   const seen = new Set<string>()
   const variants = m.reasoning ? m.variants.map((v) => checkVariant(v, seen, t)) : []
   return { id: idErr, name: nameErr, context: contextErr, variants }
@@ -120,6 +122,10 @@ function serializeModel(m: ModelEntry): [string, Record<string, unknown>] {
   const ventries = m.reasoning ? m.variants.filter((v) => v.name.trim()).map(serializeVariant) : []
   const context = Number(m.context.trim())
   const entry: Record<string, unknown> = { name: m.name.trim() }
+  if (m.vision) {
+    entry.attachment = true
+    entry.modalities = { input: ["text", "image"], output: ["text"] }
+  }
   if (m.reasoning) entry.reasoning = true
   if (Number.isSafeInteger(context) && context > 0) entry.limit = { context, output: 0 }
   if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)

@@ -894,6 +894,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "推論",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "バリアント",
   "provider.custom.models.variants.add": "バリアントを追加",
   "provider.custom.models.variants.remove": "バリアントを削除",

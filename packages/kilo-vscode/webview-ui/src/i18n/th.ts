@@ -890,6 +890,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "การใช้เหตุผล",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "รูปแบบ",
   "provider.custom.models.variants.add": "เพิ่มรูปแบบ",
   "provider.custom.models.variants.remove": "ลบรูปแบบ",

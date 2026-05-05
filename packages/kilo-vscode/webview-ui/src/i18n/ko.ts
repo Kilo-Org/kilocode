@@ -856,6 +856,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "추론",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "변형",
   "provider.custom.models.variants.add": "변형 추가",
   "provider.custom.models.variants.remove": "변형 제거",

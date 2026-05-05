@@ -851,6 +851,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "الاستدلال",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "المتغيرات",
   "provider.custom.models.variants.add": "إضافة متغير",
   "provider.custom.models.variants.remove": "إزالة المتغير",

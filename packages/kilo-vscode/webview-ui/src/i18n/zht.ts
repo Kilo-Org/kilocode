@@ -844,6 +844,7 @@ export const dict = {
   "provider.custom.models.context.label": "上下文",
   "provider.custom.models.context.placeholder": "例如 128000",
   "provider.custom.models.reasoning.label": "推理",
+  "provider.custom.models.vision.label": "視覺/圖片輸入",
   "provider.custom.models.variants.label": "變體",
   "provider.custom.models.variants.add": "新增變體",
   "provider.custom.models.variants.remove": "移除變體",

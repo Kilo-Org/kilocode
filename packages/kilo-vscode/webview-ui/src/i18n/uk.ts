@@ -859,6 +859,7 @@ export const dict = {
   "provider.custom.models.context.label": "Context",
   "provider.custom.models.context.placeholder": "e.g. 128000",
   "provider.custom.models.reasoning.label": "Міркування",
+  "provider.custom.models.vision.label": "Vision",
   "provider.custom.models.variants.label": "Варіанти",
   "provider.custom.models.variants.add": "Додати варіант",
   "provider.custom.models.variants.remove": "Видалити варіант",

@@ -26,6 +26,8 @@ const VariantConfigSchema = z.object({
 
 export type VariantConfig = z.infer<typeof VariantConfigSchema>
 
+const ModalitySchema = z.enum(["text", "audio", "image", "video", "pdf"])
+
 export const CustomProviderConfigSchema = z
   .object({
     npm: z.string().optional(),
@@ -52,10 +54,17 @@ export const CustomProviderConfigSchema = z
           .object({
             name: z.string().trim().min(1).max(200),
             reasoning: z.boolean().optional(),
+            attachment: z.boolean().optional(),
             limit: z
               .object({
                 context: z.number().int().positive(),
                 output: z.number().int().min(0).optional(),
+              })
+              .optional(),
+            modalities: z
+              .object({
+                input: z.array(ModalitySchema),
+                output: z.array(ModalitySchema),
               })
               .optional(),
             variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
@@ -80,7 +89,9 @@ export type SanitizedProviderConfig = {
     {
       name: string
       reasoning?: true
+      attachment?: boolean
       limit?: { context: number; output: number }
+      modalities?: { input: Array<z.infer<typeof ModalitySchema>>; output: Array<z.infer<typeof ModalitySchema>> }
       variants?: Record<string, VariantConfig>
     }
   >
@@ -156,7 +167,16 @@ export function normalizeCustomProviderConfig(
         {
           name: model.name.trim(),
           ...(model.reasoning ? { reasoning: true as const } : {}),
+          ...(typeof model.attachment === "boolean" ? { attachment: model.attachment } : {}),
           ...(model.limit ? { limit: { context: model.limit.context, output: model.limit.output ?? 0 } } : {}),
+          ...(model.modalities
+            ? {
+                modalities: {
+                  input: [...model.modalities.input],
+                  output: [...model.modalities.output],
+                },
+              }
+            : {}),
           ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
         },
       ]),
