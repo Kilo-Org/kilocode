@@ -327,7 +327,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   }))
 
   return (
-    <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
+    <div
+      class="am-diff-panel kilo-diff-theme"
+      onKeyDown={handleKeyDown}
+      onMouseDown={handleRootMouseDown}
+      tabIndex={-1}
+      ref={rootRef}
+    >
       <div class="am-diff-header">
         <div class="am-diff-header-main">
           <span class="am-diff-header-title">{t("session.review.change.other")}</span>

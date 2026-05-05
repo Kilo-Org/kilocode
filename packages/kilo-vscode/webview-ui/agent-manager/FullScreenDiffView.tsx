@@ -403,7 +403,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   return (
     <div
-      class="am-review-layout"
+      class="am-review-layout kilo-diff-theme"
       onKeyDown={handleKeyDown}
       onMouseDown={handleRootMouseDown}
       tabIndex={-1}

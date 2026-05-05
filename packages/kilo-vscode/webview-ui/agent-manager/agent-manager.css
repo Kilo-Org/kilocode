@@ -1,3 +1,5 @@
+@import "../src/styles/diff.css";
+
 /* Agent Manager layout */
 
 .am-layout {
@@ -1384,46 +1386,6 @@ body.am-wt-dragging-active * {
   flex: 1;
   width: 100%;
   min-height: 0;
-  /* Pierre diffs needs --diffs-light-bg/--diffs-dark-bg for the color-mix()
-     calculations that produce red/green line backgrounds. Without a Shiki
-     worker pool these are never set by the theme layer, so we provide
-     fallbacks mapped to VS Code's editor background. */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  /* The unsafeCSS in @opencode-ai/ui uses 98%/92% mix ratios for line
-     backgrounds — only 2-8% tint, nearly invisible. Override via the
-     *-override custom properties that the unsafeCSS checks first.
-     These inherit across the Shadow DOM boundary. */
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
   --am-diff-count-size: 12px;
 }
 
@@ -3309,39 +3271,6 @@ body.am-wt-dragging-active * {
   min-height: 0;
   min-width: 0;
   --am-diff-count-size: 12px;
-  /* Inherit pierre diffs CSS vars from am-diff-panel */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
 }
 
 /* Review toolbar */

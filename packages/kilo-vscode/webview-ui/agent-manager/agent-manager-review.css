@@ -24,39 +24,6 @@
   min-height: 0;
   min-width: 0;
   --am-diff-count-size: 12px;
-  /* Inherit pierre diffs CSS vars from am-diff-panel */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
 }
 
 /* Review toolbar */

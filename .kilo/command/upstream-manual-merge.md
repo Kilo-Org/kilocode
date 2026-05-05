@@ -189,7 +189,36 @@ git commit -m "resolve merge conflicts"
 The default `git merge` auto-message (`Merge branch '…' into …`) is also fine,
 but `resolve merge conflicts` is the convention for these PRs.
 
-### 10. Write the PR body
+### 10. Resync version strings in a separate commit
+
+Upstream stamps its own version into shared files — notably
+`packages/extensions/zed/extension.toml` (version field + 5 Kilo-Org download
+URLs), and any `package.json` that upstream bumped in the same release window.
+After the merge this leaves parts of the tree pointing at upstream's version
+(e.g. `1.14.30`), whose release tag does not exist on Kilo's pipeline, so the
+Zed download URLs silently 404.
+
+Fix this in a dedicated commit *after* `resolve merge conflicts`:
+
+```bash
+bun run script/sync-versions.ts             # uses root package.json version
+# or, to target an explicit version:
+bun run script/sync-versions.ts 7.2.41
+git add -A
+git commit -m "chore: resync versions after upstream merge"
+```
+
+The script rewrites every top-level `"version"` in `package.json` files
+(excluding `node_modules`, hidden dirs, and `packages/kilo-jetbrains/` which
+tracks its own cadence), plus the Zed extension toml. It is idempotent — rerun
+it any time to rebase the version back onto Kilo main (useful during
+long-running upstream merges where `main` releases in the meantime).
+
+Keeping this in its own commit makes reviewers' job easier: the merge commit
+only contains behavioural resolutions, and the version resync is a trivial
+diff they can skim in one glance.
+
+### 11. Write the PR body
 
 Structure the description so reviewers can skim:
 

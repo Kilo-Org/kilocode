@@ -44,8 +44,8 @@ export class McpOAuthProvider implements OAuthClientProvider {
   get clientMetadata(): OAuthClientMetadata {
     return {
       redirect_uris: [this.redirectUrl],
-      client_name: "Kilo", // kilocode_change
-      client_uri: "https://kilo.ai", // kilocode_change
+      client_name: "Kilo",
+      client_uri: "https://kilo.ai",
       grant_types: ["authorization_code", "refresh_token"],
       response_types: ["code"],
       token_endpoint_auth_method: this.config.clientSecret ? "client_secret_post" : "none",

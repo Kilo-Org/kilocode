@@ -124,30 +124,8 @@
     border: 1px solid var(--border-weak-base);
     border-radius: 4px;
     overflow: hidden;
-    --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-    --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
     --syntax-diff-add: #2ea043;
     --syntax-diff-delete: #da3633;
-    --diffs-bg-deletion-override: color-mix(
-      in lab,
-      var(--vscode-editor-background, #1e1e1e) 82%,
-      var(--syntax-diff-delete, #da3633)
-    );
-    --diffs-bg-deletion-number-override: color-mix(
-      in lab,
-      var(--vscode-editor-background, #1e1e1e) 72%,
-      var(--syntax-diff-delete, #da3633)
-    );
-    --diffs-bg-addition-override: color-mix(
-      in lab,
-      var(--vscode-editor-background, #1e1e1e) 82%,
-      var(--syntax-diff-add, #2ea043)
-    );
-    --diffs-bg-addition-number-override: color-mix(
-      in lab,
-      var(--vscode-editor-background, #1e1e1e) 72%,
-      var(--syntax-diff-add, #2ea043)
-    );
   }
 
   [data-slot="permission-diff-header"] {

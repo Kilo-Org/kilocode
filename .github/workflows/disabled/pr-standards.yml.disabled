@@ -5,22 +5,10 @@ on:
     types: [opened, edited, synchronize]
 
 jobs:
-  # kilocode_change start
-  check-author:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    uses: ./.github/workflows/check-org-member.yml
-    with:
-      username: ${{ github.event.pull_request.user.login }}
-    secrets:
-      kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-      kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-
   check-standards:
-    needs: check-author
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    # kilocode_change end
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Check PR standards
@@ -28,6 +16,30 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
+            const login = pr.user.login;
+
+            // Skip PRs older than Feb 18, 2026 at 6PM EST (Feb 19, 2026 00:00 UTC)
+            const cutoff = new Date('2026-02-19T00:00:00Z');
+            const prCreated = new Date(pr.created_at);
+            if (prCreated < cutoff) {
+              console.log(`Skipping: PR #${pr.number} was created before cutoff (${prCreated.toISOString()})`);
+              return;
+            }
+
+            // Check if author is a team member or bot
+            if (login === 'opencode-agent[bot]') return;
+            const { data: file } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: '.github/TEAM_MEMBERS',
+              ref: 'dev'
+            });
+            const members = Buffer.from(file.content, 'base64').toString().split('\n').map(l => l.trim()).filter(Boolean);
+            if (members.includes(login)) {
+              console.log(`Skipping: ${login} is a team member`);
+              return;
+            }
+
             const title = pr.title;
 
             async function addLabel(label) {
@@ -59,10 +71,10 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: pr.number
               });
-
+              
               const existing = comments.find(c => c.body.includes(markerText));
               if (existing) return;
-
+              
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -88,9 +100,9 @@ jobs:
             - \`refactor:\` or \`refactor(scope):\` code refactoring
             - \`test:\` or \`test(scope):\` adding or updating tests
 
-            Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`kilo\`).
+            Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`opencode\`).
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`);
+            See [CONTRIBUTING.md](../blob/dev/CONTRIBUTING.md#pr-titles) for details.`);
               return;
             }
 
@@ -133,7 +145,7 @@ jobs:
             1. Open an issue describing the bug/feature (if one doesn't exist)
             2. Add \`Fixes #<number>\` or \`Closes #<number>\` to this PR description
 
-            See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#issue-first-policy) for details.`);
+            See [CONTRIBUTING.md](../blob/dev/CONTRIBUTING.md#issue-first-policy) for details.`);
               return;
             }
 
@@ -141,7 +153,6 @@ jobs:
             console.log('PR meets all standards');
 
   check-compliance:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
     runs-on: ubuntu-latest
     permissions:
       contents: read

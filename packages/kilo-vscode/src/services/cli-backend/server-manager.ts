@@ -15,6 +15,17 @@ export interface ServerInstance {
 
 const STARTUP_TIMEOUT_SECONDS = 30
 
+type WorkspaceFolderLike = { uri: { fsPath: string } }
+
+export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
+  return folders?.[0]?.uri.fsPath ?? storage
+}
+
+export function resolveIndexingEnv(folders: readonly WorkspaceFolderLike[] | undefined): Record<string, string> {
+  if (folders && folders.length > 0) return {}
+  return { KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" }
+}
+
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
@@ -69,7 +80,11 @@ export class ServerManager {
       const cfg = vscode.workspace.getConfiguration("kilo-code.new")
       const claudeCompat = cfg.get<boolean>("claudeCodeCompat", false)
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
-      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
+      // or "$HOME" in empty VS Code windows.
+      const folders = vscode.workspace.workspaceFolders
+      const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
+      fs.mkdirSync(spawnCwd, { recursive: true })
+      const indexingEnv = resolveIndexingEnv(folders)
       // TLS / corporate-proxy support:
       //   - Default NODE_USE_SYSTEM_CA=1 so the bundled Bun CLI trusts the OS
       //     trust store (Windows cert store, macOS keychain, Linux /etc/ssl).
@@ -100,6 +115,7 @@ export class ServerManager {
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
           KILOCODE_FEATURE: "vscode-extension",
+          ...indexingEnv,
           KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
           KILO_APP_NAME: "kilo-code",
           KILO_EDITOR_NAME: vscode.env.appName,

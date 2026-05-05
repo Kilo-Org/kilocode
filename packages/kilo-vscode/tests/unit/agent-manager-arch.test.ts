@@ -61,9 +61,14 @@ describe("Agent Manager CSS Prefix", () => {
     const matches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
-    // VS Code sets these body classes on webview elements — they are scoping
-    // selectors for high contrast theme support, not agent-manager classes.
-    const host = new Set(["vscode-high-contrast", "vscode-high-contrast-light"])
+    // Exceptions:
+    // - VS Code sets these body classes on webview elements (scoping
+    //   selectors for high contrast theme support).
+    // - `kilo-diff-theme` is the shared Pierre diff theme utility defined
+    //   in webview-ui/src/styles/diff.css and reused across webviews.
+    // - `css` is matched from `@import "./diff.css"` file extension, not a
+    //   class selector.
+    const host = new Set(["vscode-high-contrast", "vscode-high-contrast-light", "kilo-diff-theme", "css"])
     const invalid = names.filter((n) => !n!.startsWith("am-") && !host.has(n!))
 
     expect(invalid, `Classes missing "am-" prefix: ${invalid.join(", ")}`).toEqual([])
