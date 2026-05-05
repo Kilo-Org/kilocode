@@ -29,7 +29,6 @@ import { ProjectID } from "../../src/project/schema"
 import { Filesystem } from "@/util/filesystem"
 import { ConfigPlugin } from "@/config/plugin"
 import { Npm } from "@opencode-ai/core/npm"
-import { toIndexingConfigInput } from "@kilocode/kilo-indexing/config" // kilocode_change
 
 const emptyAccount = Layer.mock(Account.Service)({
   active: () => Effect.succeed(Option.none()),
@@ -243,40 +242,6 @@ test("updates global config and omits empty shell key in jsonc", async () => {
     await clear(true)
   }
 })
-
-// kilocode_change start
-test("does not inherit global indexing enabled into project config", async () => {
-  await using globalTmp = await tmpdir()
-  await using tmp = await tmpdir()
-
-  const prev = Global.Path.config
-  ;(Global.Path as { config: string }).config = globalTmp.path
-  await clear(true)
-
-  try {
-    await writeConfig(globalTmp.path, {
-      $schema: "https://app.kilo.ai/config.json",
-      indexing: {
-        enabled: true,
-        provider: "ollama",
-      },
-    })
-
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const config = await load()
-        expect(config.indexing?.provider).toBe("ollama")
-        expect(config.indexing?.enabled).toBeUndefined()
-        expect(toIndexingConfigInput(config.indexing).enabled).toBe(false)
-      },
-    })
-  } finally {
-    ;(Global.Path as { config: string }).config = prev
-    await clear(true)
-  }
-})
-// kilocode_change end
 
 test("loads formatter boolean config", async () => {
   await using tmp = await tmpdir({

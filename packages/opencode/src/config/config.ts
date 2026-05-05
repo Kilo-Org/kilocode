@@ -414,18 +414,6 @@ function writableGlobal(info: Info) {
   return next
 }
 
-// kilocode_change start
-function stripGlobalIndexing(info: Info): Info {
-  // Indexing provider/storage settings can be global, but enablement is a per-project decision.
-  if (info.indexing?.enabled === undefined) return info
-  const indexing = Object.fromEntries(Object.entries(info.indexing).filter(([key]) => key !== "enabled"))
-  if (Object.keys(indexing).length > 0) return { ...info, indexing }
-  const copy = { ...info }
-  delete copy.indexing
-  return copy
-}
-// kilocode_change end
-
 export const ConfigDirectoryTypoError = NamedError.create(
   "ConfigDirectoryTypoError",
   z.object({
@@ -615,7 +603,7 @@ export const layer = Layer.effect(
         // kilocode_change start
         const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
-          const scoped = scope === "global" ? stripGlobalIndexing(next) : next
+          const scoped = KilocodeConfig.scopeIndexing(next, scope)
           result = mergeConfigConcatArrays(result, scoped)
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
         })
