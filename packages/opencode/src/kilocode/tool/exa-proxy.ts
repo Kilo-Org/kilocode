@@ -76,7 +76,7 @@ export function kiloExaCall(
   tool: string,
   value: Record<string, unknown>,
   timeout: Duration.Input,
-): Effect.Effect<string | undefined> {
+): Effect.Effect<string | undefined, unknown> {
   const body = toBody(tool, value)
   if (!body) return Effect.succeed(undefined)
 
