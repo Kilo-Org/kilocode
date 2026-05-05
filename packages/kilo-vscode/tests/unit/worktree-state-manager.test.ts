@@ -75,6 +75,26 @@ describe("WorktreeStateManager", () => {
       expect(s.worktreeId).toBeNull()
     })
 
+    it("persists session preferences", async () => {
+      manager.addSession("local-1", null)
+      manager.setSessionPrefs("local-1", {
+        agent: "code",
+        model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+        variants: { "anthropic/claude-sonnet-4": "medium" },
+      })
+      await manager.flush()
+
+      const next = new WorktreeStateManager(root, (msg) => logs.push(msg))
+      await next.load()
+
+      expect(next.getSession("local-1")?.prefs).toEqual({
+        agent: "code",
+        model: { providerID: "anthropic", modelID: "claude-sonnet-4" },
+        variants: { "anthropic/claude-sonnet-4": "medium" },
+      })
+      await next.flush()
+    })
+
     it("filters sessions by worktreeId", () => {
       const wt1 = manager.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
       const wt2 = manager.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main" })

@@ -7,7 +7,7 @@
  * ModeSwitcher     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, onCleanup, For, Show } from "solid-js"
+import { type Accessor, Component, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -167,15 +167,20 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
 // Chat-specific wrapper (backwards-compatible)
 // ---------------------------------------------------------------------------
 
-export const ModeSwitcher: Component = () => {
+interface ModeSwitcherProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ModeSwitcher: Component<ModeSwitcherProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ModeSwitcherBase
       agents={session.agents()}
-      value={session.selectedAgent()}
+      value={session.selectedAgent(id())}
       onSelect={(name) => {
-        session.selectAgent(name)
+        session.selectAgent(name, id())
         requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
       }}
     />

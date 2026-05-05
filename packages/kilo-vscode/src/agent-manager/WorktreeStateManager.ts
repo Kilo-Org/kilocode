@@ -62,6 +62,13 @@ export interface ManagedSession {
   id: string
   worktreeId: string | null
   createdAt: string
+  prefs?: SessionPrefs
+}
+
+export interface SessionPrefs {
+  agent?: string
+  model?: { providerID: string; modelID: string }
+  variants?: Record<string, string>
 }
 
 interface StateFile {
@@ -239,12 +246,19 @@ export class WorktreeStateManager {
     return orphaned
   }
 
-  addSession(sessionId: string, worktreeId: string | null): ManagedSession {
-    const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString() }
+  addSession(sessionId: string, worktreeId: string | null, prefs?: SessionPrefs): ManagedSession {
+    const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString(), prefs }
     this.sessions.set(sessionId, session)
     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
     void this.save()
     return session
+  }
+
+  setSessionPrefs(sessionId: string, prefs: SessionPrefs): void {
+    const session = this.sessions.get(sessionId)
+    if (!session) return
+    session.prefs = prefs
+    void this.save()
   }
 
   /** Move an existing session to a worktree (or back to local when null). */

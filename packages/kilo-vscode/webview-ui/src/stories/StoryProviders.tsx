@@ -214,6 +214,7 @@ export function mockSessionValue(overrides?: {
     getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
+    setSessionVariant: noop,
     revert: () => undefined,
     revertedCount: () => 0,
     summary: () => undefined,

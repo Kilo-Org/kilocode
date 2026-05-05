@@ -8,7 +8,7 @@
  */
 
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
-import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
+import type { Worktree, ManagedSession, Section, SessionPrefs } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
@@ -358,6 +358,12 @@ interface CloseSessionIn {
 interface PersistSessionIn {
   type: "agentManager.persistSession"
   sessionId: string
+}
+
+interface PersistSessionPrefsIn {
+  type: "agentManager.persistSessionPrefs"
+  sessionId: string
+  prefs: SessionPrefs
 }
 
 /** Remove a non-worktree session from agent-manager.json. */
@@ -711,6 +717,7 @@ export type AgentManagerInMessage =
   | AddSessionToWorktreeIn
   | CloseSessionIn
   | PersistSessionIn
+  | PersistSessionPrefsIn
   | ForgetSessionIn
   | ForkSessionIn
   | ConfigureSetupScriptIn

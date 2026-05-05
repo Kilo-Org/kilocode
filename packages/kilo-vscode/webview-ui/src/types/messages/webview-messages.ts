@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { AgentManagerSessionPrefs, ModelAllocation, ReviewComment } from "./agent-manager"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -501,6 +501,12 @@ export interface PersistSessionRequest {
 export interface ForgetSessionRequest {
   type: "agentManager.forgetSession"
   sessionId: string
+}
+
+export interface PersistSessionPrefsRequest {
+  type: "agentManager.persistSessionPrefs"
+  sessionId: string
+  prefs: AgentManagerSessionPrefs
 }
 
 // Rename a worktree's display label
@@ -1061,6 +1067,7 @@ export type WebviewMessage =
   | SidebarForkSessionRequest
   | CloseSessionRequest
   | PersistSessionRequest
+  | PersistSessionPrefsRequest
   | ForgetSessionRequest
   | RenameWorktreeRequest
   | TelemetryRequest

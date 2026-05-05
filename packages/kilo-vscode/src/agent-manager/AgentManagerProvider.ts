@@ -7,7 +7,7 @@ import { resolveLocalDiffTarget } from "../review-utils"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
-import { remoteRef, WorktreeStateManager } from "./WorktreeStateManager"
+import { remoteRef, WorktreeStateManager, type SessionPrefs } from "./WorktreeStateManager"
 import { handleSection } from "./section-handler"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
@@ -73,6 +73,7 @@ export class AgentManagerProvider implements Disposable {
    *  Updated synchronously — unlike the session provider's currentSession which depends on
    *  an async `session.get` round-trip and can be stale during rapid tab switches. */
   private activeSessionId: string | undefined
+  private pendingPrefs = new Map<string, SessionPrefs>()
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
@@ -372,16 +373,33 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    if (m.type === "agentManager.persistSessionPrefs") {
+      void this.stateReady?.then(() => {
+        const state = this.getStateManager()
+        if (!state) return
+        if (!state.getSession(m.sessionId)) {
+          this.pendingPrefs.set(m.sessionId, m.prefs)
+          return
+        }
+        state.setSessionPrefs(m.sessionId, m.prefs)
+      })
+      return null
+    }
+
     if (m.type === "agentManager.persistSession" || m.type === "agentManager.forgetSession") {
       const persist = m.type === "agentManager.persistSession"
       void this.stateReady?.then(() => {
         const state = this.getStateManager()
         if (!state) return
         if (persist) {
-          if (!state.getSession(m.sessionId)) state.addSession(m.sessionId, null)
+          const prefs = this.pendingPrefs.get(m.sessionId)
+          if (!state.getSession(m.sessionId)) state.addSession(m.sessionId, null, prefs)
+          else if (prefs) state.setSessionPrefs(m.sessionId, prefs)
+          this.pendingPrefs.delete(m.sessionId)
           return
         }
         state.removeSession(m.sessionId)
+        this.pendingPrefs.delete(m.sessionId)
       })
       return null
     }
