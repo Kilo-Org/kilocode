@@ -1017,6 +1017,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   ? language.t("prompt.action.autoApprove.disable")
                   : language.t("prompt.action.autoApprove.enable")
               }
+              aria-pressed={autoApprove()}
               class={`prompt-auto-approve-button ${autoApprove() ? "prompt-auto-approve-button--active" : ""}`}
             >
               <Icon name="shield" size="small" />

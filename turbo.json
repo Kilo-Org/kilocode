@@ -20,10 +20,6 @@
       "outputs": [".artifacts/unit/junit.xml"],
       "passThroughEnv": ["*"]
     },
-    "@opencode-ai/app#test": {
-      "dependsOn": ["^build"],
-      "outputs": []
-    },
     "@kilocode/kilo-docs#build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**"],
@@ -32,11 +28,6 @@
     "@kilocode/kilo-jetbrains#build": {
       "dependsOn": ["@kilocode/cli#build"],
       "outputs": ["build/distributions/**"]
-    },
-    "@opencode-ai/app#test:ci": {
-      "dependsOn": ["^build"],
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
     }
   }
 }

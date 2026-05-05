@@ -413,7 +413,9 @@ export const layer: Layer.Layer<
             return
 
           case "finish-step": {
-            const elapsed = Math.round(performance.now() - ctx.stepStart) // kilocode_change
+            // kilocode_change start - guard against finish-step without start-step
+            const elapsed = Math.round(performance.now() - (ctx.stepStart || performance.now()))
+            // kilocode_change end
             const usage = Session.getUsage({
               model: ctx.model,
               usage: value.usage,
@@ -444,7 +446,12 @@ export const layer: Layer.Layer<
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,
-              snapshot: yield* snapshot.track(),
+              // kilocode_change start - pass sessionID + messageID
+              snapshot: yield* snapshot.track({
+                sessionID: ctx.sessionID,
+                messageID: ctx.assistantMessage.id,
+              }),
+              // kilocode_change end
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",

@@ -5,14 +5,14 @@ import { StringDecoder } from "string_decoder"
 import { Cause, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
-import { Session } from "@/session"
-import { Flag } from "@/flag/flag"
+import { Session } from "@/session/session"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
 import { Permission } from "@/permission"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -63,7 +63,11 @@ export namespace KiloSessionPrompt {
   }) {
     const rules = input.session.permission ?? []
     if (!modes.includes(input.agent.name)) return rules
-    return Permission.merge(rules, input.agent.permission, rules.filter((rule) => rule.action === "deny"))
+    return Permission.merge(
+      rules,
+      input.agent.permission,
+      rules.filter((rule) => rule.action === "deny"),
+    )
   }
 
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {

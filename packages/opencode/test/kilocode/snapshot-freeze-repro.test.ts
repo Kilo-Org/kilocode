@@ -16,9 +16,10 @@ import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { Snapshot } from "../../src/snapshot"
-import { Filesystem, Log } from "../../src/util"
+import { Filesystem } from "../../src/util/filesystem"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })

@@ -301,6 +301,68 @@ class SessionUpdateQueueTest : SessionControllerTestBase() {
         assertEquals(4, a.compacted)
     }
 
+    fun `test update hooks run on EDT around queued model batch`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val order = mutableListOf<String>()
+        lateinit var m: SessionController
+        m = controller(
+            id = "ses_test",
+            flushMs = Long.MAX_VALUE,
+            condense = true,
+            beforeUpdate = {
+                assertTrue(com.intellij.openapi.application.ApplicationManager.getApplication().isDispatchThread)
+                order.add("before:${order.size}")
+                true
+            },
+            afterUpdate = { follow ->
+                assertTrue(com.intellij.openapi.application.ApplicationManager.getApplication().isDispatchThread)
+                order.add("after:$follow:${order.size}")
+            },
+        )
+        flush()
+        order.clear()
+
+        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("prt1", "ses_test", "msg1", "text", text = "hello")), flush = false)
+        settle()
+        flush()
+
+        assertEquals(listOf("before:0", "after:true:1"), order)
+        assertNotNull(m.model.message("msg1")?.parts?.get("prt1"))
+    }
+
+    fun `test update hooks run on EDT around history and recovery`() {
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        rpc.history.add(ai.kilocode.rpc.dto.MessageWithPartsDto(msg("msg1", "ses_test", "assistant"), emptyList()))
+        rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
+        val order = mutableListOf<String>()
+        val m = controller(
+            id = "ses_test",
+            flushMs = Long.MAX_VALUE,
+            condense = true,
+            beforeUpdate = {
+                assertTrue(com.intellij.openapi.application.ApplicationManager.getApplication().isDispatchThread)
+                order.add("before:${order.size}")
+                true
+            },
+            afterUpdate = { follow ->
+                assertTrue(com.intellij.openapi.application.ApplicationManager.getApplication().isDispatchThread)
+                order.add("after:$follow:${order.size}")
+            },
+        )
+
+        flush()
+
+        assertTrue(order.contains("before:0"))
+        assertTrue(order.contains("after:true:1"))
+        assertTrue(order.contains("before:2"))
+        assertTrue(order.contains("after:true:3"))
+        assertNotNull(m.model.message("msg1"))
+        assertTrue(m.model.state is SessionState.Busy)
+    }
+
     private fun corpus(): List<ChatEventDto> = buildList {
         add(ChatEventDto.TurnOpen("ses_test"))
         add(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))

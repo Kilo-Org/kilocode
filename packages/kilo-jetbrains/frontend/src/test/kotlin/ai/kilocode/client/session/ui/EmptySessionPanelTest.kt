@@ -15,11 +15,11 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
-import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class EmptySessionPanelTest : BasePlatformTestCase() {
@@ -119,7 +119,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     }
 
     fun `test renderer aligns title center and time east`() {
-        val cell = panel().rendererComponent(session("ses_1")) as JPanel
+        val cell = panel().rendererComponent(session("ses_1")) as BorderLayoutPanel
         val layout = cell.layout as BorderLayout
 
         assertNotNull(layout.getLayoutComponent(BorderLayout.CENTER))
@@ -129,8 +129,8 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
     fun `test hover uses selection colors`() {
         val panel = panel()
         val session = session("ses_1")
-        val selected = panel.rendererComponent(session, selected = true) as JPanel
-        val hovered = panel.rendererComponent(session, hover = true) as JPanel
+        val selected = panel.rendererComponent(session, selected = true) as BorderLayoutPanel
+        val hovered = panel.rendererComponent(session, hover = true) as BorderLayoutPanel
 
         assertTrue(selected.isOpaque)
         assertTrue(hovered.isOpaque)

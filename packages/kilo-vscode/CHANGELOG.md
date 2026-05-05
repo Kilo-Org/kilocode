@@ -1,5 +1,33 @@
 # kilo-code
 
+## 7.2.39
+
+## 7.2.36
+
+### Minor Changes
+
+- [#9850](https://github.com/Kilo-Org/kilocode/pull/9850) [`712371e`](https://github.com/Kilo-Org/kilocode/commit/712371e2315ea2da9a75c06b88b3745ad78ce980) - Render Mermaid diagrams in chat Markdown responses.
+
+### Patch Changes
+
+- [#7835](https://github.com/Kilo-Org/kilocode/pull/7835) [`b4a7de7`](https://github.com/Kilo-Org/kilocode/commit/b4a7de70bbbce3f9991e0725ecda6f2ba18dc7a7) Thanks [@sainzs](https://github.com/sainzs)! - Fix Agents Behavior settings not persisting the Hidden and Disable toggles when turning them off after a previous save.
+
+- [#9778](https://github.com/Kilo-Org/kilocode/pull/9778) [`33476e5`](https://github.com/Kilo-Org/kilocode/commit/33476e50508f39c232731613fd9d74a7aa19e748) - Pin the VS Code sidebar question dock above the prompt input so standalone follow-up questions no longer float in the middle of the viewport when the message list is short.
+
+- [#9839](https://github.com/Kilo-Org/kilocode/pull/9839) [`a5bb938`](https://github.com/Kilo-Org/kilocode/commit/a5bb938dbd68d577951102e5fd56559e3e985dc0) - Label disabled provider actions as enabling providers instead of deleting them.
+
+- [#9846](https://github.com/Kilo-Org/kilocode/pull/9846) [`01b5424`](https://github.com/Kilo-Org/kilocode/commit/01b54248660f0d68e107d18a7093767430df7c7a) - Support rendering Markdown files in diff viewers with a persisted toggle.
+
+- [#9833](https://github.com/Kilo-Org/kilocode/pull/9833) [`614bca7`](https://github.com/Kilo-Org/kilocode/commit/614bca7cff862ec96e4707a97f43b540210ab699) - Prevent macOS Spotlight from indexing Kilo-generated data directories.
+
+## 7.2.35
+
+### Patch Changes
+
+- [#9816](https://github.com/Kilo-Org/kilocode/pull/9816) [`c8494f2`](https://github.com/Kilo-Org/kilocode/commit/c8494f2f25c17f68455230feec146775d6707090) - Remember the main auto-approve toggle preference across VS Code reloads and extension restarts.
+
+- [#8910](https://github.com/Kilo-Org/kilocode/pull/8910) [`8472f90`](https://github.com/Kilo-Org/kilocode/commit/8472f9052883d9acf643e0786e3819936c44a61a) Thanks [@eolbrych](https://github.com/eolbrych)! - Restore the Sign in action for MCP servers that require OAuth authentication in VS Code settings.
+
 ## 7.2.33
 
 ### Minor Changes

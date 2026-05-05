@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.createTempDirectory
 
 /**
  * Lightweight mock HTTP server simulating the Kilo CLI server.
@@ -33,6 +34,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var warnings = "[]"
     @Volatile var notifications = "[]"
     @Volatile var profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":null}"""
+    @Volatile var path = """{"home":"/tmp","state":"${createTempDirectory("kilo-model-state").toAbsolutePath()}","config":"/tmp","worktree":"/tmp","directory":"/tmp"}"""
     @Volatile var profileStatus = 200
     @Volatile var configStatus = 200
     @Volatile var warningsStatus = 200
@@ -200,6 +202,7 @@ class MockCliServer : AutoCloseable {
                     }
                 }
                 path == "/global/event" -> handleSse(output)
+                path == "/path" -> respond(output, 200, this.path)
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/agent" -> respond(output, agentsStatus, agents)
                 bare == "/command" -> respond(output, commandsStatus, commands)

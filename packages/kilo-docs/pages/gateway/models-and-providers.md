@@ -60,7 +60,6 @@ Several models are available at no cost, subject to rate limits:
 
 | Model ID | Description |
 |---|---|
-| `bytedance-seed/dola-seed-2.0-pro:free` | ByteDance Dola Seed 2.0 Pro |
 | `x-ai/grok-code-fast-1:optimized:free` | xAI Grok Code Fast 1 Optimized |
 | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super 120B |
 | `arcee-ai/trinity-large-thinking:free` | Arcee Trinity Large |
@@ -74,7 +73,7 @@ Provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia
 
 ## Auto models
 
-Kilo Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
+Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
 
 {% callout type="info" title="Underlying models can change" %}
 The mappings below reflect the current routing. The underlying models behind each `kilo-auto/*` tier are updated server-side as better options become available or as providers change pricing and availability — the tier IDs themselves remain stable.
@@ -103,6 +102,10 @@ Great balance of price and capability. The resolved model depends on the API int
 ### `kilo-auto/free`
 
 Free with limited capability. No credits required. The resolved model is selected dynamically per session from a curated set of available free models; the mapping updates server-side as free model availability shifts.
+
+{% callout type="warning" title="Data handling for Auto Free" %}
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services — including NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) (trial use only, not for production or sensitive data). Do not submit personal or confidential data when using Auto Free.
+{% /callout %}
 
 ### `kilo-auto/small`
 

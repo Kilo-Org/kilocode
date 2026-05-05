@@ -21,32 +21,24 @@ sidebar_label: ChatGPT Plus/Pro
 
 Open **Settings** (gear icon) and go to the **Providers** tab. ChatGPT Plus/Pro uses OAuth authentication — follow the sign-in flow to connect your ChatGPT subscription.
 
+If OpenAI is already connected from an API key, environment variable, or `kilo.json` config, you can still sign in with ChatGPT from the OpenAI provider row. Kilo Code uses the ChatGPT sign-in for Codex models until you disconnect it, then falls back to your existing OpenAI API configuration.
+
 {% /tab %}
 {% tab label="CLI" %}
 
-ChatGPT Plus/Pro uses OAuth authentication, which is only available in the VS Code extension. For the CLI, use the [OpenAI API provider](/docs/ai-providers/openai) with an API key instead:
+Run the auth command and follow the ChatGPT Plus/Pro sign-in flow:
 
 ```bash
-export OPENAI_API_KEY="your-api-key"
+kilo auth login --provider codex
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+You can also use `--provider openai`. If you already have `OPENAI_API_KEY` or OpenAI config set, ChatGPT OAuth takes priority for Codex models until you log out of the OpenAI provider.
+
+Then set your default model to one of the OpenAI Codex models available in Kilo Code:
 
 ```jsonc
 {
-  "provider": {
-    "openai": {
-      "env": ["OPENAI_API_KEY"],
-    },
-  },
-}
-```
-
-Then set your default model:
-
-```jsonc
-{
-  "model": "openai/gpt-4.1",
+  "model": "openai/gpt-5.1-codex",
 }
 ```
 
@@ -58,7 +50,7 @@ Then set your default model:
 - **Subscription Required:** You need an active ChatGPT Plus or Pro subscription. This provider won't work with free ChatGPT accounts. See [OpenAI's ChatGPT plans](https://chatgpt.com/pricing/) for more information.
 - **Authentication Errors:** If you receive a CSRF or other error when completing OAuth authentication, ensure you do not have another application already listening on port 1455. You can check on Linux and Mac by using `lsof -i :1455`.
 - **No API Costs:** Usage through this provider counts against your ChatGPT subscription, not separately billed API usage.
-- **Sign Out:** To disconnect, use the "Sign Out" button in the provider settings.
+- **Sign Out:** To disconnect in VS Code, use the "Disconnect" button in the provider settings. In the CLI, run `kilo auth logout` and choose OpenAI.
 
 ## Limitations
 

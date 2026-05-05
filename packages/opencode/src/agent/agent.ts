@@ -1,12 +1,11 @@
-import { Config } from "../config"
+import { Config } from "@/config/config"
 import z from "zod"
-import { Provider } from "../provider"
+import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { generateObject, streamObject, type ModelMessage } from "ai"
-import { Instance } from "../project/instance"
-import { Truncate } from "../tool"
+import { Truncate } from "@/tool/truncate"
 import { Auth } from "../auth"
-import { ProviderTransform } from "../provider"
+import { ProviderTransform } from "@/provider/transform"
 
 import PROMPT_GENERATE from "./generate.txt"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
@@ -16,43 +15,43 @@ import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
-import { Global } from "@/global" // kilocode_change
+import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
-import path from "path" // kilocode_change
+import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
-import { Effect, Context, Layer } from "effect"
-import { InstanceState } from "@/effect"
+import { Effect, Context, Layer, Schema } from "effect"
+import { InstanceState } from "@/effect/instance-state"
+import { zod } from "@/util/effect-zod"
+import { withStatics, type DeepMutable } from "@/util/schema"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 
-export const Info = z
-  .object({
-    name: z.string(),
-    displayName: z.string().optional(), // kilocode_change - human-readable name for org modes
-    description: z.string().optional(),
-    deprecated: z.boolean().optional(), // kilocode_change
-    mode: z.enum(["subagent", "primary", "all"]),
-    native: z.boolean().optional(),
-    hidden: z.boolean().optional(),
-    topP: z.number().optional(),
-    temperature: z.number().optional(),
-    color: z.string().optional(),
-    permission: Permission.Ruleset.zod,
-    model: z
-      .object({
-        modelID: ModelID.zod,
-        providerID: ProviderID.zod,
-      })
-      .optional(),
-    variant: z.string().optional(),
-    prompt: z.string().optional(),
-    options: z.record(z.string(), z.any()),
-    steps: z.number().int().positive().optional(),
-  })
-  .meta({
-    ref: "Agent",
-  })
-export type Info = z.infer<typeof Info>
+export const Info = Schema.Struct({
+  name: Schema.String,
+  displayName: Schema.optional(Schema.String), // kilocode_change - human-readable name for org modes
+  description: Schema.optional(Schema.String),
+  deprecated: Schema.optional(Schema.Boolean), // kilocode_change
+  mode: Schema.Literals(["subagent", "primary", "all"]),
+  native: Schema.optional(Schema.Boolean),
+  hidden: Schema.optional(Schema.Boolean),
+  topP: Schema.optional(Schema.Number),
+  temperature: Schema.optional(Schema.Number),
+  color: Schema.optional(Schema.String),
+  permission: Permission.Ruleset,
+  model: Schema.optional(
+    Schema.Struct({
+      modelID: ModelID,
+      providerID: ProviderID,
+    }),
+  ),
+  variant: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
+  options: Schema.Record(Schema.String, Schema.Unknown),
+  steps: Schema.optional(Schema.Number),
+})
+  .annotate({ identifier: "Agent" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Info = DeepMutable<Schema.Schema.Type<typeof Info>>
 
 export interface Interface {
   readonly get: (agent: string) => Effect.Effect<Info>
@@ -82,7 +81,7 @@ export const layer = Layer.effect(
     const provider = yield* Provider.Service
 
     const state = yield* InstanceState.make<State>(
-      Effect.fn("Agent.state")(function* (_ctx) {
+      Effect.fn("Agent.state")(function* (ctx) {
         const cfg = yield* config.get()
         const skillDirs = yield* skill.dirs()
         // kilocode_change start - include global config dirs so agents can read them without prompting
@@ -154,7 +153,7 @@ export const layer = Layer.effect(
                 edit: {
                   "*": "deny",
                   [path.join(".opencode", "plans", "*.md")]: "allow",
-                  [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
+                  [path.relative(ctx.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
                 },
               }),
               user,

@@ -1,7 +1,7 @@
-import { Provider } from "@/provider"
+import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
 
