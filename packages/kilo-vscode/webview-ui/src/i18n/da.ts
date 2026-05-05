@@ -1399,6 +1399,8 @@ export const dict = {
   "settings.display.layout.description": "Layouttilstand for chatgrænsefladen",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Stræk",
+  "settings.display.fontSize.title": "Skriftstørrelse",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
@@ -1413,6 +1415,7 @@ export const dict = {
     "Letvægtsmodel til titelgenerering, generering af commit-beskeder, prompt-forbedring og andre hurtige opgaver",
   "settings.providers.disabled": "Deaktiverede udbydere",
   "settings.providers.disabled.description": "Udbydere at skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverede udbydere (hvidliste)",
   "settings.providers.enabled.description": "Hvis angivet, er kun disse udbydere tilgængelige",
   "settings.providers.notSet": "Ikke angivet (brug serverstandard)",

@@ -17,6 +17,8 @@ const BOM = {
   utf8: Buffer.from([0xef, 0xbb, 0xbf]),
   utf16le: Buffer.from([0xff, 0xfe]),
   utf16be: Buffer.from([0xfe, 0xff]),
+  utf32le: Buffer.from([0xff, 0xfe, 0x00, 0x00]),
+  utf32be: Buffer.from([0x00, 0x00, 0xfe, 0xff]),
 }
 
 async function tmp<T>(body: (dir: string) => Promise<T>): Promise<T> {
@@ -65,12 +67,21 @@ describe("Encoding.detect", () => {
     expect(Encoding.detect(bytes)).toBe("utf-16be")
   })
 
-  test("UTF-32 (detected by jschardet) is rejected and falls back to utf-8", () => {
-    // Build a sample starting with a UTF-32 LE BOM. jschardet will report
-    // UTF-32*; the namespace explicitly strips that because iconv-lite can't
-    // round-trip it.
-    const bytes = Buffer.concat([Buffer.from([0xff, 0xfe, 0x00, 0x00]), Buffer.alloc(32)])
-    expect(Encoding.detect(bytes)).toBe(Encoding.DEFAULT)
+  test("UTF-32 LE with BOM detects as utf-32le", () => {
+    const bytes = Buffer.concat([BOM.utf32le, iconv.encode("hello world", "utf-32le")])
+    expect(Encoding.detect(bytes)).toBe("utf-32le")
+  })
+
+  test("UTF-32 BE with BOM detects as utf-32be", () => {
+    const bytes = Buffer.concat([BOM.utf32be, iconv.encode("hello world", "utf-32be")])
+    expect(Encoding.detect(bytes)).toBe("utf-32be")
+  })
+
+  test("UTF-32 LE BOM is not misdetected as UTF-16 LE (shared FF FE prefix)", () => {
+    // UTF-32 LE BOM is FF FE 00 00; its first two bytes are identical to the
+    // UTF-16 LE BOM, so the order of BOM checks matters.
+    const bytes = Buffer.concat([BOM.utf32le, iconv.encode("hi", "utf-32le")])
+    expect(Encoding.detect(bytes)).toBe("utf-32le")
   })
 
   test("Shift_JIS bytes detect as Shift_JIS (case-insensitive, iconv-compatible label)", () => {
@@ -94,6 +105,8 @@ describe("Encoding.decode / Encoding.encode", () => {
     ["utf-8-bom synthetic label", Encoding.UTF8_BOM, "hello"],
     ["utf-16le", "utf-16le", "Hello 世界"],
     ["utf-16be", "utf-16be", "Hello 世界"],
+    ["utf-32le", "utf-32le", "Hello 世界"],
+    ["utf-32be", "utf-32be", "Hello 世界"],
     ["Shift_JIS", "Shift_JIS", "日本語"],
     ["windows-1251", "windows-1251", "Привет"],
     ["gb2312", "gb2312", "你好"],
@@ -134,6 +147,25 @@ describe("Encoding.decode / Encoding.encode", () => {
     expect(bytes[3]).toBe(0x68)
   })
 
+  test("utf-32le encode emits exactly one BOM even if input starts with U+FEFF", () => {
+    const bytes = Encoding.encode("\uFEFFhi", "utf-32le")
+    expect(bytes.subarray(0, 4).equals(BOM.utf32le)).toBe(true)
+    // Next four bytes must be the 'h' code point (0x68 0x00 0x00 0x00), not another BOM.
+    expect(bytes[4]).toBe(0x68)
+    expect(bytes[5]).toBe(0x00)
+    expect(bytes[6]).toBe(0x00)
+    expect(bytes[7]).toBe(0x00)
+  })
+
+  test("utf-32be encode emits exactly one BOM even if input starts with U+FEFF", () => {
+    const bytes = Encoding.encode("\uFEFFhi", "utf-32be")
+    expect(bytes.subarray(0, 4).equals(BOM.utf32be)).toBe(true)
+    expect(bytes[4]).toBe(0x00)
+    expect(bytes[5]).toBe(0x00)
+    expect(bytes[6]).toBe(0x00)
+    expect(bytes[7]).toBe(0x68)
+  })
+
   test("decode of utf-8-bom produces text without leading U+FEFF", () => {
     // iconv-lite's utf-8 codec is documented to strip BOMs; guard against
     // regressions if the underlying behaviour changes.
@@ -164,6 +196,37 @@ describe("Encoding.hasUtf16Bom", () => {
   })
   test("returns false for a one-byte buffer", () => {
     expect(Encoding.hasUtf16Bom(Buffer.from([0xff]))).toBe(false)
+  })
+  test("returns false for a UTF-32 LE BOM (distinct encoding)", () => {
+    // UTF-32 LE starts with FF FE 00 00; a naive check on the first two bytes
+    // would misclassify it as UTF-16 LE. hasUtf16Bom must reject it so the
+    // caller can disambiguate.
+    expect(Encoding.hasUtf16Bom(BOM.utf32le)).toBe(false)
+  })
+})
+
+describe("Encoding.hasUtf32Bom", () => {
+  test("detects LE BOM (FF FE 00 00)", () => {
+    expect(Encoding.hasUtf32Bom(BOM.utf32le)).toBe(true)
+  })
+  test("detects BE BOM (00 00 FE FF)", () => {
+    expect(Encoding.hasUtf32Bom(BOM.utf32be)).toBe(true)
+  })
+  test("returns false for UTF-16 LE BOM (shorter, distinct encoding)", () => {
+    expect(Encoding.hasUtf32Bom(BOM.utf16le)).toBe(false)
+  })
+  test("returns false for UTF-16 BE BOM", () => {
+    expect(Encoding.hasUtf32Bom(BOM.utf16be)).toBe(false)
+  })
+  test("returns false for UTF-8 BOM", () => {
+    expect(Encoding.hasUtf32Bom(BOM.utf8)).toBe(false)
+  })
+  test("returns false for a three-byte buffer (too short)", () => {
+    expect(Encoding.hasUtf32Bom(Buffer.from([0xff, 0xfe, 0x00]))).toBe(false)
+  })
+  test("respects an explicit limit smaller than the buffer", () => {
+    expect(Encoding.hasUtf32Bom(BOM.utf32le, 3)).toBe(false)
+    expect(Encoding.hasUtf32Bom(BOM.utf32le, 4)).toBe(true)
   })
 })
 
@@ -239,6 +302,32 @@ describe("Encoding.read / Encoding.readSync / Encoding.write", () => {
       expect(bytes.subarray(0, 2).equals(BOM.utf16le)).toBe(true)
       const result = await Encoding.read(filepath)
       expect(result.encoding).toBe("utf-16le")
+      expect(result.text).toBe(text)
+    })
+  })
+
+  test("write + read round-trips utf-32le with BOM", async () => {
+    await tmp(async (dir) => {
+      const filepath = path.join(dir, "u32.txt")
+      const text = "Hello 世界"
+      await Encoding.write(filepath, text, "utf-32le")
+      const bytes = await fs.readFile(filepath)
+      expect(bytes.subarray(0, 4).equals(BOM.utf32le)).toBe(true)
+      const result = await Encoding.read(filepath)
+      expect(result.encoding).toBe("utf-32le")
+      expect(result.text).toBe(text)
+    })
+  })
+
+  test("write + read round-trips utf-32be with BOM", async () => {
+    await tmp(async (dir) => {
+      const filepath = path.join(dir, "u32be.txt")
+      const text = "Hello 世界"
+      await Encoding.write(filepath, text, "utf-32be")
+      const bytes = await fs.readFile(filepath)
+      expect(bytes.subarray(0, 4).equals(BOM.utf32be)).toBe(true)
+      const result = await Encoding.read(filepath)
+      expect(result.encoding).toBe("utf-32be")
       expect(result.text).toBe(text)
     })
   })

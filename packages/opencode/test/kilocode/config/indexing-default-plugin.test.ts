@@ -5,14 +5,14 @@ import path from "path"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
-import { Config } from "../../../src/config"
-import * as CrossSpawnSpawner from "../../../src/effect/cross-spawn-spawner"
+import { Config } from "../../../src/config/config"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../../src/env"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { EffectFlock } from "@opencode-ai/shared/util/effect-flock"
-import { Filesystem } from "../../../src/util"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Filesystem } from "../../../src/util/filesystem"
 import { Instance } from "../../../src/project/instance"
-import { Npm } from "../../../src/npm"
+import { Npm } from "@opencode-ai/core/npm"
 import { tmpdir } from "../../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
@@ -28,7 +28,6 @@ const emptyAuth = Layer.mock(Auth.Service)({
 const noopNpm = Layer.mock(Npm.Service)({
   install: () => Effect.void,
   add: () => Effect.die("not implemented"),
-  outdated: () => Effect.succeed(false),
   which: () => Effect.succeed(Option.none()),
 })
 const layer = Config.layer.pipe(

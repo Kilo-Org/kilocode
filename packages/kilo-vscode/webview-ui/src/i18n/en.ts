@@ -1393,6 +1393,8 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.fontSize.title": "Font Size",
+  "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
@@ -1411,6 +1413,7 @@ export const dict = {
     "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
+  "settings.providers.disabled.enable": "Enable",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",

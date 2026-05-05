@@ -122,11 +122,11 @@ export async function commit(message: string): Promise<void> {
 }
 
 export async function merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
-  // Use zdiff3 markers so conflicts carry the base version (|||||||) alongside
-  // ours/theirs. This gives mergiraf the base it needs for structural heuristics
-  // and makes any remaining manual resolution dramatically easier (you can see
-  // what both sides changed relative to the common ancestor instead of
-  // reverse-engineering it from a 2-way marker).
+  // Force zdiff3 markers even if the contributor's local config has drifted:
+  // conflicts carry the base version (|||||||) alongside ours/theirs so mergiraf
+  // has the common ancestor for structural heuristics and any remaining manual
+  // resolution is dramatically easier. `postinstall` (script/setup-git.ts) sets
+  // this repo-wide as well; the `-c` override here is belt-and-suspenders.
   const result = await $`git -c merge.conflictStyle=zdiff3 merge ${branch}`.nothrow()
 
   if (result.exitCode === 0) {

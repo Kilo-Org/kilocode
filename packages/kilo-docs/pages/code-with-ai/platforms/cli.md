@@ -270,6 +270,8 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 }
 ```
 
+In Ask and Plan modes, `external_directory` allow rules can still permit reads outside the workspace. They do not enable writes or mutating commands that those modes deny, and explicit `external_directory` deny rules still win.
+
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
 ## Configuration
@@ -398,10 +400,10 @@ When running in interactive mode, command approval requests show hierarchical op
 Selecting an "Always run" option will:
 
 1. Approve and execute the current command
-2. Add the pattern to your `execute.allowed` list in the config
-3. Auto-approve matching commands in the future
+2. Save the selected pattern as an `allow` rule under `permission.bash` in your global config
+3. Auto-approve future matching commands, including matching approvals already waiting in other open sessions
 
-This allows you to progressively build your auto-approval rules without manually editing the config file.
+Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
 
 ## Autonomous Mode (Non-Interactive)
 

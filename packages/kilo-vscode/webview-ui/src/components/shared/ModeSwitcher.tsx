@@ -139,7 +139,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
                     <Show when={agent.deprecated}>
                       <span
                         style={{
-                          "font-size": "10px",
+                          "font-size": "var(--kilo-font-size-10)",
                           padding: "1px 5px",
                           "border-radius": "3px",
                           background: "var(--vscode-editorWarning-foreground, #cca700)",

@@ -1,7 +1,8 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "./services/cli-backend"
-import { buildWebviewHtml } from "./utils"
+import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { WorktreeDiffClient, type DiffTarget } from "./worktree-diff-client"
 import {
   appendOutput,
@@ -10,6 +11,7 @@ import {
   openWorkspaceRelativeFile,
   resolveLocalDiffTarget,
 } from "./review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
 
 /**
  * DiffViewerProvider opens a full-screen diff viewer in an editor tab.
@@ -24,6 +26,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private cachedDiffTarget: DiffTarget | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
+  private fontConfigDisposable: vscode.Disposable | undefined
   private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
 
   constructor(
@@ -72,10 +75,14 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
     panel.webview.html = this.getHtml(panel.webview)
+    this.fontConfigDisposable?.dispose()
+    this.fontConfigDisposable = watchFontSizeConfig((msg) => this.post(msg))
 
     panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.stopDiffPolling()
+      this.fontConfigDisposable?.dispose()
+      this.fontConfigDisposable = undefined
       this.panel = undefined
     })
   }
@@ -88,8 +95,10 @@ export class DiffViewerProvider implements vscode.Disposable {
         type: "ready",
         vscodeLanguage: vscode.env.language,
         languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+        fontSize: getWebviewFontSize(),
         workspaceDirectory: getWorkspaceRoot(),
       })
+      this.post({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
       this.startDiffPolling()
       return
     }
@@ -105,6 +114,11 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     if (type === "diffViewer.setDiffStyle" && (msg.style === "unified" || msg.style === "split")) {
+      return
+    }
+
+    if (type === "diffViewer.setMarkdownRender" && typeof msg.render === "boolean") {
+      void setDiffMarkdownRender(msg.render)
       return
     }
 
@@ -248,6 +262,7 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
+    this.fontConfigDisposable?.dispose()
     this.gitOps.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()

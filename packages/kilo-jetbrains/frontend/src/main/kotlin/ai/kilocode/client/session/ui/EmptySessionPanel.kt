@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.openapi.Disposable
@@ -10,8 +11,10 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.Centerizer
+import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -22,7 +25,6 @@ import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
 import javax.swing.JList
-import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import kotlin.math.abs
@@ -34,11 +36,12 @@ class EmptySessionPanel(
     parent: Disposable,
     private val controller: SessionController,
     recents: List<SessionDto>,
-) : JPanel(BorderLayout()), Disposable {
+) : BorderLayoutPanel(), Disposable, SessionStyleTarget {
 
     companion object {
-        internal const val LIMIT = 5
-        internal const val MAX_WIDTH = 350
+        internal val LIMIT = UiStyle.Size.LIMIT
+        internal val MAX_WIDTH = UiStyle.Size.WIDTH
+        private const val SECOND_MS_LIMIT = 10_000_000_000L
         private const val MINUTE = 60_000L
         private const val HOUR = 60 * MINUTE
         private const val DAY = 24 * HOUR
@@ -46,8 +49,14 @@ class EmptySessionPanel(
 
     private val model = DefaultListModel<SessionDto>()
     private var hover = -1
+    private var style = SessionStyle.current()
+    private val recentTitle = JBLabel(KiloBundle.message("session.empty.recent")).apply {
+        foreground = UIUtil.getContextHelpForeground()
+        border = JBUI.Borders.emptyLeft(UiStyle.Space.LG)
+    }
 
     private val list = JBList(model).apply {
+        // Blend the recent-session list into the centered empty-state surface.
         isOpaque = false
         selectionMode = ListSelectionModel.SINGLE_SELECTION
         visibleRowCount = LIMIT
@@ -76,6 +85,7 @@ class EmptySessionPanel(
         })
     }
     private val md = MdView.html().apply {
+        // MdView uses an HTML component; transparency keeps the centered panel seamless.
         opaque = false
         foreground = UIUtil.getContextHelpForeground()
         set(KiloBundle.message("session.empty.welcome"))
@@ -84,8 +94,10 @@ class EmptySessionPanel(
 
     init {
         Disposer.register(parent, this)
+        // The empty state floats on the tool-window background.
         isOpaque = false
-        border = JBUI.Borders.empty(12)
+        border = UiStyle.Insets.empty()
+        applyStyle(SessionStyle.current())
         setSessions(recents)
         add(Centerizer(content, Centerizer.TYPE.BOTH), BorderLayout.CENTER)
     }
@@ -97,44 +109,36 @@ class EmptySessionPanel(
         repaint()
     }
 
-    private fun createContent(): JPanel {
+    private fun createContent(): BorderLayoutPanel {
         val logo = JBLabel(
             IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java),
         ).apply {
             alignmentX = CENTER_ALIGNMENT
         }
-        val intro = JPanel(BorderLayout()).apply {
-            isOpaque = false
+        val intro = BorderLayoutPanel().apply {
             alignmentX = CENTER_ALIGNMENT
             add(md.component, BorderLayout.CENTER)
-            border = JBUI.Borders.empty(0, 12, 0, 12)
+            border = JBUI.Borders.empty(0, UiStyle.Space.PAD, 0, UiStyle.Space.PAD)
         }
-        val recent = JPanel(BorderLayout()).apply {
-            isOpaque = false
+        val recent = BorderLayoutPanel().apply {
             alignmentX = CENTER_ALIGNMENT
-            add(JBLabel(KiloBundle.message("session.empty.recent")).apply {
-                foreground = UIUtil.getContextHelpForeground()
-                font = font.deriveFont(font.size2D - 1f)
-                border = JBUI.Borders.emptyLeft(8)
-            }, BorderLayout.NORTH)
+            add(recentTitle, BorderLayout.NORTH)
             add(list, BorderLayout.CENTER)
         }
-        val stack = JPanel().apply {
-            isOpaque = false
+        val stack = BorderLayoutPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             add(logo)
-            add(Box.createVerticalStrut(JBUI.scale(14)))
+            add(Box.createVerticalStrut(JBUI.scale(UiStyle.Space.LOGO)))
             add(intro)
-            add(Box.createVerticalStrut(JBUI.scale(28)))
+            add(Box.createVerticalStrut(JBUI.scale(UiStyle.Space.RECENT)))
             add(recent)
         }
-        return object : JPanel(BorderLayout()) {
+        return object : BorderLayoutPanel() {
             override fun getPreferredSize(): Dimension {
                 val size = super.getPreferredSize()
-                return Dimension(JBUI.scale(MAX_WIDTH), size.height)
+                return JBDimension(JBUI.scale(MAX_WIDTH), size.height)
             }
         }.apply {
-            isOpaque = false
             add(stack, BorderLayout.NORTH)
         }
     }
@@ -168,7 +172,7 @@ class EmptySessionPanel(
 
     internal fun normalize(value: Double): Long {
         val raw = value.toLong()
-        if (abs(raw) < 10_000_000_000L) return raw * 1000
+        if (abs(raw) < SECOND_MS_LIMIT) return raw * 1000
         return raw
     }
 
@@ -192,12 +196,12 @@ class EmptySessionPanel(
         return index
     }
 
-    private inner class SessionRenderer : JPanel(BorderLayout()), ListCellRenderer<SessionDto> {
+    private inner class SessionRenderer : BorderLayoutPanel(), ListCellRenderer<SessionDto> {
         private val title = JBLabel()
         private val time = JBLabel()
 
         init {
-            border = JBUI.Borders.empty(8, 8, 8, 8)
+            border = JBUI.Borders.empty(UiStyle.Space.LG, UiStyle.Space.LG, UiStyle.Space.LG, UiStyle.Space.LG)
             add(title, BorderLayout.CENTER)
             add(time, BorderLayout.EAST)
         }
@@ -234,5 +238,13 @@ class EmptySessionPanel(
 
     override fun dispose() {
         // no-op
+    }
+
+    override fun applyStyle(style: SessionStyle) {
+        this.style = style
+        md.font = style.uiFont
+        recentTitle.font = style.smallUiFont
+        revalidate()
+        repaint()
     }
 }

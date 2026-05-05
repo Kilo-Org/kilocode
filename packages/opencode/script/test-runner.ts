@@ -7,6 +7,7 @@
 import os from "os"
 import path from "path"
 import fs from "fs/promises"
+import { skipped } from "./kilocode-test-skips" // kilocode_change
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
@@ -80,8 +81,9 @@ const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
 const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") }))).sort()
 
-const files =
+const matched =
   patterns.length > 0 ? all.filter((f) => patterns.some((p) => f.includes(p) || path.join("test", f).includes(p))) : all
+const files = patterns.length > 0 ? matched : matched.filter((f) => !skipped.has(f)) // kilocode_change
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -280,9 +282,11 @@ async function merge() {
       const extracted = extract(content)
       if (extracted) {
         suites.push(extracted)
-        counts.tests += attr(extracted, "tests")
-        counts.failures += attr(extracted, "failures")
-        counts.errors += attr(extracted, "errors")
+        // kilocode_change start - count nested suites without matching the root testsuites tag.
+        counts.tests += sum(extracted, "tests")
+        counts.failures += sum(extracted, "failures")
+        counts.errors += sum(extracted, "errors")
+        // kilocode_change end
         continue
       }
     }
@@ -320,9 +324,8 @@ async function merge() {
 }
 
 function extract(content: string, from = 0): string {
-  const open = "<testsuite"
   const close = "</testsuite>"
-  const s = content.indexOf(open, from)
+  const s = open(content, from) // kilocode_change
   if (s === -1) return ""
   const e = content.indexOf(close, s)
   if (e === -1) return ""
@@ -331,10 +334,20 @@ function extract(content: string, from = 0): string {
   return rest ? suite + "\n" + rest : suite
 }
 
-function attr(content: string, name: string): number {
-  const match = content.match(new RegExp(`${name}="(\\d+)"`))
-  return match ? Number(match[1]) : 0
+// kilocode_change start
+function open(content: string, from: number): number {
+  const tag = "<testsuite"
+  const s = content.indexOf(tag, from)
+  if (s === -1) return -1
+  const ch = content[s + tag.length]
+  if (ch === ">" || /\s/.test(ch)) return s
+  return open(content, s + 1)
 }
+
+function sum(content: string, name: string): number {
+  return Array.from(content.matchAll(new RegExp(`${name}="(\\d+)"`, "g"))).reduce((n, m) => n + Number(m[1]), 0)
+}
+// kilocode_change end
 
 function esc(s: string): string {
   return s

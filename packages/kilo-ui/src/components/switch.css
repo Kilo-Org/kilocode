@@ -4,7 +4,7 @@
   cursor: pointer;
 
   [data-slot="switch-label"] {
-    font-size: 13px;
+    font-size: var(--kilo-font-size-13);
   }
 
   [data-slot="switch-control"] {

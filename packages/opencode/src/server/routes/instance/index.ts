@@ -1,21 +1,19 @@
 import { describeRoute, resolver, validator } from "hono-openapi"
 import { Hono } from "hono"
 import type { UpgradeWebSocket } from "hono/ws"
-import { Context, Effect } from "effect"
+import { Effect } from "effect"
 import z from "zod"
 import { Format } from "@/format"
 import { TuiRoutes } from "./tui"
 import { Instance } from "@/project/instance"
-import { Vcs } from "@/project"
+import { Vcs } from "@/project/vcs"
 import { Agent } from "@/agent/agent"
 import { Skill } from "@/skill"
-import { Global } from "@/global"
-import { LSP } from "@/lsp"
+import { Global } from "@opencode-ai/core/global"
+import { LSP } from "@/lsp/lsp"
 import { Command } from "@/command"
 import { QuestionRoutes } from "./question"
 import { PermissionRoutes } from "./permission"
-import { Flag } from "@/flag/flag"
-import { ExperimentalHttpApiServer } from "./httpapi/server"
 import { ProjectRoutes } from "./project"
 import { SessionRoutes } from "./session"
 import { PtyRoutes } from "./pty"
@@ -32,24 +30,6 @@ import { register as registerKiloRoutes } from "@/kilocode/server/instance" // k
 
 export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
   const app = new Hono()
-
-  if (Flag.KILO_EXPERIMENTAL_HTTPAPI) {
-    const handler = ExperimentalHttpApiServer.webHandler().handler
-    const context = Context.empty() as Context.Context<unknown>
-    app.get("/question", (c) => handler(c.req.raw, context))
-    app.post("/question/:requestID/reply", (c) => handler(c.req.raw, context))
-    app.post("/question/:requestID/reject", (c) => handler(c.req.raw, context))
-    app.get("/permission", (c) => handler(c.req.raw, context))
-    app.post("/permission/:requestID/reply", (c) => handler(c.req.raw, context))
-    app.get("/config", (c) => handler(c.req.raw, context))
-    app.get("/config/providers", (c) => handler(c.req.raw, context))
-    app.get("/provider", (c) => handler(c.req.raw, context))
-    app.get("/provider/auth", (c) => handler(c.req.raw, context))
-    app.post("/provider/:providerID/oauth/authorize", (c) => handler(c.req.raw, context))
-    app.post("/provider/:providerID/oauth/callback", (c) => handler(c.req.raw, context))
-    app.get("/project", (c) => handler(c.req.raw, context))
-    app.get("/project/current", (c) => handler(c.req.raw, context))
-  }
 
   const full = app // kilocode_change
   full
@@ -138,7 +118,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
             description: "VCS info",
             content: {
               "application/json": {
-                schema: resolver(Vcs.Info),
+                schema: resolver(Vcs.Info.zod),
               },
             },
           },
@@ -164,7 +144,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
             description: "VCS diff",
             content: {
               "application/json": {
-                schema: resolver(Vcs.FileDiff.array()),
+                schema: resolver(Vcs.FileDiff.zod.array()),
               },
             },
           },
@@ -173,7 +153,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
       validator(
         "query",
         z.object({
-          mode: Vcs.Mode,
+          mode: Vcs.Mode.zod,
         }),
       ),
       async (c) =>
@@ -193,7 +173,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
             description: "List of commands",
             content: {
               "application/json": {
-                schema: resolver(Command.Info.array()),
+                schema: resolver(Command.Info.zod.array()),
               },
             },
           },
@@ -216,7 +196,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
             description: "List of agents",
             content: {
               "application/json": {
-                schema: resolver(Agent.Info.array()),
+                schema: resolver(Agent.Info.zod.array()),
               },
             },
           },
@@ -239,7 +219,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
             description: "List of skills",
             content: {
               "application/json": {
-                schema: resolver(Skill.Info.array()),
+                schema: resolver(Skill.Info.zod.array()),
               },
             },
           },
@@ -285,7 +265,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
             description: "Formatter status",
             content: {
               "application/json": {
-                schema: resolver(Format.Status.array()),
+                schema: resolver(Format.Status.zod.array()),
               },
             },
           },

@@ -20,7 +20,7 @@ export interface ConflictReport {
 
 export interface ConflictFile {
   path: string
-  type: "markdown" | "package" | "code" | "config" | "i18n" | "tauri" | "script" | "extension" | "web" | "other"
+  type: "markdown" | "package" | "code" | "config" | "i18n" | "script" | "extension" | "web" | "other"
   recommendation:
     | "keep-ours"
     | "keep-theirs"
@@ -29,7 +29,6 @@ export interface ConflictFile {
     | "skip"
     | "i18n-transform"
     | "take-theirs-transform"
-    | "tauri-transform"
     | "package-transform"
     | "script-transform"
     | "extension-transform"
@@ -43,16 +42,6 @@ export interface ConflictFile {
 function isI18nFile(path: string): boolean {
   // Match patterns like packages/*/src/i18n/*.ts
   return /packages\/[^/]+\/src\/i18n\/[^/]+\.ts$/.test(path) && !path.endsWith("/index.ts")
-}
-
-/**
- * Check if a file is a Tauri/Desktop config file
- */
-function isTauriFile(path: string): boolean {
-  return (
-    path.includes("packages/desktop/src-tauri/") &&
-    (path.endsWith(".json") || path.endsWith(".toml") || path.endsWith(".rs") || path.endsWith(".lock"))
-  )
 }
 
 /**
@@ -80,17 +69,7 @@ function isWebFile(path: string): boolean {
  * Check if a file should use take-theirs + transform strategy
  */
 function shouldTakeTheirsTransform(path: string): boolean {
-  const patterns = [
-    /^packages\/app\/src\/components\/.*\.tsx$/,
-    /^packages\/app\/src\/context\/.*\.tsx$/,
-    /^packages\/app\/src\/pages\/.*\.tsx$/,
-    /^packages\/ui\/src\/.*\.tsx$/,
-    /^packages\/desktop\/src\/.*\.ts$/,
-    /^packages\/app\/e2e\/.*\.ts$/,
-    /^packages\/app\/script\/.*\.ts$/,
-    /^github\/index\.ts$/,
-    /^packages\/slack\/src\/.*\.ts$/,
-  ]
+  const patterns = [/^packages\/ui\/src\/.*\.tsx$/, /^github\/index\.ts$/, /^packages\/slack\/src\/.*\.ts$/]
   return patterns.some((p) => p.test(path))
 }
 
@@ -99,7 +78,6 @@ function shouldTakeTheirsTransform(path: string): boolean {
  */
 export function classifyFile(path: string): ConflictFile["type"] {
   if (isI18nFile(path)) return "i18n"
-  if (isTauriFile(path)) return "tauri"
   if (isScriptFile(path)) return "script"
   if (isExtensionFile(path)) return "extension"
   if (isWebFile(path)) return "web"
@@ -152,7 +130,12 @@ export function getRecommendation(
   }
 
   // Kilo directories should always keep ours
-  if (matches(path, defaultConfig.kiloDirectories.map((dir) => `${dir}/**`))) {
+  if (
+    matches(
+      path,
+      defaultConfig.kiloDirectories.map((dir) => `${dir}/**`),
+    )
+  ) {
     return {
       recommendation: "keep-ours",
       reason: "File is in a Kilo-specific directory",
@@ -188,17 +171,6 @@ export function getRecommendation(
       return {
         recommendation: "i18n-transform",
         reason: "i18n file: take upstream translations and apply Kilo branding",
-      }
-    case "tauri":
-      if (currentContent?.includes("kilocode_change")) {
-        return {
-          recommendation: "manual",
-          reason: "Tauri config has kilocode_change markers — auto-transform skipped, needs manual review",
-        }
-      }
-      return {
-        recommendation: "tauri-transform",
-        reason: "Tauri config: take upstream and apply Kilo branding transforms",
       }
     case "script":
       if (currentContent?.includes("kilocode_change")) {
@@ -343,7 +315,6 @@ export function generateMarkdownReport(report: ConflictReport): string {
     "skip",
     "i18n-transform",
     "take-theirs-transform",
-    "tauri-transform",
     "package-transform",
     "script-transform",
     "extension-transform",
@@ -362,7 +333,6 @@ export function generateMarkdownReport(report: ConflictReport): string {
       skip: "Skip (Auto-Remove)",
       "i18n-transform": "i18n Transform (Auto-Apply Kilo Branding)",
       "take-theirs-transform": "Take Upstream + Kilo Branding (Auto)",
-      "tauri-transform": "Tauri Config Transform (Auto)",
       "package-transform": "Package.json Transform (Auto)",
       "script-transform": "Script Transform (Auto)",
       "extension-transform": "Extension Transform (Auto)",

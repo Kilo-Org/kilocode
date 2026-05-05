@@ -5,8 +5,8 @@ import * as path from "path"
 import { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { LSP } from "../lsp"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
 import { Instance } from "../project/instance"
 import { assertExternalDirectoryEffect } from "./external-directory"
@@ -143,9 +143,9 @@ export const ReadTool = Tool.define(
 
       if (bytes.length === 0) return false
 
-      // kilocode_change start - UTF-16 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
-      if (Encoding.hasUtf16Bom(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength), bytes.length))
-        return false
+      // kilocode_change start - UTF-16/32 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
+      const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      if (Encoding.hasUtf16Bom(buf, bytes.length) || Encoding.hasUtf32Bom(buf, bytes.length)) return false
       // kilocode_change end
 
       let nonPrintableCount = 0

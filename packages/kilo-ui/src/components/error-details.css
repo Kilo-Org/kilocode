@@ -11,7 +11,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-small);
   opacity: 0.85;
   cursor: pointer;
   background: none;
@@ -28,7 +28,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-small);
   margin-top: 4px;
 }
 
@@ -36,7 +36,7 @@
   margin: 0;
   max-height: 120px;
   overflow-y: auto;
-  font-size: var(--font-size-xs, 11px);
+  font-size: var(--font-size-small);
   white-space: pre-wrap;
   word-break: break-all;
   flex: 1;
