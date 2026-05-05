@@ -256,7 +256,7 @@ export class DiffPanelManager implements vscode.Disposable {
       capabilities: source.descriptor.capabilities,
     })
 
-    const post = this.createSourcePost()
+    const post = this.createSourcePost(epoch)
     await source.initialFetch(post)
     // Prevents source polling from starting after teardown or source swap.
     if (this.epoch !== epoch || !this.surface || this.currentSourceId !== id) {
@@ -266,9 +266,10 @@ export class DiffPanelManager implements vscode.Disposable {
     this.startDisposable = source.start?.(post)
   }
 
-  private createSourcePost(): DiffSourcePost {
+  private createSourcePost(epoch: number): DiffSourcePost {
     return (msg: DiffSourceMessage) => {
-      if (!this.surface) return
+      // Drops stale messages from sources whose lifecycle epoch has ended.
+      if (this.epoch !== epoch || !this.surface) return
       if (msg.type === "diffs") {
         this.surface.post({ type: "diffViewer.diffs", diffs: msg.diffs })
       } else if (msg.type === "loading") {

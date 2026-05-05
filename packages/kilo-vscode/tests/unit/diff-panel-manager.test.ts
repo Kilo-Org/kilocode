@@ -348,4 +348,32 @@ describe("DiffPanelManager.openPanel", () => {
     expect(session.startCount).toBe(0)
     expect(session.disposeCount).toBe(1)
   })
+
+  it("drops stale posts from a source after it has been swapped out", async () => {
+    const workspace = new RecordedSource(
+      WORKSPACE_DESC,
+      [{ type: "diffs", diffs: [{ path: "stale.ts" } as never] }],
+      true,
+    )
+    const session = new RecordedSource(SESSION_DESC, [{ type: "diffs", diffs: [{ path: "fresh.ts" } as never] }])
+    const { manager, surface, scheduler } = harness([WORKSPACE_DESC, SESSION_DESC], {
+      workspace,
+      "session:s1": session,
+    })
+
+    manager.openPanel({ workspaceRoot: "/repo", sessionId: "s1", initialSourceId: "workspace" })
+    surface.emit({ type: "webviewReady" })
+    await scheduler.flush()
+
+    // Swap to session source before the first source's initialFetch resolves.
+    surface.emit({ type: "selectSource", id: "session:s1" })
+    await scheduler.flush()
+
+    surface.posted.length = 0
+    workspace.resolve()
+    await new Promise((r) => setTimeout(r, 0))
+
+    // Stale workspace post after the swap must not reach the surface.
+    expect(surface.posted).toEqual([])
+  })
 })
