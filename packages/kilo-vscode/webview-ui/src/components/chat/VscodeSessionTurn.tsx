@@ -109,8 +109,8 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   })
 
   const [open, setOpen] = createSignal(false)
+  const [expanded, setExpanded] = createSignal<string[]>([])
   const [metrics, setMetrics] = createSignal(false)
-  const [metrics, setMetrics] = createSignal(true)
 
   const handler = (e: MessageEvent<import("../../types/messages").ExtensionMessage>) => {
     if (e.data.type === "timelineSettingLoaded") setMetrics(e.data.showTokenThroughput)
