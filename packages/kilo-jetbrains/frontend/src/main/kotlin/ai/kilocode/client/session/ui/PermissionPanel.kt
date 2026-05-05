@@ -1,17 +1,16 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.update.SessionController
 import ai.kilocode.client.session.model.Permission
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons
-import com.intellij.ui.JBColor
 import com.intellij.ui.dsl.builder.RightGap
 import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
-import javax.swing.JPanel
-import javax.swing.border.MatteBorder
 
 /**
  * Docked permission panel — shown above the prompt when the session is in
@@ -32,16 +31,12 @@ import javax.swing.border.MatteBorder
  */
 class PermissionPanel(
     private val controller: SessionController,
-) : JPanel(BorderLayout()) {
+) : BorderLayoutPanel() {
 
     private lateinit var requestId: String
 
     init {
-        isOpaque = false
-        border = JBUI.Borders.compound(
-            MatteBorder(JBUI.scale(1), 0, 0, 0, JBColor.border()),
-            JBUI.Borders.empty(JBUI.scale(6), JBUI.scale(8)),
-        )
+        border = UiStyle.Dock.warning()
         isVisible = false
     }
 
@@ -54,10 +49,10 @@ class PermissionPanel(
         add(panel {
             row {
                 icon(AllIcons.General.Warning).gap(RightGap.SMALL)
-                label("Permission request").bold()
+                label(KiloBundle.message("session.permission.title")).bold()
             }
             row {
-                label("Tool: ${permission.name}   \u2022   Patterns: $patterns")
+                label(KiloBundle.message("session.permission.meta", permission.name, patterns))
             }
             val msg = permission.message
             if (!msg.isNullOrBlank()) {
@@ -66,8 +61,8 @@ class PermissionPanel(
                 }
             }
             row {
-                button("Allow") { decide("once") }.gap(RightGap.SMALL)
-                button("Deny") { decide("reject") }
+                button(KiloBundle.message("session.permission.allow")) { decide("once") }.gap(RightGap.SMALL)
+                button(KiloBundle.message("session.permission.deny")) { decide("reject") }
             }.layout(RowLayout.INDEPENDENT)
         }, BorderLayout.CENTER)
 

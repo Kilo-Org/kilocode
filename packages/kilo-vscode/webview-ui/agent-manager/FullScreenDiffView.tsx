@@ -31,6 +31,7 @@ import {
 } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 
 type DiffStyle = "unified" | "split"
 
@@ -45,6 +46,8 @@ interface FullScreenDiffViewProps {
   onSendAll?: () => void
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
+  markdownRender?: boolean
+  onMarkdownRenderChange?: (render: boolean) => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
@@ -580,6 +583,23 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     />
                                   </Tooltip>
                                 </Show>
+                                <Show when={isMarkdownFile(diff.file) && props.onMarkdownRenderChange}>
+                                  <Tooltip
+                                    value={props.markdownRender ? "Show raw Markdown" : "Render Markdown"}
+                                    placement="top"
+                                  >
+                                    <IconButton
+                                      icon={props.markdownRender ? "code" : "eye"}
+                                      size="small"
+                                      variant="ghost"
+                                      label={props.markdownRender ? "Show raw Markdown" : "Render Markdown"}
+                                      onClick={(e: MouseEvent) => {
+                                        e.stopPropagation()
+                                        props.onMarkdownRenderChange?.(!props.markdownRender)
+                                      }}
+                                    />
+                                  </Tooltip>
+                                </Show>
                                 <span data-slot="session-review-diff-chevron">
                                   <Icon name="chevron-down" size="small" />
                                 </span>
@@ -602,19 +622,26 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                 </div>
                               }
                             >
-                              <Diff<AnnotationMeta>
-                                before={{ name: diff.file, contents: diff.before }}
-                                after={{ name: diff.file, contents: diff.after }}
-                                diffStyle={props.diffStyle}
-                                annotations={annotationsForFile(diff.file)}
-                                renderAnnotation={buildAnnotation}
-                                enableGutterUtility={true}
-                                onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
-                                onLineNumberClick={(event) => {
-                                  if (event.annotationSide === "deletions") return
-                                  props.onOpenFile?.(diff.file, event.lineNumber)
-                                }}
-                              />
+                              <Show
+                                when={props.markdownRender && isMarkdownFile(diff.file)}
+                                fallback={
+                                  <Diff<AnnotationMeta>
+                                    before={{ name: diff.file, contents: diff.before }}
+                                    after={{ name: diff.file, contents: diff.after }}
+                                    diffStyle={props.diffStyle}
+                                    annotations={annotationsForFile(diff.file)}
+                                    renderAnnotation={buildAnnotation}
+                                    enableGutterUtility={true}
+                                    onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                    onLineNumberClick={(event) => {
+                                      if (event.annotationSide === "deletions") return
+                                      props.onOpenFile?.(diff.file, event.lineNumber)
+                                    }}
+                                  />
+                                }
+                              >
+                                <MarkdownDiffView diff={diff} />
+                              </Show>
                             </Show>
                           </Show>
                         </Accordion.Content>

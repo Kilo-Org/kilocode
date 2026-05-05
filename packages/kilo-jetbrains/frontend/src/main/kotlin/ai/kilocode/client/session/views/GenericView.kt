@@ -2,9 +2,9 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Generic
+import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 
 /**
@@ -19,14 +19,14 @@ class GenericView(content: Generic) : PartView() {
     override val contentId: String = content.id
 
     private val label = JBLabel("[${content.type}]").apply {
-        foreground = UIUtil.getContextHelpForeground()
-        font = JBUI.Fonts.smallFont()
-        border = JBUI.Borders.empty(2, 0)
+        foreground = UiStyle.Colors.weak()
+        border = com.intellij.util.ui.JBUI.Borders.empty(UiStyle.Space.XS, 0)
     }
 
     init {
         layout = BorderLayout()
         isOpaque = false
+        applyStyle(SessionStyle.current())
         add(label, BorderLayout.CENTER)
     }
 
@@ -34,6 +34,13 @@ class GenericView(content: Generic) : PartView() {
 
     /** Exposed for tests. */
     fun labelText(): String = label.text
+
+    override fun applyStyle(style: SessionStyle) {
+        if (label.font == style.smallUiFont) return
+        label.font = style.smallUiFont
+        revalidate()
+        repaint()
+    }
 
     override fun dumpLabel() = "GenericView#$contentId(${label.text})"
 }

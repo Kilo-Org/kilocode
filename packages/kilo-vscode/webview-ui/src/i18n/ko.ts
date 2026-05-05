@@ -1395,6 +1395,7 @@ export const dict = {
     "제목 생성, 커밋 메시지 생성, 프롬프트 개선 및 기타 빠른 작업을 위한 경량 모델",
   "settings.providers.disabled": "비활성화된 공급자",
   "settings.providers.disabled.description": "공급자 목록에서 숨길 공급자",
+  "settings.providers.disabled.enable": "활성화",
   "settings.providers.enabled": "활성화된 공급자 (허용 목록)",
   "settings.providers.enabled.description": "설정된 경우 이 공급자만 사용 가능 (배타적 허용 목록)",
   "settings.providers.notSet": "설정되지 않음 (서버 기본값 사용)",

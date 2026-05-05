@@ -2,15 +2,16 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { ConfigPermission } from "@/config/permission"
 import * as Config from "@/config/config" // kilocode_change
-import { InstanceState } from "@/effect"
+import { InstanceState } from "@/effect/instance-state"
 import { ProjectID } from "@/project/schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { PermissionTable } from "@/session/session.sql"
-import { Database, eq } from "@/storage"
+import { Database } from "@/storage/db"
+import { eq } from "drizzle-orm"
 import { zod } from "@/util/effect-zod"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { withStatics } from "@/util/schema"
-import { Wildcard } from "@/util"
+import { Wildcard } from "@/util/wildcard"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import os from "os"
 import z from "zod" // kilocode_change
@@ -20,6 +21,7 @@ import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
+import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory" // kilocode_change
 
 const log = Log.create({ service: "permission" })
 
@@ -28,13 +30,14 @@ export const Action = Schema.Literals(["allow", "deny", "ask"])
   .pipe(withStatics((s) => ({ zod: zod(s) })))
 export type Action = Schema.Schema.Type<typeof Action>
 
-export class Rule extends Schema.Class<Rule>("PermissionRule")({
+export const Rule = Schema.Struct({
   permission: Schema.String,
   pattern: Schema.String,
   action: Action,
-}) {
-  static readonly zod = zod(this)
-}
+})
+  .annotate({ identifier: "PermissionRule" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Rule = Schema.Schema.Type<typeof Rule>
 
 export const Ruleset = Schema.mutable(Schema.Array(Rule))
   .annotate({ identifier: "PermissionRuleset" })
@@ -177,7 +180,7 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Rules
 // kilocode_change start
 function veto(permission: string, pattern: string, ruleset?: Ruleset) {
   if (!ruleset) return false
-  return evaluate(permission, pattern, ruleset).action === "deny"
+  return ExternalDirectoryPermission.evaluate(permission, pattern, ruleset).action === "deny"
 }
 
 function subset(permission: string, ruleset: Ruleset) {
@@ -227,7 +230,11 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        // kilocode_change start - external_directory allows must survive Ask/Plan hard rules
+        const rule = hardRuleset
+          ? ExternalDirectoryPermission.evaluate(request.permission, pattern, ruleset, approved, local)
+          : evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        // kilocode_change end
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
@@ -452,18 +459,8 @@ function expand(pattern: string): string {
 }
 
 export function fromConfig(permission: ConfigPermission.Info) {
-  // Sort top-level keys so wildcard permissions (`*`, `mcp_*`) come before
-  // specific ones. Combined with `findLast` in evaluate(), this gives the
-  // intuitive semantic "specific tool rules override the `*` fallback"
-  // regardless of the user's JSON key order. Sub-pattern order inside a
-  // single permission key is preserved — only top-level keys are sorted.
-  const entries = Object.entries(permission).sort(([a], [b]) => {
-    const aWild = a.includes("*")
-    const bWild = b.includes("*")
-    return aWild === bWild ? 0 : aWild ? -1 : 1
-  })
   const ruleset: Ruleset = []
-  for (const [key, value] of entries) {
+  for (const [key, value] of Object.entries(permission)) {
     if (typeof value === "string") {
       ruleset.push({ permission: key, action: value, pattern: "*" })
       continue

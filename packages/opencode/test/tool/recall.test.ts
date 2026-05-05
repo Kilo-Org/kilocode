@@ -9,7 +9,7 @@ import { RecallTool } from "../../src/tool/recall"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
-import type { Tool } from "../../src/tool"
+import type { Tool } from "../../src/tool/tool"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
 
@@ -48,7 +48,7 @@ describe("tool.recall", () => {
       )
 
       try {
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
         await Instance.provide({
           directory: first.path,
           fn: async () => Session.create({ title: "search-target root" }),
@@ -89,7 +89,7 @@ describe("tool.recall", () => {
     spyOn(Config, "get").mockImplementation(async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>)
 
     try {
-      const { Session } = await import("../../src/session/index")
+      const { Session } = await import("../../src/session/session")
       const session = await Instance.provide({
         directory: second.path,
         fn: async () => Session.create({ title: "other-project-session" }),
@@ -126,7 +126,7 @@ describe("tool.recall", () => {
       )
 
       try {
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
         const session = await Instance.provide({
           directory: worktree,
           fn: async () => Session.create({ title: "worktree readable" }),

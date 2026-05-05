@@ -80,5 +80,16 @@ export const dict = {
   "plan.followup.answer.continue": "Continuar aquí",
   "plan.followup.answer.continue.description": "Implementar el plan en esta sesión",
 
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "La instantánea es lenta",
+  "snapshot.slowRepo.question":
+    "Está tardando mucho en inicializar el sistema de instantáneas, probablemente por el tamaño del repositorio.\n\n¿Quieres desactivar las instantáneas para este repositorio?",
+  "snapshot.slowRepo.answer.continue": "Continuar con instantáneas",
+  "snapshot.slowRepo.answer.continue.description":
+    "Sigue esperando hasta que termine la instantánea. Los turnos siguientes serán rápidos una vez creada la instantánea inicial.",
+  "snapshot.slowRepo.answer.disable": "Desactivar para este proyecto",
+  "snapshot.slowRepo.answer.disable.description":
+    "Apaga las instantáneas de Kilo para este proyecto. Perderás deshacer/rehacer de los cambios de Kilo, pero git seguirá rastreando todo.",
+
   "ui.messagePart.openInDiffViewer": "Abrir en el visor de diferencias",
 }

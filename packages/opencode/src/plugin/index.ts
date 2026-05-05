@@ -5,21 +5,21 @@ import type {
   PluginModule,
   WorkspaceAdaptor as PluginWorkspaceAdaptor,
 } from "@kilocode/plugin"
-import { Config } from "../config"
+import { Config } from "@/config/config"
 import { Bus } from "../bus"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
-import { Flag } from "../flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { CodexAuthPlugin } from "./codex"
-import { Session } from "../session"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { Session } from "@/session/session"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { CopilotAuthPlugin } from "./github-copilot/copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "opencode-gitlab-auth"
 import { PoeAuthPlugin } from "opencode-poe-auth"
 import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "./cloudflare"
 import { Effect, Layer, Context, Stream } from "effect"
-import { EffectBridge } from "@/effect"
-import { InstanceState } from "@/effect"
+import { EffectBridge } from "@/effect/bridge"
+import { InstanceState } from "@/effect/instance-state"
 import { errorMessage } from "@/util/error"
 import { PluginLoader } from "./loader"
 import { parsePluginSpecifier, readPluginId, readV1Plugin, resolvePluginId } from "./shared"
@@ -130,7 +130,7 @@ export const layer = Layer.effect(
                 Authorization: `Basic ${Buffer.from(`${Flag.KILO_SERVER_USERNAME ?? "opencode"}:${Flag.KILO_SERVER_PASSWORD}`).toString("base64")}`,
               }
             : undefined,
-          fetch: async (...args) => (await Server.Default()).app.fetch(...args),
+          fetch: async (...args) => Server.Default().app.fetch(...args),
         })
         const cfg = yield* config.get()
         const input: PluginInput = {

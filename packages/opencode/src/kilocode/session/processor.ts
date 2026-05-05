@@ -4,9 +4,9 @@ import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import type { MessageV2 } from "@/session/message-v2"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })

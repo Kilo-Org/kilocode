@@ -28,7 +28,9 @@ export function drainCovered(
       if (ConfigProtection.isRequest(entry.info)) continue
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved)
-        const hard = entry.hardRuleset ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset) : undefined
+        const hard = entry.hardRuleset
+          ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset)
+          : undefined
         if (hard?.action === "deny") return hard
         return rule
       })

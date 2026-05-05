@@ -127,6 +127,7 @@ interface StateMessage {
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  reviewMarkdownRender?: boolean
   isGitRepo?: boolean
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
@@ -460,6 +461,11 @@ interface SetReviewDiffStyleIn {
   style: "unified" | "split"
 }
 
+interface SetReviewMarkdownRenderIn {
+  type: "agentManager.setReviewMarkdownRender"
+  render: boolean
+}
+
 interface SetDefaultBaseBranchIn {
   type: "agentManager.setDefaultBaseBranch"
   branch?: string
@@ -725,6 +731,7 @@ export type AgentManagerInMessage =
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
   | SetReviewDiffStyleIn
+  | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
   | RequestExternalWorktreesIn
   | ImportFromBranchIn

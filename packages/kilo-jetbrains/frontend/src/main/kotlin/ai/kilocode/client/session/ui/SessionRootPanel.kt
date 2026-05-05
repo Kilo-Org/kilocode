@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
-import java.awt.BorderLayout
+import com.intellij.util.ui.JBDimension
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
 import java.awt.Rectangle
 import javax.swing.JComponent
@@ -9,7 +10,7 @@ import javax.swing.JPanel
 
 class SessionRootPanel : JLayeredPane() {
 
-    val content = JPanel(BorderLayout())
+    val content: JPanel = BorderLayoutPanel()
 
     val overlay = Overlay()
 
@@ -37,14 +38,16 @@ class SessionRootPanel : JLayeredPane() {
     override fun getPreferredSize(): Dimension {
         val w = components.maxOfOrNull { it.preferredSize.width } ?: 0
         val h = components.maxOfOrNull { it.preferredSize.height } ?: 0
-        return Dimension(w, h)
+        return JBDimension(w, h)
     }
 
-    class Overlay : JPanel(null) {
+    class Overlay : BorderLayoutPanel() {
 
         private val items = linkedMapOf<JComponent, (JPanel, JComponent) -> Rectangle>()
 
         init {
+            layout = null
+            // The overlay must let mouse events fall through outside visible children.
             isOpaque = false
         }
 
@@ -71,7 +74,7 @@ class SessionRootPanel : JLayeredPane() {
             val pref = super.getPreferredSize()
             val w = maxOf(pref.width, components.maxOfOrNull { it.preferredSize.width } ?: 0)
             val h = maxOf(pref.height, components.maxOfOrNull { it.preferredSize.height } ?: 0)
-            return Dimension(w, h)
+            return JBDimension(w, h)
         }
     }
 }

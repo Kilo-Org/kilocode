@@ -20,7 +20,9 @@ export function RemoteIndicator(props: {
   sdk: any
   theme: any
   kilo: boolean
-  event: { on: <Type extends Event["type"]>(type: Type, handler: (event: Extract<Event, { type: Type }>) => void) => () => void }
+  event: {
+    on: <Type extends Event["type"]>(type: Type, handler: (event: Extract<Event, { type: Type }>) => void) => () => void
+  }
 }) {
   const [status, setStatus] = createSignal<Status | null>(null)
 

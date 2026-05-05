@@ -18,7 +18,6 @@ import { error, header, info, success, warn } from "./utils/logger"
 import { transformI18nContent } from "./transforms/transform-i18n"
 import { applyBrandingTransforms } from "./transforms/transform-take-theirs"
 import { applyScriptTransforms } from "./transforms/transform-scripts"
-import { applyTauriTransforms } from "./transforms/transform-tauri"
 import { applyExtensionTransforms } from "./transforms/transform-extensions"
 import { applyWebTransforms } from "./transforms/transform-web"
 import { applyPackageNameTransforms } from "./transforms/package-names"
@@ -149,8 +148,7 @@ async function translate(file: string, text: string) {
   const script = applyScriptTransforms(names).result
   const branded = applyBrandingTransforms(script).result
   const i18n = transformI18nContent(branded).result
-  const tauri = applyTauriTransforms(i18n, file).result
-  const ext = applyExtensionTransforms(tauri, file).result
+  const ext = applyExtensionTransforms(i18n, file).result
   const web = applyWebTransforms(ext).result
 
   return workflow(file, web)
