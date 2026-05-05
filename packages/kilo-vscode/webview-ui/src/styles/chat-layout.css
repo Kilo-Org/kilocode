@@ -6,6 +6,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  font-size: var(--font-size-base);
   overflow: hidden;
   position: relative;
 }
@@ -60,7 +61,7 @@
   height: 100%;
   color: var(--vscode-descriptionForeground);
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 }
 
 .message-list-page-loader {
@@ -70,7 +71,7 @@
   gap: 8px;
   padding: 8px 0 12px;
   color: var(--vscode-descriptionForeground);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
 }
 
 .message-list-load-older {
@@ -83,7 +84,7 @@
   cursor: pointer;
   padding: 5px 10px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
 }
 
 .message-list-load-older:hover {
@@ -134,7 +135,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: var(--kilo-font-size-16);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background-color 0.2s;
 }
@@ -156,7 +157,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
 }
 

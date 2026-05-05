@@ -11,6 +11,7 @@ Kilo automatically detects the text encoding of each file it reads and preserves
 
 - UTF-8, with or without BOM
 - UTF-16 LE and UTF-16 BE, **with a BOM**
+- UTF-32 LE and UTF-32 BE, **with a BOM**
 - Shift_JIS, EUC-JP, GB2312, Big5, EUC-KR
 - Windows-1251, KOI8-R
 - The ISO-8859 family
@@ -20,8 +21,7 @@ New files Kilo creates are always UTF-8 without a BOM. Encoding detection only r
 
 ## Not Supported
 
-- **UTF-16 without a BOM.** The byte pattern is ambiguous and cannot be distinguished reliably from other encodings. Save the file with a BOM or convert it to UTF-8.
-- **UTF-32.** Extremely rare in practice; convert to UTF-8 if you need Kilo to work with it.
+- **UTF-16 or UTF-32 without a BOM.** The byte pattern is ambiguous and cannot be distinguished reliably from other encodings. Save the file with a BOM or convert it to UTF-8.
 
 {% callout type="info" %}
 Encoding detection is statistical. Very short files, or files whose byte patterns happen to look like a different encoding, may occasionally be misidentified. If that happens, converting the file to UTF-8 is the most reliable workaround.

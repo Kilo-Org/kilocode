@@ -69,7 +69,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
   }
 
   return (
-    <div data-slot="permission-diff">
+    <div data-slot="permission-diff" class="kilo-diff-theme">
       <div data-slot="permission-diff-header">
         <div data-slot="permission-diff-file-info">
           <div data-slot="permission-diff-icon">

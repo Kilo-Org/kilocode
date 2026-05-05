@@ -1,7 +1,7 @@
 /* Kilo Tabs overrides – sized to match @vscode/webview-ui-toolkit panels */
 
 [data-component="tabs"] {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   line-height: normal;
 
   [data-slot="tabs-list"] {
@@ -18,7 +18,7 @@
   }
 
   [data-slot="tabs-trigger"] {
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     line-height: normal;
     padding: 0px;
   }
@@ -33,14 +33,14 @@
   &[data-variant="pill"] [data-slot="tabs-trigger"] {
     padding: 4px 0;
     border-radius: 0;
-    font-size: 13px;
+    font-size: var(--kilo-font-size-13);
   }
 
   /* Default/alt variant adjustments */
   [data-slot="tabs-trigger"] {
     height: 48px;
     padding: 4px 0;
-    font-size: 13px;
+    font-size: var(--kilo-font-size-13);
     line-height: normal;
     cursor: pointer;
   }
@@ -68,7 +68,7 @@
       padding: 8px 16px;
 
       > h3 {
-        font-size: 16px;
+        font-size: var(--kilo-font-size-16);
         font-weight: 400;
         margin: 16px 0;
         color: var(--vscode-foreground, var(--text-strong));

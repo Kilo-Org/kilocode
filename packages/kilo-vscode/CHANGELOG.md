@@ -1,5 +1,7 @@
 # kilo-code
 
+## 7.2.39
+
 ## 7.2.36
 
 ### Minor Changes

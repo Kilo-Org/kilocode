@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/upstream-merge",
-  "version": "7.2.36",
+  "version": "7.2.40",
   "private": true,
   "type": "module",
   "description": "Scripts for automating upstream opencode merges into Kilo",
@@ -14,6 +14,8 @@
     "transform:all": "bun run transforms/package-names.ts && bun run codemods/transform-imports.ts && bun run codemods/transform-strings.ts",
     "versions": "bun run transforms/preserve-versions.ts",
     "fix:markers": "bun run fix-kilocode-markers.ts",
+    "reset:upstream": "bun run reset-to-upstream.ts",
+    "find:candidates": "bun run find-reset-candidates.ts",
     "keep-ours": "bun run transforms/keep-ours.ts"
   },
   "dependencies": {

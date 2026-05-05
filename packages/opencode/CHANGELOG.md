@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.2.39
+
+### Patch Changes
+
+- [#9840](https://github.com/Kilo-Org/kilocode/pull/9840) [`db26be6`](https://github.com/Kilo-Org/kilocode/commit/db26be6b5d3ac77a729ea5242c8330b9146352a7) - Restore the `KILO=1` environment variable so plugins and tooling can distinguish the Kilo CLI from upstream OpenCode.
+
 ## 7.2.36
 
 ### Patch Changes

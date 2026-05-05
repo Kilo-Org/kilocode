@@ -94,6 +94,8 @@ const encodeBytes = (text: string, encoding: string): Buffer => {
   const lower = encoding.toLowerCase()
   if (lower === "utf-16le") return Buffer.concat([Buffer.from([0xff, 0xfe]), iconv.encode(text, encoding)])
   if (lower === "utf-16be") return Buffer.concat([Buffer.from([0xfe, 0xff]), iconv.encode(text, encoding)])
+  if (lower === "utf-32le") return Buffer.concat([Buffer.from([0xff, 0xfe, 0x00, 0x00]), iconv.encode(text, encoding)])
+  if (lower === "utf-32be") return Buffer.concat([Buffer.from([0x00, 0x00, 0xfe, 0xff]), iconv.encode(text, encoding)])
   return iconv.encode(text, encoding)
 }
 
@@ -135,6 +137,8 @@ describe("tool encoding preservation", () => {
       ["UTF-8 with BOM", UTF8_BOM, samples.utf8],
       ["UTF-16 LE with BOM", "utf-16le", samples.utf8],
       ["UTF-16 BE with BOM", "utf-16be", samples.utf8],
+      ["UTF-32 LE with BOM", "utf-32le", samples.utf8],
+      ["UTF-32 BE with BOM", "utf-32be", samples.utf8],
       ["Shift_JIS", "Shift_JIS", samples.shiftJis],
       ["EUC-JP", "euc-jp", samples.eucJp],
       ["GB2312", "gb2312", samples.gb2312],
@@ -174,6 +178,15 @@ describe("tool encoding preservation", () => {
         }),
       ),
     )
+
+    it.live("accepts UTF-32 LE with BOM (3 of every 4 bytes are NUL)", () =>
+      provideEncoded("utf-32le", samples.utf8, (filepath) =>
+        Effect.gen(function* () {
+          const result = yield* runRead({ filePath: filepath })
+          expect(result.output).toContain(samples.utf8)
+        }),
+      ),
+    )
   })
 
   describe("WriteTool preserves existing file encoding when overwriting", () => {
@@ -183,6 +196,8 @@ describe("tool encoding preservation", () => {
       ["GB2312", "gb2312", samples.gb2312],
       ["Windows-1251", "windows-1251", samples.windows1251],
       ["UTF-16 LE", "utf-16le", samples.utf8],
+      ["UTF-32 LE", "utf-32le", samples.utf8],
+      ["UTF-32 BE", "utf-32be", samples.utf8],
     ]
 
     for (const [label, encoding, original] of cases) {
@@ -226,6 +241,8 @@ describe("tool encoding preservation", () => {
       ["UTF-8 with BOM", UTF8_BOM, Buffer.from([0xef, 0xbb, 0xbf])],
       ["UTF-16 LE", "utf-16le", Buffer.from([0xff, 0xfe])],
       ["UTF-16 BE", "utf-16be", Buffer.from([0xfe, 0xff])],
+      ["UTF-32 LE", "utf-32le", Buffer.from([0xff, 0xfe, 0x00, 0x00])],
+      ["UTF-32 BE", "utf-32be", Buffer.from([0x00, 0x00, 0xfe, 0xff])],
     ]
     for (const [label, encoding, bom] of bomCases) {
       it.live(`does not emit a double BOM for ${label} when content starts with U+FEFF`, () =>
@@ -256,6 +273,7 @@ describe("tool encoding preservation", () => {
       ["GB2312", "gb2312", samples.gb2312, "简体中文", "中文简体"],
       ["Windows-1251", "windows-1251", samples.windows1251, "мир", "планета"],
       ["UTF-16 LE", "utf-16le", samples.utf8 + "\n second line", "world", "earth"],
+      ["UTF-32 LE", "utf-32le", samples.utf8 + "\n second line", "world", "earth"],
     ]
 
     for (const [label, encoding, original, oldString, newString] of cases) {

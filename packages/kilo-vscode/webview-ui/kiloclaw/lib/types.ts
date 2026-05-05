@@ -50,3 +50,4 @@ export type KiloClawOutMessage =
   | { type: "kiloclaw.status"; data: ClawStatus | null }
   | { type: "kiloclaw.locale"; locale: string }
   | { type: "kiloclaw.error"; error: string }
+  | { type: "fontSizeChanged"; fontSize: number }
