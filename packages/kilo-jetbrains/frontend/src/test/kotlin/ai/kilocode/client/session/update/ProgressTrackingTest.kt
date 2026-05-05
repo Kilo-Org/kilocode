@@ -62,7 +62,7 @@ class ProgressTrackingTest : SessionControllerTestBase() {
         assertSession(
             """
             assistant#msg1
-            reasoning#p1:
+            reasoning#p1 done=true:
               <empty>
 
             [code] [kilo/gpt-5] [busy] [thinking]

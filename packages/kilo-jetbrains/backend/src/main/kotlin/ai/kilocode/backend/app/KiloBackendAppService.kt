@@ -98,6 +98,7 @@ class KiloBackendAppService private constructor(
 
     val sessions = KiloBackendSessionManager(cs, log)
     val chat = KiloBackendChatManager(cs, log)
+    val models = KiloBackendModelStateManager(log)
     val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
 
     @Volatile var profile: KiloProfile200Response? = null
@@ -197,7 +198,10 @@ class KiloBackendAppService private constructor(
                 when (next) {
                     ConnectionState.Disconnected -> _appState.value = KiloAppState.Disconnected
                     ConnectionState.Connecting -> _appState.value = KiloAppState.Connecting
-                    is ConnectionState.Connected -> load()
+                    is ConnectionState.Connected -> {
+                        models.start(connection.apiClient ?: return@collect, next.port)
+                        load()
+                    }
                     is ConnectionState.Error -> setAppError(
                         message = next.message,
                         errors = next.details?.let {
@@ -536,6 +540,7 @@ class KiloBackendAppService private constructor(
             eventWatcher?.cancel()
         }
         workspaces.stop()
+        models.stop()
         chat.stop()
         sessions.stop()
         profile = null

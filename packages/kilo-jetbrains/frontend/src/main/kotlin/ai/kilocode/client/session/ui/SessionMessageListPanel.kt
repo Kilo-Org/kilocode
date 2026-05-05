@@ -4,8 +4,8 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.TurnView
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.Disposable
-import com.intellij.util.ui.JBUI
 
 /**
  * Scrollable transcript panel that maps the model's turn grouping to
@@ -31,18 +31,18 @@ import com.intellij.util.ui.JBUI
 class SessionMessageListPanel(
     private val model: SessionModel,
     parent: Disposable,
-) : SessionLayoutPanel() {
+) : SessionLayoutPanel(UiStyle.Card.groupGap(), UiStyle.Insets.transcript()), SessionStyleTarget {
 
     private val turnViews = LinkedHashMap<String, TurnView>()
     private val msgToTurn = HashMap<String, TurnView>()
     private val msgToView = HashMap<String, MessageView>()
+    private var style = SessionStyle.current()
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
 
     init {
         isOpaque = false
-        border = JBUI.Borders.empty(JBUI.scale(4), JBUI.scale(8))
 
         model.addListener(parent) { event ->
             when (event) {
@@ -136,7 +136,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id)
+        val tv = TurnView(turn.id, style)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -187,7 +187,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id)
+            val tv = TurnView(turn.id, style)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -229,5 +229,12 @@ class SessionMessageListPanel(
     private fun refresh() {
         revalidate()
         repaint()
+    }
+
+    override fun applyStyle(style: SessionStyle) {
+        this.style = style
+        for (view in turnViews.values) view.applyStyle(style)
+        progress.applyStyle(style)
+        refresh()
     }
 }
