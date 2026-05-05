@@ -11,7 +11,6 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
-import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -122,15 +121,14 @@ class KiloSessionService internal constructor(
 
     // ------ Chat ops (explicit session ID) ------
 
-    /** Send a text prompt to a session. */
-    suspend fun prompt(id: String, dir: String, text: String) {
+    /** Send a prompt to a session. */
+    suspend fun prompt(id: String, dir: String, dto: PromptDto) {
         val meta = if (LOG.isDebugEnabled) {
-            "${ChatLogSummary.dir(dir)} ${ChatLogSummary.prompt(text)}"
+            "${ChatLogSummary.dir(dir)} ${ChatLogSummary.prompt(dto)}"
         } else {
-            "kind=prompt chars=${text.length}"
+            "kind=prompt parts=${dto.parts.size}"
         }
         LOG.info("${ChatLogSummary.sid(id)} $meta")
-        val dto = PromptDto(parts = listOf(PromptPartDto(type = "text", text = text)))
         call { prompt(id, dir, dto) }
         LOG.info("${ChatLogSummary.sid(id)} kind=prompt ok=true")
     }

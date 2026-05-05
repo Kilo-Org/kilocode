@@ -1,6 +1,6 @@
 # TESTING.md
 
-How to spin up the **local main-branch** Kilo backend and test it with `curl` / `fetch`. Aimed at a running Kilo CLI agent iterating on backend fixes without rebuilding the VS Code extension, TUI, or desktop app.
+How to spin up the **local main-branch** Kilo backend and test it with `curl` / `fetch`. Aimed at a running Kilo CLI agent iterating on backend fixes without rebuilding the VS Code extension or TUI.
 
 All examples use plain shell + `curl`. Writing TypeScript files is a last resort (see Section 8).
 

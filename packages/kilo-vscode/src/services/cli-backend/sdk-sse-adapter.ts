@@ -8,14 +8,14 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  * SSE adapter that consumes the SDK's `client.global.event()` AsyncGenerator
  * and distributes events to subscribers via a pub/sub interface.
  *
- * Follows the same reconnection pattern as the app (`packages/app/src/context/global-sdk.tsx`):
+ * Follows the original web client reconnection pattern:
  *   - Outer `while (!aborted)` loop for reconnection
  *   - Per-attempt AbortController so heartbeat timeout can cancel a stale connection
  *   - Heartbeat timeout to detect zombie connections
  *
  * In this VS Code extension context the connection is localhost (extension ↔
  * child-process server), so zombie-connection scenarios are less likely than in
- * the web app (which goes through proxies/CDNs). We keep the heartbeat for
+ * a browser client (which goes through proxies/CDNs). We keep the heartbeat for
  * consistency with the original strategy but use a generous 90 s timeout to
  * avoid false-positive reconnections during idle periods.
  *
@@ -33,8 +33,7 @@ export class SdkSSEAdapter {
   private attemptController: AbortController | null = null
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
-  // 15s matches packages/app/src/context/global-sdk.tsx — server sends heartbeats
-  // every 10s, so this gives a 5s grace window before forcing a reconnect.
+  // Server sends heartbeats every 10s, so this gives a 5s grace window before forcing a reconnect.
   // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
   private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
   private static readonly RECONNECT_DELAY_MS = 250

@@ -151,7 +151,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const filePath = path.join(Global.Path.state, "model.json")
       const state = {
         pending: false,
-        write: Promise.resolve(), // kilocode_change - serialize model.json writes so older snapshots cannot win races
+        writer: Promise.resolve() as Promise<unknown>, // kilocode_change - serialize writes
       }
 
       // kilocode_change start - keep configured-agent selections process-local
@@ -181,14 +181,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return
         }
         state.pending = false
-        // kilocode_change start - save() is intentionally fire-and-forget, but writes must stay ordered
+        // kilocode_change start - serialize writes so a slow first write cannot overwrite a later one
         const data = {
           model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
         }
-        state.write = state.write.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
+        state.writer = state.writer
+          .then(() => Filesystem.writeJson(filePath, data))
+          .catch(() => {})
         // kilocode_change end
       }
 
