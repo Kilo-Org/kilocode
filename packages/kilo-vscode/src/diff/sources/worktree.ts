@@ -20,9 +20,8 @@ export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
 }
 
 /**
- * Diffs between the local working tree and the base branch. Matches the
- * behavior of the legacy DiffViewerProvider: initial fetch + 2.5s polling
- * with hash dedup, and file revert via WorktreeDiffClient.
+ * Diffs between the local working tree and the base branch. Initial fetch + 2.5s polling
+ * with hash dedup, and file revert.
  */
 export class WorktreeDiffSource implements DiffSource {
   readonly descriptor = WORKSPACE_DESCRIPTOR

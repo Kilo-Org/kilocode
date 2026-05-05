@@ -1,12 +1,15 @@
 import * as vscode from "vscode"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import type { DiffFile } from "../types"
+import { hashFileDiffs } from "../shared/hash"
 import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
 import { patchToBeforeAfter } from "./patch-to-before-after"
 
 export type SessionDiffFetch = (params: { sessionID: string; directory?: string }) => Promise<SnapshotFileDiff[]>
 
 export const SESSION_PREFIX = "session:"
+
+export const POLL_INTERVAL_MS = 2500
 
 export function sessionSourceId(sessionId: string): string {
   return `${SESSION_PREFIX}${sessionId}`
@@ -22,13 +25,14 @@ export function sessionDescriptor(sessionId: string): DiffSourceDescriptor {
 }
 
 /**
- * Diff for the current session. One-shot fetch;
- * no polling and no SSE. Backend returns `{file, patch, ...}`
- * (SnapshotFileDiff); this source converts each patch to before/after so
- * the webview can render it with the same component used for worktree diffs.
+ * Diff for the current session. Initial fetch + 2.5s polling with hash dedup
  */
 export class SessionDiffSource implements DiffSource {
   readonly descriptor: DiffSourceDescriptor
+
+  private lastHash: string | undefined
+  private interval: ReturnType<typeof setInterval> | undefined
+  private disposed = false
 
   constructor(
     private readonly sessionId: string,
@@ -42,33 +46,70 @@ export class SessionDiffSource implements DiffSource {
     post({ type: "loading", loading: true })
 
     try {
-      const raw = await this.fetch({ sessionID: this.sessionId, directory: this.workspaceRoot })
-      const diffs: DiffFile[] = raw.map((r) => {
-        const { before, after } = patchToBeforeAfter(r.patch)
-        return {
-          file: r.file,
-          before,
-          after,
-          additions: r.additions,
-          deletions: r.deletions,
-          status: r.status,
-          tracked: true,
-          generatedLike: false,
-          summarized: r.patch === "",
-        }
-      })
+      const diffs = await this.fetchDiffs()
+      if (this.disposed) return
+      this.lastHash = hashFileDiffs(diffs as never)
       post({ type: "diffs", diffs })
     } catch (err) {
+      if (this.disposed) return
       const message = err instanceof Error ? err.message : String(err)
       post({ type: "error", message })
     } finally {
-      post({ type: "loading", loading: false })
+      if (!this.disposed) post({ type: "loading", loading: false })
     }
   }
 
-  start(_post: DiffSourcePost): vscode.Disposable {
-    return new vscode.Disposable(() => {})
+  start(post: DiffSourcePost): vscode.Disposable {
+    this.stopPolling()
+    this.interval = setInterval(() => {
+      void this.poll(post)
+    }, POLL_INTERVAL_MS)
+
+    return new vscode.Disposable(() => this.stopPolling())
   }
 
-  dispose(): void {}
+  dispose(): void {
+    this.disposed = true
+    this.stopPolling()
+    this.lastHash = undefined
+  }
+
+  private async fetchDiffs(): Promise<DiffFile[]> {
+    const raw = await this.fetch({ sessionID: this.sessionId, directory: this.workspaceRoot })
+    return raw.map((r) => {
+      const { before, after } = patchToBeforeAfter(r.patch)
+      return {
+        file: r.file,
+        before,
+        after,
+        additions: r.additions,
+        deletions: r.deletions,
+        status: r.status,
+        tracked: true,
+        generatedLike: false,
+        summarized: r.patch === "",
+      }
+    })
+  }
+
+  private async poll(post: DiffSourcePost): Promise<void> {
+    try {
+      const diffs = await this.fetchDiffs()
+      if (this.disposed) return
+      const hash = hashFileDiffs(diffs as never)
+      if (hash === this.lastHash) return
+      this.lastHash = hash
+      post({ type: "diffs", diffs })
+    } catch (err) {
+      if (this.disposed) return
+      console.log("[Kilo New] SessionDiffSource.poll error", err)
+    }
+  }
+
+  private stopPolling(): void {
+    if (this.interval) {
+      clearInterval(this.interval)
+      this.interval = undefined
+    }
+  }
 }
