@@ -91,18 +91,6 @@ export function applyFirstLineOnly(
  */
 export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.inline-completion.accepted"
 
-export function countLines(text: string): number {
-  return _countLines(text)
-}
-
-export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boolean {
-  return _shouldShowOnlyFirstLine(prefix, suggestion)
-}
-
-export function getFirstLine(text: string): string {
-  return _getFirstLine(text)
-}
-
 export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
   if (text === "") {
     return []
