@@ -89,7 +89,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const [expanded, setExpanded] = createSignal(true)
 
   // Read initial values from VS Code settings
-  const [showMetrics, setShowMetrics] = createSignal(true)
+  const [showMetrics, setShowMetrics] = createSignal(false)
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
   const handler = (e: MessageEvent<ExtensionMessage>) => {
     if (e.data.type === "timelineSettingLoaded") {
