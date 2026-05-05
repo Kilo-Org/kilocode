@@ -1485,6 +1485,5 @@ export const dict = {
   "diffViewer.group.workspace": "工作区",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
-  "diffViewer.notice.snapshotsDisabled":
-    "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
+  "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
 } satisfies Partial<Record<Keys, string>>
