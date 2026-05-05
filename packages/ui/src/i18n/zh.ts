@@ -105,12 +105,12 @@ export const dict = {
   "ui.mermaid.renderError": "Mermaid 渲染失败：{{message}}",
   "ui.mermaid.errorDefault": "无法渲染 Mermaid 图表。",
   "ui.mermaid.errorEmpty": "Mermaid 渲染了一个空图表。",
+  "ui.mermaid.download": "下载",
   "ui.mermaid.copySource": "复制 Mermaid 源码",
   "ui.mermaid.copySvg": "复制 SVG",
   "ui.mermaid.copyPng": "复制 PNG",
   "ui.mermaid.downloadSvg": "下载 SVG",
   "ui.mermaid.downloadPng": "下载 PNG",
-  "ui.mermaid.openPreview": "打开图片预览",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "可滚动内容",
 

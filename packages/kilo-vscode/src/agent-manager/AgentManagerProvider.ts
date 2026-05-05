@@ -455,7 +455,8 @@ export class AgentManagerProvider implements Disposable {
       this.host.copyToClipboard(m.text)
       return null
     }
-    if (m.type === "previewImage" || m.type === "saveImage") return msg
+    if (m.type === "previewImage") return msg
+    if (m.type === "saveImage") return msg
     if (m.type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()
       return null

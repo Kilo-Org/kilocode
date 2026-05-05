@@ -180,26 +180,18 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 
 type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
 
-export const MermaidImageBridge: Component = () => {
+export const MermaidDownloadBridge: Component = () => {
   const vscode = useVSCode()
 
   onMount(() => {
-    const preview = (event: Event) => {
-      const detail = (event as MermaidImageEvent).detail
-      if (!detail?.dataUrl || !detail.filename) return
-      event.preventDefault()
-      vscode.postMessage({ type: "previewImage", dataUrl: detail.dataUrl, filename: detail.filename })
-    }
     const save = (event: Event) => {
       const detail = (event as MermaidImageEvent).detail
       if (!detail?.dataUrl || !detail.filename) return
       event.preventDefault()
       vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
     }
-    window.addEventListener("kilo:preview-image", preview)
     window.addEventListener("kilo:save-image", save)
     onCleanup(() => {
-      window.removeEventListener("kilo:preview-image", preview)
       window.removeEventListener("kilo:save-image", save)
     })
   })
@@ -371,7 +363,7 @@ const App: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
-          <MermaidImageBridge />
+          <MermaidDownloadBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>

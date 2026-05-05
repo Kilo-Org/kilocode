@@ -347,12 +347,13 @@ export function Markdown(
       errorDefault: i18n.t("ui.mermaid.errorDefault"),
       errorEmpty: i18n.t("ui.mermaid.errorEmpty"),
       copied: i18n.t("ui.message.copied"),
+      copy: i18n.t("ui.message.copy"),
+      download: i18n.t("ui.mermaid.download"),
       copySource: i18n.t("ui.mermaid.copySource"),
       copySvg: i18n.t("ui.mermaid.copySvg"),
       copyPng: i18n.t("ui.mermaid.copyPng"),
       downloadSvg: i18n.t("ui.mermaid.downloadSvg"),
       downloadPng: i18n.t("ui.mermaid.downloadPng"),
-      openPreview: i18n.t("ui.mermaid.openPreview"),
     }
     // kilocode_change end
 
@@ -433,7 +434,7 @@ export function Markdown(
             const fromHash = fromEl.getAttribute("data-source-hash")
             const toCode = toEl.querySelector("code")?.textContent ?? ""
             if (fromHash === fnv1a(toCode)) return false
-            // Source changed during streaming — fall through so morphdom replaces
+            // Source changed during streaming — fall through so morphdom replaces // kilocode_change
             // the stale highlighted block with the updated plain block, which will
             // be re-highlighted on the next deferredHighlight pass.
           }

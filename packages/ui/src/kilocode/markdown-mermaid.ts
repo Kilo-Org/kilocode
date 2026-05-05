@@ -16,12 +16,13 @@ export type MermaidLabels = {
   errorDefault: string
   errorEmpty: string
   copied: string
+  copy: string
+  download: string
   copySource: string
   copySvg: string
   copyPng: string
   downloadSvg: string
   downloadPng: string
-  openPreview: string
 }
 
 const labels: MermaidLabels = {
@@ -30,12 +31,13 @@ const labels: MermaidLabels = {
   errorDefault: "Unable to render Mermaid diagram.",
   errorEmpty: "Mermaid rendered an empty diagram.",
   copied: "Copied",
+  copy: "Copy",
+  download: "Download",
   copySource: "Copy Mermaid source",
   copySvg: "Copy SVG",
   copyPng: "Copy PNG",
   downloadSvg: "Download SVG",
   downloadPng: "Download PNG",
-  openPreview: "Open image preview",
 }
 
 const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = {
@@ -233,6 +235,28 @@ function button(label: string, onClick: (button: HTMLButtonElement) => Promise<v
   return item
 }
 
+function menu(label: string, items: HTMLElement[]) {
+  const root = document.createElement("details")
+  root.setAttribute("data-slot", "markdown-mermaid-menu")
+
+  const trigger = document.createElement("summary")
+  trigger.setAttribute("data-slot", "markdown-mermaid-menu-trigger")
+  trigger.textContent = label
+
+  const content = document.createElement("div")
+  content.setAttribute("data-slot", "markdown-mermaid-menu-content")
+  content.append(...items)
+
+  root.append(trigger, content)
+  root.addEventListener("click", (event) => event.stopPropagation())
+  for (const item of items) {
+    item.addEventListener("click", () => {
+      root.open = false
+    })
+  }
+  return root
+}
+
 function setDone(item: HTMLButtonElement, labels: MermaidLabels) {
   const text = item.textContent
   item.textContent = labels.copied
@@ -319,18 +343,6 @@ async function copyPng(svg: SVGSVGElement, item: HTMLButtonElement, labels: Merm
   setDone(item, labels)
 }
 
-function preview(svg: SVGSVGElement) {
-  const url = dataUrl("image/svg+xml", serialize(svg))
-  const event = new CustomEvent("kilo:preview-image", {
-    bubbles: true,
-    cancelable: true,
-    detail: { dataUrl: url, filename: "mermaid-diagram.svg" },
-  })
-  window.dispatchEvent(event)
-  if (event.defaultPrevented) return
-  window.open(url, "_blank", "noopener,noreferrer")
-}
-
 function actions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels: MermaidLabels) {
   const svg = el.querySelector("svg")
   if (!(svg instanceof SVGSVGElement)) return
@@ -345,18 +357,15 @@ function actions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels
   const sourceSvgUrl = () => dataUrl("image/svg+xml", sourceSvg())
 
   bar.append(
-    button(labels.copySource, (button) => {
-      return copyText(sourceText, button, labels)
-    }),
-    button(labels.copySvg, (button) => {
-      return copyText(sourceSvg(), button, labels)
-    }),
-    button(labels.copyPng, (button) => {
-      return copyPng(svg, button, labels)
-    }),
-    button(labels.downloadSvg, () => save(sourceSvgUrl(), "mermaid-diagram.svg")),
-    button(labels.downloadPng, async () => save(await png(svg), "mermaid-diagram.png")),
-    button(labels.openPreview, () => preview(svg)),
+    menu(labels.copy, [
+      button(labels.copySource, (button) => copyText(sourceText, button, labels)),
+      button(labels.copySvg, (button) => copyText(sourceSvg(), button, labels)),
+      button(labels.copyPng, (button) => copyPng(svg, button, labels)),
+    ]),
+    menu(labels.download, [
+      button(labels.downloadSvg, () => save(sourceSvgUrl(), "mermaid-diagram.svg")),
+      button(labels.downloadPng, async () => save(await png(svg), "mermaid-diagram.png")),
+    ]),
   )
   el.insertBefore(bar, el.firstChild)
 }

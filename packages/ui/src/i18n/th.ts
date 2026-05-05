@@ -102,12 +102,12 @@ export const dict = {
   "ui.mermaid.renderError": "เรนเดอร์ Mermaid ไม่สำเร็จ: {{message}}",
   "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
   "ui.mermaid.errorEmpty": "Mermaid เรนเดอร์ไดอะแกรมว่าง",
+  "ui.mermaid.download": "ดาวน์โหลด",
   "ui.mermaid.copySource": "คัดลอกซอร์ส Mermaid",
   "ui.mermaid.copySvg": "คัดลอก SVG",
   "ui.mermaid.copyPng": "คัดลอก PNG",
   "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
   "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
-  "ui.mermaid.openPreview": "เปิดตัวอย่างรูปภาพ",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "เนื้อหาที่เลื่อนได้",
 

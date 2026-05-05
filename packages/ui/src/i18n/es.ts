@@ -101,12 +101,12 @@ export const dict = {
   "ui.mermaid.renderError": "Error al renderizar Mermaid: {{message}}",
   "ui.mermaid.errorDefault": "No se puede renderizar el diagrama Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid renderizó un diagrama vacío.",
+  "ui.mermaid.download": "Descargar",
   "ui.mermaid.copySource": "Copiar código fuente Mermaid",
   "ui.mermaid.copySvg": "Copiar SVG",
   "ui.mermaid.copyPng": "Copiar PNG",
   "ui.mermaid.downloadSvg": "Descargar SVG",
   "ui.mermaid.downloadPng": "Descargar PNG",
-  "ui.mermaid.openPreview": "Abrir vista previa de imagen",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "contenido desplazable",
 

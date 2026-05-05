@@ -104,12 +104,12 @@ export const dict: Record<Keys, string> = {
   "ui.mermaid.renderError": "Mermaid-gjengivelse mislyktes: {{message}}",
   "ui.mermaid.errorDefault": "Kan ikke gjengi Mermaid-diagram.",
   "ui.mermaid.errorEmpty": "Mermaid gjenga et tomt diagram.",
+  "ui.mermaid.download": "Last ned",
   "ui.mermaid.copySource": "Kopier Mermaid-kilde",
   "ui.mermaid.copySvg": "Kopier SVG",
   "ui.mermaid.copyPng": "Kopier PNG",
   "ui.mermaid.downloadSvg": "Last ned SVG",
   "ui.mermaid.downloadPng": "Last ned PNG",
-  "ui.mermaid.openPreview": "Åpne bildeforhåndsvisning",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "rullbart innhold",
 

@@ -100,12 +100,12 @@ export const dict = {
   "ui.mermaid.renderError": "Mermaid のレンダリングに失敗しました: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid 図をレンダリングできません。",
   "ui.mermaid.errorEmpty": "Mermaid が空の図をレンダリングしました。",
+  "ui.mermaid.download": "ダウンロード",
   "ui.mermaid.copySource": "Mermaid ソースをコピー",
   "ui.mermaid.copySvg": "SVG をコピー",
   "ui.mermaid.copyPng": "PNG をコピー",
   "ui.mermaid.downloadSvg": "SVG をダウンロード",
   "ui.mermaid.downloadPng": "PNG をダウンロード",
-  "ui.mermaid.openPreview": "画像プレビューを開く",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "スクロール可能なコンテンツ",
 

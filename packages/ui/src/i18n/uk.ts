@@ -107,12 +107,12 @@ export const dict = {
   "ui.mermaid.renderError": "Не вдалося відтворити Mermaid: {{message}}",
   "ui.mermaid.errorDefault": "Не вдалося відтворити діаграму Mermaid.",
   "ui.mermaid.errorEmpty": "Mermaid відтворив порожню діаграму.",
+  "ui.mermaid.download": "Завантажити",
   "ui.mermaid.copySource": "Копіювати вихідний код Mermaid",
   "ui.mermaid.copySvg": "Копіювати SVG",
   "ui.mermaid.copyPng": "Копіювати PNG",
   "ui.mermaid.downloadSvg": "Завантажити SVG",
   "ui.mermaid.downloadPng": "Завантажити PNG",
-  "ui.mermaid.openPreview": "Відкрити попередній перегляд зображення",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "вміст з прокруткою",
 

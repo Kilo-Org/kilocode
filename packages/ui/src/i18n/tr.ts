@@ -107,12 +107,12 @@ export const dict = {
   "ui.mermaid.renderError": "Mermaid işleme başarısız: {{message}}",
   "ui.mermaid.errorDefault": "Mermaid diyagramı işlenemiyor.",
   "ui.mermaid.errorEmpty": "Mermaid boş bir diyagram işledi.",
+  "ui.mermaid.download": "İndir",
   "ui.mermaid.copySource": "Mermaid kaynağını kopyala",
   "ui.mermaid.copySvg": "SVG kopyala",
   "ui.mermaid.copyPng": "PNG kopyala",
   "ui.mermaid.downloadSvg": "SVG indir",
   "ui.mermaid.downloadPng": "PNG indir",
-  "ui.mermaid.openPreview": "Görsel önizlemeyi aç",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "kaydırılabilir içerik",
 

@@ -100,12 +100,12 @@ export const dict = {
   "ui.mermaid.renderError": "Mermaid-rendering mislykkedes: {{message}}",
   "ui.mermaid.errorDefault": "Kan ikke rendere Mermaid-diagram.",
   "ui.mermaid.errorEmpty": "Mermaid renderede et tomt diagram.",
+  "ui.mermaid.download": "Download",
   "ui.mermaid.copySource": "Kopiér Mermaid-kilde",
   "ui.mermaid.copySvg": "Kopiér SVG",
   "ui.mermaid.copyPng": "Kopiér PNG",
   "ui.mermaid.downloadSvg": "Download SVG",
   "ui.mermaid.downloadPng": "Download PNG",
-  "ui.mermaid.openPreview": "Åbn billedforhåndsvisning",
   // kilocode_change end
   "ui.scrollView.ariaLabel": "rulbart indhold",
 

@@ -4,6 +4,10 @@
     border-radius: 6px;
     background: var(--surface-base);
     overflow: hidden;
+
+    > [data-slot="markdown-copy-button"] {
+      display: none;
+    }
   }
 
   [data-component="markdown-mermaid"] {
@@ -36,6 +40,7 @@
     font-size: 11px;
     line-height: 18px;
     padding: 0 6px;
+    white-space: nowrap;
   }
 
   [data-slot="markdown-mermaid-action"]:hover {
@@ -44,6 +49,61 @@
 
   [data-slot="markdown-mermaid-action"][data-copied="true"] {
     color: var(--text-interactive-base);
+  }
+
+  [data-slot="markdown-mermaid-menu"] {
+    position: relative;
+  }
+
+  [data-slot="markdown-mermaid-menu-trigger"] {
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 4px;
+    background: var(--surface-raised-base, var(--surface-base));
+    color: var(--text-strong);
+    cursor: pointer;
+    font-family: var(--font-family-sans);
+    font-size: 11px;
+    line-height: 18px;
+    list-style: none;
+    padding: 0 18px 0 6px;
+    position: relative;
+    user-select: none;
+  }
+
+  [data-slot="markdown-mermaid-menu-trigger"]::-webkit-details-marker {
+    display: none;
+  }
+
+  [data-slot="markdown-mermaid-menu-trigger"]::after {
+    content: "⌄";
+    position: absolute;
+    right: 6px;
+  }
+
+  [data-slot="markdown-mermaid-menu-content"] {
+    background: var(--surface-float-base);
+    border: 1px solid var(--border-weak-base);
+    border-radius: 6px;
+    box-shadow: var(--shadow-md);
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 160px;
+    padding: 4px;
+    position: absolute;
+    top: calc(100% + 4px);
+    z-index: 10;
+  }
+
+  [data-slot="markdown-mermaid-menu"][open] [data-slot="markdown-mermaid-menu-content"] {
+    display: flex;
+  }
+
+  [data-slot="markdown-mermaid-menu-content"] [data-slot="markdown-mermaid-action"] {
+    background: transparent;
+    border: 0;
+    line-height: 24px;
+    text-align: left;
   }
 
   [data-component="markdown-mermaid"][data-state="rendered"] > svg {
