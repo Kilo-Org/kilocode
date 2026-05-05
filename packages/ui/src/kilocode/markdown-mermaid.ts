@@ -226,6 +226,7 @@ function button(label: string, onClick: (button: HTMLButtonElement) => Promise<v
   item.setAttribute("data-slot", "markdown-mermaid-action")
   item.setAttribute("aria-label", label)
   item.setAttribute("title", label)
+  item.setAttribute("role", "menuitem")
   item.textContent = label
   item.addEventListener("click", (event) => {
     event.preventDefault()
@@ -241,12 +242,41 @@ function menu(label: string, items: HTMLElement[]) {
 
   const trigger = document.createElement("summary")
   trigger.setAttribute("data-slot", "markdown-mermaid-menu-trigger")
-  trigger.textContent = label
+  trigger.setAttribute("aria-label", label)
+  trigger.setAttribute("title", label)
+  trigger.setAttribute("data-tooltip", label)
+  const text = document.createElement("span")
+  text.setAttribute("data-slot", "markdown-mermaid-menu-label")
+  text.textContent = label
+  const icon = document.createElement("span")
+  icon.setAttribute("data-slot", "markdown-mermaid-menu-chevron")
+  icon.setAttribute("aria-hidden", "true")
+  icon.textContent = "⌄"
+  trigger.append(text, icon)
 
   const content = document.createElement("div")
   content.setAttribute("data-slot", "markdown-mermaid-menu-content")
+  content.setAttribute("role", "menu")
   content.append(...items)
 
+  const close = (event: Event) => {
+    if (!(event.target instanceof Node)) return
+    if (root.contains(event.target)) return
+    root.open = false
+  }
+
+  root.addEventListener("toggle", () => {
+    if (!root.open) {
+      document.removeEventListener("pointerdown", close, true)
+      return
+    }
+    const parent = root.parentElement
+    const menus = parent?.querySelectorAll('[data-slot="markdown-mermaid-menu"]') ?? []
+    for (const menu of menus) {
+      if (menu instanceof HTMLDetailsElement && menu !== root) menu.open = false
+    }
+    document.addEventListener("pointerdown", close, true)
+  })
   root.append(trigger, content)
   root.addEventListener("click", (event) => event.stopPropagation())
   for (const item of items) {
