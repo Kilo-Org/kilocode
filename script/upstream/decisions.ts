@@ -230,7 +230,7 @@ function diff3(entry: Item) {
 
 async function side(file: string, stage: 1 | 2 | 3): Promise<Side> {
   const res = await run(["git", "show", `:${stage}:${file}`])
-  if (res.exitCode !== 0 || res.stdout.length === 0) return { present: false }
+  if (res.exitCode !== 0) return { present: false }
   const text = res.stdout
   // Keep full ours content (clipped) so we can diff the resolution against it
   // at add-time. base/theirs don't need the full content for review.
@@ -413,7 +413,6 @@ async function snapshot(entry: Snap, ours?: string) {
   const text = await Bun.file(path(entry))
     .text()
     .catch(() => "")
-  if (!text) return undefined
   if (ours !== undefined) {
     const diff = await unifiedDiff(ours, text, entry.file)
     if (diff !== undefined) {
@@ -536,9 +535,16 @@ function list(lines: string[], label: string, values: string[]) {
   lines.push(`- ${label}: ${values.join("; ")}`)
 }
 
+function ticks(text: string) {
+  const runs = text.match(/`+/g) ?? []
+  const size = Math.max(3, ...runs.map((run) => run.length))
+  return "`".repeat(size + 1)
+}
+
 function fence(lines: string[], label: string, text?: string) {
-  if (!text) return
-  lines.push(`<details><summary>${label}</summary>`, "", "```diff", text, "```", "", "</details>", "")
+  if (text === undefined) return
+  const mark = ticks(text)
+  lines.push(`<details><summary>${label}</summary>`, "", `${mark}diff`, text, mark, "", "</details>", "")
 }
 
 function markdown(ledger: Ledger) {

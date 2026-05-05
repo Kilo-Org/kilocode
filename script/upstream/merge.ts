@@ -220,7 +220,6 @@ async function main() {
   process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
 
   const options = parseArgs()
-  const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
   if (options.verbose) {
     logger.setVerbose(true)
@@ -248,6 +247,10 @@ async function main() {
 
   const currentBranch = await git.getCurrentBranch()
   logger.info(`Current branch: ${currentBranch}`)
+
+  const base = options.baseBranch === "HEAD" ? currentBranch : options.baseBranch
+  const config = loadConfig(base ? { baseBranch: base } : undefined)
+  if (options.baseBranch === "HEAD") logger.info(`Using current branch as base: ${currentBranch}`)
 
   // Enable git rerere so conflict resolutions are recorded and reused across merges
   if (!options.dryRun) {

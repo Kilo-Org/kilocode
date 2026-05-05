@@ -248,6 +248,12 @@ The command finds the newest upstream tag already merged into `HEAD`, reads that
 
 By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
 
+Use `--base-branch HEAD` to use the branch you are currently on without typing its full name:
+
+```bash
+bun run merge.ts --version v1.1.50 --base-branch HEAD
+```
+
 ### Incremental Merges
 
 When working on multiple upstream versions, you can create a chain of merge PRs:
