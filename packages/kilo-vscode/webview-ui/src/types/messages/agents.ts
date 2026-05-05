@@ -35,8 +35,8 @@ export interface AgentConfig {
   mode?: "subagent" | "primary" | "all"
   hidden?: boolean
   disable?: boolean
-  temperature?: number
-  top_p?: number
-  steps?: number
+  temperature?: number | null
+  top_p?: number | null
+  steps?: number | null
   permission?: PermissionConfig
 }

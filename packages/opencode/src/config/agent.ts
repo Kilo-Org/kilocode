@@ -30,8 +30,8 @@ const AgentSchema = Schema.StructWithRest(
     variant: Schema.optional(Schema.String).annotate({
       description: "Default model variant for this agent (applies only when using the agent's configured model).",
     }),
-    temperature: Schema.optional(Schema.Number),
-    top_p: Schema.optional(Schema.Number),
+    temperature: Schema.optional(Schema.NullOr(Schema.Number)), // kilocode_change - nullable for delete sentinel
+    top_p: Schema.optional(Schema.NullOr(Schema.Number)), // kilocode_change - nullable for delete sentinel
     prompt: Schema.optional(Schema.String),
     tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
       description: "@deprecated Use 'permission' field instead",
@@ -46,7 +46,8 @@ const AgentSchema = Schema.StructWithRest(
     color: Schema.optional(Color).annotate({
       description: "Hex color code (e.g., #FF5733) or theme color (e.g., primary)",
     }),
-    steps: Schema.optional(PositiveInt).annotate({
+    steps: Schema.optional(Schema.NullOr(PositiveInt)).annotate({
+      // kilocode_change - nullable for delete sentinel
       description: "Maximum number of agentic iterations before forcing text-only response",
     }),
     maxSteps: Schema.optional(PositiveInt).annotate({ description: "@deprecated Use 'steps' field instead." }),
@@ -80,7 +81,9 @@ const KNOWN_KEYS = new Set([
 //  - Translate the deprecated `tools: { name: boolean }` map into the new
 //    `permission` shape (write-adjacent tools collapse into `permission.edit`).
 //  - Coalesce `steps ?? maxSteps` so downstream can ignore the deprecated alias.
-const normalize = (agent: z.infer<typeof Info>) => {
+// kilocode_change - use the pre-transform schema type so null delete sentinels
+// are visible here without widening the exported Info type.
+const normalize = (agent: z.infer<ReturnType<typeof zod<typeof AgentSchema>>>) => {
   const options: Record<string, unknown> = { ...agent.options }
   for (const [key, value] of Object.entries(agent)) {
     if (!KNOWN_KEYS.has(key)) options[key] = value
@@ -97,15 +100,26 @@ const normalize = (agent: z.infer<typeof Info>) => {
   }
   globalThis.Object.assign(permission, agent.permission)
 
-  const steps = agent.steps ?? agent.maxSteps
-  return { ...agent, options, permission, ...(steps !== undefined ? { steps } : {}) }
+  // kilocode_change start - coerce null delete-sentinels back to undefined so
+  // downstream consumers see `number | undefined` as before.
+  const steps = (agent.steps ?? agent.maxSteps) || undefined
+  const temperature = agent.temperature ?? undefined
+  const top_p = agent.top_p ?? undefined
+  return { ...agent, options, permission, steps, temperature, top_p }
+  // kilocode_change end
 }
 
 export const Info = zod(AgentSchema).transform(normalize).meta({ ref: "AgentConfig" }) as unknown as z.ZodType<
-  Omit<z.infer<ReturnType<typeof zod<typeof AgentSchema>>>, "options" | "permission" | "steps"> & {
+  // kilocode_change - strip null delete-sentinels from the external type
+  Omit<
+    z.infer<ReturnType<typeof zod<typeof AgentSchema>>>,
+    "options" | "permission" | "steps" | "temperature" | "top_p"
+  > & {
     options?: Record<string, unknown>
     permission?: ConfigPermission.Info
     steps?: number
+    temperature?: number
+    top_p?: number
   }
 >
 export type Info = z.infer<typeof Info>

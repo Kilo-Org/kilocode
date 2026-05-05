@@ -1574,8 +1574,8 @@ export type AgentConfig = {
    * Default model variant for this agent (applies only when using the agent's configured model).
    */
   variant?: string
-  temperature?: number
-  top_p?: number
+  temperature?: number | null
+  top_p?: number | null
   prompt?: string
   /**
    * @deprecated Use 'permission' field instead
@@ -1603,7 +1603,7 @@ export type AgentConfig = {
   /**
    * Maximum number of agentic iterations before forcing text-only response
    */
-  steps?: number
+  steps?: number | null
   /**
    * @deprecated Use 'steps' field instead.
    */
@@ -1615,6 +1615,9 @@ export type AgentConfig = {
     | null
     | string
     | number
+    | null
+    | number
+    | null
     | {
         [key: string]: boolean
       }
@@ -1633,6 +1636,8 @@ export type AgentConfig = {
     | "warning"
     | "error"
     | "info"
+    | number
+    | null
     | number
     | PermissionConfig
     | undefined

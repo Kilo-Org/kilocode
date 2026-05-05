@@ -15055,10 +15055,24 @@
             "type": "string"
           },
           "temperature": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "top_p": {
-            "type": "number"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "prompt": {
             "type": "string"
@@ -15110,9 +15124,16 @@
           },
           "steps": {
             "description": "Maximum number of agentic iterations before forcing text-only response",
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 9007199254740991
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "maxSteps": {
             "description": "@deprecated Use 'steps' field instead.",

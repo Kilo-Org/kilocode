@@ -1,4 +1,4 @@
-import { Component, Show, For, createMemo, createSignal, createEffect } from "solid-js"
+import { Component, Show, For, createMemo, createSignal } from "solid-js"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -44,23 +44,25 @@ const ModeEditView: Component<Props> = (props) => {
     })
   }
 
-  // Local string state for float fields so intermediate input like "0." isn't
-  // erased by the parseFloat→toString controlled-value round-trip.
-  const [tempStr, setTempStr] = createSignal("")
-  const [topPStr, setTopPStr] = createSignal("")
+  // Numeric fields keep a local draft string while focused so intermediate
+  // input like "." or "0." survives the parse→toString round-trip. The draft
+  // is committed on blur; empty deletes the override, invalid is ignored.
+  const [tempStr, setTempStr] = createSignal<string>()
+  const [topPStr, setTopPStr] = createSignal<string>()
+  const [stepsStr, setStepsStr] = createSignal<string>()
+  const temp = () => tempStr() ?? cfg().temperature?.toString() ?? ""
+  const topP = () => topPStr() ?? cfg().top_p?.toString() ?? ""
+  const steps = () => stepsStr() ?? cfg().steps?.toString() ?? ""
 
-  createEffect(() => {
-    const t = cfg().temperature
-    setTempStr(t !== undefined ? t.toString() : "")
-  })
-  createEffect(() => {
-    const p = cfg().top_p
-    setTopPStr(p !== undefined ? p.toString() : "")
-  })
-
-  const commitFloat = (key: "temperature" | "top_p", raw: string) => {
-    const parsed = parseFloat(raw)
-    update({ [key]: isNaN(parsed) ? undefined : parsed })
+  const commitNumber = (key: "temperature" | "top_p" | "steps", raw: string | undefined) => {
+    if (raw === undefined) return
+    if (raw.trim() === "") {
+      update({ [key]: null })
+      return
+    }
+    const parsed = key === "steps" ? parseInt(raw, 10) : parseFloat(raw)
+    if (isNaN(parsed)) return
+    update({ [key]: parsed })
   }
 
   const updatePermission = (patch: PermissionConfig) => {
@@ -178,10 +180,13 @@ const ModeEditView: Component<Props> = (props) => {
           description={language.t("settings.agentBehaviour.temperature.description")}
         >
           <TextField
-            value={tempStr()}
+            value={temp()}
             placeholder={language.t("common.default")}
             onChange={setTempStr}
-            onBlur={() => commitFloat("temperature", tempStr())}
+            onBlur={() => {
+              commitNumber("temperature", tempStr())
+              setTempStr(undefined)
+            }}
           />
         </SettingsRow>
 
@@ -190,10 +195,13 @@ const ModeEditView: Component<Props> = (props) => {
           description={language.t("settings.agentBehaviour.topP.description")}
         >
           <TextField
-            value={topPStr()}
+            value={topP()}
             placeholder={language.t("common.default")}
             onChange={setTopPStr}
-            onBlur={() => commitFloat("top_p", topPStr())}
+            onBlur={() => {
+              commitNumber("top_p", topPStr())
+              setTopPStr(undefined)
+            }}
           />
         </SettingsRow>
 
@@ -202,11 +210,12 @@ const ModeEditView: Component<Props> = (props) => {
           description={language.t("settings.agentBehaviour.maxSteps.description")}
         >
           <TextField
-            value={cfg().steps?.toString() ?? ""}
+            value={steps()}
             placeholder={language.t("common.default")}
-            onChange={(val) => {
-              const parsed = parseInt(val, 10)
-              update({ steps: isNaN(parsed) ? undefined : parsed })
+            onChange={setStepsStr}
+            onBlur={() => {
+              commitNumber("steps", stepsStr())
+              setStepsStr(undefined)
             }}
           />
         </SettingsRow>
