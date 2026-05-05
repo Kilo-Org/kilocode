@@ -116,3 +116,4 @@ You’re free to use, modify, and distribute this code, including for commercial
 ### Where did Kilo CLI come from?
 
 Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
+
