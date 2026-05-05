@@ -1,13 +1,13 @@
 import { Schema } from "effect"
+import { PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
 import { zod } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
-
-const PositiveInt = Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThan(0))
+import { PositiveInt, withStatics } from "@/util/schema"
 
 export const Model = Schema.Struct({
   id: Schema.optional(Schema.String),
   name: Schema.optional(Schema.String),
   family: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.Literals(PROMPTS)), // kilocode_change
   release_date: Schema.optional(Schema.String),
   attachment: Schema.optional(Schema.Boolean),
   reasoning: Schema.optional(Schema.Boolean),

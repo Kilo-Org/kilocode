@@ -23,6 +23,8 @@ import java.io.File
  *  9. AnyOf union wrappers — `anyOf` unions like `boolean | object` that
  *     generate paired `Foo` + `FooAnyOf` classes the generator can't flatten.
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
+ * 10. JsonElement query parameters — anyOf query params generate empty
+ *     `if (param != null) {}` blocks. Emit the primitive JSON text instead.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
     @get:OutputDirectory
@@ -33,6 +35,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
         val root = generated.get().asFile
         fixEmptyWrappers(root)
         fixAnyOfUnionWrappers(root)
+        fixJsonElementQueryParams(root)
         root.walkTopDown().filter { it.extension == "kt" }.forEach { fix(it) }
     }
 
@@ -110,6 +113,33 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             }
             if (changed) file.writeText(text)
         }
+    }
+
+    private fun fixJsonElementQueryParams(root: File) {
+        val api = File(root, "ai/kilocode/jetbrains/api/client/DefaultApi.kt")
+        if (!api.isFile) return
+
+        val models = File(root, "ai/kilocode/jetbrains/api/model")
+        val missing = mutableSetOf<String>()
+        val text = Regex("""import ai\.kilocode\.jetbrains\.api\.model\.(\w+Parameter)\n""")
+            .replace(api.readText()) { m ->
+                val name = m.groupValues[1]
+                if (File(models, "$name.kt").isFile) return@replace m.value
+                missing.add(name)
+                ""
+            }
+            .let { input ->
+                missing.fold(input) { acc, name ->
+                    acc.replace(Regex("""\b$name\b"""), "kotlinx.serialization.json.JsonElement")
+                }
+            }
+        val empty = Regex("""(\s*)if \((\w+) != null\) \{\s*\n\s*\}""")
+        val fixed = empty.replace(text) { m ->
+            val pad = m.groupValues[1]
+            val name = m.groupValues[2]
+            "${pad}if ($name != null) {\n${pad}    put(\"$name\", listOf($name.toString()))\n$pad}"
+        }
+        if (fixed != text) api.writeText(fixed)
     }
 
     private fun fix(file: File) {

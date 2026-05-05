@@ -7,7 +7,7 @@ import { Schema } from "effect"
 import { zod } from "@/util/effect-zod"
 import { FileIgnore } from "@/file/ignore"
 import { Snapshot } from "@/snapshot"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { withStatics } from "@/util/schema"
 
 export namespace WorktreeDiff {

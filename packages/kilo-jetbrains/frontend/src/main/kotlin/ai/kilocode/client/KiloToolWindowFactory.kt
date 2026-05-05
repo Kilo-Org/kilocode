@@ -1,13 +1,12 @@
 package ai.kilocode.client
 
-import ai.kilocode.client.app.KiloAppService
-import ai.kilocode.client.app.KiloSessionService
-import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.actions.NewSessionAction
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.session.SessionSidePanelManager
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.components.service
-import ai.kilocode.log.KiloLog
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
@@ -20,7 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Creates the Kilo Code tool window with a single [SessionUi].
+ * Creates the Kilo Code tool window and delegates session content management.
  *
  * Resolves the project directory through the backend (handles split-mode
  * where `project.basePath` is a synthetic frontend path) before creating
@@ -36,8 +35,6 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         try {
             val workspaces = service<KiloWorkspaceService>()
-            val sessions = project.service<KiloSessionService>()
-            val app = service<KiloAppService>()
             val cs = CoroutineScope(SupervisorJob())
             val hint = project.basePath ?: ""
 
@@ -45,7 +42,7 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
                 val dir = workspaces.resolveProjectDirectory(hint)
                 val workspace = workspaces.workspace(dir)
                 withContext(Dispatchers.Main) {
-                    setup(project, toolWindow, workspace, sessions, app, cs)
+                    setup(project, toolWindow, workspace)
                 }
             }
         } catch (e: Exception) {
@@ -57,19 +54,18 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         project: Project,
         toolWindow: ToolWindow,
         workspace: Workspace,
-        sessions: KiloSessionService,
-        app: KiloAppService,
-        cs: CoroutineScope,
     ) {
         try {
-            val ui = SessionUi(project, workspace, sessions, app, cs)
-            val content = ContentFactory.getInstance()
-                .createContent(ui, "", false)
-            content.setDisposer(ui)
+            val manager = SessionSidePanelManager(project, workspace)
+            val content = ContentFactory.getInstance().createContent(manager.component, "", false)
+            content.setDisposer(manager)
+            content.setPreferredFocusedComponent { manager.defaultFocusedComponent }
             toolWindow.contentManager.addContent(content)
+            toolWindow.contentManager.setSelectedContent(content)
+            manager.newSession()
 
-            ActionManager.getInstance().getAction("Kilo.Settings")?.let {
-                toolWindow.setTitleActions(listOf(it))
+            ActionManager.getInstance().getAction("Kilo.Settings")?.let { settings ->
+                toolWindow.setTitleActions(listOf(NewSessionAction(), settings))
             }
         } catch (e: Exception) {
             LOG.error("Failed to set up Kilo tool window content", e)

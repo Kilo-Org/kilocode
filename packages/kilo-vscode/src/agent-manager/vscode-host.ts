@@ -13,9 +13,11 @@ import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
+import type { AutoApproveController } from "../commands/toggle-auto-approve"
 
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
+  private autoApprove: AutoApproveController | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -25,6 +27,10 @@ export class VscodeHost implements Host {
 
   setDiffVirtualProvider(provider: DiffVirtualProvider): void {
     this.diffVirtual = provider
+  }
+
+  setAutoApproveController(ctrl: AutoApproveController): void {
+    this.autoApprove = ctrl
   }
 
   openPanel(opts: {
@@ -87,6 +93,7 @@ export class VscodeHost implements Host {
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: opts.onBeforeMessage,
     })
+    if (this.autoApprove) provider.setAutoApproveController(this.autoApprove)
 
     const sessions: SessionProvider = {
       setSessionDirectory: (id, dir) => provider.setSessionDirectory(id, dir),
@@ -109,6 +116,19 @@ export class VscodeHost implements Host {
       },
       postMessage(msg) {
         void panel.webview.postMessage(msg)
+      },
+      waitForReady() {
+        return provider.waitForReady()
+      },
+      waitForActive() {
+        if (panel.active) return Promise.resolve()
+        return new Promise((resolve) => {
+          const sub = panel.onDidChangeViewState((e) => {
+            if (!e.webviewPanel.active) return
+            sub.dispose()
+            resolve()
+          })
+        })
       },
       reveal(preserveFocus) {
         panel.reveal(vscode.ViewColumn.One, preserveFocus ?? false)

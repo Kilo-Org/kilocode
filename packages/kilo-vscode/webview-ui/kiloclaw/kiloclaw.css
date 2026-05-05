@@ -39,6 +39,12 @@
 .kiloclaw-card {
   max-width: 480px;
   width: 100%;
+  padding: 12px;
+}
+
+.kiloclaw-card div[data-slot="card-actions"] {
+  display: flex;
+  justify-content: space-between;
 }
 
 .kiloclaw-card-subtitle {

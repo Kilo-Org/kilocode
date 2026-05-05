@@ -12,9 +12,9 @@ describe("indexing plugin helpers", () => {
     expect(indexingEnabled({ plugin: [INDEXING_PLUGIN] })).toBe(false)
     expect(indexingEnabled({ plugin: [INDEXING_PLUGIN], experimental: { semantic_indexing: false } })).toBe(false)
     expect(indexingEnabled({ plugin: [INDEXING_PLUGIN], experimental: { semantic_indexing: true } })).toBe(true)
-    expect(indexingEnabled({ plugin: ["@kilocode/kilo-indexing@1.0.0"], experimental: { semantic_indexing: true } })).toBe(
-      true,
-    )
+    expect(
+      indexingEnabled({ plugin: ["@kilocode/kilo-indexing@1.0.0"], experimental: { semantic_indexing: true } }),
+    ).toBe(true)
   })
 
   test("adds indexing plugin when present but missing from config", () => {

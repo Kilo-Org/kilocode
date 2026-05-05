@@ -5,6 +5,9 @@
 .kilo-notifications {
   display: flex;
   flex-direction: column;
+  align-self: center;
+  width: 100%;
+  max-width: 720px;
   border-radius: 6px;
   animation: kilo-notifications-slide-in 0.3s ease-out;
   overflow: hidden;

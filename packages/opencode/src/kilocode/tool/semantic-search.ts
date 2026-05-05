@@ -1,5 +1,4 @@
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import path from "path"
 import * as Tool from "@/tool/tool"
 import { KiloIndexing } from "@/kilocode/indexing"
@@ -7,14 +6,14 @@ import { Instance } from "@/project/instance"
 
 import DESCRIPTION from "./semantic-search.txt"
 
-const Parameters = z.object({
-  query: z.string().describe("The search query, expressed in natural language."),
-  path: z
-    .string()
-    .optional()
-    .describe(
+const Parameters = Schema.Struct({
+  query: Schema.String.annotate({
+    description: "The search query, expressed in natural language.",
+  }),
+  path: Schema.optional(Schema.String).annotate({
+    description:
       "Limit search to specific subdirectory (relative to the current workspace directory). Leave empty for entire workspace.",
-    ),
+  }),
 })
 
 type SearchResult = {
@@ -29,12 +28,15 @@ type Meta = {
   results: SearchResult[]
 }
 
-export const SemanticSearchTool = Tool.define<typeof Parameters, Meta, never, "semantic_search">(
+export const SemanticSearchTool = Tool.define(
   "semantic_search",
   Effect.succeed({
     description: DESCRIPTION,
     parameters: Parameters,
-    execute: (params, ctx) =>
+    execute: (
+      params: Schema.Schema.Type<typeof Parameters>,
+      ctx: Tool.Context,
+    ): Effect.Effect<Tool.ExecuteResult<Meta>> =>
       Effect.gen(function* () {
         if (!params.query) {
           throw new Error("query is required")

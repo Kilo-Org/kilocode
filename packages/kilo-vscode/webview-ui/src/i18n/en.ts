@@ -263,6 +263,10 @@ export const dict = {
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.indexing": "Indexing settings",
+  "prompt.action.autoApprove.enable": "Enable auto-approve",
+  "prompt.action.autoApprove.disable": "Disable auto-approve",
+  "prompt.action.autoApprove.enabled": "Auto-approve is enabled. Permission prompts will be approved automatically.",
+  "prompt.action.autoApprove.disabled": "Auto-approve is disabled. Click to approve permission prompts automatically.",
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
@@ -999,7 +1003,7 @@ export const dict = {
   "settings.indexing.title": "Indexing",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
-  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off for this workspace.",
+  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
   "settings.indexing.model.title": "Embedding model",
@@ -1034,6 +1038,36 @@ export const dict = {
   "session.status.retrying": "Retrying (attempt {{ attempt }})… {{ message }}",
   "session.status.working": "Working...",
   "session.status.offline": "Network disconnected — reconnecting...",
+  "sidebar.session.newSession": "New Session",
+  "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
+  "sidebar.session.newSession.disabled": "This session is already new. Start chatting or create a worktree instead.",
+  "sidebar.session.newWorktree": "New Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Create an isolated git worktree to experiment safely, keep changes separated, and run parallel sessions without disrupting your current branch.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Open the Agent Manager worktree dialog to configure a new worktree before creating it.",
+  "sidebar.session.newWorktree.from": "New Worktree from",
+  "sidebar.session.currentBranch": "current branch",
+  "sidebar.session.moveToWorktree": "Move to Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Move this conversation and your current local changes into a dedicated worktree for isolated follow-up work.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Move this conversation and 1 changed file into a dedicated worktree for isolated follow-up work.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Move this conversation and {{files}} changed files into a dedicated worktree for isolated follow-up work.",
+  "sidebar.session.showChanges.tooltip.empty": "Open the changes view to inspect the current working tree.",
+  "sidebar.session.showChanges.tooltip.one": "1 file changed · +{{additions}} -{{deletions}}. Open the changes view.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} files changed · +{{additions}} -{{deletions}}. Open the changes view.",
+  "sidebar.session.agentManager.tooltip":
+    "Open Agent Manager for a full overview of parallel sessions and worktrees, so you can coordinate long-running tasks in one place.",
+  "sidebar.session.openAgentManager": "Open Agent Manager",
+  "sidebar.session.progress.capturing": "Capturing changes...",
+  "sidebar.session.progress.creating": "Creating worktree...",
+  "sidebar.session.progress.setup": "Running setup...",
+  "sidebar.session.progress.transferring": "Transferring changes...",
+  "sidebar.session.progress.forking": "Starting session...",
+  "sidebar.session.progress.failed": "Failed to continue in worktree",
 
   "ui.sessionTurn.cancel": "Cancel",
   "ui.sessionTurn.status.thinking": "Thinking...",
@@ -1163,6 +1197,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
+  "settings.experimental.agentManagerTool.description":
+    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1356,6 +1393,13 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
+  "settings.display.reasoningAutoCollapse.description":
+    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",
@@ -1367,6 +1411,7 @@ export const dict = {
     "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
+  "settings.providers.disabled.enable": "Enable",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",

@@ -8,7 +8,7 @@ import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 import type { KiloConnectionService } from "../cli-backend"
-import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../shared/autocomplete-models"
+import { getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -27,7 +27,7 @@ function readSettings(): AutocompleteServiceSettings {
     enableAutoTrigger: config.get<boolean>("enableAutoTrigger") ?? true,
     enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding") ?? true,
     enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete") ?? true,
-    model: config.get<string>("model") ?? DEFAULT_AUTOCOMPLETE_MODEL.id,
+    model: getAutocompleteModel(config.get<string>("model") ?? "").id,
     snoozeUntil: config.get<number>("snoozeUntil"),
   }
 }

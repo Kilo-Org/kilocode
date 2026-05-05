@@ -73,11 +73,11 @@ Common dashboards which offer filtering based on provider, model, and tool:
 
 Implement [multi-window, multi-burn-rate alerting](https://sre.google/workbook/alerting-on-slos/) against error budgets:
 
-| Window | Burn Rate | Action | Use Case           |
-| ------ | --------- | ------ | ------------------ |
-| 5 min  | 14.4x     | Page   | Major Outage       |
-| 30 min | 6x        | Page   | Incident           |
-| 6 hr   | 1x        | Ticket | Change in behavior |
+| Window | Burn Rate | Action | Use Case |
+|---|---|---|---|
+| 5 min | 14.4x | Page | Major Outage |
+| 30 min | 6x | Page | Incident |
+| 6 hr | 1x | Ticket | Change in behavior |
 
 Paging should **only occur on Recommended Models when using the Kilo Gateway**. All other alerts should be tickets, and some may be configured to be ignored.
 

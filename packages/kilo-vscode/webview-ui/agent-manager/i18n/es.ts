@@ -72,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Siguiente elemento",
   "agentManager.shortcuts.newWorktree": "Nuevo Worktree",
   "agentManager.shortcuts.openWorktree": "Abrir Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Worktree avanzado",
+  "agentManager.shortcuts.advancedWorktree": "Configurar nuevo worktree",
   "agentManager.shortcuts.deleteWorktree": "Eliminar Worktree",
   "agentManager.shortcuts.previousTab": "Pestaña anterior",
   "agentManager.shortcuts.nextTab": "Siguiente pestaña",
@@ -94,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Eliminar Worktree obsoleto",
 
   "agentManager.dialog.openWorktree": "Nuevo Worktree",
+  "agentManager.dialog.configureWorktree": "Configurar Nuevo Worktree...",
   "agentManager.dialog.tab.new": "Nuevo",
   "agentManager.dialog.tab.import": "Importar",
   "agentManager.dialog.namePlaceholder": "Nombre del Worktree (opcional)",

@@ -1,18 +1,25 @@
 // kilocode_change - new file
-import z from "zod"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { Instance } from "../project/instance"
-import { Locale } from "../util"
-import { Filesystem } from "../util" // kilocode_change
+import { Locale } from "../util/locale"
+import { Filesystem } from "../util/filesystem" // kilocode_change
 import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change
 import DESCRIPTION from "./recall.txt"
 
-const Parameters = z.object({
-  mode: z.enum(["search", "read"]).describe("'search' to find sessions by title, 'read' to get a session transcript"),
-  query: z.string().optional().describe("Search query to match against session titles (required for search mode)"),
-  sessionID: z.string().optional().describe("Session ID to read the transcript of (required for read mode)"),
-  limit: z.number().optional().describe("Maximum number of search results to return (default: 20, max: 50)"),
+const Parameters = Schema.Struct({
+  mode: Schema.Literals(["search", "read"]).annotate({
+    description: "'search' to find sessions by title, 'read' to get a session transcript",
+  }),
+  query: Schema.optional(Schema.String).annotate({
+    description: "Search query to match against session titles (required for search mode)",
+  }),
+  sessionID: Schema.optional(Schema.String).annotate({
+    description: "Session ID to read the transcript of (required for read mode)",
+  }),
+  limit: Schema.optional(Schema.Number).annotate({
+    description: "Maximum number of search results to return (default: 20, max: 50)",
+  }),
 })
 
 export const RecallTool = Tool.define(
@@ -21,7 +28,7 @@ export const RecallTool = Tool.define(
     return {
       description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           if (params.mode === "search") {
             return yield* Effect.promise(() => search(params, ctx))
@@ -49,7 +56,7 @@ async function search(params: { query?: string; limit?: number }, ctx: Tool.Cont
 
   const limit = Math.min(params.limit ?? 20, 50)
   const dirs = await WorktreeFamily.list() // kilocode_change
-  const { Session } = await import("../session/index") // kilocode_change
+  const { Session } = await import("../session/session") // kilocode_change
 
   const results: Array<{
     id: string
@@ -95,7 +102,7 @@ async function read(params: { sessionID?: string }, ctx: Tool.Context) {
     throw new Error("The 'sessionID' parameter is required when mode is 'read'")
   }
 
-  const { Session } = await import("../session/index") // kilocode_change
+  const { Session } = await import("../session/session") // kilocode_change
   const { SessionID } = await import("../session/schema") // kilocode_change
   const session = await Session.get(SessionID.make(params.sessionID)).catch(() => {
     throw new Error(`Session "${params.sessionID}" not found. Use search mode first to find valid session IDs.`)

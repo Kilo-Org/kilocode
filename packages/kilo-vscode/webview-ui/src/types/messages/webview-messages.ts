@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation } from "./agent-manager"
+import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -28,6 +28,7 @@ export interface SendMessageRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface AbortRequest {
@@ -194,6 +195,14 @@ export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
 }
 
+export interface OpenAgentManagerRequest {
+  type: "openAgentManager"
+}
+
+export interface OpenAdvancedWorktreeRequest {
+  type: "openAdvancedWorktree"
+}
+
 export interface RequestAgentsMessage {
   type: "requestAgents"
 }
@@ -218,6 +227,7 @@ export interface SendCommandRequest {
   agent?: string
   variant?: string
   files?: FileAttachment[]
+  agentManagerContext?: string
 }
 
 export interface RemoveSkillMessage {
@@ -246,6 +256,11 @@ export interface ConnectMcpMessage {
 
 export interface DisconnectMcpMessage {
   type: "disconnectMcp"
+  name: string
+}
+
+export interface AuthenticateMcpMessage {
+  type: "authenticateMcp"
   name: string
 }
 
@@ -368,7 +383,10 @@ export interface OpenSettingsTabRequest {
 
 export interface UpdateConfigMessage {
   type: "updateConfig"
+  /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
+  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  projectConfig?: Partial<Config>
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -620,6 +638,12 @@ export interface SetReviewDiffStyleRequest {
   style: "unified" | "split"
 }
 
+// Persist Markdown render preference in diff viewers
+export interface SetReviewMarkdownRenderRequest {
+  type: "agentManager.setReviewMarkdownRender"
+  render: boolean
+}
+
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
@@ -723,6 +747,37 @@ export interface OpenChangesRequest {
 export interface OpenDiffVirtualRequest {
   type: "openDiffVirtual"
   diff: PermissionFileDiff
+  initialDiffStyle: "unified" | "split"
+}
+
+export interface DiffViewerSendCommentsRequest {
+  type: "diffViewer.sendComments"
+  comments: ReviewComment[]
+  autoSend: boolean
+}
+
+export interface DiffViewerSetDiffStyleRequest {
+  type: "diffViewer.setDiffStyle"
+  style: "unified" | "split"
+}
+
+export interface DiffViewerSetMarkdownRenderRequest {
+  type: "diffViewer.setMarkdownRender"
+  render: boolean
+}
+
+export interface DiffViewerRevertFileRequest {
+  type: "diffViewer.revertFile"
+  file: string
+}
+
+export interface DiffViewerCloseRequest {
+  type: "diffViewer.close"
+}
+
+export interface DiffVirtualSetMarkdownRenderRequest {
+  type: "diffVirtual.setMarkdownRender"
+  render: boolean
 }
 
 export interface RetryConnectionRequest {
@@ -753,6 +808,14 @@ export interface SetDefaultBaseBranchRequest {
 export interface AgentManagerOpenSessionsMessage {
   type: "agentManager.openSessions"
   sessionIDs: string[]
+}
+
+export interface RequestAutoApproveStateMessage {
+  type: "requestAutoApproveState"
+}
+
+export interface ToggleAutoApproveMessage {
+  type: "toggleAutoApprove"
 }
 
 export interface ToggleRemoteMessage {
@@ -939,6 +1002,8 @@ export type WebviewMessage =
   | OpenVSCodeSettingsRequest
   | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
+  | OpenAgentManagerRequest
+  | OpenAdvancedWorktreeRequest
   | OpenFileRequest
   | CancelLoginRequest
   | SetOrganizationRequest
@@ -955,6 +1020,7 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
+  | AuthenticateMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -1015,6 +1081,7 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetReviewDiffStyleRequest
+  | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestCloudSessionDataMessage
@@ -1043,11 +1110,19 @@ export type WebviewMessage =
   | EnhancePromptRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
+  | DiffViewerSendCommentsRequest
+  | DiffViewerSetDiffStyleRequest
+  | DiffViewerSetMarkdownRenderRequest
+  | DiffViewerRevertFileRequest
+  | DiffViewerCloseRequest
+  | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | RequestAutoApproveStateMessage
+  | ToggleAutoApproveMessage
   | FetchMarketplaceDataMessage
   | FilterMarketplaceItemsMessage
   | InstallMarketplaceItemMessage

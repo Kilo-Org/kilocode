@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import type { LSPClient } from "@/lsp"
+import type { LSPClient } from "@/lsp/client"
 
 /**
  * Filter diagnostics to only include entries for the specified files.

@@ -17,10 +17,10 @@ Kilo's **Code Reviews** feature automatically analyzes your pull or merge reques
 
 ## Supported Platforms
 
-| Platform | Integration Type | Details                        |
-| -------- | ---------------- | ------------------------------ |
-| GitHub   | GitHub App       | [GitHub Setup Guide](./github) |
-| GitLab   | OAuth or PAT     | [GitLab Setup Guide](./gitlab) |
+| Platform | Integration Type | Details |
+|---|---|---|
+| GitHub | GitHub App | [GitHub Setup Guide](./github) |
+| GitLab | OAuth or PAT | [GitLab Setup Guide](./gitlab) |
 
 ## Prerequisites
 

@@ -260,6 +260,10 @@ export const dict = {
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
+  "prompt.action.autoApprove.enable": "自動承認を有効化",
+  "prompt.action.autoApprove.disable": "自動承認を無効化",
+  "prompt.action.autoApprove.enabled": "自動承認が有効です。権限リクエストは自動的に承認されます。",
+  "prompt.action.autoApprove.disabled": "自動承認が無効です。クリックすると権限リクエストを自動的に承認します。",
   "prompt.action.resetModel": "モデルをデフォルトにリセット",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
@@ -535,7 +539,38 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "メインブランチ ({{branch}})",
   "session.new.worktree.create": "新しいワークツリーを作成",
   "session.new.lastModified": "最終更新",
-
+  "sidebar.session.newSession": "新規セッション",
+  "sidebar.session.newSession.tooltip": "現在のセッションを維持したまま、新しい会話を開始します。",
+  "sidebar.session.newSession.disabled":
+    "このセッションは既に新規です。チャットを開始するか、代わりに worktree を作成してください。",
+  "sidebar.session.newWorktree": "新規 Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "隔離された git worktree を作成して、安全に実験し、変更を分離し、現在のブランチを中断することなく並行セッションを実行します。",
+  "sidebar.session.configureWorktree.tooltip":
+    "Agent Manager の worktree ダイアログを開き、作成する前に新しい worktree を構成します。",
+  "sidebar.session.newWorktree.from": "新規 Worktree の作成元",
+  "sidebar.session.currentBranch": "現在のブランチ",
+  "sidebar.session.moveToWorktree": "Worktree に移動",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "この会話と現在のローカルの変更を専用の worktree に移動して、隔離された環境で作業を続行します。",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "この会話と1つの変更されたファイルを、分離されたフォローアップ作業用の専用 worktree に移動します。",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "この会話と{{files}}個の変更されたファイルを、分離されたフォローアップ作業用の専用 worktree に移動します。",
+  "sidebar.session.showChanges.tooltip.empty": "変更ビューを開いて、現在の作業ツリーを検査します。",
+  "sidebar.session.showChanges.tooltip.one":
+    "1つのファイルが変更されました · +{{additions}} -{{deletions}}。変更ビューを開きます。",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}}個のファイルが変更されました · +{{additions}} -{{deletions}}。変更ビューを開きます。",
+  "sidebar.session.agentManager.tooltip":
+    "Agent Manager を開いて、並行セッションと worktree の全体像を把握し、時間のかかるタスクを 1 か所で調整できます。",
+  "sidebar.session.openAgentManager": "Agent Manager を開く",
+  "sidebar.session.progress.capturing": "変更をキャプチャ中...",
+  "sidebar.session.progress.creating": "worktree を作成中...",
+  "sidebar.session.progress.setup": "セットアップを実行中...",
+  "sidebar.session.progress.transferring": "変更を転送中...",
+  "sidebar.session.progress.forking": "セッションを開始中...",
+  "sidebar.session.progress.failed": "worktree での再開に失敗しました",
   "session.header.search.placeholder": "{{project}}を検索",
   "session.header.searchFiles": "ファイルを検索",
   "session.header.openIn": "で開く",
@@ -713,8 +748,7 @@ export const dict = {
   "settings.indexing.dimension.description": "空のままにすると、モデルから埋め込み次元を自動検出します。",
   "settings.indexing.dimension.placeholder": "自動",
   "settings.indexing.dimension.title": "ベクトル次元",
-  "settings.indexing.enable.description":
-    "このワークスペースのセマンティックコードベースインデックスをオンまたはオフにします。",
+  "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
@@ -1165,6 +1199,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
+  "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
+  "settings.experimental.agentManagerTool.description":
+    "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
@@ -1359,6 +1396,13 @@ export const dict = {
   "settings.display.layout.description": "チャットインターフェースのレイアウトモード",
   "settings.display.layout.auto": "自動",
   "settings.display.layout.stretch": "ストレッチ",
+  "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
+  "settings.display.reasoningAutoCollapse.description":
+    "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",
@@ -1366,6 +1410,7 @@ export const dict = {
     "タイトル生成、コミットメッセージ生成、プロンプト改善、およびその他の高速タスク用の軽量モデル",
   "settings.providers.disabled": "無効化されたプロバイダー",
   "settings.providers.disabled.description": "プロバイダーリストから非表示にするプロバイダー",
+  "settings.providers.disabled.enable": "有効化",
   "settings.providers.enabled": "有効化されたプロバイダー（ホワイトリスト）",
   "settings.providers.enabled.description": "設定された場合、これらのプロバイダーのみが利用可能",
   "settings.providers.notSet": "未設定（サーバーのデフォルトを使用）",

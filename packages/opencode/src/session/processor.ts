@@ -2,7 +2,7 @@ import { Cause, Deferred, Effect, Layer, Context, Scope } from "effect"
 import * as Stream from "effect/Stream"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import { Snapshot } from "@/snapshot"
@@ -15,13 +15,13 @@ import type { SessionID } from "./schema"
 import { SessionRetry } from "./retry"
 import { SessionStatus } from "./status"
 import { SessionSummary } from "./summary"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
-import { NotFoundError } from "@/storage" // kilocode_change
+import { NotFoundError } from "@/storage/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
 
 const DOOM_LOOP_THRESHOLD = 3
@@ -75,6 +75,7 @@ interface ProcessorContext extends Input {
   currentText: MessageV2.TextPart | undefined
   reasoningMap: Record<string, MessageV2.ReasoningPart>
   stepStart: number // kilocode_change
+  step: { reasoning: boolean; text: boolean; tool: boolean } // kilocode_change
 }
 
 type StreamEvent = Event
@@ -113,7 +114,12 @@ export const layer: Layer.Layer<
       // Pre-capture snapshot before the LLM stream starts. The AI SDK
       // may execute tools internally before emitting start-step events,
       // so capturing inside the event handler can be too late.
-      const initialSnapshot = yield* snapshot.track()
+      // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
+      const initialSnapshot = yield* snapshot.track({
+        sessionID: input.sessionID,
+        messageID: input.assistantMessage.id,
+      })
+      // kilocode_change end
       const ctx: ProcessorContext = {
         assistantMessage: input.assistantMessage,
         sessionID: input.sessionID,
@@ -126,6 +132,7 @@ export const layer: Layer.Layer<
         currentText: undefined,
         reasoningMap: {},
         stepStart: 0, // kilocode_change
+        step: { reasoning: false, text: false, tool: false }, // kilocode_change
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
@@ -249,6 +256,7 @@ export const layer: Layer.Layer<
 
           case "reasoning-start":
             if (value.id in ctx.reasoningMap) return
+            ctx.step.reasoning = true // kilocode_change
             ctx.reasoningMap[value.id] = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -288,6 +296,7 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            ctx.step.tool = true // kilocode_change
             const part = yield* session.updatePart({
               id: ctx.toolcalls[value.id]?.partID ?? PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -316,6 +325,7 @@ export const layer: Layer.Layer<
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
+            ctx.step.tool = true // kilocode_change
             // kilocode_change start — create tool part if tool-input-start was never emitted
             if (!ctx.toolcalls[value.toolCallId]) {
               log.warn("tool-call without prior tool-input-start", {
@@ -401,7 +411,11 @@ export const layer: Layer.Layer<
 
           case "start-step":
             ctx.stepStart = performance.now() // kilocode_change
-            if (!ctx.snapshot) ctx.snapshot = yield* snapshot.track()
+            ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
+            // kilocode_change start - pass sessionID + messageID so the slow-repo prompt/progress indicator can attach
+            if (!ctx.snapshot)
+              ctx.snapshot = yield* snapshot.track({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id })
+            // kilocode_change end
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -417,13 +431,15 @@ export const layer: Layer.Layer<
               usage: value.usage,
               metadata: value.providerMetadata,
             })
-            // kilocode_change start
+            // kilocode_change start - guard against finish-step without start-step:
+            // ctx.stepStart is 0 until `start-step` fires, which would feed a
+            // huge bogus `elapsed` into telemetry. Fall back to now().
             KiloSessionProcessor.trackStep({
               sessionID: ctx.sessionID,
               model: ctx.model,
               tokens: usage.tokens,
               cost: usage.cost,
-              elapsed: Math.round(performance.now() - ctx.stepStart),
+              elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
             })
             // kilocode_change end
             ctx.assistantMessage.finish = value.finishReason
@@ -435,13 +451,31 @@ export const layer: Layer.Layer<
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,
-              snapshot: yield* snapshot.track(),
+              // kilocode_change start - pass sessionID + messageID
+              snapshot: yield* snapshot.track({
+                sessionID: ctx.sessionID,
+                messageID: ctx.assistantMessage.id,
+              }),
+              // kilocode_change end
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
               tokens: usage.tokens,
               cost: usage.cost,
             })
+            // kilocode_change start - surface output limit stops, with a stronger message for reasoning-only stops
+            const warn = KiloSessionProcessor.lengthWarning({ msg: ctx.assistantMessage, step: ctx.step })
+            if (warn) {
+              yield* session.updatePart({
+                id: PartID.ascending(),
+                messageID: ctx.assistantMessage.id,
+                sessionID: ctx.assistantMessage.sessionID,
+                type: "text",
+                text: warn,
+                ignored: true,
+              })
+            }
+            // kilocode_change end
             yield* session.updateMessage(ctx.assistantMessage)
             if (ctx.snapshot) {
               const patch = yield* snapshot.patch(ctx.snapshot)
@@ -488,6 +522,7 @@ export const layer: Layer.Layer<
           case "text-delta":
             if (!ctx.currentText) return
             ctx.currentText.text += value.text
+            if (value.text.trim()) ctx.step.text = true // kilocode_change
             if (value.providerMetadata) ctx.currentText.metadata = value.providerMetadata
             yield* session.updatePartDelta({
               sessionID: ctx.currentText.sessionID,
@@ -511,6 +546,7 @@ export const layer: Layer.Layer<
               },
               { text: ctx.currentText.text },
             )).text
+            if (ctx.currentText.text.trim()) ctx.step.text = true // kilocode_change
             {
               const end = Date.now()
               ctx.currentText.time = { start: ctx.currentText.time?.start ?? end, end }
@@ -618,6 +654,7 @@ export const layer: Layer.Layer<
           yield* Effect.gen(function* () {
             ctx.currentText = undefined
             ctx.reasoningMap = {}
+            ctx.step = { reasoning: false, text: false, tool: false } // kilocode_change
             const stream = llm.stream(streamInput)
 
             yield* stream.pipe(

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { mkdir } from "node:fs/promises"
-import type { Config } from "../../src/config"
+import type { Config } from "../../src/config/config"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { InstanceBootstrap } from "../../src/project/bootstrap"

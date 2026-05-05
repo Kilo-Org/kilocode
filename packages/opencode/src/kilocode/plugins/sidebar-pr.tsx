@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
 import { createMemo, createResource, Show } from "solid-js"
-import { Process } from "@/util"
+import { Process } from "@/util/process"
 
 const id = "internal:kilo-sidebar-pr"
 const GH_PROBE_TTL = 300_000

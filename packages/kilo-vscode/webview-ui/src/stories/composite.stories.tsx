@@ -338,6 +338,37 @@ const todoWriteDocsOverview: ToolPart = {
   },
 }
 
+const compactTodos = docsTodos.map((todo, index) =>
+  index < 5 ? { ...todo, status: "completed" } : { ...todo, status: index === 5 ? "pending" : todo.status },
+)
+const compactViewTodos = compactTodos.slice(3, 6).map((todo, index) => ({ ...todo, changed: index === 1 }))
+
+const todoWriteCompactUpdate: ToolPart = {
+  id: "part-todo-compact-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-compact-001",
+  tool: "todowrite",
+  state: {
+    status: "completed",
+    input: { todos: compactTodos },
+    output: "Updated 10 todos",
+    title: "Todo List Updated",
+    metadata: {
+      todos: compactTodos,
+      view: {
+        mode: "compact",
+        todos: compactViewTodos,
+        hiddenBefore: 3,
+        hiddenAfter: 4,
+        changed: 1,
+      },
+    },
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
 const todoWritePermission: PermissionRequest = {
   id: "perm-todo-001",
   sessionID: SESSION_ID,
@@ -667,6 +698,18 @@ export const TodoWriteDocsOverview: Story = {
   },
 }
 
+export const TodoWriteCompactUpdate: Story = {
+  name: "TodoWrite - Compact update",
+  render: () => {
+    const data = dataWith([todoWriteCompactUpdate])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
 // ---------------------------------------------------------------------------
 // 12. Permission dock — edit tool with file patterns
 // ---------------------------------------------------------------------------
@@ -677,8 +720,46 @@ const editPermission: PermissionRequest = {
   toolName: "edit",
   patterns: ["src/components/App.tsx", "src/utils/helpers.ts"],
   always: ["*"],
-  args: {},
+  args: {
+    filediff: {
+      file: "src/components/App.tsx",
+      patch:
+        '===================================================================\n--- src/components/App.tsx\n+++ src/components/App.tsx\n@@ -1,3 +1,4 @@\n import { Button } from "@kilocode/kilo-ui/button"\n+import { Card } from "@kilocode/kilo-ui/card"\n \n export function App() {\n',
+      additions: 1,
+      deletions: 0,
+    },
+  },
   tool: { messageID: ASST_MSG_ID, callID: "call-edit-001" },
+}
+
+const applyPatchPermission: PermissionRequest = {
+  id: "perm-patch-001",
+  sessionID: SESSION_ID,
+  toolName: "edit",
+  patterns: ["src/components/App.tsx", "src/utils/helpers.ts"],
+  always: ["*"],
+  args: {
+    filepath: "src/components/App.tsx, src/utils/helpers.ts",
+    files: [
+      {
+        relativePath: "src/components/App.tsx",
+        type: "update",
+        patch:
+          '===================================================================\n--- src/components/App.tsx\n+++ src/components/App.tsx\n@@ -1,3 +1,4 @@\n import { Button } from "@kilocode/kilo-ui/button"\n+import { Card } from "@kilocode/kilo-ui/card"\n \n export function App() {\n',
+        additions: 1,
+        deletions: 0,
+      },
+      {
+        relativePath: "src/utils/helpers.ts",
+        type: "update",
+        patch:
+          "===================================================================\n--- src/utils/helpers.ts\n+++ src/utils/helpers.ts\n@@ -1,3 +1,3 @@\n export function label(value: string) {\n-  return value\n+  return value.trim()\n }\n",
+        additions: 1,
+        deletions: 1,
+      },
+    ],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-patch-001" },
 }
 
 export const PermissionDockEdit: Story = {
@@ -693,6 +774,26 @@ export const PermissionDockEdit: Story = {
       <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const PermissionDockApplyPatch: Story = {
+  name: "Permission Dock - apply patch",
+  render: () => {
+    const perms = [applyPatchPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "420px", display: "flex", "flex-direction": "column" }}>
             <ChatView />
           </div>
         </SessionContext.Provider>

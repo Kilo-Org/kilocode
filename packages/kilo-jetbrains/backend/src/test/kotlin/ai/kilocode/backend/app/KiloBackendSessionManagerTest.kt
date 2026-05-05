@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.net.URLDecoder
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -119,6 +120,69 @@ class KiloBackendSessionManagerTest {
         val result = app.sessions.list("/d")
         assertEquals(1, result.sessions.size)
         assertEquals("busy", result.statuses["ses_1"]?.type)
+    }
+
+    @Test
+    fun `recent returns global sessions from experimental endpoint`() = runBlocking {
+        mock.recentSessions = """[
+            {"id":"ses_1","slug":"s1","projectID":"prj","directory":"/repo","title":"Session 1","version":"1","time":{"created":1000,"updated":5000},"project":{"id":"prj","worktree":"/repo","name":"Repo"},"summary":{"additions":10,"deletions":2,"files":3}},
+            {"id":"ses_2","slug":"s2","projectID":"prj","directory":"/repo-wt","title":"Session 2","version":"1","time":{"created":2000,"updated":4000},"project":{"id":"prj","worktree":"/repo","name":"Repo"},"parentID":"ses_parent"}
+        ]"""
+        val app = setup()
+        ready(app)
+
+        val result = app.sessions.recent("/repo", 5)
+
+        assertEquals(2, result.sessions.size)
+        assertEquals("ses_1", result.sessions[0].id)
+        assertEquals("Session 1", result.sessions[0].title)
+        assertEquals("/repo", result.sessions[0].directory)
+        assertEquals(10, result.sessions[0].summary?.additions)
+        assertEquals("ses_parent", result.sessions[1].parentID)
+    }
+
+    @Test
+    fun `recent passes worktree filters and limit`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.recent("/repo path", 5)
+
+        val path = mock.lastExperimentalSessionPath ?: error("missing experimental session request")
+        assertTrue(path.startsWith("/experimental/session?"))
+        assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/repo path"), path)
+        assertTrue(path.contains("worktrees=true"), path)
+        assertTrue(path.contains("roots=true"), path)
+        assertTrue(path.contains("limit=5.0"), path)
+        assertTrue(path.contains("archived=false"), path)
+    }
+
+    @Test
+    fun `recent filters statuses to returned sessions`() = runBlocking {
+        mock.recentSessions = """[
+            {"id":"ses_1","slug":"s1","projectID":"prj","directory":"/repo","title":"Session 1","version":"1","time":{"created":1,"updated":1},"project":{"id":"prj","worktree":"/repo","name":"Repo"}}
+        ]"""
+        mock.sessionStatuses = """{
+            "ses_1": {"type":"busy","attempt":0,"message":"running","next":0,"requestID":""},
+            "ses_other": {"type":"idle","attempt":0,"message":"","next":0,"requestID":""}
+        }"""
+        val app = setup()
+        ready(app)
+
+        val result = app.sessions.recent("/repo", 5)
+
+        assertEquals(setOf("ses_1"), result.statuses.keys)
+        assertEquals("busy", result.statuses["ses_1"]?.type)
+        assertEquals("running", result.statuses["ses_1"]?.message)
+    }
+
+    @Test
+    fun `recent throws when not started`() = runBlocking {
+        val app = setup()
+
+        assertFailsWith<IllegalStateException> {
+            app.sessions.recent("/test", 5)
+        }
     }
 
     // ------ Session create ------

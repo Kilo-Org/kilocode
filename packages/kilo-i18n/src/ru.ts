@@ -79,4 +79,17 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Реализовать в новой сессии с чистым контекстом",
   "plan.followup.answer.continue": "Продолжить здесь",
   "plan.followup.answer.continue.description": "Реализовать план в этой сессии",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Снимок выполняется медленно",
+  "snapshot.slowRepo.question":
+    "Инициализация системы снимков занимает много времени, вероятно, из-за размера репозитория.\n\nОтключить снимки для этого репозитория?",
+  "snapshot.slowRepo.answer.continue": "Продолжить со снимками",
+  "snapshot.slowRepo.answer.continue.description":
+    "Подождите, пока снимок не завершится. Последующие ходы выполняются быстро после создания первоначального снимка.",
+  "snapshot.slowRepo.answer.disable": "Отключить для этого проекта",
+  "snapshot.slowRepo.answer.disable.description":
+    "Выключите снимки Kilo для этого проекта. Вы потеряете отмену/повтор изменений Kilo, но git по-прежнему отслеживает всё.",
+
+  "ui.messagePart.openInDiffViewer": "Открыть в просмотрщике различий",
 }
