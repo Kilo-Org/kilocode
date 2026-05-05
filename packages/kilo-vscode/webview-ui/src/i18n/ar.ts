@@ -1509,9 +1509,10 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
-  "diffViewer.source.workspace.label": "مساحة العمل المحلية",
+  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "الجلسة الحالية",
-  "diffViewer.group.workspace": "مساحة العمل",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

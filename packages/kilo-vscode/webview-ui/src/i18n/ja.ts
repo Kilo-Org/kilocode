@@ -1529,9 +1529,10 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
-  "diffViewer.source.workspace.label": "ローカルワークスペース",
+  "diffViewer.source.workspace.label": "ローカルの変更",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "現在のセッション",
-  "diffViewer.group.workspace": "ワークスペース",
   "diffViewer.group.session": "セッション",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

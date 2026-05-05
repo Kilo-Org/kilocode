@@ -1544,9 +1544,10 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
-  "diffViewer.source.workspace.label": "Lokalni radni prostor",
+  "diffViewer.source.workspace.label": "Lokalne izmjene",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "Trenutna sesija",
-  "diffViewer.group.workspace": "Radni prostor",
   "diffViewer.group.session": "Sesija",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

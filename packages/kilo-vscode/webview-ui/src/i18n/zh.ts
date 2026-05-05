@@ -1480,9 +1480,10 @@ export const dict = {
   "notifications.action.close": "关闭",
   "notifications.action.tryModel": "尝试 {{model}}",
   "notifications.action.tryModelGeneric": "尝试模型",
-  "diffViewer.source.workspace.label": "本地工作区",
+  "diffViewer.source.workspace.label": "本地更改",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "当前会话",
-  "diffViewer.group.workspace": "工作区",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",

@@ -1556,9 +1556,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
-  "diffViewer.source.workspace.label": "Локальний робочий простір",
+  "diffViewer.source.workspace.label": "Локальні зміни",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "Поточна сесія",
-  "diffViewer.group.workspace": "Робочий простір",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

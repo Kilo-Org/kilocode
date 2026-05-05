@@ -1514,9 +1514,10 @@ export const dict = {
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
   "notifications.action.tryModelGeneric": "모델 시도",
-  "diffViewer.source.workspace.label": "로컬 워크스페이스",
+  "diffViewer.source.workspace.label": "로컬 변경 사항",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "현재 세션",
-  "diffViewer.group.workspace": "워크스페이스",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

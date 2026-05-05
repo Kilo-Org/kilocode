@@ -1534,9 +1534,10 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
-  "diffViewer.source.workspace.label": "Lokalt arbejdsområde",
+  "diffViewer.source.workspace.label": "Lokale ændringer",
+  "diffViewer.source.workspace.tooltip":
+    "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
   "diffViewer.source.session.label": "Nuværende session",
-  "diffViewer.group.workspace": "Arbejdsområde",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

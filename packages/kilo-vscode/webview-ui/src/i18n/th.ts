@@ -1513,9 +1513,10 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
-  "diffViewer.source.workspace.label": "เวิร์กสเปซในเครื่อง",
+  "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "เซสชันปัจจุบัน",
-  "diffViewer.group.workspace": "เวิร์กสเปซ",
   "diffViewer.group.session": "เซสชัน",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

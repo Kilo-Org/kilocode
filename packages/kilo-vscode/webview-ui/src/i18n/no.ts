@@ -1529,9 +1529,10 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
-  "diffViewer.source.workspace.label": "Lokalt arbeidsområde",
+  "diffViewer.source.workspace.label": "Lokale endringer",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "Gjeldende økt",
-  "diffViewer.group.workspace": "Arbeidsområde",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

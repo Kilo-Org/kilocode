@@ -1552,9 +1552,10 @@ export const dict = {
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
   "notifications.action.tryModelGeneric": "Probar modelo",
-  "diffViewer.source.workspace.label": "Espacio de trabajo local",
+  "diffViewer.source.workspace.label": "Cambios locales",
+  "diffViewer.source.workspace.tooltip":
+    "Todos los cambios de esta rama respecto a la rama base. Incluye archivos sin commitear (staged, unstaged y no rastreados) y commits locales que todavía no están en la base.",
   "diffViewer.source.session.label": "Sesión actual",
-  "diffViewer.group.workspace": "Espacio de trabajo",
   "diffViewer.group.session": "Sesión",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

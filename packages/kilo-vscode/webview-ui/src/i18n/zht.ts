@@ -1487,9 +1487,10 @@ export const dict = {
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",
   "notifications.action.tryModelGeneric": "嘗試模型",
-  "diffViewer.source.workspace.label": "本機工作區",
+  "diffViewer.source.workspace.label": "本機變更",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "目前工作階段",
-  "diffViewer.group.workspace": "工作區",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",

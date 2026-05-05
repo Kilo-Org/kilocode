@@ -1566,9 +1566,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
-  "diffViewer.source.workspace.label": "Lokale werkruimte",
+  "diffViewer.source.workspace.label": "Lokale wijzigingen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle wijzigingen in deze branch vergeleken met de base branch. Inclusief niet-gecommitte bestanden (staged, unstaged, ungetrackt) en lokale commits die nog niet in de base zitten.",
   "diffViewer.source.session.label": "Huidige sessie",
-  "diffViewer.group.workspace": "Werkruimte",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

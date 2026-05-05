@@ -1555,9 +1555,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Kurallar sırayla değerlendirilir — son eşleşen kural kazanır. Bu, CLI arka ucundan çözümlenen kural kümesidir.",
   "settings.agentBehaviour.editMode.save": "Tamam",
-  "diffViewer.source.workspace.label": "Yerel çalışma alanı",
+  "diffViewer.source.workspace.label": "Yerel değişiklikler",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
   "diffViewer.source.session.label": "Geçerli oturum",
-  "diffViewer.group.workspace": "Çalışma alanı",
   "diffViewer.group.session": "Oturum",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":

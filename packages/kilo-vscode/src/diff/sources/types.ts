@@ -10,7 +10,7 @@ export interface DiffSourceDescriptor {
   /** Unique within a panel context. E.g. "workspace", "session:<sessionId>". */
   id: string
   label: string
-  group: "Workspace" | "Session" | "Git"
+  group: "Session" | "Git"
   /** kilo-ui icon name. */
   icon?: string
   capabilities: DiffSourceCapabilities

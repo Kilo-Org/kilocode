@@ -1564,9 +1564,10 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
-  "diffViewer.source.workspace.label": "Lokaler Arbeitsbereich",
+  "diffViewer.source.workspace.label": "Lokale Änderungen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
   "diffViewer.source.session.label": "Aktuelle Sitzung",
-  "diffViewer.group.workspace": "Arbeitsbereich",
   "diffViewer.group.session": "Sitzung",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
