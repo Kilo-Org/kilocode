@@ -305,6 +305,7 @@ describe("disconnectProvider", () => {
       provider: { myprovider: null },
       disabled_providers: ["openai"],
     })
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
     expect(calls.remove).toEqual([{ providerID: "myprovider" }])
     expect(calls.refresh).toBe(1)
   })

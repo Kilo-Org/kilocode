@@ -223,7 +223,7 @@ async function removeCustom(ctx: ActionContext, id: string, global: Config, merg
       }),
     )
   }
-  if (customProvider(effective) && (!customProvider(cfg) || !same(cfg, effective))) {
+  if (customProvider(effective)) {
     tasks.push(saveProject(ctx, { provider: { [id]: null } }))
   }
   await Promise.all(tasks)
