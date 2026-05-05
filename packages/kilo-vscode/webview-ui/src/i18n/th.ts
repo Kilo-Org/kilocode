@@ -261,6 +261,10 @@ export const dict = {
   "prompt.action.send.blocked": "โปรดตอบหรือข้ามคำถามที่รอดำเนินการก่อน",
   "prompt.action.stop": "หยุด",
   "prompt.action.enhance": "ปรับปรุงพรอมต์",
+  "prompt.action.autoApprove.enable": "เปิดใช้การอนุมัติอัตโนมัติ",
+  "prompt.action.autoApprove.disable": "ปิดใช้การอนุมัติอัตโนมัติ",
+  "prompt.action.autoApprove.enabled": "เปิดใช้การอนุมัติอัตโนมัติแล้ว คำขอสิทธิ์จะได้รับการอนุมัติโดยอัตโนมัติ",
+  "prompt.action.autoApprove.disabled": "ปิดใช้การอนุมัติอัตโนมัติแล้ว คลิกเพื่ออนุมัติคำขอสิทธิ์โดยอัตโนมัติ",
   "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
@@ -537,7 +541,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "สาขาหลัก ({{branch}})",
   "session.new.worktree.create": "สร้าง worktree ใหม่",
   "session.new.lastModified": "แก้ไขล่าสุด",
-
+  "sidebar.session.newSession": "เซสชันใหม่",
+  "sidebar.session.newSession.tooltip": "เริ่มการสนทนาใหม่โดยที่ยังคงเซสชันปัจจุบันไว้",
+  "sidebar.session.newSession.disabled": "เซสชันนี้เป็นเซสชันใหม่อยู่แล้ว เริ่มแชทหรือสร้าง worktree แทน",
+  "sidebar.session.newWorktree": "Worktree ใหม่",
+  "sidebar.session.newWorktree.tooltip":
+    "สร้าง git worktree ที่แยกออกมาต่างหากเพื่อทดลองอย่างปลอดภัย แยกการเปลี่ยนแปลงออกจากกัน และรันเซสชันคู่ขนานโดยไม่รบกวน branch ปัจจุบันของคุณ",
+  "sidebar.session.configureWorktree.tooltip":
+    "เปิดกล่องโต้ตอบ worktree ของ Agent Manager เพื่อกำหนดค่า worktree ใหม่ก่อนที่จะสร้าง",
+  "sidebar.session.newWorktree.from": "Worktree ใหม่จาก",
+  "sidebar.session.currentBranch": "branch ปัจจุบัน",
+  "sidebar.session.moveToWorktree": "ย้ายไปยัง Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "ย้ายบทสนทนานี้และการเปลี่ยนแปลงในเครื่องปัจจุบันของคุณไปยัง worktree เฉพาะสำหรับการทำงานต่อเนื่องแบบแยกส่วน",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "ย้ายบทสนทนานี้และ 1 ไฟล์ที่ถูกแก้ไขไปยัง worktree เฉพาะสำหรับการทำงานต่อเนื่องแบบแยกส่วน",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "ย้ายบทสนทนานี้และ {{files}} ไฟล์ที่ถูกแก้ไขไปยัง worktree เฉพาะสำหรับการทำงานต่อเนื่องแบบแยกส่วน",
+  "sidebar.session.showChanges.tooltip.empty": "เปิดมุมมองการเปลี่ยนแปลงเพื่อตรวจสอบ working tree ปัจจุบัน",
+  "sidebar.session.showChanges.tooltip.one":
+    "เปลี่ยนแปลง 1 ไฟล์ · +{{additions}} -{{deletions}} เปิดมุมมองการเปลี่ยนแปลง",
+  "sidebar.session.showChanges.tooltip.other":
+    "เปลี่ยนแปลง {{files}} ไฟล์ · +{{additions}} -{{deletions}} เปิดมุมมองการเปลี่ยนแปลง",
+  "sidebar.session.agentManager.tooltip":
+    "เปิด Agent Manager เพื่อดูภาพรวมของเซสชันและ worktree คู่ขนาน เพื่อให้คุณสามารถประสานงานงานที่ใช้เวลานานได้ในที่เดียว",
+  "sidebar.session.openAgentManager": "เปิด Agent Manager",
+  "sidebar.session.progress.capturing": "กำลังบันทึกการเปลี่ยนแปลง...",
+  "sidebar.session.progress.creating": "กำลังสร้าง worktree...",
+  "sidebar.session.progress.setup": "กำลังรันการตั้งค่า...",
+  "sidebar.session.progress.transferring": "กำลังถ่ายโอนการเปลี่ยนแปลง...",
+  "sidebar.session.progress.forking": "กำลังเริ่มเซสชัน...",
+  "sidebar.session.progress.failed": "ดำเนินการต่อใน worktree ไม่สำเร็จ",
   "session.header.search.placeholder": "ค้นหา {{project}}",
   "session.header.searchFiles": "ค้นหาไฟล์",
   "session.header.openIn": "เปิดใน",
@@ -710,7 +744,7 @@ export const dict = {
 
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
-  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมายสำหรับพื้นที่ทำงานนี้",
+  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
   "settings.indexing.provider.title": "ผู้ให้บริการการฝัง",
   "settings.indexing.provider.description": "เลือกผู้ให้บริการที่ใช้สร้างการฝังสำหรับการค้นหาเชิงความหมาย",
   "settings.indexing.model.title": "โมเดลการฝัง",
@@ -1157,6 +1191,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
+  "settings.experimental.agentManagerTool.title": "เครื่องมือ Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "อนุญาตให้เอเจนต์เริ่มเซสชัน Agent Manager ในเครื่องและเซสชัน worktree จากการเรียกเครื่องมือ",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
@@ -1354,6 +1391,13 @@ export const dict = {
   "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
   "settings.display.layout.auto": "อัตโนมัติ",
   "settings.display.layout.stretch": "ยืด",
+  "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
+  "settings.display.reasoningAutoCollapse.description":
+    "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",
@@ -1361,6 +1405,7 @@ export const dict = {
     "โมเดลน้ำหนักเบาสำหรับสร้างชื่อ สร้างข้อความคอมมิต ปรับปรุงพรอมต์ และงานด่วนอื่นๆ",
   "settings.providers.disabled": "ผู้ให้บริการที่ปิดใช้งาน",
   "settings.providers.disabled.description": "ผู้ให้บริการที่จะซ่อนจากรายการ",
+  "settings.providers.disabled.enable": "เปิดใช้งาน",
   "settings.providers.enabled": "ผู้ให้บริการที่เปิดใช้งาน (รายการที่อนุญาต)",
   "settings.providers.enabled.description": "หากตั้งค่า เฉพาะผู้ให้บริการเหล่านี้เท่านั้นที่จะพร้อมใช้งาน",
   "settings.providers.notSet": "ไม่ได้ตั้งค่า (ใช้ค่าเริ่มต้นของเซิร์ฟเวอร์)",

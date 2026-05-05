@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { AUTOCOMPLETE_MODELS, DEFAULT_AUTOCOMPLETE_MODEL } from "../../src/shared/autocomplete-models"
+import { AUTOCOMPLETE_MODELS } from "../../src/shared/autocomplete-models"
 
 describe("autocomplete model enum ↔ AUTOCOMPLETE_MODELS sync", () => {
   const pkg = JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf8"))
@@ -16,7 +16,7 @@ describe("autocomplete model enum ↔ AUTOCOMPLETE_MODELS sync", () => {
     expect(prop.enumDescriptions).toHaveLength(AUTOCOMPLETE_MODELS.length)
   })
 
-  it("package.json default matches DEFAULT_AUTOCOMPLETE_MODEL", () => {
-    expect(prop.default).toBe(DEFAULT_AUTOCOMPLETE_MODEL.id)
+  it("package.json does not declare a default (VS Code strips user overrides that equal the schema default)", () => {
+    expect(prop.default).toBeUndefined()
   })
 })

@@ -7,8 +7,8 @@
  * ThinkingSelector     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, For, Show } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { Component, createSignal, For, onCleanup, Show } from "solid-js"
+import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 
@@ -27,11 +27,76 @@ export interface ThinkingSelectorBaseProps {
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
+  const [focused, setFocused] = createSignal(-1)
+  let listRef: HTMLDivElement | undefined
+
+  function focusItem(idx: number) {
+    const items = listRef?.querySelectorAll<HTMLElement>("[role=option]")
+    if (!items) return
+    const clamped = Math.max(0, Math.min(idx, items.length - 1))
+    setFocused(clamped)
+    items[clamped]?.focus()
+  }
+
+  function refocus() {
+    requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+  }
+
+  function onOpen(val: boolean) {
+    setOpen(val)
+    if (val) {
+      const idx = props.variants.findIndex((v) => v === props.value)
+      requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
+      return
+    }
+    refocus()
+  }
+
+  const onTrigger = () => {
+    if (props.variants.length === 0) return
+    onOpen(true)
+  }
+  window.addEventListener("openVariantPicker", onTrigger)
+  onCleanup(() => window.removeEventListener("openVariantPicker", onTrigger))
 
   function pick(value: string) {
     props.onSelect(value)
-    setOpen(false)
-    requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+    onOpen(false)
+  }
+
+  function onKeyDown(e: KeyboardEvent) {
+    const len = props.variants.length
+    const cur = focused()
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      focusItem((cur + 1) % len)
+      return
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault()
+      focusItem((cur - 1 + len) % len)
+      return
+    }
+    if (e.key === "Home") {
+      e.preventDefault()
+      focusItem(0)
+      return
+    }
+    if (e.key === "End") {
+      e.preventDefault()
+      focusItem(len - 1)
+      return
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      if (cur >= 0 && cur < len) pick(props.variants[cur])
+      return
+    }
+    if (e.key === "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      onOpen(false)
+    }
   }
 
   const label = () => {
@@ -41,10 +106,13 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 
   return (
     <Show when={props.variants.length > 0}>
-      <Popover
+      <PopupSelector
+        expanded={false}
         placement="top-start"
+        preferredWidth={180}
+        minHeight={100}
         open={open()}
-        onOpenChange={setOpen}
+        onOpenChange={onOpen}
         triggerAs={Button}
         triggerProps={{ variant: "ghost", size: "small" }}
         trigger={
@@ -56,21 +124,31 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
           </>
         }
       >
-        <div class="thinking-selector-list" role="listbox">
-          <For each={props.variants}>
-            {(v) => (
-              <div
-                class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
-                role="option"
-                aria-selected={props.value === v}
-                onClick={() => pick(v)}
-              >
-                <span class="thinking-selector-item-name">{v.charAt(0).toUpperCase() + v.slice(1)}</span>
-              </div>
-            )}
-          </For>
-        </div>
-      </Popover>
+        {(bodyH) => (
+          <div
+            class="thinking-selector-list"
+            role="listbox"
+            ref={listRef}
+            onKeyDown={onKeyDown}
+            style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
+          >
+            <For each={props.variants}>
+              {(v, i) => (
+                <div
+                  class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
+                  role="option"
+                  aria-selected={props.value === v}
+                  tabindex={focused() === i() ? 0 : -1}
+                  onClick={() => pick(v)}
+                  onFocus={() => setFocused(i())}
+                >
+                  <span class="thinking-selector-item-name">{v.charAt(0).toUpperCase() + v.slice(1)}</span>
+                </div>
+              )}
+            </For>
+          </div>
+        )}
+      </PopupSelector>
     </Show>
   )
 }

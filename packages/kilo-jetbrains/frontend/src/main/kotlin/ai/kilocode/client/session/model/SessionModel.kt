@@ -15,7 +15,7 @@ import com.intellij.openapi.util.Disposer
 /**
  * Pure session model — single source of truth for session content and runtime state.
  *
- * **EDT-only access** — no synchronization. [ai.kilocode.client.session.SessionController] guarantees all
+ * **EDT-only access** — no synchronization. [ai.kilocode.client.session.update.SessionController] guarantees all
  * reads and writes happen on the EDT.
  *
  * In addition to the flat message list, the model maintains a derived
@@ -46,7 +46,11 @@ class SessionModel {
     var models: List<ModelItem> = emptyList()
     var agent: String? = null
     var model: String? = null
-    var showMessages: Boolean = false
+    var defaultModel: String? = null
+    var modelOverride: Boolean = false
+    var variants: List<String> = emptyList()
+    var variant: String? = null
+    var showSession: Boolean = false
 
     var state: SessionState = SessionState.Idle
         private set
@@ -308,10 +312,16 @@ class SessionModel {
                 val text = dto.text ?: return
                 existing.content.clear()
                 existing.content.append(text)
+                existing.done = dto.time?.end != null || dto.time == null
             }
             is Tool -> {
                 existing.state = parseToolState(dto.state)
                 existing.title = dto.title
+                existing.input = dto.input
+                existing.metadata = dto.metadata
+                existing.output = dto.output
+                existing.error = dto.error
+                existing.time = dto.time
             }
             is Compaction -> return
             is Generic -> return
@@ -327,10 +337,16 @@ class SessionModel {
             }
             "reasoning" -> Reasoning(dto.id).apply {
                 if (content != null && content.isNotEmpty()) this.content.append(content)
+                done = dto.time?.end != null || dto.time == null
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown").apply {
                 state = parseToolState(dto.state)
                 title = dto.title
+                input = dto.input
+                metadata = dto.metadata
+                output = dto.output
+                error = dto.error
+                time = dto.time
             }
             "compaction" -> Compaction(dto.id)
             else -> Generic(dto.id, dto.type)
@@ -404,9 +420,24 @@ private fun parseToolState(raw: String?): ToolExecState = when (raw) {
     else -> ToolExecState.PENDING
 }
 
-data class AgentItem(val name: String, val display: String)
+data class AgentItem(
+    val name: String,
+    val display: String,
+    val description: String?,
+    val deprecated: Boolean,
+)
 
-data class ModelItem(val id: String, val display: String, val provider: String)
+data class ModelItem(
+    val id: String,
+    val display: String,
+    val provider: String,
+    val providerName: String,
+    val recommendedIndex: Double?,
+    val free: Boolean,
+    val variants: List<String>,
+) {
+    val key: String get() = "$provider/$id"
+}
 
 private fun renderMessage(msg: Message): List<String> {
     val out = mutableListOf<String>()
@@ -418,7 +449,7 @@ private fun renderMessage(msg: Message): List<String> {
                 out.addAll(renderText(part.content))
             }
             is Reasoning -> {
-                out.add("reasoning#${part.id}:")
+                out.add("reasoning#${part.id} done=${part.done}:")
                 out.addAll(renderText(part.content))
             }
             is Tool -> out.add(renderTool(part))
@@ -475,8 +506,15 @@ private fun renderFile(meta: PermissionMeta): String {
 private fun renderTool(tool: Tool): String {
     val state = tool.state.name
     val title = tool.title?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
-    return "tool#${tool.id} ${tool.name} [$state]$title"
+    val data = listOf(
+        tool.input.takeIf { it.isNotEmpty() }?.let { " input=${renderMap(it)}" },
+        tool.output?.takeIf { it.isNotBlank() }?.let { " output=${it.take(32)}" },
+    ).filterNotNull().joinToString("")
+    return "tool#${tool.id} ${tool.name} [$state]$title$data"
 }
+
+private fun renderMap(map: Map<String, String>): String =
+    map.entries.sortedBy { it.key }.joinToString(",", "{", "}") { "${it.key}=${it.value}" }
 
 private fun renderText(text: CharSequence): List<String> {
     val raw = text.toString()

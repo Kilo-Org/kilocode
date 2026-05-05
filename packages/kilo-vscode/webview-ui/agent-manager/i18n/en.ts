@@ -77,7 +77,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Next item",
   "agentManager.shortcuts.newWorktree": "New worktree",
   "agentManager.shortcuts.openWorktree": "Open worktree",
-  "agentManager.shortcuts.advancedWorktree": "Advanced worktree",
+  "agentManager.shortcuts.advancedWorktree": "Configure new worktree",
   "agentManager.shortcuts.deleteWorktree": "Delete worktree",
   "agentManager.shortcuts.previousTab": "Previous tab",
   "agentManager.shortcuts.nextTab": "Next tab",
@@ -122,6 +122,7 @@ export const dict = {
   "agentManager.dialog.createWorktree": "Create Worktree",
   "agentManager.dialog.removeImage": "Remove image",
   "agentManager.dialog.advanced": "Advanced...",
+  "agentManager.dialog.configureWorktree": "Configure New Worktree...",
 
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.diff.openFile": "Open file",

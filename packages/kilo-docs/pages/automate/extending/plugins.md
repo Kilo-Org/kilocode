@@ -44,11 +44,11 @@ Add an array of plugin specifiers to your config file:
 
 Each entry can be:
 
-| Form                                   | Loaded from                                                      |
-| -------------------------------------- | ---------------------------------------------------------------- |
-| `"package-name"`                       | Latest version from npm                                          |
-| `"package-name@1.2.3"`                 | Pinned version from npm                                          |
-| `["package-name", { options }]`        | npm package with options passed to the plugin function           |
+| Form | Loaded from |
+|---|---|
+| `"package-name"` | Latest version from npm |
+| `"package-name@1.2.3"` | Pinned version from npm |
+| `["package-name", { options }]` | npm package with options passed to the plugin function |
 | `"./path/plugin.ts"` / `"file:///..."` | Local file (relative to the config file or absolute `file:` URL) |
 
 Config files live in the same locations as the rest of your CLI configuration — see the [CLI configuration reference](/docs/code-with-ai/platforms/cli#configuration).
@@ -90,7 +90,9 @@ The command resolves the package, reads its `package.json` for plugin entrypoint
 
 ### How plugins are installed
 
-- **npm plugins** are installed automatically at startup using Bun. Packages and their dependencies are cached in Kilo's XDG cache directory (`~/.cache/kilo/` on Linux, `~/Library/Caches/kilo/` on macOS, `%LOCALAPPDATA%\kilo\` on Windows).
+- **npm plugins** are installed automatically at startup using Bun. Packages and their dependencies are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/opencode/packages/` by default, or `$XDG_CACHE_HOME/opencode/packages/` when `XDG_CACHE_HOME` is set).
+- **Pinned npm versions** like `my-plugin@1.2.3` install that exact version and do not check for newer registry versions. Bare package names resolve to `latest` and can refresh when the cached copy becomes stale.
+- **Install scripts are disabled** for npm plugins. Kilo installs packages with lifecycle scripts such as `install` and `postinstall` blocked.
 - **Local plugins** are loaded directly from the plugin directory. If your plugin imports external packages, add a `package.json` to your config directory (see [Dependencies](#dependencies)) — Kilo runs `bun install` on startup so imports resolve.
 
 ### Load order
@@ -136,17 +138,51 @@ export default { id: "hello", server: hello }
 
 The plugin function receives a context object:
 
-| Field                    | Description                                                       |
-| ------------------------ | ----------------------------------------------------------------- |
-| `project`                | Current project metadata.                                         |
-| `directory`              | Current working directory for this session.                       |
-| `worktree`               | Git worktree root for this session.                               |
-| `client`                 | A Kilo SDK client (`@kilocode/sdk`) for calling the local server. |
-| `$`                      | [Bun's shell API](https://bun.com/docs/runtime/shell).            |
-| `serverUrl`              | URL of the local Kilo server.                                     |
-| `experimental_workspace` | Register workspace adaptors (used by Agent Manager).              |
+| Field | Description |
+|---|---|
+| `project` | Current project metadata. |
+| `directory` | Current working directory for this session. |
+| `worktree` | Git worktree root for this session. |
+| `client` | A Kilo SDK client (`@kilocode/sdk`) for calling the local server. |
+| `$` | [Bun's shell API](https://bun.com/docs/runtime/shell). |
+| `serverUrl` | URL of the local Kilo server. |
+| `experimental_workspace` | Register workspace adaptors (used by Agent Manager). |
 
 The function returns a `Hooks` object. Any second argument is the options object passed via config (e.g. the `{ apiKey: "..." }` from `["my-plugin", { apiKey: "..." }]`).
+
+### Register workspace adaptors
+
+Workspace adaptors let plugins add custom workspace targets to Kilo's workspace creation flow. This API is experimental and may change.
+
+```ts
+import type { Plugin } from "@kilocode/plugin"
+import { mkdir, rm } from "node:fs/promises"
+
+const WorkspacePlugin: Plugin = async ({ experimental_workspace }) => {
+  experimental_workspace.register("folder", {
+    name: "Folder",
+    description: "Create a blank folder",
+    configure(config) {
+      return { ...config, directory: `/tmp/kilo-${Date.now()}` }
+    },
+    async create(config) {
+      await mkdir(config.directory!, { recursive: true })
+    },
+    async remove(config) {
+      await rm(config.directory!, { recursive: true, force: true })
+    },
+    target(config) {
+      return { type: "local", directory: config.directory! }
+    },
+  })
+
+  return {}
+}
+
+export default { id: "workspace-folder", server: WorkspacePlugin }
+```
+
+An adaptor implements `configure(config)`, `create(config, env, from?)`, `remove(config)`, and `target(config)`. `target` returns either `{ type: "local", directory }` for a local workspace or `{ type: "remote", url, headers? }` for a remote workspace endpoint.
 
 ### Module shape
 
@@ -166,6 +202,49 @@ export default {
 ```
 
 An npm plugin can also expose a TUI entry point (`tui`) for [TUI plugins](#tui-plugins), but `server` and `tui` are separate modules.
+
+### Package manifest for npm plugins
+
+Published npm plugins should declare separate package entrypoints for each runtime they support. Kilo detects install targets from `package.json`:
+
+- `exports["./server"]` marks the package as a server plugin.
+- `exports["./tui"]` marks the package as a TUI plugin.
+- `main` is a server-only fallback when `exports` is not used.
+- `oc-themes` marks a package as a TUI theme package, even when it has no `./tui` export.
+
+```json
+{
+  "name": "@acme/kilo-plugin",
+  "type": "module",
+  "main": "./dist/server.js",
+  "exports": {
+    "./server": {
+      "import": "./dist/server.js",
+      "config": { "apiKey": "{env:ACME_API_KEY}" }
+    },
+    "./tui": {
+      "import": "./dist/tui.js",
+      "config": { "compact": true }
+    }
+  },
+  "engines": {
+    "opencode": "^1.0.0"
+  }
+}
+```
+
+The optional `config` object on an export becomes the default options tuple written to the user's config on first install. Keep server and TUI code in separate files; each runtime loads only the entrypoint that matches its target.
+
+Theme-only packages can omit code entrypoints and provide package-relative theme files:
+
+```json
+{
+  "name": "@acme/kilo-themes",
+  "oc-themes": ["themes/acme-dark.json", "themes/acme-light.json"]
+}
+```
+
+`oc-themes` entries must be relative paths inside the package. Absolute paths, `file://` URLs, and paths that escape the package directory are rejected. Installed theme packages sync their themes on first install and when the package changes.
 
 ### TypeScript support
 
@@ -234,49 +313,71 @@ Every hook is optional. Return only the ones you care about.
 
 ### Lifecycle
 
-| Hook     | Description                                                                       |
-| -------- | --------------------------------------------------------------------------------- |
+| Hook | Description |
+|---|---|
 | `config` | Receives the fully-resolved config at startup. Read-only — useful for inspection. |
-| `event`  | Called for **every** event on the internal bus (see [Events](#events)).           |
+| `event` | Called for **every** event on the internal bus (see [Events](#events)). |
 
 ### Tools
 
-| Hook                  | Description                                                                                     |
-| --------------------- | ----------------------------------------------------------------------------------------------- |
-| `tool`                | Map of tool name → [tool definition](#custom-tools). Added tools are callable by the model.     |
-| `tool.execute.before` | Fires before a tool runs; you can mutate `output.args`.                                         |
-| `tool.execute.after`  | Fires after a tool returns; you can rewrite `output.title`, `output.output`, `output.metadata`. |
-| `tool.definition`     | Mutate a tool's `description` and `parameters` before they are sent to the model.               |
+| Hook | Description |
+|---|---|
+| `tool` | Map of tool name → [tool definition](#custom-tools). Added tools are callable by the model. |
+| `tool.execute.before` | Fires before a tool runs; you can mutate `output.args`. |
+| `tool.execute.after` | Fires after a tool returns; you can rewrite `output.title`, `output.output`, `output.metadata`. |
+| `tool.definition` | Mutate a tool's `description` and `parameters` before they are sent to the model. |
 
 ### Chat
 
-| Hook                     | Description                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| `chat.message`           | Fires when a new user message arrives. Inspect or modify `parts`.            |
-| `chat.params`            | Mutate `temperature`, `topP`, `topK`, `maxOutputTokens`, provider `options`. |
-| `chat.headers`           | Add or replace HTTP headers on the LLM API call.                             |
-| `permission.ask`         | Auto-allow or auto-deny permission prompts.                                  |
-| `command.execute.before` | Intercept slash command execution; mutate the resulting `parts`.             |
-| `shell.env`              | Inject environment variables into every shell command Kilo runs.             |
+| Hook | Description |
+|---|---|
+| `chat.message` | Fires when a new user message arrives. Inspect or modify `parts`. |
+| `chat.params` | Mutate `temperature`, `topP`, `topK`, `maxOutputTokens`, provider `options`. |
+| `chat.headers` | Add or replace HTTP headers on the LLM API call. |
+| `permission.ask` | Auto-allow or auto-deny permission prompts. |
+| `command.execute.before` | Intercept slash command execution; mutate the resulting `parts`. |
+| `shell.env` | Inject environment variables into every shell command Kilo runs. |
 
 ### Providers & auth
 
-| Hook       | Description                                                                          |
-| ---------- | ------------------------------------------------------------------------------------ |
-| `auth`     | Register an auth method (OAuth or API key) for a provider, with interactive prompts. |
-| `provider` | Dynamically supply a model catalog for a provider (useful for BYO-model gateways).   |
+| Hook | Description |
+|---|---|
+| `auth` | Register an auth method (OAuth or API key) for a provider, with interactive prompts. |
+| `provider` | Dynamically supply a model catalog for a provider (useful for BYO-model gateways). |
+
+Provider hooks can replace or refresh the model catalog for a provider. The hook receives the provider definition and auth context, and returns a map of model ID to model metadata:
+
+```ts
+import type { Plugin } from "@kilocode/plugin"
+
+const ProviderPlugin: Plugin = async () => ({
+  provider: {
+    id: "my-gateway",
+    async models(provider, { auth }) {
+      const res = await fetch("https://gateway.example.com/models", {
+        headers: auth?.type === "api" ? { Authorization: `Bearer ${auth.key}` } : {},
+      })
+      return await res.json()
+    },
+  },
+})
+
+export default { id: "my-provider", server: ProviderPlugin }
+```
+
+Kilo fills provider/model IDs from the returned catalog and uses the returned models in the picker and provider router.
 
 ### Experimental
 
 These hooks live behind the `experimental.` prefix and may change between releases.
 
-| Hook                                   | Description                                                                                          |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `experimental.chat.messages.transform` | Rewrite the full message history before it is sent to the model.                                     |
-| `experimental.chat.system.transform`   | Modify the system prompt array.                                                                      |
-| `experimental.session.compacting`      | Inject extra context (`output.context`) or replace the compaction prompt entirely (`output.prompt`). |
-| `experimental.compaction.autocontinue` | Disable the synthetic "continue" turn that follows compaction.                                       |
-| `experimental.text.complete`           | Post-process final text parts (e.g. append signatures, redact secrets).                              |
+| Hook | Description |
+|---|---|
+| `experimental.chat.messages.transform` | Rewrite the full message history before it is sent to the model. |
+| `experimental.chat.system.transform` | Modify the system prompt array. |
+| `experimental.session.compacting` | Inject extra context (`output.context`) or replace the compaction prompt entirely (`output.prompt`). |
+| `experimental.compaction.autocontinue` | Disable the synthetic "continue" turn that follows compaction. |
+| `experimental.text.complete` | Post-process final text parts (e.g. append signatures, redact secrets). |
 
 ### Events
 
@@ -448,13 +549,36 @@ export default { id: "compaction", server: Compaction }
 
 Set `output.prompt` to replace the default compaction prompt entirely — when present, `output.context` is ignored.
 
+### Stop auto-continuing after compaction
+
+By default, Kilo sends a synthetic "continue" turn after compaction so the agent resumes the interrupted task. Use `experimental.compaction.autocontinue` to disable that turn for specific sessions or providers:
+
+```ts
+const CompactionStop: Plugin = async () => ({
+  "experimental.compaction.autocontinue": async (input, output) => {
+    if (input.overflow) output.enabled = false
+  },
+})
+```
+
+The hook receives the `sessionID`, `agent`, `model`, `provider`, compacted `message`, and whether the compaction was caused by context overflow. `output.enabled` defaults to `true`.
+
 ---
 
 ## TUI plugins
 
-Plugins can also target the Kilo TUI itself — registering slash commands, routes, sidebar slots, dialogs, and keybinds. TUI plugins are SolidJS modules exported from `"./tui"` in your plugin package.
+Plugins can also target the Kilo TUI itself — registering slash commands, routes, slots, dialogs, and keybinds. TUI plugins are SolidJS modules exported from `"./tui"` in your plugin package, or theme-only packages declared with `oc-themes`.
 
 TUI plugins live in a separate module namespace (`@kilocode/plugin/tui`) and have their own API surface (`TuiPluginApi`). Because the TUI API is larger and still evolving, this guide doesn't cover it exhaustively — use the types in `@kilocode/plugin/tui` as the reference, and look at the built-in TUI plugins under `packages/opencode/src/cli/cmd/tui/feature-plugins/` for working examples.
+
+Common TUI APIs include:
+
+- `api.command.register(...)` to add commands and `api.command.show()` to open the command palette.
+- `api.ui.Slot` to render a host slot or a custom plugin slot.
+- `api.slots.register(...)` to define reusable custom slots for other plugins.
+- `api.ui.Prompt` to render prompt components in prompt replacement slots.
+
+Host slots include `home_prompt_right`, `session_prompt`, `session_prompt_right`, and `home_footer`. The `session_prompt` slot replaces the default session prompt, while the `*_prompt_right` slots add controls next to the prompt metadata row.
 
 ---
 
@@ -469,9 +593,11 @@ TUI plugins live in a separate module namespace (`@kilocode/plugin/tui`) and hav
 
   Named function exports are also accepted for backwards compatibility but should be considered legacy.
 
+- **Package installed but not active in one runtime** — make sure the package exposes the matching entrypoint. Server plugins need `exports["./server"]` or `main`; TUI plugins need `exports["./tui"]` or valid `oc-themes`. Packages that only support the other runtime are skipped with a warning instead of causing a fatal load error.
+
 - **Local plugin can't find an npm import** — add a `package.json` in the config directory so `bun install` picks up the dependency (see [Dependencies](#dependencies)).
-- **Plugin loads in dev but not in CI** — verify `KILO_PURE` is not set, and that npm-installed plugins are cached (Kilo's XDG cache directory — `~/.cache/kilo/` on Linux, `~/Library/Caches/kilo/` on macOS, `%LOCALAPPDATA%\kilo\` on Windows). Run with `--log-level DEBUG` to see install output.
-- **Reset the plugin cache** — delete the `node_modules/` under Kilo's cache directory (or the `node_modules` cache under your config directory) and restart Kilo.
+- **Plugin loads in dev but not in CI** — verify `KILO_PURE` is not set, and that npm-installed plugins are cached under `packages/` in the current CLI XDG cache directory (`~/.cache/opencode/packages/` by default, or `$XDG_CACHE_HOME/opencode/packages/` when `XDG_CACHE_HOME` is set). Run with `--log-level DEBUG` to see install output.
+- **Reset the plugin cache** — delete the plugin package folder under the CLI's `packages/` cache directory (or the `node_modules` cache under your config directory) and restart Kilo.
 
 ---
 

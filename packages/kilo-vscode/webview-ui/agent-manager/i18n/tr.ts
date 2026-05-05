@@ -77,7 +77,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Sonraki öğe",
   "agentManager.shortcuts.newWorktree": "Yeni worktree",
   "agentManager.shortcuts.openWorktree": "Worktree aç",
-  "agentManager.shortcuts.advancedWorktree": "Gelişmiş worktree",
+  "agentManager.shortcuts.advancedWorktree": "Yeni worktree yapılandır",
   "agentManager.shortcuts.deleteWorktree": "Worktree'yi sil",
   "agentManager.shortcuts.previousTab": "Önceki sekme",
   "agentManager.shortcuts.nextTab": "Sonraki sekme",
@@ -100,6 +100,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Eskimiş worktree'yi kaldır",
 
   "agentManager.dialog.openWorktree": "Yeni Worktree",
+  "agentManager.dialog.configureWorktree": "Yeni Worktree Yapılandır...",
   "agentManager.dialog.tab.new": "Yeni",
   "agentManager.dialog.tab.import": "İçe Aktar",
   "agentManager.dialog.namePlaceholder": "Worktree adı (isteğe bağlı)",

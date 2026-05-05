@@ -326,13 +326,13 @@ You can include examples, guidelines, code snippets, etc.
 
 Per the [Agent Skills specification](https://agentskills.io/specification):
 
-| Field           | Required | Description                                                                                           |
-| --------------- | -------- | ----------------------------------------------------------------------------------------------------- |
-| `name`          | Yes      | Max 64 characters. Lowercase letters, numbers, and hyphens only. Must not start or end with a hyphen. |
-| `description`   | Yes      | Max 1024 characters. Describes what the skill does and when to use it.                                |
-| `license`       | No       | License name or reference to a bundled license file                                                   |
-| `compatibility` | No       | Environment requirements (intended product, system packages, network access, etc.)                    |
-| `metadata`      | No       | Arbitrary key-value mapping for additional metadata                                                   |
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Max 64 characters. Lowercase letters, numbers, and hyphens only. Must not start or end with a hyphen. |
+| `description` | Yes | Max 1024 characters. Describes what the skill does and when to use it. |
+| `license` | No | License name or reference to a bundled license file |
+| `compatibility` | No | Environment requirements (intended product, system packages, network access, etc.) |
+| `metadata` | No | Arbitrary key-value mapping for additional metadata |
 
 ### Example with Optional Fields
 
@@ -573,11 +573,11 @@ There's currently no dedicated UI indicator showing "Skill X was activated." The
 
 ### Common Errors
 
-| Error                           | Cause                                        | Solution                                         |
-| ------------------------------- | -------------------------------------------- | ------------------------------------------------ |
-| "missing required 'name' field" | No `name` in frontmatter                     | Add `name: your-skill-name`                      |
-| "name doesn't match directory"  | Mismatch between frontmatter and folder name | Make `name` match exactly                        |
-| Skill not appearing             | Wrong directory structure                    | Verify path follows `skills/skill-name/SKILL.md` |
+| Error | Cause | Solution |
+|---|---|---|
+| "missing required 'name' field" | No `name` in frontmatter | Add `name: your-skill-name` |
+| "name doesn't match directory" | Mismatch between frontmatter and folder name | Make `name` match exactly |
+| Skill not appearing | Wrong directory structure | Verify path follows `skills/skill-name/SKILL.md` |
 
 ## Contributing to the Marketplace
 

@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.SessionStyleTarget
 import javax.swing.JPanel
 
 /**
@@ -12,7 +14,7 @@ import javax.swing.JPanel
  *
  * All methods must be called on the EDT.
  */
-abstract class PartView : JPanel() {
+abstract class PartView : JPanel(), SessionStyleTarget {
 
     /** Stable [Content.id] this renderer was created for. */
     abstract val contentId: String
@@ -29,6 +31,8 @@ abstract class PartView : JPanel() {
      * others ignore deltas by default.
      */
     open fun appendDelta(delta: String) {}
+
+    override fun applyStyle(style: SessionStyle) {}
 
     /** Readable name for test dumps. */
     open fun dumpLabel(): String = javaClass.simpleName

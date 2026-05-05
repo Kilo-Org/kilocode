@@ -1,5 +1,5 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
-import type { PartBatch, PartUpdate } from "../../../../src/shared/stream-messages"
+import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
@@ -93,6 +93,7 @@ export interface SendMessageFailedMessage {
 // webview's concrete union.
 export type PartUpdatedMessage = PartUpdate<Part>
 export type PartsUpdatedMessage = PartBatch<Part>
+export type PartRemovedMessage = PartRemove
 
 export interface SessionStatusMessage {
   type: "sessionStatus"
@@ -123,6 +124,7 @@ export interface PermissionResolvedMessage {
 export interface PermissionErrorMessage {
   type: "permissionError"
   permissionID: string
+  stale?: boolean
 }
 
 export interface TodoUpdatedMessage {
@@ -498,6 +500,7 @@ export interface AgentManagerStateMessage {
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
+  reviewMarkdownRender?: boolean
   isGitRepo?: boolean
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
@@ -537,6 +540,11 @@ export interface AgentManagerRunStatusMessage extends RunStatus {
 export interface AgentManagerKeybindingsMessage {
   type: "agentManager.keybindings"
   bindings: Record<string, string>
+}
+
+export interface AutoApproveStateMessage {
+  type: "autoApproveState"
+  active: boolean
 }
 
 // Multi-version creation progress (extension → webview)
@@ -712,6 +720,11 @@ export interface DiffViewerRevertFileResultMessage {
   message: string
 }
 
+export interface DiffViewerMarkdownRenderMessage {
+  type: "diffViewer.markdownRender"
+  render: boolean
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -813,6 +826,7 @@ export type ExtensionMessage =
   | SendMessageFailedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
+  | PartRemovedMessage
   | SessionStatusMessage
   | SessionErrorMessage
   | PermissionRequestMessage
@@ -871,6 +885,7 @@ export type ExtensionMessage =
   | AgentManagerStateMessage
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
+  | AutoApproveStateMessage
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSetSessionModelMessage
   | AgentManagerSendInitialMessage
@@ -911,6 +926,7 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | DiffViewerMarkdownRenderMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage

@@ -1,7 +1,6 @@
-// Agent Manager root component
+/** @jsxImportSource solid-js */
 
 import {
-  Component,
   For,
   Show,
   createSignal,
@@ -11,6 +10,7 @@ import {
   onMount,
   onCleanup,
   type Accessor,
+  type Component,
 } from "solid-js"
 import type {
   ExtensionMessage,
@@ -75,6 +75,7 @@ import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
+import { DisplayProvider } from "../src/context/display"
 import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
@@ -84,7 +85,7 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
-import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, LOCAL } from "./navigate"
+import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
@@ -100,6 +101,7 @@ import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import SectionHeader from "./SectionHeader"
 import { randomColor } from "./section-colors"
+import { createNewTaskDrafts } from "./new-task-drafts"
 import {
   buildTopLevelItems,
   buildSidebarOrder,
@@ -112,6 +114,7 @@ import {
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
+import { createMarkdownRender } from "./review-preferences"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -137,14 +140,10 @@ interface ApplyState {
   message: string
   conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
-
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
-
 type SidePanel = "diff" | "pr" | null
-
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
-
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
 
@@ -179,7 +178,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
   const [ref, setRef] = createSignal<HTMLDivElement | undefined>()
   const [showLeft, setShowLeft] = createSignal(false)
   const [showRight, setShowRight] = createSignal(false)
-
   let scrollFrame: number | undefined
   const update = () => {
     if (scrollFrame !== undefined) return
@@ -191,7 +189,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
       setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
     })
   }
-
   // Wheel → horizontal scroll conversion
   const onWheel = (e: WheelEvent) => {
     const el = ref()
@@ -200,7 +197,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
     e.preventDefault()
     el.scrollLeft += e.deltaY > 0 ? 60 : -60
   }
-
   // Recalculate on scroll, resize, or tab changes
   createEffect(() => {
     const el = ref()
@@ -218,7 +214,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
       mo.disconnect()
     })
   })
-
   createEffect(() => {
     const id = activeId()
     const el = ref()
@@ -237,7 +232,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
       }
     })
   })
-
   return { setRef, showLeft, showRight }
 }
 
@@ -365,13 +359,11 @@ const AgentManagerContent: Component = () => {
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
 
-  // Full-screen review state (in-memory, per sidebar context: local/worktree)
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
   const [reviewActive, setReviewActive] = createSignal(false)
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
-  // reviewOpen (memo below) controls tab presence for selected context.
-
+  const markdown = createMarkdownRender(vscode)
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
 
@@ -728,16 +720,18 @@ const AgentManagerContent: Component = () => {
 
   // Invalidate local session IDs if they no longer exist (preserve pending tabs)
   createEffect(() => {
+    if (!worktreesLoaded()) return
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
-    const ids = all.map((s) => s.id)
-    const prev = localSessionIDs()
-    const valid = prev.filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
-    if (valid.length !== prev.length) {
-      const removed = prev.filter((lid) => !isPending(lid) && !valid.includes(lid))
-      for (const id of removed) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
-      setLocalSessionIDs(valid)
-    }
+    const next = reconcileLocalSessions(
+      localSessionIDs(),
+      all.map((s) => s.id),
+      managedSessions(),
+      isPending,
+    )
+    if (!next) return
+    for (const id of next.forget) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
+    setLocalSessionIDs(next.ids)
   })
   // Drop in-memory review state for worktrees that no longer exist.
   createEffect(() => {
@@ -1173,6 +1167,18 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
+    const drafts = createNewTaskDrafts()
+    const newTaskHandler = (e: Event) => {
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      e.stopImmediatePropagation()
+      const draft = drafts.create(sel)
+      window.dispatchEvent(new CustomEvent("agentManagerCaptureDraft", { detail: { id: draft.id } }))
+      terms.setActiveId(undefined)
+      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    }
+    window.addEventListener("newTaskRequest", newTaskHandler, true)
+
     // Add created sessions as local tabs (both direct from the prompt and
     // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
@@ -1268,6 +1274,7 @@ const AgentManagerContent: Component = () => {
         saveTabMemory()
         appendToTabOrder(ev.worktreeId, ev.sessionId)
         setSelection(ev.worktreeId)
+        drafts.apply(ev.worktreeId, ev.sessionId)
         session.selectSession(ev.sessionId)
       }
 
@@ -1318,6 +1325,7 @@ const AgentManagerContent: Component = () => {
         if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
           setReviewDiffStyle(state.reviewDiffStyle)
         }
+        markdown.setRender(state.reviewMarkdownRender === true)
         if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
         setRunScriptConfigured(state.runScriptConfigured === true)
         syncRunStatuses(state.runStatuses)
@@ -1511,6 +1519,8 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
+      window.removeEventListener("newTaskRequest", newTaskHandler, true)
+      drafts.cleanup()
       unsubCreate()
       unsubSessions()
       unsubRun()
@@ -2276,17 +2286,23 @@ const AgentManagerContent: Component = () => {
                     <DropdownMenu.Portal>
                       <DropdownMenu.Content class="am-split-menu">
                         <DropdownMenu.Item onSelect={handleCreateWorktree}>
-                          <DropdownMenu.ItemLabel>{t("agentManager.worktree.new")}</DropdownMenu.ItemLabel>
+                          <span class="am-worktree-menu-gap" aria-hidden="true" />
+                          <DropdownMenu.ItemLabel class="am-worktree-menu-label">
+                            <span>{t("sidebar.session.newWorktree.from")}</span>
+                            <span class="am-worktree-menu-branch">
+                              <Icon name="branch" size="small" />
+                              <strong>{repoDefaultBranch()}</strong>
+                            </span>
+                          </DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().newWorktree ?? "").map((token) => (
                               <kbd class="am-menu-key">{token}</kbd>
                             ))}
                           </span>
                         </DropdownMenu.Item>
-                        <DropdownMenu.Separator />
                         <DropdownMenu.Item onSelect={showAdvancedWorktreeDialog}>
                           <Icon name="settings-gear" size="small" />
-                          <DropdownMenu.ItemLabel>{t("agentManager.dialog.advanced")}</DropdownMenu.ItemLabel>
+                          <DropdownMenu.ItemLabel>{t("agentManager.dialog.configureWorktree")}</DropdownMenu.ItemLabel>
                           <span class="am-menu-shortcut">
                             {parseBindingTokens(kb().advancedWorktree ?? "").map((token) => (
                               <kbd class="am-menu-key">{token}</kbd>
@@ -3086,6 +3102,8 @@ const AgentManagerContent: Component = () => {
                         sessionKey={diffSessionKey()}
                         diffStyle={reviewDiffStyle()}
                         onDiffStyleChange={setSharedDiffStyle}
+                        markdownRender={markdown.render()}
+                        onMarkdownRenderChange={markdown.update}
                         comments={reviewComments()}
                         onCommentsChange={setReviewCommentsForSelection}
                         onClose={() => setSidePanel(null)}
@@ -3119,6 +3137,8 @@ const AgentManagerContent: Component = () => {
                   onSendAll={closeReviewTab}
                   diffStyle={reviewDiffStyle()}
                   onDiffStyleChange={setSharedDiffStyle}
+                  markdownRender={markdown.render()}
+                  onMarkdownRenderChange={markdown.update}
                   onRequestDiff={requestDiffFile}
                   onOpenFile={(file, line) => {
                     const id = currentDiffSessionId()
@@ -3151,17 +3171,19 @@ export const AgentManagerApp: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <NotificationsProvider>
-                            <SessionProvider>
-                              <IndexingProvider>
-                                <WorktreeModeProvider>
-                                  <DataBridge>
-                                    <AgentManagerContent />
-                                  </DataBridge>
-                                </WorktreeModeProvider>
-                              </IndexingProvider>
-                            </SessionProvider>
-                          </NotificationsProvider>
+                          <DisplayProvider>
+                            <NotificationsProvider>
+                              <SessionProvider>
+                                <IndexingProvider>
+                                  <WorktreeModeProvider>
+                                    <DataBridge>
+                                      <AgentManagerContent />
+                                    </DataBridge>
+                                  </WorktreeModeProvider>
+                                </IndexingProvider>
+                              </SessionProvider>
+                            </NotificationsProvider>
+                          </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

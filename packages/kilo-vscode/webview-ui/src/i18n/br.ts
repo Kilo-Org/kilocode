@@ -261,6 +261,12 @@ export const dict = {
   "prompt.action.send.blocked": "Responda ou feche a pergunta pendente primeiro",
   "prompt.action.stop": "Parar",
   "prompt.action.enhance": "Melhorar prompt",
+  "prompt.action.autoApprove.enable": "Ativar aprovação automática",
+  "prompt.action.autoApprove.disable": "Desativar aprovação automática",
+  "prompt.action.autoApprove.enabled":
+    "A aprovação automática está ativada. Solicitações de permissão serão aprovadas automaticamente.",
+  "prompt.action.autoApprove.disabled":
+    "A aprovação automática está desativada. Clique para aprovar solicitações de permissão automaticamente.",
   "prompt.action.resetModel": "Redefinir modelo para o padrão",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
@@ -536,7 +542,38 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Branch principal ({{branch}})",
   "session.new.worktree.create": "Criar novo worktree",
   "session.new.lastModified": "Última modificação",
-
+  "sidebar.session.newSession": "Nova Sessão",
+  "sidebar.session.newSession.tooltip": "Inicie uma nova conversa mantendo a sessão atual intacta.",
+  "sidebar.session.newSession.disabled": "Esta sessão já é nova. Comece a conversar ou crie um worktree em vez disso.",
+  "sidebar.session.newWorktree": "Novo Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Crie um git worktree isolado para experimentar com segurança, manter as alterações separadas e executar sessões paralelas sem interromper sua branch atual.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Abra a caixa de diálogo de worktree do Agent Manager para configurar um novo worktree antes de criá-lo.",
+  "sidebar.session.newWorktree.from": "Novo Worktree de",
+  "sidebar.session.currentBranch": "branch atual",
+  "sidebar.session.moveToWorktree": "Mover para Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Mova esta conversa e suas alterações locais atuais para um worktree dedicado para trabalho de acompanhamento isolado.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Mover esta conversa e 1 arquivo alterado para um worktree dedicado para trabalho de acompanhamento isolado.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Mover esta conversa e {{files}} arquivos alterados para um worktree dedicado para trabalho de acompanhamento isolado.",
+  "sidebar.session.showChanges.tooltip.empty":
+    "Abra a visualização de alterações para inspecionar a árvore de trabalho atual.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 arquivo alterado · +{{additions}} -{{deletions}}. Abrir a visualização de alterações.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} arquivos alterados · +{{additions}} -{{deletions}}. Abrir a visualização de alterações.",
+  "sidebar.session.agentManager.tooltip":
+    "Abra o Agent Manager para uma visão geral completa de sessões paralelas e worktrees, para que você possa coordenar tarefas longas em um só lugar.",
+  "sidebar.session.openAgentManager": "Abrir Agent Manager",
+  "sidebar.session.progress.capturing": "Capturando alterações...",
+  "sidebar.session.progress.creating": "Criando worktree...",
+  "sidebar.session.progress.setup": "Executando configuração...",
+  "sidebar.session.progress.transferring": "Transferindo alterações...",
+  "sidebar.session.progress.forking": "Iniciando sessão...",
+  "sidebar.session.progress.failed": "Falha ao continuar no worktree",
   "session.header.search.placeholder": "Buscar {{project}}",
   "session.header.searchFiles": "Buscar arquivos",
   "session.header.openIn": "Abrir em",
@@ -1007,8 +1044,7 @@ export const dict = {
   "settings.language.title": "Idioma",
   "settings.indexing.title": "Indexação",
   "settings.indexing.enable.title": "Ativar indexação",
-  "settings.indexing.enable.description":
-    "Ativar ou desativar a indexação semântica da base de código para este espaço de trabalho.",
+  "settings.indexing.enable.description": "Ativar ou desativar a indexação semântica da base de código.",
   "settings.indexing.provider.title": "Provedor de embedding",
   "settings.indexing.provider.description": "Escolha o provedor usado para gerar embeddings para busca semântica.",
   "settings.indexing.model.title": "Modelo de embedding",
@@ -1174,6 +1210,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
+  "settings.experimental.agentManagerTool.title": "Ferramenta Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Permitir que agentes iniciem sessões locais e sessões worktree do Agent Manager a partir de uma chamada de ferramenta",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
@@ -1385,6 +1424,13 @@ export const dict = {
   "settings.display.layout.description": "Modo de layout para a interface de chat",
   "settings.display.layout.auto": "Automático",
   "settings.display.layout.stretch": "Esticar",
+  "settings.display.reasoningAutoCollapse.title": "Recolher raciocínio automaticamente",
+  "settings.display.reasoningAutoCollapse.description":
+    "Recolhe os blocos de raciocínio depois que o agente termina de escrevê-los. Deixe desativado para manter o raciocínio expandido, a menos que você o recolha manualmente.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",
@@ -1392,6 +1438,7 @@ export const dict = {
     "Modelo leve para geração de títulos, mensagens de commit, aprimoramento de prompts e outras tarefas rápidas",
   "settings.providers.disabled": "Provedores desativados",
   "settings.providers.disabled.description": "Provedores a ocultar da lista",
+  "settings.providers.disabled.enable": "Habilitar",
   "settings.providers.enabled": "Provedores ativados (lista branca)",
   "settings.providers.enabled.description": "Se definido, apenas estes provedores estarão disponíveis",
   "settings.providers.notSet": "Não definido (usar padrão do servidor)",

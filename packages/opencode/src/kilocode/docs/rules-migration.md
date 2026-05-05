@@ -41,28 +41,28 @@ The migrator reads rules from these locations:
 
 ### Project Rules
 
-| Location                      | Description                                              |
-| ----------------------------- | -------------------------------------------------------- |
-| `.kilocoderules`              | Legacy single-file rules in project root                 |
-| `.kilocode/rules/*.md`        | Directory-based rules (multiple markdown files)          |
-| `.kilocoderules-{mode}`       | Mode-specific legacy rules (e.g., `.kilocoderules-code`) |
-| `.kilocode/rules-{mode}/*.md` | Mode-specific rule directories                           |
+| Location | Description |
+|---|---|
+| `.kilocoderules` | Legacy single-file rules in project root |
+| `.kilocode/rules/*.md` | Directory-based rules (multiple markdown files) |
+| `.kilocoderules-{mode}` | Mode-specific legacy rules (e.g., `.kilocoderules-code`) |
+| `.kilocode/rules-{mode}/*.md` | Mode-specific rule directories |
 
 ### Global Rules
 
-| Location                 | Description            |
-| ------------------------ | ---------------------- |
+| Location | Description |
+|---|---|
 | `~/.kilocode/rules/*.md` | Global rules directory |
 
 ## File Mapping
 
-| Kilocode Location             | Opencode Equivalent                                     |
-| ----------------------------- | ------------------------------------------------------- |
-| `.kilocoderules`              | `instructions: [".kilocoderules"]`                      |
-| `.kilocoderules-{mode}`       | `instructions: [".kilocoderules-{mode}"]`               |
-| `.kilocode/rules/*.md`        | `instructions: [".kilocode/rules/file.md", ...]`        |
+| Kilocode Location | Opencode Equivalent |
+|---|---|
+| `.kilocoderules` | `instructions: [".kilocoderules"]` |
+| `.kilocoderules-{mode}` | `instructions: [".kilocoderules-{mode}"]` |
+| `.kilocode/rules/*.md` | `instructions: [".kilocode/rules/file.md", ...]` |
 | `.kilocode/rules-{mode}/*.md` | `instructions: [".kilocode/rules-{mode}/file.md", ...]` |
-| `~/.kilocode/rules/*.md`      | `instructions: ["~/.kilocode/rules/file.md", ...]`      |
+| `~/.kilocode/rules/*.md` | `instructions: ["~/.kilocode/rules/file.md", ...]` |
 
 ## AGENTS.md Compatibility
 

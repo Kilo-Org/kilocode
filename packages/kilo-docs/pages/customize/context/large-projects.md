@@ -31,7 +31,7 @@ The context window includes:
 
 5.  **Prioritize Recent History:** Kilo Code automatically truncates older messages in the conversation history to stay within the context window. Be mindful of this, and re-include important context if needed.
 
-6.  **Use Prompt Caching (if available):** Some API providers like Anthropic, OpenAI, OpenRouter and Requesty support "prompt caching". This caches your prompts for use in future tasks and helps reduce the cost and latency of requests.
+6.  **Use Prompt Caching (if available):** Some API providers like Anthropic, OpenAI, OpenRouter, Requesty, and Vertex AI Claude support "prompt caching". This caches your prompts for use in future tasks and helps reduce the cost and latency of requests.
 
 ## Example: Refactoring a Large File
 

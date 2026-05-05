@@ -1,18 +1,19 @@
 import { Command } from "../../command"
-import { Log } from "../../util"
-import z from "zod"
-import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
+import { Effect, Schema } from "effect"
 import DESCRIPTION from "./tool.txt"
-import { Tool } from "../../tool"
+import { Tool } from "../../tool/tool"
 import { Suggestion } from "./index"
 import { SessionStatus } from "../../session/status"
 import { SessionID } from "../../session/schema"
 
 const log = Log.create({ service: "tool.suggest" })
 
-const Params = z.object({
-  suggest: z.string().describe("Short suggestion text shown to the user"),
-  actions: z.array(Suggestion.Action).min(1).max(2).describe("Available actions the user can take"),
+const Params = Schema.Struct({
+  suggest: Schema.String.annotate({ description: "Short suggestion text shown to the user" }),
+  actions: Schema.Array(Suggestion.ActionSchema)
+    .check(Schema.isMinLength(1), Schema.isMaxLength(2))
+    .annotate({ description: "Available actions the user can take" }),
 })
 
 type Meta = {
@@ -62,7 +63,7 @@ export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
         const promise = Suggestion.show({
           sessionID: ctx.sessionID,
           text: params.suggest,
-          actions: params.actions,
+          actions: params.actions.map((a) => ({ ...a })),
           blocking: false, // render above an active input; VS Code does the same
           tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
         })

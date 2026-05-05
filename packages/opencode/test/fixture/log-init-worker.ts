@@ -16,7 +16,7 @@ process.env.XDG_CONFIG_HOME = path.join(dir, "config")
 process.env.XDG_STATE_HOME = path.join(dir, "state")
 process.env.KILO_TEST_HOME = path.join(dir, "home")
 
-const Log = await import("../../src/util/log")
+const Log = await import("@opencode-ai/core/util/log")
 
 async function bytes(file: string) {
   return fs

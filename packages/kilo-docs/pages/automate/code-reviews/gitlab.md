@@ -46,14 +46,14 @@ When you select repositories, Kilo **automatically creates webhooks** on each pr
 
 Once configured, the Review Agent automatically runs when:
 
-| MR Event                 | Triggers Review |
-| ------------------------ | --------------- |
-| MR opened                | ✅ Yes          |
-| New commits pushed to MR | ✅ Yes          |
-| MR reopened              | ✅ Yes          |
-| Draft or WIP MR opened   | ❌ Skipped      |
-| MR closed                | ❌ No           |
-| MR merged                | ❌ No           |
+| MR Event | Triggers Review |
+|---|---|
+| MR opened | ✅ Yes |
+| New commits pushed to MR | ✅ Yes |
+| MR reopened | ✅ Yes |
+| Draft or WIP MR opened | ❌ Skipped |
+| MR closed | ❌ No |
+| MR merged | ❌ No |
 
 ## What to Expect
 

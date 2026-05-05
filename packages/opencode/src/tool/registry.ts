@@ -1,5 +1,5 @@
 import { PlanExitTool } from "./plan"
-import { Session } from "../session"
+import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
 import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
 import { BashTool } from "./bash"
@@ -14,36 +14,38 @@ import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import * as Tool from "./tool"
-import { Config } from "../config"
+import { Config } from "@/config/config"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
+import { Schema } from "effect"
 import z from "zod"
+import { ZodOverride } from "@/util/effect-zod"
 import { Plugin } from "../plugin"
-import { Provider } from "../provider"
+import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { Flag } from "@/flag/flag"
-import { Log } from "@/util"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
 import * as Truncate from "./truncate"
 import { ApplyPatchTool } from "./apply_patch"
-import { Glob } from "@opencode-ai/shared/util/glob"
+import { Glob } from "@opencode-ai/core/util/glob"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Effect, Layer, Context } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Ripgrep } from "../file/ripgrep"
 import { Format } from "../format"
-import { InstanceState } from "@/effect"
+import { InstanceState } from "@/effect/instance-state"
 import { Question } from "../question"
 import { Todo } from "../session/todo"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
 import { Skill } from "../skill"
@@ -125,9 +127,17 @@ export const layer: Layer.Layer<
         const custom: Tool.Def[] = []
 
         function fromPlugin(id: string, def: ToolDefinition): Tool.Def {
+          // Plugin tools define their args as a raw Zod shape. Wrap the
+          // derived Zod object in a `Schema.declare` so it slots into the
+          // Schema-typed framework, and annotate with `ZodOverride` so the
+          // walker emits the original Zod object for LLM JSON Schema.
+          const zodParams = z.object(def.args)
+          const parameters = Schema.declare<unknown>((u): u is unknown => zodParams.safeParse(u).success).annotate({
+            [ZodOverride]: zodParams,
+          })
           return {
             id,
-            parameters: z.object(def.args),
+            parameters,
             description: def.description,
             execute: (args, toolCtx) =>
               Effect.gen(function* () {
@@ -203,7 +213,7 @@ export const layer: Layer.Layer<
         })
         // kilocode_change end
 
-        const kilo = yield* KiloToolRegistry.build(kiloToolInfos) // kilocode_change
+        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, { agent: agents, truncate }) // kilocode_change
 
         // kilocode_change start
         return {
@@ -355,3 +365,4 @@ export const defaultLayer = Layer.suspend(() =>
 const { runPromise } = makeRuntime(Service, defaultLayer)
 export const ids = () => runPromise((svc) => svc.ids())
 // kilocode_change end
+export * as ToolRegistry from "./registry"

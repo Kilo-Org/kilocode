@@ -349,6 +349,79 @@ describe("CodeIndexManager", () => {
     expect(stop).toBe(0)
   })
 
+  test("dispose during service recreation cancels the recreated orchestrator", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = mgr as unknown as {
+      _cacheManager: {
+        clearCacheFile(): Promise<void>
+      }
+      _orchestrator?: {
+        state: string
+        cancelIndexing(): void
+        startIndexing(trigger: IndexingTelemetryTrigger): Promise<void>
+      }
+      _searchService?: {}
+      _recreateServices(): Promise<void>
+    }
+    const gate = Promise.withResolvers<void>()
+    let cancel = 0
+    let start = 0
+
+    data._cacheManager = {
+      async clearCacheFile() {},
+    }
+    data._recreateServices = async () => {
+      await gate.promise
+      data._orchestrator = {
+        state: "Standby",
+        cancelIndexing() {
+          cancel += 1
+        },
+        async startIndexing() {
+          start += 1
+        },
+      }
+      data._searchService = {}
+    }
+
+    const init = mgr.initialize(createInput({ openAiKey: "sk-test" }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    mgr.dispose()
+    gate.resolve()
+    await init
+
+    expect(cancel).toBe(1)
+    expect(start).toBe(0)
+  })
+
+  test("dispose during recovery prevents restart after service recreation", async () => {
+    const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
+    const data = createData(mgr)
+    const gate = Promise.withResolvers<void>()
+    let start = 0
+
+    data._recreateServices = async () => {
+      await gate.promise
+      data._orchestrator = {
+        state: "Standby",
+        stopWatcher() {},
+        async startIndexing() {
+          start += 1
+        },
+      }
+      data._searchService = {}
+    }
+
+    const task = data.handleTelemetry(createStartError())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    mgr.dispose()
+    gate.resolve()
+    await data._retryTask
+
+    expect(task).toBeUndefined()
+    expect(start).toBe(0)
+  })
+
   test("retry exhaustion keeps Error and stops future retries", async () => {
     const mgr = new CodeIndexManager("/tmp/ws", "/tmp/cache")
     const data = createData(mgr)

@@ -4,9 +4,9 @@ import { Effect } from "effect"
 import path from "path"
 import z from "zod"
 import { Instance } from "../../src/project/instance"
-import { Project } from "../../src/project"
-import { Session as SessionNs } from "../../src/session"
-import { Log } from "../../src/util"
+import { Project } from "@/project/project"
+import { Session as SessionNs } from "@/session/session"
+import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender" // kilocode_change
@@ -35,7 +35,7 @@ const svc = {
   create(input?: SessionNs.CreateInput) {
     return run(SessionNs.Service.use((svc) => svc.create(input)))
   },
-  setArchived(input: z.output<typeof SessionNs.SetArchivedInput>) {
+  setArchived(input: z.output<typeof SessionNs.SetArchivedInput.zod>) {
     return run(SessionNs.Service.use((svc) => svc.setArchived(input)))
   },
 }

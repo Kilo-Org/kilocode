@@ -56,11 +56,11 @@ Codebase Indexing is rolling out across our users. It will automatically engage 
 
 ### Configuration Options
 
-| Field                            | Type    | Required | Description                                                                                 |
-| -------------------------------- | ------- | -------- | ------------------------------------------------------------------------------------------- |
-| `project.id`                     | string  | No       | Custom name for your project. Defaults to the name from your Git origin remote.             |
-| `project.baseBranch`             | string  | No       | Specifies your base branch if it isn't `main`, `master`, `dev`, or `develop`.               |
-| `project.managedIndexingEnabled` | boolean | No       | Set to `false` to disable indexing for individual project repositories. Defaults to `true`. |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `project.id` | string | No | Custom name for your project. Defaults to the name from your Git origin remote. |
+| `project.baseBranch` | string | No | Specifies your base branch if it isn't `main`, `master`, `dev`, or `develop`. |
+| `project.managedIndexingEnabled` | boolean | No | Set to `false` to disable indexing for individual project repositories. Defaults to `true`. |
 
 Organization-wide indexing is enabled for any organization that has a credit balance. If you want to disable indexing for a specific repository, set `managedIndexingEnabled` to `false` in the config file.
 

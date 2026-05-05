@@ -12,7 +12,7 @@
  */
 
 import type { ChatCredentials, ChatMessage } from "./types"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 
 const log = Log.create({ service: "claw-chat" })
 

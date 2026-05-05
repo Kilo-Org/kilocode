@@ -1,26 +1,33 @@
 import { BusEvent } from "@/bus/bus-event"
 import { SessionID, MessageID, PartID } from "./schema"
 import z from "zod"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { Snapshot } from "@/snapshot"
 import { SyncEvent } from "../sync"
-import { Database, NotFoundError, and, desc, eq, inArray, lt, or } from "@/storage"
+import { Database } from "@/storage/db"
+import { NotFoundError } from "@/storage/storage"
+import { and } from "drizzle-orm"
+import { desc } from "drizzle-orm"
+import { eq } from "drizzle-orm"
+import { inArray } from "drizzle-orm"
+import { lt } from "drizzle-orm"
+import { or } from "drizzle-orm"
 import { MessageTable, PartTable, SessionTable } from "./session.sql"
-import { ProviderError } from "@/provider"
+import * as ProviderError from "@/provider/error"
 import { iife } from "@/util/iife"
 import { errorMessage } from "@/util/error"
 import { isMedia } from "@/util/media"
 import type { SystemError } from "bun"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { SessionNetwork } from "./network" // kilocode_change
 import { Effect, Schema, Types } from "effect"
 import { zod, ZodOverride } from "@/util/effect-zod"
-import { withStatics } from "@/util/schema"
+import { NonNegativeInt, withStatics } from "@/util/schema"
 import { namedSchemaError } from "@/util/named-schema-error"
-import { EffectLogger } from "@/effect"
+import * as EffectLogger from "@opencode-ai/core/effect/logger"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -65,9 +72,7 @@ export class OutputFormatText extends Schema.Class<OutputFormatText>("OutputForm
 export class OutputFormatJsonSchema extends Schema.Class<OutputFormatJsonSchema>("OutputFormatJsonSchema")({
   type: Schema.Literal("json_schema"),
   schema: Schema.Record(Schema.String, Schema.Any).annotate({ identifier: "JSONSchema" }),
-  retryCount: Schema.Number.check(Schema.isInt())
-    .check(Schema.isGreaterThanOrEqualTo(0))
-    .pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(2))),
+  retryCount: NonNegativeInt.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(2))),
 }) {
   static readonly zod = zod(this)
 }
@@ -139,8 +144,8 @@ export type ReasoningPart = Types.DeepMutable<Schema.Schema.Type<typeof Reasonin
 const filePartSourceBase = {
   text: Schema.Struct({
     value: Schema.String,
-    start: Schema.Number.check(Schema.isInt()),
-    end: Schema.Number.check(Schema.isInt()),
+    start: Schema.Int,
+    end: Schema.Int,
   }).annotate({ identifier: "FilePartSourceText" }),
 }
 
@@ -158,7 +163,7 @@ export const SymbolSource = Schema.Struct({
   path: Schema.String,
   range: LSP.Range,
   name: Schema.String,
-  kind: Schema.Number.check(Schema.isInt()),
+  kind: Schema.Int,
 })
   .annotate({ identifier: "SymbolSource" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -197,8 +202,8 @@ export const AgentPart = Schema.Struct({
   source: Schema.optional(
     Schema.Struct({
       value: Schema.String,
-      start: Schema.Number.check(Schema.isInt()),
-      end: Schema.Number.check(Schema.isInt()),
+      start: Schema.Int,
+      end: Schema.Int,
     }),
   ),
 })
@@ -372,6 +377,16 @@ const messageBase = {
   sessionID: SessionID,
 }
 
+// kilocode_change start - shared editor context schema (used by MessageV2.User and SessionPrompt.PromptInput)
+export const EditorContext = Schema.Struct({
+  visibleFiles: Schema.optional(Schema.Array(Schema.String)),
+  openTabs: Schema.optional(Schema.Array(Schema.String)),
+  activeFile: Schema.optional(Schema.String),
+  shell: Schema.optional(Schema.String),
+})
+export type EditorContext = Types.DeepMutable<Schema.Schema.Type<typeof EditorContext>>
+// kilocode_change end
+
 export const User = Schema.Struct({
   ...messageBase,
   role: Schema.Literal("user"),
@@ -395,14 +410,7 @@ export const User = Schema.Struct({
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   // kilocode_change start
-  editorContext: Schema.optional(
-    Schema.Struct({
-      visibleFiles: Schema.optional(Schema.Array(Schema.String)),
-      openTabs: Schema.optional(Schema.Array(Schema.String)),
-      activeFile: Schema.optional(Schema.String),
-      shell: Schema.optional(Schema.String),
-    }),
-  ),
+  editorContext: Schema.optional(EditorContext),
   // kilocode_change end
 })
   .annotate({ identifier: "UserMessage" })
@@ -512,8 +520,8 @@ export const AgentPartInput = Schema.Struct({
   source: Schema.optional(
     Schema.Struct({
       value: Schema.String,
-      start: Schema.Number.check(Schema.isInt()),
-      end: Schema.Number.check(Schema.isInt()),
+      start: Schema.Int,
+      end: Schema.Int,
     }),
   ),
 })
@@ -587,54 +595,62 @@ export const Info = Object.assign(_Info, {
 })
 export type Info = User | Assistant
 
+const UpdatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  info: _Info,
+})
+
+const RemovedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  messageID: MessageID,
+})
+
+const PartUpdatedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  part: _Part,
+  time: Schema.Number,
+})
+
+const PartRemovedEventSchema = Schema.Struct({
+  sessionID: SessionID,
+  messageID: MessageID,
+  partID: PartID,
+})
+
 export const Event = {
   Updated: SyncEvent.define({
     type: "message.updated",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      info: Info.zod,
-    }),
+    schema: UpdatedEventSchema,
   }),
   Removed: SyncEvent.define({
     type: "message.removed",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-    }),
+    schema: RemovedEventSchema,
   }),
   PartUpdated: SyncEvent.define({
     type: "message.part.updated",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      part: Part.zod,
-      time: z.number(),
-    }),
+    schema: PartUpdatedEventSchema,
   }),
   PartDelta: BusEvent.define(
     "message.part.delta",
-    z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-      partID: PartID.zod,
-      field: z.string(),
-      delta: z.string(),
+    Schema.Struct({
+      sessionID: SessionID,
+      messageID: MessageID,
+      partID: PartID,
+      field: Schema.String,
+      delta: Schema.String,
     }),
   ),
   PartRemoved: SyncEvent.define({
     type: "message.part.removed",
     version: 1,
     aggregate: "sessionID",
-    schema: z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-      partID: PartID.zod,
-    }),
+    schema: PartRemovedEventSchema,
   }),
 }
 
@@ -900,7 +916,9 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         parts: [],
       }
       for (const part of msg.parts) {
-        if (part.type === "text")
+        // kilocode_change start - keep local UI warnings out of future prompts
+        if (part.type === "text" && !part.ignored)
+          // kilocode_change end
           assistantMessage.parts.push({
             type: "text",
             text: part.text,

@@ -1,7 +1,7 @@
 import z from "zod"
 import * as path from "path"
 import * as fs from "fs/promises"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { Encoding } from "../kilocode/encoding" // kilocode_change
 import * as Bom from "../util/bom"
 

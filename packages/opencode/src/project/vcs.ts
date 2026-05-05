@@ -1,15 +1,16 @@
-import { Effect, Layer, Context, Stream, Scope } from "effect"
+import { Effect, Layer, Context, Schema, Stream, Scope } from "effect"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { InstanceState } from "@/effect"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { InstanceState } from "@/effect/instance-state"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { FileWatcher } from "@/file/watcher"
 import { Git } from "@/git"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
+import { zod } from "@/util/effect-zod"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import z from "zod"
+import { withStatics } from "@/util/schema"
 
 const log = Log.create({ service: "vcs" })
 
@@ -102,40 +103,36 @@ const compare = Effect.fnUntraced(function* (
   )
 })
 
-export const Mode = z.enum(["git", "branch"])
-export type Mode = z.infer<typeof Mode>
+export const Mode = Schema.Literals(["git", "branch"]).pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Mode = Schema.Schema.Type<typeof Mode>
 
 export const Event = {
   BranchUpdated: BusEvent.define(
     "vcs.branch.updated",
-    z.object({
-      branch: z.string().optional(),
+    Schema.Struct({
+      branch: Schema.optional(Schema.String),
     }),
   ),
 }
 
-export const Info = z
-  .object({
-    branch: z.string().optional(),
-    default_branch: z.string().optional(),
-  })
-  .meta({
-    ref: "VcsInfo",
-  })
-export type Info = z.infer<typeof Info>
+export const Info = Schema.Struct({
+  branch: Schema.optional(Schema.String),
+  default_branch: Schema.optional(Schema.String),
+})
+  .annotate({ identifier: "VcsInfo" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Info = Schema.Schema.Type<typeof Info>
 
-export const FileDiff = z
-  .object({
-    file: z.string(),
-    patch: z.string(),
-    additions: z.number(),
-    deletions: z.number(),
-    status: z.enum(["added", "deleted", "modified"]).optional(),
-  })
-  .meta({
-    ref: "VcsFileDiff",
-  })
-export type FileDiff = z.infer<typeof FileDiff>
+export const FileDiff = Schema.Struct({
+  file: Schema.String,
+  patch: Schema.String,
+  additions: Schema.Number,
+  deletions: Schema.Number,
+  status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
+})
+  .annotate({ identifier: "VcsFileDiff" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type FileDiff = Schema.Schema.Type<typeof FileDiff>
 
 export interface Interface {
   readonly init: () => Effect.Effect<void>
@@ -232,3 +229,5 @@ const { runPromise } = makeRuntime(Service, defaultLayer)
 export const branch = () => runPromise((svc) => svc.branch())
 export const defaultBranch = () => runPromise((svc) => svc.defaultBranch())
 // kilocode_change end
+
+export * as Vcs from "./vcs"

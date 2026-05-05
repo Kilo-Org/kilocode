@@ -1,22 +1,22 @@
 ---
 title: "Auto Model Tiers"
-description: "Architecture of Kilo Auto — a family of smart model tiers that match users to the right models without requiring AI expertise"
+description: "Architecture of the Auto Model tiers — a family of smart model tiers that match users to the right models without requiring AI expertise"
 ---
 
 # Auto Model Tiers
 
 ## Overview
 
-Kilo Auto is a model routing system that automatically selects the optimal AI model based on the user's current mode (Code, Architect, Debug, etc.). It comes in multiple tiers so that every user — regardless of budget, preference, or expertise — gets a "just works" experience without needing to understand the AI model landscape.
+Auto Model is a routing system that automatically selects the optimal AI model based on the user's current mode (Code, Architect, Debug, etc.). It comes in multiple tiers so that every user — regardless of budget, preference, or expertise — gets a "just works" experience without needing to understand the AI model landscape.
 
 Three tiers are user-facing, and one is internal:
 
-| Tier ID              | Audience                       | Pricing |
-| -------------------- | ------------------------------ | ------- |
-| `kilo-auto/frontier` | Best paid models               | Paid    |
-| `kilo-auto/balanced` | Strong performance, lower cost | Paid    |
-| `kilo-auto/free`     | Best available free models     | Free    |
-| `kilo-auto/small`    | Internal — background tasks    | Varies  |
+| Tier ID | Audience | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Best paid models | Paid |
+| `kilo-auto/balanced` | Strong performance, lower cost | Paid |
+| `kilo-auto/free` | Best available free models | Free |
+| `kilo-auto/small` | Internal — background tasks | Varies |
 
 ## Problem
 
@@ -52,7 +52,7 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 **Who it's for**: Cost-conscious developers who want better results than free models at a fraction of frontier cost.
 
-**What it does**: Routes to a cost-effective model based on the API interface used by the client. Requests using the Completions API (default) route to `qwen/qwen3.6-plus`; Responses API requests route to `openai/gpt-5.3-codex`; Messages API requests route to `anthropic/claude-haiku-4.5`. Unlike Frontier, Balanced does not vary its underlying model by mode.
+**What it does**: Routes to a cost-effective model based on the API interface used by the client. Requests using the Completions API (default) route to `qwen/qwen3.6-plus`; Responses API requests route to `openai/gpt-5.5`; Messages API requests route to `anthropic/claude-sonnet-4.6`. Unlike Frontier, Balanced does not vary its underlying model by mode.
 
 **Pricing**: Paid, but significantly cheaper than Frontier.
 
@@ -67,6 +67,8 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 **Pricing**: Free. No credits required.
 
 **Constraints**: Free models do not vary by mode — the same model is used for every mode within a session. Quality will be lower than Frontier or Balanced tiers — this is a tradeoff users accept by choosing free.
+
+**Data handling**: Auto Free may route to providers that log prompts and outputs and use them to improve their services, including NVIDIA's free endpoints (governed by the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf)). This is surfaced to users alongside Auto Free mentions in the user-facing docs.
 
 ### Auto: Small (internal)
 
@@ -84,11 +86,11 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 The three user-facing tiers appear in the model selector:
 
-| Display Name   | Description shown to user                            |
-| -------------- | ---------------------------------------------------- |
+| Display Name | Description shown to user |
+|---|---|
 | Auto: Frontier | Best paid models, automatically matched to your task |
-| Auto: Balanced | Strong performance at lower cost                     |
-| Auto: Free     | Best free models, no credits required                |
+| Auto: Balanced | Strong performance at lower cost |
+| Auto: Free | Best free models, no credits required |
 
 Auto: Small does not appear in the model picker. It is filtered out by the UI (see `KILO_AUTO_SMALL_IDS` in the VS Code extension).
 
@@ -140,16 +142,16 @@ The client-side chain works as follows:
 
 ### Key files
 
-| File                                            | Role                                                                                  |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `packages/kilo-gateway/src/api/constants.ts`    | Default model constants (`DEFAULT_MODEL`, `DEFAULT_FREE_MODEL`)                       |
-| `packages/kilo-gateway/src/api/models.ts`       | Fetches models from Kilo API, parses `opencode.variants`                              |
-| `packages/opencode/src/provider/model-cache.ts` | Caches Kilo Gateway models with 5-min TTL                                             |
-| `packages/opencode/src/provider/provider.ts`    | Preserves variants for kilo provider; `getSmallModel()` prioritizes `kilo-auto/small` |
-| `packages/opencode/src/provider/transform.ts`   | Passes through server-defined variants for Kilo Gateway models                        |
-| `packages/opencode/src/session/prompt.ts`       | Resolves variant from agent config, attaches to user messages                         |
-| `packages/opencode/src/session/llm.ts`          | Merges variant options into LLM call parameters                                       |
-| `packages/opencode/src/config/config.ts`        | Agent config schema includes `variant` field                                          |
+| File | Role |
+|---|---|
+| `packages/kilo-gateway/src/api/constants.ts` | Default model constants (`DEFAULT_MODEL`, `DEFAULT_FREE_MODEL`) |
+| `packages/kilo-gateway/src/api/models.ts` | Fetches models from Kilo API, parses `opencode.variants` |
+| `packages/opencode/src/provider/model-cache.ts` | Caches Kilo Gateway models with 5-min TTL |
+| `packages/opencode/src/provider/provider.ts` | Preserves variants for kilo provider; `getSmallModel()` prioritizes `kilo-auto/small` |
+| `packages/opencode/src/provider/transform.ts` | Passes through server-defined variants for Kilo Gateway models |
+| `packages/opencode/src/session/prompt.ts` | Resolves variant from agent config, attaches to user messages |
+| `packages/opencode/src/session/llm.ts` | Merges variant options into LLM call parameters |
+| `packages/opencode/src/config/config.ts` | Agent config schema includes `variant` field |
 
 ## Requirements
 
@@ -160,17 +162,18 @@ The client-side chain works as follows:
 
 ## Risks
 
-| Risk                                              | User impact                                            | Mitigation                                                                                                                                                                    |
-| ------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Free model disappears mid-session                 | User's next message fails                              | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted.                                                                      |
-| Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier           | Set clear expectations in UI. Curate model lists, don't just pick the cheapest.                                                                                               |
-| Cross-family model switching breaks context       | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free tier (which may switch models). |
-| Users don't understand the tier differences       | Wrong tier selected, poor experience                   | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose.                                       |
+| Risk | User impact | Mitigation |
+|---|---|---|
+| Free model disappears mid-session | User's next message fails | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted. |
+| Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier | Set clear expectations in UI. Curate model lists, don't just pick the cheapest. |
+| Cross-family model switching breaks context | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free tier (which may switch models). |
+| Users don't understand the tier differences | Wrong tier selected, poor experience | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose. |
 
 ## Data and compliance
 
 - **Frontier**: Uses Anthropic models with no training on user data.
-- **Balanced and Free**: The underlying models may have different data handling policies depending on the provider. This should be documented per-tier so enterprise users can make informed choices.
+- **Balanced**: As a paid tier, underlying providers are selected with data-handling policies suitable for professional use. Prefer providers with stronger privacy posture when updating the routing.
+- **Free**: May route to providers that log prompts and outputs and use them to improve their services, including NVIDIA's free endpoints (see [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf)). Users should avoid submitting personal or confidential data. Surface this disclosure in proximity to every user-facing Auto Free mention.
 - **Small**: Same concern as Balanced/Free — the model selected depends on credit status, which may route to providers with different policies.
 
 ## Features for the future
