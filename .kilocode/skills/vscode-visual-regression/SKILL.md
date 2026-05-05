@@ -21,15 +21,15 @@ The test runner at `tests/visual-regression.spec.ts` is fully automatic — it f
 
 Stories live in `packages/kilo-vscode/webview-ui/src/stories/`. Existing files and their scope:
 
-| File                        | Components covered                                       |
-| --------------------------- | -------------------------------------------------------- |
-| `agent-manager.stories.tsx` | FileTree, DiffPanel, FullScreenDiffView, WorktreeItem    |
-| `chat.stories.tsx`          | ChatView, QuestionDock                                   |
-| `composite.stories.tsx`     | AssistantMessage with tool cards, permissions, questions |
-| `prompt-input.stories.tsx`  | PromptInput (sidebar prompt bar)                         |
-| `settings.stories.tsx`      | Settings panel, ProvidersTab                             |
-| `history.stories.tsx`       | SessionList                                              |
-| `shared.stories.tsx`        | ModelSelector and shared controls                        |
+| File | Components covered |
+|---|---|
+| `agent-manager.stories.tsx` | FileTree, DiffPanel, FullScreenDiffView, WorktreeItem |
+| `chat.stories.tsx` | ChatView, QuestionDock |
+| `composite.stories.tsx` | AssistantMessage with tool cards, permissions, questions |
+| `prompt-input.stories.tsx` | PromptInput (sidebar prompt bar) |
+| `settings.stories.tsx` | Settings panel, ProvidersTab |
+| `history.stories.tsx` | SessionList |
+| `shared.stories.tsx` | ModelSelector and shared controls |
 
 Add to an existing file if the component fits. Create a new file only for a genuinely new component area.
 
@@ -227,12 +227,12 @@ The title-slug is derived from the meta `title` (lowercased, slashes become hyph
 
 Example mapping:
 
-| Meta title            | Export name          | Snapshot path                                               |
-| --------------------- | -------------------- | ----------------------------------------------------------- |
-| `"Chat"`              | `ChatViewIdle`       | `chat/chat-view-idle-chromium-linux.png`                    |
+| Meta title | Export name | Snapshot path |
+|---|---|---|
+| `"Chat"` | `ChatViewIdle` | `chat/chat-view-idle-chromium-linux.png` |
 | `"Composite/Webview"` | `GlobWithPermission` | `composite-webview/glob-with-permission-chromium-linux.png` |
-| `"Prompt Input"`      | `Default200`         | `prompt-input/default-200-chromium-linux.png`               |
-| `"AgentManager"`      | `WorktreeItemActive` | `agentmanager/worktree-item-active-chromium-linux.png`      |
+| `"Prompt Input"` | `Default200` | `prompt-input/default-200-chromium-linux.png` |
+| `"AgentManager"` | `WorktreeItemActive` | `agentmanager/worktree-item-active-chromium-linux.png` |
 
 # Reference: Playwright config
 

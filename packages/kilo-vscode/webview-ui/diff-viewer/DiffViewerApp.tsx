@@ -14,11 +14,11 @@ import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
 import { LanguageProvider } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
-import type { ReviewComment, WorktreeFileDiff } from "../src/types/messages"
+import type { ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 
 type DiffStyle = "unified" | "split"
 
-const post = (message: Record<string, unknown>) => getVSCodeAPI().postMessage(message as never)
+const post = (message: WebviewMessage) => getVSCodeAPI().postMessage(message)
 
 const DiffViewerContent: Component = () => {
   const vscode = useVSCode()
@@ -26,6 +26,17 @@ const DiffViewerContent: Component = () => {
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  const [markdown, setMarkdown] = createSignal(false)
+  const [reverting, setReverting] = createSignal<Set<string>>(new Set())
+
+  const markReverting = (file: string, active: boolean) => {
+    setReverting((prev) => {
+      const next = new Set(prev)
+      if (active) next.add(file)
+      else next.delete(file)
+      return next
+    })
+  }
 
   const unsubscribe = vscode.onMessage((msg) => {
     if (msg.type === "diffViewer.diffs") {
@@ -35,6 +46,16 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.loading") {
       setLoading(msg.loading)
+      return
+    }
+
+    if (msg.type === "diffViewer.revertFileResult") {
+      markReverting(msg.file, false)
+      return
+    }
+
+    if (msg.type === "diffViewer.markdownRender") {
+      setMarkdown(msg.render)
       return
     }
   })
@@ -64,9 +85,19 @@ const DiffViewerContent: Component = () => {
         setDiffStyle(style)
         post({ type: "diffViewer.setDiffStyle", style })
       }}
+      markdownRender={markdown()}
+      onMarkdownRenderChange={(render) => {
+        setMarkdown(render)
+        post({ type: "diffViewer.setMarkdownRender", render })
+      }}
       onOpenFile={(relativePath) => {
         post({ type: "openFile", filePath: relativePath })
       }}
+      onRevertFile={(file) => {
+        markReverting(file, true)
+        post({ type: "diffViewer.revertFile", file })
+      }}
+      revertingFiles={reverting()}
       onClose={() => {
         post({ type: "diffViewer.close" })
       }}

@@ -2,7 +2,7 @@ import { Server } from "../../server/server"
 import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
-import { Flag } from "../../flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance } from "../../project/instance" // kilocode_change
 import open from "open"
 import { networkInterfaces } from "os"
@@ -35,10 +35,10 @@ export const WebCommand = cmd({
   describe: "start kilo server and open web interface", // kilocode_change
   handler: async (args) => {
     if (!Flag.KILO_SERVER_PASSWORD) {
-      UI.println(UI.Style.TEXT_WARNING_BOLD + "!  " + "KILO_SERVER_PASSWORD is not set; server is unsecured.")
+      UI.println(UI.Style.TEXT_WARNING_BOLD + "!  KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }
     const opts = await resolveNetworkOptions(args)
-    const server = Server.listen(opts)
+    const server = await Server.listen(opts)
     UI.empty()
     UI.println(UI.logo("  "))
     UI.empty()

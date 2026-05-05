@@ -3,7 +3,10 @@ import { $ } from "bun"
 import { Snapshot } from "../../src/snapshot"
 import { Instance } from "../../src/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
+
+Log.init({ print: false })
 
 async function bootstrap() {
   return tmpdir({

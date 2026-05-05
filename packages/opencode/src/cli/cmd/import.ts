@@ -1,18 +1,24 @@
 import type { Argv } from "yargs"
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
-import { Session } from "../../session"
+import { Session } from "@/session/session"
+import { MessageV2 } from "../../session/message-v2"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
-import { Database } from "../../storage/db"
+import { Database } from "@/storage/db"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { Instance } from "../../project/instance"
 import { EOL } from "os"
-import { Filesystem } from "../../util/filesystem"
-import { Log } from "../../util/log"
+import { Filesystem } from "@/util/filesystem"
+import { AppRuntime } from "@/effect/app-runtime"
+import { Schema } from "effect"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 
-const log = Log.create({ service: "import-command" })
+const log = Log.create({ service: "import" }) // kilocode_change
 
-/** Discriminated union returned by the ShareNext API (GET /api/share/:id/data) */
+const decodeMessageInfo = Schema.decodeUnknownSync(MessageV2.Info)
+const decodePart = Schema.decodeUnknownSync(MessageV2.Part)
+
+/** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
 export type ShareData =
   | { type: "session"; data: SDKSession }
   | { type: "message"; data: Message }
@@ -27,6 +33,14 @@ export function parseShareUrl(url: string): string | null {
   return match ? match[1] : null
 }
 // kilocode_change end
+
+export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: string): boolean {
+  try {
+    return new URL(shareUrl).origin === new URL(accountBaseUrl).origin
+  } catch {
+    return false
+  }
+}
 
 /**
  * Transform ShareNext API response (flat array) into the nested structure for local file storage.
@@ -120,7 +134,7 @@ export const ImportCommand = cmd({
     await bootstrap(process.cwd(), async () => {
       let exportData:
         | {
-            info: Session.Info
+            info: SDKSession
             messages: Array<{
               info: Message
               parts: Part[]
@@ -173,7 +187,11 @@ export const ImportCommand = cmd({
         return
       }
 
-      const row = { ...Session.toRow(exportData.info), project_id: Instance.project.id }
+      const info = Schema.decodeUnknownSync(Session.Info)({
+        ...exportData.info,
+        projectID: Instance.project.id,
+      }) as Session.Info
+      const row = Session.toRow(info)
       Database.use((db) =>
         db
           .insert(SessionTable)
@@ -183,28 +201,32 @@ export const ImportCommand = cmd({
       )
 
       for (const msg of exportData.messages) {
+        const msgInfo = decodeMessageInfo(msg.info) as MessageV2.Info
+        const { id, sessionID: _, ...msgData } = msgInfo
         Database.use((db) =>
           db
             .insert(MessageTable)
             .values({
-              id: msg.info.id,
-              session_id: exportData.info.id,
-              time_created: msg.info.time?.created ?? Date.now(),
-              data: msg.info,
+              id,
+              session_id: row.id,
+              time_created: msgInfo.time?.created ?? Date.now(),
+              data: msgData,
             })
             .onConflictDoNothing()
             .run(),
         )
 
         for (const part of msg.parts) {
+          const partInfo = decodePart(part) as MessageV2.Part
+          const { id: partId, sessionID: _s, messageID, ...partData } = partInfo
           Database.use((db) =>
             db
               .insert(PartTable)
               .values({
-                id: part.id,
-                message_id: msg.info.id,
-                session_id: exportData.info.id,
-                data: part,
+                id: partId,
+                message_id: messageID,
+                session_id: row.id,
+                data: partData,
               })
               .onConflictDoNothing()
               .run(),

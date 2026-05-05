@@ -67,4 +67,27 @@ export const dict = {
   "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
   "marketplace.warning.installAnyway": "それでもインストール",
   "marketplace.warning.cancel": "キャンセル",
+  "marketplace.contribute.prompt": "スキル、モード、MCP サーバーが見つかりませんか？",
+  "marketplace.contribute.cta": "GitHub で貢献する",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "実装",
+  "plan.followup.question": "実装する準備はできましたか？",
+  "plan.followup.answer.newSession": "新しいセッションを開始",
+  "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
+  "plan.followup.answer.continue": "ここで続行",
+  "plan.followup.answer.continue.description": "このセッションで計画を実装する",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "スナップショットが遅い",
+  "snapshot.slowRepo.question":
+    "リポジトリのサイズのためか、スナップショットシステムの初期化に時間がかかっています。\n\nこのリポジトリのスナップショットを無効にしますか？",
+  "snapshot.slowRepo.answer.continue": "スナップショットを続行",
+  "snapshot.slowRepo.answer.continue.description":
+    "スナップショットが完了するまで待機します。初回のスナップショットが作成された後は、以降のターンは高速になります。",
+  "snapshot.slowRepo.answer.disable": "このプロジェクトで無効化",
+  "snapshot.slowRepo.answer.disable.description":
+    "このプロジェクトでは Kilo のスナップショットを無効にします。Kilo による変更の取り消し/やり直しはできなくなりますが、git は引き続きすべてを追跡します。",
+
+  "ui.messagePart.openInDiffViewer": "差分ビューアで開く",
 }

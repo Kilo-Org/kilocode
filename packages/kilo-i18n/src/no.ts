@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
+  "marketplace.contribute.prompt": "Mangler du en skill, modus eller MCP-server?",
+  "marketplace.contribute.cta": "Bidra på GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementer",
+  "plan.followup.question": "Klar til å implementere?",
+  "plan.followup.answer.newSession": "Start ny økt",
+  "plan.followup.answer.newSession.description": "Implementer i en ny økt med ren kontekst",
+  "plan.followup.answer.continue": "Fortsett her",
+  "plan.followup.answer.continue.description": "Implementer planen i denne økten",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot er tregt",
+  "snapshot.slowRepo.question":
+    "Det tar lang tid å initialisere snapshot-systemet, sannsynligvis på grunn av størrelsen på depotet.\n\nVil du deaktivere snapshots for dette depotet?",
+  "snapshot.slowRepo.answer.continue": "Fortsett med snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Vent til snapshotet er ferdig. Påfølgende runder er raske når det første snapshotet er bygget.",
+  "snapshot.slowRepo.answer.disable": "Deaktiver for dette prosjektet",
+  "snapshot.slowRepo.answer.disable.description":
+    "Slå av Kilos snapshots for dette prosjektet. Du mister angre/gjør om for Kilo-endringer, men git fortsetter å spore alt.",
+
+  "ui.messagePart.openInDiffViewer": "Åpne i diff-viser",
 }

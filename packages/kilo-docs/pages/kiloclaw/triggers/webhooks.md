@@ -42,7 +42,7 @@ You received a webhook event. Here is the payload:
 **Available variables:**
 
 | Variable | Description |
-| --- | --- |
+|---|---|
 | `{{body}}` | Raw request body |
 | `{{bodyJson}}` | Pretty-printed JSON body |
 | `{{method}}` | HTTP method (e.g., `POST`) |

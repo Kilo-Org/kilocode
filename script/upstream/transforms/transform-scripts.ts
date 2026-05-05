@@ -62,6 +62,13 @@ const SCRIPT_REPLACEMENTS: ScriptReplacement[] = [
     description: "GitHub repo reference",
   },
 
+  // Release artifact names
+  {
+    pattern: /opencode-(linux|darwin|windows)-(arm64|x64)(-baseline)?(\.tar\.gz|\.zip)?/g,
+    replacement: "kilo-$1-$2$3$4",
+    description: "Release artifact name",
+  },
+
   // Environment variables (exclude OPENCODE_API_KEY)
   {
     pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g,

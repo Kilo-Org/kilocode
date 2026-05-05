@@ -25,6 +25,7 @@ graph LR
     cloudagent["Cloud Agent"]
     bot["Kilo Bot"]
     claw["KiloClaw"]
+    gastown["Gas Town"]
     review["Code Review"]
     triage["Auto Triage"]
     appbuilder["App Builder"]
@@ -40,6 +41,8 @@ graph LR
   provider -- Gateway --> gateway
   gateway --> providers
   claw --> gateway
+  gastown -->|Container| cli
+  gastown --> gateway
 
   bot --> cloudagent
   review --> cloudagent
@@ -59,16 +62,16 @@ The CLI can run in several modes:
 
 Key subsystems inside the CLI:
 
-| Subsystem       | Purpose                                                                  |
-| --------------- | ------------------------------------------------------------------------ |
-| Agent Runtime   | Orchestrates AI conversations, tool calls, and multi-step task execution |
-| Tools Service   | Built-in tools for file editing, shell execution, search, and more       |
-| MCP Servers     | Model Context Protocol support for extending with external tools         |
-| LSP Client      | Language Server Protocol integration for code intelligence               |
-| Session Manager | Persistent session state, conversation history, and checkpoints          |
-| Provider Router | Connects to 500+ AI models via direct APIs or Kilo Gateway               |
-| HTTP Server     | REST API + SSE streaming for client communication                        |
-| Config System   | Project and global configuration, modes, and permissions                 |
+| Subsystem | Purpose |
+|---|---|
+| Agent Runtime | Orchestrates AI conversations, tool calls, and multi-step task execution |
+| Tools Service | Built-in tools for file editing, shell execution, search, and more |
+| MCP Servers | Model Context Protocol support for extending with external tools |
+| LSP Client | Language Server Protocol integration for code intelligence |
+| Session Manager | Persistent session state, conversation history, and checkpoints |
+| Provider Router | Connects to 500+ AI models via direct APIs or Kilo Gateway |
+| HTTP Server | REST API + SSE streaming for client communication |
+| Config System | Project and global configuration, modes, and permissions |
 
 ## Client Layer
 
@@ -128,14 +131,36 @@ An automated issue triage service that classifies GitHub issues (bug, feature, q
 
 A service that builds and deploys user applications via the Cloud Agent. Users can generate full applications from prompts, with the App Builder orchestrating the Cloud Agent to scaffold, iterate, and deploy the result.
 
+### Gas Town
+
+A multi-agent orchestration platform that coordinates autonomous AI coding agents working on real Git repositories. Gas Town runs entirely on Cloudflare — a central Durable Object manages all state, while Docker containers on Cloudflare Containers run agent processes via the Kilo CLI.
+
+Key concepts:
+
+- **Town** — A workspace/project that contains one or more rigs (repositories)
+- **Rig** — A Git repository attached to a town where agents perform work
+- **Bead** — A unit of work (issue, task, merge request, or message)
+- **Convoy** — A batch of related beads with dependency tracking, dispatched together
+
+Agents operate in a hierarchy:
+
+| Agent | Role |
+|---|---|
+| Mayor | Persistent conversational coordinator — decomposes tasks and delegates to worker agents |
+| Polecat | Worker agent — clones repo worktrees, writes code, commits, pushes, and creates PRs |
+| Refinery | Code review agent — reviews polecat branches, runs quality gates, merges or requests rework |
+| Triage | Ephemeral agent that resolves ambiguous situations detected by automated patrol checks |
+
+A reconciler loop running every 5 seconds drives all state transitions: dispatching agents, transitioning beads, polling PR status, managing convoys, and recovering from failures.
+
 ### Supporting Services
 
-| Service              | Purpose                                                                              |
-| -------------------- | ------------------------------------------------------------------------------------ |
+| Service | Purpose |
+|---|---|
 | Webhook Agent Ingest | Named webhook endpoints that capture HTTP requests and queue delivery to Cloud Agent |
-| AI Attribution       | Tracks line-level AI-generated code attribution when users accept or reject edits    |
-| Session Ingest       | Ingests and stores CLI session data for analytics                                    |
-| Observability        | Telemetry pipelines for monitoring cloud services                                    |
+| AI Attribution | Tracks line-level AI-generated code attribution when users accept or reject edits |
+| Session Ingest | Ingests and stores CLI session data for analytics |
+| Observability | Telemetry pipelines for monitoring cloud services |
 
 ## Key Concepts
 
@@ -185,21 +210,34 @@ const client = new KiloClient({ baseUrl: "http://localhost:3000" })
 const session = await client.session.create({ ... })
 ```
 
-### Namespace Module Pattern
+### Module Export Pattern
 
-The CLI uses a namespace module pattern for organizing related functionality:
+The CLI uses flat ESM exports inside each module, then re-exports the module as a namespace from an index file when callers need grouped access. Avoid adding new `export namespace` declarations; top-level exports are easier to tree-shake and work better with Node's type-stripping runtime.
 
 ```typescript
-export namespace Session {
-  export const create = fn(CreateSchema, async (input) => {
-    // ...
-  })
+// packages/opencode/src/session/session.ts
+export const create = fn(CreateSchema, async (input) => {
+  // ...
+})
 
-  export const list = fn(ListSchema, async (input) => {
-    // ...
-  })
-}
+export const list = fn(ListSchema, async (input) => {
+  // ...
+})
+
+// packages/opencode/src/session/index.ts
+export * as Session from "./session"
 ```
+
+Prefer importing the specific export when possible. Use the namespace re-export (`Session.create`, `Session.list`) when a caller benefits from grouped module access or when preserving the existing public shape.
+
+### CLI Server API
+
+The CLI server is Hono-based and publishes an OpenAPI-compatible HTTP + SSE API consumed by `@kilocode/sdk`. Some route groups are being migrated behind the experimental Effect `HttpApi` bridge while preserving the generated SDK shape.
+
+- Keep the SDK output stable when moving routes between Hono and Effect `HttpApi`.
+- Use `KILO_EXPERIMENTAL_HTTPAPI` only for migration testing; public clients should not depend on the bridge detail.
+- Regenerate `packages/sdk/js/` after server endpoint changes.
+- Keep request handling observable with route spans and stable attributes where possible.
 
 ### Tool Implementation
 
@@ -230,10 +268,10 @@ The project uses:
 
 ## Repositories
 
-| Repository                                                | Contents                                                                                                             |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                   |
-| Cloud (private)                                           | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, code review, auto triage, billing, and supporting Cloudflare Workers |
+| Repository | Contents |
+|---|---|
+| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components |
+| Cloud (private) | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, Gas Town, code review, auto triage, billing, and supporting Cloudflare Workers |
 
 ## Further Reading
 

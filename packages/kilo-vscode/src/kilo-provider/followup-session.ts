@@ -11,10 +11,7 @@ export interface Followup {
 export function recordFollowup(input: { answers: string[][]; dir: string; now: number }): Followup | undefined {
   const answer = input.answers[0]?.[0]?.trim()
   if (answer !== LABEL) return
-  return {
-    dir: input.dir,
-    time: input.now,
-  }
+  return { dir: input.dir, time: input.now }
 }
 
 export function matchFollowup(input: { pending: Followup | null; dir: string; now: number }): boolean {

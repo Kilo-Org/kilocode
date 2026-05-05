@@ -12,7 +12,7 @@ All triggers are managed from the **Settings** page in the KiloClaw section of t
 ## Trigger Types
 
 | Type | Description |
-| --- | --- |
+|---|---|
 | [**Webhooks**](/docs/kiloclaw/triggers/webhooks) | Receive HTTP requests from external services (GitHub, Stripe, monitoring tools, etc.) and deliver them as chat messages to your agent |
 | [**Scheduled**](/docs/kiloclaw/triggers/scheduled) | Run tasks on a recurring schedule (e.g. every 15 minutes, daily at 9 AM, weekdays only) |
 

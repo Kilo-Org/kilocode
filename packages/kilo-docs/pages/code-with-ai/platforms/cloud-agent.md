@@ -102,6 +102,33 @@ Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#ski
 Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
 {% /callout %}
 
+## Remote Connections
+
+Remote Connections let you access and control local CLI sessions from the Cloud Agents web interface. Your computer handles the compute; the cloud gives you a window into it from any device.
+
+### How It Works
+
+When remote mode is enabled in the CLI, your active local sessions appear in the Cloud Agents dashboard alongside cloud sessions. The connection is two-way:
+
+- **Messages and responses** sync in real-time
+- **Agent questions** appear in both places — answer wherever you are
+- **Permission requests** route to your active connection
+- **Full editing capabilities** work remotely
+
+### Enabling Remote Mode
+
+Remote mode must be enabled from the CLI. See [CLI Remote Connections](/docs/code-with-ai/platforms/cli#remote-connections) for setup instructions.
+
+### Requirements
+
+- Same Kilo account on both CLI and Cloud Agent
+- Active internet connection on the local machine
+- CLI must remain running
+
+{% callout type="warning" title="Security Warning" %}
+Anyone with access to your Kilo account can send messages to your computer when remote mode is enabled.
+{% /callout %}
+
 ## Perfect For
 
 Cloud Agents are great for:

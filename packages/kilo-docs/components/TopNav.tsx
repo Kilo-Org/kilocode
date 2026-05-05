@@ -215,6 +215,15 @@ interface TopNavProps {
   showMobileMenuButton?: boolean
 }
 
+function preview(url: string) {
+  if (typeof window === "undefined" || !URL.canParse(url)) return url
+
+  const value = new URL(url)
+  if (value.hostname !== "kilo.ai" || !value.pathname.startsWith("/docs")) return url
+
+  return `${window.location.origin}${value.pathname}${value.search}${value.hash}`
+}
+
 export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobileMenuButton = true }: TopNavProps) {
   const router = useRouter()
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
@@ -250,6 +259,12 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
       indexName: process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "docsearch",
       apiKey: process.env.NEXT_PUBLIC_ALGOLIA_API_KEY || "24b09689d5b4223813d9b8e48563c8f6",
       askAi: process.env.NEXT_PUBLIC_ALGOLIA_ASSISTANT_ID || "askAIDemo",
+      transformItems(items) {
+        return items.map((item) => ({
+          ...item,
+          url: preview(item.url),
+        }))
+      },
     })
   }, [])
 
@@ -337,8 +352,8 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
       <div className="announcement-banner">
         <p>
           The all-new Kilo Code extension is here, rebuilt on the{" "}
-          <Link href="/code-with-ai/platforms/vscode/whats-new">Kilo CLI</Link> for speed, flexibility, and continued access to 500+ models via the Kilo Gateway
-          →
+          <Link href="/code-with-ai/platforms/vscode/whats-new">Kilo CLI</Link> for speed, flexibility, and continued
+          access to 500+ models via the Kilo Gateway →
         </p>
       </div>
 

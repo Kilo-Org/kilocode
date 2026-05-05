@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere sessioner kører og vil blive afbrudt",
   "marketplace.warning.installAnyway": "Installer alligevel",
   "marketplace.warning.cancel": "Annuller",
+  "marketplace.contribute.prompt": "Mangler du en skill, tilstand eller MCP-server?",
+  "marketplace.contribute.cta": "Bidrag på GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementér",
+  "plan.followup.question": "Klar til at implementere?",
+  "plan.followup.answer.newSession": "Start ny session",
+  "plan.followup.answer.newSession.description": "Implementér i en ny session med ren kontekst",
+  "plan.followup.answer.continue": "Fortsæt her",
+  "plan.followup.answer.continue.description": "Implementér planen i denne session",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot er langsomt",
+  "snapshot.slowRepo.question":
+    "Det tager lang tid at initialisere snapshot-systemet, sandsynligvis på grund af størrelsen på repositoryet.\n\nVil du deaktivere snapshots for dette repository?",
+  "snapshot.slowRepo.answer.continue": "Fortsæt med snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Vent, indtil snapshot'et er færdigt. Efterfølgende ture er hurtige, når det indledende snapshot er bygget.",
+  "snapshot.slowRepo.answer.disable": "Deaktivér for dette projekt",
+  "snapshot.slowRepo.answer.disable.description":
+    "Slå Kilos snapshots fra for dette projekt. Du mister fortryd/gentag for Kilo-ændringer, men git sporer stadig alt.",
+
+  "ui.messagePart.openInDiffViewer": "Åbn i diff-viser",
 }

@@ -1,4 +1,4 @@
-import { sampledChecksum } from "@opencode-ai/util/encode"
+import { sampledChecksum } from "@opencode-ai/core/util/encode"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
@@ -142,6 +142,24 @@ export function Diff<T>(props: DiffProps<T>) {
     host.removeAttribute("data-color-scheme")
   }
 
+  // Patch a bug in @pierre/diffs where `grid-template-columns: 100% auto` is set
+  // for `line-info-basic` separators under `@media (pointer: fine)`, causing the
+  // expand button to consume 100% of the gutter width and overlap the separator
+  // content text. We inject into `@layer unsafe` which overrides `@layer base`.
+  let separatorPatchSheet: CSSStyleSheet | null = null
+  const patchSeparatorLayout = () => {
+    const root = getRoot()
+    if (!root) return
+    if (!separatorPatchSheet) {
+      separatorPatchSheet = new CSSStyleSheet()
+      separatorPatchSheet.replaceSync(
+        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } }`,
+      )
+    }
+    if (!root.adoptedStyleSheets.includes(separatorPatchSheet))
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, separatorPatchSheet]
+  }
+
   const lineIndex = (split: boolean, element: HTMLElement) => {
     const raw = element.dataset.lineIndex
     if (!raw) return
@@ -216,6 +234,8 @@ export function Diff<T>(props: DiffProps<T>) {
       observer = undefined
       requestAnimationFrame(() => {
         if (token !== renderToken) return
+        // Clear the height pin now that Pierre has rendered new content.
+        container.style.minHeight = ""
         setSelectedLines(lastSelection)
         local.onRendered?.()
       })
@@ -255,6 +275,7 @@ export function Diff<T>(props: DiffProps<T>) {
 
     const root = getRoot()
     if (typeof MutationObserver === "undefined") {
+      container.style.minHeight = ""
       if (!root || !isReady(root)) return
       setSelectedLines(lastSelection)
       local.onRendered?.()
@@ -553,6 +574,13 @@ export function Diff<T>(props: DiffProps<T>) {
       return sampledChecksum(contents)
     }
 
+    // Preserve container height during re-render to prevent scroll jumps.
+    // When Pierre tears down the DOM (innerHTML = ""), the container collapses
+    // to 0 height, causing layout shifts that reset the scroll position of
+    // any ancestor scroller. Pinning min-height prevents the collapse.
+    const height = container.offsetHeight
+    if (height > 0) container.style.minHeight = `${height}px`
+
     instance?.cleanUp()
     instance = virtualizer
       ? new VirtualizedFileDiff<T>(opts, virtualizer, virtualMetrics, workerPool)
@@ -576,6 +604,7 @@ export function Diff<T>(props: DiffProps<T>) {
     })
 
     applyScheme()
+    patchSeparatorLayout()
 
     setRendered((value) => value + 1)
     notifyRendered()

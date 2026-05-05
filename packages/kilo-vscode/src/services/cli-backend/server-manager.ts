@@ -67,9 +67,19 @@ export class ServerManager {
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const claudeCompat = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+      // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
+      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
+        cwd: spawnCwd,
         env: {
           ...process.env,
+          // Force mimalloc (the allocator Bun ships with) to return freed pages
+          // to the OS immediately instead of retaining them in its arenas.
+          // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
+          // RSS per call on Windows, causing the Agent Manager (which polls git
+          // once per second per worktree) to reach multi-GB RSS in minutes.
+          // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
+          MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
@@ -81,6 +91,7 @@ export class ServerManager {
           KILO_MACHINE_ID: vscode.env.machineId,
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
+          KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
         },
         stdio: ["ignore", "pipe", "pipe"],
@@ -156,8 +167,7 @@ export class ServerManager {
 
   /**
    * Kill a process and its entire process group.
-   * On Unix, we send the signal to -pid (negative) to reach the whole group,
-   * mirroring the desktop app's ProcessGroup::leader() + start_kill() pattern.
+   * On Unix, we send the signal to -pid (negative) to reach the whole group.
    * On Windows, process.kill() on the child handle is sufficient.
    */
   private static killProcess(proc: ChildProcess, signal: NodeJS.Signals = "SIGTERM"): void {
@@ -186,8 +196,7 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")
 
-    // SIGKILL fallback after 5s: mirrors the desktop app going straight to
-    // start_kill(). Ensures the process tree dies even if SIGTERM is ignored
+    // SIGKILL fallback after 5s. Ensures the process tree dies even if SIGTERM is ignored
     // or Instance.disposeAll() hangs past the serve.ts shutdown timeout.
     const timer = setTimeout(() => {
       if (proc.exitCode === null) {

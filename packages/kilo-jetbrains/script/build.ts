@@ -4,8 +4,9 @@
  * Build the Kilo JetBrains plugin.
  *
  * Usage:
- *   bun script/build.ts              # Local build — only current platform binary required
- *   bun script/build.ts --production # Production build — all 6 platform binaries required
+ *   bun script/build.ts               # Local build — only current platform binary required
+ *   bun script/build.ts --production  # Production build — all 6 platform binaries required
+ *   bun script/build.ts --prepare-cli # Only prepare local CLI resources for Gradle
  *
  * Steps:
  * 1. Builds CLI binaries (or uses prebuilt ones from dist/).
@@ -21,6 +22,7 @@ import { join, relative } from "node:path"
 import { existsSync, mkdirSync, chmodSync, cpSync, rmSync } from "node:fs"
 
 const production = process.argv.includes("--production")
+const cliOnly = process.argv.includes("--prepare-cli")
 
 const root = join(import.meta.dir, "..")
 const packages = join(root, "..")
@@ -123,7 +125,9 @@ async function buildPlugin() {
 
 try {
   await prepareCli()
-  await buildPlugin()
+  if (!cliOnly) {
+    await buildPlugin()
+  }
 } catch (err) {
   console.error(`[jetbrains-build] ERROR: ${err instanceof Error ? err.message : String(err)}`)
   process.exit(1)

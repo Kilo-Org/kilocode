@@ -6,6 +6,7 @@
     "jsx": "preserve",
     "jsxImportSource": "@opentui/solid",
     "skipLibCheck": true,
+    "lib": ["es2023", "dom", "dom.iterable"],
     "types": ["node"]
   },
   "include": ["src/**/*"],

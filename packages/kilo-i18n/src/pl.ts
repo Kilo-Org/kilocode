@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "marketplace.warning.installAnyway": "Zainstaluj mimo to",
   "marketplace.warning.cancel": "Anuluj",
+  "marketplace.contribute.prompt": "Brakuje skilla, trybu lub serwera MCP?",
+  "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Wdróż",
+  "plan.followup.question": "Gotowy do wdrożenia?",
+  "plan.followup.answer.newSession": "Rozpocznij nową sesję",
+  "plan.followup.answer.newSession.description": "Wdróż w nowej sesji z czystym kontekstem",
+  "plan.followup.answer.continue": "Kontynuuj tutaj",
+  "plan.followup.answer.continue.description": "Wdróż plan w tej sesji",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot jest wolny",
+  "snapshot.slowRepo.question":
+    "Inicjalizacja systemu snapshotów trwa długo, prawdopodobnie ze względu na rozmiar repozytorium.\n\nCzy chcesz wyłączyć snapshoty dla tego repozytorium?",
+  "snapshot.slowRepo.answer.continue": "Kontynuuj ze snapshotami",
+  "snapshot.slowRepo.answer.continue.description":
+    "Poczekaj, aż snapshot się zakończy. Kolejne tury są szybkie, gdy początkowy snapshot jest już zbudowany.",
+  "snapshot.slowRepo.answer.disable": "Wyłącz dla tego projektu",
+  "snapshot.slowRepo.answer.disable.description":
+    "Wyłącz snapshoty Kilo dla tego projektu. Stracisz cofanie/przywracanie zmian Kilo, ale git nadal śledzi wszystko.",
+
+  "ui.messagePart.openInDiffViewer": "Otwórz w podglądzie różnic",
 }

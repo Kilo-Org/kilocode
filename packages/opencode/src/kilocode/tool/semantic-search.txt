@@ -1,0 +1,12 @@
+- Find files most relevant to the search query using semantic search.
+- Searches based on meaning rather than exact text matches.
+- By default searches entire workspace, with capability to filter by path.
+
+Usage Notes:
+- Use this tool any time you start exploring a new area of the codebase. This tool will help discover all areas of the codebase related to the query, even if they do not match an exact symbol name.
+- Queries MUST be in English (translate if needed).
+- Prefer the Grep tool if you know the exact symbol name to search for and do not need semantic context.
+
+Example Queries:
+- "User login and password hashing"
+- "database connection pooling"

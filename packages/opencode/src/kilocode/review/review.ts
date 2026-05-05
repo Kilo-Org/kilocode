@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { Instance } from "@/project/instance"
 import type { DiffFile, DiffHunk, DiffResult } from "./types"
 
@@ -351,27 +351,51 @@ export namespace Review {
   }
 
   /**
-   * Get uncommitted changes (staged + unstaged)
+   * Get uncommitted changes (staged + unstaged + untracked)
    * Implements SCOPE-01
    *
-   * Uses: git diff HEAD to capture both staged and unstaged changes
+   * Uses: git diff HEAD for tracked changes, plus git ls-files for untracked files
    */
   export async function getUncommittedChanges(): Promise<DiffResult> {
     log.info("getting uncommitted changes")
 
-    // git diff HEAD shows all uncommitted changes (staged + unstaged)
+    // git diff HEAD shows all uncommitted changes (staged + unstaged) for tracked files
     // Using -c core.quotepath=false to handle unicode filenames
     const result = await $`git -c core.quotepath=false diff HEAD`.cwd(Instance.directory).quiet().nothrow()
+
+    let raw = result.exitCode === 0 ? result.stdout.toString() : ""
 
     if (result.exitCode !== 0) {
       log.warn("git diff failed", {
         exitCode: result.exitCode,
         stderr: result.stderr.toString(),
       })
-      return { files: [], raw: "" }
     }
 
-    const raw = result.stdout.toString()
+    // Also include untracked files — git diff HEAD misses brand-new files
+    const untracked = await $`git ls-files --others --exclude-standard -z`.cwd(Instance.directory).quiet().nothrow()
+    if (untracked.exitCode === 0) {
+      const paths = untracked.stdout.toString().split("\0").filter(Boolean)
+      // Process in batches to avoid spawning hundreds of git processes
+      const batch = 20
+      for (let i = 0; i < paths.length; i += batch) {
+        const chunk = paths.slice(i, i + batch)
+        const diffs = await Promise.all(
+          chunk.map((p) =>
+            // --no-index exits 1 when files differ, which is expected
+            $`git -c core.quotepath=false diff --no-index -- /dev/null ${p}`
+              .cwd(Instance.directory)
+              .quiet()
+              .nothrow()
+              .then((fd) => fd.stdout.toString()),
+          ),
+        )
+        for (const out of diffs) {
+          if (out) raw += out
+        }
+      }
+    }
+
     const parsed = parseDiff(raw)
 
     log.info("parsed uncommitted changes", {
@@ -396,12 +420,25 @@ export namespace Review {
 
     log.info("getting branch changes", { baseBranch: base })
 
-    // git diff base...HEAD shows all changes on current branch since diverging
-    // Using triple-dot to get merge-base comparison
-    const result = await $`git -c core.quotepath=false diff ${base}...HEAD`.cwd(Instance.directory).quiet().nothrow()
+    // Compute merge-base explicitly, then diff working tree against it.
+    // This matches WorktreeDiff (the diff viewer) and includes uncommitted
+    // changes + untracked files — unlike `git diff base...HEAD` which only
+    // shows committed differences.
+    const ancestor = await $`git merge-base HEAD ${base}`.cwd(Instance.directory).quiet().nothrow()
+    if (ancestor.exitCode !== 0) {
+      log.warn("git merge-base failed", {
+        exitCode: ancestor.exitCode,
+        stderr: ancestor.stderr.toString(),
+        baseBranch: base,
+      })
+      return { files: [], raw: "" }
+    }
+    const hash = ancestor.stdout.toString().trim()
+
+    // Two-dot diff against working tree: includes staged, unstaged, and committed changes since merge-base
+    const result = await $`git -c core.quotepath=false diff ${hash}`.cwd(Instance.directory).quiet().nothrow()
 
     if (result.exitCode !== 0) {
-      // May fail if on base branch or no common ancestor
       log.warn("git diff failed", {
         exitCode: result.exitCode,
         stderr: result.stderr.toString(),
@@ -412,6 +449,23 @@ export namespace Review {
 
     const raw = result.stdout.toString()
     const parsed = parseDiff(raw)
+
+    // Include untracked files (same as WorktreeDiff) so new files show up in the review
+    const untracked = await $`git ls-files --others --exclude-standard`.cwd(Instance.directory).quiet().nothrow()
+    if (untracked.exitCode === 0) {
+      const paths = untracked.stdout.toString().trim()
+      if (paths) {
+        const existing = new Set(parsed.files.map((f) => f.path))
+        for (const file of paths.split("\n")) {
+          if (!file || existing.has(file)) continue
+          parsed.files.push({
+            path: file,
+            status: "added",
+            hunks: [],
+          })
+        }
+      }
+    }
 
     log.info("parsed branch changes", {
       baseBranch: base,

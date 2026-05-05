@@ -1,5 +1,5 @@
 import path from "path"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
 export namespace ConfigProtection {
@@ -53,21 +53,55 @@ export namespace ConfigProtection {
     return CONFIG_ROOT_FILES.has(normalized)
   }
 
+  function keys(p: string): string[] {
+    if (process.platform !== "win32") return [path.resolve(p)]
+
+    const expand = (value: string) => {
+      const full = path.posix.normalize(value.replaceAll("\\", "/")).toLowerCase()
+      const msys = full.replace(/^\/([a-z])(?=\/)/, "$1:")
+      return [full, full.replace(/^[a-z]:/, ""), msys, msys.replace(/^[a-z]:/, "")]
+    }
+
+    return Array.from(new Set([...expand(p), ...expand(path.resolve(p))]))
+  }
+
+  function configs(): string[] {
+    return Array.from(
+      new Set([Global.Path.config, process.env.XDG_CONFIG_HOME ? path.join(process.env.XDG_CONFIG_HOME, "kilo") : ""]),
+    ).filter(Boolean)
+  }
+
+  function fallback(p: string): boolean {
+    if (process.platform !== "win32") return false
+    return keys(p).some(
+      (key) =>
+        key.endsWith("/config/kilo") ||
+        key.includes("/config/kilo/") ||
+        key.endsWith("/.config/kilo") ||
+        key.includes("/.config/kilo/"),
+    )
+  }
+
   /** Check if `child` is equal to or nested inside `parent`. */
   function within(child: string, parent: string): boolean {
-    return child === parent || child.startsWith(parent + path.sep)
+    const sep = process.platform === "win32" ? "/" : path.sep
+    return keys(child).some((child) =>
+      keys(parent).some((parent) => child === parent || child.startsWith(parent + sep)),
+    )
   }
 
   /** Check if an absolute path is inside a known CLI config directory. */
   export function isAbsolute(filepath: string): boolean {
-    const resolved = path.resolve(filepath)
+    if (fallback(filepath)) return true
 
     // ~/.config/kilo/ (XDG config)
-    if (within(resolved, path.resolve(Global.Path.config))) return true
+    for (const dir of configs()) {
+      if (within(filepath, dir)) return true
+    }
 
     // ~/.kilo/ and ~/.kilocode/ (legacy global dirs)
     for (const dir of KilocodePaths.globalDirs()) {
-      if (within(resolved, path.resolve(dir))) return true
+      if (within(filepath, dir)) return true
     }
 
     return false
@@ -80,17 +114,22 @@ export namespace ConfigProtection {
 
   /**
    * Determine if a permission request targets config files.
-   * Checks `edit` and `external_directory` permissions — read access is not restricted.
+   * Gates `edit` permissions and bash-originated `external_directory` requests.
+   * File-tool reads are not restricted.
    */
   export function isRequest(request: {
     permission: string
-    patterns: string[]
+    patterns: readonly string[]
     metadata?: Record<string, any>
   }): boolean {
-    // external_directory patterns are absolute globs like "/Users/alex/.config/kilo/*"
     if (request.permission === "external_directory") {
+      // File tools include metadata.filepath. They may read global config
+      // without prompting, but edits are still protected separately via `edit`.
+      if (request.metadata?.filepath) return false
+      // Bash read-only file commands may read global config when explicitly allowed.
+      if (request.metadata?.access === "read") return false
       for (const pattern of request.patterns) {
-        const dir = pattern.replace(/\/\*$/, "")
+        const dir = pattern.replace(/[\\/]\*$/, "")
         if (isAbsolute(dir)) return true
       }
       return false

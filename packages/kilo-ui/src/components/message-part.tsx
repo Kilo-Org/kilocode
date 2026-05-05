@@ -5,7 +5,6 @@ import {
   createSignal,
   For,
   Match,
-  on,
   onCleanup,
   Show,
   Switch,
@@ -43,8 +42,8 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
-import { checksum } from "@opencode-ai/util/encode"
+import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/core/util/path"
+import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
@@ -85,6 +84,17 @@ interface Diagnostic {
   severity?: number
 }
 
+type TodoView = {
+  mode?: "full" | "compact"
+  todos?: TodoItem[]
+  hiddenBefore?: number
+  hiddenAfter?: number
+}
+
+type TodoItem = Todo & {
+  changed?: boolean
+}
+
 function getDiagnostics(
   diagnosticsByFile: Record<string, Diagnostic[]> | undefined,
   filePath: string | undefined,
@@ -120,6 +130,7 @@ export interface MessagePartProps {
   message: MessageType
   hideDetails?: boolean
   defaultOpen?: boolean
+  reasoningAutoCollapse?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
   turnDiffSummary?: () => JSX.Element
@@ -382,6 +393,7 @@ export function AssistantParts(props: {
   turnDiffSummary?: () => JSX.Element
   working?: boolean
   showReasoningSummaries?: boolean
+  reasoningAutoCollapse?: boolean
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
   animate?: boolean
@@ -645,6 +657,7 @@ export function AssistantParts(props: {
                               props.shellToolDefaultOpen,
                               props.editToolDefaultOpen,
                             )}
+                            reasoningAutoCollapse={props.reasoningAutoCollapse}
                             hideDetails={false}
                             animate={props.animate}
                             working={props.working}
@@ -706,6 +719,7 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   animate?: boolean
   queued?: boolean
+  onFork?: () => void
   onRevert?: () => void
 }) {
   const data = useData()
@@ -847,8 +861,23 @@ export function UserMessageDisplay(props: {
                   </Show>
                 </span>
               </Show>
+              <Show when={props.onFork}>
+                <Tooltip value={i18n.t("ui.message.forkMessage")} placement="right" gutter={4}>
+                  <IconButton
+                    icon="fork"
+                    size="normal"
+                    variant="ghost"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      props.onFork?.()
+                    }}
+                    aria-label={i18n.t("ui.message.forkMessage")}
+                  />
+                </Tooltip>
+              </Show>
               <Show when={props.onRevert}>
-                <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
+                <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
                   <IconButton
                     icon="arrow-left"
                     size="normal"
@@ -858,7 +887,7 @@ export function UserMessageDisplay(props: {
                       event.stopPropagation()
                       props.onRevert?.()
                     }}
-                    aria-label={i18n.t("ui.message.revert")}
+                    aria-label={i18n.t("ui.message.revertMessage")}
                   />
                 </Tooltip>
               </Show>
@@ -936,6 +965,7 @@ export function Part(props: MessagePartProps) {
         message={props.message}
         hideDetails={props.hideDetails}
         defaultOpen={props.defaultOpen}
+        reasoningAutoCollapse={props.reasoningAutoCollapse}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
         turnDiffSummary={props.turnDiffSummary}
@@ -949,6 +979,7 @@ export function Part(props: MessagePartProps) {
 export interface ToolProps {
   input: Record<string, any>
   metadata: Record<string, any>
+  partMetadata?: Record<string, any>
   tool: string
   partID?: string
   callID?: string
@@ -1004,7 +1035,7 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
-                    <span data-slot="apply-patch-directory">{`\u202A${getDirectory(props.path)}\u202C`}</span>
+                    <span data-slot="apply-patch-directory">{`\u2066${getDirectory(props.path)}\u2069`}</span>
                   </Show>
                   <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
                 </div>
@@ -1025,24 +1056,84 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
 // GenericTool (upstream) does not render output; this override does.
 // When hideDetails is true, render as a row (no content), otherwise as a panel with markdown output.
 function McpTool(props: ToolProps) {
+  const i18n = useI18n()
+  const labelKeys = ["description", "query", "url", "filePath", "path", "pattern", "name"]
+  const skipKeys = new Set(labelKeys)
+
+  const subtitle = () =>
+    labelKeys
+      .map((key) => props.input?.[key])
+      .find((value): value is string => typeof value === "string" && value.length > 0)
+
+  const inputArgs = () => {
+    if (!props.input) return []
+    return Object.entries(props.input)
+      .filter(([key]) => !skipKeys.has(key))
+      .flatMap(([key, value]) => {
+        if (typeof value === "string") return [`${key}=${value}`]
+        if (typeof value === "number") return [`${key}=${value}`]
+        if (typeof value === "boolean") return [`${key}=${value}`]
+        return []
+      })
+      .slice(0, 3)
+  }
+
+  const formatted = createMemo(() => {
+    if (!props.input || Object.keys(props.input).length === 0) return ""
+    return "```json\n" + JSON.stringify(props.input, null, 2) + "\n```"
+  })
+
+  const formattedOutput = createMemo(() => {
+    if (!props.output) return undefined
+    try {
+      const parsed = JSON.parse(props.output)
+      return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```"
+    } catch {
+      return props.output
+    }
+  })
+
   return (
     <Show
       when={!props.hideDetails}
-      fallback={<BasicTool hideDetails icon="mcp" status={props.status} trigger={{ title: props.tool }} />}
+      fallback={
+        <BasicTool
+          hideDetails
+          icon="mcp"
+          status={props.status}
+          trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
+        />
+      }
     >
       <BasicTool
         icon="mcp"
         status={props.status}
-        trigger={{ title: props.tool }}
+        trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
         locked={props.locked}
       >
-        <Show when={props.output}>
-          {(output) => (
-            <div data-component="tool-output" data-scrollable>
-              <Markdown text={output()} />
-            </div>
+        <Show when={formatted()}>
+          {(text) => (
+            <>
+              <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.input")}</div>
+              <div data-component="tool-output" data-scrollable>
+                <Markdown text={text()} />
+              </div>
+            </>
+          )}
+        </Show>
+        <Show when={formattedOutput()}>
+          {(text) => (
+            <>
+              <Show when={formatted()}>
+                <div data-slot="mcp-tool-divider" />
+              </Show>
+              <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.output")}</div>
+              <div data-component="tool-output" data-scrollable>
+                <Markdown text={text()} />
+              </div>
+            </>
           )}
         </Show>
       </BasicTool>
@@ -1060,13 +1151,14 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   const input = () => part.state?.input ?? emptyInput
   // @ts-expect-error
-  const partMetadata = () => part.state?.metadata ?? emptyMetadata
+  const meta = () => part.state?.metadata ?? emptyMetadata
+  const top = () => part.metadata ?? emptyMetadata
 
   const render = createMemo(() => ToolRegistry.render(part.tool) ?? McpTool)
 
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper" data-tool={part.tool}>
+      <div data-component="tool-part-wrapper" data-part-type="tool" data-tool={part.tool}>
         <Switch>
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
@@ -1122,7 +1214,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               tool={part.tool}
               partID={part.id}
               callID={part.callID}
-              metadata={partMetadata()}
+              metadata={meta()}
+              partMetadata={top()}
               // @ts-expect-error
               output={part.state.output}
               status={part.state.status}
@@ -1155,6 +1248,7 @@ PART_MAPPING["compaction"] = function CompactionPartDisplay() {
 
 PART_MAPPING["text"] = function TextPartDisplay(props) {
   const data = useData()
+  const i18n = useI18n()
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
@@ -1165,6 +1259,38 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (props.showAssistantCopyPartID !== part().id) return
     return props.turnDiffSummary
   })
+
+  // Assistant message is still in-flight when `time.completed` hasn't been set.
+  // Used as a render guard for synthetic status parts so stale ones don't
+  // linger in the scrollback after a hard-kill of the host process.
+  const streaming = createMemo(
+    () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
+  )
+
+  // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
+  // guard) are transient status indicators. Hide them once the owning message
+  // stops streaming so a hard-killed turn doesn't leave a stuck spinner line
+  // in the chat history on the next reload.
+  const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
+
+  const showCopy = createMemo(() => {
+    // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
+    // guard) are transient status indicators, not assistant output — they
+    // must never carry the copy button.
+    if (part().synthetic) return false
+    if (props.message.role !== "assistant") return false
+    if (props.showAssistantCopyPartID === null) return false
+    return props.showAssistantCopyPartID === part().id
+  })
+  const [copied, setCopied] = createSignal(false)
+
+  const handleCopy = async () => {
+    const content = displayText()
+    if (!content) return
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const handleMarkdownClick = (e: MouseEvent) => {
     if (!data.openFile) return
@@ -1195,11 +1321,29 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   return (
-    <Show when={throttledText()}>
+    <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
         </div>
+        <Show when={showCopy()}>
+          <div data-slot="assistant-copy-wrapper">
+            <Tooltip
+              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              placement="right"
+              gutter={4}
+            >
+              <IconButton
+                icon={copied() ? "check" : "copy"}
+                size="normal"
+                variant="ghost"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleCopy}
+                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              />
+            </Tooltip>
+          </div>
+        </Show>
         <Show when={summary()}>
           {(render) => (
             <GrowBox animate={!!props.animate} fade gap={4} class="w-full min-w-0">
@@ -1212,16 +1356,28 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   )
 }
 
-// Track part IDs that have been rendered while streaming.
-// Persists across component instances so that when reasoning-end replaces the
-// store object (causing <For> to recreate the component) the new instance
-// knows the part was just streaming and can animate the collapse.
+// Expanded mode tracks explicit user collapses so reactive or virtualized
+// remounts do not reopen a block the user closed.
+const userCollapsed = new Set<string>()
+// Auto-collapse mode preserves the original flow: streaming blocks open,
+// completed blocks collapse once, and manual opens survive later remounts.
 const streamed = new Set<string>()
-// Tracks parts that have already been auto-collapsed once, so component
-// recreation (from store updates while other parts stream) won't collapse again.
 const autocollapsed = new Set<string>()
+const userOpened = new Set<string>()
+const MAX_REASONING_STATE = 1000
 
-// Overrides upstream flat markdown render with streaming reasoning block + auto-collapse.
+function rememberReasoningState(set: Set<string>, id: string) {
+  // Remember the most recent manual display choices without growing forever.
+  // If an old id is evicted, only its open/collapsed override is forgotten;
+  // the reasoning block still renders normally if it appears again.
+  if (set.has(id)) set.delete(id)
+  set.add(id)
+  if (set.size <= MAX_REASONING_STATE) return
+  const first = set.values().next().value
+  if (first !== undefined) set.delete(first)
+}
+
+// Overrides upstream flat markdown render with streaming reasoning block.
 // Also filters encrypted reasoning data from OpenRouter that appears as [REDACTED].
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProps) {
   const i18n = useI18n()
@@ -1242,22 +1398,33 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   }
 
   const id = (props.part as any).id as string
-
-  // Check before adding — order matters
   const was = streamed.has(id)
-  if (!done()) streamed.add(id)
+  if (!done()) rememberReasoningState(streamed, id)
 
-  // Streaming → open. Just finished (was streaming, now done) → open briefly
-  // then collapse. Historical → collapsed from the start.
-  const [open, setOpen] = createSignal(!done() || was)
+  // Auto-collapse mode: streaming -> open, just-finished -> open briefly then
+  // collapse, historical -> collapsed. Expanded mode: open unless the user
+  // explicitly collapsed this reasoning part.
+  const initial = props.reasoningAutoCollapse ? !done() || was || userOpened.has(id) : !userCollapsed.has(id)
+  const [open, setOpen] = createSignal(initial)
 
-  // Auto-collapse once when reasoning finishes (streaming → done transition).
-  // Collapses immediately so the grid transition runs in sync with the
-  // streaming-height removal. Module-level Set prevents re-triggering on
-  // component recreation or when the user manually reopens.
+  const track = (value: boolean) => {
+    if (props.reasoningAutoCollapse) {
+      if (value) rememberReasoningState(userOpened, id)
+      else userOpened.delete(id)
+      setOpen(value)
+      return
+    }
+
+    if (value) userCollapsed.delete(id)
+    else rememberReasoningState(userCollapsed, id)
+    setOpen(value)
+  }
+
   createEffect(() => {
-    if (done() && open() && !autocollapsed.has(id)) {
-      autocollapsed.add(id)
+    if (!props.reasoningAutoCollapse) return
+    // Skip auto-collapse for blocks the user explicitly opened.
+    if (done() && open() && !autocollapsed.has(id) && !userOpened.has(id)) {
+      rememberReasoningState(autocollapsed, id)
       setOpen(false)
     }
   })
@@ -1266,19 +1433,38 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     if (done()) streamed.delete(id)
   })
 
-  // Auto-scroll the content container while streaming
+  // Auto-scroll the content container while streaming.
+  // Use a plain mutable flag rather than checking dist inside the reactive
+  // effect: by the time the effect runs the DOM has already grown, so reading
+  // scrollHeight post-update incorrectly reports the user as scrolled away
+  // whenever a streaming chunk is > 10px tall.
   let ref: HTMLDivElement | undefined
+  let scrolled = false
+
+  const onScroll = (e: Event) => {
+    const el = e.currentTarget as HTMLDivElement
+    if (el.scrollHeight - el.clientHeight - el.scrollTop < 10) scrolled = false
+  }
+
+  const onWheel = (e: WheelEvent) => {
+    if (e.deltaY < 0) scrolled = true
+  }
+
   createEffect(() => {
     display()
-    if (!done() && ref) {
+    if (!done() && ref && !scrolled) {
       ref.scrollTop = ref.scrollHeight
     }
   })
 
   return (
     <Show when={display()}>
-      <div data-component="reasoning-part" data-streaming={!done() ? "" : undefined}>
-        <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
+      <div
+        data-component="reasoning-part"
+        data-streaming={!done() ? "" : undefined}
+        data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
+      >
+        <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
           <Collapsible.Trigger>
             <div data-slot="reasoning-header">
               <Icon name="brain" size="small" />
@@ -1287,7 +1473,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content" ref={ref}>
+            <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
               <Markdown text={display()} cacheKey={id} />
             </div>
           </Collapsible.Content>
@@ -1448,7 +1634,7 @@ function ToolMetaLine(props: {
     >
       <span data-slot="message-part-title-filename">{props.filename}</span>
       <Show when={props.path}>
-        <span data-slot="message-part-directory-inline">{props.path}</span>
+        <span data-slot="message-part-directory-inline">{`\u2066${props.path}\u2069`}</span>
       </Show>
       <Show when={props.changes}>{(changes) => <DiffChanges changes={changes()} />}</Show>
     </span>
@@ -1826,7 +2012,8 @@ ToolRegistry.register({
         {...props}
         icon="console"
         animated
-        defaultOpen
+        defaultOpen={props.defaultOpen ?? true}
+        allowPendingToggle
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
@@ -1877,11 +2064,38 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
+    const before = () => props.metadata?.filediff?.before ?? props.input.oldString ?? ""
+    const after = () => props.metadata?.filediff?.after ?? props.input.newString ?? ""
+    const canOpenDiff = () => !!data.openDiff && !!path() && (before() !== "" || after() !== "")
+    const canOpenFile = () => !!data.openFile && !!path()
+
+    const openDiff = () => {
+      if (!canOpenDiff()) return
+      data.openDiff!({
+        file: path(),
+        before: before(),
+        after: after(),
+        additions: props.metadata?.filediff?.additions ?? 0,
+        deletions: props.metadata?.filediff?.deletions ?? 0,
+      })
+    }
 
     const handleFileClick = (e: MouseEvent) => {
-      if (!data.openFile || !props.input.filePath) return
       e.stopPropagation()
-      data.openFile(props.input.filePath)
+
+      if (canOpenDiff()) {
+        openDiff()
+        return
+      }
+
+      if (canOpenFile()) {
+        data.openFile!(path())
+      }
+    }
+
+    const handleOpenDiffClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      openDiff()
     }
 
     return (
@@ -1904,12 +2118,26 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={data.openFile && props.input.filePath ? handleFileClick : undefined}
+                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
                 </div>
               </div>
+              <Show when={canOpenDiff()}>
+                <span data-slot="edit-trigger-actions">
+                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+                    <IconButton
+                      icon="square-arrow-top-right"
+                      size="small"
+                      variant="ghost"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleOpenDiffClick}
+                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+                    />
+                  </Tooltip>
+                </span>
+              </Show>
             </div>
           }
         >
@@ -1927,12 +2155,12 @@ ToolRegistry.register({
                   component={fileComponent}
                   mode="diff"
                   before={{
-                    name: props.metadata?.filediff?.file || props.input.filePath,
-                    contents: props.metadata?.filediff?.before || props.input.oldString,
+                    name: path(),
+                    contents: before(),
                   }}
                   after={{
-                    name: props.metadata?.filediff?.file || props.input.filePath,
-                    contents: props.metadata?.filediff?.after || props.input.newString,
+                    name: path(),
+                    contents: after(),
                   }}
                 />
               </div>
@@ -2127,7 +2355,7 @@ ToolRegistry.register({
                                   <FileIcon node={{ path: file.relativePath, type: "file" }} />
                                   <div data-slot="apply-patch-file-name-container">
                                     <Show when={file.relativePath.includes("/")}>
-                                      <span data-slot="apply-patch-directory">{`\u202A${getDirectory(file.relativePath)}\u202C`}</span>
+                                      <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
                                     </Show>
 
                                     <span
@@ -2241,6 +2469,7 @@ ToolRegistry.register({
   name: "todowrite",
   render(props) {
     const i18n = useI18n()
+    const view = createMemo(() => (isTodoView(props.metadata?.view) ? props.metadata.view : undefined))
     const todos = createMemo(() => {
       const meta = props.metadata?.todos
       if (Array.isArray(meta)) return meta
@@ -2250,6 +2479,7 @@ ToolRegistry.register({
 
       return []
     })
+    const shown = createMemo(() => view()?.todos ?? todos())
     const pending = createMemo(() => busy(props.status))
 
     const subtitle = createMemo(() => {
@@ -2272,26 +2502,44 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={todos().length}>
+        <Show when={shown().length}>
           <div data-component="todos">
-            <For each={todos()}>
-              {(todo: Todo) => (
+            <Show when={view()?.mode === "compact" && (view()?.hiddenBefore ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenText("earlier", view()?.hiddenBefore ?? 0)}</div>
+            </Show>
+            <For each={shown()}>
+              {(todo: TodoItem) => (
                 <Checkbox readOnly checked={todo.status === "completed"}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
+                    data-changed={todo.changed ? "changed" : undefined}
                   >
                     {todo.content}
                   </span>
                 </Checkbox>
               )}
             </For>
+            <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenText("later", view()?.hiddenAfter ?? 0)}</div>
+            </Show>
           </div>
         </Show>
       </BasicTool>
     )
   },
 })
+
+function isTodoView(value: unknown): value is TodoView {
+  if (!value || typeof value !== "object") return false
+  const view = value as TodoView
+  return Array.isArray(view.todos)
+}
+
+function hiddenText(dir: "earlier" | "later", count: number) {
+  const noun = count === 1 ? "to-do" : "to-dos"
+  return `${count} ${dir} ${noun} hidden`
+}
 
 ToolRegistry.register({
   name: "question",

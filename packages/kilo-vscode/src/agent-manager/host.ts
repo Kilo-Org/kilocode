@@ -38,6 +38,12 @@ export interface SessionProvider {
   trackSession(id: string): void
   refreshSessions(): void
   registerSession(session: Session): void
+  /** Recover any pending permission/question prompts for tracked sessions. */
+  recoverPendingPrompts(): void
+  /** Register a callback invoked when a plan follow-up session is adopted.
+   *  The callback receives the new session and its directory so the Agent Manager
+   *  can route it to the correct worktree instead of LOCAL. */
+  onFollowupAdopted(cb: (session: Session, directory: string) => void): void
   dispose(): void
 }
 
@@ -50,14 +56,26 @@ export interface PanelContext {
   /** Send a message to the webview. */
   postMessage(msg: unknown): void
 
+  /** Resolve once the panel webview is ready to receive messages. */
+  waitForReady(): Promise<void>
+
+  /** Resolve once the panel is the active editor tab. */
+  waitForActive(): Promise<void>
+
   /** Reveal the panel. */
   reveal(preserveFocus?: boolean): void
 
   /** Whether the panel is currently the active tab. */
   readonly active: boolean
 
+  /** Whether the panel is visible (may be unfocused in a split editor group). */
+  readonly visible: boolean
+
   /** Session provider wired to this panel. */
   readonly sessions: SessionProvider
+
+  /** Register a callback for when panel visibility changes. */
+  onDidChangeVisibility(cb: (visible: boolean) => void): Disposable
 
   /** Register a callback for when the panel is disposed. */
   onDidDispose(cb: () => void): Disposable
@@ -106,6 +124,9 @@ export interface Host {
 
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void
+
+  /** Open a URL in the user's default browser. */
+  openExternal(url: string): void
 
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void

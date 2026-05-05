@@ -37,7 +37,13 @@ See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actio
 
 ### Is the context progress graph still available?
 
-The context progress graph will be [added soon](https://github.com/Kilo-Org/kilocode/issues/8210) for users who like to see it.
+Yes — the context progress graph (also known as the task timeline) is now available. It appears at the top of the chat panel and shows:
+
+- **Timeline bars** — colored bars representing session activity (different colors for read, write, tool, error, and text parts)
+- **Context window progress** — a three-segment bar showing used, reserved, and available tokens, with a visual indicator when usage exceeds 50%
+- **Token breakdown** — input, output, cache writes, and cache reads display
+
+You can expand or collapse the graph — your preference is saved in the `kilo-code.new.showTaskTimeline` setting.
 
 ### I like to closely monitor and approve the behavior of the agent. How can I do that better in the new version?
 
@@ -56,6 +62,7 @@ Modes have been renamed to Agents in the new extension. You can set the default 
 
 Each message that caused file changes shows a **diff badge** in the chat — click it to open the Diff Viewer and review what changed.
 The Agent Manager also includes a built-in diff reviewer that shows every change file by file, in unified or split view.
+For Markdown files, use the eye/code toggle in the file header to switch between rendered Markdown and the raw diff.
 
 ### How do I do code reviews in the new extension?
 

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -e
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export KILO_DEV_REPO="$dir"
+# Find the first non-flag arg. If there isn't one, the user is launching the
+# TUI, so point it at the caller's directory via the project positional.
+# Otherwise forward args untouched so subcommands (run, dev-alias, ...) don't
+# collide with --project (only TUI/stats accept --project under yargs strict).
+first=
+for a in "$@"; do
+  case "$a" in
+    --) break ;;
+    -*) ;;
+    *) first="$a"; break ;;
+  esac
+done
+if [[ -z "$first" ]]; then
+  exec bun run --cwd "$dir/packages/opencode" --conditions=browser src/index.ts --project "$PWD" "$@"
+fi
+exec bun run --cwd "$dir/packages/opencode" --conditions=browser src/index.ts "$@"

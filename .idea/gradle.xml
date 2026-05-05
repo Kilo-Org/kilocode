@@ -4,12 +4,24 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/packages/kilo-jetbrains/build-tasks" name="build-tasks">
+                <projects>
+                  <project path="$PROJECT_DIR$/packages/kilo-jetbrains/build-tasks" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
         <option name="externalProjectPath" value="$PROJECT_DIR$/packages/kilo-jetbrains" />
         <option name="gradleJvm" value="#JAVA_HOME" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/packages/kilo-jetbrains" />
             <option value="$PROJECT_DIR$/packages/kilo-jetbrains/backend" />
+            <option value="$PROJECT_DIR$/packages/kilo-jetbrains/build-tasks" />
             <option value="$PROJECT_DIR$/packages/kilo-jetbrains/frontend" />
             <option value="$PROJECT_DIR$/packages/kilo-jetbrains/shared" />
           </set>

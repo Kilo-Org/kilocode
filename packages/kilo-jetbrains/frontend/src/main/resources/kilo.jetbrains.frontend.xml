@@ -3,4 +3,57 @@
         <module name="intellij.platform.frontend"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
+
+    <resource-bundle>messages.KiloBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Kilo Code"
+                    anchor="left"
+                    icon="/icons/kilo.svg"
+                    factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
+
+        <registryKey key="kilo.session.condense"
+                     description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
+                     defaultValue="true"
+                     restartRequired="false"
+                     overrides="false"/>
+        <registryKey key="kilo.session.flushMs"
+                     description="Session update queue flush cadence in milliseconds."
+                     defaultValue="150"
+                     restartRequired="false"
+                     overrides="false"/>
+    </extensions>
+
+    <actions>
+        <action id="Kilo.Restart"
+                class="ai.kilocode.client.actions.RestartKiloAction"/>
+
+        <action id="Kilo.Reinstall"
+                class="ai.kilocode.client.actions.ReinstallKiloAction"/>
+
+        <group id="Kilo.SettingsGroup">
+            <reference ref="Kilo.Restart"/>
+            <reference ref="Kilo.Reinstall"/>
+        </group>
+
+        <action id="Kilo.Settings"
+                class="ai.kilocode.client.actions.KiloSettingsAction"
+                icon="AllIcons.General.GearPlain"/>
+
+        <action id="Kilo.SendPrompt"
+                class="ai.kilocode.client.actions.SendPromptAction"
+                text="Send Prompt"
+                description="Send the current Kilo prompt">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="ENTER"/>
+        </action>
+
+        <action id="Kilo.StopSession"
+                class="ai.kilocode.client.actions.StopSessionAction"
+                text="Stop Session"
+                description="Stop the current Kilo session">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="alt S"/>
+        </action>
+    </actions>
 </idea-plugin>

@@ -66,4 +66,25 @@ export const dict = {
   "marketplace.warning.busyMany": "多个会话正在运行，将被中断",
   "marketplace.warning.installAnyway": "仍然安装",
   "marketplace.warning.cancel": "取消",
+  "marketplace.contribute.prompt": "缺少技能、模式或 MCP 服务器？",
+  "marketplace.contribute.cta": "在 GitHub 上贡献",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "实现",
+  "plan.followup.question": "准备好实现了吗？",
+  "plan.followup.answer.newSession": "开启新会话",
+  "plan.followup.answer.newSession.description": "在具有干净上下文的新会话中实现",
+  "plan.followup.answer.continue": "在此继续",
+  "plan.followup.answer.continue.description": "在本会话中实现计划",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "快照速度较慢",
+  "snapshot.slowRepo.question": "初始化快照系统耗时较长，可能是由于仓库的大小。\n\n是否要为此仓库禁用快照？",
+  "snapshot.slowRepo.answer.continue": "继续使用快照",
+  "snapshot.slowRepo.answer.continue.description": "等待快照完成。初始快照构建好之后，后续回合会很快。",
+  "snapshot.slowRepo.answer.disable": "为此项目禁用",
+  "snapshot.slowRepo.answer.disable.description":
+    "关闭本项目的 Kilo 快照。你将失去对 Kilo 更改的撤销/重做，但 git 仍会追踪所有内容。",
+
+  "ui.messagePart.openInDiffViewer": "在差异查看器中打开",
 }
