@@ -600,10 +600,14 @@ export const layer = Layer.effect(
           result.plugin_origins = plugins
         })
 
-        const merge = (source: string, next: Info, kind?: ConfigPlugin.Scope) => {
-          result = mergeConfigConcatArrays(result, next)
-          return mergePluginOrigins(source, next.plugin, kind)
-        }
+        // kilocode_change start
+        const merge = Effect.fnUntraced(function* (source: string, next: Info, kind?: ConfigPlugin.Scope) {
+          const scope = kind ?? (yield* pluginScopeForSource(source))
+          const scoped = KilocodeConfig.scopeIndexing(next, scope)
+          result = mergeConfigConcatArrays(result, scoped)
+          return yield* mergePluginOrigins(source, scoped.plugin, scope)
+        })
+        // kilocode_change end
 
         for (const [key, value] of Object.entries(auth)) {
           if (value.type === "wellknown") {
@@ -836,16 +840,19 @@ export const layer = Layer.effect(
         // kilocode_change end
 
         // macOS managed preferences (.mobileconfig deployed via MDM) override everything
+        // kilocode_change start
         const managed = yield* Effect.promise(() => ConfigManaged.readManagedPreferences())
         if (managed) {
-          result = mergeConfigConcatArrays(
-            result,
+          yield* merge(
+            managed.source,
             yield* loadConfig(managed.text, {
               dir: path.dirname(managed.source),
               source: managed.source,
             }),
+            "global",
           )
         }
+        // kilocode_change end
 
         for (const [name, mode] of Object.entries(result.mode ?? {})) {
           result.agent = mergeDeep(result.agent ?? {}, {
