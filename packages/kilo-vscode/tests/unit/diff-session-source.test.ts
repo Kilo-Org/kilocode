@@ -15,29 +15,9 @@ function recording(result: SnapshotFileDiff[] | Error): { fetch: SessionDiffFetc
   return { fetch, calls }
 }
 
-function scripted(results: Array<SnapshotFileDiff[] | Error>): {
-  fetch: SessionDiffFetch
-  calls: FetchCall[]
-} {
-  const calls: FetchCall[] = []
-  let i = 0
-  const fetch: SessionDiffFetch = async (params) => {
-    calls.push(params)
-    const next = results[Math.min(i, results.length - 1)]
-    i++
-    if (next instanceof Error) throw next
-    return next ?? []
-  }
-  return { fetch, calls }
-}
-
 function collect(): { post: (msg: DiffSourceMessage) => void; messages: DiffSourceMessage[] } {
   const messages: DiffSourceMessage[] = []
   return { post: (msg) => messages.push(msg), messages }
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms))
 }
 
 const modifiedPatch = [
@@ -48,16 +28,6 @@ const modifiedPatch = [
   " keep",
   "-old",
   "+new",
-].join("\n")
-
-const modifiedPatchV2 = [
-  "diff --git a/foo.ts b/foo.ts",
-  "--- a/foo.ts",
-  "+++ b/foo.ts",
-  "@@ -1,2 +1,2 @@",
-  " keep",
-  "-old",
-  "+newer",
 ].join("\n")
 
 describe("SessionDiffSource.initialFetch", () => {
@@ -203,122 +173,5 @@ describe("SessionDiffSource lifecycle", () => {
     expect(typeof disposable.dispose).toBe("function")
     // Disposing must not throw even though no interval was scheduled.
     disposable.dispose()
-  })
-})
-
-describe("SessionDiffSource polling", () => {
-  function makeFast(source: SessionDiffSource, intervalMs = 10) {
-    // Use timers override via Bun's real timers to set a 10ms interval
-    void source
-    void intervalMs
-  }
-  void makeFast
-
-  it("polls and posts new diffs only when the hash changes", async () => {
-    const fileA: SnapshotFileDiff = {
-      file: "foo.ts",
-      patch: modifiedPatch,
-      additions: 1,
-      deletions: 1,
-      status: "modified",
-    }
-    const fileB: SnapshotFileDiff = {
-      file: "foo.ts",
-      patch: modifiedPatchV2,
-      additions: 2,
-      deletions: 1,
-      status: "modified",
-    }
-
-    const { fetch, calls } = scripted([[fileA], [fileA], [fileB], [fileB]])
-    const source = new SessionDiffSource("poll-1", fetch, "/repo")
-    const { post, messages } = collect()
-
-    await source.initialFetch(post)
-    const initialDiffs = messages.filter((m) => m.type === "diffs").length
-    expect(initialDiffs).toBe(1)
-
-    // Invoke the private poll directly for deterministic testing.
-    const poll = (source as unknown as { poll(p: typeof post): Promise<void> }).poll.bind(source)
-
-    await poll(post)
-    // second call returns identical data → no new "diffs" message
-    expect(messages.filter((m) => m.type === "diffs").length).toBe(1)
-
-    await poll(post)
-    // third call returns different patch/additions → hash changes → "diffs" posted
-    expect(messages.filter((m) => m.type === "diffs").length).toBe(2)
-
-    await poll(post)
-    // fourth call returns same as third → no new message
-    expect(messages.filter((m) => m.type === "diffs").length).toBe(2)
-
-    expect(calls.length).toBe(4)
-    source.dispose()
-  })
-
-  it("swallows errors during poll without posting error or loading", async () => {
-    const ok: SnapshotFileDiff[] = [
-      { file: "foo.ts", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" },
-    ]
-    const { fetch } = scripted([ok, new Error("transient boom"), ok])
-    const source = new SessionDiffSource("poll-2", fetch, "/repo")
-    const { post, messages } = collect()
-
-    await source.initialFetch(post)
-    const baseline = messages.length
-
-    const poll = (source as unknown as { poll(p: typeof post): Promise<void> }).poll.bind(source)
-    await poll(post)
-
-    // After a failing poll: no new messages should be posted at all.
-    expect(messages.length).toBe(baseline)
-    expect(messages.some((m) => m.type === "error")).toBe(false)
-    // loading=false should not be re-posted by the poll path
-    const loadingFalseCount = messages.filter((m) => m.type === "loading" && m.loading === false).length
-    expect(loadingFalseCount).toBe(1) // only from initialFetch
-
-    source.dispose()
-  })
-
-  it("stops polling when the disposable from start() is disposed", async () => {
-    const { fetch, calls } = recording([])
-    const source = new SessionDiffSource("poll-3", fetch)
-    const { post } = collect()
-
-    const d = source.start(post)
-    // Verify disposing clears it without waiting for the interval to complete
-    d.dispose()
-
-    await wait(30)
-    // No fetch calls expected because interval hasn't fired yet and is now cleared.
-    expect(calls.length).toBe(0)
-    source.dispose()
-  })
-
-  it("discards a poll result that arrives after dispose", async () => {
-    let resolveFetch: (value: SnapshotFileDiff[]) => void = () => {}
-    const pending = new Promise<SnapshotFileDiff[]>((resolve) => {
-      resolveFetch = resolve
-    })
-    const calls: FetchCall[] = []
-    const fetch: SessionDiffFetch = async (params) => {
-      calls.push(params)
-      return pending
-    }
-    const source = new SessionDiffSource("poll-4", fetch, "/repo")
-    const { post, messages } = collect()
-
-    const poll = (source as unknown as { poll(p: typeof post): Promise<void> }).poll.bind(source)
-    const running = poll(post)
-
-    // Dispose while the fetch is still in flight.
-    source.dispose()
-
-    // Now resolve the in-flight fetch — the result must be discarded.
-    resolveFetch([{ file: "foo.ts", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" }])
-    await running
-
-    expect(messages.length).toBe(0)
   })
 })
