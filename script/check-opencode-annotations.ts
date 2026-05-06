@@ -100,17 +100,49 @@ function isSource(file: string) {
   return content(file).startsWith("#!") // kilocode_change
 }
 
-function addedLines(file: string): Set<number> {
+// Parses the unified=0 diff for `file` against `base` and returns:
+//   - added: every added line number on HEAD
+//   - revert: true when the file's diff removes any kilocode_change marker.
+//     In that case the changes are reverting Kilo modifications back to the
+//     upstream baseline, so newly added lines (which are restoring upstream
+//     content) should not require a marker. Refs that depended on a removed
+//     Kilo construct (e.g. `unixSkip(` → `unix(`) often live in different
+//     hunks than the marker itself, so we use file-level detection rather
+//     than hunk-level to avoid false positives on legitimate reverts.
+function addedLines(file: string): { added: Set<number>; revert: boolean } {
   const diff = run("git", ["diff", "--unified=0", "--diff-filter=AMRT", `${base}...HEAD`, "--", file])
-  const out = new Set<number>()
-  for (const line of diff.split("\n")) {
-    const m = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/)
-    if (!m) continue
+  const added = new Set<number>()
+  let revert = false
+  const all = diff.split("\n")
+
+  let i = 0
+  while (i < all.length) {
+    const header = all[i] ?? ""
+    const m = header.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/)
+    if (!m) {
+      i++
+      continue
+    }
+
     const start = Number(m[1])
-    const count = m[2] !== undefined ? Number(m[2]) : 1
-    for (let i = 0; i < count; i++) out.add(start + i)
+    let pos = 0
+    let j = i + 1
+    while (j < all.length) {
+      const hl = all[j] ?? ""
+      if (hl.startsWith("@@") || hl.startsWith("diff ")) break
+      if (hl.startsWith("+") && !hl.startsWith("+++")) {
+        added.add(start + pos)
+        pos++
+      } else if (hl.startsWith("-") && !hl.startsWith("---") && hasMarker(hl.slice(1))) {
+        revert = true
+      }
+      j++
+    }
+
+    i = j
   }
-  return out
+
+  return { added, revert }
 }
 
 // kilocode_change start
@@ -189,13 +221,14 @@ if (files.length === 0) {
 const violations: string[] = []
 
 for (const file of files) {
-  const nums = addedLines(file)
-  if (nums.size === 0) continue
+  const { added, revert } = addedLines(file)
+  if (added.size === 0) continue
+  if (revert) continue // kilocode_change - file is reverting Kilo modifications back to upstream
 
   const text = content(file) // kilocode_change
   const { lines, covered } = coveredLines(text)
 
-  for (const n of nums) {
+  for (const n of added) {
     const line = lines[n - 1] ?? ""
     const trim = line.trim()
     if (!trim) continue

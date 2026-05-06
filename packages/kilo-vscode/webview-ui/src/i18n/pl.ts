@@ -1406,6 +1406,8 @@ export const dict = {
   "settings.display.layout.description": "Tryb układu interfejsu czatu",
   "settings.display.layout.auto": "Automatyczny",
   "settings.display.layout.stretch": "Rozciągnij",
+  "settings.display.fontSize.title": "Rozmiar czcionki",
+  "settings.display.fontSize.description": "Dostosuj rozmiar czcionki webview UI Kilo niezależnie od VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",

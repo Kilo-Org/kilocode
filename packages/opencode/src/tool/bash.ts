@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import { PositiveInt } from "@/util/schema"
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -56,7 +57,7 @@ const SWITCHES = new Set(["-confirm", "-debug", "-force", "-nonewline", "-recurs
 
 export const Parameters = Schema.Struct({
   command: Schema.String.annotate({ description: "The command to execute" }),
-  timeout: Schema.optional(Schema.Number).annotate({ description: "Optional timeout in milliseconds" }),
+  timeout: Schema.optional(PositiveInt).annotate({ description: "Optional timeout in milliseconds" }),
   workdir: Schema.optional(Schema.String).annotate({
     description: `The working directory to run the command in. Defaults to the current directory. Use this instead of 'cd' commands.`,
   }),
@@ -271,7 +272,7 @@ function tail(text: string, maxLines: number, maxBytes: number) {
 const parse = Effect.fn("BashTool.parse")(function* (command: string, ps: boolean) {
   const tree = yield* Effect.promise(() => parser().then((p) => (ps ? p.ps : p.bash).parse(command)))
   if (!tree) throw new Error("Failed to parse command")
-  return tree.rootNode
+  return tree
 })
 
 const ask = Effect.fn("BashTool.ask")(function* (ctx: Tool.Context, scan: Scan, command: string) {
@@ -628,15 +629,21 @@ export const BashTool = Tool.define(
               }
               const timeout = params.timeout ?? DEFAULT_TIMEOUT
               const ps = Shell.ps(shell)
-              const root = yield* parse(params.command, ps)
-              const scan = yield* collect(root, cwd, ps, shell)
-              // kilocode_change start
-              if (!Instance.containsPath(cwd)) {
-                scan.dirs.add(cwd)
-                scan.access = "unknown"
-              }
-              // kilocode_change end
-              yield* ask(ctx, scan, params.command) // kilocode_change
+              yield* Effect.scoped(
+                Effect.gen(function* () {
+                  const tree = yield* Effect.acquireRelease(parse(params.command, ps), (tree) =>
+                    Effect.sync(() => tree.delete()),
+                  )
+                  const scan = yield* collect(tree.rootNode, cwd, ps, shell)
+                  // kilocode_change start
+                  if (!Instance.containsPath(cwd)) {
+                    scan.dirs.add(cwd)
+                    scan.access = "unknown"
+                  }
+                  // kilocode_change end
+                  yield* ask(ctx, scan, params.command) // kilocode_change
+                }),
+              )
 
               return yield* run(
                 {

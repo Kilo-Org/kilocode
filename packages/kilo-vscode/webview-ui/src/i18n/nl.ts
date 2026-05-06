@@ -1383,6 +1383,8 @@ export const dict = {
   "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Uitrekken",
+  "settings.display.fontSize.title": "Lettergrootte",
+  "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",

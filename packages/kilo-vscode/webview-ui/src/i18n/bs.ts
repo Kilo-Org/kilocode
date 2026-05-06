@@ -1410,6 +1410,8 @@ export const dict = {
   "settings.display.layout.description": "Način rasporeda za sučelje chata",
   "settings.display.layout.auto": "Automatski",
   "settings.display.layout.stretch": "Rastegni",
+  "settings.display.fontSize.title": "Veličina fonta",
+  "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
   "settings.display.reasoningAutoCollapse.description":
     "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",

@@ -1373,6 +1373,8 @@ export const dict = {
   "settings.display.layout.description": "Режим макету для інтерфейсу чату",
   "settings.display.layout.auto": "Автоматично",
   "settings.display.layout.stretch": "Розтягнути",
+  "settings.display.fontSize.title": "Розмір шрифту",
+  "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
   "settings.display.reasoningAutoCollapse.description":
     "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",

@@ -3,8 +3,8 @@
 [data-component="tag"],
 [data-component="badge"] {
   border-radius: 2px;
-  font-size: 11px;
-  line-height: 16px;
+  font-size: var(--kilo-font-size-11);
+  line-height: var(--kilo-font-size-16);
   font-weight: 600;
   padding: 2px 4px;
   border: 1px solid transparent;

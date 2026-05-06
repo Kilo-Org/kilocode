@@ -47,7 +47,13 @@ export interface ReadyMessage {
   extensionVersion?: string
   vscodeLanguage?: string
   languageOverride?: string
+  fontSize?: number
   workspaceDirectory?: string
+}
+
+export interface FontSizeChangedMessage {
+  type: "fontSizeChanged"
+  fontSize: number
 }
 
 export interface GitStatusMessage {
@@ -848,6 +854,7 @@ export interface RemoteStatusMessage {
 
 export type ExtensionMessage =
   | ReadyMessage
+  | FontSizeChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage

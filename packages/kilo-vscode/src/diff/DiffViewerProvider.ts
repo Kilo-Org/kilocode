@@ -2,7 +2,8 @@ import * as vscode from "vscode"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { appendOutput, getWorkspaceRoot, openWorkspaceRelativeFile } from "../review-utils"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
-import { buildWebviewHtml } from "../utils"
+import { buildWebviewHtml, getWebviewFontSize } from "../utils"
+import { watchFontSizeConfig } from "../kilo-provider/font-size"
 import type { DiffSourceCatalog } from "./sources/catalog"
 import type { PanelContext } from "./types"
 import { SourceController } from "./SourceController"
@@ -26,6 +27,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private controller: SourceController | undefined
   private panelDisposables: vscode.Disposable[] = []
   private commentHandler: CommentHandler | undefined
+  private fontConfigDisposable: vscode.Disposable | undefined
   private readonly sessionIdProvider: () => string | undefined
   private readonly output: vscode.OutputChannel
 
@@ -81,6 +83,8 @@ export class DiffViewerProvider implements vscode.Disposable {
   dispose(): void {
     this.controller?.dispose()
     this.controller = undefined
+    this.fontConfigDisposable?.dispose()
+    this.fontConfigDisposable = undefined
     this.disposePanel()
     this.output.dispose()
   }
@@ -105,6 +109,9 @@ export class DiffViewerProvider implements vscode.Disposable {
     )
     if (this.ctx) this.controller.setContext(this.ctx)
 
+    this.fontConfigDisposable?.dispose()
+    this.fontConfigDisposable = watchFontSizeConfig((msg) => void panel.webview.postMessage(msg))
+
     this.panelDisposables.push(
       panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg as Record<string, unknown>)),
       panel.onDidDispose(() => this.onPanelDisposed()),
@@ -115,6 +122,8 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.log("Panel disposed")
     this.controller?.dispose()
     this.controller = undefined
+    this.fontConfigDisposable?.dispose()
+    this.fontConfigDisposable = undefined
     this.disposePanel()
   }
 
@@ -160,6 +169,7 @@ export class DiffViewerProvider implements vscode.Disposable {
       type: "ready",
       vscodeLanguage: vscode.env.language,
       languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+      fontSize: getWebviewFontSize(),
       workspaceDirectory: getWorkspaceRoot(),
     })
     void this.panel.webview.postMessage({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })

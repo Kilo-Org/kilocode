@@ -1375,6 +1375,8 @@ export const dict = {
   "settings.display.layout.description": "وضع التخطيط لواجهة الدردشة",
   "settings.display.layout.auto": "تلقائي",
   "settings.display.layout.stretch": "تمديد",
+  "settings.display.fontSize.title": "حجم الخط",
+  "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",

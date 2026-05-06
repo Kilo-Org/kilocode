@@ -76,7 +76,7 @@ const McpEditView: Component<Props> = (props) => {
       >
         <div style={{ display: "flex", "align-items": "center" }}>
           <IconButton size="small" variant="ghost" icon="arrow-left" onClick={props.onBack} />
-          <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
+          <span style={{ "font-weight": "600", "font-size": "var(--kilo-font-size-14)", "margin-left": "8px" }}>
             {language.t("settings.agentBehaviour.editMcp")} — {props.name}
           </span>
         </div>
@@ -87,7 +87,7 @@ const McpEditView: Component<Props> = (props) => {
       <Card style={{ "margin-bottom": "12px" }}>
         <div
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             padding: "4px 0",
           }}
@@ -197,7 +197,7 @@ const McpEditView: Component<Props> = (props) => {
                 <span
                   style={{
                     "font-family": "var(--vscode-editor-font-family, monospace)",
-                    "font-size": "12px",
+                    "font-size": "var(--kilo-font-size-12)",
                   }}
                 >
                   {key}={val}

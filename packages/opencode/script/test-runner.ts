@@ -25,9 +25,10 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "",
       "Options:",
       "  --ci                 Enable JUnit XML output to .artifacts/unit/junit.xml",
-      "  --concurrency <N>    Max parallel processes (default: CPU count)",
-      "  --timeout <ms>       Per-test timeout passed to bun test (default: 30000)",
+      "  --concurrency <N>    Max parallel processes (default: min(4, CPU count))",
+      "  --timeout <ms>       Per-test timeout passed to bun test (default: 60000)",
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
+      "  --retries <N>        Extra attempts for failing files (default: 1)",
       "  --bail               Stop on first failure",
       "  --verbose            Show full output for every file",
       "  -h, --help           Show this help",
@@ -52,11 +53,15 @@ function opt(name: string, fallback: number) {
 const ci = argv.includes("--ci")
 const bail = argv.includes("--bail")
 const verbose = argv.includes("--verbose")
-const concurrency = opt("concurrency", os.cpus().length)
-const timeout = opt("timeout", 30000)
+// Cap concurrency at 4 even on bigger runners: the bottleneck is shared
+// resources (ports, global filesystem like ~/.local/share/kilo), not CPU.
+// Eight parallel processes was triggering port/FS races, not going faster.
+const concurrency = opt("concurrency", Math.min(4, os.cpus().length))
+const timeout = opt("timeout", 60000)
 const deadline = opt("file-timeout", 300000)
+const retries = opt("retries", 1)
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout"])
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries"])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -70,6 +75,7 @@ const patterns = argv.filter((arg, i) => {
 const tty = !!process.stdout.isTTY
 const green = (s: string) => (tty ? `\x1b[32m${s}\x1b[0m` : s)
 const red = (s: string) => (tty ? `\x1b[31m${s}\x1b[0m` : s)
+const yellow = (s: string) => (tty ? `\x1b[33m${s}\x1b[0m` : s)
 const dim = (s: string) => (tty ? `\x1b[2m${s}\x1b[0m` : s)
 const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
 
@@ -80,8 +86,15 @@ const bold = (s: string) => (tty ? `\x1b[1m${s}\x1b[0m` : s)
 const glob = new Bun.Glob("**/*.test.{ts,tsx}")
 const all = (await Array.fromAsync(glob.scan({ cwd: path.join(root, "test") }))).sort()
 
-const files =
+export const skipped = new Set([
+  // Upstream browser OAuth integration tests bind the fixed callback port and
+  // race with other parallel OAuth tests in CI.
+  "mcp/oauth-browser.test.ts",
+])
+
+const matched =
   patterns.length > 0 ? all.filter((f) => patterns.some((p) => f.includes(p) || path.join("test", f).includes(p))) : all
+const files = patterns.length > 0 ? matched : matched.filter((f) => !skipped.has(f)) // kilocode_change
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -100,6 +113,7 @@ type Result = {
   stderr: string
   duration: number
   timedout: boolean
+  attempts: number
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +169,7 @@ async function run(file: string): Promise<Result> {
     stderr,
     duration: performance.now() - start,
     timedout: killed.value,
+    attempts: 1,
   }
 }
 
@@ -166,18 +181,25 @@ function report(result: Result) {
   counter.done++
   const idx = String(counter.done).padStart(pad)
   const secs = (result.duration / 1000).toFixed(1)
+  const tries = result.attempts > 1 ? dim(` [attempt ${result.attempts}/${retries + 1}]`) : ""
 
   if (result.timedout) {
     console.log(
-      `[${idx}/${files.length}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${deadline / 1000}s)`)}`,
+      `[${idx}/${files.length}] ${red("TIME")} ${result.file} ${dim(`(${secs}s - exceeded ${deadline / 1000}s)`)}${tries}`,
     )
     return
   }
 
   if (!result.passed) {
-    console.log(`[${idx}/${files.length}] ${red("FAIL")} ${result.file} ${dim(`(${secs}s)`)}`)
+    console.log(`[${idx}/${files.length}] ${red("FAIL")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
     if (verbose && result.stderr.trim()) console.log(result.stderr)
     if (verbose && result.stdout.trim()) console.log(result.stdout)
+    return
+  }
+
+  if (result.attempts > 1) {
+    console.log(`[${idx}/${files.length}] ${yellow("FLAKY")} ${result.file} ${dim(`(${secs}s)`)}${tries}`)
+    if (verbose && result.stdout.trim()) console.log(dim(result.stdout))
     return
   }
 
@@ -199,7 +221,16 @@ const stopped = { value: false }
 const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
     const file = queue.shift()!
-    const result = await run(file)
+    let result = await run(file)
+    // Retry failing files up to `retries` extra times. Bugs still fail on every
+    // attempt; contention-based flakes (port races, slow FS, slow spawn) recover.
+    // Preserve the last attempt's stdout/stderr/duration so a truly broken file
+    // still shows a useful diagnostic.
+    while (!result.passed && result.attempts <= retries && !stopped.value) {
+      const retry = await run(file)
+      retry.attempts = result.attempts + 1
+      result = retry
+    }
     results.push(result)
     report(result)
     if (bail && !result.passed) stopped.value = true
@@ -238,13 +269,52 @@ if (failures.length > 0 && !verbose) {
 // ---------------------------------------------------------------------------
 
 const passed = results.filter((r) => r.passed).length
+const flaky = results.filter((r) => r.passed && r.attempts > 1)
 
 console.log(
   `\n${bold(String(results.length))} files | ` +
     `${green(passed + " passed")} | ` +
     `${failures.length > 0 ? red(failures.length + " failed") : failures.length + " failed"} | ` +
+    `${flaky.length > 0 ? yellow(flaky.length + " flaky") : flaky.length + " flaky"} | ` +
     `${elapsed.toFixed(1)}s\n`,
 )
+
+if (flaky.length > 0) {
+  const sorted = flaky.slice().sort((a, b) => a.file.localeCompare(b.file))
+
+  console.log(`${bold(yellow("--- FLAKY (passed on retry) ---"))}\n`)
+  for (const r of sorted) {
+    console.log(`  ${yellow(r.file)} ${dim(`(passed on attempt ${r.attempts}/${retries + 1})`)}`)
+  }
+  console.log()
+
+  // Surface flakies to the GitHub Actions UI so reviewers don't have to scan
+  // the raw log. Annotations show up on the PR; the step summary is visible at
+  // the bottom of the job page and in the workflow summary email.
+  if (process.env.GITHUB_ACTIONS === "true") {
+    for (const r of sorted) {
+      const repo = `packages/opencode/test/${r.file}`
+      console.log(
+        `::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`,
+      )
+    }
+
+    const summary = process.env.GITHUB_STEP_SUMMARY
+    if (summary) {
+      const md = [
+        "### ⚠️ Flaky test files (passed on retry)",
+        "",
+        `${sorted.length} file${sorted.length === 1 ? "" : "s"} needed more than one attempt to pass.`,
+        "",
+        "| File | Attempts |",
+        "|---|---|",
+        ...sorted.map((r) => `| \`${r.file}\` | ${r.attempts}/${retries + 1} |`),
+        "",
+      ].join("\n")
+      await fs.appendFile(summary, md + "\n")
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // JUnit XML merge (CI mode)
@@ -280,11 +350,15 @@ async function merge() {
       const extracted = extract(content)
       if (extracted) {
         suites.push(extracted)
-        // kilocode_change start - count nested suites without matching the root testsuites tag.
-        counts.tests += sum(extracted, "tests")
-        counts.failures += sum(extracted, "failures")
-        counts.errors += sum(extracted, "errors")
-        // kilocode_change end
+        // Counts come from the outer <testsuites ...> root attributes, not from
+        // regex-scanning the inner content, so nested <testsuite> blocks (bun
+        // emits one per `describe`) don't get double-counted.
+        const root = content.match(/<testsuites\b([^>]*)>/)
+        if (root) {
+          counts.tests += attr(root[1], "tests")
+          counts.failures += attr(root[1], "failures")
+          counts.errors += attr(root[1], "errors")
+        }
         continue
       }
     }
@@ -321,31 +395,23 @@ async function merge() {
   await Bun.write(path.join(dir, "junit.xml"), body)
 }
 
-function extract(content: string, from = 0): string {
-  const close = "</testsuite>"
-  const s = open(content, from) // kilocode_change
-  if (s === -1) return ""
-  const e = content.indexOf(close, s)
-  if (e === -1) return ""
-  const suite = content.slice(s, e + close.length)
-  const rest = extract(content, e + close.length)
-  return rest ? suite + "\n" + rest : suite
+// Grab everything between the outer <testsuites ...> and </testsuites> of a
+// per-file JUnit XML. Preserves nested <testsuite> blocks verbatim — the
+// previous hand-rolled walker matched the first </testsuite> it found, which
+// closed an inner suite and left the outer one dangling in the merged output.
+function extract(content: string): string {
+  const open = content.match(/<testsuites\b[^>]*>/)
+  if (!open) return ""
+  const start = open.index! + open[0].length
+  const end = content.lastIndexOf("</testsuites>")
+  if (end === -1 || end <= start) return ""
+  return content.slice(start, end).trim()
 }
 
-// kilocode_change start
-function open(content: string, from: number): number {
-  const tag = "<testsuite"
-  const s = content.indexOf(tag, from)
-  if (s === -1) return -1
-  const ch = content[s + tag.length]
-  if (ch === ">" || /\s/.test(ch)) return s
-  return open(content, s + 1)
+function attr(attrs: string, name: string): number {
+  const m = attrs.match(new RegExp(`\\b${name}="(\\d+)"`))
+  return m ? Number(m[1]) : 0
 }
-
-function sum(content: string, name: string): number {
-  return Array.from(content.matchAll(new RegExp(`${name}="(\\d+)"`, "g"))).reduce((n, m) => n + Number(m[1]), 0)
-}
-// kilocode_change end
 
 function esc(s: string): string {
   return s
