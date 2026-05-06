@@ -890,6 +890,7 @@ export const SessionRoutes = lazy(() =>
         return stream(c, async (stream) => {
           const sessionID = c.req.valid("param").sessionID
           const body = c.req.valid("json")
+          // kilocode_change start - synchronous prompt callers cannot keep background subagent fibers alive
           const msg = await runRequest(
             "SessionRoutes.prompt",
             c,
@@ -901,6 +902,7 @@ export const SessionRoutes = lazy(() =>
               } as unknown as SessionPrompt.PromptInput),
             ),
           )
+          // kilocode_change end
           void stream.write(JSON.stringify(msg))
         })
       },
@@ -929,6 +931,7 @@ export const SessionRoutes = lazy(() =>
       async (c) => {
         const sessionID = c.req.valid("param").sessionID
         const body = c.req.valid("json")
+        // kilocode_change start - async prompt callers keep the server event loop alive for background subagents
         void runRequest(
           "SessionRoutes.prompt_async",
           c,
@@ -936,6 +939,7 @@ export const SessionRoutes = lazy(() =>
             svc.prompt({ ...body, sessionID, liveBackgroundSubagents: true } as unknown as SessionPrompt.PromptInput),
           ),
         ).catch((err) => {
+          // kilocode_change end
           log.error("prompt_async failed", { sessionID, error: err })
           void Bus.publish(Session.Event.Error, {
             sessionID,
