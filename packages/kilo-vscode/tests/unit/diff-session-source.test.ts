@@ -1,11 +1,7 @@
 import { describe, it, expect } from "bun:test"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
-import {
-  POLL_INTERVAL_MS,
-  SessionDiffSource,
-  type SessionDiffFetch,
-  type SnapshotEnabledCheck,
-} from "../../src/diff/sources/session"
+import { SessionDiffSource, type SessionDiffFetch, type SnapshotEnabledCheck } from "../../src/diff/sources/session"
+import { DIFF_POLL_INTERVAL_MS } from "../../src/diff/polling"
 import type { DiffSourceMessage } from "../../src/diff/sources/types"
 
 type FetchCall = { sessionID: string; directory?: string }
@@ -358,7 +354,7 @@ describe("SessionDiffSource polling", () => {
     try {
       const d = source.start(post)
       expect(captured.length).toBe(1)
-      expect(captured[0]!.ms).toBe(POLL_INTERVAL_MS)
+      expect(captured[0]!.ms).toBe(DIFF_POLL_INTERVAL_MS)
 
       d.dispose()
       expect(cleared).toEqual([42])

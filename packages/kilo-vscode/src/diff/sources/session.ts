@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import type { DiffFile } from "../types"
 import { hashFileDiffs } from "../shared/hash"
+import { DIFF_POLL_INTERVAL_MS } from "../polling"
 import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
 import { patchToBeforeAfter } from "./patch-to-before-after"
 
@@ -10,8 +11,6 @@ export type SessionDiffFetch = (params: { sessionID: string; directory?: string 
 export type SnapshotEnabledCheck = (directory?: string) => Promise<boolean>
 
 export const SESSION_PREFIX = "session:"
-
-export const POLL_INTERVAL_MS = 2500
 
 export function sessionSourceId(sessionId: string): string {
   return `${SESSION_PREFIX}${sessionId}`
@@ -81,7 +80,7 @@ export class SessionDiffSource implements DiffSource {
     if (this.snapshotsDisabled) return new vscode.Disposable(() => {})
     this.interval = setInterval(() => {
       void this.poll(post)
-    }, POLL_INTERVAL_MS)
+    }, DIFF_POLL_INTERVAL_MS)
 
     return new vscode.Disposable(() => this.stopPolling())
   }

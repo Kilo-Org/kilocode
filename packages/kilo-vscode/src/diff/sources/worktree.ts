@@ -4,11 +4,10 @@ import { GitOps } from "../../agent-manager/GitOps"
 import { WorktreeDiffClient, type DiffTarget } from "../shared/client"
 import { hashFileDiffs } from "../shared/hash"
 import { resolveLocalDiffTarget } from "../shared/target"
+import { DIFF_POLL_INTERVAL_MS } from "../polling"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
-
-const POLL_INTERVAL_MS = 2500
 
 export const WORKSPACE_SOURCE_ID = "workspace"
 
@@ -59,7 +58,7 @@ export class WorktreeDiffSource implements DiffSource {
     this.stopPolling()
     this.interval = setInterval(() => {
       void this.poll(post)
-    }, POLL_INTERVAL_MS)
+    }, DIFF_POLL_INTERVAL_MS)
 
     return new vscode.Disposable(() => this.stopPolling())
   }
