@@ -2651,10 +2651,7 @@ const AgentManagerContent: Component = () => {
           >
             <DragDropSensors />
             <ConstrainDragYAxis />
-            <div
-              class="am-tab-bar"
-              onPointerLeave={releaseTabs}
-            >
+            <div class="am-tab-bar" onPointerLeave={releaseTabs}>
               <div class="am-tab-scroll-area">
                 <div class={`am-tab-fade am-tab-fade-left ${tabScroll.showLeft() ? "am-tab-fade-visible" : ""}`} />
                 <div class="am-tab-list-wrap">
