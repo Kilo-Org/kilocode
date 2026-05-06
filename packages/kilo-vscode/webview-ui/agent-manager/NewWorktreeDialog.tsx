@@ -9,7 +9,6 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Popover } from "@kilocode/kilo-ui/popover"
 import { DeferredPopover } from "../src/components/shared/DeferredPopover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
@@ -29,7 +28,7 @@ import {
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
 import { convertToMentionPath } from "../src/utils/path-mentions"
-import { BranchSelect } from "./BranchSelect"
+import { BranchSelect, BranchSelectPopover } from "./BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -447,7 +446,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="am-advanced-field">
                   <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
                   <div class="am-selector-wrapper">
-                    <Popover
+                    <BranchSelectPopover
                       open={baseBranchOpen()}
                       onOpenChange={(open) => {
                         setBaseBranchOpen(open)
@@ -456,11 +455,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                           setHighlightedIndex(0)
                         }
                       }}
-                      placement="top-start"
-                      flip={false}
-                      sameWidth
-                      portal={false}
-                      class="am-dropdown"
                       trigger={
                         <button class="am-selector-trigger" type="button">
                           <span class="am-selector-left">
@@ -539,7 +533,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         remoteLabel={t("agentManager.dialog.branchBadge.remote")}
                         defaultName={defaultBranch()}
                       />
-                    </Popover>
+                    </BranchSelectPopover>
                   </div>
                 </div>
               </div>
@@ -701,14 +695,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
           <div class="am-import-section">
             <span class="am-nv-config-label">{t("agentManager.import.branches")}</span>
             <div class="am-selector-wrapper">
-              <Popover
+              <BranchSelectPopover
                 open={branchOpen()}
                 onOpenChange={setBranchOpen}
-                placement="top-start"
-                flip={false}
-                sameWidth
-                portal={false}
-                class="am-dropdown"
                 trigger={
                   <button class="am-selector-trigger" disabled={isPending()} type="button">
                     <span class="am-selector-left">
@@ -735,7 +724,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   defaultLabel={t("agentManager.dialog.branchBadge.default")}
                   remoteLabel={t("agentManager.dialog.branchBadge.remote")}
                 />
-              </Popover>
+              </BranchSelectPopover>
             </div>
           </div>
 

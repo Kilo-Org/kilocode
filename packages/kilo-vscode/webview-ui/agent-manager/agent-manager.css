@@ -2868,7 +2868,7 @@ body.am-wt-dragging-active * {
   padding: 0 16px 16px;
   min-width: 460px;
   max-height: 350px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .am-import-section {
@@ -3042,7 +3042,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-dropdown-list {
-  max-height: 200px;
+  max-height: min(320px, var(--kb-popper-content-available-height, 320px) - 44px);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 4px;
