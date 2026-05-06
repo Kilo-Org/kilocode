@@ -6,6 +6,7 @@ import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
+import { Filesystem } from "@/util/filesystem" // kilocode_change - atomic writes for auth.json
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 
@@ -65,22 +66,41 @@ export const layer = Layer.effect(
         } catch (err) {}
       }
 
-      const data = (yield* fsys.readJson(file).pipe(Effect.orElseSucceed(() => ({})))) as Record<string, unknown>
-      return Record.filterMap(data, (value) => Result.fromOption(decode(value), () => undefined))
+      // kilocode_change start - fail loud on read/parse errors so Auth.set/remove
+      // never silently truncate a corrupted file and wipe valid credentials.
+      // Only treat "file not found" as an empty map.
+      const present = yield* fsys.existsSafe(file)
+      if (!present) return {} as Record<string, Info>
+      const raw = (yield* fsys.readJson(file).pipe(Effect.mapError(fail("Failed to read auth data")))) as Record<
+        string,
+        unknown
+      >
+      // kilocode_change end
+      return Record.filterMap(raw, (value) => Result.fromOption(decode(value), () => undefined))
     })
 
     const get = Effect.fn("Auth.get")(function* (providerID: string) {
       return (yield* all())[providerID]
     })
 
+    // kilocode_change start - atomic write via temp-file + rename so a crashed
+    // process (OS sleep, extension reload, kill) can never leave auth.json
+    // half-written. Without this, the next Auth.all() read fails, is silently
+    // swallowed, and Auth.set rewrites the file with only the new entry —
+    // effectively logging every other provider out.
+    const writeAtomic = (data: unknown) =>
+      Effect.tryPromise({
+        try: () => Filesystem.writeJson(file, data, 0o600),
+        catch: (cause) => new AuthError({ message: "Failed to write auth data", cause }),
+      })
+    // kilocode_change end
+
     const set = Effect.fn("Auth.set")(function* (key: string, info: Info) {
       const norm = key.replace(/\/+$/, "")
       const data = yield* all()
       if (norm !== key) delete data[key]
       delete data[norm + "/"]
-      yield* fsys
-        .writeJson(file, { ...data, [norm]: info }, 0o600)
-        .pipe(Effect.mapError(fail("Failed to write auth data")))
+      yield* writeAtomic({ ...data, [norm]: info }) // kilocode_change
     })
 
     const remove = Effect.fn("Auth.remove")(function* (key: string) {
@@ -88,7 +108,7 @@ export const layer = Layer.effect(
       const data = yield* all()
       delete data[key]
       delete data[norm]
-      yield* fsys.writeJson(file, data, 0o600).pipe(Effect.mapError(fail("Failed to write auth data")))
+      yield* writeAtomic(data) // kilocode_change
 
       // kilocode_change start - Track logout and reset telemetry identity for Kilo
       if (key === "kilo") {
