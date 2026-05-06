@@ -160,7 +160,7 @@ async function mkdirSafe(dir: string): Promise<void> {
 
   /** Write text, ensuring parent directory exists, using the given encoding. */
   export async function write(path: string, text: string, encoding: string = DEFAULT): Promise<void> {
-    await mkdirSafe(dirname(path), { recursive: true })
+    await mkdirSafe(dirname(path))
     await writeFile(path, encode(text, encoding))
   }
 }
