@@ -1,16 +1,6 @@
 /** @jsxImportSource solid-js */
 
-import {
-  For,
-  Show,
-  createSignal,
-  createMemo,
-  createEffect,
-  on,
-  onMount,
-  onCleanup,
-  type Component,
-} from "solid-js"
+import { For, Show, createSignal, createMemo, createEffect, on, onMount, onCleanup, type Component } from "solid-js"
 import type {
   ExtensionMessage,
   AgentManagerRepoInfoMessage,

@@ -133,24 +133,14 @@ function buildItem(
   return buildSessionItem(tab, statuses[id], blocked, deps)
 }
 
-function statusLabel(
-  id: string,
-  blocked: boolean,
-  status: SessionStatusInfo | undefined,
-  deps: CurrentTabItemsDeps,
-) {
+function statusLabel(id: string, blocked: boolean, status: SessionStatusInfo | undefined, deps: CurrentTabItemsDeps) {
   if (blocked) return deps.t("agentManager.tabsMenu.status.waiting")
   if (status?.type === "busy") return deps.t("agentManager.tabsMenu.status.working")
   if (status?.type === "retry") return deps.t("agentManager.tabsMenu.status.retry")
   return undefined
 }
 
-function statusTone(
-  id: string,
-  blocked: boolean,
-  working: boolean,
-  deps: CurrentTabItemsDeps,
-): CurrentTabItem["tone"] {
+function statusTone(id: string, blocked: boolean, working: boolean, deps: CurrentTabItemsDeps): CurrentTabItem["tone"] {
   if (id === deps.visibleTabId()) return "active"
   if (blocked) return "waiting"
   if (working) return "busy"
