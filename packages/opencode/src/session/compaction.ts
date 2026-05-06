@@ -18,6 +18,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
 import { fn } from "@/util/fn"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -583,6 +584,9 @@ export const layer: Layer.Layer<
         auto: input.auto,
         overflow: input.overflow,
       })
+      // kilocode_change start - keep auto-compaction markers visible during queued turns
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      // kilocode_change end
     })
 
     return Service.of({

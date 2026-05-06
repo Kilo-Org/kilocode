@@ -12,7 +12,7 @@ import { useRoute } from "@tui/context/route"
 import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
 import { useEvent } from "@tui/context/event"
-import { useEditorContext } from "@tui/context/editor"
+import { useEditorContext, type EditorSelection } from "@tui/context/editor"
 import { MessageID, PartID } from "@/session/schema"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { useKeybind } from "@tui/context/keybind"
@@ -43,6 +43,7 @@ import { DialogSkill } from "../dialog-skill"
 import { DialogWorkspaceCreate, restoreWorkspaceSession } from "../dialog-workspace-create"
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
+import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync" // kilocode_change
 
 export type PromptProps = {
   sessionID?: string
@@ -82,6 +83,18 @@ function randomIndex(count: number) {
 
 function fadeColor(color: RGBA, alpha: number) {
   return RGBA.fromValues(color.r, color.g, color.b, color.a * alpha)
+}
+
+function getEditorSelectionKey(selection: EditorSelection) {
+  return [
+    selection.filePath,
+    selection.text,
+    selection.source ?? "",
+    selection.selection.start.line,
+    selection.selection.start.character,
+    selection.selection.end.line,
+    selection.selection.end.character,
+  ].join("-")
 }
 
 let stashed: { prompt: PromptInfo; cursor: number } | undefined
@@ -135,6 +148,7 @@ export function Prompt(props: PromptProps) {
     if (!file) return
     return Locale.truncateMiddle(file, Math.max(12, Math.min(48, Math.floor(dimensions().width / 3))))
   })
+  let lastSubmittedEditorSelectionKey: string | undefined
   const [auto, setAuto] = createSignal<AutocompleteRef>()
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
@@ -236,6 +250,11 @@ export function Prompt(props: PromptProps) {
     const sessionID = props.sessionID
     const msg = lastUserMessage()
     if (!sessionID || !msg) return
+    // kilocode_change start - skip compaction messages while syncing local agent/model
+    const parts = sync.data.part[msg.id]
+    if (!parts) return
+    if (!KiloSessionTuiSync.model({ role: msg.role, parts })) return
+    // kilocode_change end
 
     const key = [sessionID, msg.id].join(":")
     if (key === syncedKey) return
@@ -758,36 +777,38 @@ export function Prompt(props: PromptProps) {
     const currentMode = store.mode
     const variant = local.model.variant.current()
     const editorSelection = fileContextEnabled() ? editor.selection() : undefined
-    const editorParts = editorSelection
-      ? [
-          {
-            id: PartID.ascending(),
-            type: "text" as const,
-            text: (() => {
-              const start = editorSelection.selection.start
-              const end = editorSelection.selection.end
+    const editorSelectionKey = editorSelection ? getEditorSelectionKey(editorSelection) : undefined
+    const editorParts =
+      editorSelection && editorSelectionKey !== lastSubmittedEditorSelectionKey
+        ? [
+            {
+              id: PartID.ascending(),
+              type: "text" as const,
+              text: (() => {
+                const start = editorSelection.selection.start
+                const end = editorSelection.selection.end
 
-              let text = ""
-              if (start.line === end.line && start.character === end.character) {
-                text = `Note: The user opened the file "${editorSelection.filePath}".`
-              } else if (start.line === end.line) {
-                text = `Note: The user selected line ${start.line + 1} from "${editorSelection.filePath}". \`\`\`${editorSelection.text}\`\`\`\n\n`
-              } else {
-                text = `Note: The user selected lines ${start.line + 1} to ${end.line + 1} from "${editorSelection.filePath}". \`\`\`${editorSelection.text}\`\`\`\n\n`
-              }
+                let text = ""
+                if (start.line === end.line && start.character === end.character) {
+                  text = `Note: The user opened the file "${editorSelection.filePath}".`
+                } else if (start.line === end.line) {
+                  text = `Note: The user selected line ${start.line + 1} from "${editorSelection.filePath}". \`\`\`${editorSelection.text}\`\`\`\n\n`
+                } else {
+                  text = `Note: The user selected lines ${start.line + 1} to ${end.line + 1} from "${editorSelection.filePath}". \`\`\`${editorSelection.text}\`\`\`\n\n`
+                }
 
-              return `<system-reminder>${text} This may or may not be relevant to the current task.</system-reminder>\n`
-            })(),
-            synthetic: true,
-            metadata: {
-              kind: "editor_context",
-              source: editorSelection.source ?? "editor",
-              filePath: editorSelection.filePath,
-              selection: editorSelection.selection,
+                return `<system-reminder>${text} This may or may not be relevant to the current task.</system-reminder>\n`
+              })(),
+              synthetic: true,
+              metadata: {
+                kind: "editor_context",
+                source: editorSelection.source ?? "editor",
+                filePath: editorSelection.filePath,
+                selection: editorSelection.selection,
+              },
             },
-          },
-        ]
-      : []
+          ]
+        : []
 
     if (store.mode === "shell") {
       void sdk.client.session.shell({
@@ -850,7 +871,7 @@ export function Prompt(props: PromptProps) {
           ],
         })
         .catch(() => {})
-      editor.clearSelection()
+      lastSubmittedEditorSelectionKey = editorSelectionKey
     }
     toast.dismiss() // kilocode_change - dismiss persistent config warning on first submit
     history.append({
@@ -1240,7 +1261,7 @@ export function Prompt(props: PromptProps) {
                 const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
                 if (
                   (lineCount >= 5 || pastedContent.length > 800) && // kilocode_change #7252 delay paste summary
-                  !sync.data.config.experimental?.disable_paste_summary
+                  kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary)
                 ) {
                   pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
                   return

@@ -54,6 +54,7 @@ class MessageView(
         val existing = parts[content.id]
         if (existing != null) {
             existing.update(content)
+            refresh()
             return
         }
         val view = ViewFactory.create(content)
@@ -61,8 +62,7 @@ class MessageView(
         parts[content.id] = view
         add(view)
         syncBorder()
-        revalidate()
-        repaint()
+        refresh()
     }
 
     /** Remove the renderer for [contentId] if present. */
@@ -70,8 +70,7 @@ class MessageView(
         val view = parts.remove(contentId) ?: return
         remove(view)
         syncBorder()
-        revalidate()
-        repaint()
+        refresh()
     }
 
     private fun syncBorder() {
@@ -81,7 +80,9 @@ class MessageView(
 
     /** Append a streaming delta to the renderer for [contentId]. */
     fun appendDelta(contentId: String, delta: String) {
-        parts[contentId]?.appendDelta(delta)
+        val part = parts[contentId] ?: return
+        part.appendDelta(delta)
+        refresh()
     }
 
     /** Look up a renderer by part id. */
@@ -96,6 +97,10 @@ class MessageView(
     override fun applyStyle(style: SessionStyle) {
         this.style = style
         for (view in parts.values) view.applyStyle(style)
+        refresh()
+    }
+
+    private fun refresh() {
         revalidate()
         repaint()
     }

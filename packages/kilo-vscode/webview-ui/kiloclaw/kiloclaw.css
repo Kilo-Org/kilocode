@@ -49,14 +49,14 @@
 
 .kiloclaw-card-subtitle {
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: var(--kilo-font-size-14);
   font-weight: 600;
   color: var(--vscode-foreground);
 }
 
 .kiloclaw-card-text {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   line-height: 1.5;
   color: var(--vscode-descriptionForeground);
 }
@@ -87,7 +87,7 @@
 }
 
 .kiloclaw-chat-header-title {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-weight: 500;
   color: var(--vscode-foreground);
 }
@@ -129,7 +129,7 @@
 
 .kiloclaw-empty {
   color: var(--vscode-descriptionForeground);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   text-align: center;
   padding: 40px 0;
 }
@@ -139,7 +139,7 @@
   padding: 8px 12px;
   border-radius: 6px;
   max-width: 85%;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   line-height: 1.5;
 }
 
@@ -168,12 +168,12 @@
 
 .kiloclaw-msg-author {
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   opacity: 0.8;
 }
 
 .kiloclaw-msg-time {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   opacity: 0.6;
 }
 
@@ -213,7 +213,7 @@
   background: var(--vscode-input-background);
   color: var(--vscode-input-foreground);
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-family: var(--vscode-font-family);
   line-height: 1.4;
   max-height: 120px;
@@ -246,7 +246,7 @@
 
 .kiloclaw-sidebar-title {
   margin: 0 0 16px;
-  font-size: 14px;
+  font-size: var(--kilo-font-size-14);
   font-weight: 600;
   color: var(--vscode-foreground);
 }
@@ -256,7 +256,7 @@
 }
 
 .kiloclaw-sidebar-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -268,14 +268,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   color: var(--vscode-foreground);
 }
 
 .kiloclaw-sidebar-detail {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   color: var(--vscode-foreground);
   padding: 2px 0;
 }

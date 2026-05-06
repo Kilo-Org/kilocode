@@ -5,6 +5,7 @@ import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
+import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import z from "zod"
@@ -1293,6 +1294,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         const session = yield* sessions.get(input.sessionID)
         yield* revert.cleanup(session)
         // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
+        yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
@@ -1446,6 +1448,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 
+          // kilocode_change start - carry local review command marker into LLM telemetry
+          const telemetry = KiloSessionProcessor.extractReviewTelemetry(
+            msgs.findLast((m) => m.info.role === "user" && m.info.id === lastUser.id)?.parts ?? [],
+          )
+          // kilocode_change end
+
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
           )
@@ -1584,6 +1592,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             assistantMessage: msg,
             sessionID,
             model,
+            telemetry, // kilocode_change
           })
 
           const outcome: "break" | "continue" = yield* Effect.gen(function* () {
@@ -1737,6 +1746,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       input: LoopInput,
     ) {
       // kilocode_change start
+      yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID)),
@@ -1834,6 +1844,15 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       const templateParts = yield* resolvePromptParts(template)
+      // kilocode_change start - mark local review commands for completion telemetry
+      const telemetry = KiloSessionProcessor.reviewTelemetry(input.command)
+      if (telemetry) {
+        for (const part of templateParts) {
+          if (part.type !== "text") continue
+          part.metadata = { ...part.metadata, ...telemetry }
+        }
+      }
+      // kilocode_change end
       const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
       const parts = isSubtask
         ? [

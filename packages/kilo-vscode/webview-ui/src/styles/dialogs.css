@@ -14,12 +14,12 @@
 
 /* Provider Connect Dialog */
 .provider-connect-body {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   color: var(--text-base);
 }
 
 .provider-connect-code-label {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak-base);
 }
 
@@ -35,5 +35,5 @@
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 }

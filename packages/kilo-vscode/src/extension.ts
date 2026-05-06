@@ -21,6 +21,12 @@ import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 
+let agentManager: AgentManagerProvider | undefined
+
+const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
+  panel.title = title || EXTENSION_DISPLAY_NAME
+}
+
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
 // requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
@@ -111,6 +117,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
+  agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)
 
   // Wire "Continue in Worktree" from sidebar → Agent Manager
@@ -171,7 +178,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+          tabTitle: panelTitleHandler(panel),
+        })
         tabProvider.setRemoteService(remoteService)
         tabProvider.setAutoApproveController(autoApprove)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
@@ -431,7 +440,8 @@ export function activate(context: vscode.ExtensionContext) {
   })
 }
 
-export function deactivate() {
+export async function deactivate() {
+  await agentManager?.shutdown()
   TelemetryProxy.getInstance().shutdown()
 }
 
@@ -464,7 +474,9 @@ async function openKiloInNewTab(
     dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
   }
 
-  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+    tabTitle: panelTitleHandler(panel),
+  })
   tabProvider.setRemoteService(remoteService)
   tabProvider.setAutoApproveController(autoApprove)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>

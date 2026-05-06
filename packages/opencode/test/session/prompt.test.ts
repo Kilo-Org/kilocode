@@ -216,7 +216,6 @@ function makeHttp() {
 
 const it = testEffect(makeHttp())
 const unix = process.platform !== "win32" ? it.live : it.live.skip
-const unixSkip = it.live.skip // kilocode_change - TODO(#8990): skip flaky cancel tests on Linux CI
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -790,7 +789,7 @@ it.live(
   3_000,
 )
 
-it.live(
+unix( // kilocode_change - skip flaky cancel test on Windows CI
   "cancel records MessageAbortedError on interrupted process",
   () =>
     provideTmpdirServer(
@@ -1632,8 +1631,7 @@ unix(
   30_000,
 )
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+unix(
   "cancel interrupts shell and resolves cleanly",
   () =>
     withSh(() =>
@@ -1669,10 +1667,8 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+unix(
   "cancel persists aborted shell result when shell ignores TERM",
   () =>
     withSh(() =>
@@ -1703,7 +1699,6 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
 unix(
   "cancel finalizes interrupted bash tool output through normal truncation",
@@ -1756,8 +1751,7 @@ unix(
   30_000,
 )
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+unix(
   "cancel interrupts loop queued behind shell",
   () =>
     provideTmpdirInstance(
@@ -1789,7 +1783,7 @@ unixSkip(
   30_000,
 )
 
-unixSkip(
+unix(
   "shell rejects when another shell is already running",
   () =>
     withSh(() =>
@@ -1819,7 +1813,6 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
 // Abort signal propagation tests for inline tool execution
 

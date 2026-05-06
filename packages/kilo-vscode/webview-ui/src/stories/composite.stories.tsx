@@ -1189,6 +1189,7 @@ export const DiffSummaryCollapsed: Story = {
       profileData: () => null,
       deviceAuth: () => ({ status: "idle" as const }),
       startLogin: () => {},
+      goToLogin: () => {},
       vscodeLanguage: () => "en",
       languageOverride: () => undefined,
       workspaceDirectory: () => "/project",
