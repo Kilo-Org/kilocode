@@ -1,0 +1,5 @@
+- Stream Chat got evicted so KiloClaw could build its own chat mansion.
+- `KiloClawProvider.ts` went from provider to small weather system.
+- ULIDs showed up because apparently regular IDs lacked main-character energy.
+- Twenty locale files learned six new phrases and are coping bravely.
+- Bonus SVG providers arrived like party guests nobody remembers inviting.
