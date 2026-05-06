@@ -15892,7 +15892,14 @@
               "type": "string"
             },
             "additionalProperties": {
-              "$ref": "#/components/schemas/ProviderConfig"
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ProviderConfig"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "mcp": {
