@@ -33,6 +33,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -107,8 +108,11 @@ describe("Agent Manager CSS/TSX Consistency", () => {
     const cssMatches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const defined = new Set(cssMatches.map((m) => m[1]))
 
-    // Extract am- classes referenced in TSX (class="am-..." or `am-...`)
-    const tsxMatches = [...tsx.matchAll(/\bam-[a-z0-9-]+/g)]
+    // Extract am- classes referenced in TSX (class="am-..." or `am-...`),
+    // excluding data-* attributes that intentionally use the am namespace
+    // for behavior hooks instead of CSS classes.
+    const cleaned = tsx.replace(/data-am-[a-z0-9-]+/g, "")
+    const tsxMatches = [...cleaned.matchAll(/\bam-[a-z0-9-]+/g)]
     const used = [...new Set(tsxMatches.map((m) => m[0]))]
 
     const missing = used.filter((c) => !defined.has(c))
