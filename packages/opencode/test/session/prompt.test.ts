@@ -265,6 +265,7 @@ const cfg = {
 function providerCfg(url: string) {
   return {
     ...cfg,
+    experimental: { background_subagents: true }, // kilocode_change - enable background subagent tests
     provider: {
       ...cfg.provider,
       test: {
@@ -642,7 +643,8 @@ it.live(
   "running subtask preserves metadata after tool-call transition",
   () =>
     provideTmpdirServer(
-      Effect.fnUntraced(function* ({ llm }) { // kilocode_change
+      Effect.fnUntraced(function* ({ llm }) {
+        // kilocode_change
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
@@ -789,7 +791,8 @@ it.live(
   3_000,
 )
 
-unix( // kilocode_change - skip flaky cancel test on Windows CI
+unix(
+  // kilocode_change - skip flaky cancel test on Windows CI
   "cancel records MessageAbortedError on interrupted process",
   () =>
     provideTmpdirServer(
@@ -1170,7 +1173,8 @@ unix("shell captures stdout and stderr in completed tool output", () =>
     (_dir) =>
       Effect.gen(function* () {
         const { prompt, run, chat } = yield* boot()
-        const result = yield* prompt.shell({ // kilocode_change
+        const result = yield* prompt.shell({
+          // kilocode_change
           sessionID: chat.id,
           agent: "build",
           command: "printf out && printf err >&2",
@@ -1195,7 +1199,8 @@ unix("shell completes a fast command on the preferred shell", () =>
     (dir) =>
       Effect.gen(function* () {
         const { prompt, run, chat } = yield* boot()
-        const result = yield* prompt.shell({ // kilocode_change
+        const result = yield* prompt.shell({
+          // kilocode_change
           sessionID: chat.id,
           agent: "build",
           command: "pwd",
@@ -1295,7 +1300,8 @@ unix("shell captures stderr from a failing command", () =>
     (_dir) =>
       Effect.gen(function* () {
         const { prompt, run, chat } = yield* boot()
-        const result = yield* prompt.shell({ // kilocode_change
+        const result = yield* prompt.shell({
+          // kilocode_change
           sessionID: chat.id,
           agent: "build",
           command: "command -v __nonexistent_cmd_e2e__ || echo 'not found' >&2; exit 1",
@@ -1353,7 +1359,8 @@ it.live(
   "background completion is used on the next explicit turn",
   () =>
     provideTmpdirServer(
-      Effect.fnUntraced(function* ({ llm }) { // kilocode_change
+      Effect.fnUntraced(function* ({ llm }) {
+        // kilocode_change
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
@@ -1385,7 +1392,8 @@ it.live(
   "background completion waits until the active parent reply finishes",
   () =>
     provideTmpdirServer(
-      Effect.fnUntraced(function* ({ llm }) { // kilocode_change
+      Effect.fnUntraced(function* ({ llm }) {
+        // kilocode_change
         const gate = defer<void>()
         const child = defer<void>()
         const prompt = yield* SessionPrompt.Service
@@ -1409,6 +1417,7 @@ it.live(
         const fiber = yield* prompt
           .prompt({
             sessionID: chat.id,
+            liveBackgroundSubagents: true, // kilocode_change - direct test prompt simulates async/live runtime
             agent: "build",
             model: ref,
             parts: [{ type: "text", text: "hello" }],
@@ -1437,9 +1446,7 @@ it.live(
           "background completion storage",
           MessageV2.filterCompactedEffect(chat.id).pipe(
             Effect.map((msgs) =>
-              msgs.some((msg) =>
-                msg.parts.some((part) => part.type === "text" && part.text.includes("child done")),
-              )
+              msgs.some((msg) => msg.parts.some((part) => part.type === "text" && part.text.includes("child done")))
                 ? true
                 : undefined,
             ),
@@ -1464,7 +1471,8 @@ it.live(
   "background completion propagates child cost to parent task wrapper",
   () =>
     provideTmpdirServer(
-      Effect.fnUntraced(function* ({ llm }) { // kilocode_change
+      Effect.fnUntraced(function* ({ llm }) {
+        // kilocode_change
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         const chat = yield* sessions.create({ title: "Pinned" })
@@ -1485,6 +1493,7 @@ it.live(
         yield* llm.textMatch((hit) => JSON.stringify(hit.body).includes("background subagent running"), "active reply")
         yield* prompt.prompt({
           sessionID: chat.id,
+          liveBackgroundSubagents: true, // kilocode_change - direct test prompt simulates async/live runtime
           agent: "build",
           model: { providerID: ref.providerID, modelID: ModelID.make("priced-model") },
           parts: [{ type: "text", text: "hello" }],
@@ -1495,7 +1504,9 @@ it.live(
             Effect.map((msgs) => {
               for (const msg of msgs) {
                 if (msg.info.role !== "assistant") continue
-                const part = msg.parts.find((item): item is MessageV2.ToolPart => item.type === "tool" && item.tool === "task")
+                const part = msg.parts.find(
+                  (item): item is MessageV2.ToolPart => item.type === "tool" && item.tool === "task",
+                )
                 if (!part || msg.info.cost <= 0) continue
                 return msg.info.cost
               }
@@ -1515,7 +1526,8 @@ it.live(
   "loop waits while shell runs and starts after shell exits",
   () =>
     provideTmpdirServer(
-      Effect.fnUntraced(function* ({ llm }) { // kilocode_change
+      Effect.fnUntraced(function* ({ llm }) {
+        // kilocode_change
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
         // kilocode_change start - use explicit permissions for shell loop integration

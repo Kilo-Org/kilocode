@@ -978,6 +978,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         },
         system: input.system,
         format: input.format,
+        liveBackgroundSubagents: input.liveBackgroundSubagents, // kilocode_change
         editorContext: input.editorContext, // kilocode_change
       }
 
@@ -1965,6 +1966,9 @@ const ModelRef = Schema.Struct({
 export const PromptInput = Schema.Struct({
   sessionID: SessionID,
   messageID: Schema.optional(MessageID),
+  // kilocode_change start - mark runtimes that keep background subagent fibers alive
+  liveBackgroundSubagents: Schema.optional(Schema.Boolean),
+  // kilocode_change end
   model: Schema.optional(ModelRef),
   agent: Schema.optional(Schema.String),
   noReply: Schema.optional(Schema.Boolean),
