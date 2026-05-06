@@ -34,6 +34,8 @@ export interface ModeSwitcherBaseProps {
   value: string
   /** Called when the user picks an agent */
   onSelect: (name: string) => void
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
 }
 
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
@@ -103,6 +105,7 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
         expanded={false}
         placement="top-start"
         minHeight={100}
+        deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}

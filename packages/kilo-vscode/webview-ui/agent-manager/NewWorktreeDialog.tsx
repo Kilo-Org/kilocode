@@ -10,6 +10,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Popover } from "@kilocode/kilo-ui/popover"
+import { DeferredPopover } from "../src/components/shared/DeferredPopover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
 import { useServer } from "../src/context/server"
@@ -388,7 +389,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
                   <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} deferDismiss />
                   </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
@@ -397,8 +398,14 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         if (pid && mid) setModel({ providerID: pid, modelID: mid })
                       }}
                       placement="top-start"
+                      deferDismiss
                     />
-                    <ThinkingSelectorBase variants={variants()} value={effectiveVariant()} onSelect={setVariant} />
+                    <ThinkingSelectorBase
+                      variants={variants()}
+                      value={effectiveVariant()}
+                      onSelect={setVariant}
+                      deferDismiss
+                    />
                     <Show when={overridden()}>
                       <Tooltip value={t("prompt.action.resetModel")} placement="top">
                         <Button
@@ -596,12 +603,13 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     <Icon name="close-small" size="small" />
                   </button>
                 </div>
-                <Popover
+                <DeferredPopover
                   open={compareOpen()}
                   onOpenChange={setCompareOpen}
                   placement="top-start"
                   flip={false}
                   sameWidth
+                  deferDismiss
                   class="am-compare-popover"
                   trigger={
                     <button class="am-selector-trigger" type="button">
@@ -627,7 +635,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   }
                 >
                   <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
-                </Popover>
+                </DeferredPopover>
               </div>
             </Show>
           </div>
