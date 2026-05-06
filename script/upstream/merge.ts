@@ -426,7 +426,15 @@ async function main() {
   logger.step(6, 8, "Applying transformations to opencode branch (pre-merge)...")
 
   logger.info("Removing files skipped in Kilo...")
-  const skips = await skipFiles({ dryRun: false, verbose: options.verbose, force: true })
+  // Pre-merge skip runs on the opencode branch, so HEAD points at upstream.
+  // Pass the base branch explicitly so the "directory missing in base"
+  // grouping folds removals under directories Kilo doesn't have.
+  const skips = await skipFiles({
+    dryRun: false,
+    verbose: options.verbose,
+    force: true,
+    baseRef: config.baseBranch,
+  })
   const count = skips.filter((r) => r.action === "removed").length
   if (count > 0) {
     logger.success(`Removed ${count} skipped file(s) from opencode branch`)
