@@ -93,21 +93,21 @@ async function mount() {
         <KVProvider>
           {/* kilocode_change start */}
           <ToastProvider>
-          {/* kilocode_change end */}
-          <SDKProvider url="http://test" directory={directory} fetch={calls.fetch} events={eventSource()}>
-            <ProjectProvider>
-              <SyncProvider>
-                <Probe
-                  onReady={(ctx) => {
-                    sync = ctx.sync
-                    kv = ctx.kv
-                    done()
-                  }}
-                />
-              </SyncProvider>
-            </ProjectProvider>
-          </SDKProvider>
-          {/* kilocode_change start */}
+            {/* kilocode_change end */}
+            <SDKProvider url="http://test" directory={directory} fetch={calls.fetch} events={eventSource()}>
+              <ProjectProvider>
+                <SyncProvider>
+                  <Probe
+                    onReady={(ctx) => {
+                      sync = ctx.sync
+                      kv = ctx.kv
+                      done()
+                    }}
+                  />
+                </SyncProvider>
+              </ProjectProvider>
+            </SDKProvider>
+            {/* kilocode_change start */}
           </ToastProvider>
           {/* kilocode_change end */}
         </KVProvider>

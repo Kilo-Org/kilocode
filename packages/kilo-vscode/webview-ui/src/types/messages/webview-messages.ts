@@ -143,6 +143,11 @@ export interface WebviewReadyRequest {
   type: "webviewReady"
 }
 
+export interface SelectSourceRequest {
+  type: "selectSource"
+  id: string
+}
+
 export interface RequestProvidersMessage {
   type: "requestProviders"
 }
@@ -771,6 +776,11 @@ export interface DiffViewerRevertFileRequest {
   file: string
 }
 
+export interface DiffViewerRequestFileRequest {
+  type: "diffViewer.requestFile"
+  file: string
+}
+
 export interface DiffViewerCloseRequest {
   type: "diffViewer.close"
 }
@@ -1008,6 +1018,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
@@ -1114,6 +1125,7 @@ export type WebviewMessage =
   | DiffViewerSetDiffStyleRequest
   | DiffViewerSetMarkdownRenderRequest
   | DiffViewerRevertFileRequest
+  | DiffViewerRequestFileRequest
   | DiffViewerCloseRequest
   | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest

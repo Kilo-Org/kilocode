@@ -138,6 +138,44 @@
 }
 
 /* ============================================
+   Diff Viewer Picker Header (source dropdown)
+   ============================================ */
+
+[data-component="diff-picker-header"] {
+  margin: 8px 12px;
+}
+
+/* ============================================
+   Diff Viewer Notice (e.g. snapshots disabled)
+   ============================================ */
+
+.diff-viewer-notice {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #b89500);
+  background: var(--vscode-inputValidation-warningBackground, rgba(184, 149, 0, 0.1));
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+  font-size: var(--kilo-font-size-12);
+  line-height: 1.4;
+}
+
+.diff-viewer-notice-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.diff-viewer-notice-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* ============================================
    Auth Prompt (sign in / sign up error displays)
    ============================================ */
 

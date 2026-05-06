@@ -52,6 +52,10 @@ interface FullScreenDiffViewProps {
   onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
+  /** Defaults to true. Hides the per-file Revert action when false. */
+  canRevert?: boolean
+  /** Defaults to true. Disables comment creation and "Send all" when false. */
+  canComment?: boolean
   onClose: () => void
 }
 
@@ -288,6 +292,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleGutterClick = (file: string, range: SelectedLineRange) => {
+    if (props.canComment === false) return
     if (draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
@@ -310,6 +315,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     if (!(e.metaKey || e.ctrlKey)) return
     const target = e.target
     if (keepNativeFocus(target)) return
+    if (props.canComment === false) return
     if (comments().length === 0) return
     e.preventDefault()
     e.stopPropagation()
@@ -445,7 +451,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
             <Icon name="chevron-grabber-vertical" size="small" />
             {open().length === props.diffs.length ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
           </Button>
-          <Show when={comments().length > 0}>
+          <Show when={comments().length > 0 && props.canComment !== false}>
             <TooltipKeybind
               title={t("agentManager.review.sendAllToChat")}
               keybind={sendAllKeybind()}
@@ -469,7 +475,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               activeFile={activeFile()}
               onFileSelect={handleFileSelect}
               comments={comments()}
-              onRevertFile={props.onRevertFile}
+              onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
               revertingFiles={props.revertingFiles}
             />
           </div>
@@ -567,7 +573,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     />
                                   </Tooltip>
                                 </Show>
-                                <Show when={props.onRevertFile}>
+                                <Show when={props.onRevertFile && props.canRevert !== false}>
                                   <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
                                     <IconButton
                                       icon="discard"
@@ -631,7 +637,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     diffStyle={props.diffStyle}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
-                                    enableGutterUtility={true}
+                                    enableGutterUtility={props.canComment !== false}
                                     onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                                     onLineNumberClick={(event) => {
                                       if (event.annotationSide === "deletions") return

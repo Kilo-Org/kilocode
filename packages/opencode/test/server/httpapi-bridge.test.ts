@@ -187,12 +187,12 @@ describe("HttpApi server", () => {
   // and is not enabled in any production client (VS Code extension, JetBrains, TUI, desktop all use Hono).
   // Follow-up: migrate Kilo overlay routes onto the Effect HttpApi bridge.
   test.skip("covers every generated OpenAPI route with Effect HttpApi contracts", async () => {
-  const honoRoutes = openApiRouteKeys(await Server.openapi())
-  const effectRoutes = openApiRouteKeys(effectOpenApi())
+    const honoRoutes = openApiRouteKeys(await Server.openapi())
+    const effectRoutes = openApiRouteKeys(effectOpenApi())
 
-  expect(honoRoutes.filter((route) => !effectRoutes.includes(route))).toEqual([])
-  expect(effectRoutes.filter((route) => !honoRoutes.includes(route))).toEqual([])
-})
+    expect(honoRoutes.filter((route) => !effectRoutes.includes(route))).toEqual([])
+    expect(effectRoutes.filter((route) => !honoRoutes.includes(route))).toEqual([])
+  })
 
   test.skip("matches generated OpenAPI route parameters", async () => {
     const hono = openApiParameters(await Server.openapi())

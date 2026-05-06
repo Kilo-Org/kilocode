@@ -599,7 +599,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           post: (msg) => this.postMessage(msg),
           openAgentManager: () => vscode.commands.executeCommand("kilo-code.new.agentManagerOpen"),
           openAdvancedWorktree: () => vscode.commands.executeCommand("kilo-code.new.agentManager.advancedWorktree"),
-          openChanges: () => vscode.commands.executeCommand("kilo-code.new.showChanges"),
+          openChanges: (sessionId?: string) =>
+            vscode.commands.executeCommand("kilo-code.new.showChanges", { sessionId }),
+          currentSessionId: this.currentSession?.id,
           createWorktree: async (baseBranch, branchName) => {
             await this.createWorktreeHandler?.(baseBranch, branchName)
           },

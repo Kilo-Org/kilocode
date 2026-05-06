@@ -1,5 +1,5 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { GitOps } from "./agent-manager/GitOps"
+import type { GitOps } from "../../agent-manager/GitOps"
 
 /**
  * A worktree diff target: the working directory and the base branch we diff
@@ -11,11 +11,8 @@ type Status = "added" | "deleted" | "modified"
 
 /**
  * Thin coordinator that wraps (KiloClient, GitOps, DiffTarget) and exposes the
- * small set of operations used by both the sidebar DiffViewerProvider and the
- * agent manager's WorktreeDiffController.
- *
- * Keeping the helper off review-utils.ts: this deals in HTTP + git orchestration,
- * not the small path/vscode helpers that file is scoped to.
+ * small set of operations used by the Changes panel's WorktreeDiffSource and
+ * the agent manager's WorktreeDiffController.
  */
 export class WorktreeDiffClient {
   constructor(

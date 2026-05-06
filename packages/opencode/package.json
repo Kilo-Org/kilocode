@@ -176,7 +176,6 @@
     "semver": "^7.6.3",
     "simple-git": "3.35.2",
     "solid-js": "catalog:",
-    "stream-chat": "9.38.0",
     "strip-ansi": "7.1.2",
     "tree-sitter-bash": "0.25.0",
     "tree-sitter-powershell": "0.25.10",
