@@ -4,7 +4,7 @@ import type { DiffFile } from "../types"
 import { hashFileDiffs } from "../shared/hash"
 import { DIFF_POLL_INTERVAL_MS } from "../polling"
 import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
-import { patchToBeforeAfter } from "./patch-to-before-after"
+import { normalize, text } from "@kilocode/kilo-ui/session-diff"
 
 export type SessionDiffFetch = (params: { sessionID: string; directory?: string }) => Promise<SnapshotFileDiff[]>
 
@@ -94,11 +94,13 @@ export class SessionDiffSource implements DiffSource {
   private async fetchDiffs(): Promise<DiffFile[]> {
     const raw = await this.fetch({ sessionID: this.sessionId, directory: this.workspaceRoot })
     return raw.map((r) => {
-      const { before, after } = patchToBeforeAfter(r.patch)
+      // Empty patch means binary or summarized (>256 KB) — normalize() can't
+      // parse it, so short-circuit to empty strings.
+      const view = r.patch === "" ? null : normalize(r)
       return {
         file: r.file,
-        before,
-        after,
+        before: view ? text(view, "deletions") : "",
+        after: view ? text(view, "additions") : "",
         additions: r.additions,
         deletions: r.deletions,
         status: r.status,
