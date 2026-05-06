@@ -15,7 +15,6 @@
     "versions": "bun run transforms/preserve-versions.ts",
     "fix:markers": "bun run fix-kilocode-markers.ts",
     "reset:upstream": "bun run reset-to-upstream.ts",
-    "find:candidates": "bun run find-reset-candidates.ts",
     "keep-ours": "bun run transforms/keep-ours.ts"
   },
   "dependencies": {

@@ -1,4 +1,4 @@
-import { test, expect, mock, beforeEach } from "bun:test"
+import { test, expect, mock, beforeEach, afterEach } from "bun:test" // kilocode_change
 import { EventEmitter } from "events"
 import { Effect } from "effect"
 import type { MCP as MCPNS } from "../../src/mcp/index"
@@ -11,22 +11,10 @@ void mock.module("open", () => ({
   default: async (url: string) => {
     openCalledWith = url
 
-    // Return a mock subprocess that emits an error if openShouldFail is true
+    if (openShouldFail) throw new Error("spawn xdg-open ENOENT") // kilocode_change - avoid listener timing races in CI
+
+    // Return a mock subprocess when open succeeds. // kilocode_change
     const subprocess = new EventEmitter()
-    if (openShouldFail) {
-      // kilocode_change start - buffer the error until the consumer attaches
-      // its listener. The previous setTimeout(10) raced listener attachment
-      // on slow Windows CI; emit() before `.on("error", ...)` was silently
-      // lost and BrowserOpenFailed was never published.
-      const err = new Error("spawn xdg-open ENOENT")
-      const originalOn = subprocess.on.bind(subprocess)
-      subprocess.on = function (event, listener) {
-        const ret = originalOn(event, listener)
-        if (event === "error") queueMicrotask(() => (listener as (e: Error) => void).call(subprocess, err))
-        return ret
-      }
-      // kilocode_change end
-    }
     return subprocess
   },
 }))
@@ -107,6 +95,15 @@ beforeEach(() => {
   openCalledWith = undefined
   transportCalls.length = 0
 })
+
+// kilocode_change start
+afterEach(async () => {
+  await Instance.disposeAll()
+})
+// kilocode_change end
+
+// kilocode_change start - keep declaration lines aligned with upstream after adding afterEach cleanup
+// kilocode_change end
 
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
