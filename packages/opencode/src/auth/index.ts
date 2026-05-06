@@ -68,15 +68,24 @@ export const layer = Layer.effect(
 
       // kilocode_change start - fail loud on read/parse errors so Auth.set/remove
       // never silently truncate a corrupted file and wipe valid credentials.
-      // Only treat "file not found" as an empty map.
-      const present = yield* fsys.existsSafe(file)
-      if (!present) return {} as Record<string, Info>
-      const raw = (yield* fsys.readJson(file).pipe(Effect.mapError(fail("Failed to read auth data")))) as Record<
-        string,
-        unknown
-      >
+      // Only a genuine "file not found" maps to an empty record; every other
+      // error (EACCES, EBUSY, EIO, truncated JSON, …) propagates.
+      const text = yield* fsys.readFileString(file).pipe(
+        Effect.matchEffect({
+          onFailure: (cause) =>
+            (cause as { reason?: { _tag?: string } })?.reason?._tag === "NotFound"
+              ? Effect.succeed(null)
+              : Effect.fail(fail("Failed to read auth data")(cause)),
+          onSuccess: (value) => Effect.succeed(value),
+        }),
+      )
+      if (text === null) return {} as Record<string, Info>
+      const data = yield* Effect.try({
+        try: () => JSON.parse(text) as Record<string, unknown>,
+        catch: fail("Failed to parse auth data"),
+      })
+      return Record.filterMap(data, (value) => Result.fromOption(decode(value), () => undefined))
       // kilocode_change end
-      return Record.filterMap(raw, (value) => Result.fromOption(decode(value), () => undefined))
     })
 
     const get = Effect.fn("Auth.get")(function* (providerID: string) {

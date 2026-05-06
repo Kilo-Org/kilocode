@@ -1,10 +1,10 @@
 import { describe, expect } from "bun:test"
-import { Effect, Exit, Layer } from "effect"
-import fs from "fs/promises"
-import path from "path"
+import { Effect, Exit, Layer } from "effect" // kilocode_change - Exit for corrupted-auth test
+import fs from "fs/promises" // kilocode_change
+import path from "path" // kilocode_change
 import { Auth } from "../../src/auth"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Global } from "@opencode-ai/core/global"
+import { Global } from "@opencode-ai/core/global" // kilocode_change
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
