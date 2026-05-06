@@ -3,7 +3,8 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
-import { DiffViewerProvider } from "./DiffViewerProvider"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -206,8 +207,10 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Create standalone diff viewer provider for the sidebar "Show Changes" action
-  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
+  const diffSourceCatalog = new DiffSourceCatalog(connectionService)
+  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService, diffSourceCatalog, {
+    sessionIdProvider: () => provider.getCurrentSessionId(),
+  })
   diffViewerProvider.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
@@ -332,9 +335,12 @@ export function activate(context: vscode.ExtensionContext) {
         autoApprove,
       )
     }),
-    vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
-      diffViewerProvider.openPanel()
-    }),
+    vscode.commands.registerCommand(
+      "kilo-code.new.showChanges",
+      (arg?: { sessionId?: string; initialSourceId?: string }) => {
+        diffViewerProvider.openFromCommand(arg)
+      },
+    ),
     vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {
       subAgentViewerProvider.openPanel(sessionID, title)
     }),
