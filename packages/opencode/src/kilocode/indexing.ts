@@ -28,6 +28,8 @@ import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth
 
 const log = Log.create({ service: "kilocode-indexing" })
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
+const noWorkspace = () =>
+  disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
 
 function worktreeDisabled(): z.infer<typeof IndexingStatus> {
   return {
@@ -218,6 +220,9 @@ export namespace KiloIndexing {
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
     const cfg = await Config.get()
+    if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
+      return track(hit, await inert(() => noWorkspace()))
+    }
     if (!hasIndexingPlugin(cfg.plugin)) {
       return track(hit, await inert(() => missing()))
     }

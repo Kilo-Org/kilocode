@@ -91,6 +91,40 @@ export async function upstreamData(ref: string, file: string) {
   throw new Error(`Failed to read ${file} from ${ref}: ${stderr}`)
 }
 
+/**
+ * Batch-look up upstream blob sizes for many files in one subprocess. Returns
+ * a map keyed by the input file path. Missing files map to `null`. Avoids
+ * per-file `git show` spawns and keeps memory bounded when most candidates are
+ * missing upstream or above a size threshold.
+ */
+export async function upstreamSizes(ref: string, files: string[]): Promise<Map<string, number | null>> {
+  const result = new Map<string, number | null>()
+  if (files.length === 0) return result
+
+  const proc = Bun.spawn(["git", "cat-file", "--batch-check"], {
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+  const input = files.map((f) => `${ref}:${f}\n`).join("")
+  proc.stdin.write(input)
+  await proc.stdin.end()
+
+  const stdout = await new Response(proc.stdout).text()
+  const lines = stdout.split("\n").filter((line) => line.length > 0)
+  for (let i = 0; i < files.length; i++) {
+    const line = lines[i] ?? ""
+    if (line.includes(" missing")) {
+      result.set(files[i], null)
+      continue
+    }
+    const parts = line.trim().split(/\s+/)
+    const size = Number(parts[2] ?? "")
+    result.set(files[i], Number.isFinite(size) ? size : null)
+  }
+  return result
+}
+
 export async function translate(file: string, text: string) {
   const names = applyPackageNameTransforms(text).result
   const script = applyScriptTransforms(names).result

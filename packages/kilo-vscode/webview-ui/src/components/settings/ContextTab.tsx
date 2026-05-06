@@ -69,7 +69,7 @@ const ContextTab: Component = () => {
       <Card>
         <div
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "8px",
             "border-bottom": patterns().length > 0 || newPattern() ? "1px solid var(--border-weak-base)" : "none",
@@ -118,7 +118,7 @@ const ContextTab: Component = () => {
               <span
                 style={{
                   "font-family": "var(--vscode-editor-font-family, monospace)",
-                  "font-size": "12px",
+                  "font-size": "var(--kilo-font-size-12)",
                 }}
               >
                 {pattern}

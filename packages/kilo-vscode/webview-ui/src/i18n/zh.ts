@@ -1350,6 +1350,8 @@ export const dict = {
   "settings.display.layout.description": "聊天界面的布局模式",
   "settings.display.layout.auto": "自动",
   "settings.display.layout.stretch": "拉伸",
+  "settings.display.fontSize.title": "字体大小",
+  "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
   "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
   "settings.display.reasoningAutoCollapse.description":
     "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",

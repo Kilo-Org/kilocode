@@ -1380,6 +1380,8 @@ export const dict = {
   "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
   "settings.display.layout.auto": "อัตโนมัติ",
   "settings.display.layout.stretch": "ยืด",
+  "settings.display.fontSize.title": "ขนาดฟอนต์",
+  "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",

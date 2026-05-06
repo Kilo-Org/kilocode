@@ -8,10 +8,9 @@
  *   bun run script/upstream/reset-to-upstream.ts packages/opencode/src/file.ts --dry-run
  */
 
-import { rm } from "node:fs/promises"
-import path from "node:path"
 import { error, header, info, success, warn } from "./utils/logger"
-import { last, normalize, root, translate, upstreamData } from "./utils/upstream"
+import { resetFile } from "./utils/reset"
+import { last, normalize, root } from "./utils/upstream"
 
 interface Args {
   file?: string
@@ -34,14 +33,6 @@ written back as raw upstream bytes without text transforms.
 Options:
   --dry-run  Show what would change without writing the file.
   --help     Show this help message.`)
-}
-
-function binary(data: Uint8Array) {
-  return data.includes(0)
-}
-
-function same(left: Uint8Array, right: Uint8Array) {
-  return left.length === right.length && left.every((byte, index) => byte === right[index])
 }
 
 function args(): Args {
@@ -68,52 +59,26 @@ async function main() {
   process.chdir(top)
 
   const file = normalize(top, opts.file)
-  const abs = path.join(top, file)
 
   header("Reset file to upstream")
 
   const version = await last()
   success(`Last merged upstream: ${version.tag} (${version.commit.slice(0, 8)})`)
 
-  const data = await upstreamData(version.commit, file)
-  if (data === null) {
-    warn(`${file} does not exist upstream`)
+  const result = await resetFile({ root: top, file, commit: version.commit, dryRun: opts.dryRun })
+
+  if (result.action === "deleted") {
     if (opts.dryRun) {
+      warn(`${file} does not exist upstream`)
       info(`[DRY-RUN] Would delete ${file}`)
       return
     }
-
-    await rm(abs, { force: true })
+    warn(`${file} does not exist upstream`)
     success(`Deleted ${file}`)
     return
   }
 
-  if (binary(data)) {
-    const current = await Bun.file(abs)
-      .arrayBuffer()
-      .then((buffer) => new Uint8Array(buffer))
-      .catch(() => null)
-    if (current && same(current, data)) {
-      success(`${file} already matches upstream ${version.tag}`)
-      return
-    }
-
-    if (opts.dryRun) {
-      info(`[DRY-RUN] Would reset binary ${file} to upstream ${version.tag}`)
-      return
-    }
-
-    await Bun.write(abs, data)
-    success(`Reset binary ${file} to upstream ${version.tag}`)
-    return
-  }
-
-  const base = new TextDecoder().decode(data)
-  const next = await translate(file, base)
-  const current = await Bun.file(abs)
-    .text()
-    .catch(() => null)
-  if (current === next) {
+  if (result.action === "identical") {
     success(`${file} already matches transformed upstream ${version.tag}`)
     return
   }
@@ -123,7 +88,6 @@ async function main() {
     return
   }
 
-  await Bun.write(abs, next)
   success(`Reset ${file} to transformed upstream ${version.tag}`)
 }
 

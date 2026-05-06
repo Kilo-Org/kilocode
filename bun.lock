@@ -33,7 +33,7 @@
     },
     "packages/core": {
       "name": "@opencode-ai/core",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "bin": {
         "opencode": "./bin/opencode",
       },
@@ -68,7 +68,7 @@
     },
     "packages/kilo-docs": {
       "name": "@kilocode/kilo-docs",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@docsearch/css": "^4",
         "@docsearch/js": "^4",
@@ -97,7 +97,7 @@
     },
     "packages/kilo-gateway": {
       "name": "@kilocode/kilo-gateway",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@ai-sdk/alibaba": "1.0.17",
         "@ai-sdk/anthropic": "3.0.71",
@@ -133,7 +133,7 @@
     },
     "packages/kilo-i18n": {
       "name": "@kilocode/kilo-i18n",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "devDependencies": {
         "@tsconfig/node22": "catalog:",
         "@types/bun": "catalog:",
@@ -143,7 +143,7 @@
     },
     "packages/kilo-indexing": {
       "name": "@kilocode/kilo-indexing",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "3.1005.0",
         "@aws-sdk/credential-provider-ini": "3.972.31",
@@ -177,7 +177,7 @@
     },
     "packages/kilo-telemetry": {
       "name": "@kilocode/kilo-telemetry",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@kilocode/kilo-gateway": "workspace:*",
         "posthog-node": "4.4.0",
@@ -191,7 +191,7 @@
     },
     "packages/kilo-ui": {
       "name": "@kilocode/kilo-ui",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@kobalte/core": "0.13.11",
         "@opencode-ai/core": "workspace:*",
@@ -226,7 +226,7 @@
     },
     "packages/kilo-vscode": {
       "name": "kilo-code",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@kilocode/kilo-i18n": "workspace:*",
@@ -287,7 +287,7 @@
     },
     "packages/opencode": {
       "name": "@kilocode/cli",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "bin": {
         "kilo": "./bin/kilo",
         "kilocode": "./bin/kilo",
@@ -358,6 +358,7 @@
         "ai-gateway-provider": "3.1.2",
         "bonjour-service": "1.3.0",
         "bun-pty": "0.4.8",
+        "chardet": "2.1.1",
         "chokidar": "4.0.3",
         "cli-sound": "1.1.3",
         "clipboardy": "4.0.0",
@@ -376,7 +377,6 @@
         "iconv-lite": "0.7.2",
         "ignore": "7.0.5",
         "immer": "11.1.4",
-        "jschardet": "3.1.4",
         "jsonc-parser": "3.3.1",
         "mime-types": "3.0.2",
         "minimatch": "10.2.5",
@@ -446,7 +446,7 @@
     },
     "packages/plugin": {
       "name": "@kilocode/plugin",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "effect": "catalog:",
@@ -471,7 +471,7 @@
     },
     "packages/script": {
       "name": "@opencode-ai/script",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "semver": "^7.6.3",
       },
@@ -482,7 +482,7 @@
     },
     "packages/sdk/js": {
       "name": "@kilocode/sdk",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "cross-spawn": "catalog:",
       },
@@ -497,7 +497,7 @@
     },
     "packages/storybook": {
       "name": "@opencode-ai/storybook",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "devDependencies": {
         "@opencode-ai/ui": "workspace:*",
         "@solidjs/meta": "catalog:",
@@ -520,7 +520,7 @@
     },
     "packages/ui": {
       "name": "@opencode-ai/ui",
-      "version": "7.2.40",
+      "version": "7.2.42",
       "dependencies": {
         "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "catalog:",
@@ -3299,8 +3299,6 @@
     "js-yaml": ["js-yaml@4.1.1", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA=="],
 
     "jsbi": ["jsbi@4.3.2", "", {}, "sha512-9fqMSQbhJykSeii05nxKl4m6Eqn2P6rOlYiS+C5Dr/HPIU/7yZxu5qzbs40tgaFORiw2Amd0mirjxatXYMkIew=="],
-
-    "jschardet": ["jschardet@3.1.4", "", {}, "sha512-/kmVISmrwVwtyYU40iQUOp3SUPk2dhNCMsZBQX0R1/jZ8maaXJ/oZIzUOiyOqcgtLnETFKYChbJ5iDC/eWmFHg=="],
 
     "jsesc": ["jsesc@3.1.0", "", { "bin": { "jsesc": "bin/jsesc" } }, "sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA=="],
 

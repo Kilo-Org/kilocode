@@ -154,6 +154,9 @@ export namespace Telemetry {
   // LLM
   export function trackLlmCompletion(properties: {
     taskId?: string
+    mode?: "review"
+    feature?: "code_reviews"
+    command?: "local-review" | "local-review-uncommitted"
     apiProvider: string
     modelId: string
     inputTokens?: number
