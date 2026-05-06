@@ -2661,7 +2661,7 @@ const AgentManagerContent: Component = () => {
                   <div
                     class="am-tab-list"
                     ref={tabScroll.setRef}
-                    style={{ "--am-tab-count": `${tabIds().length}` } as JSX.CSSProperties}
+                    style={{ "--tab-count": `${tabIds().length}` } as JSX.CSSProperties}
                   >
                     <SortableProvider ids={tabIds()}>
                       <For each={tabIds()}>

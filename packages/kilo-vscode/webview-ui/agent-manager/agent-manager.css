@@ -1034,10 +1034,10 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-tab-list {
   --am-tab-max-width: 240px;
-  --am-tab-width: clamp(72px, calc(100% / var(--am-tab-count, 1)), var(--am-tab-max-width));
+  --am-tab-width: clamp(72px, calc(100% / var(--tab-count, 1)), var(--am-tab-max-width));
   display: flex;
   align-items: stretch;
-  flex: 0 1 calc(var(--am-tab-count, 1) * var(--am-tab-max-width));
+  flex: 0 1 calc(var(--tab-count, 1) * var(--am-tab-max-width));
   min-width: 0;
   overflow-x: auto;
   height: 100%;

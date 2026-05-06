@@ -500,7 +500,7 @@ export const TabBarMultipleTabs: Story = {
       <div class="am-tab-bar">
         <div class="am-tab-scroll-area">
           <div class="am-tab-list-wrap">
-            <div class="am-tab-list" style={{ "--am-tab-count": "3" } as JSX.CSSProperties}>
+            <div class="am-tab-list" style={{ "--tab-count": "3" } as JSX.CSSProperties}>
               <MockTab title="Implement auth" active />
               <MockTab title="Fix button styles" />
               <MockTab title="Add unit tests" />
@@ -535,7 +535,7 @@ export const TabBarWithReviewTab: Story = {
       <div class="am-tab-bar">
         <div class="am-tab-scroll-area">
           <div class="am-tab-list-wrap">
-            <div class="am-tab-list" style={{ "--am-tab-count": "2" } as JSX.CSSProperties}>
+            <div class="am-tab-list" style={{ "--tab-count": "2" } as JSX.CSSProperties}>
               <MockTab title="Implement auth" />
               <MockReviewTab active />
             </div>
@@ -562,7 +562,7 @@ export const TabBarSingleTab: Story = {
       <div class="am-tab-bar">
         <div class="am-tab-scroll-area">
           <div class="am-tab-list-wrap">
-            <div class="am-tab-list" style={{ "--am-tab-count": "1" } as JSX.CSSProperties}>
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
               <MockTab title="PR #6966 worktree checkout" active />
             </div>
             <div class="am-split-button am-tab-add-split">
