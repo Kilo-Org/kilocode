@@ -1,6 +1,8 @@
 import * as vscode from "vscode"
 import type { KiloConnectionService } from "../../services/cli-backend"
 import { GitOps } from "../../agent-manager/GitOps"
+import { diffSummary, diffFile } from "../../agent-manager/local-diff"
+import type { WorktreeDiffEntry } from "../../agent-manager/types"
 import { WorktreeDiffClient, type DiffTarget } from "../shared/client"
 import { hashFileDiffs } from "../shared/hash"
 import { resolveLocalDiffTarget } from "../shared/target"
@@ -19,8 +21,12 @@ export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
 }
 
 /**
- * Diffs between the local working tree and the base branch. Initial fetch + 2.5s polling
- * with hash dedup, and file revert.
+ * Diffs between the local working tree and the base branch. Polls a summary
+ * (one entry per changed file, no content) every {@link DIFF_POLL_INTERVAL_MS},
+ * then loads `before`/`after`/`patch` per file on demand via {@link requestFile}.
+ *
+ * Mirrors the Agent Manager's `WorktreeDiffController` and runs entirely in
+ * the extension host (no `kilo serve` round-trip)
  */
 export class WorktreeDiffSource implements DiffSource {
   readonly descriptor = WORKSPACE_DESCRIPTOR
@@ -82,6 +88,22 @@ export class WorktreeDiffSource implements DiffSource {
     }
   }
 
+  async requestFile(file: string): Promise<DiffFile | null> {
+    if (!file) return null
+    const target = this.target ?? (await this.resolveTarget())
+    if (!target) return null
+    this.target = target
+
+    try {
+      const entry = await diffFile(this.git, target.directory, target.baseBranch, file, (...args) => this.log(...args))
+      if (!entry) return null
+      return toDiffFile(entry)
+    } catch (err) {
+      this.log("Failed to fetch worktree diff file:", err)
+      return null
+    }
+  }
+
   dispose(): void {
     this.stopPolling()
     this.git.dispose()
@@ -97,14 +119,8 @@ export class WorktreeDiffSource implements DiffSource {
 
   private async fetchAndPost(target: DiffTarget, post: DiffSourcePost, force: boolean): Promise<void> {
     try {
-      await this.connection.connect(target.directory)
-      const client = this.connection.getClient()
-      const { data } = await client.worktree.diff(
-        { directory: target.directory, base: target.baseBranch },
-        { throwOnError: true },
-      )
-
-      const diffs = (data ?? []) as unknown as DiffFile[]
+      const entries = await diffSummary(this.git, target.directory, target.baseBranch, (...args) => this.log(...args))
+      const diffs = entries.map(toDiffFile)
       const hash = hashFileDiffs(diffs as never)
       if (!force && hash === this.lastHash) return
       this.lastHash = hash
@@ -136,5 +152,26 @@ export class WorktreeDiffSource implements DiffSource {
 
   private log(...args: unknown[]): void {
     appendOutput(this.output, "WorktreeDiffSource", ...args)
+  }
+}
+
+/**
+ * Project a `WorktreeDiffEntry` from `local-diff.ts` onto the `DiffFile` shape
+ * expected by the diff viewer. Drops `patch` (the webview rebuilds before/after
+ * for itself) and coerces optional `before`/`after` to empty strings when the
+ * entry is summarized.
+ */
+function toDiffFile(entry: WorktreeDiffEntry): DiffFile {
+  return {
+    file: entry.file,
+    before: entry.before ?? "",
+    after: entry.after ?? "",
+    additions: entry.additions,
+    deletions: entry.deletions,
+    status: entry.status,
+    tracked: entry.tracked,
+    generatedLike: entry.generatedLike,
+    summarized: entry.summarized,
+    stamp: entry.stamp,
   }
 }

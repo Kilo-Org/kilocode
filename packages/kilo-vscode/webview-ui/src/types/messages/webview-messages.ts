@@ -776,6 +776,11 @@ export interface DiffViewerRevertFileRequest {
   file: string
 }
 
+export interface DiffViewerRequestFileRequest {
+  type: "diffViewer.requestFile"
+  file: string
+}
+
 export interface DiffViewerCloseRequest {
   type: "diffViewer.close"
 }
@@ -1120,6 +1125,7 @@ export type WebviewMessage =
   | DiffViewerSetDiffStyleRequest
   | DiffViewerSetMarkdownRenderRequest
   | DiffViewerRevertFileRequest
+  | DiffViewerRequestFileRequest
   | DiffViewerCloseRequest
   | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest

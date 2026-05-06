@@ -720,6 +720,12 @@ export interface DiffViewerRevertFileResultMessage {
   message: string
 }
 
+export interface DiffViewerDiffFileMessage {
+  type: "diffViewer.diffFile"
+  file: string
+  diff: WorktreeFileDiff | null
+}
+
 export interface DiffViewerMarkdownRenderMessage {
   type: "diffViewer.markdownRender"
   render: boolean
@@ -948,6 +954,7 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
   | SetAvailableSourcesMessage
   | DiffViewerCapabilitiesMessage

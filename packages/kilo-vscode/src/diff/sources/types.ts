@@ -51,5 +51,12 @@ export interface DiffSource {
 
   revertFile?(file: string): Promise<{ ok: boolean; message: string }>
 
+  /**
+   * Lazy detail load for a single file, for sources that emit summarized entries
+   * (no `before`/`after` content) so the webview can fetch
+   * full content on demand.
+   */
+  requestFile?(file: string): Promise<DiffFile | null>
+
   dispose(): void
 }

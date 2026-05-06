@@ -145,6 +145,9 @@ export class DiffViewerProvider implements vscode.Disposable {
     "diffViewer.revertFile": (msg) => {
       if (typeof msg.file === "string") void this.controller?.revertFile(msg.file)
     },
+    "diffViewer.requestFile": (msg) => {
+      if (typeof msg.file === "string") void this.controller?.requestFile(msg.file)
+    },
     openFile: (msg) => {
       if (typeof msg.filePath !== "string") return
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)

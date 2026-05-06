@@ -101,6 +101,25 @@ export class SourceController {
     })
   }
 
+  /**
+   * Lazy detail load for a single file. Forwards to the active source's
+   * `requestFile`. Posts `diff: null` when the source can't resolve the file
+   * or doesn't support per-file detail, so the webview can clear its
+   * pending-loading indicator either way.
+   */
+  async requestFile(file: string): Promise<void> {
+    const source = this.active
+    const epoch = this.epoch
+    if (!source?.requestFile) {
+      this.post({ type: "diffViewer.diffFile", file, diff: null })
+      return
+    }
+    const diff = await source.requestFile(file).catch(() => null)
+    // Drop the response if the source has been disposed/swapped while we waited.
+    if (this.epoch !== epoch) return
+    this.post({ type: "diffViewer.diffFile", file, diff })
+  }
+
   dispose(): void {
     this.stop()
   }

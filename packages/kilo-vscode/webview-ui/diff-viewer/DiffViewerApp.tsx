@@ -12,6 +12,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
+import { mergeWorktreeDiffs } from "../agent-manager/diff-state"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
@@ -37,6 +38,7 @@ const DiffViewerContent: Component = () => {
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
   const [markdown, setMarkdown] = createSignal(false)
   const [reverting, setReverting] = createSignal<Set<string>>(new Set())
+  const [loadingFiles, setLoadingFiles] = createSignal<Set<string>>(new Set())
   const [availableSources, setAvailableSources] = createSignal<DiffSourceDescriptor[]>([])
   const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
   const [capabilities, setCapabilities] = createSignal<DiffSourceCapabilities | undefined>(undefined)
@@ -57,9 +59,47 @@ const DiffViewerContent: Component = () => {
     })
   }
 
+  const markLoadingFile = (file: string, active: boolean) => {
+    setLoadingFiles((prev) => {
+      if (active && prev.has(file)) return prev
+      if (!active && !prev.has(file)) return prev
+      const next = new Set(prev)
+      if (active) next.add(file)
+      else next.delete(file)
+      return next
+    })
+  }
+
+  const requestDiffFile = (file: string) => {
+    if (loadingFiles().has(file)) return
+    markLoadingFile(file, true)
+    post({ type: "diffViewer.requestFile", file })
+  }
+
+  const refreshStaleDiffs = (files: Set<string>) => {
+    for (const file of files) {
+      if (loadingFiles().has(file)) continue
+      markLoadingFile(file, true)
+      post({ type: "diffViewer.requestFile", file })
+    }
+  }
+
   const unsubscribe = vscode.onMessage((msg) => {
     if (msg.type === "diffViewer.diffs") {
-      setDiffs(msg.diffs)
+      // Preserve cached `before`/`after` across polls so summarized polling
+      // updates don't clobber loaded detail. Mirrors the agent manager's
+      // worktree diff merge — see worktree-diff-controller.ts.
+      const merged = mergeWorktreeDiffs(diffs(), msg.diffs)
+      setDiffs(merged.diffs)
+      if (merged.stale.size > 0) refreshStaleDiffs(merged.stale)
+      return
+    }
+
+    if (msg.type === "diffViewer.diffFile") {
+      markLoadingFile(msg.file, false)
+      const fresh = msg.diff
+      if (!fresh) return
+      setDiffs((prev) => prev.map((entry) => (entry.file === fresh.file ? fresh : entry)))
       return
     }
 
@@ -109,6 +149,7 @@ const DiffViewerContent: Component = () => {
       setComments([])
       setDiffStyle("unified")
       setReverting(new Set<string>())
+      setLoadingFiles(new Set<string>())
       setNotice(undefined)
     }),
   )
@@ -141,6 +182,8 @@ const DiffViewerContent: Component = () => {
       <FullScreenDiffView
         diffs={diffs()}
         loading={loading()}
+        loadingFiles={loadingFiles()}
+        onRequestDiff={requestDiffFile}
         sessionKey={currentSourceId() ?? "local"}
         comments={comments()}
         onCommentsChange={setComments}
