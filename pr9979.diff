@@ -1,0 +1,3803 @@
+diff --git a/.changeset/jetbrains-header-tooltips.md b/.changeset/jetbrains-header-tooltips.md
+new file mode 100644
+index 00000000000..eabe4154aa9
+--- /dev/null
++++ b/.changeset/jetbrains-header-tooltips.md
+@@ -0,0 +1,5 @@
++---
++"@kilocode/kilo-jetbrains": patch
++---
++
++Remember the JetBrains session header metrics expansion preference and show file names in read/write timeline tooltips.
+diff --git a/.changeset/jetbrains-session-header.md b/.changeset/jetbrains-session-header.md
+new file mode 100644
+index 00000000000..9c13aa6c9d5
+--- /dev/null
++++ b/.changeset/jetbrains-session-header.md
+@@ -0,0 +1,5 @@
++---
++"@kilocode/kilo-jetbrains": patch
++---
++
++Show collapsible session metadata, context usage, token usage, and compaction controls in the JetBrains session header.
+diff --git a/.changeset/jetbrains-step-finish-timeline.md b/.changeset/jetbrains-step-finish-timeline.md
+new file mode 100644
+index 00000000000..6afba10a4bc
+--- /dev/null
++++ b/.changeset/jetbrains-step-finish-timeline.md
+@@ -0,0 +1,5 @@
++---
++"@kilocode/kilo-jetbrains": patch
++---
++
++Show completed assistant steps in the JetBrains session timeline.
+diff --git a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendChatManager.kt b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendChatManager.kt
+index 51f9a1522ae..3a73539b72e 100644
+--- a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendChatManager.kt
++++ b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/app/KiloBackendChatManager.kt
+@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
+ import ai.kilocode.rpc.dto.ChatEventDto
+ import ai.kilocode.rpc.dto.ConfigUpdateDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
++import ai.kilocode.rpc.dto.ModelSelectionDto
+ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+ import ai.kilocode.rpc.dto.PermissionReplyDto
+ import ai.kilocode.rpc.dto.PermissionRequestDto
+@@ -49,6 +50,7 @@ class KiloBackendChatManager(
+             "session.turn.close",
+             "session.error",
+             "session.status",
++            "session.updated",
+             "session.idle",
+             "session.compacted",
+             "session.diff",
+@@ -156,6 +158,37 @@ class KiloBackendChatManager(
+         }
+     }
+ 
++    // ------ compact ------
++
++    fun compact(id: String, dir: String, model: ModelSelectionDto) {
++        log.info("${ChatLogSummary.sid(id)} kind=compact ${ChatLogSummary.dir(dir)} model=${model.providerID}/${model.modelID} op=summarize")
++        val http = requireClient()
++        val url = requireBase()
++        val body = KiloCliDataParser.buildSummarizeJson(model)
++        val request = Request.Builder()
++            .url("$url/session/$id/summarize?directory=${encode(dir)}")
++            .post(body.toRequestBody(JSON_TYPE))
++            .build()
++
++        try {
++            http.newCall(request).execute().use { response ->
++                val code = response.code
++                if (!response.isSuccessful) {
++                    val raw = response.body?.string()
++                    log.warn("summarize failed: HTTP $code")
++                    raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=compact op=summarize error=${ChatLogSummary.body(it)}" } }
++                    throw RuntimeException("summarize failed: HTTP $code")
++                }
++                log.debug { "${ChatLogSummary.sid(id)} kind=compact op=summarize ok=true code=$code" }
++            }
++        } catch (e: RuntimeException) {
++            throw e
++        } catch (e: Exception) {
++            log.warn("${ChatLogSummary.sid(id)} kind=compact op=summarize dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
++            throw RuntimeException("summarize HTTP call failed: ${e.message}", e)
++        }
++    }
++
+     // ------ messages ------
+ 
+     fun messages(id: String, dir: String): List<MessageWithPartsDto> {
+diff --git a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDataParser.kt b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDataParser.kt
+index f06cf03c2f5..8995a1a383e 100644
+--- a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDataParser.kt
++++ b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/cli/KiloCliDataParser.kt
+@@ -174,6 +174,13 @@ object KiloCliDataParser {
+                 ChatEventDto.SessionStatusChanged(sid, dto)
+             }
+ 
++            "session.updated" -> {
++                val info = props["info"]?.jsonObject ?: return null
++                val dto = parseSessionObject(info)
++                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
++                ChatEventDto.SessionUpdated(sid, dto)
++            }
++
+             "session.idle" -> {
+                 val sid = props.str("sessionID") ?: return null
+                 ChatEventDto.SessionIdle(sid)
+@@ -316,6 +323,12 @@ object KiloCliDataParser {
+         return sb.toString()
+     }
+ 
++    /**
++     * Build the JSON body for `POST /session/{id}/summarize`.
++     */
++    fun buildSummarizeJson(model: ModelSelectionDto): String =
++        """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
++
+     /**
+      * Build the partial JSON body for `PATCH /global/config`.
+      */
+@@ -363,22 +376,14 @@ object KiloCliDataParser {
+             modelID = obj.str("modelID"),
+             parentID = obj.str("parentID"),
+             cost = obj.num("cost"),
+-            tokens = tokens?.let {
+-                val cache = it["cache"]?.jsonObject
+-                TokensDto(
+-                    input = it.long("input") ?: 0,
+-                    output = it.long("output") ?: 0,
+-                    reasoning = it.long("reasoning") ?: 0,
+-                    cacheRead = cache?.long("read") ?: 0,
+-                    cacheWrite = cache?.long("write") ?: 0,
+-                )
+-            },
++            tokens = tokens?.let(::parseTokens),
+             error = error?.let { parseError(it) },
+         )
+     }
+ 
+     internal fun parsePart(obj: JsonObject): PartDto {
+         val state = obj["state"]?.jsonObject
++        val tokens = obj["tokens"]?.jsonObject
+         val top = obj.map("metadata")
+         val meta = state.map("metadata") + top
+         return PartDto(
+@@ -396,6 +401,20 @@ object KiloCliDataParser {
+             output = state?.str("output"),
+             error = state?.str("error"),
+             time = obj.time("time") ?: state.time("time"),
++            reason = obj.str("reason"),
++            cost = obj.num("cost"),
++            tokens = tokens?.let(::parseTokens),
++        )
++    }
++
++    private fun parseTokens(obj: JsonObject): TokensDto {
++        val cache = obj["cache"]?.jsonObject
++        return TokensDto(
++            input = obj.long("input") ?: 0,
++            output = obj.long("output") ?: 0,
++            reasoning = obj.long("reasoning") ?: 0,
++            cacheRead = cache?.long("read") ?: 0,
++            cacheWrite = cache?.long("write") ?: 0,
+         )
+     }
+ 
+diff --git a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloSessionRpcApiImpl.kt b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloSessionRpcApiImpl.kt
+index 26b98a02a9f..83aecba6219 100644
+--- a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloSessionRpcApiImpl.kt
++++ b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloSessionRpcApiImpl.kt
+@@ -11,6 +11,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
+ import ai.kilocode.rpc.dto.ChatEventDto
+ import ai.kilocode.rpc.dto.ConfigUpdateDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
++import ai.kilocode.rpc.dto.ModelSelectionDto
+ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+ import ai.kilocode.rpc.dto.PermissionReplyDto
+ import ai.kilocode.rpc.dto.PermissionRequestDto
+@@ -88,6 +89,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
+     override suspend fun abort(id: String, directory: String) =
+         chat.abort(id, directory)
+ 
++    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) =
++        chat.compact(id, directory, model)
++
+     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
+         chat.messages(id, directory)
+ 
+@@ -108,6 +112,7 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
+                 is ChatEventDto.QuestionReplied -> event.sessionID
+                 is ChatEventDto.QuestionRejected -> event.sessionID
+                 is ChatEventDto.SessionStatusChanged -> event.sessionID
++                is ChatEventDto.SessionUpdated -> event.sessionID
+                 is ChatEventDto.SessionIdle -> event.sessionID
+                 is ChatEventDto.SessionCompacted -> event.sessionID
+                 is ChatEventDto.SessionDiffChanged -> event.sessionID
+diff --git a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorkspaceRpcApiImpl.kt b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorkspaceRpcApiImpl.kt
+index 5bbc7198ced..eb1dcd02a75 100644
+--- a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorkspaceRpcApiImpl.kt
++++ b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/rpc/KiloWorkspaceRpcApiImpl.kt
+@@ -24,6 +24,7 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+ import ai.kilocode.rpc.dto.LoadErrorDto
+ import ai.kilocode.rpc.dto.ModelDto
++import ai.kilocode.rpc.dto.ModelLimitDto
+ import ai.kilocode.rpc.dto.ProviderDto
+ import ai.kilocode.rpc.dto.ProvidersDto
+ import ai.kilocode.rpc.dto.SkillDto
+@@ -142,6 +143,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
+         status = m.status,
+         recommendedIndex = m.recommendedIndex,
+         variants = m.variants,
++        limit = m.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+     )
+ 
+     private fun agents(d: AgentData) = AgentsDto(
+diff --git a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspace.kt b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspace.kt
+index 71efc268fed..3d5977e1055 100644
+--- a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspace.kt
++++ b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspace.kt
+@@ -16,6 +16,7 @@ import kotlinx.serialization.json.doubleOrNull
+ import kotlinx.serialization.json.jsonArray
+ import kotlinx.serialization.json.jsonObject
+ import kotlinx.serialization.json.jsonPrimitive
++import kotlinx.serialization.json.longOrNull
+ import kotlinx.coroutines.CancellationException
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Job
+@@ -295,6 +296,7 @@ class KiloBackendWorkspace(
+ 
+     private fun model(id: String, obj: JsonObject): ModelInfo {
+         val cap = obj["capabilities"]?.jsonObject
++        val limit = obj["limit"]?.jsonObject
+         return ModelInfo(
+             id = obj.str("id") ?: id,
+             name = obj.str("name") ?: id,
+@@ -306,6 +308,13 @@ class KiloBackendWorkspace(
+             status = obj.str("status"),
+             recommendedIndex = obj.num("recommendedIndex"),
+             variants = variants(obj),
++            limit = limit?.let {
++                ModelLimitInfo(
++                    context = it.long("context") ?: 0,
++                    input = it.long("input"),
++                    output = it.long("output") ?: 0,
++                )
++            },
+         )
+     }
+ 
+@@ -361,3 +370,4 @@ private fun encode(value: String) = java.net.URLEncoder.encode(value, Charsets.U
+ private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.contentOrNull
+ private fun JsonObject?.bool(key: String) = this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
+ private fun JsonObject.num(key: String) = this[key]?.jsonPrimitive?.doubleOrNull
++private fun JsonObject.long(key: String) = this[key]?.jsonPrimitive?.longOrNull
+diff --git a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloWorkspaceState.kt b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloWorkspaceState.kt
+index 75437e146be..991f679ef48 100644
+--- a/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloWorkspaceState.kt
++++ b/packages/kilo-jetbrains/backend/src/main/kotlin/ai/kilocode/backend/workspace/KiloWorkspaceState.kt
+@@ -57,6 +57,13 @@ data class ModelInfo(
+     val status: String?,
+     val recommendedIndex: Double?,
+     val variants: List<String>,
++    val limit: ModelLimitInfo?,
++)
++
++data class ModelLimitInfo(
++    val context: Long = 0,
++    val input: Long? = null,
++    val output: Long = 0,
+ )
+ 
+ data class AgentData(
+diff --git a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/app/KiloBackendChatManagerTest.kt b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/app/KiloBackendChatManagerTest.kt
+new file mode 100644
+index 00000000000..fd628ac4e8a
+--- /dev/null
++++ b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/app/KiloBackendChatManagerTest.kt
+@@ -0,0 +1,42 @@
++package ai.kilocode.backend.app
++
++import ai.kilocode.backend.testing.MockCliServer
++import ai.kilocode.backend.testing.TestLog
++import ai.kilocode.rpc.dto.ModelSelectionDto
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.cancel
++import kotlinx.coroutines.flow.MutableSharedFlow
++import okhttp3.OkHttpClient
++import kotlin.test.AfterTest
++import kotlin.test.Test
++import kotlin.test.assertEquals
++import kotlin.test.assertNotNull
++import kotlin.test.assertTrue
++
++class KiloBackendChatManagerTest {
++
++    private val mock = MockCliServer()
++    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
++
++    @AfterTest
++    fun tearDown() {
++        scope.cancel()
++        mock.close()
++    }
++
++    @Test
++    fun `compact posts summarize request with selected model`() {
++        val port = mock.start()
++        val chat = KiloBackendChatManager(scope, TestLog())
++        chat.start(OkHttpClient(), port, MutableSharedFlow())
++
++        chat.compact("ses_abc", "/test/project", ModelSelectionDto("anthropic", "claude-4"))
++
++        assertEquals(1, mock.requestCount("/session/ses_abc/summarize"))
++        assertNotNull(mock.lastSummarizePath)
++        assertTrue(mock.lastSummarizePath!!.startsWith("/session/ses_abc/summarize?directory="))
++        assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", mock.lastSummarizeBody)
++    }
++}
+diff --git a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/GeneratedApiModelSerializationTest.kt b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/GeneratedApiModelSerializationTest.kt
+index 9ad5e710d4b..7ddd445175f 100644
+--- a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/GeneratedApiModelSerializationTest.kt
++++ b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/GeneratedApiModelSerializationTest.kt
+@@ -188,7 +188,7 @@ class GeneratedApiModelSerializationTest {
+         assertEquals(true, obj.native)
+         assertEquals(false, obj.hidden)
+         assertEquals("#FF5733", obj.color)
+-        assertEquals(5, obj.steps)
++        assertEquals(5.0, obj.steps)
+     }
+ 
+     @Test
+diff --git a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/KiloCliDataParserTest.kt b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/KiloCliDataParserTest.kt
+index 63037b9dde9..d47528ce901 100644
+--- a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/KiloCliDataParserTest.kt
++++ b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/KiloCliDataParserTest.kt
+@@ -451,6 +451,32 @@ class KiloCliDataParserTest {
+         assertEquals("Read file.txt", part.title)
+     }
+ 
++    @Test
++    fun `parseMessages - step finish part with tokens`() {
++        val raw = """[{
++            "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
++            "parts": [{
++                "id": "p1",
++                "sessionID": "s1",
++                "messageID": "m1",
++                "type": "step-finish",
++                "reason": "stop",
++                "cost": 0.005,
++                "tokens": { "input": 100, "output": 50, "reasoning": 10, "cache": { "read": 20, "write": 5 } }
++            }]
++        }]"""
++
++        val part = KiloCliDataParser.parseMessages(raw)[0].parts[0]
++        assertEquals("step-finish", part.type)
++        assertEquals("stop", part.reason)
++        assertEquals(0.005, part.cost)
++        assertEquals(100L, part.tokens?.input)
++        assertEquals(50L, part.tokens?.output)
++        assertEquals(10L, part.tokens?.reasoning)
++        assertEquals(20L, part.tokens?.cacheRead)
++        assertEquals(5L, part.tokens?.cacheWrite)
++    }
++
+     @Test
+     fun `parseMessages - malformed JSON returns empty`() {
+         assertEquals(emptyList(), KiloCliDataParser.parseMessages("not json"))
+@@ -619,6 +645,13 @@ class KiloCliDataParserTest {
+         assertTrue(result.contains("""line1\nline2\t\"quoted\""""))
+     }
+ 
++    @Test
++    fun `buildSummarizeJson - writes provider and model`() {
++        val result = KiloCliDataParser.buildSummarizeJson(ModelSelectionDto("anthropic", "claude-4"))
++
++        assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", result)
++    }
++
+     // ================================================================
+     // buildConfigPartial
+     // ================================================================
+@@ -866,6 +899,32 @@ class KiloCliDataParserTest {
+         assertTrue(result is ChatEventDto.SessionCompacted)
+     }
+ 
++    @Test
++    fun `parseChatEvent - session updated`() {
++        val data = globalEvent("""
++            "type": "session.updated",
++            "properties": {
++                "sessionID": "ses_1",
++                "info": {
++                    "id": "ses_1",
++                    "projectID": "proj_1",
++                    "directory": "/tmp/project",
++                    "title": "Updated title",
++                    "version": "1",
++                    "time": { "created": 1.0, "updated": 2.0 },
++                    "summary": { "additions": 3, "deletions": 1, "files": 2 }
++                }
++            }
++        """)
++
++        val result = KiloCliDataParser.parseChatEvent("session.updated", data)
++        assertNotNull(result)
++        assertTrue(result is ChatEventDto.SessionUpdated)
++        assertEquals("ses_1", result.sessionID)
++        assertEquals("Updated title", result.session.title)
++        assertEquals(2, result.session.summary?.files)
++    }
++
+     @Test
+     fun `parseChatEvent - session diff`() {
+         val data = globalEvent("""
+diff --git a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/ProjectModelSerializationTest.kt b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/ProjectModelSerializationTest.kt
+index fdd0f9ee416..093b62e9c6a 100644
+--- a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/ProjectModelSerializationTest.kt
++++ b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/cli/ProjectModelSerializationTest.kt
+@@ -171,7 +171,7 @@ class ProjectModelSerializationTest {
+         assertEquals(true, obj.native)
+         assertEquals(false, obj.hidden)
+         assertEquals("#FF5733", obj.color)
+-        assertEquals(5, obj.steps)
++        assertEquals(5.0, obj.steps)
+     }
+ 
+     @Test
+diff --git a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/testing/MockCliServer.kt b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/testing/MockCliServer.kt
+index 5d794ae5f20..aa1aee34759 100644
+--- a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/testing/MockCliServer.kt
++++ b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/testing/MockCliServer.kt
+@@ -55,12 +55,16 @@ class MockCliServer : AutoCloseable {
+     @Volatile var recentSessions = "[]"
+     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+     @Volatile var sessionStatuses = "{}"
++    @Volatile var summarizeResponse = "true"
+     @Volatile var sessionsStatus = 200
+     @Volatile var recentSessionsStatus = 200
+     @Volatile var sessionCreateStatus = 200
+     @Volatile var sessionGetStatus = 200
+     @Volatile var sessionDeleteStatus = 200
+     @Volatile var sessionStatusesStatus = 200
++    @Volatile var summarizeStatus = 200
++    @Volatile var lastSummarizePath: String? = null
++    @Volatile var lastSummarizeBody: String? = null
+ 
+     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
+     @Volatile var responseDelay: Long = 0
+@@ -173,11 +177,16 @@ class MockCliServer : AutoCloseable {
+             val method = parts[0]
+             val path = parts[1]
+ 
+-            // Read all headers
++            var len = 0
+             while (true) {
+                 val header = input.readLine()
+                 if (header.isNullOrBlank()) break
++                val parts = header.split(":", limit = 2)
++                if (parts.size == 2 && parts[0].equals("Content-Length", ignoreCase = true)) {
++                    len = parts[1].trim().toIntOrNull() ?: 0
++                }
+             }
++            val body = if (len > 0) CharArray(len).also { input.read(it, 0, len) }.concatToString() else ""
+ 
+             val output = BufferedWriter(OutputStreamWriter(socket.getOutputStream()))
+             val bare = path.substringBefore("?")
+@@ -218,6 +227,11 @@ class MockCliServer : AutoCloseable {
+                     respond(output, sessionGetStatus, sessionCreate)
+                 bare.matches(Regex("/session/ses_[^/]+")) && method == "DELETE" ->
+                     respond(output, sessionDeleteStatus, "true")
++                bare.matches(Regex("/session/ses_[^/]+/summarize")) && method == "POST" -> {
++                    lastSummarizePath = path
++                    lastSummarizeBody = body
++                    respond(output, summarizeStatus, summarizeResponse)
++                }
+                 else -> respond(output, 404, """{"error":"Not found"}""")
+             }
+         } catch (_: SocketException) {
+diff --git a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspaceTest.kt b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspaceTest.kt
+index 7831df16c49..13cc7e49567 100644
+--- a/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspaceTest.kt
++++ b/packages/kilo-jetbrains/backend/src/test/kotlin/ai/kilocode/backend/workspace/KiloBackendWorkspaceTest.kt
+@@ -297,6 +297,9 @@ class KiloBackendWorkspaceTest {
+         assertTrue(model.toolCall)
+         assertEquals(2.0, model.recommendedIndex)
+         assertEquals(listOf("low", "medium", "high"), model.variants)
++        assertEquals(200000L, model.limit?.context)
++        assertEquals(100000L, model.limit?.input)
++        assertEquals(16000L, model.limit?.output)
+     }
+ 
+     @Test
+@@ -513,7 +516,7 @@ class KiloBackendWorkspaceTest {
+                             "interleaved": false
+                         },
+                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
+-                        "limit": {"context": 200000, "output": 16000},
++                        "limit": {"context": 200000, "input": 100000, "output": 16000},
+                         "status": "active",
+                         "recommendedIndex": 2,
+                         "variants": {"high": {}, "low": {}, "medium": {}},
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/app/KiloSessionService.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/app/KiloSessionService.kt
+index 7e131c93f7e..9053849503d 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/app/KiloSessionService.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/app/KiloSessionService.kt
+@@ -7,6 +7,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
+ import ai.kilocode.rpc.dto.ChatEventDto
+ import ai.kilocode.rpc.dto.ConfigUpdateDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
++import ai.kilocode.rpc.dto.ModelSelectionDto
+ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+ import ai.kilocode.rpc.dto.PermissionReplyDto
+ import ai.kilocode.rpc.dto.PermissionRequestDto
+@@ -87,6 +88,10 @@ class KiloSessionService internal constructor(
+     suspend fun recent(dir: String, limit: Int): List<SessionDto> =
+         call { recent(dir, limit) }.sessions
+ 
++    /** Get a single session. */
++    suspend fun get(id: String, dir: String): SessionDto =
++        call { get(id, dir) }
++
+     /** Create a new session. Caller awaits the result. */
+     suspend fun create(dir: String): SessionDto {
+         LOG.info("create: dir=$dir")
+@@ -138,6 +143,11 @@ class KiloSessionService internal constructor(
+         call { abort(id, dir) }
+     }
+ 
++    /** Summarize/compact a session. */
++    suspend fun compact(id: String, dir: String, model: ModelSelectionDto) {
++        call { compact(id, dir, model) }
++    }
++
+     /** Load message history for a session. */
+     suspend fun messages(id: String, dir: String): List<MessageWithPartsDto> =
+         call { messages(id, dir) }
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionSidePanelManager.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionSidePanelManager.kt
+index 626a81eecb2..d81e9d4437d 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionSidePanelManager.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionSidePanelManager.kt
+@@ -15,8 +15,8 @@ import javax.swing.JPanel
+ class SessionSidePanelManager(
+     private val project: Project,
+     private val root: Workspace,
+-    private val create: (Project, Workspace, SessionManager, String?, Boolean) -> SessionUi = { project, workspace, manager, id, loading ->
+-        service<SessionUiFactory>().create(project, workspace, manager, id, loading)
++    private val create: (Project, Workspace, SessionManager, String?, Boolean, SessionDto?) -> SessionUi = { project, workspace, manager, id, loading, session ->
++        service<SessionUiFactory>().create(project, workspace, manager, id, loading, session)
+     },
+     private val resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
+ ) : SessionManager, Disposable {
+@@ -37,13 +37,13 @@ class SessionSidePanelManager(
+         val active = current
+         if (active?.blank == true) return
+         register(active)
+-        show(create(project, root, this, null, active == null))
++        show(create(project, root, this, null, active == null, null))
+     }
+ 
+     override fun openSession(session: SessionDto) {
+         register(current)
+         val ui = opened.getOrPut(session.id) {
+-            create(project, resolve(session.directory), this, session.id, false).also {
++            create(project, resolve(session.directory), this, session.id, false, session).also {
+                 all.add(it)
+             }
+         }
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUi.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUi.kt
+index 9b238ce1816..f555b0e6377 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUi.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUi.kt
+@@ -16,6 +16,7 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
+ import ai.kilocode.client.session.ui.QuestionPanel
+ import ai.kilocode.client.session.ui.SessionRootPanel
+ import ai.kilocode.client.session.ui.SessionMessageListPanel
++import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+ import ai.kilocode.client.session.ui.SessionStyle
+ import ai.kilocode.client.session.ui.SessionStyleTarget
+ import ai.kilocode.client.session.update.EVENT_FLUSH_MS
+@@ -56,6 +57,7 @@ class SessionUi private constructor(
+     displayMs: Long,
+     open: (SessionDto) -> Unit,
+     private val loading: Boolean,
++    session: SessionDto? = null,
+ ) : JPanel(BorderLayout()), Disposable, SessionStyleTarget {
+ 
+     constructor(
+@@ -67,7 +69,8 @@ class SessionUi private constructor(
+         id: String? = null,
+         displayMs: Long = SessionController.DISPLAY_DELAY_MS,
+         open: (SessionDto) -> Unit = {},
+-    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, id == null)
++        session: SessionDto? = null,
++    ) : this(project, workspace, sessions, app, cs, session?.id ?: id, displayMs, open, id == null, session)
+ 
+     internal constructor(
+         project: Project,
+@@ -79,7 +82,8 @@ class SessionUi private constructor(
+         displayMs: Long = SessionController.DISPLAY_DELAY_MS,
+         loading: Boolean,
+         open: (SessionDto) -> Unit = {},
+-    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, loading)
++        session: SessionDto? = null,
++    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, loading, session)
+ 
+     companion object {
+         private val LOG = KiloLog.create(SessionUi::class.java)
+@@ -101,6 +105,7 @@ class SessionUi private constructor(
+         flushMs = flushMs,
+         condense = Registry.`is`("kilo.session.condense", true),
+         displayMs = displayMs,
++        session = session,
+         open = open,
+         beforeUpdate = { if (opening) false else scroll.atBottom() },
+         afterUpdate = { if (!opening) scroll.followBottom(it) },
+@@ -118,6 +123,8 @@ class SessionUi private constructor(
+ 
+     private lateinit var messageBody: SessionMessageListPanel
+ 
++    private lateinit var header: SessionHeaderPanel
++
+     internal lateinit var scroll: SessionScroll
+ 
+     private lateinit var question: QuestionPanel
+@@ -174,6 +181,7 @@ class SessionUi private constructor(
+             ), BorderLayout.CENTER)
+         }
+         messageBody = SessionMessageListPanel(controller.model, this)
++        header = SessionHeaderPanel(controller, this)
+ 
+         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
+         question = QuestionPanel(controller)
+@@ -186,6 +194,7 @@ class SessionUi private constructor(
+             onAbort = { controller.abort() },
+         )
+ 
++        sessionContent.add(header, BorderLayout.NORTH)
+         sessionContent.add(scroll.component, BorderLayout.CENTER)
+         root.content.add(sessionContent, BorderLayout.CENTER)
+         // Dock panels stay in normal flow so each visible state takes layout space
+@@ -278,6 +287,8 @@ class SessionUi private constructor(
+                 is SessionModelEvent.ContentRemoved,
+                 is SessionModelEvent.DiffUpdated,
+                 is SessionModelEvent.TodosUpdated,
++                is SessionModelEvent.SessionUpdated,
++                is SessionModelEvent.HeaderUpdated,
+                 is SessionModelEvent.Compacted,
+                 is SessionModelEvent.Cleared -> Unit
+             }
+@@ -372,6 +383,7 @@ class SessionUi private constructor(
+     override fun applyStyle(style: SessionStyle) {
+         this.style = style
+         loadingLabel.font = style.uiFont
++        header.applyStyle(style)
+         prompt.applyStyle(style)
+         scroll.applyStyle(style)
+         refresh()
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUiFactory.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUiFactory.kt
+index c55e607d926..d4e3b012186 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUiFactory.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/SessionUiFactory.kt
+@@ -3,6 +3,7 @@ package ai.kilocode.client.session
+ import ai.kilocode.client.app.KiloAppService
+ import ai.kilocode.client.app.KiloSessionService
+ import ai.kilocode.client.app.Workspace
++import ai.kilocode.rpc.dto.SessionDto
+ import com.intellij.openapi.components.Service
+ import com.intellij.openapi.components.service
+ import com.intellij.openapi.project.Project
+@@ -20,14 +21,16 @@ class SessionUiFactory(
+         manager: SessionManager,
+         id: String? = null,
+         loading: Boolean = id == null,
++        session: SessionDto? = null,
+     ): SessionUi = SessionUi(
+         project = project,
+         workspace = workspace,
+         sessions = project.service<KiloSessionService>(),
+         app = service<KiloAppService>(),
+         cs = scope(),
+-        id = id,
++        id = session?.id ?: id,
+         loading = loading,
++        session = session,
+         open = manager::openSession,
+     )
+ 
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/Message.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/Message.kt
+index 039d3786680..76ae579c523 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/Message.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/Message.kt
+@@ -2,6 +2,47 @@ package ai.kilocode.client.session.model
+ 
+ import ai.kilocode.rpc.dto.MessageDto
+ import ai.kilocode.rpc.dto.PartTimeDto
++import ai.kilocode.rpc.dto.TodoDto
++import ai.kilocode.rpc.dto.TokensDto
++
++data class SessionHeaderSnapshot(
++    val visible: Boolean,
++    val title: String,
++    val cost: Double?,
++    val context: ContextUsage?,
++    val tokens: TokensDto?,
++    val timeline: List<TimelineItem>,
++    val todos: TodoSummary,
++    val canCompact: Boolean,
++)
++
++data class ContextUsage(
++    val tokens: Long,
++    val percentage: Int?,
++    val limit: Long?,
++    val output: Long?,
++)
++
++data class TimelineItem(
++    val id: String,
++    val part: Content,
++    val title: String,
++    val weight: Int,
++    val durationMs: Long?,
++    val active: Boolean,
++)
++
++data class TodoSummary(
++    val total: Int,
++    val completed: Int,
++    val items: List<TodoDto>,
++)
++
++data class ModelLimitItem(
++    val context: Long = 0,
++    val input: Long? = null,
++    val output: Long = 0,
++)
+ 
+ /** A single message with its typed contents. */
+ class Message(
+@@ -25,7 +66,7 @@ class Reasoning(id: String) : Content(id) {
+ }
+ 
+ /** Tool invocation with lifecycle state. */
+-class Tool(id: String, val name: String) : Content(id) {
++class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
+     var state: ToolExecState = ToolExecState.PENDING
+     var title: String? = null
+     var input: Map<String, String> = emptyMap()
+@@ -38,6 +79,13 @@ class Tool(id: String, val name: String) : Content(id) {
+ /** Context compaction marker. */
+ class Compaction(id: String) : Content(id)
+ 
++/** Assistant step completion marker used by the session header timeline. */
++class StepFinish(id: String) : Content(id) {
++    var reason: String? = null
++    var cost: Double? = null
++    var tokens: TokensDto? = null
++}
++
+ /**
+  * Generic fallback for part types not yet given a dedicated class.
+  * Preserves the [type] string so unknown content is not silently dropped.
+@@ -46,6 +94,14 @@ class Generic(id: String, val type: String) : Content(id)
+ 
+ enum class ToolExecState { PENDING, RUNNING, COMPLETED, ERROR }
+ 
++enum class ToolKind { READ, WRITE, GENERIC }
++
++fun toolKind(name: String?): ToolKind = when (name) {
++    "read" -> ToolKind.READ
++    "write" -> ToolKind.WRITE
++    else -> ToolKind.GENERIC
++}
++
+ data class ToolCallRef(
+     val messageId: String,
+     val callId: String,
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModel.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModel.kt
+index 72cfc00ed55..798d2bf3c6f 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModel.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModel.kt
+@@ -8,9 +8,12 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+ import ai.kilocode.rpc.dto.MessageDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
+ import ai.kilocode.rpc.dto.PartDto
++import ai.kilocode.rpc.dto.SessionDto
+ import ai.kilocode.rpc.dto.TodoDto
++import ai.kilocode.rpc.dto.TokensDto
+ import com.intellij.openapi.Disposable
+ import com.intellij.openapi.util.Disposer
++import kotlin.math.roundToInt
+ 
+ /**
+  * Pure session model — single source of truth for session content and runtime state.
+@@ -32,7 +35,7 @@ class SessionModel {
+ 
+     companion object {
+         /** Part types that are internal server markers and must never be stored or rendered. */
+-        val SILENT_PART_TYPES = setOf("step-start", "step-finish")
++        val SILENT_PART_TYPES = setOf("step-start")
+     }
+ 
+     private val entries = LinkedHashMap<String, Message>()
+@@ -55,6 +58,12 @@ class SessionModel {
+     var state: SessionState = SessionState.Idle
+         private set
+ 
++    var session: SessionDto? = null
++        private set
++
++    var header: SessionHeaderSnapshot = emptyHeader()
++        private set
++
+     var diff: List<DiffFileDto> = emptyList()
+         private set
+ 
+@@ -95,12 +104,14 @@ class SessionModel {
+             val updated = Message(dto).also { it.parts.putAll(existing.parts) }
+             entries[dto.id] = updated
+             fire(SessionModelEvent.MessageUpdated(updated))
++            updateHeader()
+             return false
+         }
+         val msg = Message(dto)
+         entries[dto.id] = msg
+         fire(SessionModelEvent.MessageAdded(msg))
+         regroup()
++        updateHeader()
+         return true
+     }
+ 
+@@ -111,6 +122,7 @@ class SessionModel {
+         entries[dto.id] = msg
+         fire(SessionModelEvent.MessageAdded(msg))
+         regroup()
++        updateHeader()
+         return msg
+     }
+ 
+@@ -118,12 +130,14 @@ class SessionModel {
+         if (entries.remove(id) == null) return
+         fire(SessionModelEvent.MessageRemoved(id))
+         regroup()
++        updateHeader()
+     }
+ 
+     fun removeContent(messageId: String, contentId: String) {
+         val msg = entries[messageId] ?: return
+         if (msg.parts.remove(contentId) == null) return
+         fire(SessionModelEvent.ContentRemoved(messageId, contentId))
++        updateHeader()
+     }
+ 
+     fun updateContent(messageId: String, dto: PartDto) {
+@@ -137,6 +151,7 @@ class SessionModel {
+         val content = fromDto(dto)
+         msg.parts[dto.id] = content
+         fire(SessionModelEvent.ContentAdded(messageId, content))
++        updateHeader()
+     }
+ 
+     fun appendDelta(messageId: String, contentId: String, delta: String) {
+@@ -156,11 +171,20 @@ class SessionModel {
+             fire(SessionModelEvent.ContentAdded(messageId, content))
+         }
+         fire(SessionModelEvent.ContentDelta(messageId, contentId, delta))
++        updateHeader()
+     }
+ 
+     fun setState(state: SessionState) {
+         this.state = state
+         fire(SessionModelEvent.StateChanged(state))
++        updateHeader()
++    }
++
++    fun setSession(session: SessionDto) {
++        if (this.session == session) return
++        this.session = session
++        fire(SessionModelEvent.SessionUpdated(session))
++        updateHeader()
+     }
+ 
+     fun setDiff(diff: List<DiffFileDto>) {
+@@ -171,15 +195,22 @@ class SessionModel {
+     fun setTodos(todos: List<TodoDto>) {
+         this.todos = todos
+         fire(SessionModelEvent.TodosUpdated(todos))
++        updateHeader()
+     }
+ 
+     fun markCompacted() {
+         compactionCount++
+         fire(SessionModelEvent.Compacted(compactionCount))
++        updateHeader()
++    }
++
++    fun refreshHeader() {
++        updateHeader()
+     }
+ 
+     fun loadHistory(history: List<MessageWithPartsDto>) {
+         entries.clear()
++        session = null
+         state = SessionState.Idle
+         diff = emptyList()
+         todos = emptyList()
+@@ -195,16 +226,19 @@ class SessionModel {
+         }
+         rebuildTurnsSilently()
+         fire(SessionModelEvent.HistoryLoaded)
++        updateHeader()
+     }
+ 
+     fun clear() {
+         entries.clear()
+         turnEntries.clear()
++        session = null
+         state = SessionState.Idle
+         diff = emptyList()
+         todos = emptyList()
+         compactionCount = 0
+         fire(SessionModelEvent.Cleared)
++        updateHeader()
+     }
+ 
+     // ------ turn grouping ------
+@@ -315,6 +349,7 @@ class SessionModel {
+                 existing.done = dto.time?.end != null || dto.time == null
+             }
+             is Tool -> {
++                existing.kind = toolKind(dto.tool)
+                 existing.state = parseToolState(dto.state)
+                 existing.title = dto.title
+                 existing.input = dto.input
+@@ -324,9 +359,15 @@ class SessionModel {
+                 existing.time = dto.time
+             }
+             is Compaction -> return
++            is StepFinish -> {
++                existing.reason = dto.reason
++                existing.cost = dto.cost
++                existing.tokens = dto.tokens
++            }
+             is Generic -> return
+         }
+         fire(SessionModelEvent.ContentUpdated(messageId, existing))
++        updateHeader()
+     }
+ 
+     private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
+@@ -339,7 +380,7 @@ class SessionModel {
+                 if (content != null && content.isNotEmpty()) this.content.append(content)
+                 done = dto.time?.end != null || dto.time == null
+             }
+-            "tool" -> Tool(dto.id, dto.tool ?: "unknown").apply {
++            "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
+                 state = parseToolState(dto.state)
+                 title = dto.title
+                 input = dto.input
+@@ -349,6 +390,11 @@ class SessionModel {
+                 time = dto.time
+             }
+             "compaction" -> Compaction(dto.id)
++            "step-finish" -> StepFinish(dto.id).apply {
++                reason = dto.reason
++                cost = dto.cost
++                tokens = dto.tokens
++            }
+             else -> Generic(dto.id, dto.type)
+         }
+     }
+@@ -357,6 +403,61 @@ class SessionModel {
+         for (l in listeners) l.onEvent(event)
+     }
+ 
++    private fun updateHeader() {
++        val next = buildHeader()
++        if (next == header) return
++        header = next
++        fire(SessionModelEvent.HeaderUpdated(next))
++    }
++
++    private fun buildHeader(): SessionHeaderSnapshot {
++        val items = messages().toList()
++        if (items.isEmpty()) return emptyHeader()
++        val last = items.asReversed()
++            .firstOrNull { it.info.role == "assistant" && (it.info.tokens?.total()?.let { total -> total > 0 } == true) }
++        val tokens = last?.info?.tokens
++        val limit = model?.let(::item)?.limit
++        val total = tokens?.total() ?: 0
++        val context = if (tokens == null || total == 0L) null else ContextUsage(
++            tokens = total,
++            percentage = limit?.context?.takeIf { it > 0 }?.let { (total.toDouble() / it.toDouble() * 100).roundToInt() },
++            limit = limit?.context?.takeIf { it > 0 },
++            output = limit?.output?.takeIf { it > 0 },
++        )
++        val cost = items
++            .filter { it.info.role == "assistant" }
++            .sumOf { it.info.cost ?: 0.0 }
++            .takeIf { it > 0.0 }
++        val done = todos.count { it.status == "completed" }
++        return SessionHeaderSnapshot(
++            visible = items.isNotEmpty(),
++            title = session?.title?.takeIf { it.isNotBlank() } ?: "New Session",
++            cost = cost,
++            context = context,
++            tokens = tokens,
++            timeline = timeline(items),
++            todos = TodoSummary(todos.size, done, todos),
++            canCompact = !state.isBusy() && model?.let(::parseModelKey) != null,
++        )
++    }
++
++    private fun timeline(items: List<Message>): List<TimelineItem> = items
++        .filter { it.info.role == "assistant" }
++        .flatMap { msg ->
++            msg.parts.values.map { part ->
++                TimelineItem(
++                    id = "${msg.info.id}/${part.id}",
++                    part = part,
++                    title = part.timelineTitle(),
++                    weight = part.weight().coerceIn(1, 10),
++                    durationMs = (part as? Tool)?.time?.durationMs(),
++                    active = (part as? Tool)?.state == ToolExecState.RUNNING || part is Reasoning && !part.done,
++                )
++            }
++        }
++
++    private fun item(key: String): ModelItem? = models.firstOrNull { it.key == key }
++
+     // ------ string representations ------
+ 
+     /**
+@@ -435,10 +536,79 @@ data class ModelItem(
+     val recommendedIndex: Double?,
+     val free: Boolean,
+     val variants: List<String>,
++    val limit: ModelLimitItem?,
+ ) {
+     val key: String get() = "$provider/$id"
+ }
+ 
++private fun emptyHeader() = SessionHeaderSnapshot(
++    visible = false,
++    title = "New Session",
++    cost = null,
++    context = null,
++    tokens = null,
++    timeline = emptyList(),
++    todos = TodoSummary(0, 0, emptyList()),
++    canCompact = false,
++)
++
++private fun TokensDto.total(): Long = input + output + reasoning + cacheRead + cacheWrite
++
++private fun parseModelKey(value: String): Pair<String, String>? {
++    val slash = value.indexOf('/')
++    if (slash <= 0 || slash >= value.length - 1) return null
++    return value.substring(0, slash) to value.substring(slash + 1)
++}
++
++private fun Content.timelineTitle(): String = when (this) {
++    is Text -> "Text"
++    is Reasoning -> "Reasoning"
++    is Tool -> fileActionTitle() ?: title?.takeIf { it.isNotBlank() } ?: name
++    is Compaction -> "Compaction"
++    is StepFinish -> "Step finish"
++    is Generic -> type
++}
++
++private fun Tool.fileActionTitle(): String? {
++    val verb = when (kind) {
++        ToolKind.READ -> "Read"
++        ToolKind.WRITE -> "Write"
++        ToolKind.GENERIC -> return null
++    }
++    val path = listOf("filePath", "path", "file")
++        .asSequence()
++        .mapNotNull {
++            input[it]?.takeIf { value -> value.isNotBlank() }
++                ?: metadata[it]?.takeIf { value -> value.isNotBlank() }
++        }
++        .firstOrNull()
++        ?: return null
++    return "$verb ${tail(path).ifBlank { path }}"
++}
++
++private fun tail(path: String): String {
++    val value = path.trimEnd('/', '\\')
++    val index = maxOf(value.lastIndexOf('/'), value.lastIndexOf('\\'))
++    if (index < 0) return value
++    return value.substring(index + 1)
++}
++
++private fun Content.weight(): Int = when (this) {
++    is Text -> content.length / 200 + 1
++    is Reasoning -> content.length / 200 + 1
++    is Tool -> listOf(input.size, output?.length?.div(400) ?: 0, error?.length?.div(200) ?: 0).sum() + 1
++    is Compaction -> 2
++    is StepFinish -> tokens?.let { (it.input + it.output + it.reasoning).toInt() } ?: 1
++    is Generic -> 1
++}
++
++private fun ai.kilocode.rpc.dto.PartTimeDto.durationMs(): Long? {
++    val start = start ?: return null
++    val end = end ?: return null
++    if (end < start) return null
++    return ((end - start) * 1000).toLong()
++}
++
+ private fun renderMessage(msg: Message): List<String> {
+     val out = mutableListOf<String>()
+     out.add("${msg.info.role}#${msg.info.id}")
+@@ -454,6 +624,7 @@ private fun renderMessage(msg: Message): List<String> {
+             }
+             is Tool -> out.add(renderTool(part))
+             is Compaction -> out.add("compaction#${part.id}")
++            is StepFinish -> out.add("step-finish#${part.id}")
+             is Generic -> out.add("${part.type}#${part.id}")
+         }
+     }
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModelEvent.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModelEvent.kt
+index 40482f45155..83b79b45b5d 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModelEvent.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/model/SessionModelEvent.kt
+@@ -1,6 +1,7 @@
+ package ai.kilocode.client.session.model
+ 
+ import ai.kilocode.rpc.dto.DiffFileDto
++import ai.kilocode.rpc.dto.SessionDto
+ import ai.kilocode.rpc.dto.TodoDto
+ 
+ /**
+@@ -47,6 +48,12 @@ sealed class SessionModelEvent {
+     data class TodosUpdated(val todos: List<TodoDto>) : SessionModelEvent() {
+         override fun toString() = "TodosUpdated count=${todos.size}"
+     }
++    data class SessionUpdated(val session: SessionDto) : SessionModelEvent() {
++        override fun toString() = "SessionUpdated ${session.id}"
++    }
++    data class HeaderUpdated(val header: SessionHeaderSnapshot) : SessionModelEvent() {
++        override fun toString() = "HeaderUpdated visible=${header.visible}"
++    }
+     data class Compacted(val count: Int) : SessionModelEvent() {
+         override fun toString() = "Compacted count=$count"
+     }
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionMessageListPanel.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionMessageListPanel.kt
+index e5ab3e3396a..44afdeda402 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionMessageListPanel.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionMessageListPanel.kt
+@@ -87,6 +87,8 @@ class SessionMessageListPanel(
+                 is SessionModelEvent.StateChanged,
+                 is SessionModelEvent.DiffUpdated,
+                 is SessionModelEvent.TodosUpdated,
++                is SessionModelEvent.SessionUpdated,
++                is SessionModelEvent.HeaderUpdated,
+                 is SessionModelEvent.Compacted -> Unit
+             }
+         }
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionStyle.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionStyle.kt
+index 2e44a9e7910..550b3741746 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionStyle.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/SessionStyle.kt
+@@ -5,6 +5,7 @@ import com.intellij.openapi.editor.colors.EditorColorsScheme
+ import com.intellij.openapi.editor.ex.EditorEx
+ import com.intellij.util.ui.JBFont
+ import com.intellij.util.ui.JBUI
++import java.awt.Color
+ import java.awt.Font
+ import kotlin.math.roundToInt
+ 
+@@ -13,6 +14,8 @@ data class SessionStyle(
+     val editorScheme: EditorColorsScheme,
+     val editorFamily: String,
+     val editorSize: Int,
++    val editorForeground: Color,
++    val editorBackground: Color,
+     val transcriptFont: Font,
+     val smallEditorFont: Font,
+     val boldEditorFont: Font,
+@@ -44,6 +47,8 @@ data class SessionStyle(
+                 editorScheme = scheme,
+                 editorFamily = family,
+                 editorSize = size,
++                editorForeground = scheme.defaultForeground,
++                editorBackground = scheme.defaultBackground,
+                 transcriptFont = Font(family, Font.PLAIN, size),
+                 smallEditorFont = Font(family, Font.PLAIN, small),
+                 boldEditorFont = Font(family, Font.BOLD, size),
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/ContextBar.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/ContextBar.kt
+new file mode 100644
+index 00000000000..f053a2d28d8
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/ContextBar.kt
+@@ -0,0 +1,150 @@
++package ai.kilocode.client.session.ui.header
++
++import ai.kilocode.client.plugin.KiloBundle
++import ai.kilocode.client.session.model.ContextUsage
++import ai.kilocode.client.session.ui.SessionStyle
++import ai.kilocode.client.ui.UiStyle
++import com.intellij.ui.components.JBLabel
++import com.intellij.util.ui.JBUI
++import java.awt.BorderLayout
++import java.awt.Color
++import java.awt.Dimension
++import java.awt.Graphics
++import java.awt.Graphics2D
++import java.awt.RenderingHints
++import javax.swing.JComponent
++import javax.swing.JPanel
++
++internal class ContextBar : JPanel(BorderLayout(UiStyle.Gap.inline(), 0)) {
++    private val used = JBLabel()
++    private val limit = JBLabel()
++    private val meter = Meter()
++
++    init {
++        isOpaque = false
++        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
++        add(used, BorderLayout.WEST)
++        add(meter, BorderLayout.CENTER)
++        add(limit, BorderLayout.EAST)
++    }
++
++    fun setUsage(value: ContextUsage?) {
++        val data = data(value)
++        meter.data = data
++        isVisible = data != null
++        used.text = data?.used?.let(::num).orEmpty()
++        limit.text = data?.limit?.let(::num).orEmpty()
++        toolTipText = data?.tip()
++        meter.toolTipText = toolTipText
++        revalidate()
++        repaint()
++    }
++
++    fun applyStyle(style: SessionStyle) {
++        background = style.editorBackground
++        foreground = style.editorForeground
++        meter.background = style.editorBackground
++        used.font = style.smallUiFont
++        used.foreground = style.editorForeground
++        limit.font = style.smallUiFont
++        limit.foreground = style.editorForeground
++    }
++
++    fun foregrounds() = listOf(used.foreground, limit.foreground)
++
++    fun used(): Long? = meter.data?.used
++
++    fun reserved(): Long? = meter.data?.reserved
++
++    fun available(): Long? = meter.data?.available
++
++    fun limit(): Long? = meter.data?.limit
++
++    fun trackColor(): Color = meter.trackColor()
++
++    fun usedColor(): Color = meter.data?.let(meter::usedColor) ?: meter.usedColor()
++
++    fun reservedColor(): Color = meter.reservedColor()
++
++    private fun data(value: ContextUsage?): ContextData? {
++        val ctx = value ?: return null
++        val max = ctx.limit?.takeIf { it > 0 } ?: return null
++        if (ctx.tokens <= 0) return null
++        val used = ctx.tokens.coerceAtMost(max)
++        val output = ctx.output?.takeIf { it > 0 } ?: 0L
++        val reserved = output.coerceAtMost(max - used)
++        val available = (max - used - reserved).coerceAtLeast(0)
++        return ContextData(used, reserved, available, max, output)
++    }
++
++    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
++}
++
++private data class ContextData(
++    val used: Long,
++    val reserved: Long,
++    val available: Long,
++    val limit: Long,
++    val output: Long,
++) {
++    fun tip(): String {
++        val lines = mutableListOf(KiloBundle.message("session.header.context.used", num(used), num(limit)))
++        if (output > 0) lines.add(KiloBundle.message("session.header.context.reserved", num(output)))
++        if (available > 0) lines.add(KiloBundle.message("session.header.context.available", num(available)))
++        return lines.joinToString("\n")
++    }
++}
++
++private class Meter : JComponent() {
++    var data: ContextData? = null
++
++    init {
++        isOpaque = false
++        preferredSize = JBUI.size(80, 4)
++        minimumSize = JBUI.size(24, 4)
++    }
++
++    override fun paintComponent(g: Graphics) {
++        val data = data ?: return
++        val g2 = g.create() as Graphics2D
++        try {
++            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
++            val h = JBUI.scale(4).coerceAtMost(height).coerceAtLeast(1)
++            val y = (height - h) / 2
++            val arc = JBUI.scale(4)
++            g2.color = trackColor()
++            g2.fillRoundRect(0, y, width, h, arc, arc)
++            val used = segment(data.used, data.limit)
++            val reserved = segment(data.reserved, data.limit)
++            fill(g2, 0, y, used, h, usedColor(data), arc)
++            fill(g2, used, y, reserved, h, reservedColor(), arc)
++        } finally {
++            g2.dispose()
++        }
++    }
++
++    private fun segment(value: Long, limit: Long): Int {
++        if (value <= 0 || limit <= 0 || width <= 0) return 0
++        return ((value.toDouble() / limit.toDouble()) * width).toInt().coerceIn(0, width)
++    }
++
++    private fun fill(g: Graphics2D, x: Int, y: Int, w: Int, h: Int, color: Color, arc: Int) {
++        if (w <= 0) return
++        g.color = color
++        g.fillRoundRect(x, y, w, h, arc, arc)
++    }
++
++    fun trackColor(): Color = shade(0.14f)
++
++    fun usedColor(): Color = shade(0.45f)
++
++    fun usedColor(data: ContextData): Color = usedColor()
++
++    fun reservedColor(): Color = shade(0.28f)
++
++    private fun shade(alpha: Float): Color {
++        val base = background ?: UiStyle.Colors.panel()
++        val grey = if (UiStyle.Colors.bright(base)) Color.BLACK else Color.WHITE
++        return UiStyle.Colors.blend(base, grey, alpha)
++    }
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/HeaderFormat.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/HeaderFormat.kt
+new file mode 100644
+index 00000000000..719078eddfe
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/HeaderFormat.kt
+@@ -0,0 +1,48 @@
++package ai.kilocode.client.session.ui.header
++
++import ai.kilocode.client.plugin.KiloBundle
++import ai.kilocode.client.session.model.ContextUsage
++import com.intellij.ui.components.JBLabel
++
++internal fun set(label: JBLabel, value: String?) {
++    val text = value.orEmpty()
++    if (label.text != text) label.text = text
++    val show = text.isNotEmpty()
++    if (label.isVisible != show) label.isVisible = show
++}
++
++internal fun money(value: Double?): String? {
++    val cost = value ?: return null
++    if (cost < 0.01) return "\$%.4f".format(cost)
++    if (cost < 1.0) return "\$%.2f".format(cost)
++    return "\$%.2f".format(cost)
++}
++
++internal fun contextText(value: ContextUsage?): String? {
++    val ctx = value ?: return null
++    val pct = ctx.percentage
++    if (pct != null) return "$pct%"
++    if (ctx.tokens > 0) return num(ctx.tokens)
++    return null
++}
++
++internal fun contextTip(value: ContextUsage?): String? {
++    val ctx = value ?: return null
++    val pct = ctx.percentage
++    if (pct != null) return KiloBundle.message("session.header.context.tooltip.percent", num(ctx.tokens), pct)
++    if (ctx.tokens > 0) return KiloBundle.message("session.header.context.tooltip.tokens", num(ctx.tokens))
++    return null
++}
++
++internal fun todo(done: Int, total: Int): String? {
++    if (total <= 0) return null
++    if (done >= total) return KiloBundle.message("session.header.todos.done", total)
++    return KiloBundle.message("session.header.todos.progress", done, total)
++}
++
++internal fun num(value: Long): String {
++    val abs = kotlin.math.abs(value)
++    if (abs < 1_000) return value.toString()
++    if (abs < 1_000_000) return "%.1fK".format(value / 1_000.0)
++    return "%.1fM".format(value / 1_000_000.0)
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/RotatedIcon.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/RotatedIcon.kt
+new file mode 100644
+index 00000000000..e4f37d69334
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/RotatedIcon.kt
+@@ -0,0 +1,27 @@
++package ai.kilocode.client.session.ui.header
++
++import java.awt.Component
++import java.awt.Graphics
++import java.awt.Graphics2D
++import java.awt.geom.AffineTransform
++import javax.swing.Icon
++
++internal class RotatedIcon(private val base: Icon) : Icon {
++    override fun getIconWidth(): Int = base.iconWidth
++
++    override fun getIconHeight(): Int = base.iconHeight
++
++    override fun paintIcon(c: Component?, g: Graphics, x: Int, y: Int) {
++        val g2 = g.create() as Graphics2D
++        try {
++            val tx = AffineTransform()
++            tx.translate((x + iconWidth / 2.0), (y + iconHeight / 2.0))
++            tx.rotate(Math.PI)
++            tx.translate((-iconWidth / 2.0), (-iconHeight / 2.0))
++            g2.transform(tx)
++            base.paintIcon(c, g2, 0, 0)
++        } finally {
++            g2.dispose()
++        }
++    }
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/SessionHeaderPanel.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/SessionHeaderPanel.kt
+new file mode 100644
+index 00000000000..cfadf9f113e
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/SessionHeaderPanel.kt
+@@ -0,0 +1,439 @@
++package ai.kilocode.client.session.ui.header
++
++import ai.kilocode.client.plugin.KiloBundle
++import ai.kilocode.client.session.model.SessionHeaderSnapshot
++import ai.kilocode.client.session.model.SessionModelEvent
++import ai.kilocode.client.session.ui.SessionStyle
++import ai.kilocode.client.session.ui.SessionStyleTarget
++import ai.kilocode.client.session.update.SessionController
++import ai.kilocode.client.ui.UiStyle
++import ai.kilocode.rpc.dto.TokensDto
++import com.intellij.ide.util.PropertiesComponent
++import com.intellij.openapi.Disposable
++import com.intellij.openapi.util.IconLoader
++import com.intellij.ui.components.JBLabel
++import com.intellij.util.ui.JBUI
++import com.intellij.util.ui.components.BorderLayoutPanel
++import java.awt.BorderLayout
++import java.awt.Component
++import java.awt.Dimension
++import java.awt.FlowLayout
++import java.awt.Point
++import java.awt.event.MouseAdapter
++import java.awt.event.MouseEvent
++import java.awt.event.MouseMotionAdapter
++import java.awt.event.MouseWheelEvent
++import javax.swing.Box
++import javax.swing.BoxLayout
++import javax.swing.Icon
++import javax.swing.JPanel
++import javax.swing.JViewport
++import javax.swing.SwingUtilities
++
++class SessionHeaderPanel(
++    private val controller: SessionController,
++    parent: Disposable,
++) : BorderLayoutPanel(), SessionStyleTarget {
++
++    companion object {
++        private val COMPRESS_ICON: Icon = IconLoader.getIcon("/icons/compress.svg", SessionHeaderPanel::class.java)
++        private val CHEVRON_ICON: Icon = IconLoader.getIcon("/icons/chevron-down.svg", SessionHeaderPanel::class.java)
++        private val CHEVRON_UP_ICON: Icon = RotatedIcon(CHEVRON_ICON)
++        private val UP_ICON: Icon = IconLoader.getIcon("/icons/arrow-up.svg", SessionHeaderPanel::class.java)
++        private val DOWN_ICON: Icon = IconLoader.getIcon("/icons/arrow-down-to-line.svg", SessionHeaderPanel::class.java)
++        private const val TOUCH_BEGIN = 2
++        private const val TOUCH_UPDATE = 3
++        private const val TOUCH_END = 4
++        internal const val EXPANDED_KEY = "kilo.session.header.expanded"
++    }
++
++    private val title = JBLabel()
++    private val cost = JBLabel()
++    private val context = JBLabel()
++    private val todos = JBLabel()
++    private val compact = UiStyle.Buttons.HoverIcon().apply {
++        icon = COMPRESS_ICON
++        toolTipText = KiloBundle.message("session.header.compact.description")
++        accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
++        addActionListener { controller.compact() }
++    }
++    private val expand = UiStyle.Buttons.HoverIcon().apply {
++        icon = CHEVRON_ICON
++        toolTipText = KiloBundle.message("session.header.expand")
++        accessibleContext.accessibleName = KiloBundle.message("session.header.expand")
++        addActionListener { toggle() }
++    }
++    private val timeline = TimelinePanel()
++    private val viewport = JViewport().apply {
++        isOpaque = false
++        view = timeline
++    }
++    private var press: Point? = null
++    private var origin = Point()
++    private var rest = 0.0
++    private val bar = ContextBar()
++    private val tokenTitle = JBLabel(KiloBundle.message("session.header.tokens"))
++    private val input = JBLabel().apply {
++        icon = UP_ICON
++        iconTextGap = UiStyle.Gap.xs()
++    }
++    private val output = JBLabel().apply {
++        icon = DOWN_ICON
++        iconTextGap = UiStyle.Gap.xs()
++    }
++    private val cacheRead = JBLabel().apply {
++        icon = DOWN_ICON
++        iconTextGap = UiStyle.Gap.xs()
++    }
++    private val top = BorderLayoutPanel()
++    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, UiStyle.Gap.inline(), 0)).apply {
++        isOpaque = false
++        add(cost)
++        add(context)
++        add(compact)
++        add(expand)
++    }
++    private val tokens = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
++        isOpaque = false
++        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
++        add(tokenTitle)
++        add(Box.createHorizontalStrut(UiStyle.Gap.inline()))
++        add(input)
++        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
++        add(output)
++        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
++        add(cacheRead)
++    }
++    private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.inline(), 0)).apply {
++        isOpaque = false
++        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
++        add(todos)
++    }
++    private val body = JPanel().apply {
++        isOpaque = false
++        layout = BoxLayout(this, BoxLayout.Y_AXIS)
++        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
++        add(viewport)
++        add(tokens)
++        add(bar)
++        add(todoRow)
++    }
++    private var style = SessionStyle.current()
++
++    init {
++        isOpaque = true
++        updateUI()
++
++        top.add(title, BorderLayout.CENTER)
++        top.add(right, BorderLayout.EAST)
++        add(top, BorderLayout.NORTH)
++        timeline.addMouseListener(object : MouseAdapter() {
++            override fun mousePressed(event: MouseEvent) {
++                press = event.point
++                origin = viewport.viewPosition
++            }
++
++            override fun mouseReleased(event: MouseEvent) {
++                press = null
++            }
++        })
++        timeline.addMouseMotionListener(object : MouseMotionAdapter() {
++            override fun mouseDragged(event: MouseEvent) {
++                drag(event)
++            }
++        })
++        timeline.addMouseWheelListener { scroll(it) }
++        viewport.addMouseWheelListener { scroll(it) }
++
++        controller.model.addListener(parent) { event ->
++            when (event) {
++                is SessionModelEvent.HeaderUpdated -> update(event.header)
++
++                is SessionModelEvent.MessageAdded,
++                is SessionModelEvent.MessageUpdated,
++                is SessionModelEvent.MessageRemoved,
++                is SessionModelEvent.ContentAdded,
++                is SessionModelEvent.ContentUpdated,
++                is SessionModelEvent.ContentRemoved,
++                is SessionModelEvent.ContentDelta,
++                is SessionModelEvent.StateChanged,
++                is SessionModelEvent.DiffUpdated,
++                is SessionModelEvent.TodosUpdated,
++                is SessionModelEvent.SessionUpdated,
++                is SessionModelEvent.Compacted,
++                is SessionModelEvent.HistoryLoaded,
++                is SessionModelEvent.Cleared,
++                is SessionModelEvent.TurnAdded,
++                is SessionModelEvent.TurnUpdated,
++                is SessionModelEvent.TurnRemoved -> Unit
++            }
++        }
++
++        applyStyle(style)
++        syncExpanded(expanded())
++        update(controller.model.header)
++    }
++
++    override fun updateUI() {
++        super.updateUI()
++        border = JBUI.Borders.compound(
++            JBUI.Borders.customLine(JBUI.CurrentTheme.ToolWindow.borderColor(), 1, 0, 1, 0),
++            JBUI.Borders.empty(UiStyle.Space.LG, UiStyle.Space.PAD, UiStyle.Space.SM, UiStyle.Space.PAD),
++        )
++    }
++
++    fun update(header: SessionHeaderSnapshot) {
++        val before = isVisible
++        title.text = header.title
++        title.toolTipText = header.title
++        title.accessibleContext.accessibleName = header.title
++        isVisible = header.visible
++        if (!header.visible) {
++            syncExpanded(false)
++            if (before) refresh()
++            return
++        }
++
++        syncExpanded(expanded())
++
++        set(cost, money(header.cost))
++        set(context, contextText(header.context))
++        context.toolTipText = contextTip(header.context)
++        setTokens(header.tokens)
++        set(todos, todo(header.todos.completed, header.todos.total))
++        todoRow.isVisible = todos.isVisible
++
++        compact.isEnabled = header.canCompact
++        val appended = timeline.setItems(header.timeline)
++        sizeTimeline()
++        if (viewport.isVisible != timeline.isVisible) viewport.isVisible = timeline.isVisible
++        if (appended) SwingUtilities.invokeLater { endTimeline() }
++        bar.setUsage(header.context)
++        refresh()
++    }
++
++    override fun applyStyle(style: SessionStyle) {
++        this.style = style
++        background = style.editorBackground
++        foreground = style.editorForeground
++        top.background = style.editorBackground
++        right.background = style.editorBackground
++        tokens.background = style.editorBackground
++        todoRow.background = style.editorBackground
++        body.background = style.editorBackground
++        viewport.background = style.editorBackground
++        title.font = style.boldUiFont
++        title.foreground = style.editorForeground
++        cost.font = style.uiFont
++        cost.foreground = style.editorForeground
++        context.font = style.uiFont
++        context.foreground = style.editorForeground
++        todos.font = style.smallUiFont
++        todos.foreground = style.editorForeground
++        tokenTitle.font = style.smallUiFont
++        tokenTitle.foreground = style.editorForeground
++        input.font = style.smallUiFont
++        input.foreground = style.editorForeground
++        output.font = style.smallUiFont
++        output.foreground = style.editorForeground
++        cacheRead.font = style.smallUiFont
++        cacheRead.foreground = style.editorForeground
++        bar.applyStyle(style)
++        refresh()
++    }
++
++    internal fun titleText(): String = title.text
++
++    internal fun costText(): String = cost.text
++
++    internal fun contextText(): String = context.text
++
++    internal fun foregrounds() = listOf(title, cost, context, todos, tokenTitle, input, output, cacheRead)
++        .map { it.foreground }
++
++    internal fun tokenText(): String = listOf(tokenTitle, input, output, cacheRead)
++        .filter { it.isVisible }
++        .joinToString(" ") { it.text }
++
++    internal fun tokenTip(): String = tokens.toolTipText
++
++    internal fun inputTokenText(): String = input.text
++
++    internal fun outputTokenText(): String = output.text
++
++    internal fun cacheReadText(): String = cacheRead.text
++
++    internal fun todoText(): String = todos.text
++
++    internal fun todoVisible() = todoRow.isVisible && todos.isVisible
++
++    internal fun compactButton() = compact
++
++    internal fun expandButton() = expand
++
++    internal fun isExpanded() = body.parent === this
++
++    internal fun bodyPanel() = body
++
++    internal fun bodyComponents() = body.components.toList()
++
++    internal fun timelineViewport(): JViewport = viewport
++
++    internal fun tokenPanel() = tokens
++
++    internal fun timelinePanel(): Component = timeline
++
++    internal fun timelineToolTip() = timeline.toolTipText
++
++    internal fun timelineHover() = timeline.hovered()
++
++    internal fun contextBar(): Component = bar
++
++    internal fun contextBarVisible() = bar.isVisible
++
++    internal fun contextBarUsed() = bar.used()
++
++    internal fun contextBarReserved() = bar.reserved()
++
++    internal fun contextBarAvailable() = bar.available()
++
++    internal fun contextBarLimit() = bar.limit()
++
++    internal fun contextBarForegrounds() = bar.foregrounds()
++
++    internal fun contextBarTip() = bar.toolTipText
++
++    internal fun contextBarTrackColor() = bar.trackColor()
++
++    internal fun contextBarUsedColor() = bar.usedColor()
++
++    internal fun contextBarReservedColor() = bar.reservedColor()
++
++    internal fun timelineCount() = timeline.count()
++
++    internal fun timelineParts() = timeline.parts()
++
++    internal fun timelineActive(index: Int) = timeline.active(index)
++
++    internal fun timelinePreferredSize() = timeline.preferredSize
++
++    internal fun timelineBarHeight(index: Int) = timeline.barHeight(index)
++
++    internal fun timelineBarWidth() = timeline.barWidth()
++
++    internal fun timelineViewportPreferredSize() = viewport.preferredSize
++
++    internal fun expandTip() = expand.toolTipText
++
++    private fun setTokens(value: TokensDto?) {
++        val tk = value
++        val sent = tk?.input ?: 0L
++        val received = (tk?.output ?: 0L) + (tk?.reasoning ?: 0L)
++        val read = tk?.cacheRead ?: 0L
++        val total = sent + received + read
++
++        tokenTitle.text = KiloBundle.message("session.header.tokens")
++        tokens.toolTipText = KiloBundle.message("session.header.tokens.description")
++        tokenTitle.isVisible = total > 0
++        set(input, if (sent > 0) num(sent) else null)
++        set(output, if (received > 0) num(received) else null)
++        set(cacheRead, if (read > 0) KiloBundle.message("session.header.cache", num(read)) else null)
++        tokens.isVisible = total > 0
++    }
++
++    private fun toggle() {
++        val next = !isExpanded()
++        syncExpanded(next)
++        PropertiesComponent.getInstance().setValue(EXPANDED_KEY, next.toString())
++        refresh()
++    }
++
++    private fun syncExpanded(expanded: Boolean) {
++        if (expanded) expand() else collapse()
++    }
++
++    private fun expand(): Boolean {
++        if (isExpanded()) return false
++        add(body, BorderLayout.CENTER)
++        setExpand(true)
++        return true
++    }
++
++    private fun collapse(): Boolean {
++        val attached = body.parent === this
++        if (!attached) return false
++        remove(body)
++        setExpand(false)
++        return attached
++    }
++
++    private fun setExpand(expanded: Boolean) {
++        val key = if (expanded) "session.header.collapse" else "session.header.expand"
++        expand.icon = if (expanded) CHEVRON_UP_ICON else CHEVRON_ICON
++        expand.toolTipText = KiloBundle.message(key)
++        expand.accessibleContext.accessibleName = KiloBundle.message(key)
++    }
++
++    private fun expanded() = PropertiesComponent.getInstance().getBoolean(EXPANDED_KEY, true)
++
++    private fun sizeTimeline() {
++        val size = timeline.preferredSize
++        viewport.preferredSize = Dimension(0, size.height)
++        viewport.minimumSize = viewport.preferredSize
++        viewport.maximumSize = Dimension(Int.MAX_VALUE, viewport.preferredSize.height)
++    }
++
++    private fun drag(event: MouseEvent) {
++        val start = press ?: return
++        val max = limit()
++        val x = (origin.x - (event.x - start.x)).coerceIn(0, max)
++        move(x)
++    }
++
++    private fun endTimeline() {
++        move(limit())
++    }
++
++    private fun scroll(event: MouseWheelEvent) {
++        if (event.scrollType == TOUCH_BEGIN || event.scrollType == TOUCH_END) {
++            rest = 0.0
++            event.consume()
++            return
++        }
++        val delta = delta(event)
++        if (delta == 0.0) return
++        rest += delta
++        val x = rest.toInt()
++        if (x == 0) return
++        if (!move(viewport.viewPosition.x + x)) {
++            rest = 0.0
++            return
++        }
++        rest -= x
++        event.consume()
++    }
++
++    private fun delta(event: MouseWheelEvent): Double {
++        if (!event.preciseWheelRotation.isFinite()) return 0.0
++        if (event.scrollType == TOUCH_UPDATE) return event.preciseWheelRotation * event.scrollAmount
++        if (event.scrollType == MouseWheelEvent.WHEEL_BLOCK_SCROLL) return event.preciseWheelRotation * viewport.extentSize.width
++        return event.preciseWheelRotation * event.scrollAmount * timeline.barWidth()
++    }
++
++    private fun move(x: Int): Boolean {
++        val next = x.coerceIn(0, limit())
++        if (viewport.viewPosition.x == next) return false
++        viewport.setViewPosition(Point(next, 0))
++        return true
++    }
++
++    private fun limit(): Int {
++        val wide = timeline.preferredSize.width.coerceAtLeast(timeline.width)
++        return (wide - viewport.extentSize.width).coerceAtLeast(0)
++    }
++
++    private fun refresh() {
++        revalidate()
++        repaint()
++    }
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/TimelinePanel.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/TimelinePanel.kt
+new file mode 100644
+index 00000000000..3906138b5de
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/ui/header/TimelinePanel.kt
+@@ -0,0 +1,151 @@
++package ai.kilocode.client.session.ui.header
++
++import ai.kilocode.client.session.model.Content
++import ai.kilocode.client.session.model.Compaction
++import ai.kilocode.client.session.model.Reasoning
++import ai.kilocode.client.session.model.StepFinish
++import ai.kilocode.client.session.model.Text
++import ai.kilocode.client.session.model.TimelineItem
++import ai.kilocode.client.session.model.Tool
++import ai.kilocode.client.session.model.ToolExecState
++import ai.kilocode.client.session.model.ToolKind
++import ai.kilocode.client.ui.UiStyle
++import com.intellij.util.ui.JBUI
++import java.awt.Color
++import java.awt.Dimension
++import java.awt.Graphics
++import java.awt.Graphics2D
++import java.awt.event.MouseAdapter
++import java.awt.event.MouseEvent
++import java.awt.event.MouseMotionAdapter
++import kotlin.math.roundToInt
++import javax.swing.JPanel
++
++internal class TimelinePanel : JPanel() {
++    companion object {
++        private const val WIDTH = 12
++        private const val MIN = 8
++        private const val PAD = 4
++        private const val GAP = 2
++    }
++
++    private var items: List<TimelineItem> = emptyList()
++    private var heights: List<Int> = emptyList()
++    private var hover = -1
++
++    init {
++        isOpaque = false
++        addMouseMotionListener(object : MouseMotionAdapter() {
++            override fun mouseMoved(event: MouseEvent) {
++                val idx = index(event)
++                toolTipText = items.getOrNull(idx)?.title
++                if (hover == idx) return
++                hover = idx
++                repaint()
++            }
++        })
++        addMouseListener(object : MouseAdapter() {
++            override fun mouseExited(event: MouseEvent) {
++                toolTipText = null
++                if (hover == -1) return
++                hover = -1
++                repaint()
++            }
++        })
++    }
++
++    fun setItems(items: List<TimelineItem>): Boolean {
++        val appended = items.size > this.items.size
++        val max = items.maxOfOrNull { it.weight }?.coerceAtLeast(1) ?: 1
++        this.items = items
++        heights = items.map { height(it.weight, max) }
++        val show = items.isNotEmpty()
++        if (isVisible != show) isVisible = show
++        revalidate()
++        repaint()
++        return appended
++    }
++
++    override fun paintComponent(g: Graphics) {
++        super.paintComponent(g)
++        val g2 = g.create() as Graphics2D
++        val w = JBUI.scale(WIDTH)
++        val gap = JBUI.scale(GAP)
++        val grow = JBUI.scale(1)
++        val tall = height.takeIf { it > 0 } ?: preferredSize.height
++        try {
++            for (idx in items.indices) {
++                val over = idx == hover
++                val h = heights[idx] + if (over) grow else 0
++                val wide = w + if (over) grow * 2 else 0
++                val x = grow + idx * (w + gap) - if (over) grow else 0
++                val y = (tall - h).coerceAtLeast(0)
++                g2.color = color(items[idx])
++                g2.fillRect(x, y, wide, h)
++            }
++        } finally {
++            g2.dispose()
++        }
++    }
++
++    private fun index(event: MouseEvent): Int {
++        val w = JBUI.scale(WIDTH)
++        val gap = JBUI.scale(GAP)
++        val grow = JBUI.scale(1)
++        val tall = height.takeIf { it > 0 } ?: preferredSize.height
++        for (idx in items.indices) {
++            val h = heights[idx]
++            val x = grow + idx * (w + gap)
++            val y = (tall - h).coerceAtLeast(0)
++            val inside = event.x >= x && event.x < x + w && event.y >= y && event.y < y + h
++            if (inside) return idx
++        }
++        return -1
++    }
++
++    override fun getPreferredSize(): Dimension = Dimension(width(), height())
++
++    override fun getMinimumSize(): Dimension = Dimension(0, height())
++
++    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, height())
++
++    fun count() = items.size
++
++    fun parts(): List<Content> = items.map { it.part }
++
++    fun active(index: Int) = items[index].active
++
++    fun barHeight(index: Int) = heights[index]
++
++    fun barWidth() = JBUI.scale(WIDTH + GAP)
++
++    fun hovered() = hover
++
++    private fun height(weight: Int, max: Int): Int {
++        val fill = MIN + (weight.toDouble() / max.toDouble()) * (MIN * 3 - MIN - PAD)
++        return JBUI.scale(fill.roundToInt())
++    }
++
++    private fun height(): Int {
++        val max = heights.maxOrNull() ?: return 0
++        return max + JBUI.scale(PAD)
++    }
++
++    private fun width(): Int {
++        if (items.isEmpty()) return 0
++        return items.size * JBUI.scale(WIDTH) + (items.size - 1) * JBUI.scale(GAP) + JBUI.scale(2)
++    }
++
++    private fun color(item: TimelineItem): Color {
++        val part = item.part
++        if (part is Tool && part.state == ToolExecState.ERROR) return UiStyle.Colors.timelineError
++        if (part is Text) return UiStyle.Colors.timelineText
++        if (part is Reasoning) return UiStyle.Colors.timelineText
++        if (part is Compaction) return UiStyle.Colors.timelineStep
++        if (part is StepFinish) return UiStyle.Colors.timelineSuccess
++        if (part !is Tool) return UiStyle.Colors.timelineStep
++        if (part.kind == ToolKind.READ) return UiStyle.Colors.timelineRead
++        if (part.kind == ToolKind.WRITE) return UiStyle.Colors.timelineWrite
++        return UiStyle.Colors.timelineTool
++    }
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/update/SessionController.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/update/SessionController.kt
+index 2b9c35d0e27..447ab18a775 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/update/SessionController.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/update/SessionController.kt
+@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloSessionService
+ import ai.kilocode.client.app.Workspace
+ import ai.kilocode.client.plugin.KiloBundle
+ import ai.kilocode.client.session.model.AgentItem
++import ai.kilocode.client.session.model.ModelLimitItem
+ import ai.kilocode.client.session.model.ModelItem
+ import ai.kilocode.client.session.model.SessionModel
+ import ai.kilocode.client.session.model.SessionModelEvent
+@@ -68,6 +69,7 @@ class SessionController(
+   private val flushMs: Long = EVENT_FLUSH_MS,
+   private val condense: Boolean = true,
+   private val displayMs: Long = DISPLAY_DELAY_MS,
++  session: SessionDto? = null,
+   private val open: (SessionDto) -> Unit = {},
+   private val beforeUpdate: () -> Boolean = { false },
+   private val afterUpdate: (Boolean) -> Unit = {},
+@@ -87,7 +89,8 @@ class SessionController(
+     val model = SessionModel()
+ 
+     private val listeners = mutableListOf<SessionControllerListener>()
+-    private var sessionId: String? = id
++    private var sessionId: String? = session?.id ?: id
++    private val initialSession = session
+     private val directory: String get() = workspace.directory
+     private val updates = SessionUpdateQueue(
+       parent,
+@@ -151,6 +154,9 @@ class SessionController(
+                     val session = sessions.create(directory)
+                     runEdt {
+                         sessionId = session.id
++                        updateModel {
++                            model.setSession(session)
++                        }
+                     }
+                     val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
+                     LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
+@@ -185,6 +191,29 @@ class SessionController(
+         }
+     }
+ 
++    fun compact() {
++        assertEdt()
++        val id = sessionId ?: return
++        if (model.state.isBusy()) return
++        if (model.isEmpty()) return
++        val parsed = model.model?.let(::parseModel) ?: return
++        val sel = ModelSelectionDto(parsed.first, parsed.second)
++        LOG.debug { "${ChatLogSummary.sid(id)} kind=compact model=${sel.providerID}/${sel.modelID}" }
++        cs.launch {
++            try {
++                sessions.compact(id, directory, sel)
++                LOG.debug { "${ChatLogSummary.sid(id)} kind=compact ok=true" }
++            } catch (e: Exception) {
++                LOG.warn("${ChatLogSummary.sid(id)} kind=compact dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
++                edt {
++                    updateModel {
++                        model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.compact")))
++                    }
++                }
++            }
++        }
++    }
++
+     fun retryConnection() {
+         assertEdt()
+         LOG.debug {
+@@ -296,6 +325,7 @@ class SessionController(
+     }
+ 
+     init {
++        initialSession?.let { model.setSession(it) }
+         if (sessionId != null) {
+             loadHistory()
+             subscribeEvents()
+@@ -356,6 +386,7 @@ class SessionController(
+                                         info.recommendedIndex,
+                                         info.free,
+                                         info.variants,
++                                        info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
+                                     )
+                                 }
+                             }
+@@ -365,6 +396,7 @@ class SessionController(
+                         this@SessionController.model.agent = state.agents?.default
+                     }
+                     syncModelSelection()
++                    model.refreshHeader()
+                 }
+ 
+                 if (state.status == KiloWorkspaceStatusDto.READY) {
+@@ -388,11 +420,13 @@ class SessionController(
+                 if (!model.showSession) setControllerViewState(SessionControllerEvent.ViewChanged.ShowProgress)
+             }
+             try {
++                val session = initialSession ?: runCatching { sessions.get(id, directory) }.getOrNull()
+                 val items = sessions.messages(id, directory)
+                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(items)}" }
+                 runEdt {
+                     updateModel {
+                         this@SessionController.model.loadHistory(items)
++                        if (session != null) this@SessionController.model.setSession(session)
+                     }
+                 }
+                 recoverPending(id)
+@@ -604,6 +638,8 @@ class SessionController(
+                 model.setState(state)
+             }
+ 
++            is ChatEventDto.SessionUpdated -> model.setSession(event.session)
++
+             is ChatEventDto.SessionIdle -> {
+                 // Treat session.idle as an explicit signal to return to Idle.
+                 // Only apply if we're not in a more specific non-terminal state.
+@@ -685,6 +721,7 @@ class SessionController(
+         model.variants = item?.variants ?: emptyList()
+         val saved = key?.let { app.models.value.variant[it] }
+         model.variant = saved?.takeIf { it in model.variants } ?: model.variants.firstOrNull()
++        model.refreshHeader()
+     }
+ 
+     private fun item(key: String): ModelItem? = model.models.firstOrNull { it.key == key }
+@@ -943,6 +980,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
+     is ChatEventDto.QuestionReplied -> event.sessionID == id
+     is ChatEventDto.QuestionRejected -> event.sessionID == id
+     is ChatEventDto.SessionStatusChanged -> event.sessionID == id
++    is ChatEventDto.SessionUpdated -> event.sessionID == id
+     is ChatEventDto.SessionIdle -> event.sessionID == id
+     is ChatEventDto.SessionCompacted -> event.sessionID == id
+     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/MessageView.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/MessageView.kt
+index 8b2427b01ba..17322436fb2 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/MessageView.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/MessageView.kt
+@@ -2,6 +2,7 @@ package ai.kilocode.client.session.views
+ 
+ import ai.kilocode.client.session.model.Content
+ import ai.kilocode.client.session.model.Message
++import ai.kilocode.client.session.model.StepFinish
+ import ai.kilocode.client.session.ui.SessionView
+ import ai.kilocode.client.session.ui.SessionStyle
+ import ai.kilocode.client.session.ui.SessionStyleTarget
+@@ -42,6 +43,7 @@ class MessageView(
+ 
+         // Populate content that already exists (e.g. after loadHistory)
+         for ((_, content) in msg.parts) {
++            if (content is StepFinish) continue
+             val view = ViewFactory.create(content)
+             view.applyStyle(style)
+             parts[content.id] = view
+@@ -51,6 +53,7 @@ class MessageView(
+ 
+     /** Add or update the renderer for [content]. */
+     fun upsertPart(content: Content) {
++        if (content is StepFinish) return
+         val existing = parts[content.id]
+         if (existing != null) {
+             existing.update(content)
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/ViewFactory.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/ViewFactory.kt
+index 2015f1a97ee..d7ae3b8e9c4 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/ViewFactory.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/session/views/ViewFactory.kt
+@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Compaction
+ import ai.kilocode.client.session.model.Content
+ import ai.kilocode.client.session.model.Generic
+ import ai.kilocode.client.session.model.Reasoning
++import ai.kilocode.client.session.model.StepFinish
+ import ai.kilocode.client.session.model.Text
+ import ai.kilocode.client.session.model.Tool
+ 
+@@ -21,6 +22,7 @@ object ViewFactory {
+         is Reasoning -> ReasoningView(content)
+         is Tool -> ToolView(content)
+         is Compaction -> CompactionView(content)
++        is StepFinish -> error("step-finish is timeline-only")
+         is Generic -> GenericView(content)
+     }
+ }
+diff --git a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/UiStyle.kt b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/UiStyle.kt
+index cd8974b6449..b4ffe3717a4 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/UiStyle.kt
++++ b/packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/client/ui/UiStyle.kt
+@@ -51,6 +51,14 @@ object UiStyle {
+         internal const val BORDER_DELTA = 64
+         internal const val HOVER_ALPHA = 0.35f
+ 
++        val timelineRead: Color = JBColor(Color(0x37, 0x94, 0xff), Color(0x37, 0x94, 0xff))
++        val timelineWrite: Color = JBColor(Color(0x00, 0x7f, 0xd4), Color(0x00, 0x7f, 0xd4))
++        val timelineTool: Color = JBColor(Color(0x00, 0x7a, 0xcc), Color(0x00, 0x7a, 0xcc))
++        val timelineSuccess: Color = JBColor.namedColor("Label.successForeground", UIUtil.getLabelSuccessForeground())
++        val timelineError: Color = JBColor(Color(0xf4, 0x87, 0x71), Color(0xf4, 0x87, 0x71))
++        val timelineText: Color = JBColor(Color(0x9d, 0x9d, 0x9d), Color(0x9d, 0x9d, 0x9d))
++        val timelineStep: Color = JBColor(Color(0x4d, 0x4d, 0x4d), Color(0x4d, 0x4d, 0x4d))
++
+         fun bg(): Color = UIUtil.getPanelBackground()
+ 
+         fun fg(): Color = UIUtil.getLabelForeground()
+@@ -69,6 +77,8 @@ object UiStyle {
+ 
+         fun header(): Color = panel()
+ 
++        fun headerBar(): Color = JBUI.CurrentTheme.ToolWindow.headerBackground(false)
++
+         /** Local hover color for collapsible transcript card headers. */
+         fun headerHover(): Color = panelHover()
+ 
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-down-to-line.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-down-to-line.svg
+new file mode 100644
+index 00000000000..d519d808194
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-down-to-line.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path d="M15.2083 11.6667L10 16.875L4.79167 11.6667M10 16.25V3.125" stroke="#6C707E" stroke-width="1.25" stroke-linecap="square"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-down-to-line_dark.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-down-to-line_dark.svg
+new file mode 100644
+index 00000000000..cb9476c8438
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-down-to-line_dark.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path d="M15.2083 11.6667L10 16.875L4.79167 11.6667M10 16.25V3.125" stroke="#CED0D6" stroke-width="1.25" stroke-linecap="square"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-up.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-up.svg
+new file mode 100644
+index 00000000000..e66d89f32f4
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-up.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path fill-rule="evenodd" clip-rule="evenodd" d="M9.99991 2.24121L16.0921 8.33343L15.2083 9.21731L10.6249 4.63397V17.5001H9.37492V4.63398L4.7916 9.21731L3.90771 8.33343L9.99991 2.24121Z" fill="#6C707E"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-up_dark.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-up_dark.svg
+new file mode 100644
+index 00000000000..decedb2977e
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/arrow-up_dark.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path fill-rule="evenodd" clip-rule="evenodd" d="M9.99991 2.24121L16.0921 8.33343L15.2083 9.21731L10.6249 4.63397V17.5001H9.37492V4.63398L4.7916 9.21731L3.90771 8.33343L9.99991 2.24121Z" fill="#CED0D6"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/chevron-down.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/chevron-down.svg
+new file mode 100644
+index 00000000000..b916dec2a8e
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/chevron-down.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path d="M6.6665 8.33325L9.99984 11.6666L13.3332 8.33325" stroke="#6C707E" stroke-linecap="square"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/chevron-down_dark.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/chevron-down_dark.svg
+new file mode 100644
+index 00000000000..9d727eb37c2
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/chevron-down_dark.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path d="M6.6665 8.33325L9.99984 11.6666L13.3332 8.33325" stroke="#CED0D6" stroke-linecap="square"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/compress.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/compress.svg
+new file mode 100644
+index 00000000000..7b9ee760792
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/compress.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path d="M5 10H15M6.667 4.167L10 7.5L13.333 4.167M6.667 15.833L10 12.5L13.333 15.833" stroke="#6C707E" stroke-linecap="square"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/icons/compress_dark.svg b/packages/kilo-jetbrains/frontend/src/main/resources/icons/compress_dark.svg
+new file mode 100644
+index 00000000000..fd7653b5fbc
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/icons/compress_dark.svg
+@@ -0,0 +1,3 @@
++<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
++  <path d="M5 10H15M6.667 4.167L10 7.5L13.333 4.167M6.667 15.833L10 12.5L13.333 15.833" stroke="#CED0D6" stroke-linecap="square"/>
++</svg>
+diff --git a/packages/kilo-jetbrains/frontend/src/main/resources/messages/KiloBundle.properties b/packages/kilo-jetbrains/frontend/src/main/resources/messages/KiloBundle.properties
+index b648b527d95..9fe64c2c787 100644
+--- a/packages/kilo-jetbrains/frontend/src/main/resources/messages/KiloBundle.properties
++++ b/packages/kilo-jetbrains/frontend/src/main/resources/messages/KiloBundle.properties
+@@ -44,8 +44,26 @@ session.part.tool.shell=Shell
+ session.part.tool.truncated=Output truncated in preview. Full output remains in session data.
+ 
+ session.error.prompt=Prompt failed
++session.error.compact=Session compact failed
+ session.error.unknown=Unknown error
+ 
++session.header.tokens=Tokens
++session.header.tokens.description=Tokens used by the latest assistant response: input, output, and cached prompt tokens.
++session.header.input=in {0}
++session.header.output=out {0}
++session.header.cache=cache {0}
++session.header.compact=Compact session
++session.header.compact.description=Summarize the session to reduce context size
++session.header.expand=Show session metrics
++session.header.collapse=Hide session metrics
++session.header.todos.progress={0}/{1} todos complete
++session.header.todos.done=All {0} todos complete
++session.header.context.tooltip.percent={0} tokens ({1}% of context)
++session.header.context.tooltip.tokens={0} tokens
++session.header.context.used={0} / {1} tokens used
++session.header.context.reserved={0} reserved for output
++session.header.context.available={0} available
++
+ prompt.placeholder=Type a message...
+ prompt.placeholder.with.shortcuts=Type a message... ({0} to send, {1} for new line)
+ prompt.placeholder.with.send=Type a message... ({0} to send)
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionSidePanelManagerTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionSidePanelManagerTest.kt
+index c346dd1ddcb..e0d31c4c763 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionSidePanelManagerTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionSidePanelManagerTest.kt
+@@ -160,6 +160,15 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
+         assertEquals(listOf(false), loading)
+     }
+ 
++    fun `test open session seeds session metadata into ui`() {
++        val manager = manager()
++
++        manager.openSession(session("ses_1", "/test", "Opened title"))
++
++        val controller = active(manager).controller()
++        assertEquals("Opened title", controller.model.session?.title)
++    }
++
+     fun `test inactive sessions keep queued style updates`() {
+         val manager = manager()
+         manager.openSession(session("ses_1"))
+@@ -188,10 +197,10 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
+         val manager = SessionSidePanelManager(
+             project = project,
+             root = workspace,
+-            create = { project, workspace, owner, id, show ->
++            create = { project, workspace, owner, id, show, session ->
+                 created.add(workspace.directory to id)
+                 loading.add(show)
+-                SessionUi(project, workspace, sessions, app, scope, id = id, loading = show, open = owner::openSession).also {
++                SessionUi(project, workspace, sessions, app, scope, id = id, loading = show, open = owner::openSession, session = session).also {
+                     ui.add(it)
+                     Disposer.register(it) { ui.remove(it) }
+                 }
+@@ -219,11 +228,11 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
+ 
+     private fun session(id: String) = session(id, "/test")
+ 
+-    private fun session(id: String, dir: String) = SessionDto(
++    private fun session(id: String, dir: String, title: String = "Session $id") = SessionDto(
+         id = id,
+         projectID = "prj",
+         directory = dir,
+-        title = "Session $id",
++        title = title,
+         version = "1",
+         time = SessionTimeDto(created = 1.0, updated = 2.0),
+     )
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionUiLayoutTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionUiLayoutTest.kt
+index ead739f55b9..547f7c3a881 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionUiLayoutTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/SessionUiLayoutTest.kt
+@@ -13,7 +13,10 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
+ import ai.kilocode.client.session.ui.QuestionPanel
+ import ai.kilocode.client.session.ui.SessionMessageListPanel
+ import ai.kilocode.client.session.ui.SessionRootPanel
++import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+ import ai.kilocode.client.session.update.SessionControllerEvent
++import ai.kilocode.rpc.dto.MessageWithPartsDto
++import com.intellij.ui.components.JBScrollPane
+ import javax.swing.JLayeredPane
+ 
+ @Suppress("UnstableApiUsage")
+@@ -43,6 +46,17 @@ class SessionUiLayoutTest : SessionUiTestBase() {
+         assertEquals(listOf(question, permission, connection, prompt), stack.components.toList())
+     }
+ 
++    fun `test header is docked above shared scroll pane and hidden while empty`() {
++        val root = find<SessionRootPanel>(ui)
++        val header = find<SessionHeaderPanel>(ui)
++        val scroll = find<JBScrollPane>(ui)
++
++        assertSame(root.content, header.parent.parent)
++        assertSame(scroll.parent, header.parent)
++        assertTrue(header.y <= scroll.y)
++        assertFalse(header.isVisible)
++    }
++
+     fun `test default focused component is prompt editor`() {
+         val prompt = find<PromptPanel>(ui)
+ 
+@@ -152,6 +166,21 @@ class SessionUiLayoutTest : SessionUiTestBase() {
+         assertSame(find<SessionMessageListPanel>(ui), scrollView())
+     }
+ 
++    fun `test existing session history shows header above scroll pane`() {
++        rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
++
++        ui = SessionUi(project, workspace, sessions, app, scope, id = "ses_test", displayMs = 0).apply {
++            setSize(800, 600)
++        }
++        settle()
++        layout()
++
++        val header = find<SessionHeaderPanel>(ui)
++        val scroll = find<JBScrollPane>(ui)
++        assertTrue(header.isVisible)
++        assertTrue(header.y + header.height <= scroll.y)
++    }
++
+     fun `test new session keeps loading body before recents delay`() {
+         rpc.recentGate = kotlinx.coroutines.CompletableDeferred()
+         ui = newUi(displayMs = 1_000)
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/SessionModelTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/SessionModelTest.kt
+index c29b2841cfc..f468ff973af 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/SessionModelTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/SessionModelTest.kt
+@@ -10,7 +10,10 @@ import ai.kilocode.rpc.dto.MessageTimeDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
+ import ai.kilocode.rpc.dto.PartDto
+ import ai.kilocode.rpc.dto.PartTimeDto
++import ai.kilocode.rpc.dto.SessionDto
++import ai.kilocode.rpc.dto.SessionTimeDto
+ import ai.kilocode.rpc.dto.TodoDto
++import ai.kilocode.rpc.dto.TokensDto
+ import com.intellij.openapi.Disposable
+ import com.intellij.openapi.util.Disposer
+ import com.intellij.testFramework.UsefulTestCase
+@@ -26,7 +29,9 @@ class SessionModelTest : UsefulTestCase() {
+         parent = Disposer.newDisposable("test")
+         model = SessionModel()
+         events = mutableListOf()
+-        model.addListener(parent) { events.add(it) }
++        model.addListener(parent) {
++            if (it !is SessionModelEvent.HeaderUpdated) events.add(it)
++        }
+     }
+ 
+     override fun tearDown() {
+@@ -143,10 +148,23 @@ class SessionModelTest : UsefulTestCase() {
+ 
+         val p = model.message("m1")!!.parts["p1"] as Tool
+         assertEquals("bash", p.name)
++        assertEquals(ToolKind.GENERIC, p.kind)
+         assertEquals(ToolExecState.RUNNING, p.state)
+         assertEquals("ls", p.title)
+     }
+ 
++    fun `test updateContent tool derives tool kind from name`() {
++        model.addMessage(msg("m1", "assistant"))
++
++        model.updateContent("m1", part("p1", "m1", "tool", tool = "read"))
++        model.updateContent("m1", part("p2", "m1", "tool", tool = "write"))
++        model.updateContent("m1", part("p3", "m1", "tool", tool = "bash"))
++
++        assertEquals(ToolKind.READ, (model.message("m1")!!.parts["p1"] as Tool).kind)
++        assertEquals(ToolKind.WRITE, (model.message("m1")!!.parts["p2"] as Tool).kind)
++        assertEquals(ToolKind.GENERIC, (model.message("m1")!!.parts["p3"] as Tool).kind)
++    }
++
+     fun `test updateContent tool stores rich fields`() {
+         model.addMessage(msg("m1", "assistant"))
+ 
+@@ -183,6 +201,7 @@ class SessionModelTest : UsefulTestCase() {
+         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "completed"))
+ 
+         val p = model.message("m1")!!.parts["p1"] as Tool
++        assertEquals(ToolKind.GENERIC, p.kind)
+         assertEquals(ToolExecState.COMPLETED, p.state)
+         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
+     }
+@@ -221,14 +240,25 @@ class SessionModelTest : UsefulTestCase() {
+         assertTrue(events.isEmpty())
+     }
+ 
+-    fun `test updateContent silently drops step-finish parts`() {
++    fun `test updateContent stores step-finish parts`() {
+         model.addMessage(msg("m1", "assistant"))
+         events.clear()
+ 
+-        model.updateContent("m1", part("p1", "m1", "step-finish"))
++        model.updateContent("m1", part(
++            "p1",
++            "m1",
++            "step-finish",
++            reason = "stop",
++            cost = 0.005,
++            tokens = TokensDto(100, 50, 10, 20, 5),
++        ))
+ 
+-        assertNull(model.message("m1")!!.parts["p1"])
+-        assertTrue(events.isEmpty())
++        val part = model.message("m1")!!.parts["p1"]
++        assertTrue(part is StepFinish)
++        assertEquals("stop", (part as StepFinish).reason)
++        assertEquals(0.005, part.cost)
++        assertEquals(100L, part.tokens?.input)
++        assertTrue(events.single() is SessionModelEvent.ContentAdded)
+     }
+ 
+     fun `test updateContent unknown type stored as Generic`() {
+@@ -448,7 +478,7 @@ class SessionModelTest : UsefulTestCase() {
+         assertEquals("snapshot", (entry.parts["p2"] as Generic).type)
+     }
+ 
+-    fun `test loadHistory silently drops step-start and step-finish parts`() {
++    fun `test loadHistory drops step-start and preserves step-finish parts`() {
+         val text = PartDto(id = "p1", sessionID = "s1", messageID = "m1", type = "text", text = "visible")
+         val stepStart = PartDto(id = "p2", sessionID = "s1", messageID = "m1", type = "step-start")
+         val stepFinish = PartDto(id = "p3", sessionID = "s1", messageID = "m1", type = "step-finish")
+@@ -456,7 +486,8 @@ class SessionModelTest : UsefulTestCase() {
+         model.loadHistory(listOf(MessageWithPartsDto(msg("m1", "assistant"), listOf(text, stepStart, stepFinish))))
+ 
+         val entry = model.message("m1")!!
+-        assertEquals(listOf("p1"), entry.parts.keys.toList())
++        assertEquals(listOf("p1", "p3"), entry.parts.keys.toList())
++        assertTrue(entry.parts["p3"] is StepFinish)
+     }
+ 
+     fun `test upsertMessage adds new message and returns true`() {
+@@ -622,7 +653,9 @@ class SessionModelTest : UsefulTestCase() {
+         Disposer.register(parent, child)
+ 
+         val extra = mutableListOf<SessionModelEvent>()
+-        model.addListener(child) { extra.add(it) }
++        model.addListener(child) {
++            if (it !is SessionModelEvent.HeaderUpdated) extra.add(it)
++        }
+ 
+         model.addMessage(msg("m1", "user"))
+         assertEquals(2, extra.size)  // MessageAdded + TurnAdded
+@@ -634,11 +667,107 @@ class SessionModelTest : UsefulTestCase() {
+         assertTrue(extra.isEmpty())
+     }
+ 
+-    private fun msg(id: String, role: String) = MessageDto(
++    fun `test header snapshot hidden with no messages`() {
++        assertFalse(model.header.visible)
++        assertEquals("New Session", model.header.title)
++        assertFalse(model.header.canCompact)
++    }
++
++    fun `test header snapshot totals assistant cost only`() {
++        model.model = "kilo/gpt-5"
++        model.upsertMessage(msg("u1", "user", cost = 10.0))
++        model.upsertMessage(msg("a1", "assistant", cost = 0.25))
++        model.upsertMessage(msg("a2", "assistant", cost = 0.75))
++
++        assertTrue(model.header.visible)
++        assertEquals(1.0, model.header.cost)
++        assertTrue(model.header.canCompact)
++    }
++
++    fun `test header snapshot uses last assistant tokens and model limit`() {
++        model.models = listOf(ModelItem(
++            id = "gpt-5",
++            display = "GPT-5",
++            provider = "kilo",
++            providerName = "Kilo",
++            recommendedIndex = null,
++            free = false,
++            variants = emptyList(),
++            limit = ModelLimitItem(context = 1000, input = 800, output = 200),
++        ))
++        model.model = "kilo/gpt-5"
++        model.upsertMessage(msg("a1", "assistant", tokens = TokensDto(100, 50, 25, 25, 0)))
++        model.upsertMessage(msg("a2", "assistant", tokens = TokensDto(200, 100, 0, 0, 0)))
++
++        assertEquals(300L, model.header.context?.tokens)
++        assertEquals(30, model.header.context?.percentage)
++        assertEquals(1000L, model.header.context?.limit)
++        assertEquals(200L, model.header.context?.output)
++        assertEquals(200L, model.header.tokens?.input)
++    }
++
++    fun `test header snapshot tracks todo summary`() {
++        model.upsertMessage(msg("a1", "assistant"))
++        model.setTodos(listOf(
++            TodoDto("Write tests", "completed", "high"),
++            TodoDto("Ship it", "pending", "medium"),
++        ))
++
++        assertEquals(2, model.header.todos.total)
++        assertEquals(1, model.header.todos.completed)
++        assertEquals("Write tests", model.header.todos.items[0].content)
++    }
++
++    fun `test header snapshot tracks session title and timeline`() {
++        model.setSession(session("Updated title"))
++        model.upsertMessage(msg("a1", "assistant"))
++        model.updateContent("a1", part("t1", "a1", "tool", tool = "bash", state = "running", title = "Run tests", time = PartTimeDto(1.0, 3.0)))
++        model.updateContent("a1", part("s1", "a1", "step-finish", tokens = TokensDto(200, 100, 25, 0, 0)))
++
++        val item = model.header.timeline[0]
++        val step = model.header.timeline[1]
++        assertEquals("Updated title", model.header.title)
++        assertTrue(item.part is Tool)
++        assertEquals("bash", (item.part as Tool).name)
++        assertEquals("Run tests", item.title)
++        assertEquals(2000L, item.durationMs)
++        assertTrue(item.active)
++        assertTrue(step.part is StepFinish)
++        assertEquals("Step finish", step.title)
++        assertEquals(10, step.weight)
++        assertFalse(step.active)
++    }
++
++    fun `test loadHistory and clear reset header state`() {
++        model.setSession(session("Old title"))
++        model.upsertMessage(msg("a1", "assistant", cost = 1.0))
++
++        model.loadHistory(emptyList())
++        assertFalse(model.header.visible)
++        assertEquals("New Session", model.header.title)
++
++        model.upsertMessage(msg("a2", "assistant", cost = 1.0))
++        model.clear()
++        assertFalse(model.header.visible)
++        assertNull(model.header.cost)
++    }
++
++    private fun msg(id: String, role: String, cost: Double? = null, tokens: TokensDto? = null) = MessageDto(
+         id = id,
+         sessionID = "ses",
+         role = role,
+         time = MessageTimeDto(created = 0.0),
++        cost = cost,
++        tokens = tokens,
++    )
++
++    private fun session(title: String) = SessionDto(
++        id = "ses",
++        projectID = "proj",
++        directory = "/test",
++        title = title,
++        version = "1",
++        time = SessionTimeDto(created = 0.0, updated = 0.0),
+     )
+ 
+     private fun part(
+@@ -654,6 +783,9 @@ class SessionModelTest : UsefulTestCase() {
+         output: String? = null,
+         error: String? = null,
+         time: PartTimeDto? = null,
++        reason: String? = null,
++        cost: Double? = null,
++        tokens: TokensDto? = null,
+     ) = PartDto(
+         id = id,
+         sessionID = "ses",
+@@ -668,6 +800,9 @@ class SessionModelTest : UsefulTestCase() {
+         output = output,
+         error = error,
+         time = time,
++        reason = reason,
++        cost = cost,
++        tokens = tokens,
+     )
+ 
+     private fun question(id: String) = Question(
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/TurnGroupingTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/TurnGroupingTest.kt
+index 6c4bf72981c..65793c239fb 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/TurnGroupingTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/model/TurnGroupingTest.kt
+@@ -239,8 +239,8 @@ class TurnGroupingTest : UsefulTestCase() {
+             turn#u2: user#u2, assistant#a2
+         """)
+         // HistoryLoaded is the only event — no per-turn events
+-        assertEquals(1, events.size)
+-        assertTrue(events.single() is SessionModelEvent.HistoryLoaded)
++        assertEquals(1, visibleEvents().size)
++        assertTrue(visibleEvents().single() is SessionModelEvent.HistoryLoaded)
+     }
+ 
+     fun `test loadHistory with leading assistant messages groups them correctly`() {
+@@ -254,7 +254,7 @@ class TurnGroupingTest : UsefulTestCase() {
+             turn#a1: assistant#a1, assistant#a2
+             turn#u1: user#u1
+         """)
+-        assertEquals(1, events.size)  // only HistoryLoaded
++        assertEquals(1, visibleEvents().size)  // only HistoryLoaded
+     }
+ 
+     fun `test loadHistory clears previous turns`() {
+@@ -264,7 +264,7 @@ class TurnGroupingTest : UsefulTestCase() {
+         model.loadHistory(listOf(withParts(msg("u2", "user"))))
+ 
+         assertTurns("turn#u2: user#u2")
+-        assertEquals(1, events.size)  // only HistoryLoaded
++        assertEquals(1, visibleEvents().size)  // only HistoryLoaded
+     }
+ 
+     fun `test loadHistory with empty list produces no turns`() {
+@@ -274,7 +274,7 @@ class TurnGroupingTest : UsefulTestCase() {
+         model.loadHistory(emptyList())
+ 
+         assertTurns("(no turns)")
+-        assertEquals(1, events.size)  // only HistoryLoaded
++        assertEquals(1, visibleEvents().size)  // only HistoryLoaded
+     }
+ 
+     // ------ clear ------
+@@ -288,8 +288,8 @@ class TurnGroupingTest : UsefulTestCase() {
+ 
+         assertTurns("(no turns)")
+         // Cleared is the only event — no per-turn events
+-        assertEquals(1, events.size)
+-        assertTrue(events.single() is SessionModelEvent.Cleared)
++        assertEquals(1, visibleEvents().size)
++        assertTrue(visibleEvents().single() is SessionModelEvent.Cleared)
+     }
+ 
+     // ------ idempotency ------
+@@ -350,6 +350,8 @@ class TurnGroupingTest : UsefulTestCase() {
+             it is SessionModelEvent.TurnRemoved
+     }
+ 
++    private fun visibleEvents(): List<SessionModelEvent> = events.filter { it !is SessionModelEvent.HeaderUpdated }
++
+     private fun assertTurns(expected: String) {
+         assertEquals(expected.trimIndent().trim(), model.toTurnsString().trim())
+     }
+@@ -359,6 +361,6 @@ class TurnGroupingTest : UsefulTestCase() {
+     }
+ 
+     private fun assertAllEvents(expected: String) {
+-        assertEquals(expected.trimIndent().trim(), events.joinToString("\n"))
++        assertEquals(expected.trimIndent().trim(), visibleEvents().joinToString("\n"))
+     }
+ }
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionStyleTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionStyleTest.kt
+index 203c4174017..35ba549f76e 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionStyleTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionStyleTest.kt
+@@ -14,6 +14,8 @@ class SessionStyleTest : BasePlatformTestCase() {
+ 
+         assertEquals(scheme.editorFontName, font.name)
+         assertEquals(scheme.editorFontSize, font.size)
++        assertEquals(scheme.defaultForeground, style.editorForeground)
++        assertEquals(scheme.defaultBackground, style.editorBackground)
+         assertEquals(Font.PLAIN, font.style)
+     }
+ 
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionUiUpdateTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionUiUpdateTest.kt
+index 386209de196..375ae454afb 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionUiUpdateTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/SessionUiUpdateTest.kt
+@@ -131,7 +131,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
+ 
+     // ------ silent part types ------
+ 
+-    fun `test step-start part is not rendered in panel`() {
++    fun `test step markers are not rendered in panel`() {
+         model.upsertMessage(msg("a1", "assistant"))
+         model.updateContent("a1", PartDto("g1", "ses", "a1", "step-start"))
+         model.updateContent("a1", PartDto("g2", "ses", "a1", "step-finish"))
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/header/SessionHeaderPanelTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/header/SessionHeaderPanelTest.kt
+new file mode 100644
+index 00000000000..e36e31ed254
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/ui/header/SessionHeaderPanelTest.kt
+@@ -0,0 +1,571 @@
++package ai.kilocode.client.session.ui.header
++
++import ai.kilocode.client.session.model.Reasoning
++import ai.kilocode.client.session.model.StepFinish
++import ai.kilocode.client.session.model.Tool
++import ai.kilocode.client.session.model.ToolExecState
++import ai.kilocode.client.session.model.ToolKind
++import ai.kilocode.client.session.ui.SessionStyle
++import ai.kilocode.client.session.update.SessionControllerTestBase
++import ai.kilocode.rpc.dto.ChatEventDto
++import ai.kilocode.rpc.dto.MessageDto
++import ai.kilocode.rpc.dto.MessageTimeDto
++import ai.kilocode.rpc.dto.ModelDto
++import ai.kilocode.rpc.dto.PartDto
++import ai.kilocode.rpc.dto.PartTimeDto
++import ai.kilocode.rpc.dto.ProviderDto
++import ai.kilocode.rpc.dto.TodoDto
++import ai.kilocode.rpc.dto.TokensDto
++import com.intellij.ide.util.PropertiesComponent
++import java.awt.Color
++import java.awt.Point
++import java.awt.event.MouseEvent
++import java.awt.event.MouseWheelEvent
++
++class SessionHeaderPanelTest : SessionControllerTestBase() {
++
++    override fun setUp() {
++        super.setUp()
++        reset()
++    }
++
++    override fun tearDown() {
++        try {
++            reset()
++        } finally {
++            super.tearDown()
++        }
++    }
++
++    fun `test starts hidden for empty header`() {
++        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
++        projectRpc.state.value = workspaceReady()
++        val c = controller()
++        flush()
++        val panel = SessionHeaderPanel(c, parent)
++
++        assertFalse(panel.isVisible)
++        assertEquals("New Session", panel.titleText())
++    }
++
++    fun `test shows populated session header`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        val style = SessionStyle.current()
++
++        assertTrue(panel.isVisible)
++        assertTrue(panel.isExpanded())
++        assertEquals("Generated title", panel.titleText())
++        assertEquals("$0.07", panel.costText())
++        assertEquals("1%", panel.contextText())
++        assertEquals("Tokens 13.7K 2.5K cache 75", panel.tokenText())
++        assertEquals("Tokens used by the latest assistant response: input, output, and cached prompt tokens.", panel.tokenTip())
++        assertEquals("13.7K", panel.inputTokenText())
++        assertEquals("2.5K", panel.outputTokenText())
++        assertEquals("cache 75", panel.cacheReadText())
++        assertEquals("1/2 todos complete", panel.todoText())
++        assertTrue(panel.todoVisible())
++        assertEquals(style.editorBackground, panel.background)
++        assertEquals(
++            List(panel.foregrounds().size) { style.editorForeground },
++            panel.foregrounds(),
++        )
++        assertNotNull(panel.expandButton().icon)
++    }
++
++    fun `test compact button follows eligibility and invokes controller`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++
++        assertTrue(panel.compactButton().isEnabled)
++        panel.compactButton().doClick()
++        flush()
++        assertEquals(1, rpc.compacts.size)
++
++        emit(ChatEventDto.TurnOpen("ses_test"))
++        assertFalse(panel.compactButton().isEnabled)
++        panel.compactButton().doClick()
++        flush()
++        assertEquals(1, rpc.compacts.size)
++    }
++
++    fun `test retained labels update on later header event`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        val button = panel.compactButton()
++
++        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
++        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2, tokens = TokensDto(1_000, 500, 0, 0, 0))))
++
++        assertSame(button, panel.compactButton())
++        assertEquals("New title", panel.titleText())
++        assertEquals("$0.20", panel.costText())
++        assertEquals("Tokens 1.0K 500", panel.tokenText())
++        assertEquals("1.0K", panel.inputTokenText())
++        assertEquals("500", panel.outputTokenText())
++    }
++
++    fun `test apply style updates header colors`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        val style = SessionStyle.current().copy(
++            editorForeground = Color(1, 2, 3),
++            editorBackground = Color(4, 5, 6),
++        )
++
++        panel.applyStyle(style)
++
++        assertEquals(style.editorBackground, panel.background)
++        assertEquals(
++            List(panel.foregrounds().size) { style.editorForeground },
++            panel.foregrounds(),
++        )
++        assertEquals(
++            List(panel.contextBarForegrounds().size) { style.editorForeground },
++            panel.contextBarForegrounds(),
++        )
++    }
++
++    fun `test expanded body shows timeline context and token metrics`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        val style = SessionStyle.current()
++        val body = panel.bodyPanel()
++        val timeline = panel.timelinePanel()
++        val bar = panel.contextBar()
++
++        assertTrue(panel.isExpanded())
++        assertSame(body, panel.bodyPanel())
++        assertSame(timeline, panel.timelinePanel())
++        assertSame(bar, panel.contextBar())
++        assertEquals(listOf(panel.timelineViewport(), panel.tokenPanel(), bar), panel.bodyComponents().take(3))
++        assertSame(timeline, panel.timelineViewport().view)
++        assertFalse(panel.timelineViewport().isOpaque)
++        assertEquals(4, panel.timelineCount())
++        val parts = panel.timelineParts()
++        assertTrue(parts[0] is Reasoning)
++        assertEquals("bash", (parts[1] as Tool).name)
++        assertEquals(ToolKind.GENERIC, (parts[1] as Tool).kind)
++        assertEquals(ToolExecState.ERROR, (parts[2] as Tool).state)
++        assertTrue(parts[3] is StepFinish)
++        assertTrue(panel.timelineActive(0))
++        assertTrue(panel.timelineActive(1))
++        assertFalse(panel.timelineActive(2))
++        assertFalse(panel.timelineActive(3))
++        assertTrue(panel.contextBarVisible())
++        assertEquals(16_300L, panel.contextBarUsed())
++        assertEquals(200_000L, panel.contextBarReserved())
++        assertEquals(1_783_700L, panel.contextBarAvailable())
++        assertEquals(2_000_000L, panel.contextBarLimit())
++        assertEquals(
++            List(panel.contextBarForegrounds().size) { style.editorForeground },
++            panel.contextBarForegrounds(),
++        )
++        assertEquals("16.3K / 2.0M tokens used\n200.0K reserved for output\n1.8M available", panel.contextBarTip())
++        assertNotSame(panel.contextBarTrackColor(), panel.contextBarReservedColor())
++        assertNotSame(panel.contextBarUsedColor(), panel.contextBarReservedColor())
++        assertEquals(panel.timelinePreferredSize().height, panel.timelineViewportPreferredSize().height)
++        assertEquals(0, panel.timelineViewportPreferredSize().width)
++        assertTrue(panel.timelinePreferredSize().height >= panel.contextBar().preferredSize.height)
++        assertTrue(panel.timelineBarHeight(1) < panel.timelineViewportPreferredSize().height)
++        assertTrue(panel.timelineBarHeight(0) < panel.timelineBarHeight(1))
++        assertEquals(panel.timelineBarHeight(1), panel.timelineBarHeight(2))
++        assertTrue(panel.timelineBarHeight(3) > panel.timelineBarHeight(1))
++
++        timeline.dispatchEvent(MouseEvent(
++            timeline,
++            MouseEvent.MOUSE_MOVED,
++            System.currentTimeMillis(),
++            0,
++            panel.timelineBarWidth() + 1,
++            panel.timelinePreferredSize().height - 1,
++            0,
++            false,
++        ))
++        assertEquals("Run tests", panel.timelineToolTip())
++        assertEquals(1, panel.timelineHover())
++        timeline.dispatchEvent(MouseEvent(
++            timeline,
++            MouseEvent.MOUSE_MOVED,
++            System.currentTimeMillis(),
++            0,
++            panel.timelineBarWidth() * 3 + 1,
++            panel.timelinePreferredSize().height - 1,
++            0,
++            false,
++        ))
++        assertEquals("Step finish", panel.timelineToolTip())
++        assertEquals(3, panel.timelineHover())
++        timeline.dispatchEvent(MouseEvent(
++            timeline,
++            MouseEvent.MOUSE_MOVED,
++            System.currentTimeMillis(),
++            0,
++            panel.timelineBarWidth() - 1,
++            0,
++            0,
++            false,
++        ))
++        assertNull(panel.timelineToolTip())
++        assertEquals(-1, panel.timelineHover())
++
++        panel.expandButton().doClick()
++
++        assertFalse(panel.isExpanded())
++        assertSame(body, panel.bodyPanel())
++        assertSame(timeline, panel.timelinePanel())
++        assertSame(bar, panel.contextBar())
++        assertEquals(4, panel.timelineCount())
++    }
++
++    fun `test read and write timeline tooltips show filename`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        emit(ChatEventDto.PartUpdated(
++            "ses_test",
++            tool("tool_read", "read", "completed", "Read file", input = mapOf("filePath" to "src/docs/README.md")),
++        ))
++        emit(ChatEventDto.PartUpdated(
++            "ses_test",
++            tool("tool_write", "write", "completed", "Write file", input = mapOf("filePath" to "src/main/App.kt")),
++        ))
++        val timeline = panel.timelinePanel()
++
++        move(panel, 4)
++        assertEquals("Read README.md", panel.timelineToolTip())
++        move(panel, 5)
++        assertEquals("Write App.kt", panel.timelineToolTip())
++
++        assertSame(timeline, panel.timelinePanel())
++    }
++
++    fun `test expand button owns expanded state across updates`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++
++        assertTrue(panel.isExpanded())
++        assertEquals("Hide session metrics", panel.expandTip())
++
++        panel.expandButton().doClick()
++        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
++
++        assertFalse(panel.isExpanded())
++        assertEquals("Show session metrics", panel.expandTip())
++
++        panel.expandButton().doClick()
++        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2)))
++
++        assertTrue(panel.isExpanded())
++        assertEquals("Hide session metrics", panel.expandTip())
++    }
++
++    fun `test collapse persists and new header starts collapsed`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++
++        panel.expandButton().doClick()
++
++        assertFalse(panel.isExpanded())
++        assertFalse(PropertiesComponent.getInstance().getBoolean(SessionHeaderPanel.EXPANDED_KEY, true))
++
++        val next = SessionHeaderPanel(c, parent)
++
++        assertFalse(next.isExpanded())
++        assertEquals("Show session metrics", next.expandTip())
++    }
++
++    fun `test expand persists and new header starts expanded`() {
++        PropertiesComponent.getInstance().setValue(SessionHeaderPanel.EXPANDED_KEY, "false")
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++
++        assertFalse(panel.isExpanded())
++
++        panel.expandButton().doClick()
++
++        assertTrue(panel.isExpanded())
++        assertTrue(PropertiesComponent.getInstance().getBoolean(SessionHeaderPanel.EXPANDED_KEY, false))
++
++        val next = SessionHeaderPanel(c, parent)
++
++        assertTrue(next.isExpanded())
++        assertEquals("Hide session metrics", next.expandTip())
++    }
++
++    fun `test hidden empty header collapse keeps saved expansion preference`() {
++        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
++        projectRpc.state.value = workspaceReady()
++        val c = controller()
++        flush()
++        val panel = SessionHeaderPanel(c, parent)
++
++        assertFalse(panel.isVisible)
++        assertFalse(panel.isExpanded())
++        assertTrue(PropertiesComponent.getInstance().getBoolean(SessionHeaderPanel.EXPANDED_KEY, true))
++
++        edt { c.prompt("go") }
++        flush()
++        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")))
++        emit(ChatEventDto.MessageUpdated("ses_test", assistant()))
++
++        assertTrue(panel.isVisible)
++        assertTrue(panel.isExpanded())
++    }
++
++    fun `test context bar uses neutral grey colors`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        val color = panel.contextBarUsedColor()
++
++        emit(ChatEventDto.MessageUpdated("ses_test", assistant(tokens = TokensDto(1_200_000, 0, 0, 0, 0))))
++
++        assertEquals(color, panel.contextBarUsedColor())
++        assertNotSame(panel.contextBarTrackColor(), panel.contextBarUsedColor())
++        assertNotSame(panel.contextBarTrackColor(), panel.contextBarReservedColor())
++        assertNotSame(panel.contextBarUsedColor(), panel.contextBarReservedColor())
++    }
++
++    fun `test timeline width uses uniform bars and gaps`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        val first = panel.timelinePreferredSize().width
++
++        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_3", "bash", "running", "Short")))
++
++        val next = panel.timelinePreferredSize().width
++        assertTrue(first > 0)
++        assertEquals(5, panel.timelineCount())
++        assertEquals(panel.timelineBarWidth(), next - first)
++    }
++
++    fun `test timeline drags horizontally inside viewport`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        repeat(12) { idx ->
++            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")))
++        }
++        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
++        panel.timelineViewport().doLayout()
++        panel.timelineViewport().viewPosition = Point(0, 0)
++
++        val x = panel.timelineViewport().viewPosition.x
++        val y = panel.timelineViewport().viewPosition.y
++        val timeline = panel.timelinePanel()
++        timeline.dispatchEvent(MouseEvent(
++            timeline,
++            MouseEvent.MOUSE_PRESSED,
++            System.currentTimeMillis(),
++            0,
++            panel.timelineBarWidth() * 3,
++            1,
++            1,
++            false,
++        ))
++        timeline.dispatchEvent(MouseEvent(
++            timeline,
++            MouseEvent.MOUSE_DRAGGED,
++            System.currentTimeMillis(),
++            0,
++            panel.timelineBarWidth(),
++            1,
++            0,
++            false,
++        ))
++
++        assertTrue(panel.timelineViewport().viewPosition.x > x)
++        assertEquals(y, panel.timelineViewport().viewPosition.y)
++    }
++
++    fun `test timeline touch scrolls horizontally inside viewport`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        repeat(12) { idx ->
++            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_touch_$idx", "bash", "running", "Touch $idx")))
++        }
++        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
++        panel.timelineViewport().doLayout()
++        panel.timelineViewport().viewPosition = Point(0, 0)
++
++        val x = panel.timelineViewport().viewPosition.x
++        val y = panel.timelineViewport().viewPosition.y
++        val timeline = panel.timelinePanel()
++        timeline.dispatchEvent(MouseWheelEvent(
++            timeline,
++            MouseWheelEvent.MOUSE_WHEEL,
++            System.currentTimeMillis(),
++            0,
++            1,
++            1,
++            1,
++            1,
++            0,
++            false,
++            3,
++            panel.timelineBarWidth(),
++            1,
++            panel.timelineBarWidth().toDouble(),
++        ))
++
++        assertTrue(panel.timelineViewport().viewPosition.x > x)
++        assertEquals(y, panel.timelineViewport().viewPosition.y)
++    }
++
++    fun `test timeline wheel scrolls horizontally inside viewport`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        repeat(12) { idx ->
++            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_wheel_$idx", "bash", "running", "Wheel $idx")))
++        }
++        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
++        panel.timelineViewport().doLayout()
++        panel.timelineViewport().viewPosition = Point(0, 0)
++
++        val x = panel.timelineViewport().viewPosition.x
++        val y = panel.timelineViewport().viewPosition.y
++        val timeline = panel.timelinePanel()
++        timeline.dispatchEvent(MouseWheelEvent(
++            timeline,
++            MouseWheelEvent.MOUSE_WHEEL,
++            System.currentTimeMillis(),
++            0,
++            1,
++            1,
++            1,
++            1,
++            0,
++            false,
++            MouseWheelEvent.WHEEL_UNIT_SCROLL,
++            1,
++            1,
++            1.0,
++        ))
++
++        assertTrue(panel.timelineViewport().viewPosition.x > x)
++        assertEquals(y, panel.timelineViewport().viewPosition.y)
++    }
++
++    fun `test timeline append scrolls viewport to end`() {
++        val c = promptedHeader()
++        val panel = SessionHeaderPanel(c, parent)
++        repeat(12) { idx ->
++            emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_$idx", "bash", "running", "More $idx")))
++        }
++        panel.timelineViewport().setSize(panel.timelineBarWidth() * 4, panel.timelineViewportPreferredSize().height)
++        panel.timelineViewport().doLayout()
++        panel.timelineViewport().viewPosition = Point(0, 0)
++
++        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_more_final", "bash", "running", "Final")))
++        panel.timelineViewport().doLayout()
++        flush()
++
++        val max = panel.timelinePreferredSize().width - panel.timelineViewport().extentSize.width
++        assertTrue(max > 0)
++        assertEquals(max, panel.timelineViewport().viewPosition.x)
++        assertEquals(0, panel.timelineViewport().viewPosition.y)
++    }
++
++    private fun promptedHeader(): ai.kilocode.client.session.update.SessionController {
++        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(
++            ai.kilocode.rpc.dto.KiloAppStatusDto.READY,
++            config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"),
++        )
++        projectRpc.state.value = workspaceReady(
++            providers = listOf(
++                ProviderDto(
++                    id = "kilo",
++                    name = "Kilo",
++                    models = mapOf(
++                        "gpt-5" to ModelDto(
++                            id = "gpt-5",
++                            name = "GPT-5",
++                            limit = ai.kilocode.rpc.dto.ModelLimitDto(context = 2_000_000, output = 200_000),
++                        ),
++                    ),
++                ),
++            ),
++        )
++        val c = controller()
++        flush()
++        edt { c.prompt("go") }
++        flush()
++
++        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")))
++        emit(ChatEventDto.MessageUpdated("ses_test", assistant()))
++        emit(ChatEventDto.PartUpdated("ses_test", reasoning(done = false, text = "Thinking")))
++        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_1", "bash", "running", "Run tests", input = mapOf("cmd" to "test", "files" to "src"))))
++        emit(ChatEventDto.PartUpdated("ses_test", tool("tool_2", "edit", "error", "Edit file", input = mapOf("cmd" to "test", "files" to "src"))))
++        emit(ChatEventDto.PartUpdated("ses_test", stepFinish()))
++        emit(ChatEventDto.TodoUpdated("ses_test", listOf(
++            TodoDto("Write tests", "completed", "high"),
++            TodoDto("Ship it", "pending", "medium"),
++        )))
++        return c
++    }
++
++    private fun assistant(
++        cost: Double = 0.07,
++        tokens: TokensDto = TokensDto(13_700, 2_000, 500, 75, 25),
++    ) = MessageDto(
++        id = "msg1",
++        sessionID = "ses_test",
++        role = "assistant",
++        time = MessageTimeDto(created = 0.0),
++        cost = cost,
++        tokens = tokens,
++    )
++
++    private fun reasoning(done: Boolean, text: String) = PartDto(
++        id = "reasoning_1",
++        sessionID = "ses_test",
++        messageID = "msg1",
++        type = "reasoning",
++        text = text,
++        time = if (done) PartTimeDto(1.0, 2.0) else PartTimeDto(1.0, null),
++    )
++
++    private fun tool(
++        id: String,
++        name: String,
++        state: String,
++        title: String,
++        input: Map<String, String> = mapOf("cmd" to "test"),
++    ) = PartDto(
++        id = id,
++        sessionID = "ses_test",
++        messageID = "msg1",
++        type = "tool",
++        tool = name,
++        state = state,
++        title = title,
++        input = input,
++        time = PartTimeDto(1.0, 3.0),
++    )
++
++    private fun stepFinish() = PartDto(
++        id = "step_finish_1",
++        sessionID = "ses_test",
++        messageID = "msg1",
++        type = "step-finish",
++        reason = "stop",
++        cost = 0.07,
++        tokens = TokensDto(13_700, 2_000, 500, 75, 25),
++    )
++
++    private fun move(panel: SessionHeaderPanel, index: Int) {
++        val timeline = panel.timelinePanel()
++        timeline.dispatchEvent(MouseEvent(
++            timeline,
++            MouseEvent.MOUSE_MOVED,
++            System.currentTimeMillis(),
++            0,
++            panel.timelineBarWidth() * index + 1,
++            panel.timelinePreferredSize().height - 1,
++            0,
++            false,
++        ))
++    }
++
++    private fun reset() {
++        PropertiesComponent.getInstance().unsetValue(SessionHeaderPanel.EXPANDED_KEY)
++    }
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/ProgressTrackingTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/ProgressTrackingTest.kt
+index 93e83b4cb9b..e6885853521 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/ProgressTrackingTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/ProgressTrackingTest.kt
+@@ -2,12 +2,13 @@ package ai.kilocode.client.session.update
+ 
+ import ai.kilocode.client.session.model.SessionModelEvent
+ import ai.kilocode.client.session.model.SessionState
++import ai.kilocode.client.session.model.StepFinish
+ import ai.kilocode.rpc.dto.ChatEventDto
+ import ai.kilocode.rpc.dto.MessageErrorDto
+ 
+ /**
+  * Verifies that:
+- * 1. `step-start` and `step-finish` parts are silently dropped at the model level.
++ * 1. `step-start` parts are silently dropped while `step-finish` remains available to the timeline.
+  * 2. [SessionState.Busy.text] carries the right progress string throughout a turn.
+  * 3. [SessionModelEvent.StateChanged] fires with correct [SessionState.Busy] text
+  *    as parts arrive.
+@@ -15,7 +16,7 @@ import ai.kilocode.rpc.dto.MessageErrorDto
+  */
+ class ProgressTrackingTest : SessionControllerTestBase() {
+ 
+-    // ------ silent part types ------
++    // ------ timeline marker parts ------
+ 
+     fun `test step-start part is silently dropped from model`() {
+         val (m, _, modelEvents) = prompted()
+@@ -27,14 +28,14 @@ class ProgressTrackingTest : SessionControllerTestBase() {
+         assertFalse(modelEvents.any { it is SessionModelEvent.ContentAdded })
+     }
+ 
+-    fun `test step-finish part is silently dropped from model`() {
++    fun `test step-finish part is stored for timeline`() {
+         val (m, _, modelEvents) = prompted()
+ 
+         emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
+         emit(ChatEventDto.PartUpdated("ses_test", part("p2", "ses_test", "msg1", "step-finish")))
+ 
+-        assertNull(m.model.message("msg1")!!.parts["p2"])
+-        assertFalse(modelEvents.any { it is SessionModelEvent.ContentAdded })
++        assertTrue(m.model.message("msg1")!!.parts["p2"] is StepFinish)
++        assertTrue(modelEvents.any { it is SessionModelEvent.ContentAdded })
+     }
+ 
+     // ------ progress text per turn event ------
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionControllerTestBase.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionControllerTestBase.kt
+index f799d076a5e..13b30a8355b 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionControllerTestBase.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionControllerTestBase.kt
+@@ -24,6 +24,8 @@ import ai.kilocode.rpc.dto.ModelDto
+ import ai.kilocode.rpc.dto.PartDto
+ import ai.kilocode.rpc.dto.ProviderDto
+ import ai.kilocode.rpc.dto.ProvidersDto
++import ai.kilocode.rpc.dto.SessionDto
++import ai.kilocode.rpc.dto.SessionTimeDto
+ import com.intellij.openapi.Disposable
+ import com.intellij.openapi.application.ApplicationManager
+ import com.intellij.openapi.util.Disposer
+@@ -134,6 +136,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
+         flushMs: Long,
+         condense: Boolean,
+         displayMs: Long = Long.MAX_VALUE,
++        session: SessionDto? = null,
+         beforeUpdate: () -> Boolean = { false },
+         afterUpdate: (Boolean) -> Unit = {},
+     ): SessionController {
+@@ -149,8 +152,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
+            flushMs,
+            condense,
+            displayMs,
+-           beforeUpdate = beforeUpdate,
+-           afterUpdate = afterUpdate,
++           session = session,
++            beforeUpdate = beforeUpdate,
++            afterUpdate = afterUpdate,
+         )
+         controllers.add(m)
+         roots[m] = root
+@@ -197,7 +201,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
+         Disposer.register(parent, disposable)
+         m.model.addListener(disposable) { event ->
+             assertTrue("Model listener must be called on EDT", ApplicationManager.getApplication().isDispatchThread)
+-            events.add(event)
++            if (event !is SessionModelEvent.HeaderUpdated) events.add(event)
+         }
+         return events
+     }
+@@ -251,6 +255,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
+         flush()
+         edt { m.prompt("go") }
+         flush()
++        modelEvents.clear()
+         return Triple(m, events, modelEvents)
+     }
+ 
+@@ -274,7 +279,11 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
+     }
+ 
+     protected fun assertModelEvents(expected: String, events: List<SessionModelEvent>) {
+-        assertEquals(expected.trimIndent().trim(), events.joinToString("\n"))
++        val act = events
++            .filter { it !is SessionModelEvent.HeaderUpdated }
++            .filter { it !is SessionModelEvent.SessionUpdated }
++            .joinToString("\n")
++        assertEquals(expected.trimIndent().trim(), act)
+     }
+ 
+     protected fun snapshot(c: SessionController) = Snapshot(
+@@ -315,6 +324,15 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
+         title = title,
+     )
+ 
++    protected fun session(id: String, title: String = "Session $id", dir: String = "/test") = SessionDto(
++        id = id,
++        projectID = "prj",
++        directory = dir,
++        title = title,
++        version = "1",
++        time = SessionTimeDto(created = 1.0, updated = 2.0),
++    )
++
+     protected fun workspaceReady(
+         agents: List<AgentDto> = listOf(AgentDto(name = "code", displayName = "Code", mode = "code")),
+         default: String = "code",
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionHeaderControllerTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionHeaderControllerTest.kt
+new file mode 100644
+index 00000000000..8ebea6e5676
+--- /dev/null
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/update/SessionHeaderControllerTest.kt
+@@ -0,0 +1,75 @@
++package ai.kilocode.client.session.update
++
++import ai.kilocode.rpc.dto.ChatEventDto
++
++class SessionHeaderControllerTest : SessionControllerTestBase() {
++
++    fun `test session updated refreshes model metadata`() {
++        val (m, _, modelEvents) = prompted()
++        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
++        modelEvents.clear()
++
++        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "Generated title")))
++
++        assertEquals("Generated title", m.model.session?.title)
++        assertEquals("Generated title", m.model.header.title)
++        assertTrue(modelEvents.any { it is ai.kilocode.client.session.model.SessionModelEvent.SessionUpdated })
++    }
++
++    fun `test compact calls RPC with selected model when eligible`() {
++        val (m, _, _) = prompted()
++        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
++
++        edt { m.compact() }
++        flush()
++
++        val call = rpc.compacts.single()
++        assertEquals("ses_test", call.first)
++        assertEquals("/test", call.second)
++        assertEquals("kilo", call.third.providerID)
++        assertEquals("gpt-5", call.third.modelID)
++    }
++
++    fun `test compact is blocked while busy`() {
++        val (m, _, _) = prompted()
++        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
++        emit(ChatEventDto.TurnOpen("ses_test"))
++
++        edt { m.compact() }
++        flush()
++
++        assertTrue(rpc.compacts.isEmpty())
++    }
++
++    fun `test compact is blocked without model`() {
++        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = null))
++        projectRpc.state.value = workspaceReady(providers = emptyList(), connected = emptyList())
++        val m = controller()
++        flush()
++        edt { m.prompt("go") }
++        flush()
++        emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
++        edt { m.model.model = null }
++        assertNull(m.model.model)
++
++        edt { m.compact() }
++        flush()
++
++        assertTrue(rpc.compacts.isEmpty())
++    }
++
++    fun `test opened session metadata is seeded through constructor`() {
++        rpc.history.add(ai.kilocode.rpc.dto.MessageWithPartsDto(msg("msg1", "ses_test", "assistant"), emptyList()))
++        val c = controller(
++            id = "ses_test",
++            flushMs = Long.MAX_VALUE,
++            condense = true,
++            session = session("ses_test", title = "Opened title"),
++        )
++
++        flush()
++
++        assertEquals("Opened title", c.model.session?.title)
++        assertEquals("Opened title", c.model.header.title)
++    }
++}
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/ToolViewTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/ToolViewTest.kt
+index c7842c280b7..e5579fda720 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/ToolViewTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/ToolViewTest.kt
+@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
+ import ai.kilocode.client.session.model.Content
+ import ai.kilocode.client.session.model.Tool
+ import ai.kilocode.client.session.model.ToolExecState
++import ai.kilocode.client.session.model.toolKind
+ import ai.kilocode.client.session.ui.SessionStyle
+ import ai.kilocode.client.ui.UiStyle
+ import com.intellij.testFramework.fixtures.BasePlatformTestCase
+@@ -44,14 +45,14 @@ class ToolViewTest : BasePlatformTestCase() {
+     }
+ 
+     fun `test title shown instead of name when title is set`() {
+-        val t = Tool("p1", "bash").also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
++        val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
+         val view = ToolView(t)
+         assertTrue(view.labelText().contains("Install deps"))
+         assertTrue(view.labelText().contains("Shell"))
+     }
+ 
+     fun `test blank title falls back to tool name`() {
+-        val t = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED; it.title = "   " }
++        val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "   " }
+         val view = ToolView(t)
+         assertTrue(view.labelText().contains("Shell"))
+     }
+@@ -297,14 +298,14 @@ class ToolViewTest : BasePlatformTestCase() {
+ 
+     fun `test update changes state icon`() {
+         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING))
+-        val updated = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED }
++        val updated = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED }
+         view.update(updated)
+         assertFalse(view.labelText().contains("Running"))
+     }
+ 
+     fun `test update changes title`() {
+         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING, title = "old"))
+-        val updated = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED; it.title = "new title" }
++        val updated = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "new title" }
+         view.update(updated)
+         assertTrue(view.labelText().contains("new title"))
+     }
+@@ -319,14 +320,14 @@ class ToolViewTest : BasePlatformTestCase() {
+     // ---- contentId ------
+ 
+     fun `test contentId matches Tool id`() {
+-        val view = ToolView(Tool("part99", "edit").also { it.state = ToolExecState.PENDING })
++        val view = ToolView(Tool("part99", "edit", toolKind("edit")).also { it.state = ToolExecState.PENDING })
+         assertEquals("part99", view.contentId)
+     }
+ 
+     // ---- helpers ------
+ 
+     private fun tool(id: String, name: String, state: ToolExecState, title: String? = null): Tool =
+-        Tool(id, name).also { it.state = state; it.title = title }
++        Tool(id, name, toolKind(name)).also { it.state = state; it.title = title }
+ 
+     private fun assertEditorFont(font: java.awt.Font, style: SessionStyle) {
+         assertEquals(style.editorFamily, font.name)
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/TurnViewTest.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/TurnViewTest.kt
+index 0bf9d7211ec..ca961ee6650 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/TurnViewTest.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/session/views/TurnViewTest.kt
+@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.Reasoning
+ import ai.kilocode.client.session.model.Text
+ import ai.kilocode.client.session.model.Tool
+ import ai.kilocode.client.session.model.ToolExecState
++import ai.kilocode.client.session.model.toolKind
+ import ai.kilocode.client.ui.UiStyle
+ import ai.kilocode.rpc.dto.MessageDto
+ import ai.kilocode.rpc.dto.MessageTimeDto
+@@ -161,7 +162,7 @@ class TurnViewTest : BasePlatformTestCase() {
+     fun `test assistant card parts use shared compact gap`() {
+         val message = msg("a1", "assistant")
+         val reasoning = Reasoning("r1")
+-        val tool = Tool("t1", "read").also { it.state = ToolExecState.COMPLETED }
++        val tool = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
+         message.parts["r1"] = reasoning
+         message.parts["t1"] = tool
+         val mv = MessageView(message)
+@@ -175,10 +176,10 @@ class TurnViewTest : BasePlatformTestCase() {
+     fun `test consecutive messages use shared compact gap`() {
+         val tv = TurnView("u1")
+         tv.addMessage(msg("u1", "user").also { msg ->
+-            msg.parts["t1"] = Tool("t1", "read").also { it.state = ToolExecState.COMPLETED }
++            msg.parts["t1"] = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
+         })
+         tv.addMessage(msg("a2", "assistant").also { msg ->
+-            msg.parts["t2"] = Tool("t2", "read").also { it.state = ToolExecState.COMPLETED }
++            msg.parts["t2"] = Tool("t2", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
+         })
+ 
+         tv.setSize(400, 300)
+diff --git a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/testing/FakeSessionRpcApi.kt b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/testing/FakeSessionRpcApi.kt
+index 2bab0570a59..49127d853ae 100644
+--- a/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/testing/FakeSessionRpcApi.kt
++++ b/packages/kilo-jetbrains/frontend/src/test/kotlin/ai/kilocode/client/testing/FakeSessionRpcApi.kt
+@@ -4,6 +4,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
+ import ai.kilocode.rpc.dto.ChatEventDto
+ import ai.kilocode.rpc.dto.ConfigUpdateDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
++import ai.kilocode.rpc.dto.ModelSelectionDto
+ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+ import ai.kilocode.rpc.dto.PermissionReplyDto
+ import ai.kilocode.rpc.dto.PermissionRequestDto
+@@ -68,6 +69,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
+ 
+     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
+     val aborts = mutableListOf<Pair<String, String>>()
++    val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
+     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
+     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
+     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
+@@ -134,6 +136,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
+         aborts.add(id to directory)
+     }
+ 
++    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) {
++        assertNotEdt("compact")
++        compacts.add(Triple(id, directory, model))
++    }
++
+     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> {
+         assertNotEdt("messages")
+         historyGate?.await()
+diff --git a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/log/ChatLogSummary.kt b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/log/ChatLogSummary.kt
+index 19d6a80d68a..64e5966999e 100644
+--- a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/log/ChatLogSummary.kt
++++ b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/log/ChatLogSummary.kt
+@@ -29,6 +29,7 @@ object ChatLogSummary {
+         is ChatEventDto.QuestionReplied -> event.sessionID
+         is ChatEventDto.QuestionRejected -> event.sessionID
+         is ChatEventDto.SessionStatusChanged -> event.sessionID
++        is ChatEventDto.SessionUpdated -> event.sessionID
+         is ChatEventDto.SessionIdle -> event.sessionID
+         is ChatEventDto.SessionCompacted -> event.sessionID
+         is ChatEventDto.SessionDiffChanged -> event.sessionID
+@@ -181,6 +182,12 @@ object ChatLogSummary {
+             status(event.status),
+         )
+ 
++        is ChatEventDto.SessionUpdated -> join(
++            sid(event.sessionID),
++            "evt=session.updated",
++            "title=${event.session.title.length}",
++        )
++
+         is ChatEventDto.SessionIdle -> join(
+             sid(event.sessionID),
+             "evt=session.idle",
+diff --git a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloSessionRpcApi.kt b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloSessionRpcApi.kt
+index 330bfb8c113..d12efefb742 100644
+--- a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloSessionRpcApi.kt
++++ b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/KiloSessionRpcApi.kt
+@@ -3,6 +3,7 @@ package ai.kilocode.rpc
+ import ai.kilocode.rpc.dto.ChatEventDto
+ import ai.kilocode.rpc.dto.ConfigUpdateDto
+ import ai.kilocode.rpc.dto.MessageWithPartsDto
++import ai.kilocode.rpc.dto.ModelSelectionDto
+ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+ import ai.kilocode.rpc.dto.PermissionReplyDto
+ import ai.kilocode.rpc.dto.PermissionRequestDto
+@@ -66,6 +67,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
+     /** Abort ongoing processing for a session. */
+     suspend fun abort(id: String, directory: String)
+ 
++    /** Summarize/compact a session using the selected model. */
++    suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
++
+     /** Load message history for a session. */
+     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
+ 
+diff --git a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ChatDto.kt b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ChatDto.kt
+index 9d5b0094f2f..9d145f2fad6 100644
+--- a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ChatDto.kt
++++ b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ChatDto.kt
+@@ -65,6 +65,9 @@ data class PartDto(
+     val output: String? = null,
+     val error: String? = null,
+     val time: PartTimeDto? = null,
++    val reason: String? = null,
++    val cost: Double? = null,
++    val tokens: TokensDto? = null,
+ )
+ 
+ @Serializable
+@@ -196,6 +199,13 @@ sealed class ChatEventDto {
+         val status: SessionStatusDto,
+     ) : ChatEventDto()
+ 
++    @Serializable
++    @SerialName("session.updated")
++    data class SessionUpdated(
++        val sessionID: String,
++        val session: SessionDto,
++    ) : ChatEventDto()
++
+     @Serializable
+     @SerialName("session.idle")
+     data class SessionIdle(
+diff --git a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ProviderDto.kt b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ProviderDto.kt
+index 751cdce05fd..6045f5c130f 100644
+--- a/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ProviderDto.kt
++++ b/packages/kilo-jetbrains/shared/src/main/kotlin/ai/kilocode/rpc/dto/ProviderDto.kt
+@@ -14,6 +14,14 @@ data class ModelDto(
+     val status: String? = null,
+     val recommendedIndex: Double? = null,
+     val variants: List<String> = emptyList(),
++    val limit: ModelLimitDto? = null,
++)
++
++@Serializable
++data class ModelLimitDto(
++    val context: Long = 0,
++    val input: Long? = null,
++    val output: Long = 0,
+ )
+ 
+ @Serializable
