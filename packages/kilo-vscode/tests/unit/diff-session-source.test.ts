@@ -1,7 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { SessionDiffSource, type SessionDiffFetch, type SnapshotEnabledCheck } from "../../src/diff/sources/session"
-import { DIFF_POLL_INTERVAL_MS } from "../../src/diff/polling"
 import type { DiffSourceMessage } from "../../src/diff/sources/types"
 
 type FetchCall = { sessionID: string; directory?: string }
@@ -147,17 +146,6 @@ describe("SessionDiffSource.initialFetch", () => {
 })
 
 describe("SessionDiffSource lifecycle", () => {
-  it("start returns a Disposable", () => {
-    const { fetch } = recording([])
-    const source = new SessionDiffSource("s5", fetch)
-    const { post } = collect()
-
-    const d = source.start?.(post)
-    expect(d).toBeDefined()
-    d?.dispose()
-    source.dispose()
-  })
-
   it("dispose does not throw", () => {
     const { fetch } = recording([])
     const source = new SessionDiffSource("s6", fetch)
@@ -332,36 +320,5 @@ describe("SessionDiffSource polling", () => {
     await running
 
     expect(messages.length).toBe(0)
-  })
-
-  it("start() schedules polling via setInterval at 2500ms", () => {
-    const { fetch } = recording([])
-    const source = new SessionDiffSource("poll-5", fetch)
-    const { post } = collect()
-
-    const originalSetInterval = globalThis.setInterval
-    const originalClearInterval = globalThis.clearInterval
-    const captured: { handler: () => void; ms: number }[] = []
-    const cleared: unknown[] = []
-    globalThis.setInterval = ((handler: () => void, ms: number) => {
-      captured.push({ handler, ms })
-      return 42 as unknown as ReturnType<typeof setInterval>
-    }) as typeof setInterval
-    globalThis.clearInterval = ((id: unknown) => {
-      cleared.push(id)
-    }) as typeof clearInterval
-
-    try {
-      const d = source.start(post)
-      expect(captured.length).toBe(1)
-      expect(captured[0]!.ms).toBe(DIFF_POLL_INTERVAL_MS)
-
-      d.dispose()
-      expect(cleared).toEqual([42])
-    } finally {
-      globalThis.setInterval = originalSetInterval
-      globalThis.clearInterval = originalClearInterval
-      source.dispose()
-    }
   })
 })

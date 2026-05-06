@@ -98,7 +98,11 @@ export class DiffViewerProvider implements vscode.Disposable {
     panel.webview.html = this.getHtml(panel.webview)
     this.panel = panel
 
-    this.controller = new SourceController(this.catalog, (msg) => void panel.webview.postMessage(msg))
+    this.controller = new SourceController(
+      (id, ctx) => this.catalog.build(id, ctx),
+      (ctx) => this.catalog.listAvailable(ctx),
+      (msg) => void panel.webview.postMessage(msg),
+    )
     if (this.ctx) this.controller.setContext(this.ctx)
 
     this.panelDisposables.push(

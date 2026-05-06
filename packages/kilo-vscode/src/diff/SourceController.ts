@@ -1,18 +1,15 @@
 import type * as vscode from "vscode"
-import type { DiffSourceCatalog } from "./sources/catalog"
-import type { DiffSource, DiffSourceMessage, DiffSourcePost } from "./sources/types"
+import type { DiffSource, DiffSourceDescriptor, DiffSourceMessage, DiffSourcePost } from "./sources/types"
 import type { PanelContext } from "./types"
 
-type Post = (msg: unknown) => void
-
 /**
- * Owns the active DiffSource for a panel: builds it from the catalog,
- * runs initialFetch + start, and disposes it on swap or teardown.
+ * Owns the active DiffSource for a panel: builds it via the injected
+ * `build` function, runs initialFetch + start, and disposes it on swap
+ * or teardown.
  *
- * Decoupled from the webview panel — receives a neutral `post` function
- * and a `PanelContext`. Stale-message filtering is done via an internal
- * epoch counter that bumps on every stop/activate, so async posts from
- * a disposed source are dropped.
+ * Decoupled from the webview panel — receives neutral callbacks. Stale
+ * messages are filtered via an internal epoch counter that bumps on
+ * every stop/activate, so async posts from a disposed source are dropped.
  */
 export class SourceController {
   private ctx: PanelContext | undefined
@@ -22,8 +19,9 @@ export class SourceController {
   private epoch = 0
 
   constructor(
-    private readonly catalog: DiffSourceCatalog,
-    private readonly post: Post,
+    private readonly build: (id: string, ctx: PanelContext) => DiffSource,
+    private readonly listAvailable: (ctx: PanelContext) => DiffSourceDescriptor[],
+    private readonly post: (msg: unknown) => void,
   ) {}
 
   setContext(ctx: PanelContext): void {
@@ -56,12 +54,12 @@ export class SourceController {
     const epoch = this.epoch
     this.activeId = id
 
-    const source = this.catalog.build(id, ctx)
+    const source = this.build(id, ctx)
     this.active = source
 
     this.post({
       type: "setAvailableSources",
-      descriptors: this.catalog.listAvailable(ctx),
+      descriptors: this.listAvailable(ctx),
       currentId: id,
     })
     this.post({
