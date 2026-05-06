@@ -333,97 +333,101 @@ describe("tool.task", () => {
 
   // kilocode_change start - background subagent coverage
   it.live("execute starts background task without awaiting child prompt", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const { chat, assistant } = yield* seed()
-        const tool = yield* TaskTool
-        const def = yield* tool.init()
-        let seen: Parameters<TaskPromptOps["background"]>[0] | undefined
-        let called = false
-        const promptOps = stubOps({
-          onPrompt: () => (called = true),
-          onBackground: (input) => (seen = input),
-        })
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let seen: Parameters<TaskPromptOps["background"]>[0] | undefined
+          let called = false
+          const promptOps = stubOps({
+            onPrompt: () => (called = true),
+            onBackground: (input) => (seen = input),
+          })
 
-        const result = yield* def.execute(
-          {
-            description: "inspect bug",
-            prompt: "look into the cache key path",
-            subagent_type: "general",
-            background: true,
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: { promptOps },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
+          const result = yield* def.execute(
+            {
+              description: "inspect bug",
+              prompt: "look into the cache key path",
+              subagent_type: "general",
+              background: true,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
 
-        const kids = yield* sessions.children(chat.id)
-        expect(kids).toHaveLength(1)
-        expect(called).toBe(false)
-        expect(seen?.child.sessionID).toBe(result.metadata.sessionId)
-        expect(seen?.parent.sessionID).toBe(chat.id)
-        expect(result.metadata.background).toBe(true)
-        expect(result.output).toContain("background subagent running")
-      }),
+          const kids = yield* sessions.children(chat.id)
+          expect(kids).toHaveLength(1)
+          expect(called).toBe(false)
+          expect(seen?.child.sessionID).toBe(result.metadata.sessionId)
+          expect(seen?.parent.sessionID).toBe(chat.id)
+          expect(result.metadata.background).toBe(true)
+          expect(result.output).toContain("background subagent running")
+        }),
+      { config: { experimental: { background_subagents: true } } }, // kilocode_change - requires feature flag
     ),
   )
 
   it.live("execute passes background cost context to prompt ops", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const { chat, assistant } = yield* seed()
-        const child = yield* sessions.create({ parentID: chat.id, title: "existing child" })
-        yield* sessions.updateMessage({
-          id: MessageID.ascending(),
-          role: "assistant",
-          parentID: MessageID.ascending(),
-          sessionID: child.id,
-          mode: "general",
-          agent: "general",
-          cost: 0.1,
-          path: { cwd: "/tmp", root: "/tmp" },
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: ref.modelID,
-          providerID: ref.providerID,
-          time: { created: Date.now() },
-        })
-        const tool = yield* TaskTool
-        const def = yield* tool.init()
-        let seen: Parameters<TaskPromptOps["background"]>[0] | undefined
-        const promptOps = stubOps({ onBackground: (input) => (seen = input) })
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const { chat, assistant } = yield* seed()
+          const child = yield* sessions.create({ parentID: chat.id, title: "existing child" })
+          yield* sessions.updateMessage({
+            id: MessageID.ascending(),
+            role: "assistant",
+            parentID: MessageID.ascending(),
+            sessionID: child.id,
+            mode: "general",
+            agent: "general",
+            cost: 0.1,
+            path: { cwd: "/tmp", root: "/tmp" },
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          })
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let seen: Parameters<TaskPromptOps["background"]>[0] | undefined
+          const promptOps = stubOps({ onBackground: (input) => (seen = input) })
 
-        yield* def.execute(
-          {
-            description: "inspect bug",
-            prompt: "continue investigation",
-            subagent_type: "general",
-            task_id: child.id,
-            background: true,
-          },
-          {
-            sessionID: chat.id,
-            messageID: assistant.id,
-            agent: "build",
-            abort: new AbortController().signal,
-            extra: { promptOps },
-            messages: [],
-            metadata: () => Effect.void,
-            ask: () => Effect.void,
-          },
-        )
+          yield* def.execute(
+            {
+              description: "inspect bug",
+              prompt: "continue investigation",
+              subagent_type: "general",
+              task_id: child.id,
+              background: true,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
 
-        expect(seen?.messageID).toBe(assistant.id)
-        expect(seen?.cost).toBeCloseTo(0.1, 6)
-      }),
+          expect(seen?.messageID).toBe(assistant.id)
+          expect(seen?.cost).toBeCloseTo(0.1, 6)
+        }),
+      { config: { experimental: { background_subagents: true } } }, // kilocode_change - requires feature flag
     ),
   )
   // kilocode_change end
@@ -489,7 +493,8 @@ describe("tool.task", () => {
             },
             // kilocode_change end
           },
-          experimental: { // kilocode_change
+          experimental: {
+            // kilocode_change
             primary_tools: ["bash", "read"],
             openTelemetry: true, // kilocode_change
           },

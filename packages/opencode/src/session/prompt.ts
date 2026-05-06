@@ -142,6 +142,10 @@ export const layer = Layer.effect(
       yield* KiloSessionPromptQueue.cancel(sessionID) // kilocode_change - drop queued follow-up loops on abort
       KiloSessionPrompt.abortPlanFollowup(sessionID) // kilocode_change - abort pending plan-followup handover work
       yield* state.cancel(sessionID)
+      // kilocode_change start - cancel live background child sessions when parent is aborted
+      const kids = yield* sessions.children(sessionID).pipe(Effect.catchCause(() => Effect.succeed([])))
+      yield* Effect.forEach(kids, (kid) => state.cancel(kid.id).pipe(Effect.ignore), { concurrency: "unbounded" })
+      // kilocode_change end
     })
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
@@ -1354,6 +1358,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     // kilocode_change end
 
     // kilocode_change start - background subagent completion is both a UI event and parent-session context
+    // NOTE: Permission/question requests raised by a background child session are forwarded to the
+    // parent session's event stream via the normal Permission.ask mechanism (the bus). In the TUI,
+    // the user sees permission dialogs but context shifts if they have navigated away from the parent
+    // session. A dedicated "permission forwarding" UI (e.g. surfacing requests on the parent session
+    // view when a background child needs approval) is a known limitation and tracked for future work.
     const background = Effect.fn("SessionPrompt.background")(function* (input: {
       parent: PromptInput
       child: PromptInput

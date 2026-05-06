@@ -312,6 +312,12 @@ export const Info = Schema.Struct({
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
       }),
+      // kilocode_change start - experimental flag for background subagents
+      background_subagents: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Enable background subagents. When true, the task tool honours background:true and runs child sessions asynchronously. Only effective when a live TUI or server event loop is present — kilo run always coerces background tasks to foreground regardless of this setting.",
+      }),
+      // kilocode_change end
     }),
   ),
 })

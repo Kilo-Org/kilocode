@@ -167,6 +167,11 @@ export const TaskTool = Tool.define(
         ops.cancel(nextSession.id)
       }
 
+      // kilocode_change start - gate background mode behind feature flag; kilo run always uses foreground
+      // because it exits on idle and background fibers would be lost.
+      const isBackground = params.background === true && cfg.experimental?.background_subagents === true
+      // kilocode_change end
+
       return yield* Effect.acquireUseRelease(
         // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
         Effect.gen(function* () {
@@ -200,12 +205,12 @@ export const TaskTool = Tool.define(
               sessionId: nextSession.id,
               model,
               variant, // kilocode_change
-              background: params.background === true, // kilocode_change
+              background: isBackground, // kilocode_change
             }
             // kilocode_change end
 
             // kilocode_change start - allow the parent agent to continue while the child session runs
-            if (params.background === true) {
+            if (isBackground) {
               const parentModel = {
                 modelID: info.modelID,
                 providerID: info.providerID,
@@ -274,7 +279,7 @@ export const TaskTool = Tool.define(
         (costBefore) =>
           Effect.gen(function* () {
             ctx.abort.removeEventListener("abort", cancel)
-            if (params.background === true) return
+            if (isBackground) return
             const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
             yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
           }),
