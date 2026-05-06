@@ -39,8 +39,8 @@ export class DiffSourceCatalog {
 
   defaultSourceId(ctx: PanelContext): string | undefined {
     if (ctx.initialSourceId) return ctx.initialSourceId
-    if (ctx.sessionId) return sessionSourceId(ctx.sessionId)
     if (ctx.workspaceRoot) return WORKSPACE_SOURCE_ID
+    if (ctx.sessionId) return sessionSourceId(ctx.sessionId)
     return undefined
   }
 

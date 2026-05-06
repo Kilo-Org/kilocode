@@ -45,14 +45,19 @@ describe("DiffSourceCatalog.defaultSourceId", () => {
     expect(id).toBe("workspace")
   })
 
-  it("falls back to session when sessionId is present", () => {
+  it("prefers workspace over session when both are present", () => {
     const id = makeCatalog().defaultSourceId({ workspaceRoot: "/repo", sessionId: "s1" })
-    expect(id).toBe("session:s1")
+    expect(id).toBe("workspace")
   })
 
   it("falls back to workspace when only workspaceRoot is present", () => {
     const id = makeCatalog().defaultSourceId({ workspaceRoot: "/repo" })
     expect(id).toBe("workspace")
+  })
+
+  it("falls back to session when only sessionId is present", () => {
+    const id = makeCatalog().defaultSourceId({ workspaceRoot: undefined, sessionId: "s1" })
+    expect(id).toBe("session:s1")
   })
 
   it("returns undefined when nothing can be inferred", () => {
