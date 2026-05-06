@@ -156,6 +156,27 @@ function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   })
 }
 
+function denies(user: Permission.Ruleset) {
+  return user.filter((rule) => rule.action === "deny")
+}
+
+function askEditGuard() {
+  return Permission.fromConfig({ edit: "deny" })
+}
+
+function planEditRules() {
+  return {
+    "*": "deny" as const,
+    [path.join(".kilo", "plans", "*.md")]: "allow" as const,
+    [path.join(".opencode", "plans", "*.md")]: "allow" as const,
+    [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow" as const,
+  }
+}
+
+function planEditGuard() {
+  return Permission.fromConfig({ edit: planEditRules() })
+}
+
 function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
@@ -182,12 +203,7 @@ function planGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
       [Truncate.GLOB]: "allow",
       [path.join(Global.Path.data, "plans", "*")]: "allow",
     },
-    edit: {
-      "*": "deny",
-      [path.join(".kilo", "plans", "*.md")]: "allow",
-      [path.join(".opencode", "plans", "*.md")]: "allow",
-      [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
-    },
+    edit: planEditRules(),
     ...mcp,
   })
 }
@@ -300,9 +316,10 @@ export function patchAgents(
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
       permission: Permission.merge(
         defaults,
-        user,
         planGuard(kilo.mcpRules),
-        user.filter((r: Permission.Rule) => r.action === "deny"),
+        user,
+        planEditGuard(),
+        denies(user),
       ),
     }
   }
@@ -406,9 +423,10 @@ export function patchAgents(
     options: {},
     permission: Permission.merge(
       defaults,
-      user, // user before ask-specific so ask's deny+allowlist wins
       askGuard(kilo.mcpRules),
-      user.filter((r: Permission.Rule) => r.action === "deny"), // re-apply user denies so explicit MCP blocks win over mcpRules
+      user,
+      askEditGuard(),
+      denies(user),
     ),
     mode: "primary",
     native: true,
