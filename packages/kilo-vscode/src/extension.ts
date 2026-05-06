@@ -3,7 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
-import { DiffPanelManager } from "./diff/manager/DiffPanelManager"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
 import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
@@ -199,13 +199,13 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   const diffSourceCatalog = new DiffSourceCatalog(connectionService)
-  const diffPanelManager = new DiffPanelManager(context.extensionUri, connectionService, diffSourceCatalog, {
+  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService, diffSourceCatalog, {
     sessionIdProvider: () => provider.getCurrentSessionId(),
   })
-  diffPanelManager.setCommentHandler((comments, autoSend) => {
+  diffViewerProvider.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
-  context.subscriptions.push(diffPanelManager)
+  context.subscriptions.push(diffViewerProvider)
 
   // Create diff virtual provider (lightweight single-file diff for permission approval)
   const diffVirtualProvider = new DiffVirtualProvider(context.extensionUri)
@@ -236,9 +236,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   context.subscriptions.push(
-    vscode.window.registerWebviewPanelSerializer(DiffPanelManager.viewType, {
+    vscode.window.registerWebviewPanelSerializer(DiffViewerProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        diffPanelManager.deserializePanel(panel)
+        diffViewerProvider.deserializePanel(panel)
         return Promise.resolve()
       },
     }),
@@ -329,7 +329,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "kilo-code.new.showChanges",
       (arg?: { sessionId?: string; initialSourceId?: string }) => {
-        diffPanelManager.openFromCommand(arg)
+        diffViewerProvider.openFromCommand(arg)
       },
     ),
     vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {

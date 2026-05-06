@@ -38,7 +38,7 @@ export type DiffSourcePost = (msg: DiffSourceMessage) => void
 
 /**
  * A DiffSource produces file diffs for a given context (local workspace,
- * session changes, a turn, a git ref...). The DiffPanelManager owns one
+ * session changes, a turn, a git ref...). The SourceController owns one
  * active source at a time and swaps between them on user request.
  */
 export interface DiffSource {
