@@ -123,8 +123,7 @@ import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
-
-type KiloProviderOptions = { projectDirectory?: string | null; slimEditMetadata?: boolean; tabTitle?: (title: string) => void }
+import type { KiloProviderOptions } from "./kilo-provider/options"
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 // Helper to map agent data to the subset of fields sent to the webview
