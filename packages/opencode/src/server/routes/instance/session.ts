@@ -894,7 +894,11 @@ export const SessionRoutes = lazy(() =>
             "SessionRoutes.prompt",
             c,
             SessionPrompt.Service.use((svc) =>
-              svc.prompt({ ...body, sessionID } as unknown as SessionPrompt.PromptInput),
+              svc.prompt({
+                ...body,
+                sessionID,
+                liveBackgroundSubagents: false,
+              } as unknown as SessionPrompt.PromptInput),
             ),
           )
           void stream.write(JSON.stringify(msg))
@@ -929,7 +933,7 @@ export const SessionRoutes = lazy(() =>
           "SessionRoutes.prompt_async",
           c,
           SessionPrompt.Service.use((svc) =>
-            svc.prompt({ ...body, sessionID } as unknown as SessionPrompt.PromptInput),
+            svc.prompt({ ...body, sessionID, liveBackgroundSubagents: true } as unknown as SessionPrompt.PromptInput),
           ),
         ).catch((err) => {
           log.error("prompt_async failed", { sessionID, error: err })

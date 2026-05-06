@@ -765,6 +765,7 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
+  liveBackgroundSubagents?: boolean
   editorContext?: {
     visibleFiles?: Array<string>
     openTabs?: Array<string>
@@ -4438,6 +4439,7 @@ export type SessionMessagesResponse = SessionMessagesResponses[keyof SessionMess
 export type SessionPromptData = {
   body?: {
     messageID?: string
+    liveBackgroundSubagents?: boolean
     model?: {
       providerID: string
       modelID: string
@@ -4644,6 +4646,7 @@ export type PartUpdateResponse = PartUpdateResponses[keyof PartUpdateResponses]
 export type SessionPromptAsyncData = {
   body?: {
     messageID?: string
+    liveBackgroundSubagents?: boolean
     model?: {
       providerID: string
       modelID: string

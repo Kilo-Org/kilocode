@@ -408,6 +408,9 @@ export const User = Schema.Struct({
   }),
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
+  // kilocode_change start - persist whether this turn can keep background subagent fibers alive
+  liveBackgroundSubagents: Schema.optional(Schema.Boolean),
+  // kilocode_change end
   // kilocode_change start
   editorContext: Schema.optional(EditorContext),
   // kilocode_change end

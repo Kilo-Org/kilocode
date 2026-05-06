@@ -167,9 +167,12 @@ export const TaskTool = Tool.define(
         ops.cancel(nextSession.id)
       }
 
-      // kilocode_change start - gate background mode behind feature flag; kilo run always uses foreground
-      // because it exits on idle and background fibers would be lost.
-      const isBackground = params.background === true && cfg.experimental?.background_subagents === true
+      // kilocode_change start - gate background mode behind feature flag and live runtime support;
+      // kilo run exits on parent idle, so background fibers would be lost.
+      const isBackground =
+        params.background === true &&
+        cfg.experimental?.background_subagents === true &&
+        ctx.extra?.liveBackgroundSubagents === true
       // kilocode_change end
 
       return yield* Effect.acquireUseRelease(

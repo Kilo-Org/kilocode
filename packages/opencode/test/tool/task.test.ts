@@ -359,7 +359,7 @@ describe("tool.task", () => {
               messageID: assistant.id,
               agent: "build",
               abort: new AbortController().signal,
-              extra: { promptOps },
+              extra: { promptOps, liveBackgroundSubagents: true },
               messages: [],
               metadata: () => Effect.void,
               ask: () => Effect.void,
@@ -417,7 +417,7 @@ describe("tool.task", () => {
               messageID: assistant.id,
               agent: "build",
               abort: new AbortController().signal,
-              extra: { promptOps },
+              extra: { promptOps, liveBackgroundSubagents: true },
               messages: [],
               metadata: () => Effect.void,
               ask: () => Effect.void,
@@ -428,6 +428,48 @@ describe("tool.task", () => {
           expect(seen?.cost).toBeCloseTo(0.1, 6)
         }),
       { config: { experimental: { background_subagents: true } } }, // kilocode_change - requires feature flag
+    ),
+  )
+
+  it.live("execute coerces background task to foreground without live runtime support", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let bg = false
+          let called = false
+          const promptOps = stubOps({
+            onPrompt: () => (called = true),
+            onBackground: () => (bg = true),
+          })
+
+          const result = yield* def.execute(
+            {
+              description: "inspect bug",
+              prompt: "look into the cache key path",
+              subagent_type: "general",
+              background: true,
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          expect(bg).toBe(false)
+          expect(called).toBe(true)
+          expect(result.metadata.background).toBe(false)
+          expect(result.output).toContain("<task_result>")
+        }),
+      { config: { experimental: { background_subagents: true } } }, // kilocode_change - requires live runtime too
     ),
   )
   // kilocode_change end

@@ -382,6 +382,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       tools?: Record<string, boolean>
       processor: Pick<SessionProcessor.Handle, "message" | "updateToolCall" | "completeToolCall">
       bypassAgentCheck: boolean
+      liveBackgroundSubagents: boolean // kilocode_change
       messages: MessageV2.WithParts[]
     }) {
       using _ = log.time("resolveTools")
@@ -394,7 +395,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         abort: options.abortSignal!,
         messageID: input.processor.message.id,
         callID: options.toolCallId,
-        extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps },
+        // kilocode_change start - expose whether this runtime can keep background subagents alive
+        extra: {
+          model: input.model,
+          bypassAgentCheck: input.bypassAgentCheck,
+          promptOps,
+          liveBackgroundSubagents: input.liveBackgroundSubagents === true,
+        },
+        // kilocode_change end
         agent: input.agent.name,
         messages: input.messages,
         metadata: (val) =>
@@ -1615,6 +1623,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               tools: lastUser.tools,
               processor: handle,
               bypassAgentCheck,
+              liveBackgroundSubagents: lastUser.liveBackgroundSubagents === true, // kilocode_change
               messages: msgs,
             })
 
