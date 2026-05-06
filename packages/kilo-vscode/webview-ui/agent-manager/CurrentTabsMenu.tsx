@@ -247,7 +247,7 @@ export const CurrentTabsMenu: Component<CurrentTabsMenuProps> = (props) => {
       <div class="am-tabs-menu-search">
         <input
           ref={input}
-          data-am-native-text-shortcuts
+          data-agent-manager-native-text-shortcuts
           data-autofocus
           class="am-tabs-menu-search-input"
           value={search()}

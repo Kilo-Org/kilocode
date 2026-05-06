@@ -1031,7 +1031,7 @@ const AgentManagerContent: Component = () => {
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
       const target = e.target as HTMLElement | null
-      if (target?.closest("[data-am-native-text-shortcuts]")) return
+      if (target?.closest("[data-agent-manager-native-text-shortcuts]")) return
       // Arrow navigation requires Alt modifier (Cmd+Alt+Arrow for tabs/sessions)
       if (e.altKey && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
