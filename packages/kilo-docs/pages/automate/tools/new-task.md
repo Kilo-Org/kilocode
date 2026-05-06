@@ -39,6 +39,7 @@ This tool creates a new task instance with a specified starting mode and initial
 - Subtasks inherit certain workspace and extension configurations from parents
 - May require re-establishing context when switching between deeply nested tasks
 - Task completion needs explicit signaling to properly return to parent tasks
+- **Subagents cannot spawn further subagents** — The `new_task` tool is unavailable in subagent sessions. Only primary agents can create subtasks.
 
 ## How It Works
 

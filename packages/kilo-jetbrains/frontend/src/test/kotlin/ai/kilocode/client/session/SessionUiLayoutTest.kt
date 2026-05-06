@@ -13,7 +13,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
 import ai.kilocode.client.session.ui.PermissionPanel
-import ai.kilocode.client.session.ui.PromptPanel
+import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.QuestionPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
@@ -29,15 +29,20 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import ai.kilocode.rpc.dto.ChatEventDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 import com.intellij.ui.components.JBScrollPane
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import javax.swing.JButton
+import javax.swing.JScrollBar
 import javax.swing.JLayeredPane
 
 @Suppress("UnstableApiUsage")
@@ -102,8 +107,14 @@ class SessionUiLayoutTest : BasePlatformTestCase() {
 
         assertSame(root.content, stack.parent)
         assertSame(stack, connection.parent)
-        assertEquals(0, root.overlay.componentCount)
+        assertEquals(1, root.overlay.componentCount)
         assertEquals(listOf(question, permission, connection, prompt), stack.components.toList())
+    }
+
+    fun `test default focused component is prompt editor`() {
+        val prompt = find<PromptPanel>(ui)
+
+        assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
     }
 
     fun `test connection panel uses stack width and sits above prompt`() {
@@ -249,12 +260,206 @@ class SessionUiLayoutTest : BasePlatformTestCase() {
         assertEquals(1, panel.recentCount())
     }
 
+    fun `test session update follows when transcript is at bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail")))
+        drainScroll()
+
+        assertBottom(bar)
+    }
+
+    fun `test session update follows when transcript is near bottom threshold`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        val threshold = JBUI.scale(32)
+        if (bottom(bar) <= threshold) {
+            fillTranscript(24, start = 24)
+        }
+        setValue(bar, bottom(bar) - threshold + 1)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail")))
+        drainScroll()
+
+        assertBottom(bar)
+    }
+
+    fun `test session update preserves position outside bottom threshold`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        val threshold = JBUI.scale(32)
+        setValue(bar, bottom(bar) - threshold - 8)
+        val value = bar.value
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail")))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+    }
+
+    fun `test session update preserves middle scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail")))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+    }
+
+    fun `test user scroll between updates disables following`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail1")))
+        drainScroll()
+        assertBottom(bar)
+
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail2")))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+    }
+
+    fun `test user returning to bottom between updates resumes following`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail1")))
+        drainScroll()
+        assertEquals(value, bar.value)
+
+        setBottom(bar)
+        emit(ChatEventDto.MessageUpdated("ses_test", message("tail2")))
+        drainScroll()
+
+        assertBottom(bar)
+    }
+
+    fun `test batched update samples scroll once before model changes`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.MessageUpdated("ses_test", message("batch")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("part", "batch", "text", "hello")), flush = false)
+        forceFlush()
+        drainScroll()
+
+        assertEquals(value, bar.value)
+    }
+
+    fun `test state changes do not force scroll when user is in middle`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+    }
+
+    fun `test scroll button appears only when transcript is away from bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+
+        setBottom(bar)
+        drainScroll()
+        assertFalse(button.isVisible)
+
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        assertTrue(button.isVisible)
+
+        setBottom(bar)
+        drainScroll()
+        assertFalse(button.isVisible)
+    }
+
+    fun `test scroll button scrolls transcript to bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val button = jumpButton()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        drainScroll()
+        assertTrue(button.isVisible)
+
+        button.doClick()
+        drainScroll()
+
+        assertBottom(bar)
+        assertFalse(button.isVisible)
+    }
+
+    fun `test scroll button remains hidden outside transcript body`() {
+        val button = jumpButton()
+
+        settle()
+        layout()
+
+        assertFalse(button.isVisible)
+    }
+
+    fun `test history load follows initially empty transcript`() {
+        rpc.history.addAll(history(24))
+        ui = SessionUi(project, workspace, sessions, app, scope, id = "ses_test", displayMs = 0).apply {
+            setSize(800, 600)
+        }
+        settle()
+        drainScroll()
+
+        assertBottom(scrollBar())
+    }
+
+    fun `test recovered state after history preserves user scroll position`() {
+        rpc.history.addAll(history(24))
+        rpc.statuses.value = mapOf("ses_test" to ai.kilocode.rpc.dto.SessionStatusDto("busy"))
+        ui = SessionUi(project, workspace, sessions, app, scope, id = "ses_test", displayMs = 0).apply {
+            setSize(800, 600)
+        }
+        settle()
+        drainScroll()
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.TurnOpen("ses_test"))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+    }
+
     private fun layout() {
         ui.doLayout()
         val root = find<SessionRootPanel>(ui)
         root.doLayout()
         root.content.doLayout()
         find<PromptPanel>(ui).parent.doLayout()
+        find<JBScrollPane>(ui).doLayout()
+        (find<JBScrollPane>(ui).viewport.view as? java.awt.Container)?.doLayout()
     }
 
     private fun settle() = runBlocking {
@@ -271,6 +476,64 @@ class SessionUiLayoutTest : BasePlatformTestCase() {
 
     private fun showConnection() {
         find<ConnectionPanel>(ui).onEvent(SessionControllerEvent.ConnectionChanged.ShowConnecting)
+    }
+
+    private fun showMessages() {
+        controller().prompt("hello")
+        settle()
+        layout()
+    }
+
+    private fun fillTranscript(count: Int, start: Int = 0) {
+        repeat(count) { offset ->
+            val i = start + offset
+            val id = "msg_$i"
+            emit(ChatEventDto.MessageUpdated("ses_test", message(id)), flush = false)
+            emit(ChatEventDto.PartUpdated("ses_test", part("part_$i", id, "text", text(i))), flush = false)
+        }
+        settleShort(100)
+        forceFlush()
+        drainScroll()
+    }
+
+    private fun emit(event: ChatEventDto, flush: Boolean = true) {
+        runBlocking { rpc.events.emit(event) }
+        if (flush) {
+            settleShort(20)
+            forceFlush()
+        }
+    }
+
+    private fun forceFlush() {
+        controller().flushEvents()
+        com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun drainScroll() {
+        repeat(4) {
+            layout()
+            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
+        }
+    }
+
+    private fun scrollBar(): JScrollBar = find<JBScrollPane>(ui).verticalScrollBar
+
+    private fun jumpButton(): JButton {
+        return find<SessionRootPanel>(ui).overlay.components.single() as JButton
+    }
+
+    private fun bottom(bar: JScrollBar): Int = (bar.maximum - bar.visibleAmount).coerceAtLeast(0)
+
+    private fun setBottom(bar: JScrollBar) {
+        setValue(bar, bottom(bar))
+    }
+
+    private fun setValue(bar: JScrollBar, value: Int) {
+        bar.value = value.coerceIn(bar.minimum, bottom(bar))
+    }
+
+    private fun assertBottom(bar: JScrollBar) {
+        assertTrue("value=${bar.value} bottom=${bottom(bar)} max=${bar.maximum} visible=${bar.visibleAmount}", bar.value >= bottom(bar) - 1)
     }
 
     private inline fun <reified T> find(root: java.awt.Container): T {
@@ -336,4 +599,19 @@ class SessionUiLayoutTest : BasePlatformTestCase() {
         role = "user",
         time = MessageTimeDto(created = 0.0),
     )
+
+    private fun part(id: String, mid: String, type: String, text: String? = null) = PartDto(
+        id = id,
+        sessionID = "ses_test",
+        messageID = mid,
+        type = type,
+        text = text,
+    )
+
+    private fun history(count: Int): List<MessageWithPartsDto> = List(count) { i ->
+        val id = "hist_$i"
+        MessageWithPartsDto(message(id), listOf(part("hist_part_$i", id, "text", text(i))))
+    }
+
+    private fun text(i: Int): String = "line $i\n".repeat(12)
 }

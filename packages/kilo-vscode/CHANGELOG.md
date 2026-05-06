@@ -1,5 +1,63 @@
 # kilo-code
 
+## 7.2.42
+
+### Minor Changes
+
+- [#9909](https://github.com/Kilo-Org/kilocode/pull/9909) [`9ffd047`](https://github.com/Kilo-Org/kilocode/commit/9ffd047962039d6b73d301d5d4e67560cd501c4f) - Detect and preserve UTF-32 (LE and BE) with BOM when reading and editing files. UTF-16 and UTF-32 without a BOM remain unsupported.
+
+### Patch Changes
+
+- [#9939](https://github.com/Kilo-Org/kilocode/pull/9939) [`8ed0e17`](https://github.com/Kilo-Org/kilocode/commit/8ed0e17855baee32d48fa44881761a8ee6b53f1e) - Recover Agent Manager worktrees after restart when saved state is missing, corrupt, or stale.
+
+- [#9887](https://github.com/Kilo-Org/kilocode/pull/9887) [`d9453f0`](https://github.com/Kilo-Org/kilocode/commit/d9453f0da2b063041f6f98235220cde9129e162d) - Fix queued-turn auto-compaction so overflow recovery runs instead of exhausting compaction attempts.
+
+- [#9855](https://github.com/Kilo-Org/kilocode/pull/9855) [`59e8eff`](https://github.com/Kilo-Org/kilocode/commit/59e8effc3df8a03146f5ceddf95f79989b813417) - Respect project-specific semantic indexing decisions instead of enabling indexing globally across workspaces.
+
+- [#9904](https://github.com/Kilo-Org/kilocode/pull/9904) [`080faf4`](https://github.com/Kilo-Org/kilocode/commit/080faf4df88ad77762092a6c05a3c0b10297bb96) - Append a trailing space when autocompleting a file, folder, or special mention (terminal, git changes) via the `@` menu in the chat textarea, so typing immediately after selection no longer breaks the attachment.
+
+- [#9928](https://github.com/Kilo-Org/kilocode/pull/9928) [`520922f`](https://github.com/Kilo-Org/kilocode/commit/520922ff39354c2df72317dee0f70035c52c24c5) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Prevent VS Code empty windows from starting codebase indexing against the home directory.
+
+- [#9881](https://github.com/Kilo-Org/kilocode/pull/9881) [`c4fa6b3`](https://github.com/Kilo-Org/kilocode/commit/c4fa6b34c54839b7254f4aa1aa282113828023e0) - Route the "Sign In" action from the Providers settings tab, provider picker, and chat auth errors to the Profile view so the device-auth code, QR, and cancel button are always visible.
+
+- [#9905](https://github.com/Kilo-Org/kilocode/pull/9905) [`0c5d757`](https://github.com/Kilo-Org/kilocode/commit/0c5d75772d9e56f89c15cd08a5fa9a16097469b5) - Show snapshot initialization progress in the extension's existing loading indicator.
+
+- [#9881](https://github.com/Kilo-Org/kilocode/pull/9881) [`4d1023c`](https://github.com/Kilo-Org/kilocode/commit/4d1023c21a11d3c703a8dc7e7992267469cf26cf) - Trust the OS certificate store and honor corporate CA bundles for the bundled Kilo backend. The extension now defaults `NODE_USE_SYSTEM_CA=1` on the spawned CLI process so users behind MITM proxies (Zscaler, Netskope, Palo Alto, etc.) no longer hit TLS errors on sign-in. A new `kilo-code.new.extraCaCerts` setting accepts a PEM file path for additional CAs, and `http.proxyStrictSSL=false` is honored as an opt-out from verification.
+
+- [#9824](https://github.com/Kilo-Org/kilocode/pull/9824) [`b7657d1`](https://github.com/Kilo-Org/kilocode/commit/b7657d1aef37cefefe1557b981822535e41ea82c) - Add a Display setting for adjusting the Kilo webview UI font size.
+
+- Updated dependencies [[`40a4d5e`](https://github.com/Kilo-Org/kilocode/commit/40a4d5eae254a78d4f46a075557343ac5ae8de5a)]:
+  - @opencode-ai/ui@7.2.41
+  - @kilocode/kilo-ui@7.2.41
+
+## 7.2.39
+
+## 7.2.36
+
+### Minor Changes
+
+- [#9850](https://github.com/Kilo-Org/kilocode/pull/9850) [`712371e`](https://github.com/Kilo-Org/kilocode/commit/712371e2315ea2da9a75c06b88b3745ad78ce980) - Render Mermaid diagrams in chat Markdown responses.
+
+### Patch Changes
+
+- [#7835](https://github.com/Kilo-Org/kilocode/pull/7835) [`b4a7de7`](https://github.com/Kilo-Org/kilocode/commit/b4a7de70bbbce3f9991e0725ecda6f2ba18dc7a7) Thanks [@sainzs](https://github.com/sainzs)! - Fix Agents Behavior settings not persisting the Hidden and Disable toggles when turning them off after a previous save.
+
+- [#9778](https://github.com/Kilo-Org/kilocode/pull/9778) [`33476e5`](https://github.com/Kilo-Org/kilocode/commit/33476e50508f39c232731613fd9d74a7aa19e748) - Pin the VS Code sidebar question dock above the prompt input so standalone follow-up questions no longer float in the middle of the viewport when the message list is short.
+
+- [#9839](https://github.com/Kilo-Org/kilocode/pull/9839) [`a5bb938`](https://github.com/Kilo-Org/kilocode/commit/a5bb938dbd68d577951102e5fd56559e3e985dc0) - Label disabled provider actions as enabling providers instead of deleting them.
+
+- [#9846](https://github.com/Kilo-Org/kilocode/pull/9846) [`01b5424`](https://github.com/Kilo-Org/kilocode/commit/01b54248660f0d68e107d18a7093767430df7c7a) - Support rendering Markdown files in diff viewers with a persisted toggle.
+
+- [#9833](https://github.com/Kilo-Org/kilocode/pull/9833) [`614bca7`](https://github.com/Kilo-Org/kilocode/commit/614bca7cff862ec96e4707a97f43b540210ab699) - Prevent macOS Spotlight from indexing Kilo-generated data directories.
+
+## 7.2.35
+
+### Patch Changes
+
+- [#9816](https://github.com/Kilo-Org/kilocode/pull/9816) [`c8494f2`](https://github.com/Kilo-Org/kilocode/commit/c8494f2f25c17f68455230feec146775d6707090) - Remember the main auto-approve toggle preference across VS Code reloads and extension restarts.
+
+- [#8910](https://github.com/Kilo-Org/kilocode/pull/8910) [`8472f90`](https://github.com/Kilo-Org/kilocode/commit/8472f9052883d9acf643e0786e3819936c44a61a) Thanks [@eolbrych](https://github.com/eolbrych)! - Restore the Sign in action for MCP servers that require OAuth authentication in VS Code settings.
+
 ## 7.2.33
 
 ### Minor Changes

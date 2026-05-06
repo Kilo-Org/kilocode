@@ -15,6 +15,17 @@ export interface ServerInstance {
 
 const STARTUP_TIMEOUT_SECONDS = 30
 
+type WorkspaceFolderLike = { uri: { fsPath: string } }
+
+export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
+  return folders?.[0]?.uri.fsPath ?? storage
+}
+
+export function resolveIndexingEnv(folders: readonly WorkspaceFolderLike[] | undefined): Record<string, string> {
+  if (folders && folders.length > 0) return {}
+  return { KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" }
+}
+
 export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
@@ -66,12 +77,32 @@ export class ServerManager {
 
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
-      const claudeCompat = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+      const cfg = vscode.workspace.getConfiguration("kilo-code.new")
+      const claudeCompat = cfg.get<boolean>("claudeCodeCompat", false)
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
-      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
+      // or "$HOME" in empty VS Code windows.
+      const folders = vscode.workspace.workspaceFolders
+      const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
+      fs.mkdirSync(spawnCwd, { recursive: true })
+      const indexingEnv = resolveIndexingEnv(folders)
+      // TLS / corporate-proxy support:
+      //   - Default NODE_USE_SYSTEM_CA=1 so the bundled Bun CLI trusts the OS
+      //     trust store (Windows cert store, macOS keychain, Linux /etc/ssl).
+      //     Mirrors VS Code's `http.systemCertificates` default (true).
+      //   - Allow users behind MITM proxies to point at a custom CA bundle via
+      //     `kilo-code.new.extraCaCerts` (NODE_EXTRA_CA_CERTS).
+      //   - Honor VS Code's `http.proxyStrictSSL=false` as an explicit opt-out
+      //     from verification, matching what VS Code already does for its own
+      //     requests. Users explicitly set that; we don't flip it ourselves.
+      // All three are overridable by the user's environment.
+      const extraCaCerts = cfg.get<string>("extraCaCerts", "").trim()
+      const proxyStrictSSL = vscode.workspace.getConfiguration("http").get<boolean>("proxyStrictSSL", true)
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
         cwd: spawnCwd,
         env: {
+          NODE_USE_SYSTEM_CA: "1",
+          ...(extraCaCerts && { NODE_EXTRA_CA_CERTS: extraCaCerts }),
+          ...(!proxyStrictSSL && { NODE_TLS_REJECT_UNAUTHORIZED: "0" }),
           ...process.env,
           // Force mimalloc (the allocator Bun ships with) to return freed pages
           // to the OS immediately instead of retaining them in its arenas.
@@ -84,6 +115,7 @@ export class ServerManager {
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
           KILOCODE_FEATURE: "vscode-extension",
+          ...indexingEnv,
           KILO_TELEMETRY_LEVEL: vscode.env.isTelemetryEnabled ? "all" : "off",
           KILO_APP_NAME: "kilo-code",
           KILO_EDITOR_NAME: vscode.env.appName,
@@ -167,8 +199,7 @@ export class ServerManager {
 
   /**
    * Kill a process and its entire process group.
-   * On Unix, we send the signal to -pid (negative) to reach the whole group,
-   * mirroring the desktop app's ProcessGroup::leader() + start_kill() pattern.
+   * On Unix, we send the signal to -pid (negative) to reach the whole group.
    * On Windows, process.kill() on the child handle is sufficient.
    */
   private static killProcess(proc: ChildProcess, signal: NodeJS.Signals = "SIGTERM"): void {
@@ -197,8 +228,7 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")
 
-    // SIGKILL fallback after 5s: mirrors the desktop app going straight to
-    // start_kill(). Ensures the process tree dies even if SIGTERM is ignored
+    // SIGKILL fallback after 5s. Ensures the process tree dies even if SIGTERM is ignored
     // or Instance.disposeAll() hangs past the serve.ts shutdown timeout.
     const timer = setTimeout(() => {
       if (proc.exitCode === null) {

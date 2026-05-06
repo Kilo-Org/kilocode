@@ -14,7 +14,7 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { TsClient } from "../kilocode/ts-client" // kilocode_change
-import { withStatics } from "@/util/schema"
+import { NonNegativeInt, withStatics } from "@/util/schema"
 import { zod, ZodOverride } from "@/util/effect-zod"
 
 const log = Log.create({ service: "lsp" })
@@ -24,8 +24,8 @@ export const Event = {
 }
 
 const Position = Schema.Struct({
-  line: Schema.Number,
-  character: Schema.Number,
+  line: NonNegativeInt,
+  character: NonNegativeInt,
 })
 
 export const Range = Schema.Struct({
@@ -38,7 +38,7 @@ export type Range = typeof Range.Type
 
 export const Symbol = Schema.Struct({
   name: Schema.String,
-  kind: Schema.Number,
+  kind: NonNegativeInt,
   location: Schema.Struct({
     uri: Schema.String,
     range: Range,
@@ -51,7 +51,7 @@ export type Symbol = typeof Symbol.Type
 export const DocumentSymbol = Schema.Struct({
   name: Schema.String,
   detail: Schema.optional(Schema.String),
-  kind: Schema.Number,
+  kind: NonNegativeInt,
   range: Range,
   selectionRange: Range,
 })

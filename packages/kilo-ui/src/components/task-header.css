@@ -12,7 +12,7 @@
 
   [data-slot="task-header-title"] {
     flex: 1;
-    font-size: 14px;
+    font-size: var(--kilo-font-size-14);
     font-weight: 500;
     color: var(--text-strong);
     overflow: hidden;
@@ -25,7 +25,7 @@
     align-items: center;
     gap: 12px;
     flex-shrink: 0;
-    font-size: 13px;
+    font-size: var(--kilo-font-size-13);
     color: var(--text-weak);
     white-space: nowrap;
   }

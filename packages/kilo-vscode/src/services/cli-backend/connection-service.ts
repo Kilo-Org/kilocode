@@ -28,7 +28,7 @@ function isNotFound(err: unknown) {
   return false
 }
 
-// Poll /global/health at the same interval as packages/app/src/context/server.tsx.
+// Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
@@ -514,7 +514,6 @@ export class KiloConnectionService {
 
   /**
    * Start polling GET /global/health every 10 seconds.
-   * Ported from packages/app/src/context/server.tsx (HEALTH_POLL_INTERVAL_MS).
    * Provides a second detection channel for server death independent of the SSE heartbeat.
    * If the health check fails while we believe we are connected, the SSE client is
    * disconnected so its reconnect loop kicks in immediately.

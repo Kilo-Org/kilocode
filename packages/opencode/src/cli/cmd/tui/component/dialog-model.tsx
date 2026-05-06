@@ -1,4 +1,5 @@
-import { createMemo, createSignal } from "solid-js"
+import { useTerminalDimensions } from "@opentui/solid" // kilocode_change
+import { createEffect, createMemo, createSignal, Show } from "solid-js" // kilocode_change
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
 import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
@@ -7,8 +8,10 @@ import { useDialog } from "@tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { DialogVariant } from "./dialog-variant"
 import { useKeybind } from "../context/keybind"
+import type { Model } from "@kilocode/sdk/v2" // kilocode_change
 import * as fuzzysort from "fuzzysort"
 import { useConnected } from "./use-connected"
+import { ModelInfoPanel } from "@/kilocode/components/model-info-panel" // kilocode_change
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
@@ -16,6 +19,7 @@ export function DialogModel(props: { providerID?: string }) {
   const dialog = useDialog()
   const keybind = useKeybind()
   const [query, setQuery] = createSignal("")
+  const dimensions = useTerminalDimensions() // kilocode_change
 
   const connected = useConnected()
   const providers = createDialogProviderOptions()
@@ -30,6 +34,36 @@ export function DialogModel(props: { providerID?: string }) {
   // kilocode_change end
 
   const showExtra = createMemo(() => connected() && !props.providerID)
+
+  // kilocode_change start
+  const wide = createMemo(() => dimensions().width >= 108)
+  const [preview, setPreview] = createSignal<{
+    model: Model
+    provider: string
+  }>()
+
+  const lookup = (providerID: string, modelID: string) => {
+    const provider = sync.data.provider.find((x) => x.id === providerID)
+    const model = provider?.models[modelID]
+    if (!provider || !model) return
+    return {
+      model,
+      provider: provider.name,
+    }
+  }
+
+  createEffect(() => {
+    dialog.setSize(wide() ? "xlarge" : "large")
+  })
+
+  createEffect(() => {
+    const current = local.model.current()
+    if (!current) return
+    const next = lookup(current.providerID, current.modelID)
+    if (!next) return
+    setPreview(next)
+  })
+  // kilocode_change end
 
   const options = createMemo(() => {
     const needle = query().trim()
@@ -168,31 +202,49 @@ export function DialogModel(props: { providerID?: string }) {
     dialog.clear()
   }
 
+  // kilocode_change start
   return (
-    <DialogSelect<ReturnType<typeof options>[number]["value"]>
-      options={options()}
-      keybind={[
-        {
-          keybind: keybind.all.model_provider_list?.[0],
-          title: connected() ? "Connect provider" : "View all providers",
-          onTrigger() {
-            dialog.replace(() => <DialogProvider />)
-          },
-        },
-        {
-          keybind: keybind.all.model_favorite_toggle?.[0],
-          title: "Favorite",
-          disabled: !connected(),
-          onTrigger: (option) => {
-            local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
-          },
-        },
-      ]}
-      onFilter={setQuery}
-      flat={true}
-      skipFilter={true}
-      title={title()}
-      current={local.model.current()}
-    />
+    <box flexDirection="row">
+      <box flexGrow={1} flexShrink={1}>
+        <DialogSelect<ReturnType<typeof options>[number]["value"]>
+          options={options()}
+          keybind={[
+            {
+              keybind: keybind.all.model_provider_list?.[0],
+              title: connected() ? "Connect provider" : "View all providers",
+              onTrigger() {
+                dialog.replace(() => <DialogProvider />)
+              },
+            },
+            {
+              keybind: keybind.all.model_favorite_toggle?.[0],
+              title: "Favorite",
+              disabled: !connected(),
+              onTrigger: (option) => {
+                local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+              },
+            },
+          ]}
+          onFilter={setQuery}
+          onMove={(option) => {
+            if (typeof option.value === "string") {
+              setPreview(undefined)
+              return
+            }
+            const next = lookup(option.value.providerID, option.value.modelID)
+            if (!next) return
+            setPreview(next)
+          }}
+          flat={true}
+          skipFilter={true}
+          title={title()}
+          current={local.model.current()}
+        />
+      </box>
+      <Show when={wide() && preview()}>
+        {(item) => <ModelInfoPanel model={item().model} provider={item().provider} />}
+      </Show>
+    </box>
   )
+  // kilocode_change end
 }

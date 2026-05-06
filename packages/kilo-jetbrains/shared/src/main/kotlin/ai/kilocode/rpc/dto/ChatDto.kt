@@ -60,6 +60,17 @@ data class PartDto(
     val callID: String? = null,
     val state: String? = null,
     val title: String? = null,
+    val input: Map<String, String> = emptyMap(),
+    val metadata: Map<String, String> = emptyMap(),
+    val output: String? = null,
+    val error: String? = null,
+    val time: PartTimeDto? = null,
+)
+
+@Serializable
+data class PartTimeDto(
+    val start: Double? = null,
+    val end: Double? = null,
 )
 
 // --- Prompt Input ---
@@ -70,6 +81,7 @@ data class PromptDto(
     val providerID: String? = null,
     val modelID: String? = null,
     val agent: String? = null,
+    val variant: String? = null,
 )
 
 @Serializable
