@@ -1,8 +1,6 @@
 import { Client } from "./client.js"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
-import { TracerSetup } from "./tracer.js"
-import type { Tracer } from "@opentelemetry/api"
 
 export interface TelemetryProperties {
   appName: string
@@ -10,6 +8,45 @@ export interface TelemetryProperties {
   platform: string
   editorName?: string
   vscodeVersion?: string
+}
+
+export interface IndexingTelemetryProperties extends Record<string, unknown> {
+  source: "scan" | "watcher"
+  provider: string
+  vectorStore: "lancedb" | "qdrant"
+  modelId?: string
+  trigger?: "background" | "manual"
+  mode?: "full" | "incremental"
+}
+
+export interface IndexingCompletedTelemetryProperties extends IndexingTelemetryProperties {
+  trigger: "background" | "manual"
+  mode: "full" | "incremental"
+  filesIndexed: number
+  filesDiscovered: number
+  totalBlocks: number
+  batchErrors: number
+}
+
+export interface IndexingFileCountTelemetryProperties extends IndexingTelemetryProperties {
+  mode: "full" | "incremental"
+  discovered: number
+  candidate: number
+}
+
+export interface IndexingRetryTelemetryProperties extends IndexingTelemetryProperties {
+  mode: "full" | "incremental"
+  attempt: number
+  maxRetries: number
+  batchSize: number
+  error: string
+}
+
+export interface IndexingErrorTelemetryProperties extends IndexingTelemetryProperties {
+  location: string
+  error: string
+  retryCount?: number
+  maxRetries?: number
 }
 
 export namespace Telemetry {
@@ -44,16 +81,6 @@ export namespace Telemetry {
     const enabled = level ? level === "all" : options.enabled
     Client.setEnabled(enabled)
 
-    // Initialize OpenTelemetry tracer for AI SDK spans
-    TracerSetup.init({
-      version: props.appVersion,
-      enabled,
-      appName: props.appName,
-      platform: props.platform,
-      editorName: props.editorName,
-      vscodeVersion: props.vscodeVersion,
-    })
-
     await Identity.getMachineId()
 
     initialized = true
@@ -62,15 +89,6 @@ export namespace Telemetry {
 
   export function setEnabled(value: boolean) {
     Client.setEnabled(value)
-    TracerSetup.setEnabled(value)
-  }
-
-  /**
-   * Get the OpenTelemetry tracer for use with AI SDK's experimental_telemetry.
-   * Returns null if telemetry is not initialized.
-   */
-  export function getTracer(): Tracer | null {
-    return TracerSetup.getTracer()
   }
 
   export function isEnabled(): boolean {
@@ -136,6 +154,9 @@ export namespace Telemetry {
   // LLM
   export function trackLlmCompletion(properties: {
     taskId?: string
+    mode?: "review"
+    feature?: "code_reviews"
+    command?: "local-review" | "local-review-uncommitted"
     apiProvider: string
     modelId: string
     inputTokens?: number
@@ -166,6 +187,26 @@ export namespace Telemetry {
     track(TelemetryEvent.PLAN_FOLLOWUP, { sessionId, choice })
   }
 
+  export function trackIndexingStarted(properties: IndexingTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_STARTED, properties)
+  }
+
+  export function trackIndexingCompleted(properties: IndexingCompletedTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_COMPLETED, properties)
+  }
+
+  export function trackIndexingFileCount(properties: IndexingFileCountTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_FILE_COUNT, properties)
+  }
+
+  export function trackIndexingBatchRetry(properties: IndexingRetryTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_BATCH_RETRY, properties)
+  }
+
+  export function trackIndexingError(properties: IndexingErrorTelemetryProperties) {
+    track(TelemetryEvent.INDEXING_ERROR, properties)
+  }
+
   // Share
   export function trackShareCreated(sessionId: string) {
     track(TelemetryEvent.SHARE_CREATED, { sessionId })
@@ -184,6 +225,11 @@ export namespace Telemetry {
     track(TelemetryEvent.MCP_SERVER_ERROR, { server, error })
   }
 
+  // Remote
+  export function trackRemoteConnectionOpened() {
+    track(TelemetryEvent.REMOTE_CONNECTION_OPENED)
+  }
+
   // Auth
   export function trackAuthSuccess(provider: string) {
     track(TelemetryEvent.AUTH_SUCCESS, { provider })
@@ -199,7 +245,6 @@ export namespace Telemetry {
   }
 
   export async function shutdown(): Promise<void> {
-    await TracerSetup.shutdown()
     await Client.shutdown()
   }
 }

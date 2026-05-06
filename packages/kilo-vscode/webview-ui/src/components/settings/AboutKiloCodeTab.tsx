@@ -149,7 +149,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   } as const
 
   const headingStyle = {
-    "font-size": "13px",
+    "font-size": "var(--kilo-font-size-13)",
     "font-weight": "600",
     "margin-bottom": "12px",
     "margin-top": "0",
@@ -157,13 +157,13 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   } as const
 
   const labelStyle = {
-    "font-size": "12px",
+    "font-size": "var(--kilo-font-size-12)",
     color: "var(--vscode-descriptionForeground)",
     width: "100px",
   } as const
 
   const valueStyle = {
-    "font-size": "12px",
+    "font-size": "var(--kilo-font-size-12)",
     color: "var(--vscode-foreground)",
     "font-family": "var(--vscode-editor-font-family, monospace)",
   } as const
@@ -184,7 +184,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.community")}</h4>
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: "0 0 12px 0",
             "line-height": "1.5",
@@ -206,7 +206,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         </p>
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: 0,
             "line-height": "1.5",
@@ -225,7 +225,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.telemetry.title")}</h4>
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: "0 0 12px 0",
             "line-height": "1.5",
@@ -260,7 +260,9 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
                 display: "inline-block",
               }}
             />
-            <span style={{ "font-size": "12px", color: "var(--vscode-foreground)" }}>{getStatusText()}</span>
+            <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-foreground)" }}>
+              {getStatusText()}
+            </span>
           </div>
         </div>
 
@@ -276,7 +278,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.settingsTransfer.title")}</h4>
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: "0 0 12px 0",
             "line-height": "1.5",
@@ -301,7 +303,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.legacyMigration.title")}</h4>
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: "0 0 12px 0",
             "line-height": "1.5",
@@ -319,7 +321,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             padding: "6px 14px",
             "border-radius": "2px",
             cursor: "pointer",
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
           }}
         >
           {language.t("settings.legacyMigration.link")}
@@ -332,7 +334,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.resetSettings.title")}</h4>
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: "0 0 12px 0",
             "line-height": "1.5",
@@ -350,7 +352,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             padding: "6px 14px",
             "border-radius": "2px",
             cursor: "pointer",
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
           }}
         >
           {language.t("settings.aboutKiloCode.resetSettings.button")}

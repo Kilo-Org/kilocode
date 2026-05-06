@@ -385,6 +385,57 @@ add_to_path() {
     fi
 }
 
+# Persistently add $INSTALL_DIR to the Windows user PATH via the registry.
+# Works from Git Bash (MINGW64), MSYS2, and Cygwin.
+# Converts the MSYS/Cygwin path to native Windows form so that cmd and
+# PowerShell also see the entry.
+add_to_windows_path() {
+    local win_install_dir
+    if command -v cygpath >/dev/null 2>&1; then
+        win_install_dir=$(cygpath -w "$INSTALL_DIR")
+    else
+        # Fallback: naive conversion  /c/Users/... -> C:\Users\...
+        win_install_dir=$(echo "$INSTALL_DIR" | sed -e 's|^/\([a-zA-Z]\)/|\1:\\|' -e 's|/|\\|g')
+    fi
+
+    # Escape single-quotes for PowerShell single-quoted strings ('' is the escape sequence)
+    local win_install_dir_ps="${win_install_dir//\'/\'\'}"
+
+    local ps_cmd
+    ps_cmd=$(cat <<EOFPS
+\$kiloPath = '$win_install_dir_ps'
+\$currentPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+\$pathParts = if ([string]::IsNullOrEmpty(\$currentPath)) { @() } else { \$currentPath -split ';' }
+if (\$pathParts -notcontains \$kiloPath) {
+    \$newPath = if ([string]::IsNullOrEmpty(\$currentPath)) { \$kiloPath } else { "\$currentPath;\$kiloPath" }
+    [Environment]::SetEnvironmentVariable('Path', \$newPath, 'User')
+    Write-Output 'added'
+}
+EOFPS
+)
+
+    local ps_output
+    if command -v powershell.exe >/dev/null 2>&1; then
+        ps_output=$(powershell.exe -NoProfile -NonInteractive -Command "$ps_cmd" 2>/dev/null) || return 1
+    elif command -v pwsh >/dev/null 2>&1; then
+        ps_output=$(pwsh -NoProfile -NonInteractive -Command "$ps_cmd" 2>/dev/null) || return 1
+    else
+        return 1
+    fi
+
+    if [[ "$ps_output" == *"added"* ]]; then
+        print_message info "${MUTED}Successfully added ${NC}kilo ${MUTED}to Windows user PATH${NC}"
+    fi
+
+    # Also add to the current bash session so `kilo` works immediately
+    # without the user needing to open a new terminal.
+    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+        export PATH="$INSTALL_DIR:$PATH"
+    fi
+
+    return 0
+}
+
 XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 
 current_shell=$(basename "$SHELL")
@@ -411,6 +462,13 @@ case $current_shell in
 esac
 
 if [[ "$no_modify_path" != "true" ]]; then
+    # Detect if we are running on Windows (MINGW, MSYS, Cygwin) regardless
+    # of whether the binary was installed from download or --binary.
+    _running_on_windows=false
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*) _running_on_windows=true ;;
+    esac
+
     config_file=""
     for file in $config_files; do
         if [[ -f $file ]]; then
@@ -419,7 +477,12 @@ if [[ "$no_modify_path" != "true" ]]; then
         fi
     done
 
-    if [[ -z $config_file ]]; then
+    if [[ "$_running_on_windows" == "true" ]] && add_to_windows_path; then
+        # Handled via the Windows user-level PATH in the registry.
+        # The change is visible in new cmd / PowerShell / Git Bash sessions.
+        # We also exported it into the current session above.
+        :
+    elif [[ -z $config_file ]]; then
         print_message warning "No config file found for $current_shell. You may need to manually add to PATH:"
         print_message info "  export PATH=$INSTALL_DIR:\$PATH"
     elif [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then

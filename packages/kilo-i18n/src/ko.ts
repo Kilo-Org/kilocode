@@ -67,4 +67,27 @@ export const dict = {
   "marketplace.warning.busyMany": "여러 세션이 실행 중이며 중단됩니다",
   "marketplace.warning.installAnyway": "그래도 설치",
   "marketplace.warning.cancel": "취소",
+  "marketplace.contribute.prompt": "스킬, 모드 또는 MCP 서버가 없나요?",
+  "marketplace.contribute.cta": "GitHub에서 기여하기",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "구현",
+  "plan.followup.question": "구현할 준비가 되셨나요?",
+  "plan.followup.answer.newSession": "새 세션 시작",
+  "plan.followup.answer.newSession.description": "깨끗한 컨텍스트의 새 세션에서 구현",
+  "plan.followup.answer.continue": "여기서 계속하기",
+  "plan.followup.answer.continue.description": "이 세션에서 계획 구현",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "스냅샷이 느립니다",
+  "snapshot.slowRepo.question":
+    "리포지토리 크기 때문인지 스냅샷 시스템 초기화에 시간이 오래 걸리고 있습니다.\n\n이 리포지토리에서 스냅샷을 비활성화하시겠습니까?",
+  "snapshot.slowRepo.answer.continue": "스냅샷 계속 사용",
+  "snapshot.slowRepo.answer.continue.description":
+    "스냅샷이 완료될 때까지 기다리세요. 초기 스냅샷이 만들어지면 이후 턴은 빠릅니다.",
+  "snapshot.slowRepo.answer.disable": "이 프로젝트에서 비활성화",
+  "snapshot.slowRepo.answer.disable.description":
+    "이 프로젝트의 Kilo 스냅샷을 끕니다. Kilo 변경에 대한 실행 취소/다시 실행은 사용할 수 없지만 git은 여전히 모든 것을 추적합니다.",
+
+  "ui.messagePart.openInDiffViewer": "Diff 뷰어에서 열기",
 }

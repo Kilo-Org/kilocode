@@ -1,5 +1,19 @@
 import type { Part } from "../types/messages"
 
+export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+
+type SnapshotPart = {
+  type?: string
+  text?: string
+  synthetic?: boolean
+}
+
+export function snapshotProgress(part: SnapshotPart | undefined): boolean {
+  if (part?.type !== "text") return false
+  if (!part.synthetic) return false
+  return (part.text ?? "").includes("Initializing snapshot")
+}
+
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
@@ -7,6 +21,18 @@ export type CostMessage = { id: string; role: string; cost?: number }
 type ToolState = {
   input?: { description?: string; subagent_type?: string }
   metadata?: { sessionId?: string }
+}
+
+type TaskPart = {
+  type: string
+  tool?: string
+  metadata?: { sessionId?: string }
+  state?: ToolState
+}
+
+export function childID(part: TaskPart): string | undefined {
+  if (part.type !== "tool" || part.tool !== "task") return undefined
+  return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
 }
 
 /**
@@ -43,7 +69,7 @@ export function computeStatus(
     }
   }
   if (part.type === "reasoning") return t("ui.sessionTurn.status.thinking")
-  if (part.type === "text") return t("session.status.writingResponse")
+  if (part.type === "text") return snapshotProgress(part) ? SNAPSHOT_PROGRESS_TEXT : t("session.status.writingResponse")
   return undefined
 }
 
@@ -97,7 +123,7 @@ const LABEL_CAP = 24
 export function buildFamilyLabels(
   family: Set<string>,
   messages: Record<string, CostMessage[]>,
-  parts: Record<string, Array<{ type: string; tool?: string; state?: ToolState }>>,
+  parts: Record<string, TaskPart[]>,
 ): Map<string, string> {
   const labels = new Map<string, string>()
   for (const sid of family) {
@@ -108,7 +134,7 @@ export function buildFamilyLabels(
       if (!list) continue
       for (const p of list) {
         if (p.type !== "tool") continue
-        const child = p.state?.metadata?.sessionId
+        const child = childID(p)
         if (!child || !family.has(child)) continue
         const raw = p.state?.input?.subagent_type || p.state?.input?.description || p.tool || "task"
         const desc = raw.length > LABEL_CAP ? raw.slice(0, LABEL_CAP - 2) + "…" : raw
@@ -135,4 +161,31 @@ export function buildCostBreakdown(
     items.push({ label, cost })
   }
   return items
+}
+
+const VISIBLE_CHILDREN = 8
+
+/**
+ * Collapse a cost breakdown for display in the tooltip.
+ * - The root entry (first item) always stays at the top.
+ * - Child entries are shown in reverse order (most recent first).
+ * - When there are more than VISIBLE_CHILDREN child entries, the
+ *   oldest are aggregated into a single summary line.
+ *
+ * Pure function — no store dependency.
+ */
+export function collapseCostBreakdown(
+  items: Array<{ label: string; cost: number }>,
+  summaryLabel: (count: number) => string,
+): Array<{ label: string; cost: number }> {
+  const root = items[0]
+  const children = items.slice(1)
+  const reversed = [...children].reverse()
+
+  if (reversed.length <= VISIBLE_CHILDREN) return [root, ...reversed]
+
+  const visible = reversed.slice(0, VISIBLE_CHILDREN)
+  const hidden = reversed.slice(VISIBLE_CHILDREN)
+  const aggregated = hidden.reduce((sum, e) => sum + e.cost, 0)
+  return [root, ...visible, { label: summaryLabel(hidden.length), cost: aggregated }]
 }

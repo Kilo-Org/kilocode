@@ -3,7 +3,7 @@
  * Stories for Settings and ProvidersTab components.
  */
 
-import { onMount } from "solid-js"
+import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
@@ -12,7 +12,8 @@ import ProvidersTab from "../components/settings/ProvidersTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, CommandConfig } from "../types/messages"
+import type { AgentConfig, CommandConfig, Config } from "../types/messages"
+import IndexingTab from "../components/settings/IndexingTab"
 
 const meta: Meta = {
   title: "Settings",
@@ -63,6 +64,7 @@ export const AgentBehaviourAgents: Story = {
     const session = {
       ...mockSessionValue({ id: "agents-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -87,6 +89,7 @@ export const AgentBehaviourEditCustomMode: Story = {
     const session = {
       ...mockSessionValue({ id: "edit-mode-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -99,6 +102,14 @@ export const AgentBehaviourEditCustomMode: Story = {
         prompt: "You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
         model: "anthropic/claude-sonnet-4-20250514",
         temperature: 0.3,
+        permission: {
+          read: "allow",
+          grep: "allow",
+          glob: "allow",
+          edit: "deny",
+          bash: "deny",
+          task: "ask",
+        },
       },
     }
     return (
@@ -179,6 +190,7 @@ export const AgentBehaviourWorkflows: Story = {
     const session = {
       ...mockSessionValue({ id: "workflows-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -201,6 +213,7 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
     const session = {
       ...mockSessionValue({ id: "workflows-empty-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -298,6 +311,7 @@ export const ModeEditExport: Story = {
     const session = {
       ...mockSessionValue({ id: "export-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -312,6 +326,81 @@ export const ModeEditExport: Story = {
           </div>
         </SessionContext.Provider>
       </StoryProviders>
+    )
+  },
+}
+
+export const ModeEditPermissions: Story = {
+  name: "ModeEditView — per-agent permissions",
+  render: () => {
+    const cfg: Record<string, AgentConfig> = {
+      reviewer: {
+        description: "Review code without editing it",
+        prompt: "Find bugs, regressions, and missing tests.",
+        permission: {
+          "*": "deny",
+          read: "allow",
+          grep: "allow",
+          glob: "allow",
+          edit: { "*": "deny", "**/*.md": "allow" },
+          bash: "deny",
+          task: "ask",
+          skill: "deny",
+        },
+      },
+    }
+    const session = {
+      ...mockSessionValue({ id: "permissions-story", status: "idle" }),
+      agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
+      removeMode: noop,
+      removeMcp: noop,
+      skills: () => [],
+      refreshSkills: noop,
+      removeSkill: noop,
+    }
+    return (
+      <StoryProviders
+        sessionID="permissions-story"
+        status="idle"
+        config={{ permission: { bash: "ask", external_directory: "ask" }, agent: cfg } as any}
+      >
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "460px", height: "760px", overflow: "auto" }}>
+            <ModeEditView name="reviewer" onBack={noop} onRemove={noop} />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const IndexingProviderBlurRace: Story = {
+  name: "IndexingTab",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      experimental: {
+        semantic_indexing: true,
+      },
+      indexing: {
+        provider: "openai",
+        openai: { apiKey: "" },
+        gemini: { apiKey: "" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-provider-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
     )
   },
 }

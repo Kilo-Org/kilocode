@@ -3,23 +3,46 @@
 // https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/utils/editCorrector.ts
 // https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-26-25.ts
 
-import z from "zod"
 import * as path from "path"
-import { Tool } from "./tool"
-import { LSP } from "../lsp"
+import { Effect, Schema, Semaphore } from "effect"
+import * as Tool from "./tool"
+import { LSP } from "@/lsp/lsp"
 import { createTwoFilesPatch, diffLines } from "diff"
 import DESCRIPTION from "./edit.txt"
 import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Bus } from "../bus"
-import { FileTime } from "../file/time"
-import { Filesystem } from "../util/filesystem"
+import { Format } from "../format"
 import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
-import { assertExternalDirectory } from "./external-directory"
+import { assertExternalDirectoryEffect } from "./external-directory"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import * as Bom from "@/util/bom"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 
-const MAX_DIAGNOSTICS_PER_FILE = 20
+const MAX_DIFF_CONTENT = 500_000 // kilocode_change
+
+// kilocode_change start
+export function buildFileDiff(file: string, before: string, after: string): Snapshot.FileDiff {
+  const tooLarge = before.length > MAX_DIFF_CONTENT || after.length > MAX_DIFF_CONTENT
+  let additions = 0
+  let deletions = 0
+  if (!tooLarge) {
+    for (const change of diffLines(before, after)) {
+      if (change.added) additions += change.count || 0
+      if (change.removed) deletions += change.count || 0
+    }
+  }
+  return {
+    file,
+    patch: tooLarge ? "" : createTwoFilesPatch(file, file, before, after),
+    additions,
+    deletions,
+  }
+}
+// kilocode_change end
 
 function normalizeLineEndings(text: string): string {
   return text.replaceAll("\r\n", "\n")
@@ -34,139 +57,185 @@ function convertToLineEnding(text: string, ending: "\n" | "\r\n"): string {
   return text.replaceAll("\n", "\r\n")
 }
 
-export const EditTool = Tool.define("edit", {
-  description: DESCRIPTION,
-  parameters: z.object({
-    filePath: z.string().describe("The absolute path to the file to modify"),
-    oldString: z.string().describe("The text to replace"),
-    newString: z.string().describe("The text to replace it with (must be different from oldString)"),
-    replaceAll: z.boolean().optional().describe("Replace all occurrences of oldString (default false)"),
+const locks = new Map<string, Semaphore.Semaphore>()
+
+function lock(filePath: string) {
+  const resolvedFilePath = AppFileSystem.resolve(filePath)
+  const hit = locks.get(resolvedFilePath)
+  if (hit) return hit
+
+  const next = Semaphore.makeUnsafe(1)
+  locks.set(resolvedFilePath, next)
+  return next
+}
+
+export const Parameters = Schema.Struct({
+  filePath: Schema.String.annotate({ description: "The absolute path to the file to modify" }),
+  oldString: Schema.String.annotate({ description: "The text to replace" }),
+  newString: Schema.String.annotate({
+    description: "The text to replace it with (must be different from oldString)",
   }),
-  async execute(params, ctx) {
-    if (!params.filePath) {
-      throw new Error("filePath is required")
-    }
+  replaceAll: Schema.optional(Schema.Boolean).annotate({
+    description: "Replace all occurrences of oldString (default false)",
+  }),
+})
 
-    if (params.oldString === params.newString) {
-      throw new Error("No changes to apply: oldString and newString are identical.")
-    }
-
-    const filePath = path.isAbsolute(params.filePath) ? params.filePath : path.join(Instance.directory, params.filePath)
-    await assertExternalDirectory(ctx, filePath)
-
-    let diff = ""
-    let contentOld = ""
-    let contentNew = ""
-    await FileTime.withLock(filePath, async () => {
-      if (params.oldString === "") {
-        const existed = await Filesystem.exists(filePath)
-        contentNew = params.newString
-        diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
-        await ctx.ask({
-          permission: "edit",
-          patterns: [path.relative(Instance.worktree, filePath)],
-          always: ["*"],
-          metadata: {
-            filepath: filePath,
-            diff,
-          },
-        })
-        await Filesystem.write(filePath, params.newString)
-        await Bus.publish(File.Event.Edited, {
-          file: filePath,
-        })
-        await Bus.publish(FileWatcher.Event.Updated, {
-          file: filePath,
-          event: existed ? "change" : "add",
-        })
-        FileTime.read(ctx.sessionID, filePath)
-        return
-      }
-
-      const stats = Filesystem.stat(filePath)
-      if (!stats) throw new Error(`File ${filePath} not found`)
-      if (stats.isDirectory()) throw new Error(`Path is a directory, not a file: ${filePath}`)
-      await FileTime.assert(ctx.sessionID, filePath)
-      contentOld = await Filesystem.readText(filePath)
-
-      const ending = detectLineEnding(contentOld)
-      const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
-      const next = convertToLineEnding(normalizeLineEndings(params.newString), ending)
-
-      contentNew = replace(contentOld, old, next, params.replaceAll)
-
-      diff = trimDiff(
-        createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),
-      )
-      await ctx.ask({
-        permission: "edit",
-        patterns: [path.relative(Instance.worktree, filePath)],
-        always: ["*"],
-        metadata: {
-          filepath: filePath,
-          diff,
-        },
-      })
-
-      await Filesystem.write(filePath, contentNew)
-      await Bus.publish(File.Event.Edited, {
-        file: filePath,
-      })
-      await Bus.publish(FileWatcher.Event.Updated, {
-        file: filePath,
-        event: "change",
-      })
-      contentNew = await Filesystem.readText(filePath)
-      diff = trimDiff(
-        createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),
-      )
-      FileTime.read(ctx.sessionID, filePath)
-    })
-
-    const filediff: Snapshot.FileDiff = {
-      file: filePath,
-      before: contentOld,
-      after: contentNew,
-      additions: 0,
-      deletions: 0,
-    }
-    for (const change of diffLines(contentOld, contentNew)) {
-      if (change.added) filediff.additions += change.count || 0
-      if (change.removed) filediff.deletions += change.count || 0
-    }
-
-    ctx.metadata({
-      metadata: {
-        diff,
-        filediff,
-        diagnostics: {},
-      },
-    })
-
-    let output = "Edit applied successfully."
-    await LSP.touchFile(filePath, true)
-    const diagnostics = await LSP.diagnostics()
-    const normalizedFilePath = Filesystem.normalizePath(filePath)
-    const issues = diagnostics[normalizedFilePath] ?? []
-    const errors = issues.filter((item) => item.severity === 1)
-    if (errors.length > 0) {
-      const limited = errors.slice(0, MAX_DIAGNOSTICS_PER_FILE)
-      const suffix =
-        errors.length > MAX_DIAGNOSTICS_PER_FILE ? `\n... and ${errors.length - MAX_DIAGNOSTICS_PER_FILE} more` : ""
-      output += `\n\nLSP errors detected in this file, please fix:\n<diagnostics file="${filePath}">\n${limited.map(LSP.Diagnostic.pretty).join("\n")}${suffix}\n</diagnostics>`
-    }
+export const EditTool = Tool.define(
+  "edit",
+  Effect.gen(function* () {
+    const lsp = yield* LSP.Service
+    const afs = yield* AppFileSystem.Service
+    const format = yield* Format.Service
+    const bus = yield* Bus.Service
 
     return {
-      metadata: {
-        diagnostics: filterDiagnostics(diagnostics, [normalizedFilePath]), // kilocode_change
-        diff,
-        filediff,
-      },
-      title: `${path.relative(Instance.worktree, filePath)}`,
-      output,
+      description: DESCRIPTION,
+      parameters: Parameters,
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        Effect.gen(function* () {
+          if (!params.filePath) {
+            throw new Error("filePath is required")
+          }
+
+          if (params.oldString === params.newString) {
+            throw new Error("No changes to apply: oldString and newString are identical.")
+          }
+
+          const filePath = path.isAbsolute(params.filePath)
+            ? params.filePath
+            : path.join(Instance.directory, params.filePath)
+          yield* assertExternalDirectoryEffect(ctx, filePath)
+
+          let diff = ""
+          let contentOld = ""
+          let contentNew = ""
+          let cachedFilediff: Snapshot.FileDiff | undefined // kilocode_change
+          yield* lock(filePath).withPermits(1)(
+            Effect.gen(function* () {
+              if (params.oldString === "") {
+                const existed = yield* afs.existsSafe(filePath)
+                // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
+                // derive the BOM flag from the detected encoding label instead of the decoded text.
+                const pre = existed ? yield* EncodedIO.read(filePath) : { text: "", encoding: "utf-8" }
+                const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
+                // kilocode_change end
+                const next = Bom.split(params.newString)
+                const desiredBom = source.bom || next.bom
+                contentOld = source.text
+                contentNew = next.text
+                diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
+                cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+                yield* ctx.ask({
+                  permission: "edit",
+                  patterns: [path.relative(Instance.worktree, filePath)],
+                  always: ["*"],
+                  metadata: {
+                    filepath: filePath,
+                    diff,
+                    filediff: cachedFilediff, // kilocode_change
+                  },
+                })
+                yield* EncodedIO.write(filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+                if (yield* format.file(filePath)) {
+                  contentNew = yield* Bom.syncFile(afs, filePath, desiredBom)
+                }
+                yield* bus.publish(File.Event.Edited, { file: filePath })
+                yield* bus.publish(FileWatcher.Event.Updated, {
+                  file: filePath,
+                  event: existed ? "change" : "add",
+                })
+                return
+              }
+
+              const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
+              if (!info) throw new Error(`File ${filePath} not found`)
+              if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
+              // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
+              // derive the BOM flag from the detected encoding label instead of the decoded text.
+              const pre = yield* EncodedIO.read(filePath)
+              const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
+              // kilocode_change end
+              contentOld = source.text
+
+              const ending = detectLineEnding(contentOld)
+              const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
+              const replacement = convertToLineEnding(normalizeLineEndings(params.newString), ending)
+
+              const next = Bom.split(replace(contentOld, old, replacement, params.replaceAll))
+              const desiredBom = source.bom || next.bom
+              contentNew = next.text
+
+              diff = trimDiff(
+                createTwoFilesPatch(
+                  filePath,
+                  filePath,
+                  normalizeLineEndings(contentOld),
+                  normalizeLineEndings(contentNew),
+                ),
+              )
+              cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+              yield* ctx.ask({
+                permission: "edit",
+                patterns: [path.relative(Instance.worktree, filePath)],
+                always: ["*"],
+                metadata: {
+                  filepath: filePath,
+                  diff,
+                  filediff: cachedFilediff, // kilocode_change
+                },
+              })
+
+              yield* EncodedIO.write(filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+              if (yield* format.file(filePath)) {
+                contentNew = yield* Bom.syncFile(afs, filePath, desiredBom)
+              }
+              yield* bus.publish(File.Event.Edited, { file: filePath })
+              yield* bus.publish(FileWatcher.Event.Updated, {
+                file: filePath,
+                event: "change",
+              })
+              diff = trimDiff(
+                createTwoFilesPatch(
+                  filePath,
+                  filePath,
+                  normalizeLineEndings(contentOld),
+                  normalizeLineEndings(contentNew),
+                ),
+              )
+            }).pipe(Effect.orDie),
+          )
+
+          const filediff: Snapshot.FileDiff = cachedFilediff ?? buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+
+          yield* ctx.metadata({
+            metadata: {
+              diff,
+              filediff, // kilocode_change
+              diagnostics: {},
+            },
+          })
+
+          let output = "Edit applied successfully."
+          yield* lsp.touchFile(filePath, "document")
+          const diagnostics = yield* lsp.diagnostics()
+          const normalizedFilePath = AppFileSystem.normalizePath(filePath)
+          const block = LSP.Diagnostic.report(filePath, diagnostics[normalizedFilePath] ?? [])
+          if (block) output += `\n\nLSP errors detected in this file, please fix:\n${block}`
+          output += yield* Effect.promise(() => ConfigValidation.check(filePath)) // kilocode_change
+
+          return {
+            metadata: {
+              diagnostics: filterDiagnostics(diagnostics, [normalizedFilePath]), // kilocode_change
+              diff,
+              filediff, // kilocode_change
+            },
+            title: `${path.relative(Instance.worktree, filePath)}`,
+            output,
+          }
+        }),
     }
-  },
-})
+  }),
+)
 
 export type Replacer = (content: string, find: string) => Generator<string, void, unknown>
 
@@ -398,7 +467,7 @@ export const WhitespaceNormalizedReplacer: Replacer = function* (content, find) 
             if (match) {
               yield match[0]
             }
-          } catch (e) {
+          } catch {
             // Invalid regex pattern, skip
           }
         }

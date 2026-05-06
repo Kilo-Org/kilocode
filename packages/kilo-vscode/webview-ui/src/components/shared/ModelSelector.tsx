@@ -29,6 +29,7 @@ import {
   sanitizeName,
 } from "./model-selector-utils"
 import { ModelPreview } from "./ModelPreview"
+import { searchMatch } from "../../utils/search-match"
 
 // ---------------------------------------------------------------------------
 // Row / group key helpers — single source of truth for key formatting
@@ -77,6 +78,10 @@ export interface ModelSelectorBaseProps {
   value: ModelSelection | null
   /** Called when the user picks a model */
   onSelect: (providerID: string, modelID: string) => void
+  /** Called after a pick closes the popover */
+  onPick?: () => void
+  /** Called after Escape closes the popover without picking */
+  onCancel?: () => void
   /** Popover placement — defaults to "top-start" */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Allow clearing the selection (shows a "Not set" option) */
@@ -167,11 +172,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   // Flat filtered list for keyboard navigation
   const filtered = createMemo(() => {
-    const q = debouncedSearch().toLowerCase()
+    const q = debouncedSearch().trim()
     if (!q) {
       return visibleModels()
     }
-    return visibleModels().filter((m) => m.name.toLowerCase().includes(q))
+    return visibleModels().filter(
+      (m) => searchMatch(q, m.name) || searchMatch(q, m.id) || searchMatch(q, m.providerName),
+    )
   })
 
   // Live set of favorited keys — drives star icon visual state (filled vs outline).
@@ -358,9 +365,21 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   window.addEventListener("openModelPicker", onTrigger)
   onCleanup(() => window.removeEventListener("openModelPicker", onTrigger))
 
+  const onEscape = (e: KeyboardEvent) => {
+    if (!open() || e.key !== "Escape") return
+    e.preventDefault()
+    cancel()
+  }
+  createEffect(() => {
+    if (!open()) return
+    window.addEventListener("keydown", onEscape, true)
+    onCleanup(() => window.removeEventListener("keydown", onEscape, true))
+  })
+
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
+    props.onPick?.()
   }
 
   function pickClear() {
@@ -369,6 +388,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     setPreviewKey(CLEAR_KEY)
     props.onSelect("", "")
     setOpen(false)
+    props.onPick?.()
+  }
+
+  function cancel() {
+    if (!open()) return
+    setOpen(false)
+    props.onCancel?.()
   }
 
   function setRow(key: string) {
@@ -432,7 +458,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
     if (e.key === "Escape") {
       e.preventDefault()
-      setOpen(false)
+      cancel()
       return
     }
 
@@ -712,7 +738,12 @@ export const ModelSelector: Component = () => {
       value={session.selected()}
       onSelect={(providerID, modelID) => {
         session.selectModel(providerID, modelID)
-        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+      }}
+      onPick={() => {
+        requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+      }}
+      onCancel={() => {
+        requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
       }}
     />
   )

@@ -9,16 +9,29 @@ import * as vscode from "vscode"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
+import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
+import type { AutoApproveController } from "../commands/toggle-auto-approve"
 
 export class VscodeHost implements Host {
+  private diffVirtual: DiffVirtualProvider | undefined
+  private autoApprove: AutoApproveController | undefined
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
     private readonly context: vscode.ExtensionContext,
   ) {}
+
+  setDiffVirtualProvider(provider: DiffVirtualProvider): void {
+    this.diffVirtual = provider
+  }
+
+  setAutoApproveController(ctrl: AutoApproveController): void {
+    this.autoApprove = ctrl
+  }
 
   openPanel(opts: {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
@@ -74,9 +87,13 @@ export class VscodeHost implements Host {
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       slimEditMetadata: true,
     })
+    if (this.diffVirtual) {
+      provider.setDiffVirtualProvider(this.diffVirtual)
+    }
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: opts.onBeforeMessage,
     })
+    if (this.autoApprove) provider.setAutoApproveController(this.autoApprove)
 
     const sessions: SessionProvider = {
       setSessionDirectory: (id, dir) => provider.setSessionDirectory(id, dir),
@@ -85,6 +102,8 @@ export class VscodeHost implements Host {
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
       registerSession: (s) => provider.registerSession(s),
+      recoverPendingPrompts: () => provider.recoverPendingPrompts(),
+      onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       dispose: () => provider.dispose(),
     }
 
@@ -92,13 +111,32 @@ export class VscodeHost implements Host {
       get active() {
         return panel.active
       },
+      get visible() {
+        return panel.visible
+      },
       postMessage(msg) {
         void panel.webview.postMessage(msg)
+      },
+      waitForReady() {
+        return provider.waitForReady()
+      },
+      waitForActive() {
+        if (panel.active) return Promise.resolve()
+        return new Promise((resolve) => {
+          const sub = panel.onDidChangeViewState((e) => {
+            if (!e.webviewPanel.active) return
+            sub.dispose()
+            resolve()
+          })
+        })
       },
       reveal(preserveFocus) {
         panel.reveal(vscode.ViewColumn.One, preserveFocus ?? false)
       },
       sessions,
+      onDidChangeVisibility(cb) {
+        return panel.onDidChangeViewState((e) => cb(e.webviewPanel.visible))
+      },
       onDidDispose(cb) {
         return panel.onDidDispose(cb)
       },
@@ -160,9 +198,11 @@ export class VscodeHost implements Host {
     TelemetryProxy.capture(event as TelemetryEventName, properties)
   }
 
+  openExternal(url: string): void {
+    void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
   refreshGit(): void {
-    // Trigger VS Code's built-in git extension to re-scan repositories.
-    // This picks up worktrees whose gitdir refs were just rewritten by migration.
     void vscode.commands.executeCommand("git.refresh")
   }
 

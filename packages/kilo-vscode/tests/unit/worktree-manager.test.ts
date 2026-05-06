@@ -543,11 +543,12 @@ describe("WorktreeManager metadata", () => {
     const mgr = createManager(root)
     const result = await mgr.createWorktree({ prompt: "session-test" })
 
-    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch")
+    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch", "origin")
     const meta = await mgr.readMetadata(result.path)
 
     expect(meta?.sessionId).toBe("sess-abc-123")
     expect(meta?.parentBranch).toBe("feature-branch")
+    expect(meta?.remote).toBe("origin")
   })
 
   it("returns undefined when no metadata exists", async () => {

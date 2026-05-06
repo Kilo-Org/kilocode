@@ -32,7 +32,10 @@ interface KiloRoutesDeps extends ImportDeps {
   Auth: Auth
   ModelCache: ModelCache
   z: Z
+  Instance: ImportDeps["Instance"] & { disposeAll(): Promise<void> }
 }
+
+const FIM_TIMEOUT_MS = 30_000
 
 /**
  * Create Kilo Gateway routes with OpenCode dependencies injected
@@ -109,6 +112,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
               content: z.string().optional(),
             })
             .optional(),
+          text: z.string().optional(), // Text-completion style streaming (Mercury)
         }),
       )
       .optional(),
@@ -206,6 +210,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
         ModelCache.clear("kilo")
         clearModesCache()
+        await Instance.disposeAll()
 
         return c.json(true)
       },
@@ -340,25 +345,35 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           [HEADER_FEATURE]: "autocomplete",
         }
 
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: fimModel,
-            prompt: prefix,
-            suffix,
-            max_tokens: fimMaxTokens,
-            temperature: fimTemperature,
-            stream: true,
-          }),
-        })
+        const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          return c.json({ error: `FIM request failed: ${response.status} ${errorText}` }, response.status as any)
+        let response: Response
+        try {
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            signal,
+            body: JSON.stringify({
+              model: fimModel,
+              prompt: prefix,
+              suffix,
+              max_tokens: fimMaxTokens,
+              temperature: fimTemperature,
+              stream: true,
+            }),
+          })
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "TimeoutError")
+            return c.json({ error: "FIM request timed out" }, 504 as any)
+          if (signal.aborted) return c.json({ error: "FIM request canceled" }, 499 as any)
+          throw err
         }
 
-        // Stream the response through
+        if (!response.ok) {
+          const text = await response.text()
+          return c.json({ error: `FIM request failed: ${response.status} ${text}` }, response.status as any)
+        }
+
         return new Response(response.body, {
           headers: {
             "Content-Type": "text/event-stream",

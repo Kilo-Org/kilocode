@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "Varias sesiones están en ejecución y se interrumpirán",
   "marketplace.warning.installAnyway": "Instalar de todas formas",
   "marketplace.warning.cancel": "Cancelar",
+  "marketplace.contribute.prompt": "¿Falta una skill, modo o servidor MCP?",
+  "marketplace.contribute.cta": "Contribuir en GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementar",
+  "plan.followup.question": "¿Listo para implementar?",
+  "plan.followup.answer.newSession": "Iniciar nueva sesión",
+  "plan.followup.answer.newSession.description": "Implementar en una sesión nueva con contexto limpio",
+  "plan.followup.answer.continue": "Continuar aquí",
+  "plan.followup.answer.continue.description": "Implementar el plan en esta sesión",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "La instantánea es lenta",
+  "snapshot.slowRepo.question":
+    "Está tardando mucho en inicializar el sistema de instantáneas, probablemente por el tamaño del repositorio.\n\n¿Quieres desactivar las instantáneas para este repositorio?",
+  "snapshot.slowRepo.answer.continue": "Continuar con instantáneas",
+  "snapshot.slowRepo.answer.continue.description":
+    "Sigue esperando hasta que termine la instantánea. Los turnos siguientes serán rápidos una vez creada la instantánea inicial.",
+  "snapshot.slowRepo.answer.disable": "Desactivar para este proyecto",
+  "snapshot.slowRepo.answer.disable.description":
+    "Apaga las instantáneas de Kilo para este proyecto. Perderás deshacer/rehacer de los cambios de Kilo, pero git seguirá rastreando todo.",
+
+  "ui.messagePart.openInDiffViewer": "Abrir en el visor de diferencias",
 }

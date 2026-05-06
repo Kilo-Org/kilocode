@@ -11,8 +11,9 @@ import * as fs from "fs"
 import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
-import type { GitOps } from "./GitOps"
+import { type GitOps, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
+import { markNoIndex } from "../util/spotlight"
 import {
   parsePRUrl,
   localBranchName,
@@ -30,7 +31,7 @@ import {
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
-interface WorktreeInfo {
+export interface WorktreeInfo {
   branch: string
   path: string
   /** Bare branch name (e.g. "main"), without remote prefix. */
@@ -424,6 +425,7 @@ export class WorktreeManager {
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
     await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
+    await markNoIndex(this.dir, this.log)
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
     this.cleanupOrphanedTempDirs()
@@ -575,6 +577,7 @@ export class WorktreeManager {
     if (!fs.existsSync(this.dir)) {
       await fs.promises.mkdir(this.dir, { recursive: true })
     }
+    await markNoIndex(this.dir, this.log)
   }
 
   private async resolveGitDir(): Promise<string> {
@@ -662,10 +665,11 @@ export class WorktreeManager {
         }
       }
 
-      // Either not cached or cache is stale - do the fetch
+      // Either not cached or cache is stale - do the fetch.
+      // Use non-interactive env to prevent SSH passphrase popups.
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
-        await this.git.fetch(remote, branch)
+        await simpleGit(this.root).env(nonInteractiveEnv()).fetch(remote, branch)
         WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
@@ -855,6 +859,15 @@ export class WorktreeManager {
       if (branches.all.length > 0) return branches.all[0]
     } catch (e) {
       this.log(`defaultBranch: branchLocal failed: ${e}`)
+    }
+
+    // Check if this is an empty repo with no commits (unborn branch).
+    // rev-parse --verify HEAD exits non-zero only when HEAD has no target
+    // commit, which is the definitive test for an unborn branch.
+    try {
+      await this.git.raw(["rev-parse", "--verify", "HEAD"])
+    } catch {
+      throw new Error("This repository has no commits yet. Create an initial commit before using worktrees.")
     }
 
     throw new Error("Could not determine default branch")

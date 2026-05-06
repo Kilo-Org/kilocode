@@ -1,0 +1,68 @@
+on:
+  schedule:
+    - cron: "7,37 * * * *" # every 30 min at :07 and :37
+  workflow_dispatch:
+
+concurrency:
+  group: opencode-release-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check-release:
+    if: vars.OPENCODE_WATCH_ENABLED != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          data=$(gh release view --repo anomalyco/opencode --json tagName,name,url 2>/dev/null || echo '{}')
+          tag=$(echo "$data" | jq -r '.tagName // empty')
+          [ -z "$tag" ] && { echo "tag=" >> "$GITHUB_OUTPUT"; exit 0; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "name=$(echo "$data" | jq -r '.name // .tagName')" >> "$GITHUB_OUTPUT"
+          echo "url=$(echo "$data" | jq -r '.url')" >> "$GITHUB_OUTPUT"
+
+      - if: steps.fetch.outputs.tag != ''
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/last-seen
+          key: last-seen-${{ steps.fetch.outputs.tag }}
+          restore-keys: last-seen-
+
+      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+        name: Trigger opencode sync
+        env:
+          URL: ${{ secrets.OPENCODE_WATCH_SYNC_URL }}
+          SECRET: ${{ secrets.OPENCODE_WATCH_SYNC_SECRET }}
+        run: |
+          if [ -n "$URL" ] && [ -n "$SECRET" ]; then
+            curl -sf -X POST "$URL" -H "x-sync-secret: $SECRET" -H "Content-Type: application/json" -d '{}' || true
+          fi
+
+      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+        name: Notify Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.OPENCODE_WATCH_SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            name: "${{ steps.fetch.outputs.name }}"
+            tag: "${{ steps.fetch.outputs.tag }}"
+            url: "${{ steps.fetch.outputs.url }}"
+
+      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+        name: Mark tag as seen
+        run: mkdir -p .cache/last-seen && echo "${{ steps.fetch.outputs.tag }}" > .cache/last-seen/tag.txt
+
+      - if: success() && steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+        name: Save seen-tag cache
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/last-seen
+          key: last-seen-${{ steps.fetch.outputs.tag }}

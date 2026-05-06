@@ -1,8 +1,9 @@
 import * as vscode from "vscode"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "./services/cli-backend"
-import { buildWebviewHtml } from "./utils"
+import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { WorktreeDiffClient, type DiffTarget } from "./worktree-diff-client"
 import {
   appendOutput,
   getWorkspaceRoot,
@@ -10,6 +11,7 @@ import {
   openWorkspaceRelativeFile,
   resolveLocalDiffTarget,
 } from "./review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
 
 /**
  * DiffViewerProvider opens a full-screen diff viewer in an editor tab.
@@ -21,9 +23,10 @@ export class DiffViewerProvider implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private lastDiffHash: string | undefined
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: DiffTarget | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
+  private fontConfigDisposable: vscode.Disposable | undefined
   private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
 
   constructor(
@@ -72,10 +75,14 @@ export class DiffViewerProvider implements vscode.Disposable {
 
     panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
     panel.webview.html = this.getHtml(panel.webview)
+    this.fontConfigDisposable?.dispose()
+    this.fontConfigDisposable = watchFontSizeConfig((msg) => this.post(msg))
 
     panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.stopDiffPolling()
+      this.fontConfigDisposable?.dispose()
+      this.fontConfigDisposable = undefined
       this.panel = undefined
     })
   }
@@ -88,8 +95,10 @@ export class DiffViewerProvider implements vscode.Disposable {
         type: "ready",
         vscodeLanguage: vscode.env.language,
         languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+        fontSize: getWebviewFontSize(),
         workspaceDirectory: getWorkspaceRoot(),
       })
+      this.post({ type: "diffViewer.markdownRender", render: getDiffMarkdownRender() })
       this.startDiffPolling()
       return
     }
@@ -108,12 +117,53 @@ export class DiffViewerProvider implements vscode.Disposable {
       return
     }
 
+    if (type === "diffViewer.setMarkdownRender" && typeof msg.render === "boolean") {
+      void setDiffMarkdownRender(msg.render)
+      return
+    }
+
+    if (type === "diffViewer.revertFile" && typeof msg.file === "string") {
+      void this.revertFile(msg.file)
+      return
+    }
+
     if (type === "openFile" && typeof msg.filePath === "string") {
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
     }
   }
 
-  private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
+  private async revertFile(file: string): Promise<void> {
+    const target = this.cachedDiffTarget ?? (await this.resolveLocalDiffTarget())
+    if (!target) {
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: "error",
+        message: "Could not resolve diff target",
+      })
+      return
+    }
+
+    try {
+      const diff = new WorktreeDiffClient(this.connectionService.getClient(), this.gitOps, (...args) =>
+        this.log(...args),
+      )
+      const result = await diff.revertFile(target, file)
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: result.ok ? "success" : "error",
+        message: result.message,
+      })
+      if (result.ok) void this.pollDiff()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.log("Failed to revert file:", message)
+      this.post({ type: "diffViewer.revertFileResult", file, status: "error", message })
+    }
+  }
+
+  private async resolveLocalDiffTarget(): Promise<DiffTarget | undefined> {
     return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), getWorkspaceRoot())
   }
 
@@ -212,6 +262,8 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
+    this.fontConfigDisposable?.dispose()
+    this.gitOps.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
   }

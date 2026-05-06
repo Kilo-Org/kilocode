@@ -3,6 +3,7 @@
 .am-layout {
   display: flex;
   height: 100vh;
+  font-size: var(--font-size-base);
   overflow: hidden;
 }
 
@@ -62,8 +63,7 @@
 }
 
 .am-local-item-active .am-local-branch {
-  color: var(--text-on-interactive-base);
-  opacity: 0.7;
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
 }
 
 .am-local-item-active .am-stat-files {
@@ -92,8 +92,8 @@
 }
 
 .am-local-branch {
-  font-size: var(--font-size-small);
-  color: var(--text-weak);
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,12 +181,11 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-worktree-item {
-  position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 8px 10px;
-  min-height: 40px;
+  padding: 6px 10px;
+  min-height: 36px;
   box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -195,6 +194,87 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   width: 100%;
   transition: background 200ms ease;
+}
+
+/* Left icon column — shrink-0, vertically centered with first row */
+.am-wt-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+/* Right content column — flex-1 with two rows */
+.am-wt-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Row 1: label + stats/hover-actions */
+.am-wt-row1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Grid overlay cell: stats visible by default, hover actions stacked on top */
+.am-wt-actions-cell {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  align-items: center;
+  margin-left: auto;
+}
+.am-wt-actions-cell > * {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Hover actions (shortcut badge + close button) — hidden by default, shown on hover */
+.am-wt-hover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+}
+.am-worktree-item:hover .am-wt-hover-actions {
+  opacity: 1;
+  visibility: visible;
+}
+/* Stats fade out on hover (replaced by hover actions in same grid cell) */
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats,
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Row 2: always present for consistent height; PR badge right-aligned */
+.am-wt-row2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 14px;
+}
+
+.am-worktree-subtitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker);
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.am-worktree-item-active .am-worktree-subtitle {
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
 }
 
 .am-worktree-item:hover {
@@ -238,14 +318,10 @@ button.am-section-toggle:hover .am-section-label {
   outline: none;
 }
 
-/* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) matching Superset style */
+/* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) */
 
 .am-shortcut-badge {
-  position: absolute;
-  right: 30px;
-  opacity: 0;
-  transition: opacity 150ms ease;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
   color: var(--text-weaker);
   pointer-events: none;
@@ -256,8 +332,7 @@ button.am-section-toggle:hover .am-section-label {
   right: 8px;
 }
 
-.am-local-item:hover .am-shortcut-badge,
-.am-worktree-item:hover .am-shortcut-badge {
+.am-local-item:hover .am-shortcut-badge {
   opacity: 1;
 }
 
@@ -278,29 +353,27 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
-.am-worktree-item:has(.am-worktree-rename-input) .am-shortcut-badge {
-  opacity: 0;
+.am-worktree-item:has(.am-worktree-rename-input) .am-wt-row2 {
+  display: none;
 }
 
 .am-worktree-close {
-  position: absolute;
-  right: 4px;
   flex-shrink: 0;
+}
+/* Compact close button inside worktree items */
+.am-worktree-close [data-component="icon-button"] {
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+}
+.am-worktree-close [data-component="icon"] {
+  width: 14px;
+  height: 14px;
+}
+
+.am-worktree-item:has(.am-worktree-rename-input) .am-wt-hover-actions {
   opacity: 0;
-}
-
-.am-worktree-item:hover .am-worktree-branch {
-  mask-image: linear-gradient(to right, black calc(100% - 72px), transparent calc(100% - 36px));
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 72px), transparent calc(100% - 36px));
-}
-
-.am-worktree-item:hover .am-worktree-close {
-  opacity: 1;
-}
-
-.am-worktree-item:has(.am-worktree-rename-input) .am-worktree-close {
-  opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
 }
 
 /* Inline delete confirmation */
@@ -315,7 +388,8 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-critical-strong) 25%, transparent);
 }
 
-.am-worktree-pending-delete .am-worktree-branch {
+.am-worktree-pending-delete .am-worktree-branch,
+.am-worktree-pending-delete .am-worktree-subtitle {
   opacity: 0.5;
   transition: opacity 200ms ease;
 }
@@ -325,16 +399,22 @@ button.am-section-toggle:hover .am-section-label {
   display: none;
 }
 
-.am-worktree-pending-delete .am-shortcut-badge {
+.am-worktree-pending-delete .am-wt-row2 {
+  visibility: hidden;
+}
+
+.am-worktree-pending-delete .am-wt-hover-actions {
   opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 .am-worktree-delete-hint {
+  position: absolute;
+  right: 0;
   font-size: var(--font-size-small);
   color: var(--text-on-brand-base);
   background: var(--surface-critical-strong);
   white-space: nowrap;
-  flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -383,19 +463,17 @@ button.am-section-toggle:hover .am-section-label {
 .am-worktree-spinner {
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
 }
 
 /* Per-worktree git stats (diff lines + commits missing from origin) */
 
 .am-worktree-stats {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -408,9 +486,7 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-stats-skeleton {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
+  align-items: center;
   flex-shrink: 0;
 }
 
@@ -422,8 +498,98 @@ button.am-section-toggle:hover .am-section-label {
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-.am-worktree-stats-skeleton-row:nth-child(2) {
-  animation-delay: 0.15s;
+.am-pr-badge-skeleton {
+  width: 52px;
+  height: 14px;
+  border-radius: 6px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+  animation-delay: 0.3s;
+  opacity: 0;
+  margin-left: auto;
+}
+
+.am-run-badge {
+  --am-run-accent: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--am-run-accent) 12%, transparent);
+  color: var(--am-run-accent);
+  font-size: var(--kilo-font-size-10);
+  line-height: 1;
+  margin-left: auto;
+}
+
+.am-run-badge [data-component="icon"] {
+  width: 11px;
+  height: 11px;
+  color: currentColor;
+}
+
+.am-run-badge-label {
+  color: currentColor;
+}
+
+.am-run-badge[data-run-state="running"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+  animation: am-run-pulse 1.5s ease-in-out infinite;
+}
+
+.am-run-badge[data-run-state="stopping"] {
+  --am-run-accent: #fbbf24;
+}
+
+.am-run-badge[data-run-state="success"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-run-badge[data-run-state="error"] {
+  --am-run-accent: #f87171;
+}
+
+@keyframes am-run-pulse {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Toolbar Run button group */
+.am-run-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.am-run-group-chevron {
+  padding: 0 2px !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.am-run-group-chevron [data-component="icon"] {
+  width: 12px;
+  height: 12px;
+}
+
+/* Unconfigured — muted until hover */
+.am-run-unconfigured {
+  opacity: 0.5;
+}
+.am-run-unconfigured:hover {
+  opacity: 0.85;
+}
+
+/* Green accent when running — uses VS Code's standard green token */
+.am-run-active,
+.am-run-active [data-component="icon"] {
+  color: var(--vscode-testing-iconPassed, #34d399) !important;
 }
 
 .am-stat-files {
@@ -436,6 +602,76 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-stat-deletions {
   color: #f87171;
+}
+
+/* PR pill badge — second row inside am-wt-row2.
+   Uses --pr-accent custom property (set inline) to derive all colors. */
+.am-pr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px 2px 4px;
+  border-radius: 6px;
+  border: none;
+  background: color-mix(in srgb, var(--pr-accent) 12%, transparent);
+  color: var(--pr-accent);
+  cursor: pointer;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: background 150ms ease;
+  margin-left: auto;
+}
+.am-pr-badge:hover {
+  background: color-mix(in srgb, var(--pr-accent) 25%, transparent);
+}
+.am-pr-badge [data-component="icon"] {
+  width: 12px;
+  height: 12px;
+  color: var(--pr-accent);
+}
+.am-pr-badge-number {
+  line-height: 1;
+  color: var(--text-muted);
+}
+.am-pr-badge:hover .am-pr-badge-number {
+  color: var(--pr-accent);
+}
+.am-pr-badge[data-pending] {
+  animation: am-pr-pulse 1.5s ease-in-out infinite;
+}
+@keyframes am-pr-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.am-worktree-item-active .am-pr-badge {
+  background: color-mix(in srgb, var(--pr-accent) 18%, transparent);
+}
+.am-worktree-item-active .am-pr-badge:hover {
+  background: color-mix(in srgb, var(--pr-accent) 30%, transparent);
+}
+
+/* Clickable link icon in hover card to open PR on GitHub */
+.am-pr-link {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 3px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 100ms ease;
+}
+.am-pr-link:hover {
+  opacity: 1;
+}
+.am-pr-link [data-component="icon"] {
+  width: 11px;
+  height: 11px;
 }
 
 .am-worktree-item-active .am-stat-files {
@@ -470,11 +706,154 @@ button.am-section-toggle:hover .am-section-label {
   color: #fca5a5;
 }
 
-.am-worktree-item:hover .am-worktree-stats,
-.am-worktree-item:hover .am-worktree-stats-skeleton,
 .am-local-item:hover .am-worktree-stats,
 .am-local-item:hover .am-worktree-stats-skeleton {
   opacity: 0;
+}
+
+/* User-defined sections — collapsible, color-coded groups */
+
+.am-section-group {
+  margin-top: 2px;
+  border-left: 2px solid var(--section-color, var(--vscode-panel-border));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: border-color 120ms;
+}
+
+.am-section-group-drop {
+  background: color-mix(in srgb, var(--section-color) 10%, transparent);
+  border-color: var(--section-color);
+  border-style: solid;
+}
+
+.am-section-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px 5px 6px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-weak);
+}
+
+.am-section-group-header:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.am-section-group-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.am-section-group-chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 120ms ease;
+}
+
+.am-section-group-chevron-collapsed {
+  transform: rotate(-90deg);
+}
+
+.am-section-group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-section-group-count {
+  flex-shrink: 0;
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker);
+  min-width: 14px;
+  text-align: center;
+}
+
+.am-section-group-body {
+  padding-left: 4px;
+}
+
+.am-section-group-rename {
+  background: var(--input-base, var(--vscode-input-background, #3c3c3c));
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  font-size: var(--kilo-font-size-11);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Color picker grid in section context menu */
+
+.am-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 8px;
+}
+
+.am-color-grid-item {
+  padding: 3px !important;
+  border-radius: 4px !important;
+  min-height: unset !important;
+}
+
+.am-color-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+}
+
+.am-color-swatch-active {
+  border-color: var(--vscode-foreground);
+  box-shadow: 0 0 0 1px var(--vscode-editor-background);
+}
+
+.am-color-swatch-default {
+  background: var(--vscode-panel-border);
+  position: relative;
+}
+
+.am-color-swatch-default::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  height: 1.5px;
+  background: var(--text-weaker);
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.am-color-swatch-sm {
+  width: 10px;
+  height: 10px;
+}
+
+.am-icon-flip {
+  transform: rotate(180deg);
+}
+
+/* Context menu danger item (delete section) */
+
+.am-ctx-menu-danger {
+  color: var(--text-error, var(--vscode-errorForeground, #f44));
 }
 
 /* Grouped worktrees — visual grouping with header and left accent */
@@ -494,7 +873,7 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-wt-group-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.2px;
   color: color-mix(in srgb, var(--border-focus, #007fd4) 80%, var(--text-weak));
@@ -614,7 +993,7 @@ button.am-section-toggle:hover .am-section-label {
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition:
     background-color 120ms,
@@ -713,7 +1092,7 @@ button.am-section-toggle:hover .am-section-label {
   padding: 0 12px;
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   white-space: nowrap;
   border: none;
@@ -765,6 +1144,11 @@ button.am-section-toggle:hover .am-section-label {
   touch-action: none;
 }
 
+.am-tab-sortable > [data-component="tooltip-trigger"],
+.am-tab-sortable > [data-slot="context-menu-trigger"] > [data-component="tooltip-trigger"] {
+  height: 100%;
+}
+
 .am-tab-dragging {
   opacity: 0.25;
 }
@@ -813,11 +1197,18 @@ body.am-wt-dragging-active * {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   color: var(--text-base);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-small);
   white-space: nowrap;
 }
 
 .am-tab-add {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Split-button variant used in the tab bar when the experimental
+   terminal tabs feature is active — primary icon + chevron dropdown. */
+.am-tab-add-split {
   flex-shrink: 0;
   align-self: center;
 }
@@ -854,7 +1245,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-empty-state-text {
-  font-size: 15px;
+  font-size: var(--kilo-font-size-15);
   font-weight: 500;
   color: var(--text-weak);
 }
@@ -898,7 +1289,7 @@ body.am-wt-dragging-active * {
   padding: 3px 6px;
   border-radius: 5px;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
@@ -993,46 +1384,6 @@ body.am-wt-dragging-active * {
   flex: 1;
   width: 100%;
   min-height: 0;
-  /* Pierre diffs needs --diffs-light-bg/--diffs-dark-bg for the color-mix()
-     calculations that produce red/green line backgrounds. Without a Shiki
-     worker pool these are never set by the theme layer, so we provide
-     fallbacks mapped to VS Code's editor background. */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  /* The unsafeCSS in @opencode-ai/ui uses 98%/92% mix ratios for line
-     backgrounds — only 2-8% tint, nearly invisible. Override via the
-     *-override custom properties that the unsafeCSS checks first.
-     These inherit across the Shadow DOM boundary. */
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
   --am-diff-count-size: 12px;
 }
 
@@ -1234,6 +1585,12 @@ body.am-wt-dragging-active * {
 .am-review-diff-content [data-slot="session-review-file-info"] {
   min-width: 0;
   flex: 1 1 auto;
+  cursor: grab;
+}
+
+.am-diff-content [data-slot="session-review-file-info"]:active,
+.am-review-diff-content [data-slot="session-review-file-info"]:active {
+  cursor: grabbing;
 }
 
 .am-diff-content [data-slot="session-review-file-name-container"],
@@ -1265,6 +1622,46 @@ body.am-wt-dragging-active * {
   gap: 8px;
 }
 
+.am-markdown-diff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--border-weak-base);
+  border-top: 1px solid var(--border-weak-base);
+  cursor: auto;
+}
+
+.am-markdown-diff[data-split="true"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.am-markdown-pane {
+  min-width: 0;
+  padding: 16px 20px 24px;
+  background: var(--vscode-editor-background, var(--surface-base));
+  color: var(--vscode-editor-foreground, var(--text-base));
+  overflow-x: auto;
+}
+
+.am-markdown-pane-title {
+  margin: -4px 0 12px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.am-markdown-pane [data-component="markdown"] {
+  max-width: 900px;
+}
+
+@media (max-width: 840px) {
+  .am-markdown-diff[data-split="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Keep +N/-N indicators at consistent size across side/fullscreen views */
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-additions"],
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-deletions"],
@@ -1286,7 +1683,7 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--vscode-editor-font-size, 13px);
+  font-size: var(--font-size-base);
 }
 
 .am-annotation-draft {
@@ -1408,7 +1805,7 @@ body.am-wt-dragging-active * {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   border-radius: 9px;
   background: var(--surface-interactive-strong);
@@ -1423,7 +1820,7 @@ body.am-wt-dragging-active * {
   padding: 0 6px;
   height: 18px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: color-mix(in oklab, var(--text-warning, #a15c00) 85%, var(--text-base));
   background: color-mix(in oklab, var(--surface-warning, rgba(245, 158, 11, 0.16)) 65%, transparent);
@@ -1438,7 +1835,7 @@ body.am-wt-dragging-active * {
   padding: 0 6px;
   height: 18px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--text-weak);
   background: color-mix(in oklab, var(--surface-interactive-base) 70%, transparent);
@@ -1518,7 +1915,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-setup-branch {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
   font-family: var(--font-family-mono, monospace);
 }
@@ -1633,15 +2030,36 @@ body.am-wt-dragging-active * {
 }
 
 .am-split-menu {
-  min-width: 210px;
+  min-width: 250px;
 }
 
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
 }
 
-.am-split-menu [data-slot="dropdown-menu-separator"] {
-  margin: 4px 0;
+.am-worktree-menu-gap {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.am-worktree-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.am-worktree-menu-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.am-worktree-menu-branch strong {
+  font-weight: 600;
 }
 
 /* New Versioned Session Dialog */
@@ -1685,7 +2103,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   outline: none;
   box-sizing: border-box;
 }
@@ -1727,7 +2145,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-config-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -1762,7 +2180,7 @@ body.am-wt-dragging-active * {
   border-radius: calc(var(--radius-sm) - 1px);
   background: transparent;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
   transition: all 100ms;
@@ -1782,7 +2200,7 @@ body.am-wt-dragging-active * {
 /* Version hint text */
 
 .am-nv-version-hint {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
@@ -1804,7 +2222,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-pill-compare-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1818,7 +2236,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-compare-count {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   color: var(--text-weaker);
   margin-left: 6px;
@@ -1873,7 +2291,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   outline: none;
 }
 
@@ -1889,7 +2307,7 @@ body.am-wt-dragging-active * {
 
 .am-mm-group-label {
   padding: 6px 10px 2px;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -1935,7 +2353,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-mm-item-name {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-base);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1949,7 +2367,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   cursor: pointer;
   outline: none;
@@ -1979,7 +2397,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition: color 100ms;
 }
@@ -2010,7 +2428,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-family: inherit;
   outline: none;
   transition: border-color 120ms;
@@ -2027,7 +2445,7 @@ body.am-wt-dragging-active * {
 /* Branch selector */
 
 .am-branch-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
@@ -2050,7 +2468,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition: background 80ms;
   text-align: left;
@@ -2087,7 +2505,7 @@ body.am-wt-dragging-active * {
   border-radius: 3px;
   background: var(--surface-raised-stronger-non-alpha);
   color: var(--text-weak);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-family: inherit;
   line-height: 1;
 }
@@ -2101,7 +2519,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-item-time {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   white-space: nowrap;
 }
@@ -2126,7 +2544,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2135,7 +2553,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-branch {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-weight: 600;
   color: var(--text-strong);
   line-height: 1.4;
@@ -2143,7 +2561,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-meta {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
   line-height: 1.4;
 }
@@ -2159,7 +2577,7 @@ body.am-wt-dragging-active * {
   background: var(--surface-inset-base);
   border: 1px solid var(--border-weak-base);
   font-family: var(--font-family-sans);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   line-height: 1;
   color: var(--text-weak);
@@ -2180,12 +2598,12 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-row-label {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
 .am-hover-card-row-value {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   color: var(--text-base);
 }
@@ -2212,7 +2630,7 @@ body.am-wt-dragging-active * {
 
 .am-hover-card-note {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1.35;
   color: var(--text-weak);
   text-align: left;
@@ -2229,7 +2647,7 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 6px;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 .am-hover-card-hint [data-component="icon"] {
@@ -2254,7 +2672,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-shortcuts-category-title {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2304,7 +2722,7 @@ body.am-wt-dragging-active * {
   background: var(--surface-inset-base);
   border: 1px solid var(--border-weak-base);
   font-family: var(--font-family-sans);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   line-height: 1;
   color: var(--text-weak);
@@ -2331,7 +2749,7 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
 }
 
@@ -2425,7 +2843,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
   transition: all 100ms;
@@ -2667,7 +3085,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-item-time {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   white-space: nowrap;
   flex-shrink: 0;
@@ -2675,7 +3093,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
@@ -2688,7 +3106,7 @@ body.am-wt-dragging-active * {
 .am-dropdown-empty {
   padding: 16px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
@@ -2697,7 +3115,7 @@ body.am-wt-dragging-active * {
 .am-import-empty {
   padding: 20px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
   line-height: 1.5;
 }
@@ -2744,7 +3162,7 @@ body.am-wt-dragging-active * {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
   font-variant-numeric: tabular-nums;
 }
@@ -2779,7 +3197,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-apply-conflicts-title {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--text-base);
 }
@@ -2798,7 +3216,7 @@ body.am-wt-dragging-active * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-base);
 }
 
@@ -2809,12 +3227,12 @@ body.am-wt-dragging-active * {
   line-height: 1.3;
   white-space: normal;
   word-break: break-word;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
 }
 
 .am-apply-alert {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--syntax-diff-delete, #da3319);
   line-height: 1.35;
 }
@@ -2851,39 +3269,6 @@ body.am-wt-dragging-active * {
   min-height: 0;
   min-width: 0;
   --am-diff-count-size: 12px;
-  /* Inherit pierre diffs CSS vars from am-diff-panel */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
 }
 
 /* Review toolbar */
@@ -2957,6 +3342,23 @@ body.am-wt-dragging-active * {
   font-weight: 500;
 }
 
+/* Virtual diff panel: file path in toolbar stats area */
+
+.am-review-toolbar-dir {
+  color: var(--text-weak);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.am-review-toolbar-fname {
+  color: var(--text-base);
+  white-space: nowrap;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
 /* Review body: file tree + diff viewer */
 
 .am-review-body {
@@ -3025,7 +3427,7 @@ body.am-wt-dragging-active * {
 
 /* Tighter diff line height in review mode */
 .am-review-layout {
-  --diffs-line-height: 20px;
+  --diffs-line-height: var(--kilo-font-size-20);
 }
 
 /* ─── File tree (GitHub-style) ─── */
@@ -3035,7 +3437,7 @@ body.am-wt-dragging-active * {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-family: var(--font-family-sans, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
@@ -3209,7 +3611,7 @@ body.am-wt-dragging-active * {
   border-radius: 8px;
   background: var(--surface-interactive-strong);
   color: var(--text-on-fill);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   line-height: 1;
   margin-left: 6px;
@@ -3233,7 +3635,7 @@ body.am-wt-dragging-active * {
   gap: 8px;
   padding: 8px 14px;
   border-top: 1px solid var(--border-weak-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   flex-shrink: 0;
 }
@@ -3259,7 +3661,7 @@ body.am-wt-dragging-active * {
 .am-branch-hint {
   margin-left: auto;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 /* ============================================
@@ -3502,4 +3904,98 @@ body.vscode-high-contrast-light {
   [data-slot="context-menu-separator"] {
     margin: 4px 0;
   }
+}
+
+/* Experimental terminal tabs (feature-flagged) */
+
+.am-tab-terminal {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.am-tab-terminal [data-component="icon"] {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/*
+ * Stacking layout for xterm terminal tabs.
+ *
+ * The hydration invariant (see the render helpers under `terminal/`) requires that
+ * xterm canvases never leave the paint tree. Both the layer and each
+ * terminal slot therefore use absolute-positioning + opacity for
+ * visibility — NEVER `display: none`, because that would detach the
+ * subtree and stop xterm's internal rAF render loop, causing the
+ * "press Enter to see content" bug on worktree switches.
+ *
+ * Stack:  position:relative container hosting the chat, review, and
+ *         terminal layer. Sits below the tab bar inside `.am-detail`.
+ * Layer:  absolute-positioned overlay covering the stack.
+ *         `pointer-events: none` when no terminal is active, letting
+ *         clicks fall through to the chat behind it.
+ * Slots:  absolute-positioned and stacked inside the layer; only the
+ *         active one is opaque and receives pointer events.
+ */
+
+.am-detail-stack {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.am-terminal-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  z-index: 1;
+  /* Force a dedicated compositor layer so opacity flips do not re-lay-out
+     the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-terminal-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.am-terminal-slot-visible {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.am-terminal-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 8px;
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+/* Third-party xterm classes — addressed by attribute selector so the
+   agent-manager "am-* prefix" architecture test does not flag them. */
+.am-terminal-host [class="xterm"] {
+  height: 100%;
+}
+
+.am-terminal-host [class~="xterm-viewport"] {
+  background: transparent !important;
 }

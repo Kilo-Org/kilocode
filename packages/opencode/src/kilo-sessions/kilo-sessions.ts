@@ -1,14 +1,20 @@
 import { Bus } from "@/bus"
+import { BusEvent } from "@/bus/bus-event"
 import { Provider } from "@/provider/provider"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
+import { SessionSummary } from "@/session/summary"
+import { KiloSession } from "@/kilocode/session"
+import { SessionID } from "@/session/schema"
+import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Storage } from "@/storage/storage"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
+import { Schema } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
 import { Instance } from "@/project/instance"
@@ -17,8 +23,22 @@ import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { SessionStatus } from "@/session/status"
+import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Question } from "@/question"
+import { Permission } from "@/permission"
+import { withTimeout } from "@/util/timeout"
 
 export namespace KiloSessions {
+  export const Event = {
+    RemoteStatusChanged: BusEvent.define(
+      "kilo-sessions.remote-status-changed",
+      Schema.Struct({
+        enabled: Schema.Boolean,
+        connected: Schema.Boolean,
+      }),
+    ),
+  }
+
   const log = Log.create({ service: "kilo-sessions" })
 
   const Uuid = z.uuid()
@@ -135,10 +155,35 @@ export namespace KiloSessions {
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
-  let viewedSessionId: string | undefined
+  const focused = new Set<string>()
+  const opened = new Set<string>()
+  const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
+  const STATUS_TIMEOUT_MS = 3_000
+
+  async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
+    const permissions = (await Permission.list()).filter((p) => p.sessionID === sessionID)
+    if (permissions.length > 0) return "permission"
+
+    const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
+    if (questions.length > 0) return "question"
+
+    const status = await SessionStatus.get(SessionID.make(sessionID))
+    if (status.type === "offline") return "retry"
+    return status.type
+  }
+
+  async function deriveAndSyncStatus(sessionID: string) {
+    const status = await withTimeout(deriveStatus(sessionID), STATUS_TIMEOUT_MS)
+    await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
+  }
 
   export async function init() {
     if (ingestDisabled) return
+
+    // kilocode_change start - Same type-erasure upstream uses in share/share-next.ts:165-169.
+    const watch = <D extends { type: string }>(def: D, fn: (evt: { properties: any }) => unknown) =>
+      Bus.subscribe(def as never, fn as never)
+    // kilocode_change end
 
     Bus.subscribe(Session.Event.Created, (evt) => {
       const sessionId = evt.properties.info.id
@@ -146,19 +191,22 @@ export namespace KiloSessions {
     })
 
     Bus.subscribe(Session.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.id, [
+      const sessionID = evt.properties.sessionID // kilocode_change
+      const session = await Session.get(sessionID).catch(() => null) // kilocode_change
+      if (!session) return
+      await ingest.sync(sessionID, [
         {
           type: "kilo_meta",
-          data: await meta(evt.properties.info.id),
+          data: await meta(sessionID),
         },
         {
           type: "session",
-          data: evt.properties.info,
+          data: session,
         },
       ])
     })
 
-    Bus.subscribe(MessageV2.Event.Updated, async (evt) => {
+    watch(MessageV2.Event.Updated, async (evt) => {
       await ingest.sync(evt.properties.info.sessionID, [
         {
           type: "message",
@@ -180,7 +228,7 @@ export namespace KiloSessions {
       }
     })
 
-    Bus.subscribe(MessageV2.Event.PartUpdated, async (evt) => {
+    watch(MessageV2.Event.PartUpdated, async (evt) => {
       await ingest.sync(evt.properties.part.sessionID, [
         {
           type: "part",
@@ -189,7 +237,7 @@ export namespace KiloSessions {
       ])
     })
 
-    Bus.subscribe(Session.Event.Diff, async (evt) => {
+    watch(Session.Event.Diff, async (evt) => {
       await ingest.sync(evt.properties.sessionID, [
         {
           type: "session_diff",
@@ -206,10 +254,53 @@ export namespace KiloSessions {
       await ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }])
     })
 
+    // Session status changes (busy/idle/retry), question lifecycle, permission lifecycle.
+    const syncStatus = (evt: { properties: { sessionID: string } }) => {
+      const sessionID = evt.properties.sessionID
+      const current = statusSyncs.get(sessionID)
+      if (current?.running) {
+        current.dirty = true
+        return
+      }
+
+      const state = current ?? { running: false, dirty: false }
+      statusSyncs.set(sessionID, state)
+
+      const fail = (error: unknown) => {
+        const dirty = state.dirty
+        statusSyncs.delete(sessionID)
+        log.error("status sync failed", { sessionID, error: String(error) })
+        if (dirty) syncStatus(evt)
+      }
+
+      const loop = async () => {
+        state.running = true
+        state.dirty = false
+        await deriveAndSyncStatus(sessionID)
+        if (state.dirty) {
+          void loop().catch(fail)
+          return
+        }
+        statusSyncs.delete(sessionID)
+      }
+
+      void loop().catch(fail)
+    }
+    Bus.subscribe(SessionStatus.Event.Status, syncStatus)
+    Bus.subscribe(Question.Event.Asked, syncStatus)
+    Bus.subscribe(Question.Event.Replied, syncStatus)
+    Bus.subscribe(Question.Event.Rejected, syncStatus)
+    Bus.subscribe(Permission.Event.Asked, syncStatus)
+    Bus.subscribe(Permission.Event.Replied, syncStatus)
+
     const cfg = await Config.getGlobal()
     if (remoteEnabled || cfg.remote_control)
       enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
-    Bus.subscribe(Bus.InstanceDisposed, () => disableRemote())
+    // Use wildcard subscription so the dispose handler actually fires —
+    // Bus.state dispose only notifies "*" subscribers, not event-type ones.
+    Bus.subscribeAll((evt) => {
+      if (evt.type === Bus.InstanceDisposed.type) disableRemote()
+    })
   }
 
   export async function enableRemote() {
@@ -217,6 +308,7 @@ export namespace KiloSessions {
     if (ingestDisabled) return
     if (enabling) return enabling
     const seq = ++remoteSeq
+    void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: false })
     enabling = (async () => {
       const token = await kilocodeToken()
       if (!token) {
@@ -241,12 +333,14 @@ export namespace KiloSessions {
           getGitUrl().catch(() => undefined),
           Vcs.branch().catch(() => undefined),
         ])
-        const statuses = SessionStatus.list()
+        const statusMap = await SessionStatus.list()
+        const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
         const ids = new Set(Object.keys(statuses))
-        if (viewedSessionId) ids.add(viewedSessionId)
+        for (const id of focused) ids.add(id)
+        for (const id of opened) ids.add(id)
         const results = await Promise.all(
           [...ids].map(async (id) => {
-            const session = await Session.get(id).catch(() => undefined)
+            const session = await Session.get(SessionID.make(id)).catch(() => undefined)
             if (!session) return undefined
             return {
               id,
@@ -258,7 +352,12 @@ export namespace KiloSessions {
             }
           }),
         )
-        return results.filter((r): r is NonNullable<typeof r> => !!r)
+        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
+        return {
+          sessions,
+          focused: focused.size > 0 ? [...focused] : undefined,
+          open: opened.size > 0 ? [...opened] : undefined,
+        }
       }
 
       const conn = RemoteWS.connect({
@@ -267,6 +366,12 @@ export namespace KiloSessions {
         withContext: (fn) => Instance.provide({ directory, fn }),
         getSessions,
         log,
+        onOpen: () => {
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: true })
+        },
+        onDisconnect: () => {
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
+        },
         onMessage: (msg) => {
           // Must run inside Instance.provide so Bus.subscribeAll can access
           // the instance-scoped subscription map via Instance.state().
@@ -282,7 +387,7 @@ export namespace KiloSessions {
       })
 
       const heartbeat = async () => {
-        conn.send({ type: "heartbeat", sessions: await getSessions() })
+        conn.send({ type: "heartbeat", ...(await getSessions()) })
       }
 
       if (seq !== remoteSeq) {
@@ -292,32 +397,52 @@ export namespace KiloSessions {
       }
 
       remote = { conn, sender, heartbeat }
-      log.info("remote connection enabled")
-    })().finally(() => {
-      if (remoteSeq === seq) enabling = undefined
-    })
+      log.info("remote connection enabled", { connected: conn.connected })
+      Telemetry.trackRemoteConnectionOpened()
+      void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
+    })()
+      .catch((err) => {
+        if (remoteSeq === seq && !remote)
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+        throw err
+      })
+      .finally(() => {
+        if (remoteSeq === seq) enabling = undefined
+      })
 
     return enabling
   }
 
   export function disableRemote() {
     remoteSeq += 1
+    const pending = !!enabling
     enabling = undefined
-    if (!remote) return
+    if (!remote) {
+      if (pending) void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+      return
+    }
     remote.sender.dispose()
     remote.conn.close()
     remote = undefined
     log.info("remote connection disabled")
+    void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
   }
 
   export function remoteStatus() {
     return {
-      enabled: !!remote,
+      enabled: !!remote || !!enabling,
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSession(sessionID: string | undefined) {
-    viewedSessionId = sessionID
+  export function setViewedSessions(input: { focused: string[]; open?: string[] }) {
+    focused.clear()
+    opened.clear()
+    for (const id of input.focused) {
+      focused.add(id)
+    }
+    for (const id of input.open ?? []) {
+      opened.add(id)
+    }
     if (remote) void remote.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
   }
 
@@ -486,15 +611,15 @@ export namespace KiloSessions {
   async function fullSync(sessionId: string) {
     log.info("full sync", { sessionId })
 
-    const session = await Session.get(sessionId)
-    const diffs = await Session.diff(sessionId)
-    const messages = await Array.fromAsync(MessageV2.stream(sessionId))
+    const session = await Session.get(SessionID.make(sessionId))
+    const diffs = await SessionSummary.diff({ sessionID: SessionID.make(sessionId) })
+    const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const models = await Promise.all(
       messages
         .filter((m) => m.info.role === "user")
         .map((m) => (m.info as SDK.UserMessage).model)
-        .map((m) => Provider.getModel(m.providerID, m.modelID).then((m) => m)),
+        .map((m) => Provider.getModel(ProviderID.make(m.providerID), ModelID.make(m.modelID)).then((m) => m)),
     )
 
     await ingest.sync(sessionId, [
@@ -518,6 +643,10 @@ export namespace KiloSessions {
       {
         type: "model",
         data: models,
+      },
+      {
+        type: "session_status",
+        data: { status: await deriveStatus(sessionId) },
       },
     ])
   }
@@ -562,7 +691,7 @@ export namespace KiloSessions {
   }
 
   async function meta(sessionId?: string) {
-    const override = sessionId ? Session.getPlatformOverride(sessionId) : undefined
+    const override = sessionId ? KiloSession.getPlatformOverride(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)

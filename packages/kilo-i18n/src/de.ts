@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "Mehrere Sitzungen laufen und werden unterbrochen",
   "marketplace.warning.installAnyway": "Trotzdem installieren",
   "marketplace.warning.cancel": "Abbrechen",
+  "marketplace.contribute.prompt": "Fehlt ein Skill, Modus oder MCP-Server?",
+  "marketplace.contribute.cta": "Auf GitHub beitragen",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Umsetzen",
+  "plan.followup.question": "Bereit zur Umsetzung?",
+  "plan.followup.answer.newSession": "Neue Sitzung starten",
+  "plan.followup.answer.newSession.description": "In einer neuen Sitzung mit leerem Kontext umsetzen",
+  "plan.followup.answer.continue": "Hier fortfahren",
+  "plan.followup.answer.continue.description": "Den Plan in dieser Sitzung umsetzen",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot ist langsam",
+  "snapshot.slowRepo.question":
+    "Die Initialisierung des Snapshot-Systems dauert lange, wahrscheinlich aufgrund der Größe des Repositorys.\n\nMöchtest du Snapshots für dieses Repository deaktivieren?",
+  "snapshot.slowRepo.answer.continue": "Snapshots beibehalten",
+  "snapshot.slowRepo.answer.continue.description":
+    "Auf den Abschluss des Snapshots warten. Nachfolgende Runden sind schnell, sobald der initiale Snapshot erstellt ist.",
+  "snapshot.slowRepo.answer.disable": "Für dieses Projekt deaktivieren",
+  "snapshot.slowRepo.answer.disable.description":
+    "Kilo-Snapshots für dieses Projekt ausschalten. Rückgängig/Wiederherstellen für Kilo-Änderungen ist nicht mehr möglich, aber git verfolgt weiterhin alles.",
+
+  "ui.messagePart.openInDiffViewer": "Im Diff-Viewer öffnen",
 }

@@ -1,0 +1,127 @@
+import * as vscode from "vscode"
+import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { appendOutput, getWorkspaceRoot } from "./review-utils"
+import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
+
+export interface DiffVirtualFile {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  initialDiffStyle: "unified" | "split"
+}
+
+/**
+ * DiffVirtualProvider opens a lightweight diff viewer for a single in-memory
+ * file diff (not backed by git). Used by the permission approval dock to show
+ * edit changes before the user approves or rejects them.
+ */
+export class DiffVirtualProvider implements vscode.Disposable {
+  private panel: vscode.WebviewPanel | undefined
+  private pending: DiffVirtualFile | undefined
+  private outputChannel: vscode.OutputChannel
+  private fontConfigDisposable: vscode.Disposable | undefined
+
+  constructor(private readonly extensionUri: vscode.Uri) {
+    this.outputChannel = vscode.window.createOutputChannel("Kilo Diff Virtual")
+  }
+
+  private log(...args: unknown[]) {
+    appendOutput(this.outputChannel, "DiffVirtual", ...args)
+  }
+
+  public open(diff: DiffVirtualFile): void {
+    this.pending = diff
+    const filename = diff.file.split("/").pop() ?? diff.file
+    const title = `Changes: ${filename}`
+
+    if (this.panel) {
+      this.panel.title = title
+      this.panel.reveal(vscode.ViewColumn.One)
+      this.pushData()
+      return
+    }
+
+    const panel = vscode.window.createWebviewPanel("kilo-code.new.DiffVirtualPanel", title, vscode.ViewColumn.One, {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: [this.extensionUri],
+    })
+
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
+      dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
+    }
+
+    panel.webview.html = this.getHtml(panel.webview)
+    panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg))
+    this.fontConfigDisposable?.dispose()
+    this.fontConfigDisposable = watchFontSizeConfig((msg) => this.post(msg))
+    panel.onDidDispose(() => {
+      this.log("Panel disposed")
+      this.fontConfigDisposable?.dispose()
+      this.fontConfigDisposable = undefined
+      this.panel = undefined
+      this.pending = undefined
+    })
+
+    this.panel = panel
+  }
+
+  private onMessage(msg: Record<string, unknown>): void {
+    const type = msg.type as string
+
+    if (type === "webviewReady") {
+      this.post({
+        type: "ready",
+        vscodeLanguage: vscode.env.language,
+        languageOverride: vscode.workspace.getConfiguration("kilo-code.new").get<string>("language"),
+        fontSize: getWebviewFontSize(),
+        workspaceDirectory: getWorkspaceRoot(),
+      })
+      this.pushData()
+      return
+    }
+
+    if (type === "diffVirtual.close") {
+      this.panel?.dispose()
+      return
+    }
+
+    if (type === "diffVirtual.setMarkdownRender" && typeof msg.render === "boolean") {
+      void setDiffMarkdownRender(msg.render)
+    }
+  }
+
+  private pushData(): void {
+    if (!this.pending) return
+    this.post({
+      type: "diffVirtual.data",
+      diff: this.pending,
+      initialDiffStyle: this.pending.initialDiffStyle,
+      markdownRender: getDiffMarkdownRender(),
+    })
+  }
+
+  private post(message: Record<string, unknown>): void {
+    if (this.panel?.webview) void this.panel.webview.postMessage(message)
+  }
+
+  private getHtml(webview: vscode.Webview): string {
+    return buildWebviewHtml(webview, {
+      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "diff-virtual.js")),
+      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "diff-virtual.css")),
+      iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
+      title: "Diff Virtual",
+      extraStyles: "#root { display: flex; flex-direction: column; height: 100%; }",
+    })
+  }
+
+  public dispose(): void {
+    this.fontConfigDisposable?.dispose()
+    this.panel?.dispose()
+    this.outputChannel.dispose()
+  }
+}

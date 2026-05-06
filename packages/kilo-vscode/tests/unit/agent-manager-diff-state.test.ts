@@ -23,22 +23,29 @@ describe("agent manager diff state", () => {
   it("preserves loaded detail when summary metadata is unchanged", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n" })]
     const next = [diff({ summarized: true })]
+    const result = mergeWorktreeDiffs(prev, next)
 
-    expect(mergeWorktreeDiffs(prev, next)).toEqual([diff({ summarized: false, before: "old\n", after: "new\n" })])
+    expect(result.diffs).toEqual([diff({ summarized: false, before: "old\n", after: "new\n" })])
+    expect(result.diffs[0]).toBe(prev[0])
+    expect(result.stale.size).toBe(0)
   })
 
-  it("drops cached detail when summary metadata changes", () => {
+  it("preserves cached content and marks stale when summary metadata changes", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n", additions: 1 })]
     const next = [diff({ summarized: true, additions: 2 })]
+    const result = mergeWorktreeDiffs(prev, next)
 
-    expect(mergeWorktreeDiffs(prev, next)).toEqual(next)
+    expect(result.diffs[0]).toBe(prev[0])
+    expect(result.stale).toEqual(new Set(["src/app.ts"]))
   })
 
-  it("drops cached detail when the summary stamp changes", () => {
+  it("preserves cached content and marks stale when summary stamp changes", () => {
     const prev = [diff({ summarized: false, before: "old\n", after: "new\n", stamp: "1:1" })]
     const next = [diff({ summarized: true, stamp: "1:2" })]
+    const result = mergeWorktreeDiffs(prev, next)
 
-    expect(mergeWorktreeDiffs(prev, next)).toEqual(next)
+    expect(result.diffs[0]).toBe(prev[0])
+    expect(result.stale).toEqual(new Set(["src/app.ts"]))
   })
 
   it("does not auto-open generated-like files or large diff sets", () => {

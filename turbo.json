@@ -10,13 +10,15 @@
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
-    "opencode#test": {
+    "@kilocode/cli#test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["*"]
     },
-    "@opencode-ai/app#test": {
+    "@kilocode/cli#test:ci": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [".artifacts/unit/junit.xml"],
+      "passThroughEnv": ["*"]
     },
     "@kilocode/kilo-docs#build": {
       "dependsOn": ["^build"],

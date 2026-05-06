@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount } from "solid-js"
+import { createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SlashCommandInfo, WebviewMessage, ExtensionMessage } from "../types/messages"
 
@@ -35,10 +35,11 @@ export interface SlashCommand {
   close: () => void
 }
 
-export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): SlashCommand {
+export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string> | Accessor<Set<string>>): SlashCommand {
   const [server, setServer] = createSignal<SlashCommandInfo[]>([])
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
+  const [requested, setRequested] = createSignal(false)
 
   const all: SlashCommandEntry[] = [
     {
@@ -75,6 +76,14 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       },
     },
     {
+      name: "variant",
+      description: "Switch the reasoning effort",
+      hints: ["variants", "reasoning", "thinking"],
+      action: () => {
+        window.dispatchEvent(new CustomEvent("openVariantPicker"))
+      },
+    },
+    {
       name: "help",
       description: "Open help documentation",
       hints: [],
@@ -98,17 +107,42 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
         vscode.postMessage({ type: "openSettingsPanel" })
       },
     },
+    {
+      name: "remote",
+      description: "Toggle remote control",
+      hints: [],
+      action: () => {
+        vscode.postMessage({ type: "toggleRemote" })
+      },
+    },
   ]
 
-  const client = exclude ? all.filter((c) => !exclude.has(c.name)) : all
+  const excluded = () => {
+    if (typeof exclude === "function") return exclude()
+    return exclude
+  }
+
+  const client = () => {
+    const set = excluded()
+    if (!set) return all
+    return all.filter((c) => !set.has(c.name))
+  }
 
   const commands = (): SlashCommandEntry[] => {
-    const names = new Set(client.map((c) => c.name))
-    const filtered = server().filter((c) => !names.has(c.name))
-    return [...client, ...filtered]
+    const list = client()
+    const names = new Set(list.map((c) => c.name))
+    const set = excluded()
+    const filtered = server().filter((c) => !names.has(c.name) && !set?.has(c.name))
+    return [...list, ...filtered]
   }
 
   const show = () => query() !== null
+
+  const request = () => {
+    if (requested()) return
+    setRequested(true)
+    vscode.postMessage({ type: "requestCommands" })
+  }
 
   const results = () => {
     const q = query()
@@ -129,10 +163,6 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     setServer(message.commands)
   })
 
-  onMount(() => {
-    vscode.postMessage({ type: "requestCommands" })
-  })
-
   onCleanup(() => {
     unsubscribe()
   })
@@ -145,6 +175,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     const before = val.substring(0, cursor)
     const match = before.match(SLASH_PATTERN)
     if (match) {
+      request()
       setQuery(match[1])
       setIndex(0)
     } else {

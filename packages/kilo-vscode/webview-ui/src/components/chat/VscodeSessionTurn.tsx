@@ -18,19 +18,23 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { useData } from "@kilocode/kilo-ui/context/data"
-import { useDiffComponent } from "@kilocode/kilo-ui/context/diff"
+import { useFileComponent } from "@kilocode/kilo-ui/context/file"
+import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { AssistantMessage } from "./AssistantMessage"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Message as SDKMessage,
   Part as SDKPart,
-  FileDiff,
+  SnapshotFileDiff,
 } from "@kilocode/sdk/v2"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { visibleError } from "../../context/session-errors"
+import type { ErrorDisplayProps } from "./ErrorDisplay"
+import type { Message as WebMessage } from "../../types/messages"
 
 function getDirectory(path: string): string {
   const sep = path.includes("/") ? "/" : "\\"
@@ -44,73 +48,56 @@ function getFilename(path: string): string {
   return idx === -1 ? path : path.slice(idx + 1)
 }
 
+export interface VscodeTurn {
+  id: string
+  user: WebMessage
+  assistant: WebMessage[]
+  partial?: boolean
+}
+
 interface VscodeSessionTurnProps {
-  sessionID: string
-  messageID: string
+  turn: VscodeTurn
   queued?: boolean
+  onForkMessage?: (sessionId: string, messageId: string) => void
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const data = useData()
   const i18n = useI18n()
-  const diffComponent = useDiffComponent()
+  const fileComponent = useFileComponent()
   const server = useServer()
   const session = useSession()
   const language = useLanguage()
 
-  const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
-  const emptyDiffs: FileDiff[] = []
+  const emptyDiffs: SnapshotFileDiff[] = []
 
-  const allMessages = createMemo(() => {
-    const msgs = data.store.message?.[props.sessionID]
-    return (msgs ?? emptyMessages) as SDKMessage[]
+  createEffect(() => {
+    const turn = props.turn
+    const ids = turn.partial ? turn.assistant.map((m) => m.id) : [turn.user.id, ...turn.assistant.map((m) => m.id)]
+    session.hydrateParts(ids)
   })
 
-  const message = createMemo(() => {
-    return allMessages().find((m) => m.id === props.messageID && m.role === "user") as
-      | (SDKMessage & { role: "user" })
-      | undefined
-  })
+  const message = createMemo(() => props.turn.user as SDKMessage & { role: "user" })
 
   const parts = createMemo(() => {
     const msg = message()
-    if (!msg) return emptyParts
     return (data.store.part?.[msg.id] ?? emptyParts) as SDKPart[]
   })
 
-  const messageIndex = createMemo(() => {
-    const msgs = allMessages()
-    return msgs.findIndex((m) => m.id === props.messageID)
-  })
-
-  const assistantMessages = createMemo(() => {
-    const index = messageIndex()
-    if (index < 0) return [] as SDKAssistantMessage[]
-    const msgs = allMessages()
-    const result: SDKAssistantMessage[] = []
-    for (let i = index + 1; i < msgs.length; i++) {
-      const m = msgs[i]
-      if (!m) continue
-      if (m.role === "user") break
-      if (m.role === "assistant") result.push(m as SDKAssistantMessage)
-    }
-    return result
-  })
+  const assistantMessages = createMemo(() => props.turn.assistant as SDKAssistantMessage[])
 
   const interrupted = createMemo(() => assistantMessages().some((m) => m.error?.name === "MessageAbortedError"))
 
-  const error = createMemo(
-    () => assistantMessages().find((m) => m.error && m.error.name !== "MessageAbortedError")?.error,
-  )
+  const error = createMemo(() => visibleError(assistantMessages(), session.isErrorHidden))
 
   // Diffs from message summary
   const diffs = createMemo(() => {
     const rawDiffs = (message() as unknown as { summary?: { diffs?: unknown[] } } | undefined)?.summary?.diffs
     if (!rawDiffs?.length) return emptyDiffs
     const seen = new Set<string>()
-    return (rawDiffs as FileDiff[])
-      .reduceRight<FileDiff[]>((result, diff) => {
+    return (rawDiffs as SnapshotFileDiff[])
+      .reduceRight<SnapshotFileDiff[]>((result, diff) => {
         if (seen.has(diff.file)) return result
         seen.add(diff.file)
         result.push(diff)
@@ -132,7 +119,11 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     ),
   )
 
-  // Copy part ID — the last text part from the last assistant message
+  // Copy part ID — the last text part from the last assistant message.
+  // Synthetic parts (e.g. "Initializing snapshot…" from the slow-repo guard)
+  // are transient status lines, not assistant output: they must never win
+  // this lookup, otherwise the copy button renders beside the spinner
+  // instead of the real response.
   const showAssistantCopyPartID = createMemo(() => {
     const msgs = assistantMessages()
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -142,6 +133,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       for (let j = msgParts.length - 1; j >= 0; j--) {
         const part = msgParts[j]
         if (!part || part.type !== "text") continue
+        if ((part as SDKPart & { synthetic?: boolean }).synthetic) continue
         if ((part as SDKPart & { text: string }).text?.trim()) return part.id
       }
     }
@@ -153,32 +145,35 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       {(msg) => (
         <div class="vscode-session-turn" data-message={msg().id}>
           {/* User message */}
-          <div
-            class="vscode-session-turn-user"
-            data-revert-disabled={
-              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
-            }
-            title={
-              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
-                ? language.t("revert.disabled.agentBusy")
-                : undefined
-            }
-          >
-            <UserMessageDisplay
-              message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
-              parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
-              interrupted={interrupted()}
-              queued={props.queued}
-              onRevert={
-                assistantMessages().length > 0 && !session.revert()
-                  ? () => {
-                      if (session.status() !== "idle") return
-                      session.revertSession(props.messageID)
-                    }
+          <Show when={!props.turn.partial}>
+            <div
+              class="vscode-session-turn-user"
+              data-revert-disabled={
+                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
+              }
+              title={
+                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
+                  ? language.t("revert.disabled.agentBusy")
                   : undefined
               }
-            />
-          </div>
+            >
+              <UserMessageDisplay
+                message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
+                parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
+                interrupted={interrupted()}
+                queued={props.queued}
+                onFork={props.onForkMessage ? () => props.onForkMessage?.(msg().sessionID, msg().id) : undefined}
+                onRevert={
+                  assistantMessages().length > 0 && !session.revert()
+                    ? () => {
+                        if (session.status() !== "idle") return
+                        session.revertSession(msg().id)
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          </Show>
 
           {/* Assistant parts — flat list, no context grouping */}
           <Show when={assistantMessages().length > 0}>
@@ -190,13 +185,13 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           </Show>
 
           {/* Diff summary — shown after completion */}
-          <Show when={diffs().length > 0}>
+          <Show when={diffs().length > 0 && server.gitInstalled()}>
             <div class="vscode-session-turn-diffs" data-component="session-turn">
               <Collapsible open={open()} onOpenChange={setOpen} variant="ghost">
                 <Collapsible.Trigger>
                   <div data-component="session-turn-diffs-trigger">
                     <div data-slot="session-turn-diffs-title">
-                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>
+                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>{" "}
                       <span data-slot="session-turn-diffs-count">
                         {diffs().length} {i18n.t(diffs().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
                       </span>
@@ -245,7 +240,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                       <span data-slot="session-turn-diff-path">
                                         <Show when={diff.file.includes("/")}>
                                           <span data-slot="session-turn-diff-directory">
-                                            {`\u202A${getDirectory(diff.file)}\u202C`}
+                                            {`\u2066${getDirectory(diff.file)}\u2069`}
                                           </span>
                                         </Show>
                                         <span data-slot="session-turn-diff-filename">{getFilename(diff.file)}</span>
@@ -265,9 +260,9 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                   <Show when={visible()}>
                                     <div data-slot="session-turn-diff-view" data-scrollable>
                                       <Dynamic
-                                        component={diffComponent}
-                                        before={{ name: diff.file, contents: diff.before }}
-                                        after={{ name: diff.file, contents: diff.after }}
+                                        component={fileComponent}
+                                        mode="diff"
+                                        fileDiff={normalize(diff).fileDiff}
                                       />
                                     </div>
                                   </Show>
@@ -286,7 +281,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
           {/* Error handling */}
           <Show when={error()}>
-            <ErrorDisplay error={error()!} onLogin={server.startLogin} />
+            {(err) => <ErrorDisplay error={err() as ErrorDisplayProps["error"]} onLogin={server.goToLogin} />}
           </Show>
         </div>
       )}

@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
+  "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
+  "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "ดำเนินการ",
+  "plan.followup.question": "พร้อมดำเนินการหรือยัง?",
+  "plan.followup.answer.newSession": "เริ่มเซสชันใหม่",
+  "plan.followup.answer.newSession.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า",
+  "plan.followup.answer.continue": "ดำเนินการต่อที่นี่",
+  "plan.followup.answer.continue.description": "ดำเนินการตามแผนในเซสชันนี้",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "สแน็ปช็อตช้า",
+  "snapshot.slowRepo.question":
+    "การเริ่มต้นระบบสแน็ปช็อตใช้เวลานาน น่าจะเป็นเพราะขนาดของที่เก็บข้อมูล\n\nต้องการปิดสแน็ปช็อตสำหรับที่เก็บข้อมูลนี้หรือไม่?",
+  "snapshot.slowRepo.answer.continue": "ใช้สแน็ปช็อตต่อ",
+  "snapshot.slowRepo.answer.continue.description":
+    "รอจนกว่าสแน็ปช็อตจะเสร็จ เทิร์นถัดไปจะเร็วขึ้นเมื่อสร้างสแน็ปช็อตแรกเสร็จแล้ว",
+  "snapshot.slowRepo.answer.disable": "ปิดใช้งานสำหรับโปรเจกต์นี้",
+  "snapshot.slowRepo.answer.disable.description":
+    "ปิดสแน็ปช็อตของ Kilo สำหรับโปรเจกต์นี้ คุณจะสูญเสียการยกเลิก/ทำซ้ำสำหรับการเปลี่ยนแปลงของ Kilo แต่ git ยังคงติดตามทุกอย่าง",
+
+  "ui.messagePart.openInDiffViewer": "เปิดในตัวดูความแตกต่าง",
 }

@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.1.20",
+  "version": "7.2.42",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -49,6 +49,7 @@
     "./message-nav": "./src/components/message-nav.tsx",
     "./message-part": "./src/components/message-part.tsx",
     "./session-review": "./src/components/session-review.tsx",
+    "./session-diff": "./src/components/session-diff.ts",
     "./session-turn": "./src/components/session-turn.tsx",
     "./basic-tool": "./src/components/basic-tool.tsx",
     "./error-details": "./src/components/error-details.tsx",
@@ -61,6 +62,7 @@
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",
+    "./text-shimmer": "./src/components/text-shimmer.tsx",
     "./text-strikethrough": "./src/components/text-strikethrough.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
@@ -102,7 +104,7 @@
     "storybook": "10.2.10",
     "storybook-solidjs-vite": "10.0.9",
     "typescript": "catalog:",
-    "vite": "7.3.1",
+    "vite": "7.3.2",
     "vite-plugin-solid": "2.11.10"
   },
   "scripts": {
@@ -113,7 +115,7 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.11",
-    "@opencode-ai/util": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@solid-primitives/lifecycle": "0.1.2",
     "@solid-primitives/media": "2.3.3",

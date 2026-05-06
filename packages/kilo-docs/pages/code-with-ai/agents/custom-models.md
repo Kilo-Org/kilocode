@@ -18,27 +18,6 @@ Kilo Code ships with a curated list of models for each provider, but you can use
 Add custom models under the `provider.<provider_id>.models` key in your config file. The model key becomes the model ID you reference elsewhere.
 
 {% tabs %}
-{% tab label="CLI" %}
-
-**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
-
-```jsonc
-{
-  "$schema": "https://app.kilo.ai/config.json",
-  "model": "lmstudio/my-custom-model",
-  "provider": {
-    "lmstudio": {
-      "models": {
-        "my-custom-model": {
-          "name": "My Custom Model",
-        },
-      },
-    },
-  },
-}
-```
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 1. Open **Settings** (gear icon) and go to the **Providers** tab.
@@ -65,6 +44,27 @@ To edit an existing custom provider, click the **Edit provider** button next to 
 For additional model configuration (token limits, tool calling, reasoning, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab for the format.
 
 {% /tab %}
+{% tab label="CLI" %}
+
+**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "lmstudio/my-custom-model",
+  "provider": {
+    "lmstudio": {
+      "models": {
+        "my-custom-model": {
+          "name": "My Custom Model",
+        },
+      },
+    },
+  },
+}
+```
+
+{% /tab %}
 {% /tabs %}
 
 The `model` key uses the format `provider_id/model_id`, where:
@@ -76,20 +76,80 @@ The `model` key uses the format `provider_id/model_id`, where:
 
 All fields are optional. When a model ID matches one already in the built-in catalog, your values are merged on top of the defaults — you only need to specify what you want to override.
 
-| Field         | Type      | Description                                                                   |
-| ------------- | --------- | ----------------------------------------------------------------------------- |
-| `name`        | `string`  | Display name shown in the model picker                                        |
-| `id`          | `string`  | API-facing model ID sent to the provider. Defaults to the config key          |
-| `tool_call`   | `boolean` | Whether the model supports tool/function calling                              |
-| `reasoning`   | `boolean` | Whether the model supports extended thinking                                  |
-| `temperature` | `boolean` | Whether the model supports the temperature parameter                          |
-| `attachment`  | `boolean` | Whether the model supports file attachments                                   |
-| `limit`       | `object`  | Token limits: `{ context, output, input? }`                                   |
-| `cost`        | `object`  | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }`    |
-| `options`     | `object`  | Arbitrary provider-specific model options                                     |
-| `headers`     | `object`  | Custom HTTP headers to include in requests                                    |
-| `provider`    | `object`  | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
-| `variants`    | `object`  | Named variant configurations (e.g., different reasoning efforts)              |
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Display name shown in the model picker |
+| `id` | `string` | API-facing model ID sent to the provider. Defaults to the config key |
+| `tool_call` | `boolean` | Whether the model supports tool/function calling |
+| `reasoning` | `boolean` | Whether the model supports extended thinking |
+| `temperature` | `boolean` | Whether the model supports the temperature parameter |
+| `attachment` | `boolean` | Whether the model supports file attachments |
+| `modalities` | `object` | Optional. Supported input and output types: `{ input, output }` |
+| `limit` | `object` | Token limits: `{ context, output, input? }` |
+| `cost` | `object` | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }` |
+| `options` | `object` | Arbitrary provider-specific model options |
+| `headers` | `object` | Custom HTTP headers to include in requests |
+| `provider` | `object` | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
+| `variants` | `object` | Named variant configurations (e.g., different reasoning efforts) |
+
+### Modalities (modalities)
+
+The `modalities` object declares which content types the model can receive and produce. It is optional — omit it to use defaults from the catalog or fallback to text-only. When `modalities` is provided, both `input` and `output` arrays are required. Each array can include `text`, `image`, `audio`, `video`, or `pdf`.
+
+| Sub-field | Type | Required | Description |
+|---|---|---|---|
+| `input` | `array` | Yes (if present) | Content types the model accepts from the user |
+| `output` | `array` | Yes (if present) | Content types the model can generate in response |
+
+For a standard text model that can also inspect images, use:
+
+```jsonc
+"modalities": {
+  "input": ["text", "image"],
+  "output": ["text"]
+}
+```
+
+If `modalities` is omitted and the model ID matches a models.dev catalog entry for that provider, Kilo uses the catalog's modalities. For completely custom models with no catalog match, Kilo defaults to text input and text output only. Set `attachment: true` alongside image, audio, video, or PDF input modalities when the provider supports sending those files as attachments.
+
+### Token Limits (limit)
+
+The `limit` object controls how Kilo manages the model's context window and output length. These values are specified in **tokens**.
+
+| Sub-field | Type | Required | Description |
+|---|---|---|---|
+| `context` | `number` | No | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window. |
+| `output` | `number` | No | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default. |
+| `input` | `number` | No | An optional stricter input limit. Some providers enforce an input token ceiling that is lower than the full context window. When set, compaction triggers against this value instead of `context`. |
+
+```jsonc
+"limit": {
+  "context": 131072,
+  "output": 16384
+}
+```
+
+If a model stops because it reaches `limit.output`, Kilo shows a visible warning that the response may be incomplete. For reasoning models that spend the whole response reasoning and produce no text or tool call, the warning suggests disabling reasoning or increasing `limit.output`.
+
+#### How limits are resolved
+
+Kilo resolves token limits in this order:
+
+1. **Your config** — values you set under `provider.<id>.models.<model>.limit`
+2. **Built-in catalog** — Kilo ships a snapshot of [models.dev](https://models.dev) and refreshes it hourly. If your model ID matches a known model, catalog values are used as defaults.
+3. **Fallback** — if neither source provides a value, `context` and `output` default to `0`.
+
+#### What happens when limits are `0`
+
+If you use a custom or local model and don't specify limits — and the model isn't in the built-in catalog — both `context` and `output` resolve to `0`. This has meaningful side effects:
+
+- **Compaction is disabled.** Kilo uses `context` to detect when the conversation exceeds the model's window and needs to be summarized. With `context: 0`, overflow detection is skipped and conversations will grow unbounded until the provider rejects the request.
+- **Output falls back to 32,000 tokens.** When `output` is `0`, Kilo uses its internal default of 32,000 tokens (configurable via the `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` environment variable).
+- **No context usage tracking.** Usage metrics that depend on knowing the context size are skipped.
+
+{% callout type="warning" %}
+For custom and local models, always set `limit.context` and `limit.output` to match the model's actual capabilities. Without these values, automatic context management is disabled.
+{% /callout %}
 
 ## Examples
 
@@ -226,7 +286,7 @@ Override options or define reasoning variants for a built-in model:
 }
 ```
 
-### Using the `id` field to map model names
+### Using the id field to map model names
 
 If the model key in your config differs from what the provider expects, use the `id` field:
 
@@ -271,18 +331,18 @@ You can also set options that apply to all models from a provider:
       "options": {
         "apiKey": "{env:OPENAI_API_KEY}",
         "baseURL": "https://my-proxy.example.com/v1",
-        "timeout": 120000,
+        "timeout": 300000,
       },
     },
   },
 }
 ```
 
-| Option    | Type              | Description                                            |
-| --------- | ----------------- | ------------------------------------------------------ |
-| `apiKey`  | `string`          | API key (supports `{env:VAR}` syntax)                  |
-| `baseURL` | `string`          | Override the provider's base API URL                   |
-| `timeout` | `number \| false` | Request timeout in milliseconds, or `false` to disable |
+| Option | Type | Description |
+|---|---|---|
+| `apiKey` | `string` | API key (supports `{env:VAR}` syntax) |
+| `baseURL` | `string` | Override the provider's base API URL |
+| `timeout` | `number \| false` | Request timeout in milliseconds. Defaults to `300000` (5 minutes); set to `false` to disable |
 
 ## Filtering Available Models
 
@@ -313,5 +373,6 @@ Control which models appear in the model picker for a provider using allowlists 
 **Model errors or unexpected behavior:**
 
 - Set `tool_call: true` if you need the model to use tools (file editing, terminal, etc.)
-- Set `limit.context` and `limit.output` to match the model's actual capabilities
+- Set `limit.context` and `limit.output` to match the model's actual capabilities — see [Token Limits](#token-limits-limit) above for details and defaults
+- If conversations seem to grow without being compacted, your `limit.context` is likely `0` (unset)
 - For local models, ensure your inference server is running and accessible at the configured URL

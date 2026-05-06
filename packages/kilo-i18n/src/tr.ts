@@ -69,4 +69,27 @@ export const dict = {
   "marketplace.warning.busyMany": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "marketplace.warning.installAnyway": "Yine de yükle",
   "marketplace.warning.cancel": "İptal",
+  "marketplace.contribute.prompt": "Bir yetenek, mod veya MCP sunucusu mu eksik?",
+  "marketplace.contribute.cta": "GitHub'da katkıda bulun",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Uygula",
+  "plan.followup.question": "Uygulamaya hazır mısın?",
+  "plan.followup.answer.newSession": "Yeni oturum başlat",
+  "plan.followup.answer.newSession.description": "Temiz bir bağlamla yeni bir oturumda uygula",
+  "plan.followup.answer.continue": "Burada devam et",
+  "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Anlık görüntü yavaş",
+  "snapshot.slowRepo.question":
+    "Anlık görüntü sisteminin başlatılması uzun sürüyor, muhtemelen deponun boyutu nedeniyle.\n\nBu depo için anlık görüntüleri devre dışı bırakmak istiyor musunuz?",
+  "snapshot.slowRepo.answer.continue": "Anlık görüntülerle devam et",
+  "snapshot.slowRepo.answer.continue.description":
+    "Anlık görüntü tamamlanana kadar bekleyin. İlk anlık görüntü oluşturulduktan sonra sonraki turlar hızlıdır.",
+  "snapshot.slowRepo.answer.disable": "Bu proje için devre dışı bırak",
+  "snapshot.slowRepo.answer.disable.description":
+    "Bu proje için Kilo anlık görüntülerini kapat. Kilo değişiklikleri için geri alma/yeniden yapmayı kaybedersiniz, ancak git her şeyi izlemeye devam eder.",
+
+  "ui.messagePart.openInDiffViewer": "Fark görüntüleyicide aç",
 }

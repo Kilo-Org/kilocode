@@ -16,6 +16,8 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
+import { DisplayProvider } from "./context/display"
+import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -39,6 +41,20 @@ const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profi
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
+ *
+ * CRITICAL: `data` is a plain object with getters — NOT a createMemo wrapping
+ * the whole shape. Wrapping the shape in a memo defeats Solid's fine-grained
+ * reactivity: any single `store.parts[X]` mutation would re-run the outer
+ * memo, producing a fresh POJO, which invalidates every downstream consumer
+ * that reads `data.store.*` — including all mounted SessionTurn memos that
+ * scan all messages in the session. With hundreds of messages and a dozen
+ * visible turns, per-token streaming ends up doing O(N × visible_turns) work
+ * per delta, which is why long sessions stream slowly.
+ *
+ * By exposing the underlying Solid store directly via getters, consumers
+ * reading `data.store.message[X]` or `data.store.part[Y]` subscribe to only
+ * that specific key. A text-delta on message Y only invalidates consumers
+ * that actually read `part[Y]`, not the whole tree.
  */
 export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
@@ -46,37 +62,61 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const prov = useProvider()
   const server = useServer()
 
-  const data = createMemo(() => {
-    const id = session.currentSessionID()
-    const family = session.familyData(id)
-    return {
-      session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: family.status as unknown as Record<string, any>,
-      session_diff: {} as Record<string, any[]>,
-      // Restrict chat data to the selected session family (self + subagents).
-      // This keeps unrelated tracked sessions from invalidating the visible
-      // chat tree during streaming or background updates.
-      message: family.messages as Record<string, SDKMessage[]>,
-      part: family.parts as Record<string, SDKPart[]>,
-      permission: (() => {
-        const grouped: Record<string, any[]> = {}
-        for (const p of session.permissions()) {
-          const sid = p.sessionID
-          if (!sid) continue
-          ;(grouped[sid] ??= []).push(p)
-        }
-        return grouped
-      })(),
-      // Questions are handled directly by QuestionDock via session.questions(),
-      // not through DataProvider. The DataProvider's question field is unused here.
-      question: {},
-      provider: {
-        all: Object.values(prov.providers()) as unknown as any[],
-        connected: prov.connected(),
-        default: prov.defaults(),
-      } as unknown as any,
+  // Memos for fields that change infrequently (not per-token) — cheap and
+  // avoids allocating a fresh array/object on every consumer read.
+  const sessionList = createMemo(
+    () => session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
+  )
+
+  const permissionsBySession = createMemo(() => {
+    const grouped: Record<string, any[]> = {}
+    for (const p of session.permissions()) {
+      const sid = p.sessionID
+      if (!sid) continue
+      ;(grouped[sid] ??= []).push(p)
     }
+    return grouped
   })
+
+  const providerData = createMemo(() => ({
+    all: Object.values(prov.providers()) as unknown as any[],
+    connected: prov.connected(),
+    default: prov.defaults(),
+  }))
+
+  // Stable object with reactive getters — passes through to Solid stores so
+  // consumers keep per-key reactivity. The family-filter previously done here
+  // was counter-productive: consumers only ever do per-session-id / per-
+  // message-id lookups, so they never see unrelated entries in practice, and
+  // the filter pass itself was the source of the O(N) cascade.
+  const data = {
+    get session() {
+      return sessionList()
+    },
+    get session_status() {
+      return session.allStatusMap() as unknown as Record<string, any>
+    },
+    get session_diff() {
+      return {} as Record<string, any[]>
+    },
+    get message() {
+      return session.allMessages() as unknown as Record<string, SDKMessage[]>
+    },
+    get part() {
+      return session.allParts() as unknown as Record<string, SDKPart[]>
+    },
+    get permission() {
+      return permissionsBySession()
+    },
+    // Questions are handled directly by QuestionDock via session.questions(),
+    // not through DataProvider. The DataProvider's question field is unused here.
+    get question() {
+      return {}
+    },
+    get provider() {
+      return providerData() as unknown as any
+    },
+  }
 
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
     session.respondToPermission(input.permissionID, input.response, [], [])
@@ -94,6 +134,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const openDiff = (diff: { file: string; before: string; after: string; additions: number; deletions: number }) => {
+    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
+  }
+
   const openUrl = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })
   }
@@ -106,13 +150,14 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   return (
     <DataProvider
-      data={data()}
+      data={data}
       directory={directory()}
       // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
       onPermissionRespond={respond}
       onQuestionReply={reply}
       onQuestionReject={reject}
       onOpenFile={open}
+      onOpenDiff={openDiff}
       onOpenUrl={openUrl}
     >
       {props.children}
@@ -182,6 +227,12 @@ const AppContent: Component = () => {
     if (agent) session.selectAgent(agent.name)
   }
 
+  const handleForked = (message: { type?: string; sessionID?: string }) => {
+    if (message.type !== "sessionForked" || !message.sessionID) return
+    session.selectSession(message.sessionID)
+    setCurrentView("newTask")
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const message = event.data
@@ -193,12 +244,14 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
+        vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
         console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
@@ -219,17 +272,30 @@ const AppContent: Component = () => {
     setCurrentView("newTask")
   }
 
+  const handleForkMessage = (sessionId: string, messageId: string) => {
+    vscode.postMessage({ type: "forkSession", sessionId, messageId })
+  }
+
   return (
     <div class="container">
       {/* legacy-migration start — state-driven overlay, independent of currentView */}
       <Show
         when={migrationNeeded()}
         fallback={
-          <Switch fallback={<ChatView continueInWorktree promptBoxId="sidebar:fallback" />}>
+          <Switch
+            fallback={
+              <ChatView
+                continueInWorktree
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                promptBoxId="sidebar:fallback"
+              />
+            }
+          >
             <Match when={currentView() === "newTask"}>
               <ChatView
                 onSelectSession={handleSelectSession}
                 onShowHistory={() => setCurrentView("history")}
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
                 continueInWorktree
                 promptBoxId="sidebar:new-task"
               />
@@ -284,13 +350,17 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <NotificationsProvider>
-                            <SessionProvider>
-                              <DataBridge>
-                                <AppContent />
-                              </DataBridge>
-                            </SessionProvider>
-                          </NotificationsProvider>
+                          <DisplayProvider>
+                            <IndexingProvider>
+                              <NotificationsProvider>
+                                <SessionProvider>
+                                  <DataBridge>
+                                    <AppContent />
+                                  </DataBridge>
+                                </SessionProvider>
+                              </NotificationsProvider>
+                            </IndexingProvider>
+                          </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

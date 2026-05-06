@@ -1,11 +1,11 @@
 ---
 title: "Models & Providers"
-description: "Learn about the AI models and providers available through the Kilo AI Gateway, including model IDs, routing behavior, and provider-specific features."
+description: "Learn about the AI models available through the Kilo AI Gateway, including model IDs and how to use them."
 ---
 
 # Models & Providers
 
-The Kilo AI Gateway provides access to hundreds of AI models from multiple providers through a single unified API. You can switch between models by changing the model ID string -- no code changes required.
+The Kilo AI Gateway provides access to hundreds of AI models through a single unified API. You can switch between models by changing the model ID string -- no code changes required.
 
 ## Specifying a model
 
@@ -39,63 +39,82 @@ This returns model information including pricing, context window, and supported 
 
 ### Popular models
 
-| Model ID                        | Provider  | Description                                     |
-| ------------------------------- | --------- | ----------------------------------------------- |
-| `anthropic/claude-opus-4.6`     | Anthropic | Most capable Claude model for complex reasoning |
-| `anthropic/claude-sonnet-4.6`   | Anthropic | Balanced performance and cost                   |
-| `anthropic/claude-haiku-4.5`    | Anthropic | Fast and cost-effective                         |
-| `openai/gpt-5.2`                | OpenAI    | Latest GPT model                                |
-| `google/gemini-3-pro-preview`   | Google    | Advanced reasoning with 1M context              |
-| `google/gemini-3-flash-preview` | Google    | Fast and efficient                              |
-| `x-ai/grok-code-fast-1`         | xAI       | Optimized for code tasks                        |
-| `moonshotai/kimi-k2.5`          | Moonshot  | Strong multilingual model                       |
+| Model ID | Provider | Description |
+|---|---|---|
+| `anthropic/claude-opus-4.7` | Anthropic | Most capable Claude model for complex reasoning |
+| `anthropic/claude-sonnet-4.6` | Anthropic | Balanced performance and cost |
+| `anthropic/claude-haiku-4.5` | Anthropic | Fast and cost-effective |
+| `openai/gpt-5.4` | OpenAI | Latest GPT model |
+| `openai/gpt-5.4-mini` | OpenAI | Fast and efficient |
+| `google/gemini-3.1-pro-preview` | Google | Advanced reasoning |
+| `google/gemini-2.5-flash` | Google | Fast and efficient |
+| `x-ai/grok-4` | xAI | Most capable Grok model |
+| `x-ai/grok-code-fast-1` | xAI | Optimized for code tasks |
+| `deepseek/deepseek-v3.2` | DeepSeek | Strong coding and reasoning model |
+| `moonshotai/kimi-k2.5` | Moonshot | Strong coding and multilingual model |
+| `minimax/minimax-m2.7` | MiniMax | High-performance MoE model |
 
 ### Free models
 
 Several models are available at no cost, subject to rate limits:
 
-| Model ID                              | Description               |
-| ------------------------------------- | ------------------------- |
-| `minimax/minimax-m2.1:free`           | MiniMax M2.1              |
-| `z-ai/glm-5:free`                     | Z.AI GLM-5                |
-| `giga-potato`                         | Community model           |
-| `corethink:free`                      | CoreThink reasoning model |
-| `arcee-ai/trinity-large-preview:free` | Arcee Trinity             |
+| Model ID | Description |
+|---|---|
+| `x-ai/grok-code-fast-1:optimized:free` | xAI Grok Code Fast 1 Optimized |
+| `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super 120B |
+| `arcee-ai/trinity-large-thinking:free` | Arcee Trinity Large |
+| `openrouter/free` | Best available free model |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
 
+{% callout type="warning" title="Nemotron 3 Super Free (NVIDIA free endpoints)" %}
+Provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf). Trial use only — not for production or sensitive data. Prompts and outputs are logged by NVIDIA to improve its models and services. Do not submit personal or confidential data.
+{% /callout %}
+
 ## Auto models
 
-Kilo Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
+Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
+
+{% callout type="info" title="Underlying models can change" %}
+The mappings below reflect the current routing. The underlying models behind each `kilo-auto/*` tier are updated server-side as better options become available or as providers change pricing and availability — the tier IDs themselves remain stable.
+{% /callout %}
 
 ### `kilo-auto/frontier`
 
-Routes to the most capable paid models optimizing for cost, performance, and capabilities.
+Highest performance and capability for any task. Frontier requests are sent with medium reasoning effort and medium verbosity.
 
-| Mode                                                           | Resolved Model                |
-| -------------------------------------------------------------- | ----------------------------- |
-| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `anthropic/claude-opus-4.6`   |
-| `build`, `explore`, `code`                                     | `anthropic/claude-sonnet-4.6` |
-| Default (no mode specified)                                    | `anthropic/claude-sonnet-4.6` |
+| Mode | Resolved Model |
+|---|---|
+| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `anthropic/claude-opus-4.7` |
+| `build`, `explore`, `code` | `anthropic/claude-sonnet-4.6` |
+| Default (no / unknown mode) | `anthropic/claude-sonnet-4.6` |
 
 ### `kilo-auto/balanced`
 
-Follows the same mode-based routing as Frontier but uses more cost-effective models.
+Great balance of price and capability. The resolved model depends on the API interface used by the client.
 
-| Mode                                                           | Resolved Model         |
-| -------------------------------------------------------------- | ---------------------- |
-| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `moonshotai/kimi-k2.5` |
-| `build`, `explore`, `code`                                     | `minimax/minimax-m2.7` |
-| Default (no mode specified)                                    | `minimax/minimax-m2.7` |
+| API interface | Resolved Model | Reasoning effort |
+|---|---|---|
+| Completions (default) | `qwen/qwen3.6-plus` | enabled |
+| Responses API | `openai/gpt-5.5` | low |
+| Messages API | `anthropic/claude-sonnet-4.6` | low |
 
 ### `kilo-auto/free`
 
-The best available free model for each mode.
+Free with limited capability. No credits required. The resolved model is selected dynamically per session from a curated set of available free models; the mapping updates server-side as free model availability shifts.
 
-| Mode                        | Resolved Model              |
-| --------------------------- | --------------------------- |
-| All modes                   | `minimax/minimax-m2.5:free` |
-| Default (no mode specified) | `minimax/minimax-m2.5:free` |
+{% callout type="warning" title="Data handling for Auto Free" %}
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services — including NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) (trial use only, not for production or sensitive data). Do not submit personal or confidential data when using Auto Free.
+{% /callout %}
+
+### `kilo-auto/small`
+
+Automatically routes to a small, fast model for lightweight background tasks (session titles, commit messages, summaries).
+
+| Condition | Resolved Model |
+|---|---|
+| Account has paid balance | `google/gemma-4-31b-it` |
+| No balance / free account | `google/gemma-4-26b-a4b-it:free` |
 
 ### Example usage
 
@@ -115,66 +134,3 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{"model": "kilo-auto/balanced", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```
-
-## Providers
-
-The gateway routes requests to the appropriate provider based on the model and your configuration:
-
-| Provider          | Slug         | Description                         |
-| ----------------- | ------------ | ----------------------------------- |
-| OpenRouter        | `openrouter` | Primary gateway for most models     |
-| Vercel AI Gateway | `vercel`     | BYOK routing and select A/B testing |
-| Mistral           | `mistral`    | FIM completions (Codestral)         |
-| xAI               | `x-ai`       | Grok models (direct)                |
-| MiniMax           | `minimax`    | MiniMax models (direct)             |
-| CoreThink         | `corethink`  | CoreThink reasoning model           |
-| Inception         | `inception`  | InceptionLabs models                |
-| Martian           | `martian`    | Optimized xAI models                |
-| StreamLake        | `streamlake` | KAT-Coder models                    |
-
-## Provider routing
-
-The gateway uses the following priority for routing requests:
-
-1. **BYOK check**: If you have a BYOK key for the model's provider, the request is routed through Vercel AI Gateway using your key
-2. **Free model routing**: If the model is a Kilo-hosted free model, it's routed to its designated provider
-3. **Default routing**: All other requests go through OpenRouter
-
-### Preferred inference providers
-
-For models available through multiple providers, the gateway may use a preferred provider for better performance:
-
-| Model Family     | Preferred Provider   |
-| ---------------- | -------------------- |
-| Anthropic models | Amazon Bedrock       |
-| MiniMax models   | MiniMax (direct)     |
-| Mistral models   | Mistral (direct)     |
-| Moonshot models  | Moonshot AI (direct) |
-
-These preferences are sent as hints to OpenRouter, which may override them based on availability and load.
-
-## Listing models
-
-### Models endpoint
-
-```
-GET https://api.kilo.ai/api/gateway/models
-```
-
-Returns an OpenAI-compatible list of all available models with metadata including pricing, context window, and capabilities.
-
-### Providers endpoint
-
-```
-GET https://api.kilo.ai/api/gateway/providers
-```
-
-Returns a list of all available inference providers.
-
-### Models by provider
-
-```
-GET https://api.kilo.ai/api/gateway/models-by-provider
-```
-
-Returns models grouped by their provider, useful for building model selection interfaces.

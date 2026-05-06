@@ -25,3 +25,45 @@ For security reasons, SSH access is currently disabled for all KiloClaw instance
 Do **not** click **Update Now** inside the OpenClaw Control UI — this is not supported for KiloClaw instances and may break your setup.
 
 Updates are managed by the KiloClaw platform team to ensure stability. When a new version is available, it will be announced in the **Changelog** on your dashboard. To apply the update, click **Upgrade & Redeploy** from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy).
+
+## How do I migrate my OpenClaw?
+
+Whether you're migrating from another OpenClaw provider to KiloClaw, moving between KiloClaw instances (e.g., individual to org or vice versa), or leaving KiloClaw for another OpenClaw provider, you should plan to migrate your workspace, memory, and context so your new Claw retains the same knowledge as before.
+
+You should plan to reconfigure integrations in the new instance as these are often tied to the instance and will break if you attempt migration.
+
+### 1. Back up your workspace
+
+Have your current instance export the workspace. We recommend creating a GitHub repo or `tar` archive file for easy loading.
+
+If you are on KiloClaw, you can use
+
+**GitHub export** — make sure [GitHub is configured](/docs/kiloclaw/development-tools/github) and ask your instance:
+
+> Create a new GitHub repo and push your entire workspace there with the `gh` CLI. Tell me the URL of the repo you used.
+
+**Google Drive** — make sure [Google Drive is configured](/docs/kiloclaw/development-tools/google) and ask your instance:
+
+> Tar compress your workspace and push the file to Google Drive with the `gog` CLI. Then share the filename you used.
+
+### 2. Stand up the new instance
+
+### 3. Reconfigure integrations on the new instance
+
+If you are using GitHub or Google Drive for the migration, prioritize that configuration.
+
+### 4. Restore the workspace on the new instance
+
+On your new Claw, restore the workspace from whichever backup method you used:
+
+**From GitHub:**
+
+> The GitHub repo `<repo>` has a backup of your workspace. Pull the workspace from the repo with the `gh` CLI and overwrite the existing workspace directory with the repo's contents.
+
+**From Google Drive:**
+
+> The Google Drive file `<filename>` has a backup of your workspace. Pull the tar file from Google Drive with the `gog` CLI and overwrite the existing workspace directory with its contents.
+
+{% callout type="note" %}
+Replace `<repo>` or `<filename>` with the actual repository URL or filename from the backup step.
+{% /callout %}
