@@ -1330,6 +1330,8 @@ export const dict = {
   "settings.display.layout.description": "聊天介面的佈局模式",
   "settings.display.layout.auto": "自動",
   "settings.display.layout.stretch": "延伸",
+  "settings.display.fontSize.title": "字體大小",
+  "settings.display.fontSize.description": "獨立於 VS Code 調整 Kilo webview UI 的字體大小。",
   "settings.display.reasoningAutoCollapse.title": "自動收合推理",
   "settings.display.reasoningAutoCollapse.description":
     "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",
@@ -1487,4 +1489,12 @@ export const dict = {
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",
   "notifications.action.tryModelGeneric": "嘗試模型",
+  "diffViewer.source.workspace.label": "本機變更",
+  "diffViewer.source.workspace.tooltip":
+    "此分支相對於基礎分支的所有變更。包含未提交的檔案（已暫存、未暂存、未追蹤）以及尚未合入基礎分支的本機提交。",
+  "diffViewer.source.session.label": "工作階段",
+  "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
+  "diffViewer.group.session": "工作階段",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",
 } satisfies Partial<Record<Keys, string>>

@@ -35,6 +35,9 @@ export function DialogSessionList() {
   const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
 
   // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
+  // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
+  // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
+  // keeping worktree grouping. Currently the toggle has no effect here.
   const [searchResults, searchActions] = createResource(
     () => search(),
     async (query) => {

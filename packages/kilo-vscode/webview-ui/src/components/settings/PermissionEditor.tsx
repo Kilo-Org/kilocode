@@ -190,7 +190,7 @@ const PermissionEditor: Component<{
       <Show when={props.description}>
         <div
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "padding-bottom": "12px",
             "border-bottom": "1px solid var(--border-weak-base)",
@@ -280,12 +280,12 @@ const SimpleToolRow: Component<{
       }}
     >
       <div style={{ flex: 1, "min-width": 0 }}>
-        <div style={{ "font-size": "13px", color: "var(--text-base, var(--vscode-foreground))" }}>
+        <div style={{ "font-size": "var(--kilo-font-size-13)", color: "var(--text-base, var(--vscode-foreground))" }}>
           {toolTitle(props.id)}
         </div>
         <div
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
             "margin-top": "6px",
           }}
@@ -345,12 +345,12 @@ const GranularToolRow: Component<{
     <div style={{ padding: "12px 0", "border-bottom": "1px solid var(--border-weak-base)" }}>
       <div style={{ display: "flex", gap: "24px", "align-items": "flex-start", "justify-content": "space-between" }}>
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "13px", color: "var(--text-base, var(--vscode-foreground))" }}>
+          <div style={{ "font-size": "var(--kilo-font-size-13)", color: "var(--text-base, var(--vscode-foreground))" }}>
             {toolTitle(props.tool.id)}
           </div>
           <div
             style={{
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-top": "6px",
             }}
@@ -370,7 +370,7 @@ const GranularToolRow: Component<{
         }}
       >
         <div style={{ flex: 1, "min-width": 0 }}>
-          <div style={{ "font-size": "12px", color: "var(--text-base, #ccc)" }}>
+          <div style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--text-base, #ccc)" }}>
             {language.t(props.tool.granular.wildcardKey)}
           </div>
         </div>
@@ -386,7 +386,7 @@ const GranularToolRow: Component<{
         <div style={{ "margin-top": "4px" }}>
           <div
             style={{
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-bottom": "4px",
             }}
@@ -409,7 +409,7 @@ const GranularToolRow: Component<{
                   style={{
                     flex: "1 1 0%",
                     "min-width": 0,
-                    "font-size": "13px",
+                    "font-size": "var(--kilo-font-size-13)",
                     "font-family": "var(--vscode-editor-font-family, monospace)",
                     color: "var(--text-base, #ccc)",
                     overflow: "hidden",
@@ -450,14 +450,14 @@ const GranularToolRow: Component<{
               background: "none",
               border: "none",
               cursor: "pointer",
-              "font-size": "12px",
+              "font-size": "var(--kilo-font-size-12)",
               color: "var(--text-link-base, #3794ff)",
               "font-family": "inherit",
               "margin-top": "4px",
             }}
             onClick={() => setAdding(true)}
           >
-            <span style={{ "font-size": "14px" }}>+</span>
+            <span style={{ "font-size": "var(--kilo-font-size-14)" }}>+</span>
             {language.t(props.tool.granular.addKey)}
           </button>
         }
@@ -483,7 +483,7 @@ const GranularToolRow: Component<{
               border: "1px solid var(--border-base, #434443)",
               "border-radius": "2px",
               color: "var(--text-base, #ccc)",
-              "font-size": "13px",
+              "font-size": "var(--kilo-font-size-13)",
               "font-family": "var(--vscode-editor-font-family, monospace)",
               padding: "4px 8px",
               outline: "none",

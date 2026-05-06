@@ -1,6 +1,8 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { hashFileDiffs, resolveLocalDiffTarget } from "../review-utils"
-import { WorktreeDiffClient } from "../worktree-diff-client"
+import { hashFileDiffs } from "../diff/shared/hash"
+import { resolveLocalDiffTarget } from "../diff/shared/target"
+import { DIFF_POLL_INTERVAL_MS } from "../diff/polling"
+import { WorktreeDiffClient } from "../diff/shared/client"
 import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
@@ -200,7 +202,7 @@ export class WorktreeDiffController {
       if (this.session !== sessionId) return
       this.interval = setInterval(() => {
         void this.poll(sessionId)
-      }, 2500)
+      }, DIFF_POLL_INTERVAL_MS)
     })
   }
 

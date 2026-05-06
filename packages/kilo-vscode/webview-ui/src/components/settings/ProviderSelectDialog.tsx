@@ -61,7 +61,8 @@ const ProviderSelectDialog = () => {
 
     if (item.id === KILO_PROVIDER_ID) {
       dialog.close()
-      server.startLogin()
+      // Navigate to the Profile view so the full device-auth UI is visible.
+      server.goToLogin()
       return
     }
 
@@ -114,7 +115,13 @@ const ProviderSelectDialog = () => {
                 "flex-wrap": "wrap",
               }}
             >
-              <span style={{ "font-size": "14px", "line-height": "20px", color: "var(--vscode-foreground)" }}>
+              <span
+                style={{
+                  "font-size": "var(--kilo-font-size-14)",
+                  "line-height": "var(--kilo-font-size-20)",
+                  color: "var(--vscode-foreground)",
+                }}
+              >
                 {item.name}
               </span>
               <Show when={item.id === KILO_PROVIDER_ID}>

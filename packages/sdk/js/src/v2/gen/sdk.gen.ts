@@ -1841,6 +1841,8 @@ export class Session2 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
+      scope?: "project"
+      path?: string
       roots?: boolean | "true" | "false"
       start?: number
       search?: string
@@ -1855,6 +1857,8 @@ export class Session2 extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
+            { in: "query", key: "path" },
             { in: "query", key: "roots" },
             { in: "query", key: "start" },
             { in: "query", key: "search" },
@@ -5783,7 +5787,7 @@ export class Claw extends HeyApiClient {
   /**
    * Get KiloClaw chat credentials
    *
-   * Fetch Stream Chat credentials for the user's KiloClaw instance
+   * Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.
    */
   public chatCredentials<ThrowOnError extends boolean = false>(
     parameters?: {

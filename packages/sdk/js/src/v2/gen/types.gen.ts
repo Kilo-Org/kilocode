@@ -1572,7 +1572,6 @@ export type PermissionConfig =
       question?: PermissionActionConfig
       webfetch?: PermissionActionConfig
       websearch?: PermissionActionConfig
-      codesearch?: PermissionActionConfig
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
@@ -1960,7 +1959,7 @@ export type Config = {
    * Custom provider configurations and model overrides
    */
   provider?: {
-    [key: string]: ProviderConfig
+    [key: string]: ProviderConfig | null
   }
   /**
    * MCP (Model Context Protocol) server configurations
@@ -3887,10 +3886,18 @@ export type SessionListData = {
   path?: never
   query?: {
     /**
-     * Filter sessions by project directory
+     * Filter sessions by directory
      */
     directory?: string
     workspace?: string
+    /**
+     * List all sessions for the current project
+     */
+    scope?: "project"
+    /**
+     * Filter sessions by project-relative path
+     */
+    path?: string
     /**
      * Only return root sessions (no parentID)
      */
@@ -7296,7 +7303,16 @@ export type KiloClawStatusResponses = {
    * Instance status
    */
   200: {
-    status: "provisioned" | "starting" | "restarting" | "running" | "stopped" | "destroying" | null
+    status:
+      | "provisioned"
+      | "starting"
+      | "restarting"
+      | "recovering"
+      | "running"
+      | "stopped"
+      | "destroying"
+      | "restoring"
+      | null
     sandboxId?: string
     flyRegion?: string
     machineSize?: {
@@ -7309,6 +7325,7 @@ export type KiloClawStatusResponses = {
     channelCount?: number
     secretCount?: number
     userId?: string
+    botName?: string | null
   }
 }
 
@@ -7326,13 +7343,13 @@ export type KiloClawChatCredentialsData = {
 
 export type KiloClawChatCredentialsResponses = {
   /**
-   * Stream Chat credentials or null
+   * Kilo Chat credentials or null
    */
   200: {
-    apiKey: string
-    userId: string
-    userToken: string
-    channelId: string
+    token: string
+    expiresAt: string
+    kiloChatUrl: string
+    eventServiceUrl: string
   } | null
 }
 

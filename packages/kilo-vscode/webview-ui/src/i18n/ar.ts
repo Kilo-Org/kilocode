@@ -1375,6 +1375,8 @@ export const dict = {
   "settings.display.layout.description": "وضع التخطيط لواجهة الدردشة",
   "settings.display.layout.auto": "تلقائي",
   "settings.display.layout.stretch": "تمديد",
+  "settings.display.fontSize.title": "حجم الخط",
+  "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
@@ -1509,4 +1511,14 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
+  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.tooltip":
+    "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
+  "diffViewer.source.session.label": "الجلسة",
+  "diffViewer.source.session.tooltip":
+    "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
+  "diffViewer.group.session": "الجلسة",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 }

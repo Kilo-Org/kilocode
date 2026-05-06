@@ -1398,6 +1398,8 @@ export const dict = {
   "settings.display.layout.description": "Layoutmodus for chatgrensesnittet",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Strekk",
+  "settings.display.fontSize.title": "Skriftstørrelse",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
@@ -1529,4 +1531,14 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
+  "diffViewer.source.workspace.label": "Lokale endringer",
+  "diffViewer.source.workspace.tooltip":
+    "Alle endringer på denne grenen sammenlignet med basegrenen. Inkluderer ikke-committede filer (staged, unstaged, usporede) og lokale commits som ennå ikke er i basen.",
+  "diffViewer.source.session.label": "Økt",
+  "diffViewer.source.session.tooltip":
+    "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
+  "diffViewer.group.session": "Økt",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 } satisfies Partial<Record<Keys, string>>

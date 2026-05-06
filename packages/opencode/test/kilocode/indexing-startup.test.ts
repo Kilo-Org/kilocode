@@ -46,6 +46,7 @@ const off: Partial<Config.Info> = {
 const configDir = process.env["KILO_CONFIG_DIR"]
 const content = process.env["KILO_CONFIG_CONTENT"]
 const lancedb = process.env["KILO_LANCEDB_PATH"]
+const disabled = process.env["KILO_DISABLE_CODEBASE_INDEXING"]
 const error = new Error("test indexing initialization failed")
 const plugins = JSON.stringify({ plugin: ["@kilocode/kilo-indexing"] })
 
@@ -78,6 +79,8 @@ function reset() {
   else process.env["KILO_CONFIG_CONTENT"] = content
   if (lancedb === undefined) delete process.env["KILO_LANCEDB_PATH"]
   else process.env["KILO_LANCEDB_PATH"] = lancedb
+  if (disabled === undefined) delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
+  else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
 }
 
 function configure(dir: string) {
@@ -294,6 +297,39 @@ describe("indexing startup degradation", () => {
           expect(init).not.toHaveBeenCalled()
         },
       })
+    },
+    timeout,
+  )
+
+  test(
+    "stays disabled when VS Code starts without a workspace folder",
+    async () => {
+      await using tmp = await tmpdir({ git: true, config: cfg })
+      configure(tmp.path)
+      process.env["KILO_DISABLE_CODEBASE_INDEXING"] = "vscode-no-workspace"
+      const init = spyOn(CodeIndexManager.prototype, "initialize")
+
+      try {
+        await Instance.provide({
+          directory: tmp.path,
+          init: () => AppRuntime.runPromise(InstanceBootstrap),
+          fn: async () => {
+            const status = await KiloIndexing.current()
+
+            expect(status).toMatchObject({
+              state: "Disabled",
+              message: "Codebase indexing is disabled because no workspace folder is open in VS Code.",
+            })
+            expect(await KiloIndexing.available()).toBe(false)
+            expect(KiloIndexing.ready()).toBe(false)
+            expect(await KiloIndexing.search("no workspace")).toEqual([])
+            expect(init).not.toHaveBeenCalled()
+          },
+        })
+      } finally {
+        init.mockRestore()
+        reset()
+      }
     },
     timeout,
   )

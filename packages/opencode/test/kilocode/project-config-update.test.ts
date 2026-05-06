@@ -70,6 +70,18 @@ test("project config update creates .kilo/kilo.json and reloads it", async () =>
   })
 })
 
+test("project config update skips empty delete-only writes when no config exists", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ provider: { missing: null } } as any)
+
+      await expect(fs.access(path.join(tmp.path, ".kilo", "kilo.json"))).rejects.toThrow()
+    },
+  })
+})
+
 test("project config update prefers existing root kilo.json", async () => {
   await using tmp = await tmpdir()
   await writeConfig(tmp.path, { username: "alice" })

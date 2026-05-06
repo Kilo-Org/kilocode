@@ -22,6 +22,7 @@ import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
+import { snapshotProgress } from "../../context/session-utils"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 import { formatRate, messageRates } from "../../context/session-utils"
@@ -42,7 +43,7 @@ function isRenderable(part: SDKPart): boolean {
     // Always render question tool parts — active ones get the inline QuestionDock
     return true
   }
-  if (part.type === "text") return !!(part as SDKPart & { text: string }).text?.trim()
+  if (part.type === "text") return !snapshotProgress(part) && !!(part as SDKPart & { text: string }).text?.trim()
   if (part.type === "reasoning") return !!(part as SDKPart & { text: string }).text?.trim()
   return !!PART_MAPPING[part.type]
 }

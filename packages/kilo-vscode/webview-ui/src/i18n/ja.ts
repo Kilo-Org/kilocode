@@ -1396,6 +1396,8 @@ export const dict = {
   "settings.display.layout.description": "チャットインターフェースのレイアウトモード",
   "settings.display.layout.auto": "自動",
   "settings.display.layout.stretch": "ストレッチ",
+  "settings.display.fontSize.title": "フォントサイズ",
+  "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
@@ -1529,4 +1531,14 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
+  "diffViewer.source.workspace.label": "ローカルの変更",
+  "diffViewer.source.workspace.tooltip":
+    "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
+  "diffViewer.source.session.label": "セッション",
+  "diffViewer.source.session.tooltip":
+    "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
+  "diffViewer.group.session": "セッション",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 }
