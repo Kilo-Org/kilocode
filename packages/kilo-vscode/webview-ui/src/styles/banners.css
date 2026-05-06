@@ -159,7 +159,7 @@
   border: 1px solid var(--vscode-inputValidation-warningBorder, #b89500);
   background: var(--vscode-inputValidation-warningBackground, rgba(184, 149, 0, 0.1));
   color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1.4;
 }
 
