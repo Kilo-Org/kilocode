@@ -14,7 +14,7 @@ const stop = new Error("stop")
 // kilocode_change start
 const seen = {
   tui: [] as string[],
-  args: [] as Array<{ yolo?: boolean }>,
+  args: [] as Array<{ autoApprove?: boolean }>,
 }
 // kilocode_change end
 
@@ -27,7 +27,7 @@ function setup() {
   // https://github.com/oven-sh/bun/issues/7823 and #12823.
   spyOn(App, "tui").mockImplementation(async (input) => {
     if (input.directory) seen.tui.push(input.directory)
-    seen.args.push({ yolo: input.args.yolo })
+    seen.args.push({ autoApprove: input.args.autoApprove })
     throw stop
   })
   // kilocode_change end
@@ -67,7 +67,8 @@ describe("tui thread", () => {
       continue: false,
       fork: false,
       // kilocode_change
-      yolo: false,
+      "auto-approve": false,
+      autoApprove: false,
       "cloud-fork": undefined, // kilocode_change
       cloudFork: undefined, // kilocode_change
       port: 0,
@@ -116,7 +117,7 @@ describe("tui thread", () => {
       process.env.PWD = link
       await expect(call(project)).rejects.toBe(stop)
       expect(seen.tui[0]).toBe(tmp.path)
-      expect(seen.args[0]).toEqual({ yolo: false })
+      expect(seen.args[0]).toEqual({ autoApprove: false })
     } finally {
       process.chdir(cwd)
       if (pwd === undefined) delete process.env.PWD
@@ -139,7 +140,7 @@ describe("tui thread", () => {
   // kilocode_change end
 
   // kilocode_change start
-  test("forwards yolo flag into tui args", async () => {
+  test("forwards auto-approve flag into tui args", async () => {
     setup()
     await using tmp = await tmpdir({ git: true })
     const cwd = process.cwd()
@@ -175,7 +176,8 @@ describe("tui thread", () => {
         session: undefined,
         continue: false,
         fork: false,
-        yolo: true,
+        "auto-approve": true,
+        autoApprove: true,
         "cloud-fork": undefined,
         cloudFork: undefined,
         port: 0,
@@ -186,7 +188,7 @@ describe("tui thread", () => {
         cors: [],
       }
       await expect(TuiThreadCommand.handler(args)).rejects.toBe(stop)
-      expect(seen.args[0]).toEqual({ yolo: true })
+      expect(seen.args[0]).toEqual({ autoApprove: true })
     } finally {
       process.chdir(cwd)
       if (tty) Object.defineProperty(process.stdin, "isTTY", tty)

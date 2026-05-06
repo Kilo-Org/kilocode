@@ -8,7 +8,7 @@ export interface Args {
   continue?: boolean
   sessionID?: string
   fork?: boolean
-  yolo?: boolean // kilocode_change
+  autoApprove?: boolean // kilocode_change
 }
 // kilocode_change end
 

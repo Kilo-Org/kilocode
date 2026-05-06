@@ -23,7 +23,7 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { Link } from "@tui/ui/link"
 import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
-import { TuiYolo } from "@/kilocode/cli/cmd/tui/yolo"
+import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 
 // Re-export so upstream can render the route without importing directly
@@ -140,7 +140,7 @@ export function init() {
 
   const enabled = () => {
     if (route.data.type !== "session") return false
-    return TuiYolo.enabled(route.data.sessionID)
+    return TuiAutoApprove.enabled(route.data.sessionID)
   }
 
   // Inject TUI dependencies for kilo-gateway
@@ -163,48 +163,48 @@ export function init() {
   registerKiloCommands(useSDK)
 
   createEffect(() => {
-    if (!args.yolo) return
+    if (!args.autoApprove) return
     if (route.data.type !== "session") return
     if (!args.sessionID && !args.continue && !args.fork) return
-    TuiYolo.boot(route.data.sessionID)
+    TuiAutoApprove.boot(route.data.sessionID)
   })
 
   createEffect(() => {
     if (route.data.type !== "session") return
     const req = sync.data.permission[route.data.sessionID]?.[0]
     if (!req) return
-    if (!TuiYolo.shouldReply(route.data.sessionID, req.id)) return
-    TuiYolo.mark(route.data.sessionID, req.id)
+    if (!TuiAutoApprove.shouldReply(route.data.sessionID, req.id)) return
+    TuiAutoApprove.mark(route.data.sessionID, req.id)
     void sdk.client.permission.reply({ requestID: req.id, reply: "once" })
   })
 
-  // Register YOLO toggle
+  // Register auto-approve toggle
   command.register(() => [
     {
       get title() {
-        return enabled() ? "Disable YOLO mode" : "Enable YOLO mode"
+        return enabled() ? "Disable auto-approve mode" : "Enable auto-approve mode"
       },
       value: "permission.allow_everything",
       category: "Session",
       enabled: route.data.type === "session",
       slash: {
-        name: "yolo",
+        name: "auto-approve",
       },
       onSelect: async (dialog) => {
         if (route.data.type !== "session") return
         const sessionID = route.data.sessionID
         const next = !enabled()
-        TuiYolo.set(sessionID, next)
+        TuiAutoApprove.set(sessionID, next)
         if (next) {
           const req = sync.data.permission[sessionID]?.[0]
-          if (req && TuiYolo.shouldReply(sessionID, req.id)) {
-            TuiYolo.mark(sessionID, req.id)
+          if (req && TuiAutoApprove.shouldReply(sessionID, req.id)) {
+            TuiAutoApprove.mark(sessionID, req.id)
             const result = await sdk.client.permission.reply({ requestID: req.id, reply: "once" })
             if (result.error) {
-              TuiYolo.set(sessionID, false)
+              TuiAutoApprove.set(sessionID, false)
               toast.show({
                 variant: "error",
-                message: "Failed to enable YOLO mode",
+                message: "Failed to enable auto-approve mode",
               })
               return
             }

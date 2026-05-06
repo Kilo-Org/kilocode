@@ -296,7 +296,7 @@ export const RunCommand = cmd({
           default: false,
         })
         // kilocode_change start
-        .option("yolo", {
+        .option("auto-approve", {
           type: "boolean",
           describe: "allow tools to run without permission prompts",
           default: false,
@@ -581,8 +581,8 @@ export const RunCommand = cmd({
             const permission = event.properties
             if (permission.sessionID !== sessionID) continue
 
-            if (args.auto || args.yolo) {
-              // kilocode_change - In auto/YOLO mode, automatically approve all permissions without prompting
+            if (args.auto || args.autoApprove) {
+              // kilocode_change - In auto/auto-approve mode, automatically approve all permissions without prompting
               await sdk.permission.reply({
                 requestID: permission.id,
                 reply: "once",

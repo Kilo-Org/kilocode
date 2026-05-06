@@ -3,7 +3,7 @@ const sessions = new Set<string>()
 const replies = new Map<string, string>()
 let startup = false
 
-export namespace TuiYolo {
+export namespace TuiAutoApprove {
   export function enabled(sessionID?: string) {
     if (!sessionID) return false
     return sessions.has(sessionID)

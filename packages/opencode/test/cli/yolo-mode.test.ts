@@ -57,7 +57,7 @@ function idle(sessionID: string): Event {
   }
 }
 
-function args(input?: { yolo?: boolean; auto?: boolean }) {
+function args(input?: { autoApprove?: boolean; auto?: boolean }) {
   return {
     _: [],
     $0: "kilo",
@@ -81,7 +81,8 @@ function args(input?: { yolo?: boolean; auto?: boolean }) {
     variant: undefined,
     thinking: false,
     auto: input?.auto ?? false,
-    yolo: input?.yolo ?? false,
+    "auto-approve": input?.autoApprove ?? false,
+    autoApprove: input?.autoApprove ?? false,
     "--": [],
   }
 }
@@ -97,7 +98,7 @@ afterEach(() => {
   delete (process.stdin as { isTTY?: boolean }).isTTY
 })
 
-async function run(input: { sdk: Record<string, unknown>; yolo?: boolean; auto?: boolean }) {
+async function run(input: { sdk: Record<string, unknown>; autoApprove?: boolean; auto?: boolean }) {
   mock.module("@kilocode/sdk/v2", () => ({
     createKiloClient: () => input.sdk,
   }))
@@ -109,11 +110,11 @@ async function run(input: { sdk: Record<string, unknown>; yolo?: boolean; auto?:
 
   const key = JSON.stringify({ time: Date.now(), rand: Math.random() })
   const { RunCommand } = await import(`../../src/cli/cmd/run?${key}`)
-  return RunCommand.handler(args({ yolo: input.yolo, auto: input.auto }) as never)
+  return RunCommand.handler(args({ autoApprove: input.autoApprove, auto: input.auto }) as never)
 }
 
-describe("cli run YOLO mode", () => {
-  test("--yolo auto-approves permission prompts", async () => {
+describe("cli run auto-approve mode", () => {
+  test("--auto-approve auto-approves permission prompts", async () => {
     const q = feed<Event>()
     const calls: Array<{ requestID: string; reply: string }> = []
 
@@ -140,12 +141,12 @@ describe("cli run YOLO mode", () => {
       },
     }
 
-    await run({ sdk, yolo: true })
+    await run({ sdk, autoApprove: true })
 
     expect(calls).toEqual([{ requestID: "perm_1", reply: "once" }])
   })
 
-  test("without --yolo still rejects permission prompts by default", async () => {
+  test("without --auto-approve still rejects permission prompts by default", async () => {
     const q = feed<Event>()
     const calls: Array<{ requestID: string; reply: string }> = []
 
