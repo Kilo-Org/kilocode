@@ -2122,8 +2122,10 @@ ToolRegistry.register({
     const view = createMemo(() => {
       const diff = props.metadata?.filediff
       if (diff?.patch) return normalize(diff)
-      const before = diff?.before ?? props.input.oldString ?? ""
-      const after = diff?.after ?? props.input.newString ?? ""
+      // Pending state: tool-part metadata.filediff is written only after the
+      // permission ask completes, so render from the tool input in the meantime.
+      const before = props.input.oldString ?? ""
+      const after = props.input.newString ?? ""
       if (!before && !after) return
       return normalize({
         file: diff?.file ?? path(),
@@ -2141,8 +2143,6 @@ ToolRegistry.register({
       if (!canOpenDiff() || !v) return
       data.openDiff!({
         file: path(),
-        before: v.before,
-        after: v.after,
         patch: v.patch,
         additions: v.additions,
         deletions: v.deletions,
@@ -2258,8 +2258,6 @@ ToolRegistry.register({
       if (data.openDiff && v) {
         data.openDiff({
           file: props.metadata?.filediff?.file || props.input.filePath,
-          before: v.before,
-          after: v.after,
           patch: v.patch,
           additions: v.additions,
           deletions: v.deletions,
@@ -2348,8 +2346,6 @@ interface ApplyPatchFile {
   type: "add" | "update" | "delete" | "move"
   patch?: string
   diff: string
-  before?: string
-  after?: string
   additions: number
   deletions: number
   movePath?: string
@@ -2364,21 +2360,13 @@ ToolRegistry.register({
     const files = createMemo(() => (props.metadata.files ?? []) as ApplyPatchFile[])
     const view = (file: ApplyPatchFile) => {
       const patch = file.patch ?? file.diff
-      if (patch)
-        return normalize({
-          file: file.relativePath,
-          patch,
-          additions: file.additions,
-          deletions: file.deletions,
-        })
-      if (file.before !== undefined || file.after !== undefined)
-        return normalize({
-          file: file.relativePath,
-          before: file.before ?? "",
-          after: file.after ?? "",
-          additions: file.additions,
-          deletions: file.deletions,
-        })
+      if (!patch) return
+      return normalize({
+        file: file.relativePath,
+        patch,
+        additions: file.additions,
+        deletions: file.deletions,
+      })
     }
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)

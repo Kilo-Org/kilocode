@@ -23,8 +23,6 @@ type DiffStyle = "unified" | "split"
 interface DiffVirtualFile {
   file: string
   patch?: string
-  before?: string
-  after?: string
   additions: number
   deletions: number
 }
@@ -65,9 +63,7 @@ const DiffVirtualContent: Component = () => {
 
   const view = createMemo(() => {
     const d = diff()
-    if (!d) return
-    if (typeof d.patch === "string" && d.patch.length > 0) return normalize(d)
-    if (d.before === undefined && d.after === undefined) return
+    if (!d?.patch) return
     return normalize(d)
   })
 
@@ -117,15 +113,15 @@ const DiffVirtualContent: Component = () => {
               </Show>
             </div>
             <div class="am-review-diff" style={{ width: "100%" }}>
-              <Show
-                when={markdown() && isMarkdownFile(d().file)}
-                fallback={
-                  <Show when={view()}>
-                    {(v) => <Diff fileDiff={v().fileDiff} diffStyle={style()} hunkSeparators="simple" />}
+              <Show when={view()}>
+                {(v) => (
+                  <Show
+                    when={markdown() && isMarkdownFile(d().file)}
+                    fallback={<Diff fileDiff={v().fileDiff} diffStyle={style()} hunkSeparators="simple" />}
+                  >
+                    <MarkdownDiffView diff={{ file: d().file, before: v().before, after: v().after }} />
                   </Show>
-                }
-              >
-                <MarkdownDiffView diff={{ file: d().file, before: view()?.before ?? "", after: view()?.after ?? "" }} />
+                )}
               </Show>
             </div>
           </>

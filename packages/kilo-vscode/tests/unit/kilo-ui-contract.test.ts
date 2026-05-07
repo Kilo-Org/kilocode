@@ -136,10 +136,10 @@ describe("Edit tool diff-first click contract (source)", () => {
   const editBlockMatch = src.match(/ToolRegistry\.register\(\{\s*name:\s*"edit"[\s\S]*?(?=ToolRegistry\.register\(|$)/)
   const editBlock = editBlockMatch?.[0] ?? ""
 
-  it("edit tool derives before/after content from filediff or input", () => {
+  it("edit tool renders from filediff.patch and falls back to tool input", () => {
     expect(editBlock).toContain("normalize(diff)")
-    expect(editBlock).toMatch(/diff\?\.before\s*\?\?\s*props\.input\.oldString/)
-    expect(editBlock).toMatch(/diff\?\.after\s*\?\?\s*props\.input\.newString/)
+    expect(editBlock).toMatch(/props\.input\.oldString\s*\?\?\s*""/)
+    expect(editBlock).toMatch(/props\.input\.newString\s*\?\?\s*""/)
   })
 })
 

@@ -16,12 +16,6 @@ type ReviewDiff = SnapshotFileDiff | VcsFileDiff | LegacyDiff
 
 // kilocode_change start - parse patches with Pierre's partial-diff path so the
 // hunk header is the source of truth for line numbers.
-export type DiffText = {
-  before: string
-  after: string
-  patch: string
-}
-
 export type ViewDiff = {
   file: string
   patch: string
@@ -54,7 +48,9 @@ function reconstruct(patch: string) {
   return { before: before.join("\n") + "\n", after: after.join("\n") + "\n" }
 }
 
-export function contents(diff: ReviewDiff): DiffText {
+type DiffText = { before: string; after: string; patch: string }
+
+function contents(diff: ReviewDiff): DiffText {
   if (typeof diff.patch === "string") {
     return { ...reconstruct(diff.patch), patch: diff.patch }
   }

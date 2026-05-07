@@ -24,22 +24,16 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     return parts.slice(0, -1).join("/")
   })
 
-  // Always go through normalize: when a patch is present it uses Pierre's
-  // partial-diff path (real line numbers from the @@ header), otherwise it
-  // falls back to before/after. Returns undefined when there is nothing to
-  // render at all.
   const view = createMemo(() => {
     const fd = props.filediff
-    if (typeof fd.patch === "string" && fd.patch.length > 0) return normalize(fd)
-    if (fd.before === undefined && fd.after === undefined) return
+    if (!fd.patch) return
     return normalize(fd)
   })
 
   const openInTab = () => {
-    const v = view()
     vscode.postMessage({
       type: "openDiffVirtual",
-      diff: { ...props.filediff, before: v?.before ?? "", after: v?.after ?? "" },
+      diff: props.filediff,
       initialDiffStyle: "unified",
     })
   }
