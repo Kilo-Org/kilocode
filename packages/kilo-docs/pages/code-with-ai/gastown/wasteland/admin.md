@@ -115,7 +115,7 @@ The inbox classifies incoming DoltHub PRs into typed cards:
 | **Wanted post** | Someone posted a new wanted item — review title, description, type, priority |
 | **Wanted edit** | An existing item was updated (`update`), withdrawn (`delete`), or unclaimed (`unclaim`) |
 | **Work submission** | A rig submitted evidence for a claimed item — review the evidence URL |
-| **Admin action** | An accept, reject, or close was performed — review the stamp details |
+| **Admin action** | An accept (`accept` / `accept-upstream`), reject (`reject`), or close (`close` / `close-upstream`) was performed — review the stamp details. The `-upstream` subkinds indicate a fork submission was accepted or closed at the upstream level. |
 | **Unknown** | A PR from outside the `wl` toolchain — foreign commits not matching any known verb |
 
 ### Inspecting evidence
@@ -127,6 +127,10 @@ When a work submission appears, you can:
 3. **Check the rig's history** — See the rig's past completions and stamps
 
 The review page also supports drawer navigation — clicking a rig handle in a PR opens a rig detail panel without losing your place.
+
+### Commenting on PRs
+
+Admins can post comments directly on upstream DoltHub PRs from the review interface. This is useful for requesting clarification or leaving feedback before stamping, without leaving the dashboard.
 
 ## Stamping Work
 
@@ -286,3 +290,45 @@ Each wasteland instance maintains its own:
 - **Claims and evidence** — Only visible within the instance where the work was done.
 - **Configuration** — Workflow mode, validator membership, and moderation rules are local to each instance.
 - **Members list** — Your instance's member roster is independent.
+
+## Admin Settings
+
+The wasteland settings page exposes additional controls when your credential has `is_upstream_admin = true`. These are visible only to owners.
+
+### Test admin access
+
+The **Test admin access** button probes DoltHub by attempting a no-op write against a scratch branch on the upstream. If the probe succeeds, you see a green "Admin access verified" badge. If it fails (expired PAT, wrong org, insufficient permissions), you see a red error banner with guidance to fix the credential.
+
+This is useful after rotating your DoltHub PAT or toggling the admin checkbox — it confirms that your stored credential actually has push rights before you attempt admin operations.
+
+### Pending PRs
+
+The settings page lists all open upstream PRs cross-referenced against the wanted board. Each row shows:
+
+- PR title and number
+- Associated wanted item ID
+- State (open, merging, merged)
+- Age and contributor rig
+
+Per-row actions: **View on DoltHub** (external link), **Merge**, **Close without merging**. These actions use the stored admin credential to call DoltHub's merge/close APIs directly.
+
+{% callout type="warning" %}
+DoltHub merge is **asynchronous**. After clicking Merge, the PR state may not update for 5–30 seconds. The UI polls the PR state to confirm.
+{% /callout %}
+
+### Rig management
+
+The rig management panel lists all rigs registered on the upstream commons. Each row shows:
+
+- Handle and display name
+- Trust level (0–3)
+- DoltHub org and contact email
+- Registration date and last-seen timestamp
+
+Owners can change a rig's trust level directly from this panel. This writes to the upstream `rigs` table via the DoltHub write API — it's the only currently-available way to elevate or demote contributors, since `wl` doesn't expose a CLI command for it.
+
+Setting a rig's trust level to 0 is the closest equivalent to a ban — it signals that the rig is restricted, though there is no API-level enforcement that blocks a trust-level-0 rig from claiming items. See [Moderation](#moderation) for the full escalation workflow.
+
+### Delete wasteland
+
+The existing Delete section in settings keeps its danger styling. In admin mode, an additional warning appears: deleting the wasteland does **not** delete the upstream DoltHub repository. To fully decommission, you must also archive or delete the `<owner>/<db>` repo on DoltHub.
