@@ -43,4 +43,10 @@ describe("Kilo API URL resolvers", () => {
       "https://token.test/api/gateway/",
     )
   })
+
+  test("resolves child endpoint URLs", () => {
+    expect(new URL("embedding-models", resolveKiloGatewayBaseUrl({ baseURL: "https://example.test" })).toString()).toBe(
+      "https://example.test/api/gateway/embedding-models",
+    )
+  })
 })

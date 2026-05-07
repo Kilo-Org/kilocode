@@ -66,6 +66,21 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.currentModelDimension).toBe(1536)
   })
 
+  test("uses configured dimension for Kilo models outside the fallback catalog", () => {
+    const cfg = new CodeIndexConfigManager(
+      createInput({
+        embedderProvider: "kilo",
+        openAiKey: undefined,
+        kiloApiKey: "kilo-token",
+        modelId: "custom/model",
+        modelDimension: 2048,
+      }),
+    )
+
+    expect(cfg.currentModelId).toBe("custom/model")
+    expect(cfg.currentModelDimension).toBe(2048)
+  })
+
   describe("loadConfiguration restart checks", () => {
     test("requires restart when model changes with same dimension", () => {
       const cfg = new CodeIndexConfigManager(createInput({ modelId: "text-embedding-3-small" }))

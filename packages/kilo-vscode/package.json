@@ -927,6 +927,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",

@@ -10,8 +10,8 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import {
-  KILO_DEFAULT_EMBEDDING_MODEL,
-  KILO_EMBEDDING_MODELS,
+  FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
+  FALLBACK_KILO_EMBEDDING_MODELS,
   getKiloEmbeddingModel,
   normalizeKiloEmbeddingModelId,
 } from "@kilocode/kilo-indexing/embedding-models"
@@ -93,7 +93,7 @@ function defaultIndexing(sync: ReturnType<typeof useSync>): IndexingConfig {
   const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
   const auth = resolveKiloIndexingAuth({ config: sync.data.config, provider })
   if (!shouldDefaultIndexingToKilo(indexing, auth)) return indexing
-  return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL }
+  return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL }
 }
 
 async function saveIndexing(
@@ -175,7 +175,12 @@ function ProviderSelect(props: SubDialogProps) {
         const current = getIndexing(sync)
         const updated: IndexingConfig =
           provider === "kilo"
-            ? { ...current, provider, model: kiloModel(current.model) ?? KILO_DEFAULT_EMBEDDING_MODEL, dimension: undefined }
+            ? {
+                ...current,
+                provider,
+                model: kiloModel(current.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
+                dimension: undefined,
+              }
             : {
                 ...current,
                 provider,
@@ -400,14 +405,22 @@ function KiloModelSelect(props: SubDialogProps) {
   return (
     <DialogSelect
       title="Kilo Embedding Model"
-      options={KILO_EMBEDDING_MODELS.map((item) => ({
+      options={FALLBACK_KILO_EMBEDDING_MODELS.map((item) => ({
         value: item.id,
         title: item.name,
-        description: item.id === (kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL) ? "(current)" : `${item.dimension}d`,
+        description:
+          item.id === (kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL)
+            ? "(current)"
+            : `${item.dimension}d`,
       }))}
-      current={kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL}
+      current={kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL}
       onSelect={async (option) => {
-        await saveIndexing(sdk, sync, { ...getIndexing(sync), provider: "kilo", model: option.value, dimension: undefined }, toast)
+        await saveIndexing(
+          sdk,
+          sync,
+          { ...getIndexing(sync), provider: "kilo", model: option.value, dimension: undefined },
+          toast,
+        )
         dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
       }}
     />
@@ -479,7 +492,7 @@ export function DialogIndexing(props: DialogIndexingProps) {
       value: "kiloModel",
       title: "Kilo Model Preset",
       category: "Embedding",
-      description: kiloModel(indexing.model) ?? KILO_DEFAULT_EMBEDDING_MODEL,
+      description: kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
     })
   }
 
@@ -504,7 +517,8 @@ export function DialogIndexing(props: DialogIndexingProps) {
           case "toggle": {
             const current = getIndexing(sync)
             const enabled = !indexing.enabled
-            const updated = enabled && !current.provider && hasKiloAuth(sync) ? { ...defaultIndexing(sync), enabled } : { ...current, enabled }
+            const updated =
+              enabled && !current.provider && hasKiloAuth(sync) ? { ...defaultIndexing(sync), enabled } : { ...current, enabled }
             await saveIndexing(sdk, sync, updated, toast)
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
             break
@@ -523,7 +537,8 @@ export function DialogIndexing(props: DialogIndexingProps) {
           case "model": {
             const result = await DialogPrompt.show(dialog, "Embedding Model", {
               value: indexing.model ?? "",
-              placeholder: indexing.provider === "kilo" ? KILO_DEFAULT_EMBEDDING_MODEL : "e.g. text-embedding-3-small",
+              placeholder:
+                indexing.provider === "kilo" ? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL : "e.g. text-embedding-3-small",
             })
             if (result !== null) {
               const trimmed = result.trim()

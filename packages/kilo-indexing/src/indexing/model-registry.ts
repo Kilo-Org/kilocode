@@ -9,8 +9,8 @@
  */
 
 import {
-  KILO_DEFAULT_EMBEDDING_MODEL,
-  KILO_EMBEDDING_MODELS,
+  FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
+  FALLBACK_KILO_EMBEDDING_MODELS,
   normalizeKiloEmbeddingModelId,
 } from "../kilo-embedding-models"
 import type { EmbedderProvider } from "./interfaces/manager"
@@ -22,7 +22,7 @@ interface ModelProfile {
 }
 
 const openRouterProfiles = Object.fromEntries(
-  KILO_EMBEDDING_MODELS.map((model) => [
+  FALLBACK_KILO_EMBEDDING_MODELS.map((model) => [
     model.id,
     { dimension: model.dimension, scoreThreshold: model.scoreThreshold } satisfies ModelProfile,
   ]),
@@ -73,7 +73,7 @@ const profiles: Record<string, Record<string, ModelProfile>> = {
 }
 
 const defaults: Record<string, string> = {
-  kilo: KILO_DEFAULT_EMBEDDING_MODEL,
+  kilo: FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
   openai: "text-embedding-3-small",
   ollama: "nomic-embed-text",
   gemini: "gemini-embedding-001",

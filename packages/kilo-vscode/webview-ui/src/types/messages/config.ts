@@ -87,6 +87,20 @@ export interface IndexingConfig {
   scannerMaxBatchRetries?: number
 }
 
+export type KiloEmbeddingModel = {
+  id: string
+  name: string
+  dimension: number
+  scoreThreshold: number
+  note?: string
+}
+
+export type KiloEmbeddingModelCatalog = {
+  defaultModel: string
+  models: KiloEmbeddingModel[]
+  aliases: Record<string, string>
+}
+
 export type IndexingStatus = SdkIndexingStatus
 
 export interface BrowserSettings {

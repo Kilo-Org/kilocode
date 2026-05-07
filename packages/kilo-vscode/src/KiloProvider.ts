@@ -126,6 +126,7 @@ import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
+import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 // Helper to map agent data to the subset of fields sent to the webview
@@ -173,6 +174,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedConfigMessage: unknown = null
   /** Cached indexingStatusLoaded payload so requestIndexingStatus can be served before client is ready */
   private cachedIndexingStatusMessage: unknown = null
+  /** Cached kiloEmbeddingModelsLoaded payload so requestKiloEmbeddingModels is resilient offline. */
+  private cachedKiloEmbeddingModelsMessage: unknown = null
   /** Cached mcpStatusLoaded payload so requestMcpStatus can be served before client is ready */
   private cachedMcpStatusMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
@@ -853,6 +856,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestIndexingStatus":
           this.fetchAndSendIndexingStatus().catch((e) =>
             console.error("[Kilo New] fetchAndSendIndexingStatus failed:", e),
+          )
+          break
+        case "requestKiloEmbeddingModels":
+          this.fetchAndSendKiloEmbeddingModels().catch((e) =>
+            console.error("[Kilo New] fetchAndSendKiloEmbeddingModels failed:", e),
           )
           break
         case "updateConfig":
@@ -2125,6 +2133,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch indexing status:", error)
     }
+  }
+
+  private async fetchAndSendKiloEmbeddingModels(): Promise<void> {
+    const catalog = await fetchKiloEmbeddingModelCatalog()
+    const message = { type: "kiloEmbeddingModelsLoaded", catalog }
+    this.cachedKiloEmbeddingModelsMessage = message
+    this.postMessage(message)
   }
 
   /**

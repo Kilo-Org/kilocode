@@ -27,6 +27,7 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@ai-sdk/alibaba": "1.0.17",
