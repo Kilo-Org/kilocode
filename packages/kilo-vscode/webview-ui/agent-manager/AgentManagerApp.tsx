@@ -76,6 +76,7 @@ import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
+import { KiloEmbeddingModelsProvider } from "../src/context/kilo-embedding-models"
 import { NotificationsProvider } from "../src/context/notifications"
 import { FeedbackProvider } from "../src/context/feedback"
 import { SessionProvider, useSession } from "../src/context/session"
@@ -3150,19 +3151,21 @@ export const AgentManagerApp: Component = () => {
                       <ProviderProvider>
                         <ConfigProvider>
                           <DisplayProvider>
-                            <NotificationsProvider>
-                              <SessionProvider>
-                                <FeedbackProvider>
-                                  <IndexingProvider>
-                                    <WorktreeModeProvider>
-                                      <DataBridge>
-                                        <AgentManagerContent />
-                                      </DataBridge>
-                                    </WorktreeModeProvider>
-                                  </IndexingProvider>
-                                </FeedbackProvider>
-                              </SessionProvider>
-                            </NotificationsProvider>
+                            <IndexingProvider>
+                              <KiloEmbeddingModelsProvider>
+                                <NotificationsProvider>
+                                  <SessionProvider>
+                                    <FeedbackProvider>
+                                      <WorktreeModeProvider>
+                                        <DataBridge>
+                                          <AgentManagerContent />
+                                        </DataBridge>
+                                      </WorktreeModeProvider>
+                                    </FeedbackProvider>
+                                  </SessionProvider>
+                                </NotificationsProvider>
+                              </KiloEmbeddingModelsProvider>
+                            </IndexingProvider>
                           </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
