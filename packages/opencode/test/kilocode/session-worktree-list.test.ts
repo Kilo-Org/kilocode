@@ -96,6 +96,7 @@ describe("Kilo experimental session worktree list", () => {
       })
 
       await $`git worktree remove ${worktree} --force`.cwd(repo.path).quiet()
+      await Instance.disposeAll()
 
       const response = await root.app.request("/experimental/session?roots=true&worktrees=true", {
         headers: { "x-kilo-directory": repo.path },
