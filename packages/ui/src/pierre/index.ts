@@ -1,18 +1,10 @@
-// kilocode_change start - import FileDiffMetadata for the patch-only Diff variant
-import {
-  DiffLineAnnotation,
-  FileContents,
-  FileDiffMetadata,
-  FileDiffOptions,
-  type SelectedLineRange,
-} from "@pierre/diffs"
-// kilocode_change end
+import { DiffLineAnnotation, FileContents, FileDiffOptions, type SelectedLineRange } from "@pierre/diffs"
 import { ComponentProps } from "solid-js"
 import { lineCommentStyles } from "../components/line-comment-styles"
 
-// kilocode_change start - allow passing a precomputed FileDiffMetadata so Pierre
-// can render hunk-anchored diffs without reconstructing full file contents.
-type DiffShared<T> = FileDiffOptions<T> & {
+export type DiffProps<T = {}> = FileDiffOptions<T> & {
+  before: FileContents
+  after: FileContents
   annotations?: DiffLineAnnotation<T>[]
   selectedLines?: SelectedLineRange | null
   commentedLines?: SelectedLineRange[]
@@ -21,21 +13,6 @@ type DiffShared<T> = FileDiffOptions<T> & {
   class?: string
   classList?: ComponentProps<"div">["classList"]
 }
-
-type DiffPair<T> = DiffShared<T> & {
-  before: FileContents
-  after: FileContents
-  fileDiff?: undefined
-}
-
-type DiffPatch<T> = DiffShared<T> & {
-  fileDiff: FileDiffMetadata
-  before?: undefined
-  after?: undefined
-}
-
-export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T>
-// kilocode_change end
 
 const unsafeCSS = `
 [data-diff],

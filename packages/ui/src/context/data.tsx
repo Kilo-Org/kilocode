@@ -33,7 +33,14 @@ export type SessionHrefFn = (sessionID: string) => string
 // kilocode_change start
 export type OpenFileFn = (filePath: string, line?: number, column?: number) => void
 
-export type OpenDiffFn = (diff: { file: string; patch?: string; additions: number; deletions: number }) => void
+export type OpenDiffFn = (diff: {
+  file: string
+  before?: string // kilocode_change - optional, kilo uses `patch`
+  after?: string // kilocode_change - optional, kilo uses `patch`
+  patch?: string // kilocode_change
+  additions: number
+  deletions: number
+}) => void
 
 export type OpenUrlFn = (url: string) => void
 // kilocode_change end
