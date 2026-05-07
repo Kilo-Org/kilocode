@@ -32,6 +32,7 @@ import { WorktreeImporter } from "./worktree-importer"
 import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { writeOverviewSnapshot, type AgentManagerOverviewSnapshot } from "./overview-snapshot"
 
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -453,6 +454,12 @@ export class AgentManagerProvider implements Disposable {
       this.connectionService.registerOpen("agent-manager", m.sessionIDs)
       return null
     }
+    if (m.type === "agentManager.overviewSnapshot") {
+      void writeOverviewSnapshot(this.getRoot(), m.snapshot as unknown as AgentManagerOverviewSnapshot, (msg) =>
+        this.log(msg),
+      )
+      return null
+    }
   }
 
   private onUiMessage(
@@ -677,6 +684,7 @@ export class AgentManagerProvider implements Disposable {
     existingBranch?: string
     name?: string
     label?: string
+    requestId?: string
   }): Promise<{
     worktree: ReturnType<WorktreeStateManager["addWorktree"]>
     result: CreateWorktreeResult
@@ -731,6 +739,7 @@ export class AgentManagerProvider implements Disposable {
       remote: result.remote,
       groupId: opts?.groupId,
       label: opts?.label,
+      requestId: opts?.requestId,
     })
 
     // Push state immediately so the sidebar shows the new worktree with a loading indicator

@@ -471,6 +471,11 @@ interface SetDefaultBaseBranchIn {
   branch?: string
 }
 
+interface OverviewSnapshotIn {
+  type: "agentManager.overviewSnapshot"
+  snapshot: Record<string, unknown>
+}
+
 interface RequestExternalWorktreesIn {
   type: "agentManager.requestExternalWorktrees"
 }
@@ -733,6 +738,7 @@ export type AgentManagerInMessage =
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
+  | OverviewSnapshotIn
   | RequestExternalWorktreesIn
   | ImportFromBranchIn
   | ImportFromPRIn

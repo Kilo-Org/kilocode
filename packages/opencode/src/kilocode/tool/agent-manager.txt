@@ -1,13 +1,90 @@
-Start Agent Manager sessions in the VS Code extension.
+Start Agent Manager sessions in the VS Code extension, or get a read-only overview of existing Agent Manager work.
 
-Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
+Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple visible Agent Manager sessions for independent tasks.
 
-Modes:
-- `worktree`: creates a new Agent Manager git worktree for each task, like the New Worktree dialog.
-- `local`: creates Agent Manager sessions in the current workspace directory without git worktree isolation.
+Use `action: "overview"` before orchestrating more sessions when you need to know what is already running. Overview is read-only and returns compact Agent Manager state: local tabs, worktree tabs, sessions, sections, active selection, exact working directories, request correlation, git counts, behind counts, and PR badges. It does not include transcripts, prompts, tool logs, file diffs, or file contents.
+
+Actions:
+- `overview`: returns a compact read-only state snapshot and ignores start-only fields.
+- `start`: creates Agent Manager sessions. This is the default when `action` is omitted.
+
+Recommended orchestration workflow:
+1. Call `agent_manager` with `action: "overview"` before starting new sessions.
+2. Inspect the returned `worktrees`, `sessions`, `sections`, and `requests` to avoid duplicate work.
+3. Treat each returned `cwd` as the canonical execution directory for that tab or session.
+4. To inspect a worktree's changes, use normal tools with that `cwd`; for bash commands, set `workdir` to the returned `cwd`.
+5. To read files from a worktree, first discover changed paths with git, glob, or other file-search tools using the returned `cwd`, then call the read tool with absolute file paths under that `cwd`.
+6. If overview shows a matching `running` or `waiting` session, do not start a duplicate agent unless the user explicitly wants another one.
+7. If overview shows `waiting`, check whether it says `waiting for input` or `waiting for permission`.
+
+Location rules:
+- `cwd` is the directory where that Agent Manager tab or session runs. Use it for follow-up inspection.
+- `worktree.path` is the absolute path of the git worktree. Worktree sessions should normally have the same `cwd`.
+- `root` is the Agent Manager root snapshot location. Do not assume it is the execution directory for every session.
+- `kind: "worktree"` means the session is isolated in a git worktree.
+- `kind: "local"` means the session runs in the current Agent Manager context. If Agent Manager itself was opened from a worktree, local sessions may run inside that worktree.
+
+Using normal tools with overview:
+- For `bash`, pass the returned `cwd` as the tool `workdir` when inspecting or testing a specific worktree.
+- For `read`, use an absolute file path. Build it from the returned `cwd` plus a relative path, or use glob/git output to find exact files first.
+- For `glob` and `grep`, search within the returned `cwd` when you need to inspect a specific worktree.
+- Do not infer location from display names, section names, or branch names. Use `cwd`.
+
+Start modes:
+- `worktree`: creates a new Agent Manager git worktree for each task, like the New Worktree dialog. Use this for isolated implementation work.
+- `local`: creates Agent Manager sessions in the current invoking session directory without creating a new git worktree. Use this only when the new agent should share the current checkout/context.
+
+Choosing where to delegate:
+- Use `mode: "worktree"` when the task should have isolated changes, its own branch, and a later PR or merge path.
+- Use `mode: "local"` when continuing work in the current checkout is intentional.
+- If a task belongs to an existing worktree shown by overview, do not use `worktree` mode to create another worktree for it. Start or continue work in that existing context only if the user requested it and the current invoking session is already in that context.
+- If you need to inspect an existing worktree before deciding, use overview's `cwd` with normal read/search/bash tools first.
 
 Each task may provide a prompt, a short display name, and a branch name. Keep display names short because Agent Manager cards are narrow. Branch names are sanitized before worktree creation. The agent, model, reasoning, and base branch settings always use the normal defaults.
 
 By default, multiple tasks are started as independent Agent Manager sessions. Set `versions` to true only when all tasks are alternate versions of the same work that should be compared together. Versioned worktrees are grouped in Agent Manager and branch names may receive version suffixes.
+
+Examples:
+
+Read the current Agent Manager state:
+```json
+{
+  "action": "overview"
+}
+```
+
+Start two isolated worktree agents:
+```json
+{
+  "action": "start",
+  "mode": "worktree",
+  "tasks": [
+    {
+      "name": "Fix auth race",
+      "branchName": "fix-auth-race",
+      "prompt": "Investigate and fix the auth race. Keep changes scoped to this worktree."
+    },
+    {
+      "name": "Improve tests",
+      "branchName": "improve-auth-tests",
+      "prompt": "Add focused tests for the auth race without changing production code unless required."
+    }
+  ]
+}
+```
+
+Start a local Agent Manager session in the current invoking context:
+```json
+{
+  "action": "start",
+  "mode": "local",
+  "tasks": [
+    {
+      "name": "Continue current work",
+      "prompt": "Continue investigating the current checkout. Do not create a new worktree."
+    }
+  ]
+}
+```
 
 Do not use this for ordinary subagent research. Use the `task` tool for internal subagents, and use this only when the user wants visible Agent Manager sessions in the extension.

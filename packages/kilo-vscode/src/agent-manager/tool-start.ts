@@ -40,6 +40,7 @@ export interface ToolDeps {
     branchName?: string
     name?: string
     label?: string
+    requestId?: string
   }) => Promise<WorktreeCreated | null>
   cleanupWorktree: (wid: string, dir: string) => Promise<void>
   setup: (dir: string, branch?: string, id?: string) => Promise<void>
@@ -108,7 +109,7 @@ async function prompt(client: KiloClient, sid: string, dir: string, task: ToolTa
   )
 }
 
-async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directory?: string) {
+async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, requestId: string, directory?: string) {
   const root = deps.getRoot()
   const state = deps.getState()
   if (!root || !state) return false
@@ -126,7 +127,7 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
   const target = wt?.path ?? root
   const { data } = await client.session.create({ directory: target, platform: PLATFORM }, { throwOnError: true })
   const session = data
-  state.addSession(session.id, wt?.id ?? null)
+  state.addSession(session.id, wt?.id ?? null, requestId)
   if (wt) deps.registerWorktreeSession(session.id, wt.path)
   deps.push()
   deps.getPanel()?.sessions.registerSession(session)
@@ -138,6 +139,7 @@ async function local(deps: ToolDeps, client: KiloClient, task: ToolTask, directo
     tool: true,
     mode: "local",
     worktreeId: wt?.id,
+    requestId,
   })
   return true
 }
@@ -148,6 +150,7 @@ async function worktree(
   task: ToolTask,
   index: number,
   total: number,
+  requestId: string,
   groupId?: string,
   versions?: boolean,
 ) {
@@ -159,6 +162,7 @@ async function worktree(
     branchName: version.branch,
     name: version.branch,
     label: versionedLabel(baseLabel, versions ? index : 0, versions ? total : 1),
+    requestId,
   })
   if (!created) return false
 
@@ -174,7 +178,7 @@ async function worktree(
     await deps.cleanupWorktree(created.worktree.id, created.result.path)
     return false
   }
-  state.addSession(session.id, created.worktree.id)
+  state.addSession(session.id, created.worktree.id, requestId)
   deps.registerWorktreeSession(session.id, created.result.path)
   deps.notifyReady(session.id, created.result, created.worktree.id)
   deps.getPanel()?.sessions.registerSession(session)
@@ -184,6 +188,7 @@ async function worktree(
     sessionId: session.id,
     worktreeId: created.worktree.id,
     branch: created.result.branch,
+    requestId,
     tool: true,
   })
   return true
@@ -205,8 +210,8 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
     try {
       const done =
         req.mode === "local"
-          ? await local(deps, client, task, req.directory)
-          : await worktree(deps, client, task, i, total, groupId, versions)
+          ? await local(deps, client, task, req.requestID, req.directory)
+          : await worktree(deps, client, task, i, total, req.requestID, groupId, versions)
       if (done) state.ok++
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

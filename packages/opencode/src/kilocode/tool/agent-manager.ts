@@ -4,6 +4,9 @@ import { AgentManagerEvent } from "@/kilocode/agent-manager/event"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import DESCRIPTION from "./agent-manager.txt"
+import { formatOverview, readOverview } from "./agent-manager-overview"
+
+const Action = Schema.Literals(["start", "overview"])
 
 const Task = Schema.Struct({
   prompt: Schema.optional(Schema.String).annotate({ description: "Initial prompt to send to the new session" }),
@@ -17,22 +20,34 @@ const Task = Schema.Struct({
   ),
 )
 
-export const Params = Schema.Struct({
-  mode: Schema.Literals(["worktree", "local"]).annotate({
+const ParamsShape = Schema.Struct({
+  action: Schema.optional(Action).annotate({
+    description:
+      "Use overview for a read-only Agent Manager state snapshot, or start to create sessions. Defaults to start.",
+  }),
+  mode: Schema.optional(Schema.Literals(["worktree", "local"])).annotate({
     description: "Use worktree for isolated git worktrees, or local for same-directory Agent Manager sessions",
   }),
   versions: Schema.optional(Schema.Boolean).annotate({
     description:
       "Set true only when tasks are alternative versions of the same work to compare. Omit or false for independent sessions.",
   }),
-  tasks: Schema.Array(Task)
-    .check(Schema.isMinLength(1), Schema.isMaxLength(20))
-    .annotate({ description: "Agent Manager sessions to start" }),
+  tasks: Schema.optional(Schema.Array(Task).check(Schema.isMinLength(1), Schema.isMaxLength(20))).annotate({
+    description: "Agent Manager sessions to start",
+  }),
 })
+
+export const Params = ParamsShape.check(
+  Schema.makeFilter((params: Schema.Schema.Type<typeof ParamsShape>) => {
+    if (params.action === "overview") return undefined
+    if (params.mode && params.tasks?.length) return undefined
+    return "Start action requires mode and at least one task"
+  }),
+)
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { requestID: string; count: number },
+  { requestID?: string; count?: number; action?: "start" | "overview" },
   Bus.Service,
   "agent_manager"
 >(
@@ -44,6 +59,25 @@ export const AgentManagerTool = Tool.define<
       parameters: Params,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          if (params.action === "overview") {
+            yield* ctx.ask({
+              permission: "agent_manager",
+              patterns: ["overview"],
+              always: ["overview"],
+              metadata: { action: "overview" },
+            })
+            const overview = yield* Effect.promise(() => readOverview())
+            return {
+              title: "Agent Manager overview",
+              output: formatOverview(overview),
+              metadata: { action: "overview" },
+            }
+          }
+
+          if (!params.mode || !params.tasks) {
+            return yield* Effect.die(new Error("Start action requires mode and at least one task"))
+          }
+
           yield* ctx.ask({
             permission: "agent_manager",
             patterns: [params.mode],

@@ -1,17 +1,6 @@
 /** @jsxImportSource solid-js */
 
-import {
-  For,
-  Show,
-  createSignal,
-  createMemo,
-  createEffect,
-  on,
-  onMount,
-  onCleanup,
-  type Accessor,
-  type Component,
-} from "solid-js"
+import { For, Show, createSignal, createMemo, createEffect, on, onMount, onCleanup, type Component } from "solid-js"
 import type {
   ExtensionMessage,
   AgentManagerRepoInfoMessage,
@@ -72,7 +61,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { Popover } from "@kilocode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
-import { ServerProvider } from "../src/context/server"
+import { ServerProvider, useServer } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
@@ -115,6 +104,8 @@ import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
 import { createMarkdownRender } from "./review-preferences"
+import { buildOverviewSnapshot } from "./overview-snapshot"
+import { useTabScroll } from "./tab-scroll"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -169,70 +160,6 @@ const defaultBindings: Record<string, string> = {
   ...Object.fromEntries(
     Array.from({ length: MAX_JUMP_INDEX }, (_, i) => [`jumpTo${i + 1}`, isMac ? `⌘${i + 1}` : `Ctrl+${i + 1}`]),
   ),
-}
-
-/** Manages horizontal scroll for the tab list: hides the scrollbar, converts
- *  vertical wheel events to horizontal scroll, tracks overflow to show/hide
- *  fade indicators, and auto-scrolls the active tab into view. */
-function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<string | undefined>) {
-  const [ref, setRef] = createSignal<HTMLDivElement | undefined>()
-  const [showLeft, setShowLeft] = createSignal(false)
-  const [showRight, setShowRight] = createSignal(false)
-  let scrollFrame: number | undefined
-  const update = () => {
-    if (scrollFrame !== undefined) return
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = undefined
-      const el = ref()
-      if (!el) return
-      setShowLeft(el.scrollLeft > 2)
-      setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
-    })
-  }
-  // Wheel → horizontal scroll conversion
-  const onWheel = (e: WheelEvent) => {
-    const el = ref()
-    if (!el) return
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
-    e.preventDefault()
-    el.scrollLeft += e.deltaY > 0 ? 60 : -60
-  }
-  // Recalculate on scroll, resize, or tab changes
-  createEffect(() => {
-    const el = ref()
-    if (!el) return
-    el.addEventListener("scroll", update, { passive: true })
-    el.addEventListener("wheel", onWheel, { passive: false })
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    const mo = new MutationObserver(update)
-    mo.observe(el, { childList: true, subtree: true })
-    onCleanup(() => {
-      el.removeEventListener("scroll", update)
-      el.removeEventListener("wheel", onWheel)
-      ro.disconnect()
-      mo.disconnect()
-    })
-  })
-  createEffect(() => {
-    const id = activeId()
-    const el = ref()
-    // depend on tabs length to trigger on tab add/remove
-    activeTabs()
-    if (!id || !el) return
-    requestAnimationFrame(() => {
-      const tab = el.querySelector(`[data-tab-id="${id}"]`) as HTMLElement | null
-      if (!tab) return
-      const left = tab.offsetLeft
-      const right = left + tab.offsetWidth
-      if (left < el.scrollLeft) {
-        el.scrollTo({ left: left - 8, behavior: "smooth" })
-      } else if (right > el.scrollLeft + el.clientWidth) {
-        el.scrollTo({ left: right - el.clientWidth + 8, behavior: "smooth" })
-      }
-    })
-  })
-  return { setRef, showLeft, showRight }
 }
 
 /** Shortcut category definition for the keyboard shortcuts dialog */
@@ -310,6 +237,7 @@ import { parseBindingTokens } from "./keybind-tokens"
 const AgentManagerContent: Component = () => {
   const { t } = useLanguage()
   const session = useSession()
+  const server = useServer()
   const vscode = useVSCode()
   const dialog = useDialog()
 
@@ -868,6 +796,69 @@ const AgentManagerContent: Component = () => {
     const label = worktreeLabel(wt)
     return label !== wt.branch ? wt.branch : undefined
   }
+
+  const overviewTimer: { id?: ReturnType<typeof setTimeout> } = {}
+
+  const scheduleOverviewSnapshot = () => {
+    clearTimeout(overviewTimer.id)
+    overviewTimer.id = setTimeout(() => postOverviewSnapshot(), 500)
+  }
+
+  const trackStatus = () => {
+    const statuses = session.allStatusMap()
+    for (const item of managedSessions()) statuses[item.id]?.type
+    for (const id of localSessionIDs()) statuses[id]?.type
+  }
+
+  const postOverviewSnapshot = () => {
+    const root = server.workspaceDirectory()
+    if (!root) return
+    vscode.postMessage({
+      type: "agentManager.overviewSnapshot",
+      snapshot: buildOverviewSnapshot({
+        root,
+        selection: selection(),
+        localKey: LOCAL,
+        activeSessionId: session.currentSessionID(),
+        worktrees: worktrees(),
+        managedSessions: managedSessions(),
+        sections: sections(),
+        sessions: session.sessions(),
+        localSessionIds: localSessionIDs(),
+        statuses: session.allStatusMap(),
+        permissions: session.permissions(),
+        questions: session.questions(),
+        worktreeStats: worktreeStats(),
+        localStats: localStats(),
+        prStatuses: prStatuses(),
+        runStatuses: runStatuses(),
+        staleWorktreeIds: staleWorktreeIds(),
+        worktreeLabel,
+      }),
+    })
+  }
+
+  onCleanup(() => clearTimeout(overviewTimer.id))
+
+  createEffect(() => {
+    server.workspaceDirectory()
+    selection()
+    session.currentSessionID()
+    worktrees()
+    managedSessions()
+    sections()
+    session.sessions()
+    localSessionIDs()
+    trackStatus()
+    session.permissions()
+    session.questions()
+    worktreeStats()
+    localStats()
+    prStatuses()
+    runStatuses()
+    staleWorktreeIds()
+    scheduleOverviewSnapshot()
+  })
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 

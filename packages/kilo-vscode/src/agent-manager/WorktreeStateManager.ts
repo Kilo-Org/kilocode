@@ -37,6 +37,8 @@ export interface Worktree {
   originalBranch?: string
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
+  /** Agent Manager tool request that created this worktree, if any. */
+  requestId?: string
 }
 
 export interface Section {
@@ -62,6 +64,8 @@ export interface ManagedSession {
   id: string
   worktreeId: string | null
   createdAt: string
+  /** Agent Manager tool request that created this session, if any. */
+  requestId?: string
 }
 
 interface StateFile {
@@ -174,6 +178,7 @@ export class WorktreeStateManager {
     remote?: string
     groupId?: string
     label?: string
+    requestId?: string
   }): Worktree {
     const id = generateId("wt")
     const wt: Worktree = {
@@ -186,6 +191,7 @@ export class WorktreeStateManager {
     if (params.remote) wt.remote = params.remote
     if (params.groupId) wt.groupId = params.groupId
     if (params.label) wt.label = params.label
+    if (params.requestId) wt.requestId = params.requestId
     this.worktrees.set(id, wt)
     this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(
@@ -271,8 +277,9 @@ export class WorktreeStateManager {
     return orphaned
   }
 
-  addSession(sessionId: string, worktreeId: string | null): ManagedSession {
+  addSession(sessionId: string, worktreeId: string | null, requestId?: string): ManagedSession {
     const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString() }
+    if (requestId) session.requestId = requestId
     this.sessions.set(sessionId, session)
     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
     void this.save()

@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { AgentManagerOverviewSnapshot, ModelAllocation, ReviewComment } from "./agent-manager"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -804,6 +804,11 @@ export interface SetDefaultBaseBranchRequest {
   branch?: string
 }
 
+export interface AgentManagerOverviewSnapshotMessage {
+  type: "agentManager.overviewSnapshot"
+  snapshot: AgentManagerOverviewSnapshot
+}
+
 // Report all open session IDs to extension for heartbeat (webview → extension)
 export interface AgentManagerOpenSessionsMessage {
   type: "agentManager.openSessions"
@@ -1120,6 +1125,7 @@ export type WebviewMessage =
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
   | SetDefaultBaseBranchRequest
+  | AgentManagerOverviewSnapshotMessage
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
