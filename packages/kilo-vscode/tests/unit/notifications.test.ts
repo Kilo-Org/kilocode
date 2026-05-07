@@ -123,13 +123,14 @@ describe("NotificationController", () => {
     const ref = { client: client([note({ id: "n1" })]) as never }
     const ctrl = new NotificationController({
       client: () => ref.client,
-      state: () => ({
-        get: ctx.memento.get,
-        update: async (key: string, value: string[] | undefined) => {
-          calls.push(`persist:${value?.join(",") ?? "undefined"}`)
-          await ctx.memento.update(key, value)
-        },
-      }) as never,
+      state: () =>
+        ({
+          get: ctx.memento.get,
+          update: async (key: string, value: string[] | undefined) => {
+            calls.push(`persist:${value?.join(",") ?? "undefined"}`)
+            await ctx.memento.update(key, value)
+          },
+        }) as never,
       post: (msg) => {
         const posted = msg as { dismissedIds: string[] }
         calls.push(`post:${posted.dismissedIds.join(",")}`)

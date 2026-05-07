@@ -935,9 +935,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.sendTimelineSetting()
           break
         case "requestNotifications":
-          this.notifications.fetch().catch((e) =>
-            console.error("[Kilo New] fetchAndSendNotifications failed:", e),
-          )
+          this.notifications.fetch().catch((e) => console.error("[Kilo New] fetchAndSendNotifications failed:", e))
           break
         case "requestCloudSessions":
           await handleRequestCloudSessions(this.cloudSessionCtx, message)
