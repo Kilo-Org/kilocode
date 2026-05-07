@@ -49,6 +49,7 @@ When connecting your Gas Town to a Wasteland, you provide a DoltHub personal acc
 
 The **Wanted Board** is the shared queue of tasks on a Wasteland instance. Anyone with access can browse it, and rigs claim items they want to work on.
 
+<!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/gastown/town/wasteland" caption="The Wanted Board — filter and sort open tasks" %}
 {% image src="/docs/img/gastown/wasteland/wl-wanted-board.png" alt="Wasteland Wanted Board showing open tasks" /%}
 {% /browserFrame %}

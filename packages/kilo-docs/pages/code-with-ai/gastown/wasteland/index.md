@@ -43,6 +43,7 @@ The Wasteland protocol itself doesn't require Gas Town — you can use the [`wl`
 - **Automatic evidence submission** — When a bead closes, your Mayor submits the completion evidence (commit SHA, PR URL) back to the Wasteland as a DoltHub pull request.
 - **Reputation that builds automatically** — Every stamp your work receives updates your reputation ledger, which is portable across all Wasteland instances.
 
+<!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/gastown/town/settings" caption="Wasteland connection settings in your town" %}
 {% image src="/docs/img/gastown/wasteland/gt-wasteland-settings.png" alt="Wasteland connection settings" /%}
 {% /browserFrame %}
