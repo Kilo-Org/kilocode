@@ -106,7 +106,7 @@ If you need to release a claim, you can abandon it at any time before evidence i
 
 When you're working through Gas Town, your Mayor submits evidence automatically via `wl done` when a bead closes. The Mayor packages the PR URL and pushes it to your Wasteland fork as a DoltHub pull request.
 
-<!-- TODO: verify — confirm the exact Mayor tool name (e.g., gt_wasteland_done or similar) in wasteland-tools.handler.ts -->
+<!-- TODO: verify — the Mayor tool is `gt_wasteland_done` (gastown handler at `/api/mayor/:townId/tools/wasteland/done`), which calls `WASTELAND_SERVICE.markWantedItemDone`. Confirm this is the canonical tool name exposed to the Mayor's agent. -->
 
 In the standalone `wl` CLI, you'd use `wl done <id> --evidence "..."` to submit manually.
 
@@ -118,16 +118,16 @@ Each stamp scores across dimensions:
 
 | Dimension | What it measures |
 |---|---|
-| **Quality** | How well was the work done? (1–5) |
-| **Reliability** | Did the rig deliver on time and to spec? (1–5) |
+| **Quality** | How well was the work done? (`excellent`, `good`, `fair`, `poor`) |
+| **Reliability** | Did the rig deliver on time and to spec? (stored in `stamps.valence` JSON alongside quality) |
 
-Validators also set a **severity** — `leaf`, `branch`, or `root` — indicating how impactful the work was, and attach **skill tags** (e.g., `go`, `federation`) to build the completer's profile.
+Validators also set a **severity** — `leaf`, `branch`, or `root` — indicating how impactful the work was, and attach **skill tags** (e.g., `go`, `federation`) to build the completer's profile. The `stamps.confidence` field records how certain the validator is in their assessment.
 
 <!-- TODO: verify — confirm whether Gas Town adds a Creativity dimension on top of the open-source wl protocol's Quality/Reliability/Severity -->
 
 The **yearbook rule** enforces that you can't stamp your own work. Your reputation is built exclusively from what other validators write about you. This keeps the system honest and evidence-backed — every stamp traces back to verifiable work.
 
-<!-- TODO: verify — confirm whether confidence is a separate numeric score or a categorical level -->
+<!-- TODO: verify — confirm whether confidence is a numeric score or a categorical level; the schema accepts string or number -->
 
 ## Reputation Ledger
 
@@ -146,7 +146,7 @@ You can view your reputation from the Wasteland page in your Gas Town dashboard,
 Validator responsibilities:
 
 - Review submitted evidence (commits, PRs, deployed URLs)
-- Assess work across quality and reliability dimensions (1–5 each)
+- Assess work across quality and reliability dimensions
 - Set severity level (`leaf`, `branch`, `root`)
 - Attach skill tags relevant to the work
 - Write justifications for their assessment
@@ -169,6 +169,6 @@ In **PR mode** (the default), the flow looks like this:
 3. **DoltHub PR** — The branch is proposed upstream as a pull request. Reviewers can see the full diff (claim + evidence) in one place.
 4. **Accept/Reject** — Validators approve (merge the PR, issue a stamp) or reject (request changes, sending it back for rework).
 
-In **wild-west mode**, changes push directly to the upstream commons without a review gate. This is intended for maintainers with write access who don't need the PR review step.
+In **direct mode** (enabled when `is_upstream_admin = true`), changes push directly to the upstream commons without creating a PR. This is intended for maintainers with write access who don't need the PR review step. Direct mode is off by default — the `--direct` flag must be passed explicitly, and is silently downgraded to PR mode if the caller's credential isn't marked as admin.
 
 This model means the entire history of a wanted item — from posting to completion — is versioned, auditable, and cryptographically signed (when GPG signing is enabled). See [Workflow](/docs/code-with-ai/gastown/wasteland/workflow) for the end-to-end walkthrough and [Administration](/docs/code-with-ai/gastown/wasteland/admin) for running your own instance.

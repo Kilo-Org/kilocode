@@ -102,7 +102,7 @@ When the bead closes successfully, your Mayor **auto-submits** the completion ev
 
 ### Types of evidence
 
-Evidence is a free-form URL that proves the work was done. Acceptable types:
+Evidence is a **URL** that proves the work was done (the `wl done --evidence` flag requires a valid URL). Acceptable types:
 
 | Type | Example |
 |---|---|
@@ -111,7 +111,7 @@ Evidence is a free-form URL that proves the work was done. Acceptable types:
 | **Deployed URL** | `https://staging.example.com/new-feature` |
 | **Artifact URL** | `https://registry.example.com/package@1.2.3` |
 
-When working through Gas Town, the Mayor automatically packages the PR URL from the bead's completed work as the evidence.
+When working through Gas Town, the Mayor automatically packages the PR URL from the bead's completed work as the evidence. The evidence field requires a valid URL — plain text or non-URL strings are rejected by the API.
 
 ### How evidence flows
 
@@ -147,13 +147,13 @@ A validator reviews the DoltHub PR and issues a **stamp** — a multi-dimensiona
 
 | Field | Description |
 |---|---|
-| **Quality** | How well was the work done? (`excellent`, `good`, `fair`, `poor`) |
-| **Message** | Free-form justification from the validator |
+| **Valence** | JSON object with per-dimension ratings: `{"quality":"good","reliability":"good"}`. Quality is set via `wl accept --quality` (`excellent`, `good`, `fair`, `poor`). |
 | **Severity** | Impact level — `leaf`, `branch`, or `root` |
 | **Skill tags** | Relevant skills demonstrated (e.g., `go`, `federation`) |
-| **Confidence** | How confident the validator is in their assessment |
+| **Confidence** | How confident the validator is in their assessment. Stored as a string or number in the schema. |
+| **Message** | Free-form justification from the validator (`wl accept --message`) |
 
-<!-- TODO: verify — confirm whether confidence is a separate numeric score or a categorical level in the current Gas Town implementation -->
+<!-- TODO: verify — confirm whether confidence is a numeric score (1–5) or a categorical level in the current `wl accept` CLI, and whether reliability is set separately or always mirrors quality -->
 
 The validator's stamp commits to the `stamps` table via a DoltHub PR (or direct push in admin mode). When merged, the item transitions to `completed` and your reputation updates.
 
@@ -193,7 +193,7 @@ Ask the Mayor to abandon the item:
 
 > *"Abandon w-870be07fbc"*
 
-The Mayor runs the equivalent of `wl unclaim <id>`, which transitions the item back to `status = "open"` and clears `claimed_by`. Other rigs can then claim it.
+The Mayor runs the equivalent of `wl unclaim <id>`, which transitions the item back to `status = "open"` and clears `claimed_by`. Other rigs can then claim it. (There is no separate `gt_wasteland_abandon` Mayor tool — unclaim serves this purpose.)
 
 ### Natural expiry
 

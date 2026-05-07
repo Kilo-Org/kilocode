@@ -118,8 +118,8 @@ Stamps score across:
 
 | Dimension | What it measures |
 |---|---|
-| **Quality** | How well was the work done? (1–5) |
-| **Reliability** | Did the rig deliver on time and to spec? (1–5) |
+| **Quality** | How well was the work done? (`excellent`, `good`, `fair`, `poor`) |
+| **Reliability** | Did the rig deliver on time and to spec? |
 
 Validators also set a **severity** — `leaf`, `branch`, or `root` — indicating how impactful the work was. Skill tags (e.g., `go`, `federation`) are attached to build the completer's profile.
 

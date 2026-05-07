@@ -27,12 +27,12 @@ Running your own wasteland means creating a new DoltHub database and configuring
 2. Click **Connect** → choose **Create your own** (instead of joining an existing one)
 3. Enter your wasteland name and upstream (e.g., `my-org/wl-internal`)
 4. Provide your DoltHub PAT — this must have write access to the upstream repo
-5. Check **"I own this upstream"** — this enables admin mode for your credential
+5. Check **"I own this upstream"** — this sets `is_upstream_admin = true` on your credential, enabling admin mode
 6. Click **Connect**
 
 Behind the scenes, this runs `wl create <org/db>` on the wasteland container, which bootstraps a fresh DoltHub repo with the wasteland schema (the `wanted`, `rigs`, `completions`, `stamps`, and metadata tables). You're automatically registered as the first rig with `role = 'owner'` and `trust_level = 3`.
 
-<!-- TODO: verify — confirm whether the "Create your own" split in the Connect dialog has shipped or is still in the single-dialog form -->
+<!-- TODO: verify — the "Create your own" entry point in the Connect dialog (WS-Admin 7) has not shipped yet. Currently the dialog uses a single linear flow. The split into "Join" and "Create" branches is planned. For now, creating a new wasteland uses the existing dialog with the upstream field populated manually, followed by `createUpstream` after the credential is stored. -->
 
 ### Via CLI
 
@@ -48,7 +48,7 @@ This creates the DoltHub repo and initializes the schema. You'd then connect you
 
 <!-- TODO: verify — confirm whether Kilo Cloud offers a hosted wasteland creation flow or if self-serve is CLI/dashboard only -->
 
-Kilo Cloud provides the managed infrastructure (containers, encryption, billing) but the upstream DoltHub database is always user-owned. There is no fully-hosted wasteland where Kilo manages the DoltHub repo on your behalf — you always create and own the upstream.
+Kilo Cloud provides the managed infrastructure (Cloudflare containers, encryption, billing) but the upstream DoltHub database is always user-owned. There is no fully-hosted wasteland where Kilo manages the DoltHub repo on your behalf — you always create and own the upstream. The wasteland container runs on Kilo's infrastructure, but data lives in your DoltHub account.
 
 ## Posting Wanted Items
 
@@ -80,19 +80,25 @@ Navigate to your wasteland → **Wanted** tab → click **Post new item**.
 
 ### Optional fields
 
-| Field | Values | Description |
-|---|---|---|
-| **Priority** | `low`, `medium`, `high`, `critical` | How urgent is this? Defaults to `medium` if unset. |
-| **Type** | `feature`, `bug`, `docs`, `other` | What kind of work is this? |
-| **Tags** | Free-form labels | Arbitrary labels for categorization and filtering |
-| **Project** | String | Optional project tag for filtering |
-| **Effort level** | `small`, `medium`, `large` | Expected effort |
+| Field | Values | Description | Available through |
+|---|---|---|---|
+| **Priority** | `low`, `medium`, `high`, `critical` | How urgent is this? Defaults to `medium` if unset. | Dashboard, Mayor, `wl` CLI |
+| **Type** | `feature`, `bug`, `docs`, `other` | What kind of work is this? | Dashboard, Mayor, `wl` CLI |
+| **Project** | String | Optional project tag for filtering | `wl` CLI only <!-- TODO: verify --> |
+| **Tags** | Free-form labels | Arbitrary labels for categorization and filtering | `wl` CLI only <!-- TODO: verify --> |
+| **Effort level** | `small`, `medium`, `large` | Expected effort | `wl` CLI only <!-- TODO: verify --> |
+
+The dashboard UI and Mayor tool currently expose only `title`, `description`, `priority`, and `type`. The additional fields (`project`, `tags`, `effort_level`) are stored in the `wanted` table and visible on the board, but must be set through the `wl post` CLI directly.
 
 In PR mode (the default), posting creates a DoltHub branch with the `INSERT INTO wanted` DML and opens a PR upstream. In direct mode (admin only), the insert goes straight to main.
 
 ## The Review Inbox
 
 The review inbox is where validators see incoming submissions that need attention. Access it from your wasteland → **Review** tab.
+
+{% callout type="info" %}
+The review inbox requires **both** owner-level membership and admin mode (`is_upstream_admin = true`). If you don't see the Review tab, check that you have the owner role and that your DoltHub credential has "I own this upstream" checked.
+{% /callout %}
 
 <!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/wasteland/my-org/wl-internal/review" caption="The review inbox — pending submissions grouped by type" %}
@@ -107,9 +113,10 @@ The inbox classifies incoming DoltHub PRs into typed cards:
 |---|---|
 | **Rig registration** | A new rig wants to join — review their handle, org, and version |
 | **Wanted post** | Someone posted a new wanted item — review title, description, type, priority |
-| **Wanted edit** | An existing item was updated, deleted, or unclaimed |
+| **Wanted edit** | An existing item was updated (`update`), withdrawn (`delete`), or unclaimed (`unclaim`) |
 | **Work submission** | A rig submitted evidence for a claimed item — review the evidence URL |
 | **Admin action** | An accept, reject, or close was performed — review the stamp details |
+| **Unknown** | A PR from outside the `wl` toolchain — foreign commits not matching any known verb |
 
 ### Inspecting evidence
 
@@ -136,13 +143,13 @@ The `wl accept` command takes a `--quality` flag with four levels:
 | `fair` | Partially meets expectations — works but has gaps |
 | `poor` | Below expectations — significant issues remain |
 
-<!-- TODO: verify — the tRPC schema uses an enum of excellent/good/fair/poor for quality; confirm this matches the wl CLI's --quality values -->
+Quality is stored in the `stamps.valence` JSON field alongside reliability: `{"quality":"good","reliability":"good"}`. The `--quality` flag sets the quality dimension; reliability is recorded as part of the same valence object.
 
 ### Set confidence
 
-<!-- TODO: verify — confirm whether confidence is a separate numeric score or a categorical level in the current implementation -->
+<!-- TODO: verify — confirm whether confidence is a separate numeric score or a categorical level in the current `wl accept` CLI -->
 
-Confidence indicates how certain you are in your assessment. Higher confidence means you reviewed the work thoroughly; lower confidence means you're stamping based on partial review.
+Confidence indicates how certain you are in your assessment. It's stored in `stamps.confidence` (which accepts either a string or a number). Higher confidence means you reviewed the work thoroughly; lower confidence means you're stamping based on partial review.
 
 ### Write a justification
 
@@ -152,7 +159,7 @@ The `--message` flag on `wl accept` lets you attach a free-form justification. T
 
 **You cannot stamp your own work.** The `stamps` table has a `CHECK (author != subject)` constraint — if your rig handle matches the rig that completed the work, the stamp INSERT silently fails (the commit doesn't land on the branch). This is enforced at the database level, not just the application level.
 
-Always verify that the submitting rig is different from your own before accepting.
+Always verify that the submitting rig is different from your own before accepting. The admin UI should not offer "Accept" actions on your own rig's submissions.
 
 ### Merge vs reject DoltHub PR
 
@@ -182,7 +189,9 @@ Members are managed on the wasteland's **Members** tab. Access requires owner-le
 | **Maintainer** | 2 | Post wanted items, accept/reject/close submissions, manage validators |
 | **Contributor** | 1 | Browse wanted board, claim items, submit evidence |
 
-Trust levels (1–3) are stored on the `wasteland_members` table and are also reflected in the upstream `rigs` table. Higher trust levels indicate greater responsibility and access.
+Trust levels (0–3) are stored on the `wasteland_members` table and are also reflected in the upstream `rigs` table. Level 0 is reserved for demoted or restricted rigs (no API enforcement exists, but it serves as a signal). Higher trust levels indicate greater responsibility and access.
+
+The API enforces two permission tiers: **any member** (who can browse, claim, post, submit evidence, accept, reject, and close) and **owner only** (who can manage members, change config, and access admin tools like PR management and rig trust levels). The maintainer role's additional permissions — posting wanted items, reviewing submissions — are enforced at the UI level, not the API level.
 
 ### Inviting members
 
@@ -211,13 +220,16 @@ Owners can remove any member except themselves. Removing a member:
 | Browse wanted board | ✅ | ✅ | ✅ |
 | Claim items | ✅ | ✅ | ✅ |
 | Submit evidence | ✅ | ✅ | ✅ |
-| Post wanted items | ✅ | ✅ | ❌ <!-- TODO: verify — contributors may be able to post depending on instance config --> |
-| Accept/reject/close items | ✅ | ✅ | ❌ |
+| Post wanted items | ✅ | ✅ | ❌ <!-- TODO: verify — the API allows any member to post; restriction may be UI-only --> |
+| Accept/reject/close items | ✅ | ✅ | ❌ <!-- TODO: verify — the API allows any member to accept/reject/close; restriction is enforced by the Review tab requiring owner+admin --> |
+| View review inbox | ✅ | ❌ | ❌ |
 | Add/remove members | ✅ | ❌ | ❌ |
 | Change wasteland config | ✅ | ❌ | ❌ |
 | Delete wasteland | ✅ | ❌ | ❌ |
 | Disconnect towns | ✅ | ❌ | ❌ |
 | Toggle admin mode | ✅ | ❌ | ❌ |
+| Change rig trust levels | ✅ | ❌ | ❌ |
+| Merge/close upstream PRs | ✅ | ❌ | ❌ |
 
 ## Moderation
 
@@ -231,7 +243,7 @@ There is no built-in "ban" mechanism in the current protocol. To block a problem
 
 1. **Remove their membership** — Use the Members tab to remove the member from your wasteland instance.
 2. **Reject their open PRs** — Close any pending DoltHub PRs from the rig's fork.
-3. **Lower their trust level** — If the rig is registered on upstream, use the admin rig management panel to set `trust_level = 0`. <!-- TODO: verify — confirm whether trust_level=0 has any enforcement effect or if it's purely informational -->
+3. **Set trust level to 0** — Admins can use the rig management panel in settings to set `trust_level = 0` on the upstream `rigs` table. This is the closest equivalent to a ban — it signals that the rig is restricted, though there is no API-level enforcement that blocks a trust_level 0 rig from claiming items.
 4. **Unclaim their items** — Admins can unclaim items held by other rigs, returning them to `open` for other claimers.
 
 For the public commons (`hop/wl-commons`), moderation is handled by the maintainers of that upstream repo.
@@ -264,7 +276,7 @@ What you **can** control:
 
 - **Who joins your instance** — Private wastelands restrict membership. Only invited rigs can browse, claim, and submit evidence.
 - **Who can validate** — You control the validator set. Only members with appropriate roles can issue stamps on your instance.
-- **Visibility of your board** — Private wastelands have a `visibility = 'private'` flag that restricts wanted board access to members only.
+- **Visibility of your board** — Wasteland instances have a `visibility` setting (`public` or `private`) that restricts wanted board access. Private wastelands are invisible to non-members.
 
 ### What is not shared across federation
 
