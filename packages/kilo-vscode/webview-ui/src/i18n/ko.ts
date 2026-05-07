@@ -1160,6 +1160,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "인라인 작업을 트리거하는 스마트 키바인딩 사용",
   "settings.autocomplete.chatAutocomplete.title": "채팅 텍스트 영역 자동완성 활성화",
   "settings.autocomplete.chatAutocomplete.description": "채팅 텍스트 영역에서 자동완성 제안 표시",
+  "settings.autocomplete.modelsHint": "자동 완성에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.notifications.agent.title": "에이전트 완료",
   "settings.notifications.agent.description": "에이전트가 작업을 완료하면 알림 표시",
   "settings.notifications.permissions.title": "권한 요청",

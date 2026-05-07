@@ -16,7 +16,7 @@ import type { EditorContext, IndexingStatus } from "./services/cli-backend/types
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
-import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
+import { TelemetryProxy, type TelemetryPropertiesProvider, pushTelemetryState, watchTelemetryState } from "./services/telemetry" // prettier-ignore
 import {
   sessionToWebview,
   indexProvidersById,
@@ -62,6 +62,7 @@ import { abortSession } from "./kilo-provider/abort"
 import {
   buildAutocompleteSettingsMessage,
   routeAutocompleteMessage,
+  validAutocompleteSetting,
   watchAutocompleteConfig,
 } from "./services/autocomplete/settings"
 import * as ModelState from "./kilo-provider/model-state"
@@ -216,6 +217,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
   private autocompleteConfigDisposable: vscode.Disposable | null = null
+  private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
@@ -357,10 +359,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Always push connection state first so the UI can render appropriately.
-    this.postMessage({
-      type: "connectionState",
-      state: this.connectionState,
-    })
+    this.postMessage({ type: "connectionState", state: this.connectionState })
+    pushTelemetryState((m) => this.postMessage(m))
 
     // Re-send ready so the webview can recover after refresh.
     if (serverInfo) {
@@ -581,6 +581,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
+    this.telemetryStateDisposable?.dispose()
+    this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       const intercepted = await interceptMessage(message, {
         workspaceDir: (sid) => this.getWorkspaceDirectory(sid ?? this.currentSession?.id),
@@ -2864,6 +2866,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
     const { section, leaf } = buildSettingPath(key)
+    if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
   }
@@ -3404,6 +3407,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
+    this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.streams.dispose()
     this.isWebviewReady = false

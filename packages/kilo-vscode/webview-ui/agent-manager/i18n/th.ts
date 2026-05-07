@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
   "agentManager.tab.newOptions": "ตัวเลือกแท็บใหม่เพิ่มเติม",
+  "agentManager.tabsMenu.label": "ค้นหาแท็บที่เปิดอยู่",
+  "agentManager.tabsMenu.search": "ค้นหาแท็บ...",
+  "agentManager.tabsMenu.empty": "ไม่มีแท็บที่ตรงกัน",
+  "agentManager.tabsMenu.status.waiting": "รอ",
+  "agentManager.tabsMenu.status.working": "ทำงาน",
+  "agentManager.tabsMenu.status.retry": "ลองใหม่",
 
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
   "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",

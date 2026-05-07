@@ -1172,6 +1172,7 @@ export const dict = {
     "Використовувати розумне прив'язування клавіш для активації підказок",
   "settings.autocomplete.chatAutocomplete.title": "Увімкнути автодоповнення в полі чату",
   "settings.autocomplete.chatAutocomplete.description": "Показувати підказки автодоповнення в полі введення чату",
+  "settings.autocomplete.modelsHint": "Щоб вибрати модель для автодоповнення, див. Налаштування моделей.",
 
   "settings.notifications.agent.title": "Завершення агента",
   "settings.notifications.agent.description": "Показувати сповіщення, коли агент завершить завдання",

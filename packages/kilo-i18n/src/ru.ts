@@ -92,4 +92,9 @@ export const dict = {
     "Выключите снимки Kilo для этого проекта. Вы потеряете отмену/повтор изменений Kilo, но git по-прежнему отслеживает всё.",
 
   "ui.messagePart.openInDiffViewer": "Открыть в просмотрщике различий",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Это было полезно",
+  "ui.message.feedback.notHelpful": "Это было бесполезно",
+  "ui.message.feedback.clearRating": "Очистить оценку",
 }

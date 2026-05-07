@@ -1151,6 +1151,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "استخدام اختصار ذكي لتشغيل المهام المضمّنة",
   "settings.autocomplete.chatAutocomplete.title": "تمكين الإكمال التلقائي للدردشة",
   "settings.autocomplete.chatAutocomplete.description": "عرض اقتراحات الإكمال التلقائي في مربع الدردشة",
+  "settings.autocomplete.modelsHint": "لاختيار النموذج المستخدم للإكمال التلقائي، راجع إعدادات النماذج.",
   "settings.notifications.agent.title": "إكمال الوكيل",
   "settings.notifications.agent.description": "إظهار إشعار عند إكمال الوكيل لمهمة",
   "settings.notifications.permissions.title": "طلبات الأذونات",

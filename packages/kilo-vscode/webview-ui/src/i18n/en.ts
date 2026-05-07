@@ -1162,6 +1162,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Use a smart keybinding for triggering inline tasks",
   "settings.autocomplete.chatAutocomplete.title": "Enable chat textarea autocomplete",
   "settings.autocomplete.chatAutocomplete.description": "Show autocomplete suggestions in the chat textarea",
+  "settings.autocomplete.modelsHint": "To choose which model is used for autocompletions, see the Models settings.",
 
   "settings.notifications.agent.title": "Agent Completion",
   "settings.notifications.agent.description": "Show notification when agent completes a task",

@@ -27,6 +27,7 @@ import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
+import { useFeedback } from "../../context/feedback"
 import { visibleError } from "../../context/session-errors"
 import type { ErrorDisplayProps } from "./ErrorDisplay"
 import type { Message as WebMessage } from "../../types/messages"
@@ -51,6 +52,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
+  const feedback = useFeedback()
 
   const emptyParts: SDKPart[] = []
   const emptyDiffs: SnapshotFileDiff[] = []
@@ -151,7 +153,26 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={assistantMessages().length > 0}>
             <div class="vscode-session-turn-assistant">
               <For each={assistantMessages()}>
-                {(msg) => <AssistantMessage message={msg} showAssistantCopyPartID={showAssistantCopyPartID()} />}
+                {(amsg) => (
+                  <AssistantMessage
+                    message={amsg}
+                    showAssistantCopyPartID={showAssistantCopyPartID()}
+                    feedback={{
+                      enabled: feedback.telemetryEnabled(),
+                      rating: feedback.getRating(amsg.id),
+                      onRate: (next) =>
+                        feedback.rate({
+                          messageID: amsg.id,
+                          sessionID: amsg.sessionID,
+                          parentMessageID: amsg.parentID,
+                          providerID: amsg.providerID,
+                          modelID: amsg.modelID,
+                          variant: (amsg as SDKAssistantMessage & { variant?: string }).variant,
+                          next,
+                        }),
+                    }}
+                  />
+                )}
               </For>
             </div>
           </Show>

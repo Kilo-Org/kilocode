@@ -1,10 +1,11 @@
 // Reusable branch selector: search input + scrollable list with keyboard navigation
 
-import { type Component, For, Show } from "solid-js"
+import { type Component, For, Show, type JSXElement, type ParentProps } from "solid-js"
 import type { BranchInfo } from "../src/types/messages"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { formatRelativeDate } from "../src/utils/date"
+import { DeferredPopover } from "../src/components/shared/DeferredPopover"
 
 interface AutoOption {
   label: string
@@ -32,6 +33,28 @@ interface BranchSelectProps {
   remoteLabel: string
   autoOption?: AutoOption
 }
+
+interface BranchSelectPopoverProps extends ParentProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  trigger: JSXElement
+}
+
+export const BranchSelectPopover: Component<BranchSelectPopoverProps> = (props) => (
+  <DeferredPopover
+    open={props.open}
+    onOpenChange={props.onOpenChange}
+    placement="top-start"
+    flip={false}
+    sameWidth
+    portal={false}
+    deferDismiss
+    class="am-dropdown"
+    trigger={props.trigger}
+  >
+    {props.children}
+  </DeferredPopover>
+)
 
 export const BranchSelect: Component<BranchSelectProps> = (props) => {
   const isDefault = (branch: BranchInfo) => {

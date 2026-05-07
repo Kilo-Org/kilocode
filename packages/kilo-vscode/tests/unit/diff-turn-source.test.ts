@@ -51,8 +51,8 @@ describe("createTurnDiffSource.fetch", () => {
     expect(result.notice).toBeUndefined()
     expect(result.diffs).toHaveLength(1)
     expect(result.diffs[0]!.file).toBe("foo.ts")
-    expect(result.diffs[0]!.before).toBe("old")
-    expect(result.diffs[0]!.after).toBe("new")
+    expect(result.diffs[0]!.before).toBe("old\n")
+    expect(result.diffs[0]!.after).toBe("new\n")
   })
 
   it("propagates underlying fetch errors", async () => {
