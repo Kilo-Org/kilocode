@@ -1,7 +1,7 @@
 import type { EmbedderProvider } from "./interfaces/manager"
 import type { CodeIndexConfig, PreviousConfigSnapshot } from "./interfaces/config"
 import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS } from "./constants"
-import { getDefaultModelId, getModelDimension, getModelScoreThreshold, normalizeKiloModelId } from "./model-registry"
+import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "./model-registry"
 import { isEmbeddingProfileEqual, resolveEmbeddingProfile } from "./embedding-profile"
 
 /**
@@ -96,7 +96,7 @@ export class CodeIndexConfigManager {
     this.searchMaxResults = input.searchMaxResults
     this.embeddingBatchSize = input.embeddingBatchSize
     this.scannerMaxBatchRetries = input.scannerMaxBatchRetries
-    this.modelId = input.embedderProvider === "kilo" ? normalizeKiloModelId(input.modelId) : input.modelId
+    this.modelId = input.modelId
 
     // Validate and set model dimension
     if (input.modelDimension !== undefined && input.modelDimension !== null) {
@@ -164,7 +164,7 @@ export class CodeIndexConfigManager {
     // LanceDB doesn't need a qdrant URL; qdrant does
     const hasStore = isLancedb || !!qdrant
 
-    if (provider === "kilo") return !!(this.kiloOptions?.apiKey && hasStore)
+    if (provider === "kilo") return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
     if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
     if (provider === "ollama") return !!(this.ollamaOptions?.baseUrl && hasStore)
     if (provider === "openai-compatible")

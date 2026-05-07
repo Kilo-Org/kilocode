@@ -1,18 +1,11 @@
 /**
  * Indexing-local embedding model metadata registry.
  *
- * RATIONALE: The legacy codebase imported model metadata from a shared module
- * (`shared/embeddingModels`) that does not exist in this package. Rather than
- * recreating the full legacy module, we keep a focused registry of the models
- * the indexing engine needs to know about — primarily for dimension resolution,
- * default model selection, and score thresholds.
+ * RATIONALE: This registry only contains provider-local defaults and static
+ * metadata. Kilo-hosted embedding catalog metadata is fetched from Cloud so the
+ * model list is defined in one place.
  */
 
-import {
-  FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
-  FALLBACK_KILO_EMBEDDING_MODELS,
-  normalizeKiloEmbeddingModelId,
-} from "../kilo-embedding-models"
 import type { EmbedderProvider } from "./interfaces/manager"
 
 interface ModelProfile {
@@ -21,20 +14,7 @@ interface ModelProfile {
   queryPrefix?: string
 }
 
-const openRouterProfiles = Object.fromEntries(
-  FALLBACK_KILO_EMBEDDING_MODELS.map((model) => [
-    model.id,
-    { dimension: model.dimension, scoreThreshold: model.scoreThreshold } satisfies ModelProfile,
-  ]),
-)
-
-// Kilo-hosted embeddings route through Kilo Gateway/OpenRouter today. Keep a
-// separate map so Kilo-specific additions or overrides do not implicitly change
-// the direct OpenRouter provider.
-const kiloProfiles = { ...openRouterProfiles }
-
 const profiles: Record<string, Record<string, ModelProfile>> = {
-  kilo: kiloProfiles,
   openai: {
     "text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
     "text-embedding-3-large": { dimension: 3072, scoreThreshold: 0.4 },
@@ -65,7 +45,10 @@ const profiles: Record<string, Record<string, ModelProfile>> = {
     "amazon.titan-embed-text-v1": { dimension: 1536, scoreThreshold: 0.35 },
     "cohere.embed-english-v3": { dimension: 1024, scoreThreshold: 0.35 },
   },
-  openrouter: openRouterProfiles,
+  openrouter: {
+    "openai/text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
+    "openai/text-embedding-3-large": { dimension: 3072, scoreThreshold: 0.4 },
+  },
   "openai-compatible": {},
   "vercel-ai-gateway": {
     "text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
@@ -73,7 +56,7 @@ const profiles: Record<string, Record<string, ModelProfile>> = {
 }
 
 const defaults: Record<string, string> = {
-  kilo: FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
+  kilo: "",
   openai: "text-embedding-3-small",
   ollama: "nomic-embed-text",
   gemini: "gemini-embedding-001",
@@ -102,7 +85,7 @@ export function getModelQueryPrefix(provider: EmbedderProvider, modelId: string)
 }
 
 export function normalizeKiloModelId(modelId: string | undefined): string | undefined {
-  return normalizeKiloEmbeddingModelId(modelId)
+  return modelId
 }
 
 export function hasModelProfile(provider: EmbedderProvider, modelId: string | undefined): boolean {

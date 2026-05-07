@@ -11,7 +11,7 @@ describe("KiloEmbedder", () => {
     setOpenAIConstructorHook(undefined)
   })
 
-  test("uses Kilo Gateway headers and default embedding model", async () => {
+  test("uses Kilo Gateway headers and configured embedding model", async () => {
     const seen: unknown[] = []
     setOpenAIConstructorHook((cfg) => seen.push(cfg))
     mockEmbeddingsCreate.mockResolvedValue({
@@ -19,7 +19,11 @@ describe("KiloEmbedder", () => {
       usage: { prompt_tokens: 1, total_tokens: 1 },
     })
 
-    const embedder = new KiloEmbedder({ apiKey: "kilo-token", organizationId: "org_123" })
+    const embedder = new KiloEmbedder({
+      apiKey: "kilo-token",
+      organizationId: "org_123",
+      modelId: "mistralai/mistral-embed-2312",
+    })
 
     await embedder.createEmbeddings(["hello"])
 
@@ -42,7 +46,11 @@ describe("KiloEmbedder", () => {
     const seen: unknown[] = []
     setOpenAIConstructorHook((cfg) => seen.push(cfg))
 
-    new KiloEmbedder({ apiKey: "kilo-token", baseUrl: "https://example.test/api/openrouter/" })
+    new KiloEmbedder({
+      apiKey: "kilo-token",
+      baseUrl: "https://example.test/api/openrouter/",
+      modelId: "mistralai/mistral-embed-2312",
+    })
 
     expect((seen[0] as { baseURL: string }).baseURL).toBe("https://example.test/api/gateway/")
   })

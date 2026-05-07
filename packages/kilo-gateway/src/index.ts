@@ -35,7 +35,7 @@ export {
 } from "./api/profile.js"
 export { fetchKiloModels } from "./api/models.js"
 export {
-  FALLBACK_KILO_EMBEDDING_MODEL_CATALOG,
+  EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,
   type KiloEmbeddingModel,
   type KiloEmbeddingModelCatalog,

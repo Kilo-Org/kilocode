@@ -154,12 +154,14 @@ describe("CodeIndexServiceFactory", () => {
     })
   })
 
-  test("creates Kilo embedder with hosted default dimensions", async () => {
+  test("creates Kilo embedder with Cloud-provided model", async () => {
     const factory = createFactory({
       embedderProvider: "kilo",
       openAiKey: undefined,
       kiloApiKey: "kilo-token",
       kiloOrganizationId: "org_123",
+      modelId: "mistralai/mistral-embed-2312",
+      modelDimension: 1024,
     })
 
     mockEmbeddingsCreate.mockResolvedValue({

@@ -31,7 +31,7 @@ describe("CodeIndexConfigManager", () => {
     expect(cfg.getConfig().vectorStoreProvider).toBe("qdrant")
   })
 
-  test("configures Kilo with hosted auth options", () => {
+  test("configures Kilo with hosted auth options and explicit model metadata", () => {
     const cfg = new CodeIndexConfigManager(
       createInput({
         embedderProvider: "kilo",
@@ -39,6 +39,8 @@ describe("CodeIndexConfigManager", () => {
         kiloApiKey: "kilo-token",
         kiloBaseUrl: "https://example.test/api/gateway/",
         kiloOrganizationId: "org_123",
+        modelId: "mistralai/mistral-embed-2312",
+        modelDimension: 1024,
       }),
     )
 
@@ -48,22 +50,22 @@ describe("CodeIndexConfigManager", () => {
       baseUrl: "https://example.test/api/gateway/",
       organizationId: "org_123",
     })
-    expect(cfg.currentModelId).toBeUndefined()
+    expect(cfg.currentModelId).toBe("mistralai/mistral-embed-2312")
     expect(cfg.currentModelDimension).toBe(1024)
   })
 
-  test("normalizes bare OpenAI model IDs for Kilo", () => {
+  test("requires Kilo model metadata from Cloud config", () => {
     const cfg = new CodeIndexConfigManager(
       createInput({
         embedderProvider: "kilo",
         openAiKey: undefined,
         kiloApiKey: "kilo-token",
-        modelId: "text-embedding-3-small",
       }),
     )
 
-    expect(cfg.currentModelId).toBe("openai/text-embedding-3-small")
-    expect(cfg.currentModelDimension).toBe(1536)
+    expect(cfg.isFeatureConfigured).toBe(false)
+    expect(cfg.currentModelId).toBeUndefined()
+    expect(cfg.currentModelDimension).toBeUndefined()
   })
 
   test("uses configured dimension for Kilo models outside the fallback catalog", () => {
@@ -115,11 +117,23 @@ describe("CodeIndexConfigManager", () => {
 
     test("requires restart when Kilo auth changes", () => {
       const cfg = new CodeIndexConfigManager(
-        createInput({ embedderProvider: "kilo", openAiKey: undefined, kiloApiKey: "old-token" }),
+        createInput({
+          embedderProvider: "kilo",
+          openAiKey: undefined,
+          kiloApiKey: "old-token",
+          modelId: "mistralai/mistral-embed-2312",
+          modelDimension: 1024,
+        }),
       )
 
       const result = cfg.loadConfiguration(
-        createInput({ embedderProvider: "kilo", openAiKey: undefined, kiloApiKey: "new-token" }),
+        createInput({
+          embedderProvider: "kilo",
+          openAiKey: undefined,
+          kiloApiKey: "new-token",
+          modelId: "mistralai/mistral-embed-2312",
+          modelDimension: 1024,
+        }),
       )
 
       expect(result.requiresRestart).toBe(true)

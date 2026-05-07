@@ -1,7 +1,6 @@
 import { resolveKiloGatewayBaseUrl } from "@kilocode/kilo-gateway"
 import { HEADER_FEATURE, HEADER_ORGANIZATIONID } from "@kilocode/kilo-gateway"
 import { MAX_ITEM_TOKENS } from "../constants"
-import { getDefaultModelId, normalizeKiloModelId } from "../model-registry"
 import type { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces/embedder"
 import { Log } from "../../util/log"
 import { OpenAICompatibleEmbedder } from "./openai-compatible"
@@ -22,7 +21,8 @@ export class KiloEmbedder implements IEmbedder {
   }) {
     if (!input.apiKey) throw new Error("Kilo API key is required for embedding.")
 
-    this.model = normalizeKiloModelId(input.modelId) || getDefaultModelId("kilo")
+    if (!input.modelId) throw new Error("Kilo embedding model is required.")
+    this.model = input.modelId
     const headers: Record<string, string> = {
       [HEADER_FEATURE]: KILO_INDEXING_FEATURE,
       ...(input.organizationId ? { [HEADER_ORGANIZATIONID]: input.organizationId } : {}),

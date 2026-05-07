@@ -10,8 +10,6 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import {
-  FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
-  FALLBACK_KILO_EMBEDDING_MODELS,
   getKiloEmbeddingModel,
   normalizeKiloEmbeddingModelId,
 } from "@kilocode/kilo-indexing/embedding-models"
@@ -98,7 +96,7 @@ function defaultIndexing(sync: ReturnType<typeof useSync>, global?: IndexingConf
   const provider = sync.data.provider_next.all.find((item) => item.id === "kilo")
   const auth = resolveKiloIndexingAuth({ config: sync.data.config, provider })
   if (!shouldDefaultIndexingToKilo({ ...global, ...indexing }, auth)) return indexing
-  return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL }
+  return { ...indexing, provider: "kilo", model: kiloModel(indexing.model) }
 }
 
 async function saveIndexing(
@@ -214,7 +212,7 @@ function ProviderSelect(props: SubDialogProps) {
             ? {
                 ...current,
                 provider,
-                model: kiloModel(current.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
+                model: kiloModel(current.model),
                 dimension: undefined,
               }
             : {
@@ -427,38 +425,6 @@ function TuningMenu(props: SubDialogProps) {
   )
 }
 
-function KiloModelSelect(props: SubDialogProps) {
-  const dialog = useDialog()
-  const sync = useSync()
-  const sdk = props.useSDK()
-  const toast = useToast()
-  const indexing = defaultIndexing(sync)
-
-  return (
-    <DialogSelect
-      title="Kilo Embedding Model"
-      options={FALLBACK_KILO_EMBEDDING_MODELS.map((item) => ({
-        value: item.id,
-        title: item.name,
-        description:
-          item.id === (kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL)
-            ? "(current)"
-            : `${item.dimension}d`,
-      }))}
-      current={kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL}
-      onSelect={async (option) => {
-        await saveIndexing(
-          sdk,
-          sync,
-          { ...getIndexing(sync), provider: "kilo", model: option.value, dimension: undefined },
-          toast,
-        )
-        dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
-      }}
-    />
-  )
-}
-
 // --- Main Dialog ---
 
 interface DialogIndexingProps {
@@ -527,15 +493,6 @@ export function DialogIndexing(props: DialogIndexingProps) {
     },
   ]
 
-  if (indexing.provider === "kilo") {
-    options.splice(3, 0, {
-      value: "kiloModel",
-      title: "Kilo Model Preset",
-      category: "Embedding",
-      description: kiloModel(indexing.model) ?? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
-    })
-  }
-
   if (indexing.provider) {
     const settingsDesc = providerSettingsDescription(sync, indexing, indexing.provider)
     options.splice(2, 0, {
@@ -584,14 +541,10 @@ export function DialogIndexing(props: DialogIndexingProps) {
               await showProviderSettings(dialog, sync, sdk, toast, indexing.provider, props.useSDK)
             }
             break
-          case "kiloModel":
-            dialog.replace(() => <KiloModelSelect useSDK={props.useSDK} />)
-            break
           case "model": {
             const result = await DialogPrompt.show(dialog, "Embedding Model", {
               value: indexing.model ?? "",
-              placeholder:
-                indexing.provider === "kilo" ? FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL : "e.g. text-embedding-3-small",
+              placeholder: indexing.provider === "kilo" ? "provider/model" : "e.g. text-embedding-3-small",
             })
             if (result !== null) {
               const trimmed = result.trim()

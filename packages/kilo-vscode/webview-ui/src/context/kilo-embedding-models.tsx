@@ -1,6 +1,6 @@
 import { createContext, createSignal, onCleanup, useContext, type Accessor, type ParentComponent } from "solid-js"
 import {
-  FALLBACK_KILO_EMBEDDING_MODEL_CATALOG,
+  EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   type KiloEmbeddingModelCatalog,
 } from "@kilocode/kilo-indexing/embedding-models"
 import { useVSCode } from "./vscode"
@@ -14,7 +14,7 @@ export const KiloEmbeddingModelsContext = createContext<KiloEmbeddingModelsConte
 
 export const KiloEmbeddingModelsProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
-  const [catalog, setCatalog] = createSignal<KiloEmbeddingModelCatalog>(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG)
+  const [catalog, setCatalog] = createSignal<KiloEmbeddingModelCatalog>(EMPTY_KILO_EMBEDDING_MODEL_CATALOG)
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "kiloEmbeddingModelsLoaded") return

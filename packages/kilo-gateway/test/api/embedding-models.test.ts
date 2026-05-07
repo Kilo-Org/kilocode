@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test"
-import { FALLBACK_KILO_EMBEDDING_MODEL_CATALOG, fetchKiloEmbeddingModelCatalog } from "../../src/api/embedding-models"
+import { EMPTY_KILO_EMBEDDING_MODEL_CATALOG, fetchKiloEmbeddingModelCatalog } from "../../src/api/embedding-models"
 
 describe("fetchKiloEmbeddingModelCatalog", () => {
   test("fetches catalog from Kilo Gateway", async () => {
@@ -35,18 +35,18 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
 
     try {
       await expect(fetchKiloEmbeddingModelCatalog({ baseURL: "https://example.test" })).resolves.toEqual(
-        FALLBACK_KILO_EMBEDDING_MODEL_CATALOG,
+        EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
       )
     } finally {
       global.fetch = prev
     }
   })
 
-  test("fallback metadata matches Cloud-owned KiloClaw defaults", () => {
-    expect(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG.defaultModel).toBe("mistralai/mistral-embed-2312")
-    expect(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG.models.find((item) => item.id === "mistralai/mistral-embed-2312"))
-      .toMatchObject({ dimension: 1024 })
-    expect(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG.models.find((item) => item.id === "mistralai/codestral-embed-2505"))
-      .toMatchObject({ dimension: 256 })
+  test("fallback catalog is empty so Cloud owns model metadata", () => {
+    expect(EMPTY_KILO_EMBEDDING_MODEL_CATALOG).toEqual({
+      defaultModel: "",
+      models: [],
+      aliases: {},
+    })
   })
 })

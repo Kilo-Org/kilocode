@@ -1,7 +1,6 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import {
-  FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL,
   formatKiloEmbeddingModelLabel,
   getKiloEmbeddingModel,
   normalizeKiloEmbeddingModelId,
@@ -97,7 +96,7 @@ const IndexingTab: Component = () => {
   }
 
   const vectorStore = () => cfg().vectorStore ?? "qdrant"
-  const kiloDefault = () => embeds.catalog().defaultModel || FALLBACK_KILO_DEFAULT_EMBEDDING_MODEL
+  const kiloDefault = () => embeds.catalog().defaultModel
   const kiloModels = createMemo(() =>
     embeds.catalog().models.map((model) => ({
       value: model.id,
@@ -266,22 +265,24 @@ const IndexingTab: Component = () => {
           />
         </SettingsRow>
         <Show when={selectedProvider() === "kilo"}>
-          <SettingsRow
-            title={language.t("settings.indexing.kiloModel.title")}
-            description={language.t("settings.indexing.kiloModel.description")}
-          >
-            <Select
-              options={kiloModels()}
-              current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
-              value={(item) => item.value}
-              label={(item) => item.label}
-              onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: undefined })}
-              variant="secondary"
-              size="small"
-              triggerVariant="settings"
-              placeholder="Custom model"
-            />
-          </SettingsRow>
+          <Show when={kiloModels().length > 0}>
+            <SettingsRow
+              title={language.t("settings.indexing.kiloModel.title")}
+              description={language.t("settings.indexing.kiloModel.description")}
+            >
+              <Select
+                options={kiloModels()}
+                current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
+                value={(item) => item.value}
+                label={(item) => item.label}
+                onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: undefined })}
+                variant="secondary"
+                size="small"
+                triggerVariant="settings"
+                placeholder="Custom model"
+              />
+            </SettingsRow>
+          </Show>
         </Show>
         <SettingsRow
           title={language.t("settings.indexing.model.title")}
@@ -289,7 +290,7 @@ const IndexingTab: Component = () => {
         >
           <TextField
             value={cfg().model ?? ""}
-            placeholder={selectedProvider() === "kilo" ? kiloDefault() : "text-embedding-3-small"}
+            placeholder={selectedProvider() === "kilo" ? kiloDefault() || "provider/model" : "text-embedding-3-small"}
             onChange={saveModel}
           />
         </SettingsRow>
