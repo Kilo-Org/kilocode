@@ -28,6 +28,7 @@ const modifiedPatch = [
   " keep",
   "-old",
   "+new",
+  "",
 ].join("\n")
 
 describe("SessionDiffSource.initialFetch", () => {

@@ -53,7 +53,7 @@ import { busy, createThrottledValue, useToolFade, useContextToolPending } from "
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
-import { contents } from "./session-diff"
+import { normalize } from "./session-diff"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -2121,22 +2121,31 @@ ToolRegistry.register({
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const view = createMemo(() => {
       const diff = props.metadata?.filediff
-      if (!diff?.patch) return
-      return contents(diff)
+      if (diff?.patch) return normalize(diff)
+      const before = diff?.before ?? props.input.oldString ?? ""
+      const after = diff?.after ?? props.input.newString ?? ""
+      if (!before && !after) return
+      return normalize({
+        file: diff?.file ?? path(),
+        before,
+        after,
+        additions: diff?.additions ?? 0,
+        deletions: diff?.deletions ?? 0,
+      })
     })
-    const before = () => view()?.before ?? props.metadata?.filediff?.before ?? props.input.oldString ?? ""
-    const after = () => view()?.after ?? props.metadata?.filediff?.after ?? props.input.newString ?? ""
-    const canOpenDiff = () => !!data.openDiff && !!path() && (before() !== "" || after() !== "")
+    const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
     const canOpenFile = () => !!data.openFile && !!path()
 
     const openDiff = () => {
-      if (!canOpenDiff()) return
+      const v = view()
+      if (!canOpenDiff() || !v) return
       data.openDiff!({
         file: path(),
-        before: before(),
-        after: after(),
-        additions: props.metadata?.filediff?.additions ?? 0,
-        deletions: props.metadata?.filediff?.deletions ?? 0,
+        before: v.before,
+        after: v.after,
+        patch: v.patch,
+        additions: v.additions,
+        deletions: v.deletions,
       })
     }
 
@@ -2211,19 +2220,11 @@ ToolRegistry.register({
               }
             >
               <div data-component="edit-content">
-                <Dynamic
-                  component={fileComponent}
-                  mode="diff"
-                  hunkSeparators="simple"
-                  before={{
-                    name: path(),
-                    contents: before(),
-                  }}
-                  after={{
-                    name: path(),
-                    contents: after(),
-                  }}
-                />
+                <Show when={view()}>
+                  {(v) => (
+                    <Dynamic component={fileComponent} mode="diff" hunkSeparators="simple" fileDiff={v().fileDiff} />
+                  )}
+                </Show>
               </div>
             </ToolFileAccordion>
           </Show>
@@ -2248,18 +2249,20 @@ ToolRegistry.register({
     const view = createMemo(() => {
       const diff = props.metadata?.filediff
       if (!diff?.patch) return
-      return contents(diff)
+      return normalize(diff)
     })
 
     const handleFileClick = (e: MouseEvent) => {
       e.stopPropagation()
-      if (data.openDiff && view()) {
+      const v = view()
+      if (data.openDiff && v) {
         data.openDiff({
           file: props.metadata?.filediff?.file || props.input.filePath,
-          before: view()!.before,
-          after: view()!.after,
-          additions: props.metadata?.filediff?.additions ?? 0,
-          deletions: props.metadata?.filediff?.deletions ?? 0,
+          before: v.before,
+          after: v.after,
+          patch: v.patch,
+          additions: v.additions,
+          deletions: v.deletions,
         })
         return
       }
@@ -2326,13 +2329,7 @@ ToolRegistry.register({
                   }
                 >
                   {(diff) => (
-                    <Dynamic
-                      component={fileComponent}
-                      mode="diff"
-                      hunkSeparators="simple"
-                      before={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().before }}
-                      after={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().after }}
-                    />
+                    <Dynamic component={fileComponent} mode="diff" hunkSeparators="simple" fileDiff={diff().fileDiff} />
                   )}
                 </Show>
               </div>
@@ -2366,22 +2363,22 @@ ToolRegistry.register({
     const fileComponent = useFileComponent()
     const files = createMemo(() => (props.metadata.files ?? []) as ApplyPatchFile[])
     const view = (file: ApplyPatchFile) => {
-      if (file.patch)
-        return contents({
+      const patch = file.patch ?? file.diff
+      if (patch)
+        return normalize({
           file: file.relativePath,
-          patch: file.patch,
-          additions: file.additions,
-          deletions: file.deletions,
-        })
-      if (file.diff)
-        return contents({
-          file: file.relativePath,
-          patch: file.diff,
+          patch,
           additions: file.additions,
           deletions: file.deletions,
         })
       if (file.before !== undefined || file.after !== undefined)
-        return { before: file.before ?? "", after: file.after ?? "" }
+        return normalize({
+          file: file.relativePath,
+          before: file.before ?? "",
+          after: file.after ?? "",
+          additions: file.additions,
+          deletions: file.deletions,
+        })
     }
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
@@ -2527,8 +2524,7 @@ ToolRegistry.register({
                                     component={fileComponent}
                                     mode="diff"
                                     hunkSeparators="simple"
-                                    before={{ name: file.filePath, contents: diff().before }}
-                                    after={{ name: file.movePath ?? file.filePath, contents: diff().after }}
+                                    fileDiff={diff().fileDiff}
                                   />
                                 </div>
                               )}
@@ -2578,8 +2574,7 @@ ToolRegistry.register({
                         component={fileComponent}
                         mode="diff"
                         hunkSeparators="simple"
-                        before={{ name: file().filePath, contents: diff().before }}
-                        after={{ name: file().movePath ?? file().filePath, contents: diff().after }}
+                        fileDiff={diff().fileDiff}
                       />
                     </div>
                   )}

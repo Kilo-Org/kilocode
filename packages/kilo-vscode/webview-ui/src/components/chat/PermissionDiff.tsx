@@ -3,7 +3,7 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { contents } from "@kilocode/kilo-ui/session-diff"
+import { normalize } from "@kilocode/kilo-ui/session-diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
 
@@ -24,26 +24,22 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     return parts.slice(0, -1).join("/")
   })
 
-  const resolved = createMemo(() => {
+  // Always go through normalize: when a patch is present it uses Pierre's
+  // partial-diff path (real line numbers from the @@ header), otherwise it
+  // falls back to before/after. Returns undefined when there is nothing to
+  // render at all.
+  const view = createMemo(() => {
     const fd = props.filediff
-    if (fd.before !== undefined || fd.after !== undefined) return { before: fd.before ?? "", after: fd.after ?? "" }
-    if (fd.patch) {
-      const view = contents(fd)
-      return { before: view.before, after: view.after }
-    }
-    return { before: "", after: "" }
-  })
-
-  const empty = createMemo(() => {
-    const diff = resolved()
-    return diff.before === "" && diff.after === ""
+    if (typeof fd.patch === "string" && fd.patch.length > 0) return normalize(fd)
+    if (fd.before === undefined && fd.after === undefined) return
+    return normalize(fd)
   })
 
   const openInTab = () => {
-    const { before, after } = resolved()
+    const v = view()
     vscode.postMessage({
       type: "openDiffVirtual",
-      diff: { ...props.filediff, before, after },
+      diff: { ...props.filediff, before: v?.before ?? "", after: v?.after ?? "" },
       initialDiffStyle: "unified",
     })
   }
@@ -83,15 +79,10 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
       </div>
       <div data-slot="permission-diff-content">
         <Show
-          when={!empty()}
+          when={view()}
           fallback={<div data-slot="permission-diff-empty">Diff preview unavailable for this file.</div>}
         >
-          <Diff
-            before={{ name: props.filediff.file, contents: resolved().before }}
-            after={{ name: props.filediff.file, contents: resolved().after }}
-            diffStyle="unified"
-            hunkSeparators="simple"
-          />
+          {(v) => <Diff fileDiff={v().fileDiff} diffStyle="unified" hunkSeparators="simple" />}
         </Show>
       </div>
     </div>

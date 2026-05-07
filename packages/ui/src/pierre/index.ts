@@ -1,10 +1,14 @@
-import { DiffLineAnnotation, FileContents, FileDiffOptions, type SelectedLineRange } from "@pierre/diffs"
+import {
+  DiffLineAnnotation,
+  FileContents,
+  FileDiffMetadata,
+  FileDiffOptions,
+  type SelectedLineRange,
+} from "@pierre/diffs"
 import { ComponentProps } from "solid-js"
 import { lineCommentStyles } from "../components/line-comment-styles"
 
-export type DiffProps<T = {}> = FileDiffOptions<T> & {
-  before: FileContents
-  after: FileContents
+type DiffShared<T> = FileDiffOptions<T> & {
   annotations?: DiffLineAnnotation<T>[]
   selectedLines?: SelectedLineRange | null
   commentedLines?: SelectedLineRange[]
@@ -13,6 +17,20 @@ export type DiffProps<T = {}> = FileDiffOptions<T> & {
   class?: string
   classList?: ComponentProps<"div">["classList"]
 }
+
+type DiffPair<T> = DiffShared<T> & {
+  before: FileContents
+  after: FileContents
+  fileDiff?: undefined
+}
+
+type DiffPatch<T> = DiffShared<T> & {
+  fileDiff: FileDiffMetadata
+  before?: undefined
+  after?: undefined
+}
+
+export type DiffProps<T = {}> = DiffPair<T> | DiffPatch<T>
 
 const unsafeCSS = `
 [data-diff],

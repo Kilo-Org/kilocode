@@ -37,6 +37,7 @@ export type OpenDiffFn = (diff: {
   file: string
   before: string
   after: string
+  patch?: string
   additions: number
   deletions: number
 }) => void

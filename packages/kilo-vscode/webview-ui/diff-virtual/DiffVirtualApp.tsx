@@ -12,7 +12,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { contents } from "@kilocode/kilo-ui/session-diff"
+import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider } from "../src/context/vscode"
@@ -63,15 +63,15 @@ const DiffVirtualContent: Component = () => {
     return f.split("/").slice(0, -1).join("/")
   }
 
-  const resolved = createMemo(() => {
+  // Always go through normalize. When the payload carries a unified patch it
+  // uses Pierre's partial-diff path (real line numbers from the @@ header);
+  // otherwise it falls back to before/after.
+  const view = createMemo(() => {
     const d = diff()
-    if (!d) return { before: "", after: "" }
-    if (d.before !== undefined || d.after !== undefined) return { before: d.before ?? "", after: d.after ?? "" }
-    if (d.patch) {
-      const view = contents(d as { file: string; patch: string; additions: number; deletions: number })
-      return { before: view.before, after: view.after }
-    }
-    return { before: "", after: "" }
+    if (!d) return
+    if (typeof d.patch === "string" && d.patch.length > 0) return normalize(d)
+    if (d.before === undefined && d.after === undefined) return
+    return normalize(d)
   })
 
   return (
@@ -123,15 +123,12 @@ const DiffVirtualContent: Component = () => {
               <Show
                 when={markdown() && isMarkdownFile(d().file)}
                 fallback={
-                  <Diff
-                    before={{ name: d().file, contents: resolved().before }}
-                    after={{ name: d().file, contents: resolved().after }}
-                    diffStyle={style()}
-                    hunkSeparators="simple"
-                  />
+                  <Show when={view()}>
+                    {(v) => <Diff fileDiff={v().fileDiff} diffStyle={style()} hunkSeparators="simple" />}
+                  </Show>
                 }
               >
-                <MarkdownDiffView diff={{ file: d().file, before: resolved().before, after: resolved().after }} />
+                <MarkdownDiffView diff={{ file: d().file, before: view()?.before ?? "", after: view()?.after ?? "" }} />
               </Show>
             </div>
           </>
