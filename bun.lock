@@ -104,7 +104,6 @@
         "@ai-sdk/openai": "3.0.48",
         "@ai-sdk/openai-compatible": "2.0.37",
         "@clack/prompts": "1.0.0-alpha.1",
-        "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",
         "@openrouter/ai-sdk-provider": "2.8.1",
