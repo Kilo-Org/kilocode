@@ -34,7 +34,7 @@ import type {
   ExperimentalConsoleSwitchOrgResponses,
   ExperimentalResourceListResponses,
   ExperimentalSessionListResponses,
-  ExperimentalWorkspaceAdaptorListResponses,
+  ExperimentalWorkspaceAdapterListResponses,
   ExperimentalWorkspaceCreateErrors,
   ExperimentalWorkspaceCreateResponses,
   ExperimentalWorkspaceListResponses,
@@ -576,11 +576,11 @@ export class App extends HeyApiClient {
   }
 }
 
-export class Adaptor extends HeyApiClient {
+export class Adapter extends HeyApiClient {
   /**
-   * List workspace adaptors
+   * List workspace adapters
    *
-   * List all available workspace adaptors for the current project.
+   * List all available workspace adapters for the current project.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -600,8 +600,8 @@ export class Adaptor extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<ExperimentalWorkspaceAdaptorListResponses, unknown, ThrowOnError>({
-      url: "/experimental/workspace/adaptor",
+    return (options?.client ?? this.client).get<ExperimentalWorkspaceAdapterListResponses, unknown, ThrowOnError>({
+      url: "/experimental/workspace/adapter",
       ...options,
       ...params,
     })
@@ -795,9 +795,9 @@ export class Workspace extends HeyApiClient {
     })
   }
 
-  private _adaptor?: Adaptor
-  get adaptor(): Adaptor {
-    return (this._adaptor ??= new Adaptor({ client: this.client }))
+  private _adapter?: Adapter
+  get adapter(): Adapter {
+    return (this._adapter ??= new Adapter({ client: this.client }))
   }
 }
 

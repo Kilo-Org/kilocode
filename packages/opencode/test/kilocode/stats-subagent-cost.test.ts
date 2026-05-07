@@ -11,12 +11,12 @@ import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Session } from "../../src/session/session"
 import { MessageID, PartID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const ref = {

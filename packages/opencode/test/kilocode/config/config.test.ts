@@ -15,7 +15,7 @@ import { Env } from "../../../src/env"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
 import { Instance } from "../../../src/project/instance"
 import { Filesystem } from "../../../src/util/filesystem"
-import { tmpdir } from "../../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
   Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
@@ -66,6 +66,7 @@ const cfg: Partial<Config.Info> = {
 
 describe("kilocode indexing config", () => {
   afterEach(async () => {
+    await disposeAllInstances()
     await clear(true)
   })
 

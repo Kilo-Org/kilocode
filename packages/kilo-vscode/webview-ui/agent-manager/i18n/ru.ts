@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
   "agentManager.tab.newOptions": "Другие параметры новой вкладки",
+  "agentManager.tabsMenu.label": "Искать открытые вкладки",
+  "agentManager.tabsMenu.search": "Поиск вкладок...",
+  "agentManager.tabsMenu.empty": "Нет подходящих вкладок",
+  "agentManager.tabsMenu.status.waiting": "Ожидание",
+  "agentManager.tabsMenu.status.working": "Работа",
+  "agentManager.tabsMenu.status.retry": "Повтор",
 
   "agentManager.terminal.new": "Новая вкладка терминала",
   "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",

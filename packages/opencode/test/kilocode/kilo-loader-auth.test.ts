@@ -39,7 +39,6 @@ import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider/models"
 import { Auth } from "../../src/auth"
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
@@ -50,12 +49,11 @@ function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
 
 test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
   // Reset state that may be stale from other test files sharing this process.
-  // Auth.set from other tests persists in the shared auth.json, ModelsDev.Data
-  // holds a lazy singleton whose resolved object gets mutated in-place by get(),
+  // Auth.set from other tests persists in the shared auth.json,
   // and ModelCache keeps fetched models in a TTL map.
+  // ModelsDev.Data was removed in v1.14.33 — instance-store disposal handles cache invalidation.
   await Auth.remove("kilo")
   ModelCache.clear("kilo")
-  ModelsDev.Data.reset()
 
   await using base = await tmpdir({
     init: async (dir) => {
@@ -103,7 +101,6 @@ test("kilo loader keeps paid models without auth and when config apiKey is prese
 test("kilo loader keeps paid models without auth and when auth exists", async () => {
   await Auth.remove("kilo")
   ModelCache.clear("kilo")
-  ModelsDev.Data.reset()
 
   await using base = await tmpdir({
     init: async (dir) => {

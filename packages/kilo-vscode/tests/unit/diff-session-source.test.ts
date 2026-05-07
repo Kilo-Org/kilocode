@@ -75,8 +75,8 @@ describe("SessionDiffSource.initialFetch", () => {
 
     const foo = diffsMsg.diffs[0]!
     expect(foo.file).toBe("foo.ts")
-    expect(foo.before).toBe("keep\nold")
-    expect(foo.after).toBe("keep\nnew")
+    expect(foo.before).toBe("keep\nold\n")
+    expect(foo.after).toBe("keep\nnew\n")
     expect(foo.additions).toBe(1)
     expect(foo.deletions).toBe(1)
     expect(foo.status).toBe("modified")
