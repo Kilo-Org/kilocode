@@ -149,6 +149,6 @@
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.2.42",
+  "version": "7.2.44",
   "peerDependencies": {}
 }
