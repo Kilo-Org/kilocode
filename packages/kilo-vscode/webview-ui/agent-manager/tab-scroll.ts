@@ -2,7 +2,13 @@ import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
 
-/** Manages horizontal scroll for the tab list. */
+/**
+ * Keeps the Agent Manager tab strip usable when tabs overflow.
+ *
+ * - Converts vertical wheel movement over the tab strip into horizontal scroll.
+ * - Tracks whether the left/right fade indicators should be visible.
+ * - Scrolls the active tab into view after tab selection or tab list changes.
+ */
 export function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<string | undefined>) {
   const [ref, setRef] = createSignal<HTMLDivElement | undefined>()
   const [showLeft, setShowLeft] = createSignal(false)

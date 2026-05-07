@@ -1,17 +1,6 @@
 /** @jsxImportSource solid-js */
 
-import {
-  For,
-  Show,
-  createSignal,
-  createMemo,
-  createEffect,
-  on,
-  onMount,
-  onCleanup,
-  type Component,
-  type JSX,
-} from "solid-js"
+import { For, Show, createSignal, createMemo, createEffect, on, onMount, onCleanup, type Component, type JSX } from "solid-js"
 import type {
   ExtensionMessage,
   AgentManagerRepoInfoMessage,
@@ -92,12 +81,14 @@ import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
+import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "./FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
+import { CurrentTabsMenu, createCurrentTabItems, focusCurrentTab } from "./CurrentTabsMenu"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import SectionHeader from "./SectionHeader"
@@ -118,7 +109,6 @@ import { mergeWorktreeDiffs } from "./diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { setTabWidths } from "./tab-widths"
-import { useTabScroll } from "./tab-scroll"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -947,24 +937,7 @@ const AgentManagerContent: Component = () => {
     if (idx === -1) return
     const next = direction === "left" ? idx - 1 : idx + 1
     if (next < 0 || next >= ids.length) return
-    const targetId = ids[next]!
-    if (isTerminalTabId(targetId)) return termHandlers.activate(targetId)
-    terms.setActiveId(undefined)
-    if (targetId === REVIEW_TAB_ID) {
-      if (!reviewOpen()) setReviewOpenForSelection(true)
-      setReviewActive(true)
-      return
-    }
-    const target = tabLookup().get(targetId)
-    if (!target) return
-    setReviewActive(false)
-    if (isPending(target.id)) {
-      setActivePendingId(target.id)
-      session.clearCurrentSession()
-      return
-    }
-    setActivePendingId(undefined)
-    session.selectSession(target.id)
+    focusTab(ids[next]!)
   }
 
   const selectLocal = () => {
@@ -1069,6 +1042,8 @@ const AgentManagerContent: Component = () => {
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest("[data-agent-manager-native-text-shortcuts]")) return
       // Arrow navigation requires Alt modifier (Cmd+Alt+Arrow for tabs/sessions)
       if (e.altKey && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
@@ -2057,6 +2032,37 @@ const AgentManagerContent: Component = () => {
     return activeTabs().find((s) => s.id === id)
   })
 
+  const focusTab = (id: string) =>
+    focusCurrentTab({
+      id,
+      terms,
+      isTerminal: isTerminalTabId,
+      isPending,
+      reviewId: REVIEW_TAB_ID,
+      reviewOpen,
+      setReviewOpen: setReviewOpenForSelection,
+      setReviewActive,
+      tabLookup,
+      setActivePendingId,
+      clearSession: session.clearCurrentSession,
+      selectSession: session.selectSession,
+      activateTerminal: termHandlers.activate,
+    })
+
+  const tabMenuItems = createCurrentTabItems({
+    tabIds,
+    tabLookup,
+    statusMap: session.allStatusMap,
+    permissions: session.permissions,
+    questions: session.questions,
+    visibleTabId,
+    terms,
+    reviewId: REVIEW_TAB_ID,
+    isTerminal: isTerminalTabId,
+    isPending,
+    t,
+  })
+
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
@@ -2704,6 +2710,14 @@ const AgentManagerContent: Component = () => {
                 <div class={`am-tab-fade am-tab-fade-right ${tabScroll.showRight() ? "am-tab-fade-visible" : ""}`} />
               </div>
               <div class="am-tab-actions">
+                <CurrentTabsMenu
+                  items={tabMenuItems}
+                  label={t("agentManager.tabsMenu.label")}
+                  searchLabel={t("agentManager.tabsMenu.search")}
+                  emptyLabel={t("agentManager.tabsMenu.empty")}
+                  activeId={visibleTabId}
+                  onSelect={focusTab}
+                />
                 {(() => {
                   const sel = () => selection()
                   const isWorktree = () => typeof sel() === "string" && sel() !== LOCAL

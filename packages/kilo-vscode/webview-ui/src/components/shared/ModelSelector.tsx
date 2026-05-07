@@ -90,6 +90,8 @@ export interface ModelSelectorBaseProps {
   clearLabel?: string
   /** Include the kilo-auto/small model in the list — defaults to false */
   includeAutoSmall?: boolean
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -523,6 +525,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       preferredExpandedHeight={800}
       minHeight={200}
       placement={props.placement ?? "top-start"}
+      deferDismiss={props.deferDismiss}
       open={open()}
       onOpenChange={setOpen}
       triggerAs={Button}
