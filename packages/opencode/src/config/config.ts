@@ -5,7 +5,7 @@ import { createRequire } from "module"
 import os from "os"
 import z from "zod"
 import { ModelsDev } from "../provider/models"
-import { mergeDeep, pipe, unique } from "remeda"
+import { mergeDeep, unique } from "remeda"
 import { Global } from "../global"
 import fs from "fs/promises"
 import { lazy } from "../util/lazy"
@@ -1347,16 +1347,19 @@ export namespace Config {
   export type Info = z.output<typeof Info>
 
   export const global = lazy(async () => {
-    let result: Info = pipe(
-      {},
-      mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
+    const files = [
+      "config.json",
       // kilocode_change start
-      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
+      "kilo.json",
+      "kilo.jsonc",
       // kilocode_change end
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
-    )
+      "opencode.json",
+      "opencode.jsonc",
+    ]
+    let result: Info = {}
+    for (const file of files) {
+      result = mergeConfigConcatArrays(result, await loadFile(path.join(Global.Path.config, file)))
+    }
 
     const legacy = path.join(Global.Path.config, "config")
     if (existsSync(legacy)) {
