@@ -186,6 +186,27 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
   )
 }
 
+type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
+
+export const MermaidDownloadBridge: Component = () => {
+  const vscode = useVSCode()
+
+  onMount(() => {
+    const save = (event: Event) => {
+      const detail = (event as MermaidImageEvent).detail
+      if (!detail?.dataUrl || !detail.filename) return
+      event.preventDefault()
+      vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
+    }
+    window.addEventListener("kilo:save-image", save)
+    onCleanup(() => {
+      window.removeEventListener("kilo:save-image", save)
+    })
+  })
+
+  return null
+}
+
 // Inner app component that uses the contexts
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
@@ -350,6 +371,7 @@ const App: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
+          <MermaidDownloadBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>

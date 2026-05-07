@@ -1,8 +1,9 @@
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Effect } from "effect"
+import { HttpClient, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { Hono } from "hono"
-// import { proxy } from "hono/proxy" // kilocode_change - proxy import removed
 import { getMimeType } from "hono/utils/mime"
-// import { createHash } from "node:crypto" // kilocode_change
 import fs from "node:fs/promises"
 
 const embeddedUIPromise = Flag.KILO_DISABLE_EMBEDDED_WEB_UI
@@ -13,33 +14,58 @@ const embeddedUIPromise = Flag.KILO_DISABLE_EMBEDDED_WEB_UI
 const DEFAULT_CSP =
   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:"
 
-// kilocode_change start - csp function removed, used by proxy fallback to app.opencode.ai
-// const csp = (hash = "") =>
-//   `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hash ? ` 'sha256-${hash}'` : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:`
-// kilocode_change end
+// kilocode_change - upstream's proxy-to-app.opencode.ai fallback was removed; Kilo serves the embedded UI only
+function embeddedUI() {
+  if (Flag.KILO_DISABLE_EMBEDDED_WEB_UI) return Promise.resolve(null)
+  return embeddedUIPromise
+}
 
-export const UIRoutes = (): Hono =>
-  new Hono().all("/*", async (c) => {
-    const embeddedWebUI = await embeddedUIPromise
-    const path = c.req.path
+export async function serveUI(request: Request) {
+  const embeddedWebUI = await embeddedUI()
+  const path = new URL(request.url).pathname
+
+  if (embeddedWebUI) {
+    const match = embeddedWebUI[path.replace(/^\//, "")] ?? embeddedWebUI["index.html"] ?? null
+    if (!match) return Response.json({ error: "Not Found" }, { status: 404 })
+
+    if (await fs.exists(match)) {
+      const mime = getMimeType(match) ?? "text/plain"
+      const headers = new Headers({ "content-type": mime })
+      if (mime.startsWith("text/html")) headers.set("content-security-policy", DEFAULT_CSP)
+      return new Response(new Uint8Array(await fs.readFile(match)), { headers })
+    }
+
+    return Response.json({ error: "Not Found" }, { status: 404 })
+  }
+
+  // kilocode_change - no proxy fallback to app.opencode.ai; embedded UI only
+  return Response.json({ error: "Not Found" }, { status: 404 })
+}
+
+export function serveUIEffect(
+  request: HttpServerRequest.HttpServerRequest,
+  services: { fs: AppFileSystem.Interface; client: HttpClient.HttpClient },
+) {
+  return Effect.gen(function* () {
+    const embeddedWebUI = yield* Effect.promise(() => embeddedUI())
+    const path = new URL(request.url, "http://localhost").pathname
 
     if (embeddedWebUI) {
       const match = embeddedWebUI[path.replace(/^\//, "")] ?? embeddedWebUI["index.html"] ?? null
-      if (!match) return c.json({ error: "Not Found" }, 404)
+      if (!match) return HttpServerResponse.jsonUnsafe({ error: "Not Found" }, { status: 404 })
 
-      if (await fs.exists(match)) {
+      if (yield* services.fs.existsSafe(match)) {
         const mime = getMimeType(match) ?? "text/plain"
-        c.header("Content-Type", mime)
-        if (mime.startsWith("text/html")) {
-          c.header("Content-Security-Policy", DEFAULT_CSP)
-        }
-        return c.body(new Uint8Array(await fs.readFile(match)))
-      } else {
-        return c.json({ error: "Not Found" }, 404)
+        const headers = new Headers({ "content-type": mime })
+        if (mime.startsWith("text/html")) headers.set("content-security-policy", DEFAULT_CSP)
+        return HttpServerResponse.raw(yield* services.fs.readFile(match), { headers })
       }
-    } else {
-      // kilocode_change start - return 404 instead of proxying to app.opencode.ai
-      return c.json({ error: "Not Found" }, 404)
-      // kilocode_change end
+      return HttpServerResponse.jsonUnsafe({ error: "Not Found" }, { status: 404 })
     }
+
+    // kilocode_change - no proxy fallback to app.opencode.ai; embedded UI only
+    return HttpServerResponse.jsonUnsafe({ error: "Not Found" }, { status: 404 })
   })
+}
+
+export const UIRoutes = (): Hono => new Hono().all("/*", (c) => serveUI(c.req.raw))

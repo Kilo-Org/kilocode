@@ -755,6 +755,13 @@ export const dict = {
   "settings.indexing.title": "Indexación",
   "settings.indexing.enable.title": "Habilitar indexación",
   "settings.indexing.enable.description": "Activar o desactivar la indexación semántica de la base de código.",
+  "settings.indexing.globalEnable.title": "Habilitar globalmente",
+  "settings.indexing.globalEnable.description": "Habilitar la indexación para cada área de trabajo.",
+  "settings.indexing.projectEnable.title": "Habilitar para este proyecto",
+  "settings.indexing.projectEnable.description":
+    "Habilitar la indexación para esta área de trabajo cuando la indexación global está desactivada.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "La indexación global está habilitada, por lo que este proyecto ya está cubierto.",
   "settings.indexing.provider.title": "Proveedor de embeddings",
   "settings.indexing.provider.description":
     "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",
@@ -1182,6 +1189,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Usar un atajo inteligente para activar tareas en línea",
   "settings.autocomplete.chatAutocomplete.title": "Habilitar autocompletado del chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugerencias de autocompletado en el chat",
+  "settings.autocomplete.modelsHint":
+    "Para elegir qué modelo se usa para el autocompletado, consulta la configuración de Modelos.",
   "settings.notifications.agent.title": "Finalización del agente",
   "settings.notifications.agent.description": "Mostrar notificación cuando el agente completa una tarea",
   "settings.notifications.permissions.title": "Solicitudes de permiso",

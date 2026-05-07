@@ -14,7 +14,7 @@ import { Shell } from "../../../src/shell/shell"
 import { Truncate } from "../../../src/tool/truncate"
 import { BashTool } from "../../../src/tool/bash"
 import { Plugin } from "../../../src/plugin"
-import { tmpdir } from "../../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 
 const runtime = ManagedRuntime.make(
@@ -125,7 +125,7 @@ async function wait(count: number) {
 }
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("external_directory allow config protection", () => {

@@ -3,14 +3,14 @@ import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
 import { Instance } from "../../src/project/instance"
-import { provideInstance, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
 
 function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
   return Effect.runPromise(provideInstance(dir)(Agent.Service.use(fn)).pipe(Effect.provide(Agent.defaultLayer)))
 }
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 test("ask agent honors user MCP allow over generated ask rule", async () => {

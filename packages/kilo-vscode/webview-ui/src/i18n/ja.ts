@@ -750,6 +750,13 @@ export const dict = {
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
+  "settings.indexing.globalEnable.title": "グローバルで有効にする",
+  "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.title": "このプロジェクトで有効にする",
+  "settings.indexing.projectEnable.description":
+    "グローバルなインデックス作成がオフの場合に、このワークスペースでのインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "グローバルインデックスが有効なため、このプロジェクトはすでにカバーされています。",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
   "settings.indexing.lancedbDirectory.title": "LanceDBディレクトリ",
@@ -1166,6 +1173,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "インラインタスクをトリガーするスマートキーバインドを使用",
   "settings.autocomplete.chatAutocomplete.title": "チャットの自動補完を有効にする",
   "settings.autocomplete.chatAutocomplete.description": "チャットテキストエリアに自動補完の提案を表示",
+  "settings.autocomplete.modelsHint": "オートコンプリートに使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.notifications.agent.title": "エージェント完了",
   "settings.notifications.agent.description": "エージェントがタスクを完了したら通知を表示",
   "settings.notifications.permissions.title": "権限リクエスト",

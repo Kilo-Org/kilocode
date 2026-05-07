@@ -1147,6 +1147,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Bruk en smart tastbinding for å utløse innebygde oppgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofullføring",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofullføringsforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For å velge hvilken modell som brukes til autofullføring, se Modellinnstillinger.",
   "settings.notifications.agent.title": "Agentfullføring",
   "settings.notifications.agent.description": "Vis varsling når agenten fullfører en oppgave",
   "settings.notifications.permissions.title": "Tillatelsesforespørsler",
@@ -1199,6 +1201,13 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
+  "settings.indexing.globalEnable.title": "Aktiver globalt",
+  "settings.indexing.globalEnable.description": "Aktiver indeksering for hvert arbeidsområde.",
+  "settings.indexing.projectEnable.title": "Aktiver for dette prosjektet",
+  "settings.indexing.projectEnable.description":
+    "Aktiver indeksering for dette arbeidsområdet når global indeksering er slått av.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktivert, så dette prosjektet er allerede dekket.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
   "settings.indexing.model.title": "Embedding-modell",

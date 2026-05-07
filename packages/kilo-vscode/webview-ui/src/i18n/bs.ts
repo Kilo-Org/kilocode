@@ -759,6 +759,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Dimenzija vektora",
   "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
+  "settings.indexing.globalEnable.title": "Omogući globalno",
+  "settings.indexing.globalEnable.description": "Omogući indeksiranje za svaki radni prostor.",
+  "settings.indexing.projectEnable.title": "Omogući za ovaj projekat",
+  "settings.indexing.projectEnable.description":
+    "Omogući indeksiranje za ovaj radni prostor kada je globalno indeksiranje isključeno.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globalno indeksiranje je omogućeno, tako da je ovaj projekat već obuhvaćen.",
   "settings.indexing.lancedbDirectory.description": "Opcionalni direktorij za lokalno LanceDB skladište.",
   "settings.indexing.lancedbDirectory.placeholder": "Ostavite prazno za zadano",
   "settings.indexing.lancedbDirectory.title": "LanceDB direktorij",
@@ -1177,6 +1184,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Koristi pametnu prečicu za pokretanje inline zadataka",
   "settings.autocomplete.chatAutocomplete.title": "Omogući automatsko dovršavanje chata",
   "settings.autocomplete.chatAutocomplete.description": "Prikaži prijedloge automatskog dovršavanja u polju chata",
+  "settings.autocomplete.modelsHint":
+    "Da odaberete koji se model koristi za automatsko dovršavanje, pogledajte postavke Modela.",
   "settings.notifications.agent.title": "Završetak agenta",
   "settings.notifications.agent.description": "Prikaži obavijest kada agent završi zadatak",
   "settings.notifications.permissions.title": "Zahtjevi za dozvolu",

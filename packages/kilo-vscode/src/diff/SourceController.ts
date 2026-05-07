@@ -1,21 +1,29 @@
-import type * as vscode from "vscode"
-import type { DiffSource, DiffSourceDescriptor, DiffSourceMessage, DiffSourcePost } from "./sources/types"
+import { hashFileDiffs } from "./shared/hash"
+import { DIFF_POLL_INTERVAL_MS } from "./polling"
+import type { DiffSource, DiffSourceDescriptor } from "./sources/types"
 import type { PanelContext } from "./types"
 
 /**
- * Owns the active DiffSource for a panel: builds it via the injected
- * `build` function, runs initialFetch + start, and disposes it on swap
- * or teardown.
+ * Owns the active DiffSource for a panel: builds it via the injected `build`
+ * function, runs an initial fetch, and then polls on a fixed interval with
+ * hash-dedup. Posts loading / diffs / notice messages to the webview, and
+ * disposes the source on swap or teardown.
  *
- * Decoupled from the webview panel — receives neutral callbacks. Stale
- * messages are filtered via an internal epoch counter that bumps on
- * every stop/activate, so async posts from a disposed source are dropped.
+ * Sources are declarative — they only implement `fetch()` (and optionally
+ * `fetchFile` / `revert` / `dispose`). All lifecycle, polling, and message
+ * posting lives here so that concrete sources can be plain factory functions
+ * with closure state instead of classes with a `post`/`start`/`dispose` dance.
+ *
+ * Stale results are filtered via an internal epoch counter that bumps on
+ * every stop/activate, so in-flight fetches from a disposed source are
+ * dropped.
  */
 export class SourceController {
   private ctx: PanelContext | undefined
   private activeId: string | undefined
   private active: DiffSource | undefined
-  private startDisposable: vscode.Disposable | undefined
+  private interval: ReturnType<typeof setInterval> | undefined
+  private lastHash: string | undefined
   private epoch = 0
 
   constructor(
@@ -32,20 +40,20 @@ export class SourceController {
     return this.activeId
   }
 
-  /** Dispose the active source and bump the epoch so in-flight posts are dropped. */
+  /** Dispose the active source and bump the epoch so in-flight fetches are dropped. */
   stop(): void {
     this.epoch++
-    this.startDisposable?.dispose()
-    this.startDisposable = undefined
-    this.active?.dispose()
+    this.stopPolling()
+    this.active?.dispose?.()
     this.active = undefined
     this.activeId = undefined
+    this.lastHash = undefined
   }
 
   /**
-   * Build, initial-fetch, and start source `id` in the current context.
-   * Internally disposes any previously active source. Throws if the
-   * catalog can't build the id — callers should catch and log.
+   * Build, initial-fetch, and start polling source `id` in the current context.
+   * Disposes any previously active source. Throws if the catalog can't build
+   * the id — callers should catch and log.
    */
   async activate(id: string): Promise<void> {
     const ctx = this.ctx
@@ -67,19 +75,15 @@ export class SourceController {
       capabilities: source.descriptor.capabilities,
     })
 
-    const sourcePost = this.guardedPost(epoch)
-    await source.initialFetch(sourcePost)
-    // Prevents source polling from starting after teardown or source swap.
-    if (this.epoch !== epoch || this.activeId !== id) {
-      if (this.active === source) source.dispose()
-      return
-    }
-    this.startDisposable = source.start?.(sourcePost)
+    const keepPolling = await this.runFetch(source, epoch, true)
+    // Prevents the polling interval from starting after teardown or swap.
+    if (this.epoch !== epoch || this.activeId !== id) return
+    if (keepPolling) this.startPolling(source, epoch)
   }
 
   async revertFile(file: string): Promise<void> {
     const source = this.active
-    if (!source?.revertFile) {
+    if (!source?.revert) {
       this.post({
         type: "diffViewer.revertFileResult",
         file,
@@ -89,7 +93,8 @@ export class SourceController {
       return
     }
 
-    const result = await source.revertFile(file).catch((err) => {
+    const epoch = this.epoch
+    const result = await source.revert(file).catch((err) => {
       const message = err instanceof Error ? err.message : String(err)
       return { ok: false, message }
     })
@@ -99,22 +104,27 @@ export class SourceController {
       status: result.ok ? "success" : "error",
       message: result.message,
     })
+    // Push fresh diffs immediately after a successful revert so the webview
+    // doesn't have to wait for the next polling tick.
+    if (result.ok && this.epoch === epoch && this.active === source) {
+      await this.runFetch(source, epoch, false)
+    }
   }
 
   /**
    * Lazy detail load for a single file. Forwards to the active source's
-   * `requestFile`. Posts `diff: null` when the source can't resolve the file
+   * `fetchFile`. Posts `diff: null` when the source can't resolve the file
    * or doesn't support per-file detail, so the webview can clear its
    * pending-loading indicator either way.
    */
   async requestFile(file: string): Promise<void> {
     const source = this.active
     const epoch = this.epoch
-    if (!source?.requestFile) {
+    if (!source?.fetchFile) {
       this.post({ type: "diffViewer.diffFile", file, diff: null })
       return
     }
-    const diff = await source.requestFile(file).catch(() => null)
+    const diff = await source.fetchFile(file).catch(() => null)
     // Drop the response if the source has been disposed/swapped while we waited.
     if (this.epoch !== epoch) return
     this.post({ type: "diffViewer.diffFile", file, diff })
@@ -124,19 +134,57 @@ export class SourceController {
     this.stop()
   }
 
-  private guardedPost(epoch: number): DiffSourcePost {
-    return (msg: DiffSourceMessage) => {
-      // Drops stale messages from sources whose lifecycle epoch has ended.
-      if (this.epoch !== epoch) return
-      if (msg.type === "diffs") {
-        this.post({ type: "diffViewer.diffs", diffs: msg.diffs })
-      } else if (msg.type === "loading") {
-        this.post({ type: "diffViewer.loading", loading: msg.loading })
-      } else if (msg.type === "error") {
-        this.post({ type: "diffViewer.loading", loading: false })
-      } else if (msg.type === "notice") {
-        this.post({ type: "diffViewer.notice", notice: msg.notice })
+  /**
+   * Run one fetch against the source and post results. Returns whether the
+   * controller should keep polling this source — false when the source
+   * requests a stop or the epoch has moved on.
+   */
+  private async runFetch(source: DiffSource, epoch: number, initial: boolean): Promise<boolean> {
+    if (initial) this.post({ type: "diffViewer.loading", loading: true })
+
+    try {
+      const result = await source.fetch()
+      if (this.epoch !== epoch) return false
+
+      if (result.notice !== undefined) {
+        this.post({ type: "diffViewer.notice", notice: result.notice })
       }
+
+      const hash = hashFileDiffs(result.diffs as never)
+      if (initial || hash !== this.lastHash) {
+        this.lastHash = hash
+        this.post({ type: "diffViewer.diffs", diffs: result.diffs })
+      }
+
+      return !result.stopPolling
+    } catch (err) {
+      if (this.epoch !== epoch) return false
+      // Errors are swallowed for the webview (it just needs the loading
+      // indicator cleared below), but we always log so initial-fetch
+      // failures leave a trace in the Extension Host output — previously
+      // they were silent and invisible in production.
+      console.log("[Kilo New] SourceController.fetch error", { initial, err })
+      return true
+    } finally {
+      if (initial && this.epoch === epoch) {
+        this.post({ type: "diffViewer.loading", loading: false })
+      }
+    }
+  }
+
+  private startPolling(source: DiffSource, epoch: number): void {
+    this.stopPolling()
+    this.interval = setInterval(async () => {
+      // Self-cancel when the tick reports the source is done
+      const keep = await this.runFetch(source, epoch, false)
+      if (!keep) this.stopPolling()
+    }, DIFF_POLL_INTERVAL_MS)
+  }
+
+  private stopPolling(): void {
+    if (this.interval) {
+      clearInterval(this.interval)
+      this.interval = undefined
     }
   }
 }

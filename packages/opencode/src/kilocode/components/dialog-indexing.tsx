@@ -11,6 +11,7 @@ import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
+import { createResource } from "solid-js"
 import { reconcile } from "solid-js/store"
 import type { IndexingConfig, Config } from "@kilocode/sdk/v2"
 
@@ -70,6 +71,10 @@ function getIndexing(sync: ReturnType<typeof useSync>): IndexingConfig {
   return (sync.data.config as Config & { indexing?: IndexingConfig }).indexing ?? {}
 }
 
+function globalIndexing(data: Config | undefined): IndexingConfig {
+  return data?.indexing ?? {}
+}
+
 async function saveIndexing(
   sdk: SDK,
   sync: ReturnType<typeof useSync>,
@@ -95,6 +100,40 @@ async function saveIndexing(
   if (configResponse.data) {
     sync.set("config", reconcile(configResponse.data))
   }
+  toast.show({ message: "Indexing config saved", variant: "success" })
+  return true
+}
+
+async function saveGlobalIndexing(
+  sdk: SDK,
+  sync: ReturnType<typeof useSync>,
+  indexing: IndexingConfig,
+  toast: ReturnType<typeof useToast>,
+): Promise<boolean> {
+  const response = await sdk.client.global.config.update({ config: { indexing } })
+  if (response.error) {
+    toast.show({ message: "Failed to save indexing config", variant: "error" })
+    return false
+  }
+  const merged = await sdk.client.config.get({})
+  if (merged.data) sync.set("config", reconcile(merged.data))
+  toast.show({ message: "Indexing config saved", variant: "success" })
+  return true
+}
+
+async function saveProjectIndexing(
+  sdk: SDK,
+  sync: ReturnType<typeof useSync>,
+  indexing: IndexingConfig,
+  toast: ReturnType<typeof useToast>,
+): Promise<boolean> {
+  const response = await sdk.client.config.update({ config: { indexing: { enabled: indexing.enabled } } })
+  if (response.error) {
+    toast.show({ message: "Failed to save indexing config", variant: "error" })
+    return false
+  }
+  const configResponse = await sdk.client.config.get({})
+  if (configResponse.data) sync.set("config", reconcile(configResponse.data))
   toast.show({ message: "Indexing config saved", variant: "success" })
   return true
 }
@@ -356,6 +395,8 @@ export function DialogIndexing(props: DialogIndexingProps) {
   const sdk = props.useSDK()
   const toast = useToast()
   const indexing = getIndexing(sync)
+  const [global] = createResource(async () => (await sdk.client.global.config.get({})).data as Config | undefined)
+  const globalCfg = () => globalIndexing(global())
 
   const providerLabel = indexing.provider ? PROVIDER_LABELS[indexing.provider] : "not set"
   const storeLabel = indexing.vectorStore
@@ -367,10 +408,20 @@ export function DialogIndexing(props: DialogIndexingProps) {
 
   const options: DialogSelectOption<string>[] = [
     {
-      value: "toggle",
-      title: "Indexing",
+      value: "globalToggle",
+      title: "Indexing (Global)",
       category: "General",
-      description: indexing.enabled ? "enabled" : "disabled",
+      description: global.loading ? "loading" : globalCfg().enabled ? "enabled" : "disabled",
+    },
+    {
+      value: "projectToggle",
+      title: "Indexing (Project)",
+      category: "General",
+      description: globalCfg().enabled
+        ? "controlled by global"
+        : indexing.enabled
+          ? "enabled"
+          : "disabled",
     },
     {
       value: "provider",
@@ -422,9 +473,18 @@ export function DialogIndexing(props: DialogIndexingProps) {
       skipFilter
       onSelect={async (option) => {
         switch (option.value) {
-          case "toggle": {
-            const updated = { ...getIndexing(sync), enabled: !indexing.enabled }
-            await saveIndexing(sdk, sync, updated, toast)
+          case "globalToggle": {
+            await saveGlobalIndexing(sdk, sync, { enabled: !globalCfg().enabled }, toast)
+            dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
+            break
+          }
+          case "projectToggle": {
+            if (globalCfg().enabled) {
+              toast.show({ message: "Global indexing is enabled, so this project is already covered.", variant: "info" })
+              dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
+              break
+            }
+            await saveProjectIndexing(sdk, sync, { enabled: !indexing.enabled }, toast)
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
             break
           }

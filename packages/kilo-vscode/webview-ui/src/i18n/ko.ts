@@ -1039,6 +1039,13 @@ export const dict = {
   "settings.indexing.dimension.title": "벡터 차원",
   "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
   "settings.indexing.enable.title": "인덱싱 활성화",
+  "settings.indexing.globalEnable.title": "전역으로 활성화",
+  "settings.indexing.globalEnable.description": "모든 작업 영역에 대해 인덱싱을 활성화합니다.",
+  "settings.indexing.projectEnable.title": "이 프로젝트에 대해 활성화",
+  "settings.indexing.projectEnable.description":
+    "전역 인덱싱이 꺼져 있을 때 이 작업 영역에 대해 인덱싱을 활성화합니다.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "글로벌 인덱싱이 활성화되어 있어 이 프로젝트는 이미 포함되어 있습니다.",
   "settings.indexing.lancedbDirectory.description": "로컬 LanceDB 저장소의 선택적 디렉터리입니다.",
   "settings.indexing.lancedbDirectory.placeholder": "기본값 사용을 위해 비워두세요",
   "settings.indexing.lancedbDirectory.title": "LanceDB 디렉터리",
@@ -1160,6 +1167,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "인라인 작업을 트리거하는 스마트 키바인딩 사용",
   "settings.autocomplete.chatAutocomplete.title": "채팅 텍스트 영역 자동완성 활성화",
   "settings.autocomplete.chatAutocomplete.description": "채팅 텍스트 영역에서 자동완성 제안 표시",
+  "settings.autocomplete.modelsHint": "자동 완성에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.notifications.agent.title": "에이전트 완료",
   "settings.notifications.agent.description": "에이전트가 작업을 완료하면 알림 표시",
   "settings.notifications.permissions.title": "권한 요청",

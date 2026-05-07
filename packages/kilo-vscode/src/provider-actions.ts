@@ -187,11 +187,14 @@ async function configs(ctx: ActionContext) {
 }
 
 async function refreshConfig(ctx: ActionContext, setCachedConfig: SetCachedConfig) {
-  const { data: config } = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
+  const [{ data: config }, { data: global }] = await Promise.all([
+    ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+    ctx.client.global.config.get({ throwOnError: true }),
+  ])
   if (!config) return
   const features = configFeatures(config)
-  setCachedConfig({ type: "configLoaded", config, features })
-  ctx.postMessage({ type: "configUpdated", config, features })
+  setCachedConfig({ type: "configLoaded", config, globalConfig: global, features })
+  ctx.postMessage({ type: "configUpdated", config, globalConfig: global, features })
 }
 
 async function saveGlobal(ctx: ActionContext, config: Config) {
@@ -403,9 +406,11 @@ export async function saveCustomProvider(
       { throwOnError: true },
     )
 
-    const msg = { type: "configLoaded", config: updated, features: configFeatures(updated) }
+    const merged = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
+    const config = merged.data ?? updated
+    const msg = { type: "configLoaded", config, globalConfig: updated, features: configFeatures(config) }
     setCachedConfig(msg)
-    ctx.postMessage({ type: "configUpdated", config: updated, features: configFeatures(updated) })
+    ctx.postMessage({ type: "configUpdated", config, globalConfig: updated, features: configFeatures(config) })
 
     const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
 

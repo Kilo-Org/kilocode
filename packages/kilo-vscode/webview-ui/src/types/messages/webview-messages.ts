@@ -315,12 +315,6 @@ export interface RequestAutocompleteSettingsMessage {
   type: "requestAutocompleteSettings"
 }
 
-export interface UpdateAutocompleteSettingMessage {
-  type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
-  value: boolean | string
-}
-
 export interface RequestChatCompletionMessage {
   type: "requestChatCompletion"
   text: string
@@ -746,6 +740,12 @@ export interface EnhancePromptRequest {
 // Open the standalone changes viewer tab from the sidebar
 export interface OpenChangesRequest {
   type: "openChanges"
+  /**
+   * When set, opens the viewer scoped to a single turn (identified by the
+   * user message ID). The source picker is hidden and polling is disabled
+   * for this mode.
+   */
+  turnId?: string
 }
 
 // Open diff virtual (permission diff) in the lightweight diff virtual panel
@@ -804,6 +804,12 @@ export interface OpenSubAgentViewerRequest {
 // Preview an image attachment in VS Code's built-in image viewer
 export interface PreviewImageRequest {
   type: "previewImage"
+  dataUrl: string
+  filename: string
+}
+
+export interface SaveImageRequest {
+  type: "saveImage"
   dataUrl: string
   filename: string
 }
@@ -1040,7 +1046,6 @@ export type WebviewMessage =
   | DeleteSessionRequest
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage
-  | UpdateAutocompleteSettingMessage
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage
@@ -1131,6 +1136,7 @@ export type WebviewMessage =
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
+  | SaveImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage

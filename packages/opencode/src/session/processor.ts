@@ -478,6 +478,14 @@ export const layer: Layer.Layer<
                 ignored: true,
               })
             }
+            const providerError = KiloSessionProcessor.providerFinishError(ctx.assistantMessage)
+            if (providerError) {
+              yield* bus.publish(Session.Event.Error, {
+                sessionID: ctx.assistantMessage.sessionID,
+                error: providerError,
+              })
+              yield* status.set(ctx.sessionID, { type: "idle" })
+            }
             // kilocode_change end
             yield* session.updateMessage(ctx.assistantMessage)
             if (ctx.snapshot) {

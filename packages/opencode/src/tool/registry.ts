@@ -23,8 +23,10 @@ import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
-import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
+// kilocode_change start
+import { KiloToolRegistry } from "../kilocode/tool/registry"
+import { makeRuntime } from "@/effect/run-service"
+// kilocode_change end
 import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
@@ -117,8 +119,10 @@ export const layer: Layer.Layer<
     const patchtool = yield* ApplyPatchTool
     const skilltool = yield* SkillTool
     const agent = yield* Agent.Service
-    const suggesttool = yield* SuggestTool // kilocode_change
-    const kiloToolInfos = yield* KiloToolRegistry.infos() // kilocode_change
+    // kilocode_change start
+    const suggesttool = yield* SuggestTool
+    const kiloToolInfos = yield* KiloToolRegistry.infos()
+    // kilocode_change end
 
     const state = yield* InstanceState.make<State>(
       Effect.fn("ToolRegistry.state")(function* (ctx) {
@@ -159,7 +163,16 @@ export const layer: Layer.Layer<
                     ...(out.truncated && { outputPath: out.outputPath }),
                   },
                 }
-              }),
+              }).pipe(
+                Effect.withSpan("Tool.execute", {
+                  attributes: {
+                    "tool.name": id,
+                    "session.id": toolCtx.sessionID,
+                    "message.id": toolCtx.messageID,
+                    ...(toolCtx.callID ? { "tool.call_id": toolCtx.callID } : {}),
+                  },
+                }),
+              ),
           }
         }
 
@@ -185,10 +198,10 @@ export const layer: Layer.Layer<
           }
         }
 
-        const cfg = yield* config.get()
-        const questionEnabled = KiloToolRegistry.question() // kilocode_change
+        const cfg = yield* config.get() // kilocode_change: capture for KiloToolRegistry.extra
+        const questionEnabled =
+          ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL // kilocode_change: add vscode client + KILO_* flag
 
-        // kilocode_change start
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
           bash: Tool.init(bash),
@@ -208,11 +221,9 @@ export const layer: Layer.Layer<
           plan: Tool.init(plan),
           suggest: Tool.init(suggesttool), // kilocode_change
         })
-        // kilocode_change end
 
         const kilo = yield* KiloToolRegistry.build(kiloToolInfos, { agent: agents, truncate }) // kilocode_change
 
-        // kilocode_change start
         return {
           custom,
           builtin: [
@@ -230,15 +241,16 @@ export const layer: Layer.Layer<
             tool.search,
             tool.skill,
             tool.patch,
-            ...(KiloToolRegistry.plan() ? [tool.plan] : []), // kilocode_change
-            ...KiloToolRegistry.suggest(tool.suggest), // kilocode_change
-            ...KiloToolRegistry.extra(kilo, cfg), // kilocode_change
+            // kilocode_change start
+            tool.plan,
+            ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
+            ...KiloToolRegistry.extra(kilo, cfg),
+            // kilocode_change end
             ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
           ],
           task: tool.task,
           read: tool.read,
         }
-        // kilocode_change end
       }),
     )
 
@@ -292,8 +304,10 @@ export const layer: Layer.Layer<
         }
 
         const usePatch =
-          KiloToolRegistry.e2e() || // kilocode_change
+          // kilocode_change start
+          !!process.env["KILO_E2E_LLM_URL"] ||
           (input.modelID.includes("gpt-") && !input.modelID.includes("oss") && !input.modelID.includes("gpt-4"))
+          // kilocode_change end
         if (tool.id === ApplyPatchTool.id) return usePatch
         if (tool.id === EditTool.id) return !usePatch // kilocode_change
 

@@ -409,12 +409,14 @@ export interface ClaudeCompatSettingLoadedMessage {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+  globalConfig?: Config
   features: FeatureFlags
 }
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+  globalConfig?: Config
   features: FeatureFlags
 }
 
