@@ -193,6 +193,7 @@
       "name": "@kilocode/kilo-ui",
       "version": "7.2.44",
       "dependencies": {
+        "@kilocode/sdk": "workspace:*",
         "@kobalte/core": "0.13.11",
         "@opencode-ai/core": "workspace:*",
         "@pierre/diffs": "catalog:",
@@ -200,6 +201,7 @@
         "@solid-primitives/media": "2.3.3",
         "@solid-primitives/resize-observer": "2.1.5",
         "@solid-primitives/rootless": "1.5.2",
+        "diff": "catalog:",
         "lucide-solid": "0.576.0",
         "motion": "12.34.5",
         "motion-dom": "12.34.3",

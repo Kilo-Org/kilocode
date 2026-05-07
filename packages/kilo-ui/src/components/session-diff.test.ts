@@ -34,4 +34,23 @@ describe("session diff", () => {
     expect(text(view, "deletions")).toBe("one\n")
     expect(text(view, "additions")).toBe("two\n")
   })
+
+  test("preserves real line numbers from hunk headers without padding", () => {
+    const diff = {
+      file: "a.ts",
+      patch:
+        "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -340,2 +340,2 @@\n one\n-two\n+three\n",
+      additions: 1,
+      deletions: 1,
+      status: "modified" as const,
+    }
+    const view = normalize(diff)
+
+    expect(view.fileDiff.hunks[0]?.deletionStart).toBe(340)
+    expect(view.fileDiff.hunks[0]?.additionStart).toBe(340)
+    expect(view.fileDiff.isPartial).toBe(true)
+    // No blank-line padding: only the hunk lines are materialized.
+    expect(view.fileDiff.deletionLines.length).toBe(2)
+    expect(view.fileDiff.additionLines.length).toBe(2)
+  })
 })

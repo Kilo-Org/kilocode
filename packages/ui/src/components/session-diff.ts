@@ -1,4 +1,4 @@
-import { parseDiffFromFile, processFile, type FileDiffMetadata } from "@pierre/diffs"
+import { parseDiffFromFile, type FileDiffMetadata } from "@pierre/diffs"
 import { formatPatch, parsePatch, structuredPatch } from "diff"
 import type { SnapshotFileDiff, VcsFileDiff } from "@kilocode/sdk/v2"
 
@@ -14,13 +14,18 @@ type LegacyDiff = {
 
 type ReviewDiff = SnapshotFileDiff | VcsFileDiff | LegacyDiff
 
-// kilocode_change start - parse patches with Pierre's partial-diff path so the
-// hunk header is the source of truth for line numbers.
+// kilocode_change start - expose patch text extraction without building FileDiffMetadata on the UI thread
+export type DiffText = {
+  before: string
+  after: string
+  patch: string
+}
+
 export type ViewDiff = {
   file: string
   patch: string
-  before: string
-  after: string
+  before: string // kilocode_change
+  after: string // kilocode_change
   additions: number
   deletions: number
   status?: "added" | "deleted" | "modified"
@@ -29,72 +34,71 @@ export type ViewDiff = {
 
 const cache = new Map<string, FileDiffMetadata>()
 
-// Reconstruct before/after strings from a patch by concatenating hunk lines.
-function reconstruct(patch: string) {
-  const [parsed] = parsePatch(patch)
-  const before: string[] = []
-  const after: string[] = []
-  if (!parsed) return { before: "", after: "" }
-  for (const hunk of parsed.hunks) {
-    for (const line of hunk.lines) {
-      if (line.startsWith("-")) before.push(line.slice(1))
-      else if (line.startsWith("+")) after.push(line.slice(1))
-      else {
-        before.push(line.slice(1))
-        after.push(line.slice(1))
+export function contents(diff: ReviewDiff): DiffText {
+  if (typeof diff.patch === "string") {
+    const [patch] = parsePatch(diff.patch)
+
+    const beforeLines = []
+    const afterLines = []
+
+    for (const hunk of patch.hunks) {
+      for (const line of hunk.lines) {
+        if (line.startsWith("-")) {
+          beforeLines.push(line.slice(1))
+        } else if (line.startsWith("+")) {
+          afterLines.push(line.slice(1))
+        } else {
+          // context line (starts with ' ')
+          beforeLines.push(line.slice(1))
+          afterLines.push(line.slice(1))
+        }
       }
     }
+
+    return { before: beforeLines.join("\n") + "\n", after: afterLines.join("\n") + "\n", patch: diff.patch }
   }
-  return { before: before.join("\n") + "\n", after: after.join("\n") + "\n" }
-}
-
-type DiffText = { before: string; after: string; patch: string }
-
-function contents(diff: ReviewDiff): DiffText {
-  if (typeof diff.patch === "string") {
-    return { ...reconstruct(diff.patch), patch: diff.patch }
+  return {
+    before: "before" in diff && typeof diff.before === "string" ? diff.before : "",
+    after: "after" in diff && typeof diff.after === "string" ? diff.after : "",
+    patch: formatPatch(
+      structuredPatch(
+        diff.file,
+        diff.file,
+        "before" in diff && typeof diff.before === "string" ? diff.before : "",
+        "after" in diff && typeof diff.after === "string" ? diff.after : "",
+        "",
+        "",
+        { context: Number.MAX_SAFE_INTEGER },
+      ),
+    ),
   }
-  const before = "before" in diff && typeof diff.before === "string" ? diff.before : ""
-  const after = "after" in diff && typeof diff.after === "string" ? diff.after : ""
-  const patch = formatPatch(
-    structuredPatch(diff.file, diff.file, before, after, "", "", { context: Number.MAX_SAFE_INTEGER }),
-  )
-  return { before, after, patch }
 }
+// kilocode_change end
 
-function fileDiffFor(diff: ReviewDiff, view: DiffText): FileDiffMetadata {
-  const hit = cache.get(view.patch)
+function file(file: string, patch: string, before: string, after: string) {
+  const hit = cache.get(patch)
   if (hit) return hit
-  const fromPatch = typeof diff.patch === "string" ? processFile(diff.patch, { cacheKey: diff.patch }) : undefined
-  const value =
-    fromPatch ??
-    parseDiffFromFile({ name: diff.file, contents: view.before }, { name: diff.file, contents: view.after })
-  cache.set(view.patch, value)
+
+  const value = parseDiffFromFile({ name: file, contents: before }, { name: file, contents: after })
+  cache.set(patch, value)
   return value
 }
 
 export function normalize(diff: ReviewDiff): ViewDiff {
-  const view = contents(diff)
+  const next = contents(diff) // kilocode_change
   return {
-    file: diff.file,
-    patch: view.patch,
-    before: view.before,
-    after: view.after,
+    file: diff.file, // kilocode_change
+    patch: next.patch, // kilocode_change
+    before: next.before, // kilocode_change
+    after: next.after, // kilocode_change
     additions: diff.additions,
     deletions: diff.deletions,
     status: diff.status,
-    fileDiff: fileDiffFor(diff, view),
+    fileDiff: file(diff.file, next.patch, next.before, next.after),
   }
 }
 
 export function text(diff: ViewDiff, side: "deletions" | "additions") {
-  const lines = side === "deletions" ? diff.fileDiff.deletionLines : diff.fileDiff.additionLines
-  const out = lines.join("")
-  // Pierre's processFile preserves the patch's trailing-newline state, so when
-  // a patch ends without `\n` the last line comes back without one too.
-  // Consumers (toSessionDiffFile, markdown export, openDiff payloads) expect
-  // file-shaped content with a trailing newline; normalize here.
-  if (out === "" || out.endsWith("\n")) return out
-  return out + "\n"
+  if (side === "deletions") return diff.fileDiff.deletionLines.join("")
+  return diff.fileDiff.additionLines.join("")
 }
-// kilocode_change end
