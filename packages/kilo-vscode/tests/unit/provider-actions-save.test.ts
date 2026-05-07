@@ -18,7 +18,10 @@ function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged
   const ctx = {
     client: {
       auth: {
-        set: async (input: { providerID: string; auth: { type: string; key: string; metadata?: Record<string, string> } }) => {
+        set: async (input: {
+          providerID: string
+          auth: { type: string; key: string; metadata?: Record<string, string> }
+        }) => {
           calls.set.push(input)
           return { data: true }
         },

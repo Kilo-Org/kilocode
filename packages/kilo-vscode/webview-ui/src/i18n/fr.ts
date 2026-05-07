@@ -141,7 +141,8 @@ export const dict = {
   "provider.connect.prompt.required": "{{field}} est requis",
   "provider.connect.azure.endpointType.label": "Sélectionner la configuration du point de terminaison Azure",
   "provider.connect.azure.endpointType.resourceName.label": "Nom de la ressource",
-  "provider.connect.azure.endpointType.resourceName.hint": "Créer le point de terminaison à partir du nom de votre ressource Azure",
+  "provider.connect.azure.endpointType.resourceName.hint":
+    "Créer le point de terminaison à partir du nom de votre ressource Azure",
   "provider.connect.azure.endpointType.baseURL.label": "URL complète du point de terminaison",
   "provider.connect.azure.endpointType.baseURL.hint": "Utiliser un point de terminaison Azure OpenAI personnalisé",
   "provider.connect.azure.resourceName.label": "Nom de la ressource Azure",

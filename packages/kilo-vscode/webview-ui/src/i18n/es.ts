@@ -140,7 +140,8 @@ export const dict = {
   "provider.connect.prompt.required": "{{field}} es obligatorio",
   "provider.connect.azure.endpointType.label": "Seleccionar configuración de endpoint de Azure",
   "provider.connect.azure.endpointType.resourceName.label": "Nombre del recurso",
-  "provider.connect.azure.endpointType.resourceName.hint": "Crear el endpoint a partir del nombre de su recurso de Azure",
+  "provider.connect.azure.endpointType.resourceName.hint":
+    "Crear el endpoint a partir del nombre de su recurso de Azure",
   "provider.connect.azure.endpointType.baseURL.label": "URL completa del endpoint",
   "provider.connect.azure.endpointType.baseURL.hint": "Usar un endpoint de Azure OpenAI personalizado",
   "provider.connect.azure.resourceName.label": "Nombre del recurso de Azure",
