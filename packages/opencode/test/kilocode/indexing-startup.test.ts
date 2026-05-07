@@ -2,13 +2,12 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
 import type { Config } from "../../src/config/config"
 import { GlobalBus } from "../../src/bus/global"
-import { AppRuntime } from "../../src/effect/app-runtime"
+import { getBootstrapRunEffect } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
-import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
@@ -67,7 +66,7 @@ afterEach(async () => {
   else process.env["KILO_CONFIG_DIR"] = configDir
   if (disabled === undefined) delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
   else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("indexing startup degradation", () => {
@@ -160,14 +159,14 @@ describe("indexing startup degradation", () => {
     try {
       await Instance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        init: await getBootstrapRunEffect(),
         fn: async () => {
           await called(init)
           expect((await KiloIndexing.current()).state).toBe("In Progress")
         },
       })
 
-      await Instance.disposeAll()
+      await disposeAllInstances()
       gate.resolve({ requiresRestart: false })
       await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -188,7 +187,7 @@ describe("indexing startup degradation", () => {
     try {
       await Instance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        init: await getBootstrapRunEffect(),
         fn: async () => {
           const status = await wait(() => KiloIndexing.current(), "Error")
 
@@ -213,7 +212,7 @@ describe("indexing startup degradation", () => {
     try {
       await Instance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        init: await getBootstrapRunEffect(),
         fn: async () => {
           await called(init)
 
@@ -236,7 +235,7 @@ describe("indexing startup degradation", () => {
 
     await Instance.provide({
       directory: tmp.path,
-      init: () => AppRuntime.runPromise(InstanceBootstrap),
+      init: await getBootstrapRunEffect(),
       fn: async () => {
         const status = await KiloIndexing.current()
 
@@ -261,7 +260,7 @@ describe("indexing startup degradation", () => {
     try {
       await Instance.provide({
         directory: tmp.path,
-        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        init: await getBootstrapRunEffect(),
         fn: async () => {
           const status = await KiloIndexing.current()
 

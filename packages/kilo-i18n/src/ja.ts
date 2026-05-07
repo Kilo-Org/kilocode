@@ -90,4 +90,9 @@ export const dict = {
     "このプロジェクトでは Kilo のスナップショットを無効にします。Kilo による変更の取り消し/やり直しはできなくなりますが、git は引き続きすべてを追跡します。",
 
   "ui.messagePart.openInDiffViewer": "差分ビューアで開く",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "役に立ちました",
+  "ui.message.feedback.notHelpful": "役に立ちませんでした",
+  "ui.message.feedback.clearRating": "評価をクリア",
 }

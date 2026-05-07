@@ -171,7 +171,7 @@ class ProjectModelSerializationTest {
         assertEquals(true, obj.native)
         assertEquals(false, obj.hidden)
         assertEquals("#FF5733", obj.color)
-        assertEquals(5, obj.steps)
+        assertEquals(5.0, obj.steps)
     }
 
     @Test

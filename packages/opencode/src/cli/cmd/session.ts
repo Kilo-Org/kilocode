@@ -113,7 +113,9 @@ export const SessionListCommand = cmd({
       // kilocode_change start
       const sessions = args.all
         ? [...Session.listGlobal({ roots: true, limit: args.maxCount, search: args.search })]
-        : [...Session.list({ roots: true, limit: args.maxCount, search: args.search })]
+        : await AppRuntime.runPromise(
+            Session.Service.use((svc) => svc.list({ roots: true, limit: args.maxCount, search: args.search })),
+          )
       // kilocode_change end
 
       // kilocode_change start

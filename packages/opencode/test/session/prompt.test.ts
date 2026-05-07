@@ -758,7 +758,8 @@ it.live(
   3_000,
 )
 
-unix( // kilocode_change - skip flaky cancel test on Windows CI
+unix(
+  // kilocode_change - skip flaky cancel test on Windows CI
   "cancel records MessageAbortedError on interrupted process",
   () =>
     provideTmpdirServer(

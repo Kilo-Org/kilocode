@@ -16,6 +16,7 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.QuestionPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.SessionStyle
 import ai.kilocode.client.session.ui.SessionStyleTarget
 import ai.kilocode.client.session.update.EVENT_FLUSH_MS
@@ -56,6 +57,7 @@ class SessionUi private constructor(
     displayMs: Long,
     open: (SessionDto) -> Unit,
     private val loading: Boolean,
+    session: SessionDto? = null,
 ) : JPanel(BorderLayout()), Disposable, SessionStyleTarget {
 
     constructor(
@@ -67,7 +69,8 @@ class SessionUi private constructor(
         id: String? = null,
         displayMs: Long = SessionController.DISPLAY_DELAY_MS,
         open: (SessionDto) -> Unit = {},
-    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, id == null)
+        session: SessionDto? = null,
+    ) : this(project, workspace, sessions, app, cs, session?.id ?: id, displayMs, open, id == null, session)
 
     internal constructor(
         project: Project,
@@ -79,7 +82,8 @@ class SessionUi private constructor(
         displayMs: Long = SessionController.DISPLAY_DELAY_MS,
         loading: Boolean,
         open: (SessionDto) -> Unit = {},
-    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, loading)
+        session: SessionDto? = null,
+    ) : this(project, workspace, sessions, app, cs, id, displayMs, open, loading, session)
 
     companion object {
         private val LOG = KiloLog.create(SessionUi::class.java)
@@ -101,6 +105,7 @@ class SessionUi private constructor(
         flushMs = flushMs,
         condense = Registry.`is`("kilo.session.condense", true),
         displayMs = displayMs,
+        session = session,
         open = open,
         beforeUpdate = { if (opening) false else scroll.atBottom() },
         afterUpdate = { if (!opening) scroll.followBottom(it) },
@@ -117,6 +122,8 @@ class SessionUi private constructor(
     private lateinit var progressBody: JPanel
 
     private lateinit var messageBody: SessionMessageListPanel
+
+    private lateinit var header: SessionHeaderPanel
 
     internal lateinit var scroll: SessionScroll
 
@@ -174,6 +181,7 @@ class SessionUi private constructor(
             ), BorderLayout.CENTER)
         }
         messageBody = SessionMessageListPanel(controller.model, this)
+        header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         question = QuestionPanel(controller)
@@ -186,6 +194,7 @@ class SessionUi private constructor(
             onAbort = { controller.abort() },
         )
 
+        sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
         // Dock panels stay in normal flow so each visible state takes layout space
@@ -278,6 +287,8 @@ class SessionUi private constructor(
                 is SessionModelEvent.ContentRemoved,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.SessionUpdated,
+                is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted,
                 is SessionModelEvent.Cleared -> Unit
             }
@@ -372,6 +383,7 @@ class SessionUi private constructor(
     override fun applyStyle(style: SessionStyle) {
         this.style = style
         loadingLabel.font = style.uiFont
+        header.applyStyle(style)
         prompt.applyStyle(style)
         scroll.applyStyle(style)
         refresh()

@@ -26,11 +26,7 @@ function parse(color: string) {
   const value = color.trim()
   const hex = value.match(/^#([0-9a-f]{6})/i)
   if (hex?.[1]) {
-    return [
-      parseInt(hex[1].slice(0, 2), 16),
-      parseInt(hex[1].slice(2, 4), 16),
-      parseInt(hex[1].slice(4, 6), 16),
-    ]
+    return [parseInt(hex[1].slice(0, 2), 16), parseInt(hex[1].slice(2, 4), 16), parseInt(hex[1].slice(4, 6), 16)]
   }
 
   const short = value.match(/^#([0-9a-f]{3})/i)
@@ -70,7 +66,8 @@ function css(root: Element, names: string[], fallback: string) {
 
 function dark(root: Element, background: string) {
   if (document.body.classList.contains("vscode-light")) return false
-  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("vscode-high-contrast")) return true
+  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("vscode-high-contrast"))
+    return true
 
   const scheme = getComputedStyle(root).colorScheme
   if (scheme.includes("dark")) return true
@@ -90,10 +87,18 @@ function config(root: Element) {
   )
   const panel = css(root, ["--vscode-editorWidget-background", "--surface-raised-base", "--surface-base"], background)
   const alt = css(root, ["--vscode-input-background", "--surface-weak", "--surface-base"], panel)
-  const text = css(root, ["--vscode-editor-foreground", "--text-strong", "--vscode-foreground"], style.color || "#ffffff")
+  const text = css(
+    root,
+    ["--vscode-editor-foreground", "--text-strong", "--vscode-foreground"],
+    style.color || "#ffffff",
+  )
   const weak = css(root, ["--vscode-descriptionForeground", "--text-weak", "--vscode-foreground"], text)
   const border = css(root, ["--vscode-editorWidget-border", "--vscode-editorGroup-border", "--border-weak-base"], weak)
-  const accent = css(root, ["--vscode-textLink-foreground", "--vscode-charts-blue", "--text-interactive-base"], "#6cb6ff")
+  const accent = css(
+    root,
+    ["--vscode-textLink-foreground", "--vscode-charts-blue", "--text-interactive-base"],
+    "#6cb6ff",
+  )
   const critical = css(root, ["--vscode-errorForeground", "--vscode-charts-red", "--syntax-critical"], "#ff9580")
   const criticalBg = css(root, ["--vscode-inputValidation-errorBackground", "--surface-critical-base"], alt)
 
