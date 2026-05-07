@@ -846,6 +846,7 @@ export interface ConnectProviderMessage {
   requestId: string
   providerID: string
   apiKey: string
+  metadata?: Record<string, string>
 }
 
 export interface AuthorizeProviderOAuthMessage {

@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "Klucz API {{provider}}",
   "provider.connect.apiKey.placeholder": "Klucz API",
   "provider.connect.apiKey.required": "Klucz API jest wymagany",
+  "provider.connect.prompt.required": "{{field}} jest wymagane",
+  "provider.connect.azure.endpointType.label": "Wybierz konfigurację punktu końcowego Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nazwa zasobu",
+  "provider.connect.azure.endpointType.resourceName.hint": "Zbuduj punkt końcowy z nazwy zasobu Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "Pełny adres URL punktu końcowego",
+  "provider.connect.azure.endpointType.baseURL.hint": "Użyj niestandardowego punktu końcowego Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Nazwa zasobu Azure",
+  "provider.connect.azure.resourceName.placeholder": "np. my-models",
+  "provider.connect.azure.baseURL.label": "Adres URL punktu końcowego Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "np. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen daje dostęp do wybranego zestawu niezawodnych, zoptymalizowanych modeli dla agentów kodujących.",
   "provider.connect.opencodeZen.line2":

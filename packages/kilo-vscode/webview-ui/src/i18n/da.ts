@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
   "provider.connect.apiKey.placeholder": "API-nøgle",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
+  "provider.connect.prompt.required": "{{field}} er påkrævet",
+  "provider.connect.azure.endpointType.label": "Vælg Azure-slutpunktskonfiguration",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressourcenavn",
+  "provider.connect.azure.endpointType.resourceName.hint": "Byg slutpunktet fra dit Azure-ressourcenavn",
+  "provider.connect.azure.endpointType.baseURL.label": "Fuld slutpunkts-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Brug et brugerdefineret Azure OpenAI-slutpunkt",
+  "provider.connect.azure.resourceName.label": "Azure-ressourcenavn",
+  "provider.connect.azure.resourceName.placeholder": "f.eks. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-slutpunkts-URL",
+  "provider.connect.azure.baseURL.placeholder": "f.eks. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen giver dig adgang til et udvalg af pålidelige optimerede modeller til kodningsagenter.",
   "provider.connect.opencodeZen.line2":

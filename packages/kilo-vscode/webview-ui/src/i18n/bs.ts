@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API ključ",
   "provider.connect.apiKey.placeholder": "API ključ",
   "provider.connect.apiKey.required": "API ključ je obavezan",
+  "provider.connect.prompt.required": "{{field}} je obavezno",
+  "provider.connect.azure.endpointType.label": "Odaberite konfiguraciju krajnje tačke za Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Ime resursa",
+  "provider.connect.azure.endpointType.resourceName.hint": "Izgradite krajnju tačku iz imena vašeg Azure resursa",
+  "provider.connect.azure.endpointType.baseURL.label": "Puni URL krajnje tačke",
+  "provider.connect.azure.endpointType.baseURL.hint": "Koristite prilagođenu Azure OpenAI krajnju tačku",
+  "provider.connect.azure.resourceName.label": "Ime Azure resursa",
+  "provider.connect.azure.resourceName.placeholder": "npr. my-models",
+  "provider.connect.azure.baseURL.label": "URL krajnje tačke za Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "npr. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen ti daje pristup kuriranom skupu pouzdanih, optimizovanih modela za coding agente.",
   "provider.connect.opencodeZen.line2":

@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "Chave de API do {{provider}}",
   "provider.connect.apiKey.placeholder": "Chave de API",
   "provider.connect.apiKey.required": "A chave de API é obrigatória",
+  "provider.connect.prompt.required": "{{field}} é obrigatório",
+  "provider.connect.azure.endpointType.label": "Selecionar configuração de endpoint do Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nome do recurso",
+  "provider.connect.azure.endpointType.resourceName.hint": "Criar o endpoint a partir do nome do seu recurso do Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "URL completa do endpoint",
+  "provider.connect.azure.endpointType.baseURL.hint": "Usar um endpoint personalizado do Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Nome do recurso do Azure",
+  "provider.connect.azure.resourceName.placeholder": "ex. my-models",
+  "provider.connect.azure.baseURL.label": "URL do endpoint do Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "ex. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen oferece acesso a um conjunto selecionado de modelos confiáveis otimizados para agentes de código.",
   "provider.connect.opencodeZen.line2":

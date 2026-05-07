@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
+  "provider.connect.prompt.required": "{{field}} مطلوب",
+  "provider.connect.azure.endpointType.label": "حدد تكوين نقطة نهاية Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "اسم المورد",
+  "provider.connect.azure.endpointType.resourceName.hint": "قم بإنشاء نقطة النهاية من اسم مورد Azure الخاص بك",
+  "provider.connect.azure.endpointType.baseURL.label": "URL الكامل لنقطة النهاية",
+  "provider.connect.azure.endpointType.baseURL.hint": "استخدم نقطة نهاية Azure OpenAI مخصصة",
+  "provider.connect.azure.resourceName.label": "اسم مورد Azure",
+  "provider.connect.azure.resourceName.placeholder": "على سبيل المثال: my-models",
+  "provider.connect.azure.baseURL.label": "URL نقطة نهاية Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "على سبيل المثال: https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "يمنحك OpenCode Zen الوصول إلى مجموعة مختارة من النماذج الموثوقة والمحسنة لوكلاء البرمجة.",
   "provider.connect.opencodeZen.line2":

@@ -309,6 +309,38 @@ If the model key in your config differs from what the provider expects, use the 
 
 Here `my-local-llama` is the key you use in your config and model picker, while `meta-llama-3.1-8b-instruct` is the actual model identifier sent to the LM Studio API.
 
+For Azure OpenAI, use the native `azure` provider and set `id` to your Azure deployment name when it differs from the model key. Do not configure Azure GPT-5 family deployments under `openai-compatible`, because that provider sends `max_tokens` and Azure GPT-5 expects `max_completion_tokens`.
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "azure/gpt-5.5",
+  "provider": {
+    "azure": {
+      "options": {
+        "apiKey": "{env:AZURE_API_KEY}",
+        "resourceName": "my-azure-resource",
+      },
+      "models": {
+        "gpt-5.5": {
+          "id": "my-gpt-5-5-deployment",
+          "name": "GPT-5.5 on Azure",
+          "reasoning": true,
+          "tool_call": true,
+          "temperature": false,
+          "limit": {
+            "context": 400000,
+            "output": 128000,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+Here `azure/gpt-5.5` is the model you select in Kilo Code, while `my-gpt-5-5-deployment` is the Azure deployment name sent to Azure. If you prefer to configure the full Azure endpoint instead of a resource name, replace `resourceName` with `baseURL`, for example `"baseURL": "https://my-resource.openai.azure.com/openai"`. If both are configured, Kilo Code uses `baseURL` and ignores `resourceName` to avoid sending conflicting Azure SDK options.
+
 ## Model Loading Priority
 
 When Kilo starts, it resolves the active model in this order:
