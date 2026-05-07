@@ -1147,6 +1147,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Bruk en smart tastbinding for å utløse innebygde oppgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofullføring",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofullføringsforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For å velge hvilken modell som brukes til autofullføring, se Modellinnstillinger.",
   "settings.notifications.agent.title": "Agentfullføring",
   "settings.notifications.agent.description": "Vis varsling når agenten fullfører en oppgave",
   "settings.notifications.permissions.title": "Tillatelsesforespørsler",

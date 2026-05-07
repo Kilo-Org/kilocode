@@ -62,6 +62,7 @@ import { abortSession } from "./kilo-provider/abort"
 import {
   buildAutocompleteSettingsMessage,
   routeAutocompleteMessage,
+  validAutocompleteSetting,
   watchAutocompleteConfig,
 } from "./services/autocomplete/settings"
 import * as ModelState from "./kilo-provider/model-state"
@@ -2892,6 +2893,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
     const { section, leaf } = buildSettingPath(key)
+    if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
   }

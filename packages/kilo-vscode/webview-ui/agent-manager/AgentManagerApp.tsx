@@ -1,6 +1,17 @@
 /** @jsxImportSource solid-js */
 
-import { For, Show, createSignal, createMemo, createEffect, on, onMount, onCleanup, type Component } from "solid-js"
+import {
+  For,
+  Show,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  onMount,
+  onCleanup,
+  type Component,
+  type JSX,
+} from "solid-js"
 import type {
   ExtensionMessage,
   AgentManagerRepoInfoMessage,
@@ -108,6 +119,7 @@ import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
+import { setTabWidths } from "./tab-widths"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -582,6 +594,13 @@ const AgentManagerContent: Component = () => {
 
   // Drag-and-drop state for tab reordering
   const [draggingTab, setDraggingTab] = createSignal<string | undefined>()
+
+  const freezeTabs = () => {
+    const bar = document.querySelector(".am-tab-bar")
+    if (bar instanceof HTMLElement && bar.matches(":hover")) setTabWidths(true)
+  }
+
+  const releaseTabs = () => setTabWidths(false)
   // Tab ordering: context key → ordered session ID array (recovered from extension state)
   const [worktreeTabOrder, setWorktreeTabOrder] = createSignal<Record<string, string[]>>({})
   // Sidebar worktree order (persisted to extension state)
@@ -824,6 +843,8 @@ const AgentManagerContent: Component = () => {
 
   /** True when a local session is actively working. */
   const isLocalBusy = (): boolean => isAnySessionBusy(localSessionIDs())
+
+  const isSessionBusy = (id: string): boolean => isAnySessionBusy([id])
 
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
   const sortedWorktrees = createMemo(() => {
@@ -1516,6 +1537,7 @@ const AgentManagerContent: Component = () => {
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
   const closeReviewTab = () => {
+    freezeTabs()
     setReviewActive(false)
     setReviewOpenForSelection(false)
   }
@@ -1881,6 +1903,7 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ ...msg, worktreeId: sel })
   }
   const handleCloseTab = (sessionId: string) => {
+    freezeTabs()
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
     if (isActive) {
@@ -1909,6 +1932,7 @@ const AgentManagerContent: Component = () => {
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {
     if (e.button === 1) {
       e.preventDefault()
+      e.stopPropagation()
       handleCloseTab(sessionId)
     }
   }
@@ -1937,6 +1961,7 @@ const AgentManagerContent: Component = () => {
     isPendingId: isPending,
     findTab: (id) => tabLookup().get(id),
     postMessage: (msg) => vscode.postMessage(msg as never),
+    onRemove: freezeTabs,
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
@@ -1967,7 +1992,6 @@ const AgentManagerContent: Component = () => {
       worktreeTabOrder()[key],
     ).map((item) => item.id)
   })
-
   const handleDragStart = (event: DragEvent) => {
     const id = event.draggable?.id
     if (typeof id === "string") setDraggingTab(id)
@@ -2640,55 +2664,62 @@ const AgentManagerContent: Component = () => {
           >
             <DragDropSensors />
             <ConstrainDragYAxis />
-            <div class="am-tab-bar">
+            <div class="am-tab-bar" onPointerLeave={releaseTabs}>
               <div class="am-tab-scroll-area">
                 <div class={`am-tab-fade am-tab-fade-left ${tabScroll.showLeft() ? "am-tab-fade-visible" : ""}`} />
-                <div class="am-tab-list" ref={tabScroll.setRef}>
-                  <SortableProvider ids={tabIds()}>
-                    <For each={tabIds()}>
-                      {(id) =>
-                        renderTab(id, {
-                          terms,
-                          REVIEW_TAB_ID,
-                          tabIds,
-                          kb,
-                          reviewActive,
-                          currentSessionID: () => session.currentSessionID(),
-                          activePendingId,
-                          visibleTabId,
-                          isPending,
-                          tabLookup,
-                          adjacentHint,
-                          activateTerminal: termHandlers.activate,
-                          deactivateTerminal: termHandlers.deactivate,
-                          closeTerminal: termHandlers.closeTerminal,
-                          terminalMiddleClick: termHandlers.middleClick,
-                          closeReview: closeReviewTab,
-                          reviewMiddleClick: handleReviewTabMouseDown,
-                          selectReviewTab: () => setReviewActive(true),
-                          selectSessionTab,
-                          sessionMiddleClick: handleTabMouseDown,
-                          sessionClose: handleCloseTab,
-                          sessionFork: handleForkSession,
-                          reviewLabel: t("session.tab.review"),
-                          reviewTooltip: t("command.review.toggle"),
-                        })
-                      }
-                    </For>
-                  </SortableProvider>
+                <div class="am-tab-list-wrap">
+                  <div
+                    class="am-tab-list"
+                    ref={tabScroll.setRef}
+                    style={{ "--tab-count": `${tabIds().length}` } as JSX.CSSProperties}
+                  >
+                    <SortableProvider ids={tabIds()}>
+                      <For each={tabIds()}>
+                        {(id) =>
+                          renderTab(id, {
+                            terms,
+                            REVIEW_TAB_ID,
+                            tabIds,
+                            kb,
+                            reviewActive,
+                            currentSessionID: () => session.currentSessionID(),
+                            activePendingId,
+                            visibleTabId,
+                            isPending,
+                            isBusy: isSessionBusy,
+                            tabLookup,
+                            adjacentHint,
+                            activateTerminal: termHandlers.activate,
+                            deactivateTerminal: termHandlers.deactivate,
+                            closeTerminal: termHandlers.closeTerminal,
+                            terminalMiddleClick: termHandlers.middleClick,
+                            closeReview: closeReviewTab,
+                            reviewMiddleClick: handleReviewTabMouseDown,
+                            selectReviewTab: () => setReviewActive(true),
+                            selectSessionTab,
+                            sessionMiddleClick: handleTabMouseDown,
+                            sessionClose: handleCloseTab,
+                            sessionFork: handleForkSession,
+                            reviewLabel: t("session.tab.review"),
+                            reviewTooltip: t("command.review.toggle"),
+                          })
+                        }
+                      </For>
+                    </SortableProvider>
+                  </div>
+                  {renderNewTabButton({
+                    contextSelected: () => selection() !== null,
+                    kb,
+                    newSessionLabel: t("agentManager.session.new"),
+                    newTerminalLabel: t("agentManager.terminal.new"),
+                    newSessionMenuLabel: t("agentManager.session.newSession"),
+                    moreOptionsLabel: t("agentManager.tab.newOptions"),
+                    onNewSession: handleAddSession,
+                    onNewTerminal: () => termHandlers.requestNew(),
+                  })}
                 </div>
                 <div class={`am-tab-fade am-tab-fade-right ${tabScroll.showRight() ? "am-tab-fade-visible" : ""}`} />
               </div>
-              {renderNewTabButton({
-                contextSelected: () => selection() !== null,
-                kb,
-                newSessionLabel: t("agentManager.session.new"),
-                newTerminalLabel: t("agentManager.terminal.new"),
-                newSessionMenuLabel: t("agentManager.session.newSession"),
-                moreOptionsLabel: t("agentManager.tab.newOptions"),
-                onNewSession: handleAddSession,
-                onNewTerminal: () => termHandlers.requestNew(),
-              })}
               <div class="am-tab-actions">
                 <CurrentTabsMenu
                   items={tabMenuItems}

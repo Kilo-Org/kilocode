@@ -13,17 +13,20 @@ export function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Acce
   const [ref, setRef] = createSignal<HTMLDivElement | undefined>()
   const [showLeft, setShowLeft] = createSignal(false)
   const [showRight, setShowRight] = createSignal(false)
-  let frame: number | undefined
+  let scrollFrame: number | undefined
+  let activeFrame: number | undefined
+
   const update = () => {
-    if (frame !== undefined) return
-    frame = requestAnimationFrame(() => {
-      frame = undefined
+    if (scrollFrame !== undefined) return
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = undefined
       const el = ref()
       if (!el) return
       setShowLeft(el.scrollLeft > 2)
       setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
     })
   }
+
   const wheel = (e: WheelEvent) => {
     const el = ref()
     if (!el) return
@@ -31,6 +34,7 @@ export function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Acce
     e.preventDefault()
     el.scrollLeft += e.deltaY > 0 ? 60 : -60
   }
+
   createEffect(() => {
     const el = ref()
     if (!el) return
@@ -47,12 +51,15 @@ export function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Acce
       mo.disconnect()
     })
   })
+
   createEffect(() => {
     const id = activeId()
     const el = ref()
     activeTabs()
     if (!id || !el) return
-    requestAnimationFrame(() => {
+    if (activeFrame !== undefined) cancelAnimationFrame(activeFrame)
+    activeFrame = requestAnimationFrame(() => {
+      activeFrame = undefined
       const tab = el.querySelector(`[data-tab-id="${id}"]`) as HTMLElement | null
       if (!tab) return
       const left = tab.offsetLeft
@@ -61,8 +68,16 @@ export function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Acce
         el.scrollTo({ left: left - 8, behavior: "smooth" })
         return
       }
-      if (right > el.scrollLeft + el.clientWidth) el.scrollTo({ left: right - el.clientWidth + 8, behavior: "smooth" })
+      if (right > el.scrollLeft + el.clientWidth) {
+        el.scrollTo({ left: right - el.clientWidth + 8, behavior: "smooth" })
+      }
     })
   })
+
+  onCleanup(() => {
+    if (scrollFrame !== undefined) cancelAnimationFrame(scrollFrame)
+    if (activeFrame !== undefined) cancelAnimationFrame(activeFrame)
+  })
+
   return { setRef, showLeft, showRight }
 }

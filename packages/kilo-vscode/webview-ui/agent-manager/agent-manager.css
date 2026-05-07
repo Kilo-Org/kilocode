@@ -1033,8 +1033,11 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-tab-list {
+  --am-tab-max-width: 240px;
+  --am-tab-width: clamp(72px, calc(100% / var(--tab-count, 1)), var(--am-tab-max-width));
   display: flex;
   align-items: stretch;
+  flex: 0 1 calc(var(--tab-count, 1) * var(--am-tab-max-width));
   min-width: 0;
   overflow-x: auto;
   height: 100%;
@@ -1042,6 +1045,16 @@ button.am-section-toggle:hover .am-section-label {
   /* Hide scrollbar while keeping scroll functionality */
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.am-tab-list-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: 100%;
+  height: 100%;
 }
 
 .am-tab-list::-webkit-scrollbar {
@@ -1053,7 +1066,7 @@ button.am-section-toggle:hover .am-section-label {
   position: relative;
   display: flex;
   min-width: 0;
-  flex-shrink: 1;
+  flex: 1 1 auto;
   align-items: stretch;
   height: 100%;
   overflow: hidden;
@@ -1086,10 +1099,11 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-tab {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: 5px;
+  padding: 0 8px;
   background: none;
   color: var(--text-weak);
   font-size: var(--kilo-font-size-12);
@@ -1098,7 +1112,12 @@ button.am-section-toggle:hover .am-section-label {
   border: none;
   border-bottom: 2px solid transparent;
   min-width: 0;
+  width: 100%;
   height: 100%;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
 .am-tab:hover {
@@ -1108,32 +1127,59 @@ button.am-section-toggle:hover .am-section-label {
 .am-tab-active {
   color: var(--text-base);
   border-bottom-color: var(--surface-interactive-base);
+  background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
+}
+
+.am-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.am-tab-icon [data-component="icon"] {
+  color: currentColor;
 }
 
 .am-tab-label {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.am-tab-close {
+.am-tab-close-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-}
-
-.am-tab .am-tab-close {
   opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
 }
 
-.am-tab:hover .am-tab-close {
-  opacity: 0.6;
-}
-
-.am-tab-active .am-tab-close {
-  opacity: 0.6;
-}
-
-.am-tab-close:hover {
+.am-tab:hover .am-tab-close-wrap,
+.am-tab-active .am-tab-close-wrap {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.am-tab-close-wrap:hover {
+  opacity: 1;
+}
+
+.am-tab-close[data-component="icon-button"] {
+  width: 20px;
+  height: 20px;
+}
+
+.am-tab-close[data-component="icon-button"] [data-slot="icon-svg"] {
+  color: var(--text-base);
 }
 
 /* Drag-and-drop sortable tab wrapper */
@@ -1141,12 +1187,28 @@ button.am-section-toggle:hover .am-section-label {
 .am-tab-sortable {
   display: flex;
   height: 100%;
+  width: var(--am-tab-width);
+  min-width: var(--am-tab-width);
+  max-width: var(--am-tab-width);
+  flex: 0 0 var(--am-tab-width);
   touch-action: none;
+  transition:
+    flex-basis 140ms ease,
+    max-width 140ms ease,
+    min-width 140ms ease,
+    width 140ms ease;
+}
+
+.am-tab-list[data-tab-widths-frozen] .am-tab-sortable,
+.am-tab-dragging {
+  transition: none;
 }
 
 .am-tab-sortable > [data-component="tooltip-trigger"],
 .am-tab-sortable > [data-slot="context-menu-trigger"] > [data-component="tooltip-trigger"] {
   height: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .am-tab-dragging {
@@ -1211,6 +1273,7 @@ body.am-wt-dragging-active * {
 .am-tab-add-split {
   flex-shrink: 0;
   align-self: center;
+  margin-right: 2px;
 }
 
 .am-tab-actions {

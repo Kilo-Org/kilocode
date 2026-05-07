@@ -315,12 +315,6 @@ export interface RequestAutocompleteSettingsMessage {
   type: "requestAutocompleteSettings"
 }
 
-export interface UpdateAutocompleteSettingMessage {
-  type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
-  value: boolean | string
-}
-
 export interface RequestChatCompletionMessage {
   type: "requestChatCompletion"
   text: string
@@ -1040,7 +1034,6 @@ export type WebviewMessage =
   | DeleteSessionRequest
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage
-  | UpdateAutocompleteSettingMessage
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage
