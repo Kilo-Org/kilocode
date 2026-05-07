@@ -11,6 +11,8 @@ import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
+const fetch = global.fetch
+
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
   experimental: {
@@ -89,6 +91,7 @@ afterEach(async () => {
   else process.env["KILO_CONFIG_DIR"] = configDir
   if (disabled === undefined) delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
   else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
+  global.fetch = fetch
   await disposeAllInstances()
 })
 
@@ -275,6 +278,18 @@ describe("indexing startup degradation", () => {
   })
 
   test("enriches Kilo provider config from env auth", async () => {
+    global.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            defaultModel: "mistralai/mistral-embed-2312",
+            models: [
+              { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+            ],
+            aliases: {},
+          }),
+        ),
+      )) as unknown as typeof global.fetch
     const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
     const key = process.env.KILO_API_KEY
     const org = process.env.KILO_ORG_ID
@@ -294,6 +309,9 @@ describe("indexing startup degradation", () => {
             embedderProvider: "kilo",
             kiloApiKey: "kilo-token",
             kiloOrganizationId: "org_123",
+            modelId: "mistralai/mistral-embed-2312",
+            modelDimension: 1024,
+            searchMinScore: 0.35,
           })
         },
       })

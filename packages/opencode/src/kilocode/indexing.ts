@@ -15,6 +15,7 @@ import {
   normalizeIndexingStatus,
 } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
@@ -81,6 +82,23 @@ function enrichKilo(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloI
     kiloApiKey: input.kiloApiKey ?? auth.apiKey,
     kiloBaseUrl: input.kiloBaseUrl ?? auth.baseUrl,
     kiloOrganizationId: input.kiloOrganizationId ?? auth.organizationId,
+  }
+}
+
+async function model(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloIndexingAuth) {
+  if (input.embedderProvider !== "kilo") return input
+  if (input.modelId && input.modelDimension) return input
+
+  const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey })
+  const id = input.modelId ? (catalog.aliases[input.modelId] ?? input.modelId) : catalog.defaultModel
+  const found = catalog.models.find((item) => item.id === id)
+  if (!found) return { ...input, modelId: id || input.modelId }
+
+  return {
+    ...input,
+    modelId: found.id,
+    modelDimension: input.modelDimension ?? found.dimension,
+    searchMinScore: input.searchMinScore ?? found.scoreThreshold,
   }
 }
 
@@ -256,7 +274,7 @@ export namespace KiloIndexing {
       { ...cfg, indexing: { ...globalConfig.indexing, ...cfg.indexing } },
       auth,
     ) as Config.Indexing | undefined
-    const cfgInput = enrichKilo(input(merged, globalConfig.indexing), auth)
+    const cfgInput = await model(enrichKilo(input(merged, globalConfig.indexing), auth), auth)
     const box = { status: pending() as Status | undefined }
     const current = () => box.status ?? normalizeIndexingStatus(manager)
     let disposed = false
