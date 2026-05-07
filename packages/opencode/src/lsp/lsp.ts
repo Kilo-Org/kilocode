@@ -1,20 +1,20 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import * as LSPClient from "./client"
 import path from "path"
 import { pathToFileURL, fileURLToPath } from "url"
 import * as LSPServer from "./server"
 import z from "zod"
-import { Config } from "../config"
-import { Flag } from "@/flag/flag"
-import { Process } from "../util"
+import { Config } from "@/config/config"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Process } from "@/util/process"
 import { spawn as lspspawn } from "./launch"
 import { Effect, Layer, Context, Schema } from "effect"
-import { InstanceState } from "@/effect"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { InstanceState } from "@/effect/instance-state"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { TsClient } from "../kilocode/ts-client" // kilocode_change
-import { withStatics } from "@/util/schema"
+import { NonNegativeInt, withStatics } from "@/util/schema"
 import { zod, ZodOverride } from "@/util/effect-zod"
 
 const log = Log.create({ service: "lsp" })
@@ -24,8 +24,8 @@ export const Event = {
 }
 
 const Position = Schema.Struct({
-  line: Schema.Number,
-  character: Schema.Number,
+  line: NonNegativeInt,
+  character: NonNegativeInt,
 })
 
 export const Range = Schema.Struct({
@@ -38,7 +38,7 @@ export type Range = typeof Range.Type
 
 export const Symbol = Schema.Struct({
   name: Schema.String,
-  kind: Schema.Number,
+  kind: NonNegativeInt,
   location: Schema.Struct({
     uri: Schema.String,
     range: Range,
@@ -51,7 +51,7 @@ export type Symbol = typeof Symbol.Type
 export const DocumentSymbol = Schema.Struct({
   name: Schema.String,
   detail: Schema.optional(Schema.String),
-  kind: Schema.Number,
+  kind: NonNegativeInt,
   range: Range,
   selectionRange: Range,
 })
@@ -534,3 +534,5 @@ export const layer = Layer.effect(
 export const defaultLayer = layer.pipe(Layer.provide(Config.defaultLayer))
 
 export * as Diagnostic from "./diagnostic"
+
+export * as LSP from "./lsp"

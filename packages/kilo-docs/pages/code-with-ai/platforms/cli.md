@@ -241,7 +241,7 @@ You can use `~` or `$HOME` at the start of a pattern to reference your home dire
 
 ### External Directories
 
-Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `list`, `glob`, `grep`, and many bash commands).
+Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `glob`, `grep`, and many bash commands).
 
 ```json
 {
@@ -269,6 +269,8 @@ Any directory allowed here inherits the same defaults as the current workspace. 
   }
 }
 ```
+
+In Ask and Plan modes, `external_directory` allow rules can still permit reads outside the workspace. They do not enable writes or mutating commands that those modes deny, and explicit `external_directory` deny rules still win.
 
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
@@ -308,12 +310,55 @@ Common configuration options include:
 - **`mcp`** - MCP server configuration
 - **`permission`** - Tool permission settings (`allow` or `ask`)
 - **`instructions`** - Paths to instruction files (e.g., `["CONTRIBUTING.md", ".cursor/rules/*.md"]`)
-- **`formatter`** - Code formatter configuration
+- **`formatter`** - Code formatter configuration (`true`, `false`, or formatter-specific entries)
+- **`lsp`** - Language server configuration (`true`, `false`, or server-specific entries)
 - **`disabled_providers`** / **`enabled_providers`** - Control which providers are available
 
 {% callout type="tip" %}
 **Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.
 {% /callout %}
+
+### Formatter and LSP Toggles
+
+Set `formatter` or `lsp` to `true` to use built-in defaults, or `false` to disable the feature completely:
+
+```jsonc
+{
+  "formatter": true,
+  "lsp": false,
+}
+```
+
+Both keys also accept object configuration for specific tools or language servers. Custom LSP server entries must include an `extensions` array unless the entry disables a built-in server:
+
+```jsonc
+{
+  "lsp": {
+    "my-language-server": {
+      "command": ["my-lsp", "--stdio"],
+      "extensions": [".foo"],
+    },
+  },
+}
+```
+
+### TUI Keybindings on Windows
+
+The TUI gives `Ctrl+Z` to input undo on Windows because native Windows terminals do not support POSIX terminal suspend. On Windows, `input_undo` defaults to `ctrl+z,ctrl+-,super+z` and `terminal_suspend` is disabled. On macOS and Linux, `terminal_suspend` defaults to `ctrl+z`.
+
+### OpenTelemetry Export
+
+Kilo telemetry is enabled by default and can be disabled with `experimental.openTelemetry = false`:
+
+```jsonc
+{
+  "experimental": {
+    "openTelemetry": false,
+  },
+}
+```
+
+If `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the CLI exports OpenTelemetry traces and logs to that OTLP HTTP endpoint. You can also pass `OTEL_EXPORTER_OTLP_HEADERS` as comma-separated `key=value` pairs and `OTEL_RESOURCE_ATTRIBUTES` as comma-separated resource attributes. Request spans include `http.method`, `http.path`, route params such as `session.id` and `message.id`, and internal params under the `opencode.*` namespace.
 
 ### Environment Variables
 
@@ -355,10 +400,10 @@ When running in interactive mode, command approval requests show hierarchical op
 Selecting an "Always run" option will:
 
 1. Approve and execute the current command
-2. Add the pattern to your `execute.allowed` list in the config
-3. Auto-approve matching commands in the future
+2. Save the selected pattern as an `allow` rule under `permission.bash` in your global config
+3. Auto-approve future matching commands, including matching approvals already waiting in other open sessions
 
-This allows you to progressively build your auto-approval rules without manually editing the config file.
+Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
 
 ## Autonomous Mode (Non-Interactive)
 

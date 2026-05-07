@@ -754,8 +754,7 @@ export const dict = {
 
   "settings.indexing.title": "Indexación",
   "settings.indexing.enable.title": "Habilitar indexación",
-  "settings.indexing.enable.description":
-    "Activar o desactivar la indexación semántica de la base de código para este espacio de trabajo.",
+  "settings.indexing.enable.description": "Activar o desactivar la indexación semántica de la base de código.",
   "settings.indexing.provider.title": "Proveedor de embeddings",
   "settings.indexing.provider.description":
     "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",
@@ -1217,6 +1216,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",
+  "settings.experimental.agentManagerTool.title": "Herramienta Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Permitir que los agentes inicien sesiones locales y sesiones de worktree de Agent Manager desde una llamada de herramienta",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
@@ -1417,6 +1419,16 @@ export const dict = {
   "settings.display.layout.description": "Modo de diseño para la interfaz de chat",
   "settings.display.layout.auto": "Automático",
   "settings.display.layout.stretch": "Estirar",
+  "settings.display.fontSize.title": "Tamaño de fuente",
+  "settings.display.fontSize.description":
+    "Ajusta el tamaño de fuente de la webview UI de Kilo de forma independiente a VS Code.",
+  "settings.display.reasoningAutoCollapse.title": "Contraer razonamiento automáticamente",
+  "settings.display.reasoningAutoCollapse.description":
+    "Contrae los bloques de razonamiento después de que el agente termine de escribirlos. Déjalo desactivado para mantener el razonamiento expandido, a menos que lo contraigas manualmente.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Modelo predeterminado",
   "settings.providers.defaultModel.description": "Modelo principal para conversaciones",
   "settings.providers.smallModel.title": "Modelo pequeño",
@@ -1424,6 +1436,7 @@ export const dict = {
     "Modelo ligero para generación de títulos, mensajes de commit, mejora de prompts y otras tareas rápidas",
   "settings.providers.disabled": "Proveedores deshabilitados",
   "settings.providers.disabled.description": "Proveedores a ocultar de la lista de proveedores",
+  "settings.providers.disabled.enable": "Habilitar",
   "settings.providers.enabled": "Proveedores habilitados (lista blanca)",
   "settings.providers.enabled.description": "Si se establece, solo estos proveedores estarán disponibles",
   "settings.providers.notSet": "No establecido (usar predeterminado del servidor)",
@@ -1542,4 +1555,14 @@ export const dict = {
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
   "notifications.action.tryModelGeneric": "Probar modelo",
+  "diffViewer.source.workspace.label": "Cambios locales",
+  "diffViewer.source.workspace.tooltip":
+    "Todos los cambios de esta rama respecto a la rama base. Incluye archivos sin commitear (staged, unstaged y no rastreados) y commits locales que todavía no están en la base.",
+  "diffViewer.source.session.label": "Sesión",
+  "diffViewer.source.session.tooltip":
+    "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
+  "diffViewer.group.session": "Sesión",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
 }

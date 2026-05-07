@@ -1,15 +1,15 @@
-import { Global } from "../global"
-import { Log } from "../util"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
 import { Schema } from "effect"
 import { Installation } from "../installation"
-import { Flag } from "../flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { lazy } from "@/util/lazy"
-import { Filesystem } from "../util"
-import { Flock } from "@opencode-ai/shared/util/flock"
-import { Hash } from "@opencode-ai/shared/util/hash"
+import { Filesystem } from "@/util/filesystem"
+import { Flock } from "@opencode-ai/core/util/flock"
+import { Hash } from "@opencode-ai/core/util/hash"
 // kilocode_change start
-import { Config } from "../config"
+import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
 import { Auth } from "../auth"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
@@ -43,16 +43,16 @@ const filepath = path.join(
 const ttl = 5 * 60 * 1000
 
 const Cost = Schema.Struct({
-  input: Schema.Number,
-  output: Schema.Number,
-  cache_read: Schema.optional(Schema.Number),
-  cache_write: Schema.optional(Schema.Number),
+  input: Schema.Finite,
+  output: Schema.Finite,
+  cache_read: Schema.optional(Schema.Finite),
+  cache_write: Schema.optional(Schema.Finite),
   context_over_200k: Schema.optional(
     Schema.Struct({
-      input: Schema.Number,
-      output: Schema.Number,
-      cache_read: Schema.optional(Schema.Number),
-      cache_write: Schema.optional(Schema.Number),
+      input: Schema.Finite,
+      output: Schema.Finite,
+      cache_read: Schema.optional(Schema.Finite),
+      cache_write: Schema.optional(Schema.Finite),
     }),
   ),
 })
@@ -76,9 +76,9 @@ export const Model = Schema.Struct({
   ),
   cost: Schema.optional(Cost),
   limit: Schema.Struct({
-    context: Schema.Number,
-    input: Schema.optional(Schema.Number),
-    output: Schema.Number,
+    context: Schema.Finite,
+    input: Schema.optional(Schema.Finite),
+    output: Schema.Finite,
   }),
   modalities: Schema.optional(
     Schema.Struct({
@@ -290,3 +290,5 @@ if (!Flag.KILO_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-compl
     60 * 1000 * 60,
   ).unref()
 }
+
+export * as ModelsDev from "./models"

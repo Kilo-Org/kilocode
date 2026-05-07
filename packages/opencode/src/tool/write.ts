@@ -2,20 +2,20 @@ import { Schema } from "effect"
 import * as path from "path"
 import { Effect } from "effect"
 import * as Tool from "./tool"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { createTwoFilesPatch } from "diff"
 import DESCRIPTION from "./write.txt"
 import { Bus } from "../bus"
 import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Format } from "../format"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Instance } from "../project/instance"
 import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import * as Bom from "@/util/bom"
 
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5

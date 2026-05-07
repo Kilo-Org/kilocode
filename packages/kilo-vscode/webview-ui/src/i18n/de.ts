@@ -763,8 +763,7 @@ export const dict = {
     "Leer lassen, um die Embedding-Dimension automatisch aus dem Modell zu erkennen.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Vektordimension",
-  "settings.indexing.enable.description":
-    "Semantische Codebasis-Indizierung für diesen Arbeitsbereich ein- oder ausschalten.",
+  "settings.indexing.enable.description": "Semantische Codebasis-Indizierung ein- oder ausschalten.",
   "settings.indexing.enable.title": "Indizierung aktivieren",
   "settings.indexing.lancedbDirectory.description": "Optionaler Ordner für den lokalen LanceDB-Speicher.",
   "settings.indexing.lancedbDirectory.placeholder": "Leer lassen für Standard",
@@ -1226,6 +1225,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-Werkzeug",
+  "settings.experimental.agentManagerTool.description":
+    "Agenten erlauben, lokale Agent Manager-Sitzungen und Worktree-Sitzungen per Werkzeugaufruf zu starten",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
@@ -1426,6 +1428,15 @@ export const dict = {
   "settings.display.layout.description": "Layout-Modus für die Chat-Oberfläche",
   "settings.display.layout.auto": "Automatisch",
   "settings.display.layout.stretch": "Gestreckt",
+  "settings.display.fontSize.title": "Schriftgröße",
+  "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
+  "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
+  "settings.display.reasoningAutoCollapse.description":
+    "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primäres Modell für Gespräche",
   "settings.providers.smallModel.title": "Kleines Modell",
@@ -1433,6 +1444,7 @@ export const dict = {
     "Leichtgewichtiges Modell für Titelgenerierung, Commit-Nachrichten, Prompt-Verbesserung und andere schnelle Aufgaben",
   "settings.providers.disabled": "Deaktivierte Anbieter",
   "settings.providers.disabled.description": "Anbieter aus der Anbieterliste ausblenden",
+  "settings.providers.disabled.enable": "Aktivieren",
   "settings.providers.enabled": "Aktivierte Anbieter (Whitelist)",
   "settings.providers.enabled.description": "Wenn gesetzt, sind nur diese Anbieter verfügbar (exklusive Whitelist)",
   "settings.providers.notSet": "Nicht festgelegt (Server-Standard verwenden)",
@@ -1554,4 +1566,14 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
+  "diffViewer.source.workspace.label": "Lokale Änderungen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
+  "diffViewer.source.session.label": "Sitzung",
+  "diffViewer.source.session.tooltip":
+    "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
+  "diffViewer.group.session": "Sitzung",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
 } satisfies Partial<Record<Keys, string>>

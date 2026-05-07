@@ -18,14 +18,16 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { registerDisposer } from "@/effect/instance-registry"
-import { Global } from "@/global"
-import { Log } from "@/util"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 
 const log = Log.create({ service: "kilocode-indexing" })
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
+const noWorkspace = () =>
+  disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
 
 function worktreeDisabled(): z.infer<typeof IndexingStatus> {
   return {
@@ -200,6 +202,9 @@ export namespace KiloIndexing {
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
     const cfg = await Config.get()
+    if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
+      return track(hit, await inert(() => noWorkspace()))
+    }
     if (!hasIndexingPlugin(cfg.plugin)) {
       return track(hit, await inert(() => missing()))
     }
@@ -207,7 +212,9 @@ export namespace KiloIndexing {
     if (cfg.experimental?.semantic_indexing !== true) {
       return track(
         hit,
-        await inert(() => disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings.")),
+        await inert(() =>
+          disabledIndexingStatus("Semantic indexing is disabled. Enable it in the Experimental settings."),
+        ),
       )
     }
 

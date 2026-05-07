@@ -22,7 +22,7 @@
   align-items: center;
   flex-wrap: nowrap;
   min-height: 22px;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .session-actions-row > * {
@@ -36,10 +36,6 @@
   flex: 0 0 auto;
 }
 
-.session-actions-row > .session-move-changes-trigger {
-  margin-left: auto;
-}
-
 .session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
   flex: 0 0 auto;
   border-radius: var(--session-action-radius);
@@ -50,7 +46,7 @@
   border: none;
   box-shadow: none;
   font-family: var(--font-family-sans);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-style: normal;
   font-weight: var(--font-weight-medium);
   line-height: normal;
@@ -255,7 +251,7 @@
 
 .session-move-changes {
   font-family: var(--font-family-sans);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-variant-numeric: tabular-nums;
 }
 
@@ -287,7 +283,7 @@
   background: transparent;
   color: var(--vscode-descriptionForeground);
   font-family: var(--vscode-editor-font-family), monospace;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   white-space: nowrap;
@@ -333,6 +329,7 @@
   .session-actions-row {
     gap: 4px;
     flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .session-actions-row > *,
@@ -361,11 +358,5 @@
 
   .session-move-dot {
     opacity: 1;
-  }
-}
-
-@container (max-width: 420px) {
-  .session-actions-row > .session-move-changes-trigger {
-    margin-left: 0;
   }
 }

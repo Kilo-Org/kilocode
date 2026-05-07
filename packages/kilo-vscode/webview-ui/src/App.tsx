@@ -16,6 +16,7 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
+import { DisplayProvider } from "./context/display"
 import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
@@ -32,6 +33,7 @@ registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
+import { FeedbackProvider } from "./context/feedback"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
@@ -349,15 +351,19 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <IndexingProvider>
-                            <NotificationsProvider>
-                              <SessionProvider>
-                                <DataBridge>
-                                  <AppContent />
-                                </DataBridge>
-                              </SessionProvider>
-                            </NotificationsProvider>
-                          </IndexingProvider>
+                          <DisplayProvider>
+                            <IndexingProvider>
+                              <NotificationsProvider>
+                                <SessionProvider>
+                                  <FeedbackProvider>
+                                    <DataBridge>
+                                      <AppContent />
+                                    </DataBridge>
+                                  </FeedbackProvider>
+                                </SessionProvider>
+                              </NotificationsProvider>
+                            </IndexingProvider>
+                          </DisplayProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

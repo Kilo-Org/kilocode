@@ -5,7 +5,7 @@ import type { JSONSchema } from "zod/v4/core"
 import type * as Provider from "./provider"
 import type * as ModelsDev from "./models"
 import { iife } from "@/util/iife"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 
@@ -56,10 +56,30 @@ function normalizeMessages(
 ): ModelMessage[] {
   // Anthropic rejects messages with empty content - filter out empty string messages
   // and remove empty text/reasoning parts from array content
+  if (model.api.npm === "@ai-sdk/anthropic") {
+    msgs = msgs
+      .map((msg) => {
+        if (typeof msg.content === "string") {
+          if (msg.content === "") return undefined
+          return msg
+        }
+        if (!Array.isArray(msg.content)) return msg
+        const filtered = msg.content.filter((part) => {
+          if (part.type === "text" || part.type === "reasoning") {
+            return part.text !== ""
+          }
+          return true
+        })
+        if (filtered.length === 0) return undefined
+        return { ...msg, content: filtered }
+      })
+      .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
+  }
+
+  // Bedrock specific transforms
   // kilocode_change start - only filter for Claude models on Bedrock, not all Bedrock models
-  const bedrock = model.api.npm === "@ai-sdk/amazon-bedrock"
   const claude = model.api.id.includes("anthropic") || model.api.id.includes("claude") || model.id.includes("claude")
-  if (model.api.npm === "@ai-sdk/anthropic" || (bedrock && claude)) {
+  if (model.api.npm === "@ai-sdk/amazon-bedrock" && claude) {
     // kilocode_change end
     msgs = msgs
       .map((msg) => {
@@ -183,10 +203,8 @@ function normalizeMessages(
     return result
   }
 
-  // kilocode_change start - cherry-picked from anomalyco/opencode#24180;
-  // will be reverted on the next wholesale upstream merge.
   // Deepseek requires all assistant messages to have reasoning on them
-  if (model.api.id.includes("deepseek")) {
+  if (model.api.id.toLowerCase().includes("deepseek")) {
     msgs = msgs.map((msg) => {
       if (msg.role !== "assistant") return msg
       if (Array.isArray(msg.content)) {
@@ -202,15 +220,12 @@ function normalizeMessages(
       }
     })
   }
-  // kilocode_change end
 
-  // kilocode_change start - cherry-picked from anomalyco/opencode#24435
   if (
     typeof model.capabilities.interleaved === "object" &&
     model.capabilities.interleaved.field &&
     model.api.npm !== "@openrouter/ai-sdk-provider"
   ) {
-    // kilocode_change end
     const field = model.capabilities.interleaved.field
     return msgs.map((msg) => {
       if (msg.role === "assistant" && Array.isArray(msg.content)) {
@@ -596,7 +611,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort
     case "@ai-sdk/openai-compatible":
       const efforts = [...WIDELY_SUPPORTED_EFFORTS]
-      if (model.api.id.includes("deepseek-v4")) {
+      if (model.api.id.toLowerCase().includes("deepseek-v4")) {
         efforts.push("max")
       }
       return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
@@ -658,16 +673,17 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic
     case "@ai-sdk/google-vertex/anthropic":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/google-vertex#anthropic-provider
-
-      if (model.providerID === "github-copilot") {
-        if (model.api.id.includes("opus-4.7")) {
-          return Object.fromEntries(["medium"].map((effort) => [effort, { reasoningEffort: effort }]))
-        }
-      }
-
       if (adaptiveEfforts) {
+        let efforts = [...adaptiveEfforts]
+        if (model.providerID === "github-copilot") {
+          if (model.api.id.includes("opus-4.7")) {
+            efforts = ["medium"]
+          }
+          // Efforts currently supported are: low, medium, high
+          efforts = efforts.filter((v) => v !== "max" && v !== "xhigh")
+        }
         return Object.fromEntries(
-          adaptiveEfforts.map((effort) => [
+          efforts.map((effort) => [
             effort,
             {
               thinking: {
@@ -787,9 +803,10 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
       // https://docs.mistral.ai/capabilities/reasoning/adjustable
       if (!model.capabilities.reasoning) return {}
-      // Only Mistral Small 4 supports reasoning (mistral-small-2603, mistral-small-latest)
+      // Only Mistral Small 4 and Medium 3.5 support reasoning
+      const MISTRAL_REASONING_IDS = ["mistral-small-2603", "mistral-small-latest", "mistral-medium-3.5"]
       const mistralId = model.api.id.toLowerCase()
-      if (!mistralId.includes("mistral-small-2603") && !mistralId.includes("mistral-small-latest")) return {}
+      if (!MISTRAL_REASONING_IDS.some((id) => mistralId.includes(id))) return {}
       return {
         high: { reasoningEffort: "high" },
       }
@@ -875,6 +892,13 @@ export function options(input: {
 }): Record<string, any> {
   const result: Record<string, any> = {}
 
+  if (
+    input.model.api.npm === "@ai-sdk/google-vertex/anthropic" ||
+    (!input.model.api.id.includes("claude") && input.model.api.npm === "@ai-sdk/anthropic")
+  ) {
+    result["toolStreaming"] = false
+  }
+
   // openai and providers using openai package should set store to false by default.
   if (
     input.model.providerID === "openai" ||
@@ -885,7 +909,7 @@ export function options(input: {
   }
 
   if (input.model.api.npm === "@ai-sdk/azure") {
-    result["store"] = true
+    result["store"] = false
     result["promptCacheKey"] = input.sessionID
   }
 
@@ -1124,6 +1148,21 @@ export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JS
   }
   */
 
+  if (model.providerID === "moonshotai" || model.api.id.toLowerCase().includes("kimi")) {
+    const sanitizeMoonshot = (obj: unknown): unknown => {
+      if (obj === null || typeof obj !== "object") return obj
+      if (Array.isArray(obj)) return obj.map(sanitizeMoonshot)
+      // Moonshot expands $ref before validation and rejects sibling keywords like description on the same node.
+      if ("$ref" in obj && typeof obj.$ref === "string") return { $ref: obj.$ref }
+      const result = Object.fromEntries(Object.entries(obj).map(([key, value]) => [key, sanitizeMoonshot(value)]))
+      // MFJS does not support tuple-style `items` arrays; it requires one schema object for all array items.
+      if (Array.isArray(result.items)) result.items = result.items[0] ?? {}
+      return result
+    }
+
+    schema = sanitizeMoonshot(schema) as JSONSchema.BaseSchema | JSONSchema7
+  }
+
   // Convert integer enums to string enums for Google/Gemini
   if (model.providerID === "google" || model.api.id.includes("gemini")) {
     const isPlainObject = (node: unknown): node is Record<string, any> =>
@@ -1205,3 +1244,5 @@ export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JS
 
   return schema as JSONSchema7
 }
+
+export * as ProviderTransform from "./transform"

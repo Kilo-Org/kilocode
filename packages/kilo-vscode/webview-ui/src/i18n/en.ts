@@ -1003,7 +1003,7 @@ export const dict = {
   "settings.indexing.title": "Indexing",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
-  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off for this workspace.",
+  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
   "settings.indexing.model.title": "Embedding model",
@@ -1197,6 +1197,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
+  "settings.experimental.agentManagerTool.description":
+    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1390,6 +1393,15 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.fontSize.title": "Font Size",
+  "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
+  "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
+  "settings.display.reasoningAutoCollapse.description":
+    "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",
@@ -1401,6 +1413,7 @@ export const dict = {
     "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
+  "settings.providers.disabled.enable": "Enable",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",
@@ -1526,4 +1539,15 @@ export const dict = {
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
   "notifications.action.tryModelGeneric": "Try Model",
+
+  "diffViewer.source.workspace.label": "Local Changes",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
 }

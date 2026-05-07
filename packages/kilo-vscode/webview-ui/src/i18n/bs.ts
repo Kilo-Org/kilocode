@@ -757,8 +757,7 @@ export const dict = {
     "Ostavite prazno za automatsko prepoznavanje dimenzije embeddinga iz modela.",
   "settings.indexing.dimension.placeholder": "Auto",
   "settings.indexing.dimension.title": "Dimenzija vektora",
-  "settings.indexing.enable.description":
-    "Uključite ili isključite semantičko indeksiranje baze koda za ovaj radni prostor.",
+  "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
   "settings.indexing.lancedbDirectory.description": "Opcionalni direktorij za lokalno LanceDB skladište.",
   "settings.indexing.lancedbDirectory.placeholder": "Ostavite prazno za zadano",
@@ -1211,6 +1210,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
+  "settings.experimental.agentManagerTool.title": "Agent Manager alat",
+  "settings.experimental.agentManagerTool.description":
+    "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1408,6 +1410,15 @@ export const dict = {
   "settings.display.layout.description": "Način rasporeda za sučelje chata",
   "settings.display.layout.auto": "Automatski",
   "settings.display.layout.stretch": "Rastegni",
+  "settings.display.fontSize.title": "Veličina fonta",
+  "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
+  "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
+  "settings.display.reasoningAutoCollapse.description":
+    "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",
@@ -1415,6 +1426,7 @@ export const dict = {
     "Lagani model za generiranje naslova, commit poruka, poboljšanje promptova i druge brze zadatke",
   "settings.providers.disabled": "Onemogućeni pružatelji",
   "settings.providers.disabled.description": "Pružatelji za skrivanje s popisa",
+  "settings.providers.disabled.enable": "Omogući",
   "settings.providers.enabled": "Omogućeni pružatelji (bijela lista)",
   "settings.providers.enabled.description": "Ako je postavljeno, samo ovi pružatelji će biti dostupni",
   "settings.providers.notSet": "Nije postavljeno (koristi zadano servera)",
@@ -1534,4 +1546,14 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
+  "diffViewer.source.workspace.label": "Lokalne izmjene",
+  "diffViewer.source.workspace.tooltip":
+    "Sve promjene na ovoj grani u poređenju s osnovnom granom. Uključuje nekomitovane datoteke (staged, unstaged, nepraćene) i lokalne commitove koji još nisu u osnovi.",
+  "diffViewer.source.session.label": "Sesija",
+  "diffViewer.source.session.tooltip":
+    "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
+  "diffViewer.group.session": "Sesija",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
 }

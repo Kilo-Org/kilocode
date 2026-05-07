@@ -133,6 +133,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   /** Abort controller for the current in-flight FIM request */
   private fimAbortController: AbortController | null = null
   private acceptedCommand: vscode.Disposable | null = null
+  private contextService: ContextRetrievalService | null = null
   private debounceDelayMs: number = INITIAL_DEBOUNCE_DELAY_MS
   private latencyHistory: number[] = []
   private telemetry: AutocompleteTelemetry | null
@@ -167,10 +168,10 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     })()
 
     const ide = new VsCodeIde(context)
-    const contextService = new ContextRetrievalService(ide)
+    this.contextService = new ContextRetrievalService(ide)
     const contextProvider: AutocompleteContextProvider = {
       ide,
-      contextService,
+      contextService: this.contextService,
       model,
       ignoreController: this.ignoreController,
     }
@@ -304,6 +305,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     this.fimAbortController?.abort()
     this.fimAbortController = null
     this.telemetry?.dispose()
+    this.contextService?.dispose()
+    this.contextService = null
     this.recentlyVisitedRangesService.dispose()
     this.recentlyEditedTracker.dispose()
     void this.disposeIgnoreController()

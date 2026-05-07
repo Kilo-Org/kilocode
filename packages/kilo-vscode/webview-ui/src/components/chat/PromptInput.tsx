@@ -82,7 +82,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
   const git = useGitChangesContext(vscode, ctx, hasGit)
-  const slash = useSlashCommand(vscode)
+  const slash = useSlashCommand(vscode, () =>
+    session.variantList(sid()).length > 0 ? new Set() : new Set(["variant"]),
+  )
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -315,7 +317,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const onCompact = () => {
     if (session.status() === "busy") return
     if (session.messages().length === 0) return
-    if (!session.selected()) return
+    if (!session.selected(sid())) return
     session.compact()
   }
   window.addEventListener("compactSession", onCompact)
@@ -387,8 +389,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
-      const sel = session.selected()
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+      const sel = session.selected(sid())
+      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
 
     if (message.type === "sendMessageFailed") {
@@ -679,9 +681,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
-    const sel = session.selected()
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
     const id = sid()
+    const sel = session.selected(id)
 
     const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
       showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
@@ -708,9 +710,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     }
 
     history.append(draft)
@@ -955,15 +957,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher />
-          <ModelSelector />
-          <ThinkingSelector />
-          <Show when={session.hasModelOverride()}>
+          <ModeSwitcher sessionID={sid} />
+          <ModelSelector sessionID={sid} />
+          <ThinkingSelector sessionID={sid} />
+          <Show when={session.hasModelOverride(sid())}>
             <Tooltip value={language.t("prompt.action.resetModel")} placement="top">
               <Button
                 variant="ghost"
                 size="small"
-                onClick={() => session.clearModelOverride()}
+                onClick={() => session.clearModelOverride(sid())}
                 aria-label={language.t("prompt.action.resetModel")}
               >
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
@@ -1017,6 +1019,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   ? language.t("prompt.action.autoApprove.disable")
                   : language.t("prompt.action.autoApprove.enable")
               }
+              aria-pressed={autoApprove()}
               class={`prompt-auto-approve-button ${autoApprove() ? "prompt-auto-approve-button--active" : ""}`}
             >
               <Icon name="shield" size="small" />

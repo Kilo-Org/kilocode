@@ -128,6 +128,7 @@ Reference files and other context directly in your message using `@`:
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
+- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
 
 **Status signals:**
 

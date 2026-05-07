@@ -3,6 +3,7 @@
 .am-layout {
   display: flex;
   height: 100vh;
+  font-size: var(--font-size-base);
   overflow: hidden;
 }
 
@@ -91,7 +92,7 @@
 }
 
 .am-local-branch {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   line-height: 1.2;
   overflow: hidden;
@@ -266,7 +267,7 @@ button.am-section-toggle:hover .am-section-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   line-height: 1.2;
   min-width: 0;
@@ -320,7 +321,7 @@ button.am-section-toggle:hover .am-section-label {
 /* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) */
 
 .am-shortcut-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
   color: var(--text-weaker);
   pointer-events: none;
@@ -472,7 +473,7 @@ button.am-section-toggle:hover .am-section-label {
   gap: 4px;
   flex-shrink: 0;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -517,7 +518,7 @@ button.am-section-toggle:hover .am-section-label {
   border-radius: 6px;
   background: color-mix(in srgb, var(--am-run-accent) 12%, transparent);
   color: var(--am-run-accent);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   line-height: 1;
   margin-left: auto;
 }
@@ -615,7 +616,7 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--pr-accent) 12%, transparent);
   color: var(--pr-accent);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   transition: background 150ms ease;
@@ -733,7 +734,7 @@ button.am-section-toggle:hover .am-section-label {
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -770,7 +771,7 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-section-group-count {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   min-width: 14px;
   text-align: center;
@@ -786,7 +787,7 @@ button.am-section-toggle:hover .am-section-label {
   border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
   border-radius: var(--radius-sm);
   padding: 1px 4px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -872,7 +873,7 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-wt-group-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.2px;
   color: color-mix(in srgb, var(--border-focus, #007fd4) 80%, var(--text-weak));
@@ -992,7 +993,7 @@ button.am-section-toggle:hover .am-section-label {
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition:
     background-color 120ms,
@@ -1091,7 +1092,7 @@ button.am-section-toggle:hover .am-section-label {
   padding: 0 12px;
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   white-space: nowrap;
   border: none;
@@ -1196,7 +1197,7 @@ body.am-wt-dragging-active * {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   color: var(--text-base);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-small);
   white-space: nowrap;
 }
 
@@ -1244,7 +1245,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-empty-state-text {
-  font-size: 15px;
+  font-size: var(--kilo-font-size-15);
   font-weight: 500;
   color: var(--text-weak);
 }
@@ -1288,7 +1289,7 @@ body.am-wt-dragging-active * {
   padding: 3px 6px;
   border-radius: 5px;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
@@ -1383,46 +1384,6 @@ body.am-wt-dragging-active * {
   flex: 1;
   width: 100%;
   min-height: 0;
-  /* Pierre diffs needs --diffs-light-bg/--diffs-dark-bg for the color-mix()
-     calculations that produce red/green line backgrounds. Without a Shiki
-     worker pool these are never set by the theme layer, so we provide
-     fallbacks mapped to VS Code's editor background. */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  /* The unsafeCSS in @opencode-ai/ui uses 98%/92% mix ratios for line
-     backgrounds — only 2-8% tint, nearly invisible. Override via the
-     *-override custom properties that the unsafeCSS checks first.
-     These inherit across the Shadow DOM boundary. */
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
   --am-diff-count-size: 12px;
 }
 
@@ -1661,6 +1622,46 @@ body.am-wt-dragging-active * {
   gap: 8px;
 }
 
+.am-markdown-diff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--border-weak-base);
+  border-top: 1px solid var(--border-weak-base);
+  cursor: auto;
+}
+
+.am-markdown-diff[data-split="true"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.am-markdown-pane {
+  min-width: 0;
+  padding: 16px 20px 24px;
+  background: var(--vscode-editor-background, var(--surface-base));
+  color: var(--vscode-editor-foreground, var(--text-base));
+  overflow-x: auto;
+}
+
+.am-markdown-pane-title {
+  margin: -4px 0 12px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.am-markdown-pane [data-component="markdown"] {
+  max-width: 900px;
+}
+
+@media (max-width: 840px) {
+  .am-markdown-diff[data-split="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Keep +N/-N indicators at consistent size across side/fullscreen views */
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-additions"],
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-deletions"],
@@ -1682,7 +1683,7 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--vscode-editor-font-size, 13px);
+  font-size: var(--font-size-base);
 }
 
 .am-annotation-draft {
@@ -1804,7 +1805,7 @@ body.am-wt-dragging-active * {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   border-radius: 9px;
   background: var(--surface-interactive-strong);
@@ -1819,7 +1820,7 @@ body.am-wt-dragging-active * {
   padding: 0 6px;
   height: 18px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: color-mix(in oklab, var(--text-warning, #a15c00) 85%, var(--text-base));
   background: color-mix(in oklab, var(--surface-warning, rgba(245, 158, 11, 0.16)) 65%, transparent);
@@ -1834,7 +1835,7 @@ body.am-wt-dragging-active * {
   padding: 0 6px;
   height: 18px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--text-weak);
   background: color-mix(in oklab, var(--surface-interactive-base) 70%, transparent);
@@ -1914,7 +1915,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-setup-branch {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
   font-family: var(--font-family-mono, monospace);
 }
@@ -2102,7 +2103,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   outline: none;
   box-sizing: border-box;
 }
@@ -2144,7 +2145,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-config-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -2179,7 +2180,7 @@ body.am-wt-dragging-active * {
   border-radius: calc(var(--radius-sm) - 1px);
   background: transparent;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
   transition: all 100ms;
@@ -2199,7 +2200,7 @@ body.am-wt-dragging-active * {
 /* Version hint text */
 
 .am-nv-version-hint {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
@@ -2221,7 +2222,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-pill-compare-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -2235,7 +2236,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-compare-count {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   color: var(--text-weaker);
   margin-left: 6px;
@@ -2290,7 +2291,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   outline: none;
 }
 
@@ -2306,7 +2307,7 @@ body.am-wt-dragging-active * {
 
 .am-mm-group-label {
   padding: 6px 10px 2px;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -2352,7 +2353,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-mm-item-name {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-base);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2366,7 +2367,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   cursor: pointer;
   outline: none;
@@ -2396,7 +2397,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition: color 100ms;
 }
@@ -2427,7 +2428,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-family: inherit;
   outline: none;
   transition: border-color 120ms;
@@ -2444,7 +2445,7 @@ body.am-wt-dragging-active * {
 /* Branch selector */
 
 .am-branch-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
@@ -2467,7 +2468,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition: background 80ms;
   text-align: left;
@@ -2504,7 +2505,7 @@ body.am-wt-dragging-active * {
   border-radius: 3px;
   background: var(--surface-raised-stronger-non-alpha);
   color: var(--text-weak);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-family: inherit;
   line-height: 1;
 }
@@ -2518,7 +2519,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-item-time {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   white-space: nowrap;
 }
@@ -2543,7 +2544,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2552,7 +2553,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-branch {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-weight: 600;
   color: var(--text-strong);
   line-height: 1.4;
@@ -2560,7 +2561,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-meta {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
   line-height: 1.4;
 }
@@ -2576,7 +2577,7 @@ body.am-wt-dragging-active * {
   background: var(--surface-inset-base);
   border: 1px solid var(--border-weak-base);
   font-family: var(--font-family-sans);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   line-height: 1;
   color: var(--text-weak);
@@ -2597,12 +2598,12 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-row-label {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
 .am-hover-card-row-value {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   color: var(--text-base);
 }
@@ -2629,7 +2630,7 @@ body.am-wt-dragging-active * {
 
 .am-hover-card-note {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1.35;
   color: var(--text-weak);
   text-align: left;
@@ -2646,7 +2647,7 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 6px;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 .am-hover-card-hint [data-component="icon"] {
@@ -2671,7 +2672,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-shortcuts-category-title {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2721,7 +2722,7 @@ body.am-wt-dragging-active * {
   background: var(--surface-inset-base);
   border: 1px solid var(--border-weak-base);
   font-family: var(--font-family-sans);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   line-height: 1;
   color: var(--text-weak);
@@ -2748,7 +2749,7 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
 }
 
@@ -2842,7 +2843,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
   transition: all 100ms;
@@ -3084,7 +3085,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-item-time {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   white-space: nowrap;
   flex-shrink: 0;
@@ -3092,7 +3093,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
@@ -3105,7 +3106,7 @@ body.am-wt-dragging-active * {
 .am-dropdown-empty {
   padding: 16px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
@@ -3114,7 +3115,7 @@ body.am-wt-dragging-active * {
 .am-import-empty {
   padding: 20px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
   line-height: 1.5;
 }
@@ -3161,7 +3162,7 @@ body.am-wt-dragging-active * {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
   font-variant-numeric: tabular-nums;
 }
@@ -3196,7 +3197,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-apply-conflicts-title {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--text-base);
 }
@@ -3215,7 +3216,7 @@ body.am-wt-dragging-active * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-base);
 }
 
@@ -3226,12 +3227,12 @@ body.am-wt-dragging-active * {
   line-height: 1.3;
   white-space: normal;
   word-break: break-word;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
 }
 
 .am-apply-alert {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--syntax-diff-delete, #da3319);
   line-height: 1.35;
 }
@@ -3268,39 +3269,6 @@ body.am-wt-dragging-active * {
   min-height: 0;
   min-width: 0;
   --am-diff-count-size: 12px;
-  /* Inherit pierre diffs CSS vars from am-diff-panel */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
 }
 
 /* Review toolbar */
@@ -3459,7 +3427,7 @@ body.am-wt-dragging-active * {
 
 /* Tighter diff line height in review mode */
 .am-review-layout {
-  --diffs-line-height: 20px;
+  --diffs-line-height: var(--kilo-font-size-20);
 }
 
 /* ─── File tree (GitHub-style) ─── */
@@ -3469,7 +3437,7 @@ body.am-wt-dragging-active * {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-family: var(--font-family-sans, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
@@ -3643,7 +3611,7 @@ body.am-wt-dragging-active * {
   border-radius: 8px;
   background: var(--surface-interactive-strong);
   color: var(--text-on-fill);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   line-height: 1;
   margin-left: 6px;
@@ -3667,7 +3635,7 @@ body.am-wt-dragging-active * {
   gap: 8px;
   padding: 8px 14px;
   border-top: 1px solid var(--border-weak-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   flex-shrink: 0;
 }
@@ -3693,7 +3661,7 @@ body.am-wt-dragging-active * {
 .am-branch-hint {
   margin-left: auto;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 /* ============================================

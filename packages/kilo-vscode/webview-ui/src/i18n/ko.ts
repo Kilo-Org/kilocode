@@ -1037,7 +1037,7 @@ export const dict = {
   "settings.indexing.dimension.description": "비워두면 모델에서 임베딩 차원을 자동으로 감지합니다.",
   "settings.indexing.dimension.placeholder": "자동",
   "settings.indexing.dimension.title": "벡터 차원",
-  "settings.indexing.enable.description": "이 작업 공간의 의미적 코드베이스 인덱싱을 켜거나 끕니다.",
+  "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
   "settings.indexing.enable.title": "인덱싱 활성화",
   "settings.indexing.lancedbDirectory.description": "로컬 LanceDB 저장소의 선택적 디렉터리입니다.",
   "settings.indexing.lancedbDirectory.placeholder": "기본값 사용을 위해 비워두세요",
@@ -1193,6 +1193,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
+  "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
+  "settings.experimental.agentManagerTool.description":
+    "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
@@ -1378,6 +1381,15 @@ export const dict = {
   "settings.display.layout.description": "채팅 인터페이스의 레이아웃 모드",
   "settings.display.layout.auto": "자동",
   "settings.display.layout.stretch": "늘리기",
+  "settings.display.fontSize.title": "글꼴 크기",
+  "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
+  "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
+  "settings.display.reasoningAutoCollapse.description":
+    "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "기본 모델",
   "settings.providers.defaultModel.description": "대화의 기본 모델",
   "settings.providers.smallModel.title": "소형 모델",
@@ -1385,6 +1397,7 @@ export const dict = {
     "제목 생성, 커밋 메시지 생성, 프롬프트 개선 및 기타 빠른 작업을 위한 경량 모델",
   "settings.providers.disabled": "비활성화된 공급자",
   "settings.providers.disabled.description": "공급자 목록에서 숨길 공급자",
+  "settings.providers.disabled.enable": "활성화",
   "settings.providers.enabled": "활성화된 공급자 (허용 목록)",
   "settings.providers.enabled.description": "설정된 경우 이 공급자만 사용 가능 (배타적 허용 목록)",
   "settings.providers.notSet": "설정되지 않음 (서버 기본값 사용)",
@@ -1503,4 +1516,14 @@ export const dict = {
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
   "notifications.action.tryModelGeneric": "모델 시도",
+  "diffViewer.source.workspace.label": "로컬 변경 사항",
+  "diffViewer.source.workspace.tooltip":
+    "베이스 브랜치와 비교한 이 브랜치의 모든 변경 사항. 커밋되지 않은 파일(staged, unstaged, 추적되지 않음)과 아직 베이스에 반영되지 않은 로컬 커밋을 포함합니다.",
+  "diffViewer.source.session.label": "세션",
+  "diffViewer.source.session.tooltip":
+    "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
+  "diffViewer.group.session": "세션",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 }

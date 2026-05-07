@@ -81,4 +81,22 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implementeren in een nieuwe sessie met een lege context",
   "plan.followup.answer.continue": "Hier doorgaan",
   "plan.followup.answer.continue.description": "Het plan in deze sessie implementeren",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot is traag",
+  "snapshot.slowRepo.question":
+    "Het initialiseren van het snapshot-systeem duurt lang, waarschijnlijk vanwege de grootte van de repository.\n\nWil je snapshots voor deze repository uitschakelen?",
+  "snapshot.slowRepo.answer.continue": "Doorgaan met snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Wacht tot de snapshot klaar is. Volgende beurten zijn snel zodra de eerste snapshot is gemaakt.",
+  "snapshot.slowRepo.answer.disable": "Uitschakelen voor dit project",
+  "snapshot.slowRepo.answer.disable.description":
+    "Zet Kilo-snapshots uit voor dit project. Je verliest ongedaan maken/opnieuw doen van Kilo-wijzigingen, maar git blijft alles volgen.",
+
+  "ui.messagePart.openInDiffViewer": "Openen in diff-viewer",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dit was nuttig",
+  "ui.message.feedback.notHelpful": "Dit was niet nuttig",
+  "ui.message.feedback.clearRating": "Beoordeling wissen",
 }

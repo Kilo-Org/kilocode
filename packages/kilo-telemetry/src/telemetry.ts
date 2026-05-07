@@ -1,8 +1,6 @@
 import { Client } from "./client.js"
 import { Identity } from "./identity.js"
 import { TelemetryEvent } from "./events.js"
-import { TracerSetup } from "./tracer.js"
-import type { Tracer } from "@opentelemetry/api"
 
 export interface TelemetryProperties {
   appName: string
@@ -83,16 +81,6 @@ export namespace Telemetry {
     const enabled = level ? level === "all" : options.enabled
     Client.setEnabled(enabled)
 
-    // Initialize OpenTelemetry tracer for AI SDK spans
-    TracerSetup.init({
-      version: props.appVersion,
-      enabled,
-      appName: props.appName,
-      platform: props.platform,
-      editorName: props.editorName,
-      vscodeVersion: props.vscodeVersion,
-    })
-
     await Identity.getMachineId()
 
     initialized = true
@@ -101,15 +89,6 @@ export namespace Telemetry {
 
   export function setEnabled(value: boolean) {
     Client.setEnabled(value)
-    TracerSetup.setEnabled(value)
-  }
-
-  /**
-   * Get the OpenTelemetry tracer for use with AI SDK's experimental_telemetry.
-   * Returns null if telemetry is not initialized.
-   */
-  export function getTracer(): Tracer | null {
-    return TracerSetup.getTracer()
   }
 
   export function isEnabled(): boolean {
@@ -175,6 +154,9 @@ export namespace Telemetry {
   // LLM
   export function trackLlmCompletion(properties: {
     taskId?: string
+    mode?: "review"
+    feature?: "code_reviews"
+    command?: "local-review" | "local-review-uncommitted"
     apiProvider: string
     modelId: string
     inputTokens?: number
@@ -262,8 +244,23 @@ export namespace Telemetry {
     track(TelemetryEvent.ERROR, { error, context })
   }
 
+  // Feedback
+  export interface FeedbackProperties extends Record<string, unknown> {
+    providerID: string
+    modelID: string
+    variant?: string
+    rating: "up" | "down" | "cleared"
+    previousRating?: "up" | "down"
+    sessionID?: string
+    messageID?: string
+    parentMessageID?: string
+  }
+
+  export function trackFeedback(props: FeedbackProperties) {
+    track(TelemetryEvent.FEEDBACK_SUBMITTED, props)
+  }
+
   export async function shutdown(): Promise<void> {
-    await TracerSetup.shutdown()
     await Client.shutdown()
   }
 }

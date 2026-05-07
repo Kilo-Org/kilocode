@@ -76,6 +76,103 @@ export type EventFileWatcherUpdated = {
   }
 }
 
+export type QuestionOption = {
+  /**
+   * Display text (1-5 words, concise)
+   */
+  label: string
+  /**
+   * Explanation of choice
+   */
+  description: string
+  /**
+   * Optional i18n key for the label; clients translate and still reply with `label`
+   */
+  labelKey?: string
+  /**
+   * Optional i18n key for the description
+   */
+  descriptionKey?: string
+}
+
+export type QuestionInfo = {
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  /**
+   * Available choices
+   */
+  options: Array<QuestionOption>
+  /**
+   * Allow selecting multiple choices
+   */
+  multiple?: boolean
+  /**
+   * Optional i18n key for the question text; clients fall back to `question` when missing
+   */
+  questionKey?: string
+  /**
+   * Optional i18n key for the header; clients fall back to `header` when missing
+   */
+  headerKey?: string
+  /**
+   * Allow typing a custom answer (default: true)
+   */
+  custom?: boolean
+}
+
+export type QuestionTool = {
+  messageID: string
+  callID: string
+}
+
+export type QuestionRequest = {
+  id: string
+  sessionID: string
+  /**
+   * Questions to ask
+   */
+  questions: Array<QuestionInfo>
+  /**
+   * Whether this question blocks prompt input (default: true)
+   */
+  blocking?: boolean
+  tool?: QuestionTool
+}
+
+export type EventQuestionAsked = {
+  type: "question.asked"
+  properties: QuestionRequest
+}
+
+export type QuestionAnswer = Array<string>
+
+export type QuestionReplied = {
+  sessionID: string
+  requestID: string
+  answers: Array<QuestionAnswer>
+}
+
+export type EventQuestionReplied = {
+  type: "question.replied"
+  properties: QuestionReplied
+}
+
+export type QuestionRejected = {
+  sessionID: string
+  requestID: string
+}
+
+export type EventQuestionRejected = {
+  type: "question.rejected"
+  properties: QuestionRejected
+}
+
 export type EventLspClientDiagnostics = {
   type: "lsp.client.diagnostics"
   properties: {
@@ -88,20 +185,6 @@ export type EventLspUpdated = {
   type: "lsp.updated"
   properties: {
     [key: string]: unknown
-  }
-}
-
-export type EventInstallationUpdated = {
-  type: "installation.updated"
-  properties: {
-    version: string
-  }
-}
-
-export type EventInstallationUpdateAvailable = {
-  type: "installation.update-available"
-  properties: {
-    version: string
   }
 }
 
@@ -360,110 +443,74 @@ export type EventSessionError = {
   }
 }
 
-export type QuestionOption = {
-  /**
-   * Display text (1-5 words, concise)
-   */
-  label: string
-  /**
-   * Explanation of choice
-   */
-  description: string
-  /**
-   * Optional i18n key for the label; clients translate and still reply with `label`
-   */
-  labelKey?: string
-  /**
-   * Optional i18n key for the description
-   */
-  descriptionKey?: string
-}
-
-export type QuestionInfo = {
-  /**
-   * Complete question
-   */
-  question: string
-  /**
-   * Very short label (max 30 chars)
-   */
-  header: string
-  /**
-   * Available choices
-   */
-  options: Array<QuestionOption>
-  /**
-   * Allow selecting multiple choices
-   */
-  multiple?: boolean
-  /**
-   * Optional i18n key for the question text; clients fall back to `question` when missing
-   */
-  questionKey?: string
-  /**
-   * Optional i18n key for the header; clients fall back to `header` when missing
-   */
-  headerKey?: string
-  /**
-   * Allow typing a custom answer (default: true)
-   */
-  custom?: boolean
-}
-
-export type QuestionTool = {
-  messageID: string
-  callID: string
-}
-
-export type QuestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Questions to ask
-   */
-  questions: Array<QuestionInfo>
-  /**
-   * Whether this question blocks prompt input (default: true)
-   */
-  blocking?: boolean
-  tool?: QuestionTool
-}
-
-export type EventQuestionAsked = {
-  type: "question.asked"
-  properties: QuestionRequest
-}
-
-export type QuestionAnswer = Array<string>
-
-export type QuestionReplied = {
-  sessionID: string
-  requestID: string
-  answers: Array<QuestionAnswer>
-}
-
-export type EventQuestionReplied = {
-  type: "question.replied"
-  properties: QuestionReplied
-}
-
-export type QuestionRejected = {
-  sessionID: string
-  requestID: string
-}
-
-export type EventQuestionRejected = {
-  type: "question.rejected"
-  properties: QuestionRejected
-}
-
-export type EventCommandExecuted = {
-  type: "command.executed"
+export type EventInstallationUpdated = {
+  type: "installation.updated"
   properties: {
-    name: string
+    version: string
+  }
+}
+
+export type EventInstallationUpdateAvailable = {
+  type: "installation.update-available"
+  properties: {
+    version: string
+  }
+}
+
+export type Todo = {
+  /**
+   * Brief description of the task
+   */
+  content: string
+  /**
+   * Current status of the task: pending, in_progress, completed, cancelled
+   */
+  status: string
+  /**
+   * Priority level of the task: high, medium, low
+   */
+  priority: string
+}
+
+export type EventTodoUpdated = {
+  type: "todo.updated"
+  properties: {
     sessionID: string
-    arguments: string
-    messageID: string
+    todos: Array<Todo>
+  }
+}
+
+export type SessionStatus =
+  | {
+      type: "idle"
+    }
+  | {
+      type: "retry"
+      attempt: number
+      message: string
+      next: number
+    }
+  | {
+      type: "busy"
+    }
+  | {
+      type: "offline"
+      requestID: string
+      message: string
+    }
+
+export type EventSessionStatus = {
+  type: "session.status"
+  properties: {
+    sessionID: string
+    status: SessionStatus
+  }
+}
+
+export type EventSessionIdle = {
+  type: "session.idle"
+  properties: {
+    sessionID: string
   }
 }
 
@@ -526,60 +573,44 @@ export type EventSuggestionDismissed = {
   }
 }
 
-export type SessionStatus =
-  | {
-      type: "idle"
-    }
-  | {
-      type: "retry"
-      attempt: number
-      message: string
-      next: number
-    }
-  | {
-      type: "busy"
-    }
-  | {
-      type: "offline"
-      requestID: string
-      message: string
-    }
-
-export type EventSessionStatus = {
-  type: "session.status"
-  properties: {
-    sessionID: string
-    status: SessionStatus
-  }
-}
-
-export type EventSessionIdle = {
-  type: "session.idle"
+export type EventSessionCompacted = {
+  type: "session.compacted"
   properties: {
     sessionID: string
   }
 }
 
-export type Todo = {
-  /**
-   * Brief description of the task
-   */
-  content: string
-  /**
-   * Current status of the task: pending, in_progress, completed, cancelled
-   */
-  status: string
-  /**
-   * Priority level of the task: high, medium, low
-   */
-  priority: string
+export type EventCommandExecuted = {
+  type: "command.executed"
+  properties: {
+    name: string
+    sessionID: string
+    arguments: string
+    messageID: string
+  }
 }
 
-export type EventTodoUpdated = {
-  type: "todo.updated"
+export type EventKilocodeAgentManagerStart = {
+  type: "kilocode.agent_manager.start"
   properties: {
+    requestID: string
     sessionID: string
-    todos: Array<Todo>
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      /**
+       * Initial prompt to send to the new session
+       */
+      prompt?: string
+      /**
+       * Short display name for the Agent Manager card
+       */
+      name?: string
+      /**
+       * Git branch name seed for worktree mode
+       */
+      branchName?: string
+    }>
   }
 }
 
@@ -587,13 +618,6 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
-  }
-}
-
-export type EventSessionCompacted = {
-  type: "session.compacted"
-  properties: {
-    sessionID: string
   }
 }
 
@@ -1102,6 +1126,7 @@ export type Session = {
   projectID: string
   workspaceID?: string
   directory: string
+  path?: string
   parentID?: string
   summary?: {
     additions: number
@@ -1246,6 +1271,7 @@ export type SyncEventSessionUpdated = {
       projectID?: string | null
       workspaceID?: string | null
       directory?: string | null
+      path?: string | null
       parentID?: string | null
       summary?: {
         additions: number
@@ -1299,10 +1325,11 @@ export type GlobalEvent = {
     | EventGlobalConfigUpdated
     | EventFileEdited
     | EventFileWatcherUpdated
+    | EventQuestionAsked
+    | EventQuestionReplied
+    | EventQuestionRejected
     | EventLspClientDiagnostics
     | EventLspUpdated
-    | EventInstallationUpdated
-    | EventInstallationUpdateAvailable
     | EventTuiPromptAppend
     | EventTuiCommandExecute
     | EventTuiToastShow
@@ -1320,18 +1347,18 @@ export type GlobalEvent = {
     | EventSessionTurnClose
     | EventSessionDiff
     | EventSessionError
-    | EventQuestionAsked
-    | EventQuestionReplied
-    | EventQuestionRejected
-    | EventCommandExecuted
+    | EventInstallationUpdated
+    | EventInstallationUpdateAvailable
+    | EventTodoUpdated
+    | EventSessionStatus
+    | EventSessionIdle
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
-    | EventSessionStatus
-    | EventSessionIdle
-    | EventTodoUpdated
-    | EventVcsBranchUpdated
     | EventSessionCompacted
+    | EventCommandExecuted
+    | EventKilocodeAgentManagerStart
+    | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventWorktreeReady
     | EventWorktreeFailed
@@ -1535,10 +1562,10 @@ export type PermissionConfig =
       question?: PermissionActionConfig
       webfetch?: PermissionActionConfig
       websearch?: PermissionActionConfig
-      codesearch?: PermissionActionConfig
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
+      agent_manager?: PermissionRuleConfig
       [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
 
@@ -1548,9 +1575,9 @@ export type AgentConfig = {
    * Default model variant for this agent (applies only when using the agent's configured model).
    */
   variant?: string
-  temperature?: number
-  top_p?: number
-  prompt?: string
+  temperature?: number | null
+  top_p?: number | null
+  prompt?: string | null
   /**
    * @deprecated Use 'permission' field instead
    */
@@ -1561,7 +1588,7 @@ export type AgentConfig = {
   /**
    * Description of when to use the agent
    */
-  description?: string
+  description?: string | null
   mode?: "subagent" | "primary" | "all"
   /**
    * Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)
@@ -1577,7 +1604,7 @@ export type AgentConfig = {
   /**
    * Maximum number of agentic iterations before forcing text-only response
    */
-  steps?: number
+  steps?: number | null
   /**
    * @deprecated Use 'steps' field instead.
    */
@@ -1589,10 +1616,17 @@ export type AgentConfig = {
     | null
     | string
     | number
+    | null
+    | number
+    | null
+    | string
+    | null
     | {
         [key: string]: boolean
       }
     | boolean
+    | string
+    | null
     | "subagent"
     | "primary"
     | "all"
@@ -1607,6 +1641,8 @@ export type AgentConfig = {
     | "warning"
     | "error"
     | "info"
+    | number
+    | null
     | number
     | PermissionConfig
     | undefined
@@ -1646,6 +1682,7 @@ export type ProviderConfig = {
       id?: string
       name?: string
       family?: string
+      prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
       release_date?: string
       attachment?: boolean
       reasoning?: boolean
@@ -1788,6 +1825,10 @@ export type Config = {
    * JSON schema reference for configuration validation
    */
   $schema?: string
+  /**
+   * Default shell to use for terminal and bash tool
+   */
+  shell?: string
   logLevel?: LogLevel
   server?: ServerConfig
   /**
@@ -1855,7 +1896,15 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  /**
+   * Automatically collapse reasoning blocks after the agent finishes writing them
+   */
+  auto_collapse_reasoning?: boolean
   indexing?: IndexingConfig
+  /**
+   * Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI
+   */
+  terminal_command_display?: "expanded" | "collapsed"
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
@@ -1867,7 +1916,7 @@ export type Config = {
   /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
-  default_agent?: string
+  default_agent?: string | null
   /**
    * Custom username to display in conversations instead of system username
    */
@@ -1900,7 +1949,7 @@ export type Config = {
    * Custom provider configurations and model overrides
    */
   provider?: {
-    [key: string]: ProviderConfig
+    [key: string]: ProviderConfig | null
   }
   /**
    * MCP (Model Context Protocol) server configurations
@@ -2017,6 +2066,10 @@ export type Config = {
      * Enable semantic codebase indexing and the semantic_search tool
      */
     semantic_indexing?: boolean
+    /**
+     * Enable the VS Code Agent Manager orchestration tool
+     */
+    agent_manager_tool?: boolean
     /**
      * Enable telemetry. Set to false to opt-out.
      */
@@ -2156,7 +2209,7 @@ export type Model = {
     }
   }
   recommendedIndex?: number
-  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling"
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
   ai_sdk_provider?: "alibaba" | "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
@@ -2239,6 +2292,7 @@ export type GlobalSession = {
   projectID: string
   workspaceID?: string
   directory: string
+  path?: string
   parentID?: string
   summary?: {
     additions: number
@@ -2417,10 +2471,11 @@ export type Event =
   | EventGlobalConfigUpdated
   | EventFileEdited
   | EventFileWatcherUpdated
+  | EventQuestionAsked
+  | EventQuestionReplied
+  | EventQuestionRejected
   | EventLspClientDiagnostics
   | EventLspUpdated
-  | EventInstallationUpdated
-  | EventInstallationUpdateAvailable
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
@@ -2438,18 +2493,18 @@ export type Event =
   | EventSessionTurnClose
   | EventSessionDiff
   | EventSessionError
-  | EventQuestionAsked
-  | EventQuestionReplied
-  | EventQuestionRejected
-  | EventCommandExecuted
+  | EventInstallationUpdated
+  | EventInstallationUpdateAvailable
+  | EventTodoUpdated
+  | EventSessionStatus
+  | EventSessionIdle
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
-  | EventSessionStatus
-  | EventSessionIdle
-  | EventTodoUpdated
-  | EventVcsBranchUpdated
   | EventSessionCompacted
+  | EventCommandExecuted
+  | EventKilocodeAgentManagerStart
+  | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventWorktreeReady
   | EventWorktreeFailed
@@ -2498,6 +2553,10 @@ export type McpStatus =
   | McpStatusFailed
   | McpStatusNeedsAuth
   | McpStatusNeedsClientRegistration
+
+export type McpUnsupportedOAuthError = {
+  error: string
+}
 
 export type Path = {
   home: string
@@ -3105,6 +3164,29 @@ export type ProjectUpdateResponses = {
 }
 
 export type ProjectUpdateResponse = ProjectUpdateResponses[keyof ProjectUpdateResponses]
+
+export type PtyShellsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/pty/shells"
+}
+
+export type PtyShellsResponses = {
+  /**
+   * List of shells
+   */
+  200: Array<{
+    path: string
+    name: string
+    acceptable: boolean
+  }>
+}
+
+export type PtyShellsResponse = PtyShellsResponses[keyof PtyShellsResponses]
 
 export type PtyListData = {
   body?: never
@@ -3733,7 +3815,7 @@ export type ExperimentalSessionListData = {
     /**
      * Only return root sessions (no parentID)
      */
-    roots?: boolean
+    roots?: boolean | "true" | "false"
     /**
      * Filter sessions updated on or after this timestamp (milliseconds since epoch)
      */
@@ -3753,7 +3835,7 @@ export type ExperimentalSessionListData = {
     /**
      * Include archived sessions (default false)
      */
-    archived?: boolean
+    archived?: boolean | "true" | "false"
   }
   url: "/experimental/session"
 }
@@ -3794,14 +3876,22 @@ export type SessionListData = {
   path?: never
   query?: {
     /**
-     * Filter sessions by project directory
+     * Filter sessions by directory
      */
     directory?: string
     workspace?: string
     /**
+     * List all sessions for the current project
+     */
+    scope?: "project"
+    /**
+     * Filter sessions by project-relative path
+     */
+    path?: string
+    /**
      * Only return root sessions (no parentID)
      */
-    roots?: boolean
+    roots?: boolean | "true" | "false"
     /**
      * Filter sessions updated on or after this timestamp (milliseconds since epoch)
      */
@@ -5496,9 +5586,9 @@ export type McpAuthStartData = {
 
 export type McpAuthStartErrors = {
   /**
-   * Bad request
+   * MCP server does not support OAuth
    */
-  400: BadRequestError
+  400: McpUnsupportedOAuthError
   /**
    * Not found
    */
@@ -5574,9 +5664,9 @@ export type McpAuthAuthenticateData = {
 
 export type McpAuthAuthenticateErrors = {
   /**
-   * Bad request
+   * MCP server does not support OAuth
    */
-  400: BadRequestError
+  400: McpUnsupportedOAuthError
   /**
    * Not found
    */
@@ -6374,6 +6464,36 @@ export type TelemetryCaptureResponses = {
 }
 
 export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
+
+export type TelemetrySetEnabledData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/telemetry/setEnabled"
+}
+
+export type TelemetrySetEnabledErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type TelemetrySetEnabledError = TelemetrySetEnabledErrors[keyof TelemetrySetEnabledErrors]
+
+export type TelemetrySetEnabledResponses = {
+  /**
+   * State updated
+   */
+  200: boolean
+}
+
+export type TelemetrySetEnabledResponse = TelemetrySetEnabledResponses[keyof TelemetrySetEnabledResponses]
 
 export type RemoteEnableData = {
   body?: never
@@ -7203,7 +7323,16 @@ export type KiloClawStatusResponses = {
    * Instance status
    */
   200: {
-    status: "provisioned" | "starting" | "restarting" | "running" | "stopped" | "destroying" | null
+    status:
+      | "provisioned"
+      | "starting"
+      | "restarting"
+      | "recovering"
+      | "running"
+      | "stopped"
+      | "destroying"
+      | "restoring"
+      | null
     sandboxId?: string
     flyRegion?: string
     machineSize?: {
@@ -7216,6 +7345,7 @@ export type KiloClawStatusResponses = {
     channelCount?: number
     secretCount?: number
     userId?: string
+    botName?: string | null
   }
 }
 
@@ -7233,13 +7363,13 @@ export type KiloClawChatCredentialsData = {
 
 export type KiloClawChatCredentialsResponses = {
   /**
-   * Stream Chat credentials or null
+   * Kilo Chat credentials or null
    */
   200: {
-    apiKey: string
-    userId: string
-    userToken: string
-    channelId: string
+    token: string
+    expiresAt: string
+    kiloChatUrl: string
+    eventServiceUrl: string
   } | null
 }
 

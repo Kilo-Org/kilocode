@@ -3,16 +3,16 @@ import { AppRuntime } from "../../effect/app-runtime"
 import { cmd } from "./cmd"
 import * as prompts from "@clack/prompts"
 import { UI } from "../ui"
-import { ModelsDev } from "../../provider"
+import { ModelsDev } from "@/provider/models"
 import { map, pipe, sortBy, values } from "remeda"
 import path from "path"
 import os from "os"
-import { Config } from "../../config"
-import { Global } from "../../global"
+import { Config } from "@/config/config"
+import { Global } from "@opencode-ai/core/global"
 import { Plugin } from "../../plugin"
 import { Instance } from "../../project/instance"
 import type { Hooks } from "@kilocode/plugin"
-import { Process } from "../../util"
+import { Process } from "@/util/process"
 import { text } from "node:stream/consumers"
 import { Effect } from "effect"
 
@@ -375,7 +375,9 @@ export const ProvidersLoginCommand = cmd({
           existingProviders: providers,
           disabled,
           enabled,
-          providerNames: Object.fromEntries(Object.entries(config.provider ?? {}).map(([id, p]) => [id, p.name])),
+          providerNames: Object.fromEntries(
+            Object.entries(config.provider ?? {}).flatMap(([id, p]) => (p ? [[id, p.name]] : [])),
+          ), // kilocode_change
         })
         const options = [
           ...pipe(

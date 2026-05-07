@@ -1180,6 +1180,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
+  "settings.experimental.agentManagerTool.description":
+    "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
@@ -1195,7 +1198,7 @@ export const dict = {
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
-  "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av for dette arbeidsområdet.",
+  "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
   "settings.indexing.model.title": "Embedding-modell",
@@ -1395,6 +1398,15 @@ export const dict = {
   "settings.display.layout.description": "Layoutmodus for chatgrensesnittet",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Strekk",
+  "settings.display.fontSize.title": "Skriftstørrelse",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
+  "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
+  "settings.display.reasoningAutoCollapse.description":
+    "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",
@@ -1402,6 +1414,7 @@ export const dict = {
     "Lettvektsmodell for titelgenerering, generering av commit-meldinger, prompt-forbedring og andre raske oppgaver",
   "settings.providers.disabled": "Deaktiverte leverandører",
   "settings.providers.disabled.description": "Leverandører å skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverte leverandører (hvitliste)",
   "settings.providers.enabled.description": "Hvis angitt, er bare disse leverandørene tilgjengelige",
   "settings.providers.notSet": "Ikke angitt (bruk serverstandard)",
@@ -1518,4 +1531,14 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
+  "diffViewer.source.workspace.label": "Lokale endringer",
+  "diffViewer.source.workspace.tooltip":
+    "Alle endringer på denne grenen sammenlignet med basegrenen. Inkluderer ikke-committede filer (staged, unstaged, usporede) og lokale commits som ennå ikke er i basen.",
+  "diffViewer.source.session.label": "Økt",
+  "diffViewer.source.session.tooltip":
+    "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
+  "diffViewer.group.session": "Økt",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 } satisfies Partial<Record<Keys, string>>

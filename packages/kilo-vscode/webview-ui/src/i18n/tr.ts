@@ -1040,7 +1040,7 @@ export const dict = {
   "settings.indexing.title": "İndeksleme",
   "settings.indexing.status.title": "Durum",
   "settings.indexing.enable.title": "İndekslemeyi etkinleştir",
-  "settings.indexing.enable.description": "Bu çalışma alanı için anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.enable.description": "Anlamsal kod tabanı indekslemeyi açın veya kapatın.",
   "settings.indexing.provider.title": "Yerleştirme sağlayıcısı",
   "settings.indexing.provider.description":
     "Anlamsal arama için yerleştirmeleri oluşturmak amacıyla kullanılacak sağlayıcıyı seçin.",
@@ -1206,6 +1206,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
+  "settings.experimental.agentManagerTool.title": "Agent Manager Aracı",
+  "settings.experimental.agentManagerTool.description":
+    "Ajanların bir araç çağrısından Agent Manager yerel oturumları ve worktree oturumları başlatmasına izin ver",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
@@ -1369,6 +1372,15 @@ export const dict = {
   "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
+  "settings.display.fontSize.title": "Yazı Tipi Boyutu",
+  "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
+  "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
+  "settings.display.reasoningAutoCollapse.description":
+    "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",
@@ -1380,6 +1392,7 @@ export const dict = {
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",
   "settings.providers.disabled": "Devre Dışı Sağlayıcılar",
   "settings.providers.disabled.description": "Sağlayıcı listesinde gizlenecek sağlayıcılar",
+  "settings.providers.disabled.enable": "Etkinleştir",
   "settings.providers.enabled": "Etkin Sağlayıcılar (İzin Listesi)",
   "settings.providers.enabled.description":
     "Ayarlanırsa yalnızca bu sağlayıcılar kullanılabilir olacak (özel izin listesi)",
@@ -1544,4 +1557,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Kurallar sırayla değerlendirilir — son eşleşen kural kazanır. Bu, CLI arka ucundan çözümlenen kural kümesidir.",
   "settings.agentBehaviour.editMode.save": "Tamam",
+  "diffViewer.source.workspace.label": "Yerel değişiklikler",
+  "diffViewer.source.workspace.tooltip":
+    "Bu daldaki tüm değişiklikler, temel dal ile karşılaştırıldığında. Commitlenmemiş dosyaları (staged, unstaged, izlenmeyen) ve temelde henüz bulunmayan yerel commitleri içerir.",
+  "diffViewer.source.session.label": "Oturum",
+  "diffViewer.source.session.tooltip":
+    "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
+  "diffViewer.group.session": "Oturum",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 }

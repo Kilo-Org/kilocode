@@ -1041,7 +1041,7 @@ export const dict = {
   "settings.indexing.title": "Indexering",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
-  "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit voor deze werkruimte.",
+  "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
   "settings.indexing.provider.title": "Embedding-provider",
   "settings.indexing.provider.description":
     "Kies de provider die wordt gebruikt om embeddings te genereren voor semantisch zoeken.",
@@ -1213,6 +1213,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.agentManagerTool.title": "Agent Manager-tool",
+  "settings.experimental.agentManagerTool.description":
+    "Sta agents toe om lokale Agent Manager-sessies en worktree-sessies te starten vanuit een tool call",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1380,6 +1383,15 @@ export const dict = {
   "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Uitrekken",
+  "settings.display.fontSize.title": "Lettergrootte",
+  "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
+  "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
+  "settings.display.reasoningAutoCollapse.description":
+    "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",
@@ -1391,6 +1403,7 @@ export const dict = {
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
   "settings.providers.disabled": "Uitgeschakelde Providers",
   "settings.providers.disabled.description": "Providers om te verbergen in de providerlijst",
+  "settings.providers.disabled.enable": "Inschakelen",
   "settings.providers.enabled": "Ingeschakelde Providers (Allowlist)",
   "settings.providers.enabled.description":
     "Indien ingesteld, zijn alleen deze providers beschikbaar (exclusieve allowlist)",
@@ -1555,4 +1568,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
+  "diffViewer.source.workspace.label": "Lokale wijzigingen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle wijzigingen in deze branch vergeleken met de base branch. Inclusief niet-gecommitte bestanden (staged, unstaged, ungetrackt) en lokale commits die nog niet in de base zitten.",
+  "diffViewer.source.session.label": "Sessie",
+  "diffViewer.source.session.tooltip":
+    "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
+  "diffViewer.group.session": "Sessie",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 }

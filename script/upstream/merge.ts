@@ -10,9 +10,10 @@
  * Options:
  *   --version <version>  Target upstream version (e.g., v1.1.49)
  *   --commit <hash>      Target upstream commit hash
- *   --base-branch <name> Base branch to merge into (default: main)
+ *   --base-branch <name> Base branch to merge into, or HEAD for current branch (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
+ *   --no-worktrees       Don't create reference worktrees for manual resolution
  *   --report-only        Only generate conflict report, don't merge
  *   --verbose            Enable verbose logging
  *   --author <name>      Author name for branch prefix (default: from git config)
@@ -23,31 +24,19 @@ import * as git from "./utils/git"
 import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
-import { defaultConfig, loadConfig, type MergeConfig } from "./utils/config"
+import * as worktree from "./utils/worktree"
+import { loadConfig, resolveBaseBranch } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
 import { keepOursFiles, resetToOurs } from "./transforms/keep-ours"
-import { skipFiles, skipSpecificFiles } from "./transforms/skip-files"
+import { skipFiles } from "./transforms/skip-files"
 import { transformConflictedI18n, transformAllI18n } from "./transforms/transform-i18n"
 // New transforms for auto-resolving more conflict types
-import {
-  transformConflictedTakeTheirs,
-  shouldTakeTheirs,
-  transformAllTakeTheirs,
-} from "./transforms/transform-take-theirs"
-import { transformConflictedTauri, isTauriFile, transformAllTauri } from "./transforms/transform-tauri"
-import {
-  transformConflictedPackageJson,
-  isPackageJson,
-  transformAllPackageJson,
-} from "./transforms/transform-package-json"
-import { transformConflictedScripts, isScriptFile, transformAllScripts } from "./transforms/transform-scripts"
-import {
-  transformConflictedExtensions,
-  isExtensionFile,
-  transformAllExtensions,
-} from "./transforms/transform-extensions"
-import { transformConflictedWeb, isWebFile, transformAllWeb } from "./transforms/transform-web"
+import { transformConflictedTakeTheirs, transformAllTakeTheirs } from "./transforms/transform-take-theirs"
+import { transformConflictedPackageJson, transformAllPackageJson } from "./transforms/transform-package-json"
+import { transformConflictedScripts, transformAllScripts } from "./transforms/transform-scripts"
+import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
+import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
 
 interface MergeOptions {
@@ -56,6 +45,7 @@ interface MergeOptions {
   baseBranch?: string
   dryRun: boolean
   push: boolean
+  worktrees: boolean
   reportOnly: boolean
   verbose: boolean
   author?: string
@@ -150,6 +140,7 @@ function parseArgs(): MergeOptions {
   const options: MergeOptions = {
     dryRun: args.includes("--dry-run"),
     push: !args.includes("--no-push"),
+    worktrees: !args.includes("--no-worktrees"),
     reportOnly: args.includes("--report-only"),
     verbose: args.includes("--verbose"),
   }
@@ -175,6 +166,29 @@ function parseArgs(): MergeOptions {
   }
 
   return options
+}
+
+function logWorktrees(refs: worktree.RefInfo, input: worktree.RefInput, baseName: string): void {
+  logger.divider()
+  logger.info("Reference worktrees:")
+  logger.info(`  opencode:   ${refs.opencode} (${input.tag}, ${input.upstream.slice(0, 8)})`)
+  logger.info(`  kilo-main:  ${refs.main} (${baseName}, ${input.base.slice(0, 8)})`)
+  logger.info(`  auto-merge: ${refs.auto} (${refs.branch}, ${refs.snapshot.slice(0, 8)})`)
+  logger.info("")
+  logger.info("Agent prompt:")
+  logger.info("  Use these references while resolving the merge:")
+  logger.info(`  - upstream opencode: ${refs.opencode}`)
+  logger.info(`  - Kilo base main: ${refs.main}`)
+  logger.info(`  - automated merge snapshot: ${refs.auto}`)
+}
+
+async function prepareWorktrees(options: MergeOptions, input: worktree.RefInput, baseName: string) {
+  if (!options.worktrees) return null
+
+  logger.info("Preparing reference worktrees...")
+  const refs = await worktree.prepare(input)
+  logWorktrees(refs, input, baseName)
+  return refs
 }
 
 async function getAuthor(): Promise<string> {
@@ -205,7 +219,6 @@ async function main() {
   process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
 
   const options = parseArgs()
-  const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
   if (options.verbose) {
     logger.setVerbose(true)
@@ -233,6 +246,12 @@ async function main() {
 
   const currentBranch = await git.getCurrentBranch()
   logger.info(`Current branch: ${currentBranch}`)
+
+  const base = resolveBaseBranch(options.baseBranch, currentBranch)
+  const config = loadConfig(base ? { baseBranch: base } : undefined)
+  if (options.baseBranch === "HEAD") {
+    logger.info(`Resolved --base-branch HEAD to current branch: ${config.baseBranch}`)
+  }
 
   // Enable git rerere so conflict resolutions are recorded and reused across merges
   if (!options.dryRun) {
@@ -375,6 +394,7 @@ async function main() {
   // Create backup branch
   await git.checkout(config.baseBranch)
   await git.pull(config.originRemote)
+  const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
 
@@ -405,6 +425,13 @@ async function main() {
   // This reduces conflicts by transforming upstream code to Kilo conventions BEFORE merging
   logger.step(6, 8, "Applying transformations to opencode branch (pre-merge)...")
 
+  logger.info("Removing files skipped in Kilo...")
+  const skips = await skipFiles({ dryRun: false, verbose: options.verbose, force: true })
+  const count = skips.filter((r) => r.action === "removed").length
+  if (count > 0) {
+    logger.success(`Removed ${count} skipped file(s) from opencode branch`)
+  }
+
   // 6a. Transform package names (opencode-ai -> @kilocode/cli)
   logger.info("Transforming package names...")
   const nameResults = await transformPackageNames({ dryRun: false, verbose: options.verbose })
@@ -433,14 +460,6 @@ async function main() {
   const brandingCount = brandingResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
   if (brandingCount > 0) {
     logger.success(`Transformed ${brandingCount} files with Kilo branding`)
-  }
-
-  // 6e. Transform Tauri/Desktop config files
-  logger.info("Transforming Tauri/Desktop config files...")
-  const tauriPreResults = await transformAllTauri({ dryRun: false, verbose: options.verbose })
-  const tauriPreCount = tauriPreResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
-  if (tauriPreCount > 0) {
-    logger.success(`Transformed ${tauriPreCount} Tauri config files`)
   }
 
   // 6f. Transform package.json files (names, deps, Kilo injections)
@@ -594,26 +613,6 @@ async function main() {
         }
       }
 
-      // Transform Tauri files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const tauriResults = await transformConflictedTauri(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const tauriCount = tauriResults.filter((r) => r.action === "transformed").length
-        if (tauriCount > 0) {
-          logger.success(`Auto-resolved ${tauriCount} Tauri conflicts`)
-        }
-        const tauriFlagged = tauriResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (tauriFlagged.length > 0) {
-          logger.warn(
-            `${tauriFlagged.length} Tauri file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...tauriFlagged)
-        }
-      }
-
       // Transform package.json files
       conflictedFiles = await git.getConflictedFiles()
       if (conflictedFiles.length > 0) {
@@ -734,6 +733,17 @@ async function main() {
       await report.saveReport(conflictReport, reportPath)
       logger.success(`Report saved to ${reportPath}`)
 
+      await prepareWorktrees(
+        options,
+        {
+          tag: targetVersion.tag,
+          upstream: targetVersion.commit,
+          base: await git.getCommitHash("HEAD"),
+          merge: await git.getCommitHash(opencodeBranch),
+        },
+        config.baseBranch,
+      )
+
       logger.divider()
       logger.info("Next steps:")
       logger.info("  1. Resolve remaining conflicts manually")
@@ -760,6 +770,8 @@ async function main() {
       await git.commit(`merge: upstream ${targetVersion.tag}`)
     }
   }
+
+  const autoSha = await git.getCommitHash("HEAD")
 
   // Step 8: Regenerate lock files and finalize
   logger.step(8, 8, "Regenerating lock files and finalizing...")
@@ -816,6 +828,18 @@ async function main() {
   logger.info(`Opencode branch: ${opencodeBranch}`)
   logger.info(`Backup branch: ${backupBranch}`)
   logger.info(`Report: ${reportPath}`)
+
+  await prepareWorktrees(
+    options,
+    {
+      tag: targetVersion.tag,
+      upstream: targetVersion.commit,
+      base: baseSha,
+      merge: opencodeBranch,
+      snapshot: autoSha,
+    },
+    config.baseBranch,
+  )
 
   const remainingConflicts = await git.getConflictedFiles()
   if (remainingConflicts.length > 0) {

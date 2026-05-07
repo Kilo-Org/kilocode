@@ -267,13 +267,9 @@
             opencode = final.callPackage ./nix/opencode.nix {
               inherit node_modules;
             };
-            desktop = final.callPackage ./nix/desktop.nix {
-              inherit opencode;
-            };
           in
           {
             inherit opencode;
-            opencode-desktop = desktop;
           };
       };
 
@@ -286,13 +282,10 @@
           kilo = pkgs.callPackage ./nix/kilo.nix {
             inherit node_modules;
           };
-          desktop = pkgs.callPackage ./nix/desktop.nix {
-            inherit kilo;
-          };
         in
         {
           default = kilo;
-          inherit kilo desktop;
+          inherit kilo;
           # Updater derivation with fakeHash - build fails and reveals correct hash
           node_modules_updater = node_modules.override {
             hash = pkgs.lib.fakeHash;

@@ -3,11 +3,10 @@ package ai.kilocode.client.session.ui
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.Disposable
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import java.awt.FlowLayout
 
 /**
@@ -18,24 +17,23 @@ import java.awt.FlowLayout
  * - [SessionState.Busy] → shows an animated spinner and [SessionState.Busy.text]
  * - Any other state → hidden
  *
- * Owned by [SessionPanel], which always re-anchors it as the last child so it
+ * Owned by [SessionMessageListPanel], which always re-anchors it as the last child so it
  * appears below all turn views inside the scroll pane.
  */
 class ProgressPanel(
     model: SessionModel,
     parent: Disposable,
-) : SessionLayoutPanel() {
+) : SessionLayoutPanel(), SessionStyleTarget {
 
     private val label = JBLabel().apply {
-        foreground = UIUtil.getContextHelpForeground()
-        font = JBUI.Fonts.label()
+        foreground = UiStyle.Colors.weak()
     }
 
     init {
         isOpaque = false
         isVisible = false
-        layout = FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)
-        border = JBUI.Borders.empty(JBUI.scale(6), 0, JBUI.scale(4), 0)
+        layout = FlowLayout(FlowLayout.LEFT, UiStyle.Gap.inline(), 0)
+        applyStyle(SessionStyle.current())
 
         add(JBLabel(AnimatedIcon.Default()))
         add(label)
@@ -56,6 +54,12 @@ class ProgressPanel(
             }
             else -> isVisible = false
         }
+        revalidate()
+        repaint()
+    }
+
+    override fun applyStyle(style: SessionStyle) {
+        label.font = style.uiFont
         revalidate()
         repaint()
     }

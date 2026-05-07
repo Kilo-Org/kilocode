@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { Instance } from "@/project/instance"
 import type { DiffFile, DiffHunk, DiffResult } from "./types"
 

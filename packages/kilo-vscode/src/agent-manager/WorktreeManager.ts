@@ -13,6 +13,7 @@ import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
 import { type GitOps, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
+import { markNoIndex } from "../util/spotlight"
 import {
   parsePRUrl,
   localBranchName,
@@ -30,7 +31,7 @@ import {
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
-interface WorktreeInfo {
+export interface WorktreeInfo {
   branch: string
   path: string
   /** Bare branch name (e.g. "main"), without remote prefix. */
@@ -424,6 +425,7 @@ export class WorktreeManager {
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
     await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
+    await markNoIndex(this.dir, this.log)
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
     this.cleanupOrphanedTempDirs()
@@ -575,6 +577,7 @@ export class WorktreeManager {
     if (!fs.existsSync(this.dir)) {
       await fs.promises.mkdir(this.dir, { recursive: true })
     }
+    await markNoIndex(this.dir, this.log)
   }
 
   private async resolveGitDir(): Promise<string> {

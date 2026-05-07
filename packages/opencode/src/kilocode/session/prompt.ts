@@ -2,20 +2,24 @@
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
-import { Cause, Exit } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
-import { Session } from "@/session"
-import { Flag } from "@/flag/flag"
+import { Session } from "@/session/session"
+import type { SessionStatus } from "@/session/status"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
+import { Permission } from "@/permission"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
+  const modes = ["ask", "plan"]
+
   /**
    * Determines whether the plan follow-up prompt should be shown.
    * Checks if the plan_exit tool was called in the last assistant turn.
@@ -52,6 +56,44 @@ export namespace KiloSessionPrompt {
 
   export function abortPlanFollowup(sessionID: SessionID) {
     return PlanFollowup.abort(sessionID)
+  }
+
+  export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
+    sessionID: SessionID
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+  }) {
+    const state = yield* input.status.get(input.sessionID)
+    if (state.type !== "idle") return
+
+    const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+    const tail = msgs.at(-1)
+    if (!tail || tail.info.role !== "assistant") return
+    if (tail.parts.length > 0 || tail.info.finish || tail.info.error) return
+
+    const prev = msgs.at(-2)
+    if (!prev || prev.info.role !== "user") return
+    if (tail.info.parentID !== prev.info.id) return
+
+    yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+  })
+
+  export function guardPermissions(input: {
+    agent: { name: string; permission: Permission.Ruleset }
+    session: Pick<Session.Info, "permission">
+  }) {
+    const rules = input.session.permission ?? []
+    if (!modes.includes(input.agent.name)) return rules
+    return Permission.merge(
+      rules,
+      input.agent.permission,
+      rules.filter((rule) => rule.action === "deny"),
+    )
+  }
+
+  export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
+    if (!modes.includes(input.agent.name)) return
+    return input.agent.permission
   }
 
   /**
@@ -117,6 +159,16 @@ export namespace KiloSessionPrompt {
   }
 
   /**
+   * Ensures the plan file directory exists. Pre-checks with `Filesystem.isDir`
+   * because `fs.mkdir(recursive: true)` still throws `EEXIST` on Windows
+   * OneDrive ReparsePoint directories in some Node versions (kilocode#9755).
+   */
+  export async function ensurePlanDir(dir: string) {
+    if (await Filesystem.isDir(dir)) return
+    await fs.mkdir(dir, { recursive: true })
+  }
+
+  /**
    * Injects plan-specific reminders into the user message when using the plan agent.
    * Ensures the plan file directory exists and tells the agent where to write.
    */
@@ -128,7 +180,7 @@ export namespace KiloSessionPrompt {
     if (input.agent.name !== "plan") return
     const plan = Session.plan(input.session)
     const exists = await Filesystem.exists(plan)
-    if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
+    if (!exists) await ensurePlanDir(path.dirname(plan))
     const info = exists
       ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
       : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`

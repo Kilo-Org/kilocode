@@ -3,14 +3,14 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { createMemo, createResource, createSignal, onMount } from "solid-js"
-import { Locale } from "@/util"
+import { Locale } from "@/util/locale"
 import { useProject } from "@tui/context/project"
 import { useKeybind } from "../context/keybind"
 import { useTheme } from "../context/theme"
 import { useSDK } from "../context/sdk"
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { DialogSessionRename } from "./dialog-session-rename"
-import { Keybind } from "@/util"
+import { Keybind } from "@/util/keybind"
 import { createDebouncedSignal } from "../util/signal"
 import { useToast } from "../ui/toast"
 import { DialogWorkspaceCreate, openWorkspaceSession, restoreWorkspaceSession } from "./dialog-workspace-create"
@@ -35,6 +35,9 @@ export function DialogSessionList() {
   const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
 
   // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
+  // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
+  // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
+  // keeping worktree grouping. Currently the toggle has no effect here.
   const [searchResults, searchActions] = createResource(
     () => search(),
     async (query) => {

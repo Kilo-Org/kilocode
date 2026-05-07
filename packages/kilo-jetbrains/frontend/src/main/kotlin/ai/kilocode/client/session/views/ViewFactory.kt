@@ -4,6 +4,7 @@ import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Generic
 import ai.kilocode.client.session.model.Reasoning
+import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 
@@ -21,6 +22,7 @@ object ViewFactory {
         is Reasoning -> ReasoningView(content)
         is Tool -> ToolView(content)
         is Compaction -> CompactionView(content)
+        is StepFinish -> error("step-finish is timeline-only")
         is Generic -> GenericView(content)
     }
 }

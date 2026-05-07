@@ -6,7 +6,7 @@
 import * as path from "path"
 import { Effect, Schema, Semaphore } from "effect"
 import * as Tool from "./tool"
-import { LSP } from "../lsp"
+import { LSP } from "@/lsp/lsp"
 import { createTwoFilesPatch, diffLines } from "diff"
 import DESCRIPTION from "./edit.txt"
 import { File } from "../file"
@@ -16,11 +16,11 @@ import { Format } from "../format"
 import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import * as Bom from "@/util/bom"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 

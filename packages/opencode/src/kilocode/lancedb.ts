@@ -1,4 +1,4 @@
-import { Npm } from "@/npm"
+import { Npm } from "@opencode-ai/core/npm"
 
 export namespace LanceDBRuntime {
   export const env = "KILO_LANCEDB_PATH"

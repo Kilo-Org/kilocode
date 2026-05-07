@@ -753,8 +753,7 @@ export const dict = {
 
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
-  "settings.indexing.enable.description":
-    "Включить или отключить семантическую индексацию кодовой базы для этого рабочего пространства.",
+  "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.provider.title": "Провайдер эмбеддингов",
   "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",
@@ -1208,6 +1207,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
+  "settings.experimental.agentManagerTool.title": "Инструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Разрешить агентам запускать локальные сеансы Agent Manager и сеансы worktree через вызов инструмента",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
@@ -1404,6 +1406,15 @@ export const dict = {
   "settings.display.layout.description": "Режим макета для интерфейса чата",
   "settings.display.layout.auto": "Авто",
   "settings.display.layout.stretch": "Растянуть",
+  "settings.display.fontSize.title": "Размер шрифта",
+  "settings.display.fontSize.description": "Настройте размер шрифта webview UI для Kilo независимо от VS Code.",
+  "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
+  "settings.display.reasoningAutoCollapse.description":
+    "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",
@@ -1411,6 +1422,7 @@ export const dict = {
     "Лёгкая модель для генерации заголовков, сообщений коммитов, улучшения промптов и других быстрых задач",
   "settings.providers.disabled": "Отключённые провайдеры",
   "settings.providers.disabled.description": "Провайдеры для скрытия из списка",
+  "settings.providers.disabled.enable": "Включить",
   "settings.providers.enabled": "Включённые провайдеры (белый список)",
   "settings.providers.enabled.description": "Если установлено, только эти провайдеры будут доступны",
   "settings.providers.notSet": "Не задано (использовать значение сервера по умолчанию)",
@@ -1529,4 +1541,14 @@ export const dict = {
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
   "notifications.action.tryModelGeneric": "Попробовать модель",
+  "diffViewer.source.workspace.label": "Локальные изменения",
+  "diffViewer.source.workspace.tooltip":
+    "Все изменения в этой ветке по сравнению с базовой. Включает незакоммиченные файлы (staged, unstaged, неотслеживаемые) и локальные коммиты, которых ещё нет в базе.",
+  "diffViewer.source.session.label": "Сессия",
+  "diffViewer.source.session.tooltip":
+    "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
+  "diffViewer.group.session": "Сессия",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 }

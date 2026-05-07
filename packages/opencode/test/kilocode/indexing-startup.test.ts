@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
-import type { Config } from "../../src/config"
+import type { Config } from "../../src/config/config"
 import { GlobalBus } from "../../src/bus/global"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
@@ -42,6 +42,7 @@ const off: Partial<Config.Info> = {
   },
 }
 const configDir = process.env["KILO_CONFIG_DIR"]
+const disabled = process.env["KILO_DISABLE_CODEBASE_INDEXING"]
 const error = new Error("test indexing initialization failed")
 
 async function wait(read: () => Promise<KiloIndexing.Status>, state: KiloIndexing.Status["state"]) {
@@ -64,6 +65,8 @@ async function called(init: ReturnType<typeof spyOn<CodeIndexManager, "initializ
 afterEach(async () => {
   if (configDir === undefined) delete process.env["KILO_CONFIG_DIR"]
   else process.env["KILO_CONFIG_DIR"] = configDir
+  if (disabled === undefined) delete process.env["KILO_DISABLE_CODEBASE_INDEXING"]
+  else process.env["KILO_DISABLE_CODEBASE_INDEXING"] = disabled
   await Instance.disposeAll()
 })
 
@@ -144,7 +147,10 @@ describe("indexing startup degradation", () => {
     const gate = Promise.withResolvers<{ requiresRestart: boolean }>()
     const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
     const events: KiloIndexing.Status[] = []
-    const on = (data: { directory?: string; payload?: { type?: string; properties?: { status?: KiloIndexing.Status } } }) => {
+    const on = (data: {
+      directory?: string
+      payload?: { type?: string; properties?: { status?: KiloIndexing.Status } }
+    }) => {
       if (data.directory !== tmp.path) return
       if (data.payload?.type !== KiloIndexing.Event.type) return
       if (data.payload.properties?.status) events.push(data.payload.properties.status)
@@ -244,5 +250,33 @@ describe("indexing startup degradation", () => {
         expect(init).not.toHaveBeenCalled()
       },
     })
+  })
+
+  test("stays disabled when VS Code starts without a workspace folder", async () => {
+    await using tmp = await tmpdir({ git: true, config: cfg })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env["KILO_DISABLE_CODEBASE_INDEXING"] = "vscode-no-workspace"
+    const init = spyOn(CodeIndexManager.prototype, "initialize")
+
+    try {
+      await Instance.provide({
+        directory: tmp.path,
+        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        fn: async () => {
+          const status = await KiloIndexing.current()
+
+          expect(status).toMatchObject({
+            state: "Disabled",
+            message: "Codebase indexing is disabled because no workspace folder is open in VS Code.",
+          })
+          expect(await KiloIndexing.available()).toBe(false)
+          expect(KiloIndexing.ready()).toBe(false)
+          expect(await KiloIndexing.search("no workspace")).toEqual([])
+          expect(init).not.toHaveBeenCalled()
+        },
+      })
+    } finally {
+      init.mockRestore()
+    }
   })
 })

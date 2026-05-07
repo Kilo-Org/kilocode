@@ -8,13 +8,13 @@ import { Patch } from "../patch"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { trimDiff } from "./edit"
-import { LSP } from "../lsp"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { LSP } from "@/lsp/lsp"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
 

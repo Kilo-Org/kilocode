@@ -1040,8 +1040,7 @@ export const dict = {
   "settings.indexing.title": "Індексування",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
-  "settings.indexing.enable.description":
-    "Увімкніть або вимкніть семантичне індексування кодової бази для цього робочого простору.",
+  "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
   "settings.indexing.provider.title": "Провайдер ембедингів",
   "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
   "settings.indexing.model.title": "Модель ембедингів",
@@ -1209,6 +1208,9 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
@@ -1371,6 +1373,15 @@ export const dict = {
   "settings.display.layout.description": "Режим макету для інтерфейсу чату",
   "settings.display.layout.auto": "Автоматично",
   "settings.display.layout.stretch": "Розтягнути",
+  "settings.display.fontSize.title": "Розмір шрифту",
+  "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
+  "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
+  "settings.display.reasoningAutoCollapse.description":
+    "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",
@@ -1382,6 +1393,7 @@ export const dict = {
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
   "settings.providers.disabled": "Вимкнені провайдери",
   "settings.providers.disabled.description": "Провайдери, що будуть приховані у списку провайдерів",
+  "settings.providers.disabled.enable": "Увімкнути",
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",
@@ -1546,4 +1558,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
+  "diffViewer.source.workspace.label": "Локальні зміни",
+  "diffViewer.source.workspace.tooltip":
+    "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
+  "diffViewer.source.session.label": "Сесія",
+  "diffViewer.source.session.tooltip":
+    "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
+  "diffViewer.group.session": "Сесія",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 }

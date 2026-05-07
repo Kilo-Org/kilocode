@@ -10,7 +10,7 @@ import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
 await fs.mkdir(dir, { recursive: true })
 afterAll(async () => {
-  const { Database } = await import("../src/storage")
+  const { Database } = await import("../src/storage/db")
   Database.close()
   await cleanup(dir) // kilocode_change
 })
@@ -65,7 +65,7 @@ delete process.env["KILO_SERVER_USERNAME"]
 process.env["KILO_DB"] = ":memory:"
 
 // Now safe to import from src/
-const { Log } = await import("../src/util")
+const Log = await import("@opencode-ai/core/util/log")
 const { initProjectors } = await import("../src/server/projectors")
 
 void Log.init({

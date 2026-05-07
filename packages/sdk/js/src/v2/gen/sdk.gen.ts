@@ -150,6 +150,7 @@ import type {
   PtyListResponses,
   PtyRemoveErrors,
   PtyRemoveResponses,
+  PtyShellsResponses,
   PtyUpdateErrors,
   PtyUpdateResponses,
   QuestionAnswer,
@@ -220,6 +221,8 @@ import type {
   SyncStartResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
+  TelemetrySetEnabledErrors,
+  TelemetrySetEnabledResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -911,12 +914,12 @@ export class Session extends HeyApiClient {
       workspace?: string
       projectID?: string
       worktrees?: boolean
-      roots?: boolean
+      roots?: boolean | "true" | "false"
       start?: number
       cursor?: number
       search?: string
       limit?: number
-      archived?: boolean
+      archived?: boolean | "true" | "false"
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1146,6 +1149,36 @@ export class Project extends HeyApiClient {
 }
 
 export class Pty extends HeyApiClient {
+  /**
+   * List available shells
+   *
+   * Get a list of available shells on the system.
+   */
+  public shells<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<PtyShellsResponses, unknown, ThrowOnError>({
+      url: "/pty/shells",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * List PTY sessions
    *
@@ -1810,7 +1843,9 @@ export class Session2 extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      roots?: boolean
+      scope?: "project"
+      path?: string
+      roots?: boolean | "true" | "false"
       start?: number
       search?: string
       limit?: number
@@ -1824,6 +1859,8 @@ export class Session2 extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "query", key: "scope" },
+            { in: "query", key: "path" },
             { in: "query", key: "roots" },
             { in: "query", key: "start" },
             { in: "query", key: "search" },
@@ -4901,6 +4938,45 @@ export class Telemetry extends HeyApiClient {
       },
     })
   }
+
+  /**
+   * Set PostHog telemetry enabled state
+   *
+   * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
+   */
+  public setEnabled<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TelemetrySetEnabledResponses, TelemetrySetEnabledErrors, ThrowOnError>(
+      {
+        url: "/telemetry/setEnabled",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
 }
 
 export class Remote extends HeyApiClient {
@@ -5752,7 +5828,7 @@ export class Claw extends HeyApiClient {
   /**
    * Get KiloClaw chat credentials
    *
-   * Fetch Stream Chat credentials for the user's KiloClaw instance
+   * Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.
    */
   public chatCredentials<ThrowOnError extends boolean = false>(
     parameters?: {

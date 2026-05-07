@@ -7,11 +7,11 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
-import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  * Project-level frontend service for session management.
  *
  * Stateless with respect to "active session" — callers pass explicit
- * session IDs. [ai.kilocode.client.session.SessionController] owns the
+ * session IDs. [ai.kilocode.client.session.update.SessionController] owns the
  * active session concept.
  */
 @Service(Service.Level.PROJECT)
@@ -84,6 +84,14 @@ class KiloSessionService internal constructor(
         }
     }
 
+    /** Load recent sessions for the current worktree family. */
+    suspend fun recent(dir: String, limit: Int): List<SessionDto> =
+        call { recent(dir, limit) }.sessions
+
+    /** Get a single session. */
+    suspend fun get(id: String, dir: String): SessionDto =
+        call { get(id, dir) }
+
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
         LOG.info("create: dir=$dir")
@@ -118,15 +126,14 @@ class KiloSessionService internal constructor(
 
     // ------ Chat ops (explicit session ID) ------
 
-    /** Send a text prompt to a session. */
-    suspend fun prompt(id: String, dir: String, text: String) {
+    /** Send a prompt to a session. */
+    suspend fun prompt(id: String, dir: String, dto: PromptDto) {
         val meta = if (LOG.isDebugEnabled) {
-            "${ChatLogSummary.dir(dir)} ${ChatLogSummary.prompt(text)}"
+            "${ChatLogSummary.dir(dir)} ${ChatLogSummary.prompt(dto)}"
         } else {
-            "kind=prompt chars=${text.length}"
+            "kind=prompt parts=${dto.parts.size}"
         }
         LOG.info("${ChatLogSummary.sid(id)} $meta")
-        val dto = PromptDto(parts = listOf(PromptPartDto(type = "text", text = text)))
         call { prompt(id, dir, dto) }
         LOG.info("${ChatLogSummary.sid(id)} kind=prompt ok=true")
     }
@@ -134,6 +141,11 @@ class KiloSessionService internal constructor(
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, dir: String) {
         call { abort(id, dir) }
+    }
+
+    /** Summarize/compact a session. */
+    suspend fun compact(id: String, dir: String, model: ModelSelectionDto) {
+        call { compact(id, dir, model) }
     }
 
     /** Load message history for a session. */

@@ -1,19 +1,20 @@
 import { lstat } from "fs/promises" // kilocode_change
 import { Effect, Option, Schema, Scope } from "effect"
+import { NonNegativeInt } from "@/util/schema"
 import { createReadStream } from "fs"
 import * as path from "path"
 import { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { LSP } from "../lsp"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
 import { Instance } from "../project/instance"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
 import { isImageAttachment, isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
-import { Encoding } from "../kilocode/encoding"
+import * as Encoding from "../kilocode/encoding"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -31,10 +32,10 @@ const DIRECTORY_CONCURRENCY = 8 // kilocode_change
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
   filePath: Schema.String.annotate({ description: "The absolute path to the file or directory to read" }),
-  offset: Schema.optional(Schema.Number).annotate({
+  offset: Schema.optional(NonNegativeInt).annotate({
     description: "The line number to start reading from (1-indexed)",
   }),
-  limit: Schema.optional(Schema.Number).annotate({
+  limit: Schema.optional(NonNegativeInt).annotate({
     description: "The maximum number of lines to read (defaults to 2000)",
   }),
 })
@@ -143,9 +144,9 @@ export const ReadTool = Tool.define(
 
       if (bytes.length === 0) return false
 
-      // kilocode_change start - UTF-16 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
-      if (Encoding.hasUtf16Bom(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength), bytes.length))
-        return false
+      // kilocode_change start - UTF-16/32 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
+      const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      if (Encoding.hasUtf16Bom(buf, bytes.length) || Encoding.hasUtf32Bom(buf, bytes.length)) return false
       // kilocode_change end
 
       let nonPrintableCount = 0

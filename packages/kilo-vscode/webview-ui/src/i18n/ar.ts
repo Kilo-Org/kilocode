@@ -1025,7 +1025,7 @@ export const dict = {
   "settings.context.title": "السياق",
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
-  "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية لمساحة العمل هذه.",
+  "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
   "settings.indexing.provider.title": "موفر التضمين",
   "settings.indexing.provider.description": "اختر الموفر المستخدم لإنشاء التضمينات للبحث الدلالي.",
   "settings.indexing.model.title": "نموذج التضمين",
@@ -1184,6 +1184,9 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
+  "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
@@ -1372,6 +1375,15 @@ export const dict = {
   "settings.display.layout.description": "وضع التخطيط لواجهة الدردشة",
   "settings.display.layout.auto": "تلقائي",
   "settings.display.layout.stretch": "تمديد",
+  "settings.display.fontSize.title": "حجم الخط",
+  "settings.display.fontSize.description": "اضبط حجم خط webview UI الخاص بـ Kilo بشكل مستقل عن VS Code.",
+  "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
+  "settings.display.reasoningAutoCollapse.description":
+    "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
   "settings.providers.defaultModel.title": "النموذج الافتراضي",
   "settings.providers.defaultModel.description": "النموذج الأساسي للمحادثات",
   "settings.providers.smallModel.title": "نموذج صغير",
@@ -1379,6 +1391,7 @@ export const dict = {
     "نموذج خفيف لتوليد العناوين ورسائل الـ commit وتحسين المطالبات والمهام السريعة الأخرى",
   "settings.providers.disabled": "مزودون معطلون",
   "settings.providers.disabled.description": "مزودون لإخفائهم من القائمة",
+  "settings.providers.disabled.enable": "تمكين",
   "settings.providers.enabled": "مزودون مفعلون (قائمة بيضاء)",
   "settings.providers.enabled.description": "إذا تم التعيين، فقط هؤلاء المزودون سيكونون متاحين",
   "settings.providers.notSet": "غير محدد (استخدام الافتراضي)",
@@ -1498,4 +1511,14 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
+  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.tooltip":
+    "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
+  "diffViewer.source.session.label": "الجلسة",
+  "diffViewer.source.session.tooltip":
+    "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
+  "diffViewer.group.session": "الجلسة",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 }

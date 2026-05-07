@@ -8,7 +8,7 @@
  */
 
 import { createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector, useContext } from "solid-js"
-import type { Component } from "solid-js"
+import type { Accessor, Component } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -80,6 +80,8 @@ export interface ModelSelectorBaseProps {
   onSelect: (providerID: string, modelID: string) => void
   /** Called after a pick closes the popover */
   onPick?: () => void
+  /** Called after Escape closes the popover without picking */
+  onCancel?: () => void
   /** Popover placement — defaults to "top-start" */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Allow clearing the selection (shows a "Not set" option) */
@@ -363,6 +365,17 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   window.addEventListener("openModelPicker", onTrigger)
   onCleanup(() => window.removeEventListener("openModelPicker", onTrigger))
 
+  const onEscape = (e: KeyboardEvent) => {
+    if (!open() || e.key !== "Escape") return
+    e.preventDefault()
+    cancel()
+  }
+  createEffect(() => {
+    if (!open()) return
+    window.addEventListener("keydown", onEscape, true)
+    onCleanup(() => window.removeEventListener("keydown", onEscape, true))
+  })
+
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
@@ -376,6 +389,12 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     props.onSelect("", "")
     setOpen(false)
     props.onPick?.()
+  }
+
+  function cancel() {
+    if (!open()) return
+    setOpen(false)
+    props.onCancel?.()
   }
 
   function setRow(key: string) {
@@ -439,7 +458,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
     if (e.key === "Escape") {
       e.preventDefault()
-      setOpen(false)
+      cancel()
       return
     }
 
@@ -711,16 +730,24 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 // Chat-specific wrapper (backwards-compatible default export)
 // ---------------------------------------------------------------------------
 
-export const ModelSelector: Component = () => {
+interface ModelSelectorProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ModelSelector: Component<ModelSelectorProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ModelSelectorBase
-      value={session.selected()}
+      value={session.selected(id())}
       onSelect={(providerID, modelID) => {
-        session.selectModel(providerID, modelID)
+        session.selectModel(providerID, modelID, id())
       }}
       onPick={() => {
+        requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
+      }}
+      onCancel={() => {
         requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
       }}
     />

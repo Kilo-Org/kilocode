@@ -5,7 +5,6 @@ import {
   createSignal,
   For,
   Match,
-  on,
   onCleanup,
   Show,
   Switch,
@@ -43,8 +42,8 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/shared/util/path"
-import { checksum } from "@opencode-ai/shared/util/encode"
+import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/core/util/path"
+import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
@@ -86,6 +85,17 @@ interface Diagnostic {
   severity?: number
 }
 
+type TodoView = {
+  mode?: "full" | "compact"
+  todos?: TodoItem[]
+  hiddenBefore?: number
+  hiddenAfter?: number
+}
+
+type TodoItem = Todo & {
+  changed?: boolean
+}
+
 function getDiagnostics(
   diagnosticsByFile: Record<string, Diagnostic[]> | undefined,
   filePath: string | undefined,
@@ -116,16 +126,24 @@ function DiagnosticsDisplay(props: { diagnostics: Diagnostic[] }): JSX.Element {
   )
 }
 
+export interface MessageFeedbackControls {
+  enabled?: boolean
+  rating?: "up" | "down"
+  onRate?: (rating: "up" | "down" | null) => void
+}
+
 export interface MessagePartProps {
   part: PartType
   message: MessageType
   hideDetails?: boolean
   defaultOpen?: boolean
+  reasoningAutoCollapse?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
   turnDiffSummary?: () => JSX.Element
   animate?: boolean
   working?: boolean
+  feedback?: MessageFeedbackControls
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -383,6 +401,7 @@ export function AssistantParts(props: {
   turnDiffSummary?: () => JSX.Element
   working?: boolean
   showReasoningSummaries?: boolean
+  reasoningAutoCollapse?: boolean
   shellToolDefaultOpen?: boolean
   editToolDefaultOpen?: boolean
   animate?: boolean
@@ -646,6 +665,7 @@ export function AssistantParts(props: {
                               props.shellToolDefaultOpen,
                               props.editToolDefaultOpen,
                             )}
+                            reasoningAutoCollapse={props.reasoningAutoCollapse}
                             hideDetails={false}
                             animate={props.animate}
                             working={props.working}
@@ -953,11 +973,13 @@ export function Part(props: MessagePartProps) {
         message={props.message}
         hideDetails={props.hideDetails}
         defaultOpen={props.defaultOpen}
+        reasoningAutoCollapse={props.reasoningAutoCollapse}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
         turnDiffSummary={props.turnDiffSummary}
         animate={props.animate}
         working={props.working}
+        feedback={props.feedback}
       />
     </Show>
   )
@@ -1247,7 +1269,24 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     return props.turnDiffSummary
   })
 
+  // Assistant message is still in-flight when `time.completed` hasn't been set.
+  // Used as a render guard for synthetic status parts so stale ones don't
+  // linger in the scrollback after a hard-kill of the host process.
+  const streaming = createMemo(
+    () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
+  )
+
+  // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
+  // guard) are transient status indicators. Hide them once the owning message
+  // stops streaming so a hard-killed turn doesn't leave a stuck spinner line
+  // in the chat history on the next reload.
+  const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
+
   const showCopy = createMemo(() => {
+    // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
+    // guard) are transient status indicators, not assistant output — they
+    // must never carry the copy button.
+    if (part().synthetic) return false
     if (props.message.role !== "assistant") return false
     if (props.showAssistantCopyPartID === null) return false
     return props.showAssistantCopyPartID === part().id
@@ -1291,7 +1330,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   return (
-    <Show when={throttledText()}>
+    <Show when={throttledText() && showSyntheticPart()}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
@@ -1312,6 +1351,52 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
               />
             </Tooltip>
+            <Show when={props.feedback?.enabled}>
+              <Tooltip
+                value={
+                  props.feedback?.rating === "up"
+                    ? i18n.t("ui.message.feedback.clearRating")
+                    : i18n.t("ui.message.feedback.helpful")
+                }
+                placement="top"
+                gutter={4}
+              >
+                <IconButton
+                  icon={props.feedback?.rating === "up" ? "thumbs-up-filled" : "thumbs-up"}
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const next = props.feedback?.rating === "up" ? null : "up"
+                    props.feedback?.onRate?.(next)
+                  }}
+                  aria-pressed={props.feedback?.rating === "up"}
+                  aria-label={i18n.t("ui.message.feedback.helpful")}
+                />
+              </Tooltip>
+              <Tooltip
+                value={
+                  props.feedback?.rating === "down"
+                    ? i18n.t("ui.message.feedback.clearRating")
+                    : i18n.t("ui.message.feedback.notHelpful")
+                }
+                placement="top"
+                gutter={4}
+              >
+                <IconButton
+                  icon={props.feedback?.rating === "down" ? "thumbs-down-filled" : "thumbs-down"}
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const next = props.feedback?.rating === "down" ? null : "down"
+                    props.feedback?.onRate?.(next)
+                  }}
+                  aria-pressed={props.feedback?.rating === "down"}
+                  aria-label={i18n.t("ui.message.feedback.notHelpful")}
+                />
+              </Tooltip>
+            </Show>
           </div>
         </Show>
         <Show when={summary()}>
@@ -1326,19 +1411,28 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   )
 }
 
-// Track part IDs that have been rendered while streaming.
-// Persists across component instances so that when reasoning-end replaces the
-// store object (causing <For> to recreate the component) the new instance
-// knows the part was just streaming and can animate the collapse.
+// Expanded mode tracks explicit user collapses so reactive or virtualized
+// remounts do not reopen a block the user closed.
+const userCollapsed = new Set<string>()
+// Auto-collapse mode preserves the original flow: streaming blocks open,
+// completed blocks collapse once, and manual opens survive later remounts.
 const streamed = new Set<string>()
-// Tracks parts that have already been auto-collapsed once, so component
-// recreation (from store updates while other parts stream) won't collapse again.
 const autocollapsed = new Set<string>()
-// Tracks parts that the user has explicitly opened, so auto-collapse won't
-// override the user's intent when reasoning finishes or a tool call starts.
 const userOpened = new Set<string>()
+const MAX_REASONING_STATE = 1000
 
-// Overrides upstream flat markdown render with streaming reasoning block + auto-collapse.
+function rememberReasoningState(set: Set<string>, id: string) {
+  // Remember the most recent manual display choices without growing forever.
+  // If an old id is evicted, only its open/collapsed override is forgotten;
+  // the reasoning block still renders normally if it appears again.
+  if (set.has(id)) set.delete(id)
+  set.add(id)
+  if (set.size <= MAX_REASONING_STATE) return
+  const first = set.values().next().value
+  if (first !== undefined) set.delete(first)
+}
+
+// Overrides upstream flat markdown render with streaming reasoning block.
 // Also filters encrypted reasoning data from OpenRouter that appears as [REDACTED].
 PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProps) {
   const i18n = useI18n()
@@ -1359,42 +1453,39 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   }
 
   const id = (props.part as any).id as string
-
-  // Check before adding — order matters
   const was = streamed.has(id)
-  if (!done()) streamed.add(id)
+  if (!done()) rememberReasoningState(streamed, id)
 
-  // Streaming → open. Just finished (was streaming, now done) → open briefly
-  // then collapse. Historical → collapsed from the start.
-  // Restore user's explicit open preference across component recreations.
-  const [open, setOpen] = createSignal(!done() || was || userOpened.has(id))
+  // Auto-collapse mode: streaming -> open, just-finished -> open briefly then
+  // collapse, historical -> collapsed. Expanded mode: open unless the user
+  // explicitly collapsed this reasoning part.
+  const initial = props.reasoningAutoCollapse ? !done() || was || userOpened.has(id) : !userCollapsed.has(id)
+  const [open, setOpen] = createSignal(initial)
 
-  // Propagate user intent to the module-level set so it survives component
-  // recreations (e.g. when a tool call arrives while reading reasoning).
   const track = (value: boolean) => {
-    if (value) userOpened.add(id)
-    else userOpened.delete(id)
+    if (props.reasoningAutoCollapse) {
+      if (value) rememberReasoningState(userOpened, id)
+      else userOpened.delete(id)
+      setOpen(value)
+      return
+    }
+
+    if (value) userCollapsed.delete(id)
+    else rememberReasoningState(userCollapsed, id)
     setOpen(value)
   }
 
-  // Auto-collapse once when reasoning finishes (streaming → done transition).
-  // Collapses immediately so the grid transition runs in sync with the
-  // streaming-height removal. Module-level Set prevents re-triggering on
-  // component recreation. Skipped entirely if the user has explicitly opened
-  // the block, so reading is not interrupted by a subsequent tool call.
   createEffect(() => {
+    if (!props.reasoningAutoCollapse) return
+    // Skip auto-collapse for blocks the user explicitly opened.
     if (done() && open() && !autocollapsed.has(id) && !userOpened.has(id)) {
-      autocollapsed.add(id)
+      rememberReasoningState(autocollapsed, id)
       setOpen(false)
     }
   })
 
   onCleanup(() => {
     if (done()) streamed.delete(id)
-    // userOpened is intentionally NOT deleted here. The component recreates
-    // frequently while other parts stream (same as autocollapsed), so removing
-    // the entry on unmount would discard the user's explicit preference and
-    // re-collapse the block on the next remount.
   })
 
   // Auto-scroll the content container while streaming.
@@ -1423,7 +1514,11 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   return (
     <Show when={display()}>
-      <div data-component="reasoning-part" data-streaming={!done() ? "" : undefined}>
+      <div
+        data-component="reasoning-part"
+        data-streaming={!done() ? "" : undefined}
+        data-auto-collapse={props.reasoningAutoCollapse ? "" : undefined}
+      >
         <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
           <Collapsible.Trigger>
             <div data-slot="reasoning-header">
@@ -1972,7 +2067,8 @@ ToolRegistry.register({
         {...props}
         icon="console"
         animated
-        defaultOpen
+        defaultOpen={props.defaultOpen ?? true}
+        allowPendingToggle
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
@@ -2033,23 +2129,33 @@ ToolRegistry.register({
     const canOpenDiff = () => !!data.openDiff && !!path() && (before() !== "" || after() !== "")
     const canOpenFile = () => !!data.openFile && !!path()
 
+    const openDiff = () => {
+      if (!canOpenDiff()) return
+      data.openDiff!({
+        file: path(),
+        before: before(),
+        after: after(),
+        additions: props.metadata?.filediff?.additions ?? 0,
+        deletions: props.metadata?.filediff?.deletions ?? 0,
+      })
+    }
+
     const handleFileClick = (e: MouseEvent) => {
       e.stopPropagation()
 
       if (canOpenDiff()) {
-        data.openDiff!({
-          file: path(),
-          before: before(),
-          after: after(),
-          additions: props.metadata?.filediff?.additions ?? 0,
-          deletions: props.metadata?.filediff?.deletions ?? 0,
-        })
+        openDiff()
         return
       }
 
       if (canOpenFile()) {
         data.openFile!(path())
       }
+    }
+
+    const handleOpenDiffClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      openDiff()
     }
 
     return (
@@ -2078,6 +2184,20 @@ ToolRegistry.register({
                   </Show>
                 </div>
               </div>
+              <Show when={canOpenDiff()}>
+                <span data-slot="edit-trigger-actions">
+                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+                    <IconButton
+                      icon="square-arrow-top-right"
+                      size="small"
+                      variant="ghost"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleOpenDiffClick}
+                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+                    />
+                  </Tooltip>
+                </span>
+              </Show>
             </div>
           }
         >
@@ -2462,6 +2582,7 @@ ToolRegistry.register({
   name: "todowrite",
   render(props) {
     const i18n = useI18n()
+    const view = createMemo(() => (isTodoView(props.metadata?.view) ? props.metadata.view : undefined))
     const todos = createMemo(() => {
       const meta = props.metadata?.todos
       if (Array.isArray(meta)) return meta
@@ -2471,6 +2592,7 @@ ToolRegistry.register({
 
       return []
     })
+    const shown = createMemo(() => view()?.todos ?? todos())
     const pending = createMemo(() => busy(props.status))
 
     const subtitle = createMemo(() => {
@@ -2493,26 +2615,44 @@ ToolRegistry.register({
           />
         }
       >
-        <Show when={todos().length}>
+        <Show when={shown().length}>
           <div data-component="todos">
-            <For each={todos()}>
-              {(todo: Todo) => (
+            <Show when={view()?.mode === "compact" && (view()?.hiddenBefore ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenText("earlier", view()?.hiddenBefore ?? 0)}</div>
+            </Show>
+            <For each={shown()}>
+              {(todo: TodoItem) => (
                 <Checkbox readOnly checked={todo.status === "completed"}>
                   <span
                     data-slot="message-part-todo-content"
                     data-completed={todo.status === "completed" ? "completed" : undefined}
+                    data-changed={todo.changed ? "changed" : undefined}
                   >
                     {todo.content}
                   </span>
                 </Checkbox>
               )}
             </For>
+            <Show when={view()?.mode === "compact" && (view()?.hiddenAfter ?? 0) > 0}>
+              <div data-slot="message-part-todo-hidden">{hiddenText("later", view()?.hiddenAfter ?? 0)}</div>
+            </Show>
           </div>
         </Show>
       </BasicTool>
     )
   },
 })
+
+function isTodoView(value: unknown): value is TodoView {
+  if (!value || typeof value !== "object") return false
+  const view = value as TodoView
+  return Array.isArray(view.todos)
+}
+
+function hiddenText(dir: "earlier" | "later", count: number) {
+  const noun = count === 1 ? "to-do" : "to-dos"
+  return `${count} ${dir} ${noun} hidden`
+}
 
 ToolRegistry.register({
   name: "question",

@@ -1,5 +1,19 @@
 import type { Part } from "../types/messages"
 
+export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+
+type SnapshotPart = {
+  type?: string
+  text?: string
+  synthetic?: boolean
+}
+
+export function snapshotProgress(part: SnapshotPart | undefined): boolean {
+  if (part?.type !== "text") return false
+  if (!part.synthetic) return false
+  return (part.text ?? "").includes("Initializing snapshot")
+}
+
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
@@ -55,7 +69,7 @@ export function computeStatus(
     }
   }
   if (part.type === "reasoning") return t("ui.sessionTurn.status.thinking")
-  if (part.type === "text") return t("session.status.writingResponse")
+  if (part.type === "text") return snapshotProgress(part) ? SNAPSHOT_PROGRESS_TEXT : t("session.status.writingResponse")
   return undefined
 }
 

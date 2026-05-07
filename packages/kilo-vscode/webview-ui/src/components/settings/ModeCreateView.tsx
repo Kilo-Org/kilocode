@@ -67,7 +67,7 @@ const ModeCreateView: Component<Props> = (props) => {
     <div>
       <div style={{ display: "flex", "align-items": "center", "margin-bottom": "16px" }}>
         <IconButton size="small" variant="ghost" icon="arrow-left" onClick={cancel} />
-        <span style={{ "font-weight": "600", "font-size": "14px", "margin-left": "8px" }}>
+        <span style={{ "font-weight": "600", "font-size": "var(--kilo-font-size-14)", "margin-left": "8px" }}>
           {language.t("settings.agentBehaviour.createMode")}
         </span>
       </div>
@@ -90,7 +90,7 @@ const ModeCreateView: Component<Props> = (props) => {
           <Show when={error()}>
             <div
               style={{
-                "font-size": "11px",
+                "font-size": "var(--kilo-font-size-11)",
                 color: "var(--vscode-errorForeground)",
                 "margin-top": "4px",
               }}
