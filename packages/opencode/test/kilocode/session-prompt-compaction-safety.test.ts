@@ -441,4 +441,59 @@ describe("SessionPrompt recovery", () => {
       { git: true, config: providerCfg },
     ),
   )
+
+  it.live("recovers from persisted provider finish errors before replying", () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Provider finish error recovery" })
+        const first = yield* user(chat.id, "before provider finish error")
+        const stale = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: first.id,
+          sessionID: chat.id,
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          time: { created: Date.now() },
+          finish: "error",
+        } satisfies MessageV2.Assistant)
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: stale.id,
+          sessionID: chat.id,
+          type: "step-start",
+        } satisfies MessageV2.StepStartPart)
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: stale.id,
+          sessionID: chat.id,
+          type: "step-finish",
+          reason: "error",
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        } satisfies MessageV2.StepFinishPart)
+        yield* llm.text("recovered")
+
+        const result = yield* prompt.prompt({
+          sessionID: chat.id,
+          agent: "code",
+          parts: [{ type: "text", text: "continue after provider finish error" }],
+        })
+
+        expect(result.info.role).toBe("assistant")
+        expect(result.info.id).not.toBe(stale.id)
+        expect(result.parts.some((part) => part.type === "text" && part.text === "recovered")).toBe(true)
+        const msgs = yield* sessions.messages({ sessionID: chat.id })
+        expect(msgs.some((msg) => msg.info.id === stale.id)).toBe(false)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  )
 })
