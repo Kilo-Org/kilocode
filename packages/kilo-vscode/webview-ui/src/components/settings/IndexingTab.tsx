@@ -158,7 +158,8 @@ const IndexingTab: Component = () => {
       return
     }
     updateIndexing({
-      model: selectedProvider() === "kilo" ? (normalizeKiloEmbeddingModelId(trimmed, embeds.catalog()) ?? trimmed) : trimmed,
+      model:
+        selectedProvider() === "kilo" ? (normalizeKiloEmbeddingModelId(trimmed, embeds.catalog()) ?? trimmed) : trimmed,
     })
   }
 
@@ -240,12 +241,7 @@ const IndexingTab: Component = () => {
             placement="top"
             inactive={!globalOn()}
           >
-            <Switch
-              checked={cfg().enabled === true}
-              onChange={saveEnabled}
-              disabled={globalOn()}
-              hideLabel
-            >
+            <Switch checked={cfg().enabled === true} onChange={saveEnabled} disabled={globalOn()} hideLabel>
               {language.t("settings.indexing.projectEnable.title")}
             </Switch>
           </Tooltip>
