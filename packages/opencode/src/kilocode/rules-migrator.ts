@@ -13,6 +13,7 @@ export namespace RulesMigrator {
 
   // Known modes for mode-specific rule discovery
   export const KNOWN_MODES = ["code", "architect", "ask", "debug", "orchestrator"]
+  const MODE_PATTERN = /^[a-zA-Z0-9_-]+$/
 
   export interface RuleFile {
     path: string
@@ -89,6 +90,8 @@ export namespace RulesMigrator {
     // 4. Mode-specific rules
     const allModes = modes ?? KNOWN_MODES
     for (const mode of allModes) {
+      if (!MODE_PATTERN.test(mode)) continue
+
       // Mode-specific directories (.kilo/rules-{mode}/*.md and .kilocode/rules-{mode}/*.md)
       const modeSeen = new Set<string>()
       for (const prefix of [".kilo", ".kilocode"]) {

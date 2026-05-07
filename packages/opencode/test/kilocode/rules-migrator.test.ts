@@ -199,6 +199,19 @@ describe("RulesMigrator", () => {
       expect(rules).toHaveLength(1)
       expect(rules[0].mode).toBe("translate")
     })
+
+    test("skips unsafe mode slugs", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, "rules-escape"), { recursive: true })
+          await Bun.write(path.join(dir, "rules-escape", "secret.md"), "# Secret")
+        },
+      })
+
+      const rules = await RulesMigrator.discoverRules(tmp.path, ["../escape"])
+
+      expect(rules).toHaveLength(0)
+    })
   })
 
   describe("migrate", () => {
