@@ -159,9 +159,11 @@ export class SourceController {
       return !result.stopPolling
     } catch (err) {
       if (this.epoch !== epoch) return false
-      // Errors are swallowed for now — the webview doesn't render them
-      // separately; it just needs the loading indicator cleared below.
-      if (!initial) console.log("[Kilo New] SourceController.poll error", err)
+      // Errors are swallowed for the webview (it just needs the loading
+      // indicator cleared below), but we always log so initial-fetch
+      // failures leave a trace in the Extension Host output — previously
+      // they were silent and invisible in production.
+      console.log("[Kilo New] SourceController.fetch error", { initial, err })
       return true
     } finally {
       if (initial && this.epoch === epoch) {
