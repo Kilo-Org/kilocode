@@ -15,7 +15,7 @@ type LegacyDiff = {
 type ReviewDiff = SnapshotFileDiff | VcsFileDiff | LegacyDiff
 
 // kilocode_change start - parse patches with Pierre's partial-diff path so the
-// hunk header is the source of truth for line numbers. No blank-line padding.
+// hunk header is the source of truth for line numbers.
 export type DiffText = {
   before: string
   after: string
@@ -36,9 +36,6 @@ export type ViewDiff = {
 const cache = new Map<string, FileDiffMetadata>()
 
 // Reconstruct before/after strings from a patch by concatenating hunk lines.
-// No blank-line padding: line numbers come from `fileDiff` instead. These
-// strings are only used by legacy callers (openDiff payloads, markdown render,
-// copy-as-text) — never for diff rendering.
 function reconstruct(patch: string) {
   const [parsed] = parsePatch(patch)
   const before: string[] = []
@@ -72,9 +69,6 @@ export function contents(diff: ReviewDiff): DiffText {
 function fileDiffFor(diff: ReviewDiff, view: DiffText): FileDiffMetadata {
   const hit = cache.get(view.patch)
   if (hit) return hit
-  // Prefer Pierre's partial-diff path: line numbers come from the @@ header,
-  // no full-file reconstruction needed. Falls back to parseDiffFromFile when
-  // the input is legacy before/after with no real patch.
   const fromPatch = typeof diff.patch === "string" ? processFile(diff.patch, { cacheKey: diff.patch }) : undefined
   const value =
     fromPatch ??
@@ -98,7 +92,13 @@ export function normalize(diff: ReviewDiff): ViewDiff {
 }
 
 export function text(diff: ViewDiff, side: "deletions" | "additions") {
-  if (side === "deletions") return diff.fileDiff.deletionLines.join("")
-  return diff.fileDiff.additionLines.join("")
+  const lines = side === "deletions" ? diff.fileDiff.deletionLines : diff.fileDiff.additionLines
+  const out = lines.join("")
+  // Pierre's processFile preserves the patch's trailing-newline state, so when
+  // a patch ends without `\n` the last line comes back without one too.
+  // Consumers (toSessionDiffFile, markdown export, openDiff payloads) expect
+  // file-shaped content with a trailing newline; normalize here.
+  if (out === "" || out.endsWith("\n")) return out
+  return out + "\n"
 }
 // kilocode_change end

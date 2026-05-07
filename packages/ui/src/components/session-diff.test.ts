@@ -35,6 +35,7 @@ describe("session diff", () => {
     expect(text(view, "additions")).toBe("two\n")
   })
 
+  // kilocode_change start - hunk-anchored line numbers without padding
   test("preserves real line numbers from hunk headers without padding", () => {
     const diff = {
       file: "a.ts",
@@ -53,4 +54,5 @@ describe("session diff", () => {
     expect(view.fileDiff.deletionLines.length).toBe(2)
     expect(view.fileDiff.additionLines.length).toBe(2)
   })
+  // kilocode_change end
 })

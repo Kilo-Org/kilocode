@@ -63,9 +63,6 @@ const DiffVirtualContent: Component = () => {
     return f.split("/").slice(0, -1).join("/")
   }
 
-  // Always go through normalize. When the payload carries a unified patch it
-  // uses Pierre's partial-diff path (real line numbers from the @@ header);
-  // otherwise it falls back to before/after.
   const view = createMemo(() => {
     const d = diff()
     if (!d) return
