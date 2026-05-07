@@ -89,7 +89,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       .reverse()
   })
 
-  const openChanges = () => vscode.postMessage({ type: "openChanges" })
+  const openChanges = () => vscode.postMessage({ type: "openChanges", turnId: message().id })
 
   // Copy part ID — the last text part from the last assistant message.
   // Synthetic parts (e.g. "Initializing snapshot…" from the slow-repo guard)

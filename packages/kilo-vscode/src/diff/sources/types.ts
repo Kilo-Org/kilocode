@@ -6,10 +6,13 @@ export interface DiffSourceCapabilities {
 }
 
 /**
- * Closed enum of diff source kinds. Drives i18n key composition:
- * `diffViewer.source.<type>.label` and `diffViewer.source.<type>.tooltip`.
+ * Closed enum of diff source kinds. Drives i18n key composition for types
+ * that appear in the picker: `diffViewer.source.<type>.label` and
+ * `diffViewer.source.<type>.tooltip`. Types that are only ever shown in
+ * hide-picker mode (e.g. `turn`) don't need matching i18n entries because
+ * `DiffPickerHeader` never renders them.
  */
-export type DiffSourceType = "workspace" | "session"
+export type DiffSourceType = "workspace" | "session" | "turn"
 
 export interface DiffSourceDescriptor {
   /** Unique within a panel context. E.g. "workspace", "session:<sessionId>". */

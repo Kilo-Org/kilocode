@@ -54,12 +54,16 @@ export function createSessionDiffSource(
       }
 
       const raw = await fetch({ sessionID: sessionId, directory: workspaceRoot })
-      return { diffs: raw.map(toDiffFile) }
+      return { diffs: raw.map(toSessionDiffFile) }
     },
   }
 }
 
-function toDiffFile(raw: SnapshotFileDiff): DiffFile {
+/**
+ * Project a backend `SnapshotFileDiff` onto the `DiffFile` shape the viewer
+ * expects. Shared with `createTurnDiffSource` since both hit the same endpoint.
+ */
+export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
   // Empty patch means binary or summarized (>256 KB) — normalize() can't
   // parse it, so short-circuit to empty strings.
   const view = raw.patch === "" ? null : normalize(raw)

@@ -33,6 +33,11 @@ describe("DiffSourceCatalog.listAvailable", () => {
     const out = makeCatalog().listAvailable({ workspaceRoot: undefined })
     expect(out).toEqual([])
   })
+
+  it("returns [] when hidePicker is set, regardless of workspace/session", () => {
+    const out = makeCatalog().listAvailable({ workspaceRoot: "/repo", sessionId: "s1", hidePicker: true })
+    expect(out).toEqual([])
+  })
 })
 
 describe("DiffSourceCatalog.defaultSourceId", () => {
@@ -82,6 +87,19 @@ describe("DiffSourceCatalog.build", () => {
     expect(src.descriptor.type).toBe("session")
     expect(src.revert).toBeUndefined()
     src.dispose?.()
+  })
+
+  it("builds a turn source for 'turn:<sessionId>:<messageId>'", () => {
+    const src = makeCatalog().build("turn:sess:msg", { workspaceRoot: "/repo" })
+    expect(src.descriptor.id).toBe("turn:sess:msg")
+    expect(src.descriptor.type).toBe("turn")
+    expect(src.revert).toBeUndefined()
+    src.dispose?.()
+  })
+
+  it("throws on a malformed turn id", () => {
+    expect(() => makeCatalog().build("turn:sess", { workspaceRoot: "/repo" })).toThrow(/malformed turn id/)
+    expect(() => makeCatalog().build("turn:", { workspaceRoot: "/repo" })).toThrow(/malformed turn id/)
   })
 
   it("throws on an empty session id", () => {
