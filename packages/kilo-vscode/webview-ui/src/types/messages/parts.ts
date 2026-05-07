@@ -16,6 +16,7 @@ export interface BasePart {
 export interface TextPart extends BasePart {
   type: "text"
   text: string
+  synthetic?: boolean
 }
 
 export interface FilePartSource {

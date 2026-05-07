@@ -6,6 +6,7 @@
 import { createContext, createSignal, onMount, onCleanup, useContext, type JSX } from "solid-js"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import type { ClawStatus, ChatMessage, KiloClawOutMessage } from "../lib/types"
+import { applyFontSize } from "../../src/font-size"
 
 type VSCodeAPI = {
   postMessage(msg: unknown): void
@@ -47,6 +48,10 @@ export function ClawProvider(props: { children: JSX.Element }) {
 
   const handler = (event: MessageEvent) => {
     const msg = event.data as KiloClawOutMessage
+    if (msg?.type === "fontSizeChanged") {
+      applyFontSize(msg.fontSize)
+      return
+    }
     if (!msg?.type?.startsWith("kiloclaw.")) return
 
     switch (msg.type) {

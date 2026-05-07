@@ -1,7 +1,11 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -152,6 +156,37 @@ class TurnViewTest : BasePlatformTestCase() {
 
         assertEquals(listOf("p1"), mv.partIds())
         assertTrue(mv.part("p1") is TextView)
+    }
+
+    fun `test assistant card parts use shared compact gap`() {
+        val message = msg("a1", "assistant")
+        val reasoning = Reasoning("r1")
+        val tool = Tool("t1", "read").also { it.state = ToolExecState.COMPLETED }
+        message.parts["r1"] = reasoning
+        message.parts["t1"] = tool
+        val mv = MessageView(message)
+
+        mv.setSize(400, 200)
+        mv.doLayout()
+
+        assertEquals(UiStyle.Card.groupGap(), mv.part("t1")!!.y - mv.part("r1")!!.bounds.maxY.toInt())
+    }
+
+    fun `test consecutive messages use shared compact gap`() {
+        val tv = TurnView("u1")
+        tv.addMessage(msg("u1", "user").also { msg ->
+            msg.parts["t1"] = Tool("t1", "read").also { it.state = ToolExecState.COMPLETED }
+        })
+        tv.addMessage(msg("a2", "assistant").also { msg ->
+            msg.parts["t2"] = Tool("t2", "read").also { it.state = ToolExecState.COMPLETED }
+        })
+
+        tv.setSize(400, 300)
+        tv.doLayout()
+        val first = tv.messageView("u1")!!
+        val second = tv.messageView("a2")!!
+
+        assertEquals(UiStyle.Card.groupGap(), second.y - first.bounds.maxY.toInt())
     }
 
     // ------ helpers ------

@@ -107,7 +107,7 @@ describe("Patch encoding preservation", () => {
 
   test("preserves Shift_JIS encoding through update", async () => {
     const file = path.join(dir, "jp.txt")
-    // jschardet needs enough characteristic bytes to identify Shift_JIS. A
+    // chardet needs enough characteristic bytes to identify Shift_JIS. A
     // single 19-byte phrase looks like windows-1252, so the sample is padded
     // to match the body of Japanese text the tool tests already rely on.
     const sample = "こんにちは、世界！日本語のテストです。"

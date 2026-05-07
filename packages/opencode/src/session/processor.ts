@@ -17,7 +17,7 @@ import { SessionStatus } from "./status"
 import { SessionSummary } from "./summary"
 import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
-import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { NotFoundError } from "@/storage/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
@@ -53,6 +53,7 @@ type Input = {
   assistantMessage: MessageV2.Assistant
   sessionID: SessionID
   model: Provider.Model
+  telemetry?: ReviewTelemetry // kilocode_change
 }
 
 export interface Interface {
@@ -131,6 +132,7 @@ export const layer: Layer.Layer<
         needsCompaction: false,
         currentText: undefined,
         reasoningMap: {},
+        telemetry: input.telemetry, // kilocode_change
         stepStart: 0, // kilocode_change
         step: { reasoning: false, text: false, tool: false }, // kilocode_change
       }
@@ -440,6 +442,7 @@ export const layer: Layer.Layer<
               tokens: usage.tokens,
               cost: usage.cost,
               elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
+              telemetry: ctx.telemetry,
             })
             // kilocode_change end
             ctx.assistantMessage.finish = value.finishReason

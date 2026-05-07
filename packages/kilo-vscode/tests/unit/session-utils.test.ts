@@ -76,6 +76,11 @@ describe("computeStatus", () => {
     const part: Part = { type: "text", id: "p1", text: "hello" }
     expect(computeStatus(part, t)).toBe("session.status.writingResponse")
   })
+
+  it("maps synthetic snapshot progress to snapshot status", () => {
+    const part: Part = { type: "text", id: "p1", text: "⠋ Initializing snapshot…", synthetic: true }
+    expect(computeStatus(part, t)).toBe("Initializing snapshot...")
+  })
 })
 
 describe("calcTotalCost", () => {

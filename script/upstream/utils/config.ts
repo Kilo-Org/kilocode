@@ -21,9 +21,6 @@ export interface MergeConfig {
   /** Files that should take upstream version and apply Kilo branding transforms */
   takeTheirsAndTransform: string[]
 
-  /** Tauri/Desktop config files with predictable branding patterns */
-  tauriFiles: string[]
-
   /** Script files with GitHub API references */
   scriptFiles: string[]
 
@@ -86,7 +83,6 @@ export const defaultConfig: MergeConfig = {
     // GitHub Action - Kilo version is fully ported and complete
     "github/action.yml",
     "github/README.md",
-    "github/.gitignore",
     "github/script/release",
     "github/script/publish",
   ],
@@ -118,11 +114,26 @@ export const defaultConfig: MergeConfig = {
     "README.zht.md",
     // Stats file
     "STATS.md",
+    // Team members file (Kilo doesn't maintain this upstream list)
+    ".github/TEAM_MEMBERS",
     // Workflows that don't exist in Kilo
     ".github/workflows/update-nix-hashes.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/docs-update.yml",
     ".github/workflows/docs-locale-sync.yml",
+    // Workflows deleted in Kilo (replaced or no longer needed)
+    ".github/workflows/opencode.yml",
+    ".github/workflows/publish-vscode.yml",
+    // VS Code example configs (Kilo ships real .vscode/* files)
+    ".vscode/launch.example.json",
+    ".vscode/settings.example.json",
+    // Nix files for packages Kilo has removed / replaced with nix/kilo.nix
+    "nix/desktop.nix",
+    "nix/opencode.nix",
+    // opencode CLI bin (Kilo uses its own build output)
+    "packages/opencode/bin/opencode",
+    // Removed prompt file
+    "packages/opencode/src/session/prompt/build-switch.txt",
     // Vouch files (Kilo doesn't use Vouch).
     // Upstream currently ships VOUCHED.td (typo extension). The glob covers both
     // the current .td file and any future .md rename without another merge breaking.
@@ -142,38 +153,24 @@ export const defaultConfig: MergeConfig = {
     "packages/function/**",
     "packages/docs/**",
     "packages/identity/**",
+    "packages/app/**",
+    "packages/desktop/**",
+    "packages/desktop-electron/**",
     // GitHub Action - Kilo version is fully ported and complete
     "github/index.ts",
     "github/package.json",
     "github/tsconfig.json",
     "github/bun.lock",
     "github/sst-env.d.ts",
+    "github/.gitignore",
   ],
 
   // Files that should take upstream version and apply Kilo branding transforms
   // These are files with only branding differences, no logic changes
   takeTheirsAndTransform: [
-    // App components with branding only
-    "packages/app/src/components/**/*.tsx",
-    "packages/app/src/context/**/*.tsx",
-    "packages/app/src/pages/**/*.tsx",
     // UI components
     "packages/ui/src/components/**/*.tsx",
     "packages/ui/src/context/**/*.tsx",
-    // Desktop TypeScript files (not Rust)
-    "packages/desktop/src/**/*.ts",
-    // E2E and test fixtures
-    "packages/app/e2e/**/*.ts",
-    "packages/app/script/**/*.ts",
-  ],
-
-  // Tauri/Desktop config files with predictable branding patterns
-  tauriFiles: [
-    "packages/desktop/src-tauri/tauri.conf.json",
-    "packages/desktop/src-tauri/tauri.prod.conf.json",
-    "packages/desktop/src-tauri/Cargo.toml",
-    "packages/desktop/src-tauri/Cargo.lock",
-    "packages/desktop/src-tauri/src/*.rs",
   ],
 
   // Script files with GitHub API references
@@ -228,9 +225,15 @@ export const defaultConfig: MergeConfig = {
   originRemote: "origin",
 
   // i18n translation files that need Kilo branding transforms
-  i18nPatterns: ["packages/*/src/i18n/*.ts", "packages/desktop/src/i18n/*.ts"],
+  i18nPatterns: ["packages/*/src/i18n/*.ts"],
 }
 
 export function loadConfig(overrides?: Partial<MergeConfig>): MergeConfig {
   return { ...defaultConfig, ...overrides }
+}
+
+export function resolveBaseBranch(base: string | undefined, current: string): string | undefined {
+  if (base !== "HEAD") return base
+  if (current === "HEAD") throw new Error("--base-branch HEAD requires a named branch, but git is in detached HEAD")
+  return current
 }

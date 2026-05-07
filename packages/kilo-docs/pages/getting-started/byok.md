@@ -32,6 +32,7 @@ Use your provider API key to route matching models through your account:
 - Moonshot AI (Kimi)
 - Novita
 - OpenAI
+- Xiaomi
 - xAI
 - Z.ai
 

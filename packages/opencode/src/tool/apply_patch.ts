@@ -14,7 +14,7 @@ import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
+import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
 

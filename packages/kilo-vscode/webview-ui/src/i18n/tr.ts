@@ -1372,6 +1372,8 @@ export const dict = {
   "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
+  "settings.display.fontSize.title": "Yazı Tipi Boyutu",
+  "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",

@@ -1,5 +1,43 @@
 # @kilocode/cli
 
+## 7.2.42
+
+### Minor Changes
+
+- [#9909](https://github.com/Kilo-Org/kilocode/pull/9909) [`9ffd047`](https://github.com/Kilo-Org/kilocode/commit/9ffd047962039d6b73d301d5d4e67560cd501c4f) - Detect and preserve UTF-32 (LE and BE) with BOM when reading and editing files. UTF-16 and UTF-32 without a BOM remain unsupported.
+
+### Patch Changes
+
+- [#9887](https://github.com/Kilo-Org/kilocode/pull/9887) [`d9453f0`](https://github.com/Kilo-Org/kilocode/commit/d9453f0da2b063041f6f98235220cde9129e162d) - Fix queued-turn auto-compaction so overflow recovery runs instead of exhausting compaction attempts.
+
+- [#9855](https://github.com/Kilo-Org/kilocode/pull/9855) [`59e8eff`](https://github.com/Kilo-Org/kilocode/commit/59e8effc3df8a03146f5ceddf95f79989b813417) - Respect project-specific semantic indexing decisions instead of enabling indexing globally across workspaces.
+
+- [#9928](https://github.com/Kilo-Org/kilocode/pull/9928) [`520922f`](https://github.com/Kilo-Org/kilocode/commit/520922ff39354c2df72317dee0f70035c52c24c5) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Prevent VS Code empty windows from starting codebase indexing against the home directory.
+
+- [#9843](https://github.com/Kilo-Org/kilocode/pull/9843) [`27d14d4`](https://github.com/Kilo-Org/kilocode/commit/27d14d432c33051e4bdd5863ea14b207758e9234) - Prompt before reading `.env` files even after broad read permissions were previously approved.
+
+- [#9924](https://github.com/Kilo-Org/kilocode/pull/9924) [`914bbdf`](https://github.com/Kilo-Org/kilocode/commit/914bbdfd0575e40554c39c6691e4264a63109953) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Restore Skill tool access for Plan, Ask, Explore, and other non-system agents so skill workflows are available by default.
+
+- [#9907](https://github.com/Kilo-Org/kilocode/pull/9907) [`d9d4dcd`](https://github.com/Kilo-Org/kilocode/commit/d9d4dcd37c6719652252da66b6a1ce27049beb47) - Recover sessions left unable to continue after an assistant turn was created but never started.
+
+## 7.2.39
+
+### Patch Changes
+
+- [#9840](https://github.com/Kilo-Org/kilocode/pull/9840) [`db26be6`](https://github.com/Kilo-Org/kilocode/commit/db26be6b5d3ac77a729ea5242c8330b9146352a7) - Restore the `KILO=1` environment variable so plugins and tooling can distinguish the Kilo CLI from upstream OpenCode.
+
+## 7.2.36
+
+### Patch Changes
+
+- [#9869](https://github.com/Kilo-Org/kilocode/pull/9869) [`d5fd42c`](https://github.com/Kilo-Org/kilocode/commit/d5fd42c3d736329c27de06d52154701f6f4608fb) - Fix question tool being unavailable in code mode
+
+- [#9838](https://github.com/Kilo-Org/kilocode/pull/9838) [`f499257`](https://github.com/Kilo-Org/kilocode/commit/f499257c3287274473db801edba1852dbcdbd92a) - Honor approved external directory read access in Ask and Plan modes.
+
+- [#9778](https://github.com/Kilo-Org/kilocode/pull/9778) [`33476e5`](https://github.com/Kilo-Org/kilocode/commit/33476e50508f39c232731613fd9d74a7aa19e748) - Show an "Initializing snapshot…" line in the chat while the initial snapshot is running on very large repositories, and add an interactive prompt when it stalls. After 10 seconds (configurable via `KILO_SNAPSHOT_TRACK_TIMEOUT_MS`) the prompt asks whether to keep waiting or disable snapshots for the project; choosing to disable writes `"snapshot": false` to `.kilo/kilo.json` so future sessions skip snapshots entirely.
+
+- [#9833](https://github.com/Kilo-Org/kilocode/pull/9833) [`614bca7`](https://github.com/Kilo-Org/kilocode/commit/614bca7cff862ec96e4707a97f43b540210ab699) - Prevent macOS Spotlight from indexing Kilo-generated data directories.
+
 ## 7.2.35
 
 ### Patch Changes

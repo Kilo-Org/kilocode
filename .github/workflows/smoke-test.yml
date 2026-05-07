@@ -47,7 +47,7 @@ jobs:
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     steps:
       - name: Checkout kilo-bench
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           repository: Kilo-Org/kilo-bench
           token: ${{ secrets.BENCH_GITHUB_TOKEN }}
@@ -122,7 +122,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: smoke-test-results
           path: |

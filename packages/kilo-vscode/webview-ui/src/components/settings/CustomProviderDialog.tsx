@@ -435,7 +435,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       >
         <div style={{ padding: "0 10px", display: "flex", gap: "16px", "align-items": "center" }}>
           <ProviderIcon id="synthetic" width={20} height={20} />
-          <div style={{ "font-size": "16px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+          <div
+            style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "500", color: "var(--vscode-foreground)" }}
+          >
             {editing() ? language.t("provider.custom.edit.title") : language.t("provider.custom.title")}
           </div>
         </div>
@@ -444,7 +446,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           onSubmit={save}
           style={{ padding: "0 10px 24px 10px", display: "flex", "flex-direction": "column", gap: "24px" }}
         >
-          <div style={{ "font-size": "14px", color: "var(--text-base)" }}>
+          <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)" }}>
             {language.t("provider.custom.description.prefix")}
             <a
               href="https://kilo.ai/docs/providers/#custom-provider"
@@ -510,7 +512,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           {/* Models */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
             <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
-              <label style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+              <label
+                style={{
+                  "font-size": "var(--kilo-font-size-12)",
+                  "font-weight": "500",
+                  color: "var(--text-weak-base)",
+                }}
+              >
                 {language.t("provider.custom.models.label")}
               </label>
               <Show when={fetching()}>
@@ -552,7 +560,11 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             {/* Fetch error */}
             <Show when={fetchError()}>
               {(err) => (
-                <span style={{ "font-size": "12px", color: "var(--vscode-errorForeground, #f14c4c)" }}>{err()}</span>
+                <span
+                  style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground, #f14c4c)" }}
+                >
+                  {err()}
+                </span>
               )}
             </Show>
 
@@ -561,7 +573,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {(status) => (
                 <span
                   style={{
-                    "font-size": "12px",
+                    "font-size": "var(--kilo-font-size-12)",
                     color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                   }}
                 >
@@ -591,7 +603,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                       "align-items": "center",
                     }}
                   >
-                    <span style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+                    <span
+                      style={{
+                        "font-size": "var(--kilo-font-size-12)",
+                        "font-weight": "500",
+                        color: "var(--text-weak-base)",
+                      }}
+                    >
                       <Show
                         when={debouncedSearch()}
                         fallback={language.t("provider.custom.models.fetch.found", {
@@ -644,7 +662,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                             gap: "8px",
                             padding: "4px 2px",
                             cursor: "pointer",
-                            "font-size": "13px",
+                            "font-size": "var(--kilo-font-size-13)",
                             color: "var(--text-base, var(--vscode-foreground))",
                           }}
                         >
@@ -676,7 +694,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
           {/* Headers */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-            <label style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+            <label
+              style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
+            >
               {language.t("provider.custom.headers.label")}
             </label>
             <For each={form.headers}>

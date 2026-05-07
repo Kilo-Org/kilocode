@@ -11,7 +11,7 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Database } from "@/storage/db"
 import { NotFoundError } from "@/storage/storage"
 // kilocode_change - drop unused inArray/lt (listGlobal delegated to KiloSession)
-import { eq, and, gte, isNull, desc, like } from "drizzle-orm"
+import { eq, and, gte, isNull, desc, like, or } from "drizzle-orm"
 import { SyncEvent } from "../sync"
 import { PartTable, SessionTable } from "./session.sql"
 // kilocode_change - ProjectTable removed (unused)
@@ -35,7 +35,7 @@ import { fn } from "@/util/fn"
 // kilocode_change end
 import { Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { zod } from "@/util/effect-zod"
-import { optionalOmitUndefined, withStatics } from "@/util/schema"
+import { NonNegativeInt, optionalOmitUndefined, withStatics } from "@/util/schema"
 
 const log = Log.create({ service: "session" })
 
@@ -129,9 +129,9 @@ function sessionPath(worktree: string, cwd: string) {
 }
 
 const Summary = Schema.Struct({
-  additions: Schema.Number,
-  deletions: Schema.Number,
-  files: Schema.Number,
+  additions: NonNegativeInt,
+  deletions: NonNegativeInt,
+  files: NonNegativeInt,
   diffs: optionalOmitUndefined(Schema.Array(Snapshot.SummaryFileDiff)), // kilocode_change - lightweight diff without patch
 })
 
@@ -140,10 +140,10 @@ const Share = Schema.Struct({
 })
 
 const Time = Schema.Struct({
-  created: Schema.Number,
-  updated: Schema.Number,
-  compacting: optionalOmitUndefined(Schema.Number),
-  archived: optionalOmitUndefined(Schema.Number),
+  created: NonNegativeInt,
+  updated: NonNegativeInt,
+  compacting: optionalOmitUndefined(NonNegativeInt),
+  archived: optionalOmitUndefined(NonNegativeInt),
 })
 
 const Revert = Schema.Struct({
@@ -214,7 +214,7 @@ export const SetTitleInput = Schema.Struct({ sessionID: SessionID, title: Schema
 )
 export const SetArchivedInput = Schema.Struct({
   sessionID: SessionID,
-  time: Schema.optional(Schema.Number),
+  time: Schema.optional(NonNegativeInt),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export const SetPermissionInput = Schema.Struct({
   sessionID: SessionID,
@@ -227,7 +227,7 @@ export const SetRevertInput = Schema.Struct({
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 export const MessagesInput = Schema.Struct({
   sessionID: SessionID,
-  limit: Schema.optional(Schema.Number),
+  limit: Schema.optional(NonNegativeInt),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 
 const CreatedEventSchema = Schema.Struct({
@@ -240,10 +240,10 @@ const UpdatedShare = Schema.Struct({
 })
 
 const UpdatedTime = Schema.Struct({
-  created: Schema.optional(Schema.NullOr(Schema.Number)),
-  updated: Schema.optional(Schema.NullOr(Schema.Number)),
-  compacting: Schema.optional(Schema.NullOr(Schema.Number)),
-  archived: Schema.optional(Schema.NullOr(Schema.Number)),
+  created: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  updated: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  compacting: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  archived: Schema.optional(Schema.NullOr(NonNegativeInt)),
 })
 
 const UpdatedInfo = Schema.Struct({
@@ -668,12 +668,16 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
         })
 
         for (const part of msg.parts) {
-          yield* updatePart({
+          const p: MessageV2.Part = {
             ...part,
             id: PartID.ascending(),
             messageID: cloned.id,
             sessionID: session.id,
-          })
+          }
+          if (p.type === "compaction" && p.tail_start_id) {
+            p.tail_start_id = idMap.get(p.tail_start_id)
+          }
+          yield* updatePart(p)
         }
       }
       return session
@@ -812,6 +816,8 @@ export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(S
 
 export function* list(input?: {
   directory?: string
+  scope?: "project"
+  path?: string
   workspaceID?: WorkspaceID
   roots?: boolean
   start?: number
@@ -819,19 +825,35 @@ export function* list(input?: {
   limit?: number
 }) {
   const project = Instance.project
-  const conditions = KiloSession.filters({ projectID: project.id, directory: input?.directory }) // kilocode_change
+  // kilocode_change start - KiloSession.filters keeps sessions visible across project_id changes
+  // (see PR #8875). That directory-anchored filter conflicts with upstream's path-prefix filter,
+  // so bypass it when input.path is provided and fall back to the plain project_id base.
+  const conditions =
+    input?.path !== undefined
+      ? [eq(SessionTable.project_id, project.id)]
+      : KiloSession.filters({ projectID: project.id, directory: input?.directory })
+  // kilocode_change end
 
   if (input?.workspaceID) {
     conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
   }
-  // kilocode_change start - directory filtering handled by KiloSession.filters above
-  // if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
-  //   if (input?.directory) {
-  //     conditions.push(eq(SessionTable.directory, input.directory))
-  //   }
-  // }
-  // kilocode_change end
+  if (input?.path !== undefined) {
+    if (input.path) {
+      const conds = [eq(SessionTable.path, input.path), like(SessionTable.path, `${input.path}/%`)]
 
+      conditions.push(
+        input.directory
+          ? or(...conds, and(isNull(SessionTable.path), eq(SessionTable.directory, input.directory))!)!
+          : or(...conds)!,
+      )
+    }
+  } else if (input?.scope !== "project" && !Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+    // kilocode_change start - directory filtering handled by KiloSession.filters above
+    // if (input?.directory) {
+    //   conditions.push(eq(SessionTable.directory, input.directory))
+    // }
+    // kilocode_change end
+  }
   if (input?.roots) {
     conditions.push(isNull(SessionTable.parent_id))
   }
