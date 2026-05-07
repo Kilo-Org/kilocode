@@ -1,14 +1,53 @@
 ---
-description: Resolve upstream merge conflicts
+description: Resolve upstream opencode merge conflicts interactively
+mode: primary
+permission:
+  read: ask
+  edit: ask
+  webfetch: ask
+  bash:
+    "*": ask
+    "git status *": allow
+    "git log *": allow
+    "git diff *": allow
+    "git show *": allow
+    "git ls-files *": allow
+    "git ls-tree *": allow
+    "git grep *": allow
+    "git hash-object *": allow
+    "git remote -v *": allow
+    "git rev-parse *": allow
+    "git merge-base *": allow
+    "git show-ref *": allow
+    "git worktree list": allow
+    "git branch --show-current": allow
+    "grep *": allow
+    "rg *": allow
+    "head *": allow
+    "tail *": allow
+    "cat *": allow
+    "wc *": allow
+    "ls *": allow
+    "pwd *": allow
+    "diff *": allow
+    "gh pr view *": allow
+    "gh run view *": allow
+    "gh api \"repos/sst/opencode/commits/dev\" *": allow
+    "axiom *": allow
+    "bun test *": allow
+    "bun run typecheck *": allow
+    "bun run lint *": allow
+    "bun run script/check-opencode-annotations.ts *": allow
+    "script/upstream/find-conflict-markers.sh *": allow
+    "./script/upstream/find-conflict-markers.sh *": allow
 ---
 
 Resolve the manual part of an upstream merge.
 
-Arguments: `$ARGUMENTS`
-
-Use the first argument as the upstream version, for example `v1.1.50` or
-`1.1.50`. If no argument is provided, infer the version from the current branch
-name, `upstream-merge-report-<version>.md`, or the newest relevant report file.
+The user will provide the upstream version (for example `v1.1.50` or `1.1.50`)
+in their first message. If they don't, infer it from the current branch name,
+from `upstream-merge-report-<version>.md`, or from the newest relevant report
+file.
 
 ## Workflow
 
@@ -43,6 +82,11 @@ git log --all --oneline -- <kilo-file>
 
 Look at the commit message and any PR reference. "We wrote our own because of
 PR #NNNN" is a real constraint; "we wrote our own because of a typo" is not.
+
+When upstream narrows an externally-visible compatibility list (models,
+providers, routes, config keys, file formats), verify the intent from upstream
+PRs, issues, release notes, or current docs before dropping entries. Treat
+silent list shrinkage during a refactor as suspicious until proven intentional.
 
 ### 3. Write a plan in chat and get approval
 
@@ -112,6 +156,9 @@ Apply in order:
   there and list both paths in the final summary. Verify the new file already
   carries the Kilo-renamed symbols (e.g. `x-kilo-directory`) by diffing against
   pristine upstream.
+- if upstream extracts shared policy into a helper, move Kilo-specific additions
+  into the helper when possible instead of keeping a pre-check at the old call
+  site. The extracted helper should stay the source of truth for all callers.
 - if upstream deleted a file, analyse whether the Kilo behaviour should be
   ported elsewhere or removed rather than restoring the deleted file
 - if tests fail only because upstream intentionally removed behaviour, remove
@@ -151,6 +198,26 @@ ported in too. After resolving the flagged file, check:
 Add any such files to the plan as `hybrid` or `take-ours` with the same
 approval flow.
 
+### 6.5. Scan auto-merged files for latent bugs
+
+Files not in `--diff-filter=U` merged without conflict markers but may still
+be broken. Check every auto-merged file for:
+
+- **Duplicate declarations in the same scope.** If both sides added equivalent
+  code independently, auto-merge keeps both. Grep touched functions for
+  repeated identifiers before trusting the merge.
+- **Duplicate keys in config/manifest files.** If both sides added the same
+  entry to a shared manifest (dependencies, scripts, workflow lists), the
+  merged file may have the key twice. This often breaks install/setup before
+  any test runs — a cheap early win to scan for.
+- **Orphaned imports and references.** A rename upstream may leave a Kilo
+  callsite pointing at a now-missing export. Run full typecheck from the repo
+  root; references that silently survived the merge surface there.
+- **Partial auto-merges.** Upstream may have refactored a region Kilo
+  deliberately stubbed out (commented blocks, removed fallbacks). If the
+  auto-merge pulled in references to names that only exist in the removed
+  path, the file compiles upstream but breaks on Kilo.
+
 ### 7. Verify each resolution before moving on
 
 - confirm `script/upstream/find-conflict-markers.sh <file>` prints nothing
@@ -188,6 +255,49 @@ git commit -m "resolve merge conflicts"
 
 The default `git merge` auto-message (`Merge branch '…' into …`) is also fine,
 but `resolve merge conflicts` is the convention for these PRs.
+
+### 9.5. Handle downstream API renames as separate commits
+
+Upstream often renames exported APIs. The rename itself auto-merges cleanly in
+shared code, but the change cascades into Kilo-only files (kilocode tests,
+kilo-specific source, plugins) that still reference the old symbol. Those
+files don't appear in `--diff-filter=U` because their own content didn't
+conflict.
+
+Keep the behavioural merge commit focused on resolution decisions. Land the
+cascade in one or more follow-up commits:
+
+- after the merge commit, run full repo typecheck and collect every "cannot
+  find name" / "property does not exist" error
+- bulk-rename with a mechanical transform when the rename is one-to-one
+- restructure or parameter-thread when upstream changed semantics, not just
+  the name (e.g. moved a helper behind a dependency-injected surface, so
+  callers now need the injected handle)
+- split large downstream refactors into their own commits with messages that
+  name the rename
+
+Reviewers can then skim the behavioural commit without untangling mechanical
+rename noise from merge decisions.
+
+### 9.6. Handle upstream-added tests that diverge from Kilo
+
+Upstream sometimes adds tests that encode design contracts Kilo intentionally
+breaks. These auto-merge cleanly and then fail. Three resolution patterns:
+
+- **Rewrite the test** when the test is a contract assertion and Kilo has a
+  different but equally valid contract. Invert or adjust the assertion with a
+  `kilocode_change` marker explaining the divergence.
+- **Skip the test** when the test relies on patterns that Kilo has replaced
+  (interception seams that are bypassed by dependency injection, fixture
+  helpers bound to a removed API, assumptions about serialization shape that
+  Kilo's extensions break). Mark with `kilocode_change` and a rationale
+  explaining what would need to change for the test to run.
+- **Delete the test** when it covers functionality Kilo deliberately removed
+  (fallback paths, deprecated endpoints, products Kilo doesn't ship). Note
+  the deletion in the PR body.
+
+Never silently delete; always leave a breadcrumb. A future reviewer should be
+able to understand why this one upstream test is treated differently.
 
 ### 10. Resync version strings in a separate commit
 
@@ -261,3 +371,37 @@ config schema behaviour, migrations, provider routing, or security posture.
 - Stricter DOM lib types (upstream TS upgrade) can surface latent casting
   issues around `WebSocket.send`, `Headers`, etc. — prefer narrowing the Kilo
   type over adding `any` casts.
+- Auto-merge can duplicate the same declaration twice in one scope when both
+  sides added equivalent code independently. Silent for git, caught by
+  typecheck. Same hazard for duplicated object keys in config/manifest files —
+  those can break install before any test runs.
+- Kilo code may rely on ambient context (async-local storage, globally-set
+  flags, process env) being populated at a lifecycle moment that upstream
+  refactors away. If Kilo behaviour reads ambient state during init, forked
+  work, or event handlers, check the refactor still establishes that state at
+  the right time. Fix by restoring the ambient state, or by threading the
+  needed value through explicitly.
+- Tests that intercept via process-global or module-global spies can become
+  no-ops after upstream moves the intercepted code path through dependency
+  injection. The production code no longer touches the spied symbol. Fixing
+  the test usually means injecting a mock at the new seam rather than tweaking
+  the spy.
+- When Kilo extends a shared data shape with extra optional fields, different
+  serialization paths for that shape can diverge on whether missing values are
+  omitted or emitted as null. Parity tests between two such paths break on
+  every Kilo addition — audit the encoding assumption before adding fields.
+- Rule ordering in allowlist/permission evaluation is usually last-match-wins.
+  Re-declaring a catch-all rule "for safety" in a later ruleset silently
+  overrides more specific allow rules from an earlier ruleset. Treat a
+  redundant catch-all as destructive, not defensive.
+- Upstream-added tests can encode a design contract Kilo deliberately breaks.
+  The test passes upstream because upstream doesn't share Kilo's requirement.
+  Decide between refactoring Kilo to match the upstream contract or rewriting
+  the test to assert Kilo's divergent contract — with a `kilocode_change`
+  marker explaining the divergence.
+- CI and local can show different test failures. Tests that read user-local
+  state (home dir, global config, auth tokens) pass in one environment but
+  fail in the other. A green local run does not imply green CI.
+- Dependency manifests and lockfiles move together. When the merge edits one,
+  regenerate and commit the other in the same change — otherwise CI breaks on
+  the follow-up setup step.
