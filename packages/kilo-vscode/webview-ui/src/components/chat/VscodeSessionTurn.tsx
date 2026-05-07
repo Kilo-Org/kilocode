@@ -281,7 +281,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                   <Show when={visible()}>
                                     <div data-slot="session-turn-diff-view" data-scrollable>
                                       {(() => {
-                                        const view = contents(diff)
+                                        const view = diff.patch === "" ? { before: "", after: "" } : contents(diff)
                                         return (
                                           <Dynamic
                                             component={fileComponent}
