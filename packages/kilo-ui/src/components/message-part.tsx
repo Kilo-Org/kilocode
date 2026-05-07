@@ -2185,7 +2185,7 @@ ToolRegistry.register({
                 </div>
               </div>
               <Show when={canOpenDiff()}>
-                <span data-slot="edit-trigger-actions">
+                <span data-slot="tool-trigger-actions">
                   <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
                     <IconButton
                       icon="square-arrow-top-right"
@@ -2249,21 +2249,35 @@ ToolRegistry.register({
       if (!diff?.patch) return
       return contents(diff)
     })
+    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && (!!view() || !!props.input.content)
+    const canOpenFile = () => !!data.openFile && !!props.input.filePath
+
+    const openDiff = () => {
+      if (!data.openDiff || !props.input.filePath) return
+      const v = view()
+      data.openDiff({
+        file: props.metadata?.filediff?.file || props.input.filePath,
+        before: v?.before ?? "",
+        after: v?.after ?? props.input.content ?? "",
+        additions: props.metadata?.filediff?.additions ?? 0,
+        deletions: props.metadata?.filediff?.deletions ?? 0,
+      })
+    }
 
     const handleFileClick = (e: MouseEvent) => {
       e.stopPropagation()
-      if (data.openDiff && view()) {
-        data.openDiff({
-          file: props.metadata?.filediff?.file || props.input.filePath,
-          before: view()!.before,
-          after: view()!.after,
-          additions: props.metadata?.filediff?.additions ?? 0,
-          deletions: props.metadata?.filediff?.deletions ?? 0,
-        })
+      if (canOpenDiff()) {
+        openDiff()
         return
       }
-      if (!data.openFile || !props.input.filePath) return
-      data.openFile(props.input.filePath)
+      if (canOpenFile()) {
+        data.openFile!(props.input.filePath!)
+      }
+    }
+
+    const handleOpenDiffClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      openDiff()
     }
 
     return (
@@ -2286,16 +2300,26 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={
-                          (view() && data.openDiff) || (data.openFile && props.input.filePath)
-                            ? handleFileClick
-                            : undefined
-                        }
+                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
                 </div>
               </div>
+              <Show when={canOpenDiff()}>
+                <span data-slot="tool-trigger-actions">
+                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+                    <IconButton
+                      icon="square-arrow-top-right"
+                      size="small"
+                      variant="ghost"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleOpenDiffClick}
+                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+                    />
+                  </Tooltip>
+                </span>
+              </Show>
             </div>
           }
         >
