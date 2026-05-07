@@ -135,7 +135,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     )
   }
 
-  function connect(apiKey: string) {
+  function connect(apiKey: string, metadata?: Record<string, string>) {
     setState({
       ...state,
       phase: "connecting",
@@ -147,6 +147,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         type: "connectProvider",
         providerID: props.providerID,
         apiKey,
+        metadata,
       },
       {
         onConnected: succeed,
@@ -205,6 +206,8 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
 
   const ApiView: Component = () => {
     const [value, setValue] = createSignal("")
+    const prompts = createMemo(() => method()?.prompts ?? [])
+    const [promptValues, setPromptValues] = createStore<Record<string, string>>({})
 
     function submit(e: SubmitEvent) {
       e.preventDefault()
@@ -213,7 +216,16 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         setState({ ...state, error: language.t("provider.connect.apiKey.required") })
         return
       }
-      connect(apiKey)
+      const metadata: Record<string, string> = {}
+      for (const prompt of prompts()) {
+        const v = promptValues[prompt.key]?.trim()
+        if (!v) {
+          setState({ ...state, error: `${prompt.message} is required` })
+          return
+        }
+        metadata[prompt.key] = v
+      }
+      connect(apiKey, Object.keys(metadata).length > 0 ? metadata : undefined)
     }
 
     return (
@@ -225,8 +237,20 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         <div class="provider-connect-body">
           {language.t("provider.connect.apiKey.description", { provider: name() })}
         </div>
+        <For each={prompts()}>
+          {(prompt) => (
+            <TextField
+              autofocus={prompts().indexOf(prompt) === 0 && !value()}
+              type="text"
+              label={prompt.message}
+              placeholder={prompt.type === "text" ? prompt.placeholder : undefined}
+              value={promptValues[prompt.key] ?? ""}
+              onChange={(v) => setPromptValues(prompt.key, v)}
+            />
+          )}
+        </For>
         <TextField
-          autofocus
+          autofocus={prompts().length === 0}
           type="password"
           label={language.t("provider.connect.apiKey.label", { provider: name() })}
           placeholder={language.t("provider.connect.apiKey.placeholder")}

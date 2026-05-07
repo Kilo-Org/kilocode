@@ -155,11 +155,20 @@ function validateID(
   return null
 }
 
-export async function connectProvider(ctx: ActionContext, requestId: string, providerID: string, apiKey: string) {
+export async function connectProvider(
+  ctx: ActionContext,
+  requestId: string,
+  providerID: string,
+  apiKey: string,
+  metadata?: Record<string, string>,
+) {
   const id = validateID(ctx, requestId, providerID, "connect")
   if (!id) return
   try {
-    await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
+    await ctx.client.auth.set(
+      { providerID: id, auth: { type: "api", key: apiKey, metadata } },
+      { throwOnError: true },
+    )
     await ctx.disposeGlobal(`provider connect (${id})`)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
