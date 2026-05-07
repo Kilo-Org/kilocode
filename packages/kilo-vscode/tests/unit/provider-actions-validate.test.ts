@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { validateModelSelections, validateRecents, validateFavorites } from "../../src/provider-actions"
+import { validateModelSelections } from "../../src/provider-actions"
 
 describe("validateModelSelections", () => {
   it("returns empty object for null", () => {

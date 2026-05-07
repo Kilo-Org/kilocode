@@ -105,21 +105,6 @@ function isModelSelection(r: unknown): r is { providerID: string; modelID: strin
   )
 }
 
-/** Validate and sanitize recent model selections from untrusted sources. */
-export function validateRecents(raw: unknown): Array<{ providerID: string; modelID: string }> {
-  if (!Array.isArray(raw)) return []
-  return raw
-    .filter(isModelSelection)
-    .slice(0, 5)
-    .map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
-}
-
-/** Validate and sanitize favorite model selections from untrusted sources. */
-export function validateFavorites(raw: unknown): Array<{ providerID: string; modelID: string }> {
-  if (!Array.isArray(raw)) return []
-  return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
-}
-
 /** Validate and sanitize per-mode model selections from untrusted sources. */
 export function validateModelSelections(raw: unknown): Record<string, { providerID: string; modelID: string }> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}

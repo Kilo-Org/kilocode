@@ -106,13 +106,13 @@ import {
 } from "./kilo-provider/handlers/question"
 import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
+import * as Preferences from "./kilo-provider/model-preferences"
+import { handleEnhancePrompt } from "./kilo-provider/enhance-prompt"
 
 import {
   buildActionContext,
   computeDefaultSelection,
   fetchProviderData,
-  validateRecents,
-  validateFavorites,
   connectProvider as connectProviderAction,
   authorizeProviderOAuth as authorizeOAuthAction,
   completeProviderOAuth as completeOAuthAction,
@@ -315,6 +315,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return this.connectionService.getClient()
     } catch {
       return null
+    }
+  }
+
+  private get preferenceCtx(): Parameters<typeof Preferences.persistVariant>[0] {
+    return {
+      extensionContext: this.extensionContext,
+      postMessage: (msg) => this.postMessage(msg),
+      notifyFavoritesChanged: (favorites) => this.connectionService.notifyFavoritesChanged(favorites),
+    }
+  }
+
+  private get enhancePromptCtx(): Parameters<typeof handleEnhancePrompt>[0] {
+    return {
+      client: this.client,
+      postMessage: (msg) => this.postMessage(msg),
+      getErrorMessage,
+      showErrorMessage: (msg) => {
+        void vscode.window.showErrorMessage(msg)
+      },
     }
   }
 
@@ -970,41 +989,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           TelemetryProxy.capture(message.event, message.properties)
           break
         case "persistVariant": {
-          const stored = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
-          stored[message.key] = message.value
-          await this.extensionContext?.globalState.update("variantSelections", stored)
+          await Preferences.persistVariant(this.preferenceCtx, message.key, message.value)
           break
         }
         case "requestVariants": {
-          const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
-          this.postMessage({ type: "variantsLoaded", variants })
+          Preferences.requestVariants(this.preferenceCtx)
           break
         }
         case "persistRecents":
-          await this.extensionContext?.globalState.update("recentModels", validateRecents(message.recents))
+          await Preferences.persistRecents(this.preferenceCtx, message.recents)
           break
         case "requestRecents": {
-          const recents = validateRecents(this.extensionContext?.globalState.get("recentModels"))
-          this.postMessage({ type: "recentsLoaded", recents })
+          Preferences.requestRecents(this.preferenceCtx)
           break
         }
         case "toggleFavorite": {
-          const current = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
-          const key = `${message.providerID}/${message.modelID}`
-          const exists = current.some((f) => `${f.providerID}/${f.modelID}` === key)
-          const favorites =
-            message.action === "add" && !exists
-              ? [...current, { providerID: message.providerID, modelID: message.modelID }]
-              : message.action === "remove" && exists
-                ? current.filter((f) => `${f.providerID}/${f.modelID}` !== key)
-                : current
-          await this.extensionContext?.globalState.update("favoriteModels", favorites)
-          this.connectionService.notifyFavoritesChanged(favorites)
+          await Preferences.toggleFavorite(this.preferenceCtx, message.action, {
+            providerID: message.providerID,
+            modelID: message.modelID,
+          })
           break
         }
         case "requestFavorites": {
-          const favorites = validateFavorites(this.extensionContext?.globalState.get("favoriteModels"))
-          this.postMessage({ type: "favoritesLoaded", favorites })
+          Preferences.requestFavorites(this.preferenceCtx)
           break
         }
         // legacy-migration start
@@ -1025,30 +1032,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         // legacy-migration end
         case "enhancePrompt": {
-          const sdkClient = this.client
-          if (!sdkClient) {
-            this.postMessage({
-              type: "enhancePromptError",
-              error: "Not connected to CLI backend",
-              requestId: message.requestId,
-            })
-            break
-          }
-          void sdkClient.enhancePrompt
-            .enhance({ text: message.text }, { throwOnError: true })
-            .then(({ data }) => {
-              this.postMessage({ type: "enhancePromptResult", text: data.text, requestId: message.requestId })
-            })
-            .catch((err: unknown) => {
-              const msg = getErrorMessage(err) || "Failed to enhance prompt"
-              console.error("[Kilo New] KiloProvider: Failed to enhance prompt:", err)
-              vscode.window.showErrorMessage(`Enhance prompt failed: ${msg}`)
-              this.postMessage({
-                type: "enhancePromptError",
-                error: msg,
-                requestId: message.requestId,
-              })
-            })
+          handleEnhancePrompt(this.enhancePromptCtx, message.text, message.requestId)
           break
         }
         case "fetchMarketplaceData": {
