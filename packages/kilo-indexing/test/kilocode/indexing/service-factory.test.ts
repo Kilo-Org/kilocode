@@ -173,7 +173,7 @@ describe("CodeIndexServiceFactory", () => {
     expect(embedder.embedderInfo).toEqual({ name: "kilo" })
     expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
       input: ["hello"],
-      model: "mistralai/codestral-embed-2505",
+      model: "mistralai/mistral-embed-2312",
       encoding_format: "base64",
     })
   })

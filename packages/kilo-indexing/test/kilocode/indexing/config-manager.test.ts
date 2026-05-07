@@ -49,7 +49,7 @@ describe("CodeIndexConfigManager", () => {
       organizationId: "org_123",
     })
     expect(cfg.currentModelId).toBeUndefined()
-    expect(cfg.currentModelDimension).toBe(1536)
+    expect(cfg.currentModelDimension).toBe(1024)
   })
 
   test("normalizes bare OpenAI model IDs for Kilo", () => {

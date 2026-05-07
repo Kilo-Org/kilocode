@@ -41,4 +41,12 @@ describe("fetchKiloEmbeddingModelCatalog", () => {
       global.fetch = prev
     }
   })
+
+  test("fallback metadata matches Cloud-owned KiloClaw defaults", () => {
+    expect(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG.defaultModel).toBe("mistralai/mistral-embed-2312")
+    expect(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG.models.find((item) => item.id === "mistralai/mistral-embed-2312"))
+      .toMatchObject({ dimension: 1024 })
+    expect(FALLBACK_KILO_EMBEDDING_MODEL_CATALOG.models.find((item) => item.id === "mistralai/codestral-embed-2505"))
+      .toMatchObject({ dimension: 256 })
+  })
 })

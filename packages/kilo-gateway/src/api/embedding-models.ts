@@ -16,12 +16,12 @@ export type KiloEmbeddingModelCatalog = {
 }
 
 export const FALLBACK_KILO_EMBEDDING_MODEL_CATALOG: KiloEmbeddingModelCatalog = {
-  defaultModel: "mistralai/codestral-embed-2505",
+  defaultModel: "mistralai/mistral-embed-2312",
   models: [
     {
       id: "mistralai/codestral-embed-2505",
       name: "Codestral Embed 2505",
-      dimension: 1536,
+      dimension: 256,
       scoreThreshold: 0.35,
       note: "code",
     },

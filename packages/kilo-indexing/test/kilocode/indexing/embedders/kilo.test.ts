@@ -11,7 +11,7 @@ describe("KiloEmbedder", () => {
     setOpenAIConstructorHook(undefined)
   })
 
-  test("uses Kilo Gateway headers and default code embedding model", async () => {
+  test("uses Kilo Gateway headers and default embedding model", async () => {
     const seen: unknown[] = []
     setOpenAIConstructorHook((cfg) => seen.push(cfg))
     mockEmbeddingsCreate.mockResolvedValue({
@@ -33,7 +33,7 @@ describe("KiloEmbedder", () => {
     })
     expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
       input: ["hello"],
-      model: "mistralai/codestral-embed-2505",
+      model: "mistralai/mistral-embed-2312",
       encoding_format: "base64",
     })
   })
