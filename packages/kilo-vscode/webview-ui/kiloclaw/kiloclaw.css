@@ -134,67 +134,6 @@
   padding: 40px 0;
 }
 
-/* Message bubble */
-.kiloclaw-msg {
-  padding: 8px 12px;
-  border-radius: 6px;
-  max-width: 85%;
-  font-size: var(--kilo-font-size-13);
-  line-height: 1.5;
-}
-
-.kiloclaw-msg-user {
-  align-self: flex-end;
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border-bottom-right-radius: 2px;
-}
-
-.kiloclaw-msg-bot {
-  align-self: flex-start;
-  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
-  color: var(--vscode-foreground);
-  border: 1px solid var(--vscode-panel-border);
-  border-bottom-left-radius: 2px;
-}
-
-.kiloclaw-msg-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-  gap: 12px;
-}
-
-.kiloclaw-msg-author {
-  font-weight: 600;
-  font-size: var(--kilo-font-size-11);
-  opacity: 0.8;
-}
-
-.kiloclaw-msg-time {
-  font-size: var(--kilo-font-size-10);
-  opacity: 0.6;
-}
-
-.kiloclaw-msg-body {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* Markdown inside bot messages — reset spacing for inline rendering */
-.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] {
-  white-space: normal;
-}
-
-.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] p:first-child {
-  margin-top: 0;
-}
-
-.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] p:last-child {
-  margin-bottom: 0;
-}
-
 /* Input area */
 .kiloclaw-input-wrap {
   display: flex;
@@ -244,13 +183,6 @@
   background: var(--vscode-sideBar-background, var(--vscode-editor-background));
 }
 
-.kiloclaw-sidebar-title {
-  margin: 0 0 16px;
-  font-size: var(--kilo-font-size-14);
-  font-weight: 600;
-  color: var(--vscode-foreground);
-}
-
 .kiloclaw-sidebar-section {
   margin-bottom: 16px;
 }
@@ -262,6 +194,39 @@
   letter-spacing: 0.5px;
   color: var(--vscode-descriptionForeground);
   margin-bottom: 6px;
+}
+
+/* Conversation title at the top of the sidebar (mirrors the session
+   route layout). Clicking enters rename mode. */
+.kiloclaw-sidebar-titlebtn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: var(--kilo-font-size-14);
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+  word-break: break-word;
+}
+
+.kiloclaw-sidebar-titlebtn:hover {
+  text-decoration: underline;
+}
+
+.kiloclaw-sidebar-titleinput {
+  width: 100%;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  padding: 4px 8px;
+  font-size: var(--kilo-font-size-14);
+  font-weight: 600;
+  font-family: inherit;
 }
 
 .kiloclaw-sidebar-row {
@@ -276,10 +241,642 @@
   display: flex;
   justify-content: space-between;
   font-size: var(--kilo-font-size-13);
+  gap: 8px;
   color: var(--vscode-foreground);
   padding: 2px 0;
 }
 
 .kiloclaw-sidebar-muted {
   color: var(--vscode-descriptionForeground);
+}
+
+.kiloclaw-sidebar-value-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ── Conversation list ─────────────────────────────────────────────── */
+
+.kiloclaw-convlist {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kiloclaw-convlist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  flex-shrink: 0;
+}
+
+.kiloclaw-convlist-title {
+  font-size: var(--kilo-font-size-13);
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.kiloclaw-convlist-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.kiloclaw-convlist-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground);
+}
+
+.kiloclaw-convlist-group {
+  margin-bottom: 8px;
+}
+
+.kiloclaw-convlist-grouplabel {
+  padding: 8px 16px 4px;
+  font-size: var(--kilo-font-size-10);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.kiloclaw-convitem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: var(--kilo-font-size-13);
+  color: var(--vscode-foreground);
+  border-left: 2px solid transparent;
+}
+
+.kiloclaw-convitem:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.kiloclaw-convitem-active {
+  background: var(--vscode-list-activeSelectionBackground);
+  border-left-color: var(--vscode-focusBorder);
+}
+
+.kiloclaw-convitem-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kiloclaw-convitem-unread {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vscode-focusBorder);
+  flex-shrink: 0;
+}
+
+.kiloclaw-convitem-renameinput {
+  flex: 1;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  padding: 2px 6px;
+  font-size: var(--kilo-font-size-12);
+  font-family: inherit;
+}
+
+/* Actions reserve their layout space on every row and only toggle
+   visibility on hover. Using `display: none` here instead would let the
+   row's height collapse to the title text, then expand to fit the icon
+   buttons on hover — producing a visible layout jump as the mouse moves
+   between items. `visibility: hidden` keeps the row's height fixed. */
+.kiloclaw-convitem-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  visibility: hidden;
+}
+
+.kiloclaw-convitem:hover .kiloclaw-convitem-actions {
+  visibility: visible;
+}
+
+/* ── Active message area ───────────────────────────────────────────── */
+
+.kiloclaw-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.kiloclaw-empty-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-13);
+  padding: 24px;
+}
+
+.kiloclaw-area-messages-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+
+.kiloclaw-area-messages {
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.kiloclaw-scrollbtn {
+  position: absolute;
+  right: 16px;
+  bottom: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  font-size: var(--kilo-font-size-16);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.kiloclaw-typing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.kiloclaw-reply-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--vscode-editorWidget-background);
+  border-top: 1px solid var(--vscode-panel-border);
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-descriptionForeground);
+}
+
+.kiloclaw-reply-preview-label {
+  font-weight: 600;
+}
+
+.kiloclaw-reply-preview-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Dot states ────────────────────────────────────────────────────── */
+
+.kiloclaw-dot-idle {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.kiloclaw-dot-unknown {
+  background: var(--vscode-descriptionForeground, #888);
+  opacity: 0.5;
+}
+
+/* ── Message bubble ─────────────────────────────────────────────────
+ *
+ * Layout mirrors the web UI (cloud/apps/web/src/app/(app)/claw/kilo-chat/
+ * components/MessageBubble.tsx):
+ *
+ *   [own]                          [bot/other]
+ *         ┌─ column ─┐              ┌─ column ─┐
+ *         │ (author) │  (none)      │ author   │
+ *         │ (reply)  │              │ (reply)  │
+ *         │ [bubble] │              │ [bubble] │
+ *         │ reacts   │              │ reacts   │
+ *         └──────────┘              └──────────┘
+ *
+ * Each message is a flex row that justifies its column to either end or
+ * start. Author/reply labels stack above the bubble; timestamp + edited
+ * markers render inside the bubble's footer (right-aligned); reactions
+ * sit below. The per-message toolbar is absolutely positioned beside the
+ * bubble and revealed on hover of the whole row.
+ */
+
+.kiloclaw-msg {
+  position: relative;
+  display: flex;
+  padding: 2px 16px;
+}
+
+.kiloclaw-msg-own {
+  justify-content: flex-end;
+}
+
+.kiloclaw-msg-bot,
+.kiloclaw-msg-other {
+  justify-content: flex-start;
+}
+
+.kiloclaw-msg-column {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+  min-width: 0;
+}
+
+.kiloclaw-msg-own .kiloclaw-msg-column {
+  align-items: flex-end;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-column,
+.kiloclaw-msg-other .kiloclaw-msg-column {
+  align-items: flex-start;
+}
+
+.kiloclaw-msg-author {
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 2px;
+  padding: 0 4px;
+}
+
+.kiloclaw-msg-reply {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+  padding: 0 4px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-descriptionForeground);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.kiloclaw-msg-reply-arrow {
+  flex-shrink: 0;
+}
+
+.kiloclaw-msg-reply-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.kiloclaw-msg-reply-deleted {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Bubble wrapper — relative so we can absolutely position the toolbar
+   and reaction popup to the side. */
+.kiloclaw-msg-bubble-wrap {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kiloclaw-msg-bubble {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: var(--kilo-font-size-13);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  overflow: hidden;
+}
+
+/* Own messages — primary (VS Code button) palette. */
+.kiloclaw-msg-own .kiloclaw-msg-bubble {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+/* Bot/other messages — muted editor-widget palette. */
+.kiloclaw-msg-bot .kiloclaw-msg-bubble,
+.kiloclaw-msg-other .kiloclaw-msg-bubble {
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+}
+
+.kiloclaw-msg-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.kiloclaw-msg-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Markdown inside bot bubbles — strip default paragraph margins so the
+   first/last block sit flush with the bubble padding, and let markdown
+   render as normal flow rather than pre-wrap. */
+.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"],
+.kiloclaw-msg-other .kiloclaw-msg-body [data-component="markdown"] {
+  white-space: normal;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] p:first-child,
+.kiloclaw-msg-other .kiloclaw-msg-body [data-component="markdown"] p:first-child {
+  margin-top: 0;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] p:last-child,
+.kiloclaw-msg-other .kiloclaw-msg-body [data-component="markdown"] p:last-child {
+  margin-bottom: 0;
+}
+
+/* Footer inside the bubble (timestamp + edited + delivery) */
+.kiloclaw-msg-footer {
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: var(--kilo-font-size-10);
+}
+
+.kiloclaw-msg-own .kiloclaw-msg-footer {
+  color: var(--vscode-button-foreground);
+  opacity: 0.7;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-footer,
+.kiloclaw-msg-other .kiloclaw-msg-footer {
+  color: var(--vscode-descriptionForeground);
+}
+
+.kiloclaw-msg-deleted {
+  font-style: italic;
+  opacity: 0.5;
+}
+
+.kiloclaw-msg-thinking {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.kiloclaw-msg-failed {
+  color: var(--vscode-errorForeground);
+}
+
+/* Action approval buttons */
+.kiloclaw-msg-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.kiloclaw-msg-action {
+  padding: 4px 10px;
+  font-size: var(--kilo-font-size-12);
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.kiloclaw-msg-action-primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.kiloclaw-msg-action-danger {
+  background: var(--vscode-errorForeground, #f14c4c);
+  color: var(--vscode-button-foreground);
+}
+
+.kiloclaw-msg-action-secondary {
+  background: var(--vscode-button-secondaryBackground, var(--vscode-editorWidget-background));
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+}
+
+.kiloclaw-msg-actions-resolved {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--kilo-font-size-11);
+  opacity: 0.7;
+}
+
+.kiloclaw-msg-actions-resolved-icon {
+  font-weight: 700;
+}
+
+/* Reactions — sit below the bubble, aligned with the bubble edge. */
+.kiloclaw-msg-reactions {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.kiloclaw-msg-own .kiloclaw-msg-reactions {
+  justify-content: flex-end;
+}
+
+.kiloclaw-msg-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: var(--kilo-font-size-11);
+  border-radius: 10px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border);
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--vscode-foreground);
+}
+
+.kiloclaw-msg-reaction-pill:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+/* Per-message toolbar — absolutely positioned to the side; shown on
+   hover of the whole row (so hovering the toolbar itself also keeps it
+   visible, since it is a descendant of `.kiloclaw-msg`). */
+.kiloclaw-msg-toolbar {
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  gap: 0;
+  padding: 2px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.kiloclaw-msg-own .kiloclaw-msg-toolbar {
+  right: 100%;
+  margin-right: 4px;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-toolbar,
+.kiloclaw-msg-other .kiloclaw-msg-toolbar {
+  left: 100%;
+  margin-left: 4px;
+}
+
+.kiloclaw-msg:hover .kiloclaw-msg-toolbar {
+  display: flex;
+}
+
+.kiloclaw-msg-toolbar .kiloclaw-iconbtn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 3px;
+}
+
+/* Quick reaction picker popover (anchored to the toolbar side) */
+.kiloclaw-msg-reactionpick {
+  position: absolute;
+  top: 30px;
+  z-index: 20;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  width: max-content;
+}
+
+.kiloclaw-msg-own .kiloclaw-msg-reactionpick {
+  right: 100%;
+  margin-right: 4px;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-reactionpick,
+.kiloclaw-msg-other .kiloclaw-msg-reactionpick {
+  left: 100%;
+  margin-left: 4px;
+}
+
+.kiloclaw-msg-reactionpick-btn {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: var(--kilo-font-size-14);
+  border-radius: 2px;
+}
+
+.kiloclaw-msg-reactionpick-btn:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.kiloclaw-msg-confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--kilo-font-size-13);
+}
+
+.kiloclaw-msg-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kiloclaw-msg-edit-input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid currentColor;
+  border-color: rgba(128, 128, 128, 0.3);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  padding: 4px 6px;
+  font-size: var(--kilo-font-size-13);
+  font-family: inherit;
+  min-height: 40px;
+}
+
+.kiloclaw-msg-edit-input:focus {
+  outline: none;
+  border-color: currentColor;
+  opacity: 0.8;
+}
+
+.kiloclaw-msg-edit-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+/* ── Icon buttons ──────────────────────────────────────────────────── */
+
+.kiloclaw-iconbtn {
+  background: none;
+  border: 1px solid var(--vscode-panel-border);
+  color: var(--vscode-foreground);
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: var(--kilo-font-size-14);
+  font-family: inherit;
+}
+
+.kiloclaw-iconbtn:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.kiloclaw-iconbtn-sm {
+  background: none;
+  border: none;
+  color: var(--vscode-foreground);
+  border-radius: 2px;
+  padding: 2px 4px;
+  cursor: pointer;
+  font-size: var(--kilo-font-size-12);
+  font-family: inherit;
+  opacity: 0.7;
+}
+
+.kiloclaw-iconbtn-sm:hover {
+  background: var(--vscode-list-hoverBackground);
+  opacity: 1;
+}
+
+.kiloclaw-iconbtn-danger {
+  color: var(--vscode-errorForeground);
 }

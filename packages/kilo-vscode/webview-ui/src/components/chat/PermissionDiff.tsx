@@ -3,35 +3,12 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { parsePatch } from "diff"
+import { contents } from "@kilocode/kilo-ui/session-diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
 
 interface PermissionDiffProps {
   filediff: PermissionFileDiff
-}
-
-function patchText(patch: string) {
-  const parsed = parsePatch(patch)[0]
-  if (!parsed) return { before: "", after: "" }
-
-  const before: string[] = []
-  const after: string[] = []
-  for (const hunk of parsed.hunks) {
-    for (const line of hunk.lines) {
-      if (line.startsWith("-")) {
-        before.push(line.slice(1))
-        continue
-      }
-      if (line.startsWith("+")) {
-        after.push(line.slice(1))
-        continue
-      }
-      before.push(line.slice(1))
-      after.push(line.slice(1))
-    }
-  }
-  return { before: before.join("\n"), after: after.join("\n") }
 }
 
 export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
@@ -50,7 +27,10 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
   const resolved = createMemo(() => {
     const fd = props.filediff
     if (fd.before !== undefined || fd.after !== undefined) return { before: fd.before ?? "", after: fd.after ?? "" }
-    if (fd.patch) return patchText(fd.patch)
+    if (fd.patch) {
+      const view = contents(fd)
+      return { before: view.before, after: view.after }
+    }
     return { before: "", after: "" }
   })
 

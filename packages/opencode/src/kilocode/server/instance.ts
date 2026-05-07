@@ -20,6 +20,7 @@ import { errors } from "../../server/error"
 import { ModelCache } from "../../provider/model-cache"
 import { Database } from "../../storage/db"
 import { Instance } from "../../project/instance"
+import { InstanceStore } from "../../project/instance-store"
 import { Session } from "../../session/session"
 import { Identifier } from "../../id/id"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
@@ -48,6 +49,7 @@ export function register(app: Hono): Hono {
         z,
         Database,
         Instance,
+        InstanceStore,
         SessionTable,
         MessageTable,
         PartTable,

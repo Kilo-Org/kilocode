@@ -92,4 +92,9 @@ export const dict = {
     "Slå av Kilos snapshots for dette prosjektet. Du mister angre/gjør om for Kilo-endringer, men git fortsetter å spore alt.",
 
   "ui.messagePart.openInDiffViewer": "Åpne i diff-viser",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dette var nyttig",
+  "ui.message.feedback.notHelpful": "Dette var ikke nyttig",
+  "ui.message.feedback.clearRating": "Fjern vurdering",
 }

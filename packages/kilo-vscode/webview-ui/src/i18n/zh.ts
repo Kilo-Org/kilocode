@@ -1482,4 +1482,12 @@ export const dict = {
   "notifications.action.close": "关闭",
   "notifications.action.tryModel": "尝试 {{model}}",
   "notifications.action.tryModelGeneric": "尝试模型",
+  "diffViewer.source.workspace.label": "本地更改",
+  "diffViewer.source.workspace.tooltip":
+    "此分支相对于基础分支的所有更改。包括未提交的文件（已暂存、未暂存、未跟踪）以及尚未合入基础分支的本地提交。",
+  "diffViewer.source.session.label": "会话",
+  "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
+  "diffViewer.group.session": "会话",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
 } satisfies Partial<Record<Keys, string>>

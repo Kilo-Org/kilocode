@@ -8,7 +8,7 @@
  */
 
 import { createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector, useContext } from "solid-js"
-import type { Component } from "solid-js"
+import type { Accessor, Component } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -730,14 +730,19 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 // Chat-specific wrapper (backwards-compatible default export)
 // ---------------------------------------------------------------------------
 
-export const ModelSelector: Component = () => {
+interface ModelSelectorProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ModelSelector: Component<ModelSelectorProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ModelSelectorBase
-      value={session.selected()}
+      value={session.selected(id())}
       onSelect={(providerID, modelID) => {
-        session.selectModel(providerID, modelID)
+        session.selectModel(providerID, modelID, id())
       }}
       onPick={() => {
         requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
