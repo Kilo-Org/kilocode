@@ -63,7 +63,7 @@ export function DialogSessionList() {
     if (global()) return all
     const root = project.instance.path().worktree
     if (!root || root === "/") return all
-    return all.filter((s) => s.directory === root || s.directory.startsWith(root + path.sep))
+    return all.filter((s) => s.worktreeDirectory === root)
   })
   // kilocode_change end
 

@@ -2319,6 +2319,7 @@ export type GlobalSession = {
     diff?: string
   }
   project: ProjectSummary | null
+  worktreeDirectory?: string
   worktreeName?: string
 }
 

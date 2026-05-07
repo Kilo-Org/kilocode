@@ -17079,6 +17079,9 @@
               }
             ]
           },
+          "worktreeDirectory": {
+            "type": "string"
+          },
           "worktreeName": {
             "type": "string"
           }

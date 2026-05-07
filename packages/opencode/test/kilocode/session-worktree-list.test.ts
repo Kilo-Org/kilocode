@@ -120,7 +120,7 @@ describe("Kilo experimental session worktree list", () => {
 
   test("keeps sessions for removed worktrees visible after process restart", async () => {
     await using repo = await tmpdir({ git: true })
-    const worktree = path.join(repo.path, "..", path.basename(repo.path) + "-stale")
+    const worktree = path.join(repo.path, ".kilo", "worktrees", "stale")
     const now = Date.now()
     const session = SessionID.descending()
 

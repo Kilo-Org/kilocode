@@ -216,9 +216,9 @@ export namespace KiloSession {
     archived?: boolean
   }) {
     const conditions: SQL[] = []
+    const ids = input.projectID ? family(input.projectID) : []
 
     if (input.projectID) {
-      const ids = family(input.projectID)
       if (ids.length === 1 && ids[0] === input.projectID) {
         conditions.push(eq(SessionTable.project_id, ProjectID.make(input.projectID)))
       } else {
@@ -252,6 +252,7 @@ export namespace KiloSession {
 
     const limit = input.limit ?? 100
     const dirs = [...new Set((input.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
+    const projectIDs = new Set(ids)
 
     const rows = Database.use((db) => {
       const query =
@@ -269,19 +270,19 @@ export namespace KiloSession {
       dirs.length > 0
         ? rows.filter((row) => {
             const dir = Filesystem.resolve(row.directory)
-            return dirs.some((root) => Filesystem.contains(root, dir))
+            return dirs.some((root) => Filesystem.contains(root, dir)) || projectIDs.has(row.project_id)
           })
         : rows
 
-    const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
+    const pids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
     const projects = new Map<string, ProjectInfo>()
 
-    if (ids.length > 0) {
+    if (pids.length > 0) {
       const items = Database.use((db) =>
         db
           .select({ id: ProjectTable.id, name: ProjectTable.name, worktree: ProjectTable.worktree })
           .from(ProjectTable)
-          .where(inArray(ProjectTable.id, ids))
+          .where(inArray(ProjectTable.id, pids))
           .all(),
       )
       for (const item of items) {

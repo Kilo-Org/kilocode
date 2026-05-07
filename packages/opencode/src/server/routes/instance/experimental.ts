@@ -44,6 +44,12 @@ const ConsoleSwitchBody = z.object({
   orgID: z.string(),
 })
 
+// kilocode_change start - Agent Manager worktrees live under ignored .kilo folders
+function kiloRoot(dir: string) {
+  return /^(.*(?:\/|\\)\.kilo(?:code)?(?:\/|\\)worktrees(?:\/|\\)[^\/\\]+)/.exec(dir)?.[1]
+}
+// kilocode_change end
+
 const QueryBoolean = z.union([
   z.preprocess((value) => (value === "true" ? true : value === "false" ? false : value), z.boolean()),
   z.enum(["true", "false"]),
@@ -522,8 +528,12 @@ export const ExperimentalRoutes = lazy(() =>
         })) {
           // kilocode_change start - resolve worktree folder name for each session
           if (sorted) {
-            const root = sorted.find((d) => Filesystem.contains(d, session.directory))
-            sessions.push({ ...session, worktreeName: path.basename(root ?? session.directory) })
+            const exact = sorted.find((d) => d === session.directory)
+            const kilo = kiloRoot(session.directory)
+            const parent = sorted.find((d) => Filesystem.contains(d, session.directory))
+            const root = exact ?? (kilo && parent ? kilo : parent)
+            const dir = root ?? session.directory
+            sessions.push({ ...session, worktreeDirectory: dir, worktreeName: path.basename(dir) })
             continue
           }
           // kilocode_change end

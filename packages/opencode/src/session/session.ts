@@ -185,6 +185,7 @@ export type ProjectInfo = Types.DeepMutable<Schema.Schema.Type<typeof ProjectInf
 export const GlobalInfo = Schema.Struct({
   ...Info.fields,
   project: Schema.NullOr(ProjectInfo),
+  worktreeDirectory: Schema.optional(Schema.String), // kilocode_change - exact worktree root for session list filtering
   worktreeName: Schema.optional(Schema.String), // kilocode_change - basename of the specific worktree directory
 })
   .annotate({ identifier: "GlobalSession" })
