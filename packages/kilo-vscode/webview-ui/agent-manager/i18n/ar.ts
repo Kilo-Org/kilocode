@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "الطرفية",
   "agentManager.tab.openTerminal": "فتح الطرفية",
   "agentManager.tab.newOptions": "المزيد من خيارات علامات التبويب الجديدة",
+  "agentManager.tabsMenu.label": "البحث في علامات التبويب المفتوحة",
+  "agentManager.tabsMenu.search": "البحث في علامات التبويب...",
+  "agentManager.tabsMenu.empty": "لا توجد علامات تبويب مطابقة",
+  "agentManager.tabsMenu.status.waiting": "انتظار",
+  "agentManager.tabsMenu.status.working": "يعمل",
+  "agentManager.tabsMenu.status.retry": "إعادة",
 
   "agentManager.terminal.new": "علامة تبويب جديدة للمحطة الطرفية",
   "agentManager.terminal.ended": "انتهت المحطة الطرفية — أغلق علامة التبويب للإخفاء",

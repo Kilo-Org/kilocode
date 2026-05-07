@@ -1176,6 +1176,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Usar um atalho inteligente para acionar tarefas inline",
   "settings.autocomplete.chatAutocomplete.title": "Ativar autocompletar do chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugestões de autocompletar no campo de chat",
+  "settings.autocomplete.modelsHint":
+    "Para escolher qual modelo é usado para autocompletar, veja as configurações de Modelos.",
   "settings.notifications.agent.title": "Conclusão do agente",
   "settings.notifications.agent.description": "Mostrar notificação quando o agente conclui uma tarefa",
   "settings.notifications.permissions.title": "Solicitações de permissão",

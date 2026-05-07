@@ -1158,6 +1158,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "ใช้ปุ่มลัดอัจฉริยะสำหรับงานอินไลน์",
   "settings.autocomplete.chatAutocomplete.title": "เปิดใช้งานเติมอัตโนมัติแชท",
   "settings.autocomplete.chatAutocomplete.description": "แสดงข้อเสนอแนะเติมอัตโนมัติในช่องแชท",
+  "settings.autocomplete.modelsHint": "เลือกโมเดลที่ใช้สำหรับการเติมอัตโนมัติได้ที่การตั้งค่าโมเดล",
   "settings.notifications.agent.title": "เอเจนต์เสร็จสิ้น",
   "settings.notifications.agent.description": "แสดงการแจ้งเตือนเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permissions.title": "คำขออนุญาต",

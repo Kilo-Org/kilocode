@@ -272,6 +272,8 @@ interface StoryProvidersProps {
 const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config: Config) => void }> = (props) => {
   if (props.config) {
     const [cfg, setCfg] = createSignal(props.config)
+    const [settings, setSettings] = createSignal<Record<string, unknown>>({})
+    const [dirty, setDirty] = createSignal(false)
     const features = createMemo(() => {
       const config = cfg() as Config & {
         plugin?: readonly PluginSpec[] | null
@@ -284,9 +286,10 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
 
     const value = {
       config: createMemo(() => cfg()),
+      settings,
       features,
       loading: () => false,
-      isDirty: () => false,
+      isDirty: dirty,
       saving: () => false,
       saveError: () => null,
       updateConfig: (partial: Partial<Config>) => {
@@ -295,9 +298,14 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
           props.onConfigChange?.(next)
           return next
         })
+        setDirty(true)
       },
-      saveConfig: noop,
-      discardConfig: noop,
+      updateSetting: (key: string, value: unknown) => {
+        setSettings((prev) => ({ ...prev, [key]: value }))
+        setDirty(true)
+      },
+      saveConfig: () => setDirty(false),
+      discardConfig: () => setDirty(false),
     }
     return <ConfigContext.Provider value={value}>{props.children}</ConfigContext.Provider>
   }

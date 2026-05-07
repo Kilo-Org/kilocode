@@ -23,6 +23,8 @@ export interface ThinkingSelectorBaseProps {
   value: string | undefined
   /** Called when the user picks a variant */
   onSelect: (value: string) => void
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -111,6 +113,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
         placement="top-start"
         preferredWidth={180}
         minHeight={100}
+        deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}

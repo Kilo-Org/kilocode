@@ -1170,6 +1170,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Brug en smart tastaturgenvej til at udløse inline-opgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofuldførelse",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofuldførelsesforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For at vælge hvilken model der bruges til autofuldførelse, se Modelindstillinger.",
   "settings.notifications.agent.title": "Agentafslutning",
   "settings.notifications.agent.description": "Vis notifikation, når agenten fuldfører en opgave",
   "settings.notifications.permissions.title": "Tilladelsesanmodninger",

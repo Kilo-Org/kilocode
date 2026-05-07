@@ -1177,6 +1177,8 @@ export const dict = {
   "settings.autocomplete.chatAutocomplete.title": "Chat tekstveld automatisch aanvullen inschakelen",
   "settings.autocomplete.chatAutocomplete.description":
     "Toon suggesties voor automatisch aanvullen in het chat tekstveld",
+  "settings.autocomplete.modelsHint":
+    "Om te kiezen welk model wordt gebruikt voor automatisch aanvullen, zie de Modellen-instellingen.",
 
   "settings.notifications.agent.title": "Agent Voltooiing",
   "settings.notifications.agent.description": "Toon melding wanneer agent een taak voltooit",

@@ -1174,6 +1174,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Использовать умную клавишу для запуска встроенных задач",
   "settings.autocomplete.chatAutocomplete.title": "Включить автодополнение чата",
   "settings.autocomplete.chatAutocomplete.description": "Показывать предложения автодополнения в поле чата",
+  "settings.autocomplete.modelsHint": "Чтобы выбрать модель для автодополнения, см. настройки Моделей.",
   "settings.notifications.agent.title": "Завершение агента",
   "settings.notifications.agent.description": "Показать уведомление при завершении задачи агентом",
   "settings.notifications.permissions.title": "Запросы разрешений",

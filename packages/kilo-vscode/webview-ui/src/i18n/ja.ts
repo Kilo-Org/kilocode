@@ -1166,6 +1166,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "インラインタスクをトリガーするスマートキーバインドを使用",
   "settings.autocomplete.chatAutocomplete.title": "チャットの自動補完を有効にする",
   "settings.autocomplete.chatAutocomplete.description": "チャットテキストエリアに自動補完の提案を表示",
+  "settings.autocomplete.modelsHint": "オートコンプリートに使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.notifications.agent.title": "エージェント完了",
   "settings.notifications.agent.description": "エージェントがタスクを完了したら通知を表示",
   "settings.notifications.permissions.title": "権限リクエスト",

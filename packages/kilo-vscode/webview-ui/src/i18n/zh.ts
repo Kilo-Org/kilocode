@@ -1143,6 +1143,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "使用智能快捷键触发内联任务",
   "settings.autocomplete.chatAutocomplete.title": "启用聊天文本框自动补全",
   "settings.autocomplete.chatAutocomplete.description": "在聊天文本框中显示自动补全建议",
+  "settings.autocomplete.modelsHint": "若要选择用于自动补全的模型，请参阅模型设置。",
   "settings.notifications.agent.title": "智能体完成",
   "settings.notifications.agent.description": "智能体完成任务时显示通知",
   "settings.notifications.permissions.title": "权限请求",
