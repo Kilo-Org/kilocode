@@ -165,7 +165,6 @@ export const dict: Record<string, string> = {
   "ui.message.copied": "Gekopieerd",
   "ui.message.forkMessage": "Fork to new session",
   "ui.message.revertMessage": "Hiernaar terugzetten",
-  "ui.message.revert": "Hiernaar terugdraaien",
   "ui.message.interrupted": "Onderbroken",
   "ui.message.queued": "In wachtrij",
   "ui.message.attachment.alt": "bijlage",

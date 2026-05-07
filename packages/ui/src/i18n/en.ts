@@ -54,8 +54,6 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Add credits",
 
   "ui.sessionTurn.status.delegating": "Delegating work",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planning next steps",
   "ui.sessionTurn.status.gatheringContext": "Exploring",
   "ui.sessionTurn.status.gatheredContext": "Explored",
@@ -69,8 +67,6 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps",
 
   "ui.messagePart.diagnostic.error": "Error",
-  "ui.messagePart.mcp.input": "Input",
-  "ui.messagePart.mcp.output": "Output",
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
@@ -160,7 +156,7 @@ export const dict: Record<string, string> = {
   "ui.message.copy": "Copy",
   "ui.message.copyMessage": "Copy message",
   "ui.message.forkMessage": "Fork to new session",
-  "ui.message.revertMessage": "Revert to here",
+  "ui.message.revertMessage": "Revert message",
   "ui.message.copyResponse": "Copy response",
   "ui.message.copied": "Copied",
   "ui.message.duration.seconds": "{{count}}s",
