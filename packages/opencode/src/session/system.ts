@@ -92,7 +92,12 @@ export const layer = Layer.effect(
     const skill = yield* Skill.Service
 
     return Service.of({
-      environment: Effect.fn("SystemPrompt.environment")(function* (model: Provider.Model, editorContext?: EditorContext) {
+      // kilocode_change start
+      environment: Effect.fn("SystemPrompt.environment")(function* (
+        model: Provider.Model,
+        editorContext?: EditorContext,
+      ) {
+        // kilocode_change end
         const ctx = yield* InstanceState.context
         return [
           [

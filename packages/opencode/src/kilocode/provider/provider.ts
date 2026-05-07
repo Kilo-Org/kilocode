@@ -190,8 +190,10 @@ export function patchCustomLoaderResult(
       })()
       if (url) {
         result.options.baseURL = url
+        delete result.options.resourceName
       } else if (resource) {
         result.options.resourceName = resource
+        delete result.options.baseURL
       }
       break
     }

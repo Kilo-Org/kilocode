@@ -99,16 +99,41 @@ export function calcContextUsage(
 }
 
 /**
- * Build a map of session ID → total cost for each session in the family
- * that has non-zero cost. Pure function — no store dependency.
+ * Build a map of session ID → **own cost** for each session in the family
+ * that has non-zero own cost.
+ *
+ * The CLI backend already propagates each subagent's total up into its
+ * parent assistant message when the subagent finishes (see
+ * `packages/opencode/src/kilocode/session/cost-propagation.ts`), so a
+ * session's `message.info.cost` sum is actually the whole sub-tree rooted
+ * at that session, not its own LLM usage. Summing every session in the
+ * family would double-count the propagated amounts.
+ *
+ * To present a breakdown whose entries sum to the root's propagated total
+ * (== the family's true cost), we subtract each session's propagated
+ * total from its parent's figure. The root's entry then holds its own
+ * LLM cost, each subagent's entry holds its own LLM cost, and the sum
+ * equals the root's `message.info.cost` — matching the backend's number.
+ *
+ * Pure function — no store dependency.
  */
 export function buildFamilyCosts(
   family: Set<string>,
   messages: Record<string, Array<{ role: string; cost?: number }>>,
+  sessions: Record<string, { parentID?: string | null } | undefined>,
 ): Map<string, number> {
-  const costs = new Map<string, number>()
+  const totals = new Map<string, number>()
+  for (const sid of family) totals.set(sid, calcTotalCost(messages[sid] ?? []))
+
+  const own = new Map<string, number>(totals)
   for (const sid of family) {
-    const cost = calcTotalCost(messages[sid] ?? [])
+    const parent = sessions[sid]?.parentID
+    if (!parent || !own.has(parent)) continue
+    own.set(parent, (own.get(parent) ?? 0) - (totals.get(sid) ?? 0))
+  }
+
+  const costs = new Map<string, number>()
+  for (const [sid, cost] of own) {
     if (cost > 0) costs.set(sid, cost)
   }
   return costs

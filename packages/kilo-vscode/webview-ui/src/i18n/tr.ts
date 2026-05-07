@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
   "provider.connect.apiKey.placeholder": "API anahtarı",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
+  "provider.connect.prompt.required": "{{field}} zorunludur",
+  "provider.connect.azure.endpointType.label": "Azure uç nokta yapılandırmasını seçin",
+  "provider.connect.azure.endpointType.resourceName.label": "Kaynak adı",
+  "provider.connect.azure.endpointType.resourceName.hint": "Azure kaynak adınızdan uç nokta oluşturun",
+  "provider.connect.azure.endpointType.baseURL.label": "Tam uç nokta URL'si",
+  "provider.connect.azure.endpointType.baseURL.hint": "Özel bir Azure OpenAI uç noktası kullanın",
+  "provider.connect.azure.resourceName.label": "Azure kaynak adı",
+  "provider.connect.azure.resourceName.placeholder": "örn. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI uç nokta URL'si",
+  "provider.connect.azure.baseURL.placeholder": "örn. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen, kodlama ajanları için seçilmiş güvenilir optimize edilmiş modellere erişim sağlar.",
   "provider.connect.opencodeZen.line2":

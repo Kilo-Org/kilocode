@@ -140,6 +140,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-nøkkel",
   "provider.connect.apiKey.placeholder": "API-nøkkel",
   "provider.connect.apiKey.required": "API-nøkkel er påkrevd",
+  "provider.connect.prompt.required": "{{field}} er påkrevd",
+  "provider.connect.azure.endpointType.label": "Velg Azure-endepunktskonfigurasjon",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressursnavn",
+  "provider.connect.azure.endpointType.resourceName.hint": "Bygg endepunktet fra ditt Azure-ressursnavn",
+  "provider.connect.azure.endpointType.baseURL.label": "Full endepunkts-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Bruk et egendefinert Azure OpenAI-endepunkt",
+  "provider.connect.azure.resourceName.label": "Azure-ressursnavn",
+  "provider.connect.azure.resourceName.placeholder": "f.eks. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-endepunkts-URL",
+  "provider.connect.azure.baseURL.placeholder": "f.eks. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen gir deg tilgang til et utvalg av pålitelige optimaliserte modeller for kodeagenter.",
   "provider.connect.opencodeZen.line2":

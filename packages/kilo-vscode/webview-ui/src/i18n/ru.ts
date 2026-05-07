@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API ключ",
   "provider.connect.apiKey.placeholder": "API ключ",
   "provider.connect.apiKey.required": "API ключ обязателен",
+  "provider.connect.prompt.required": "{{field}} обязательно",
+  "provider.connect.azure.endpointType.label": "Выберите конфигурацию конечной точки Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Имя ресурса",
+  "provider.connect.azure.endpointType.resourceName.hint": "Создать конечную точку из имени ресурса Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "Полный URL конечной точки",
+  "provider.connect.azure.endpointType.baseURL.hint": "Использовать пользовательскую конечную точку Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Имя ресурса Azure",
+  "provider.connect.azure.resourceName.placeholder": "например, my-models",
+  "provider.connect.azure.baseURL.label": "URL конечной точки Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "например, https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen даёт вам доступ к отобранным надёжным оптимизированным моделям для агентов программирования.",
   "provider.connect.opencodeZen.line2":

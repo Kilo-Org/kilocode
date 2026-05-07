@@ -114,10 +114,12 @@
     "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
+    "@kilocode/sdk": "workspace:*",
     "@kobalte/core": "0.13.11",
     "@opencode-ai/core": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@solid-primitives/lifecycle": "0.1.2",
+    "diff": "catalog:",
     "@solid-primitives/media": "2.3.3",
     "@solid-primitives/resize-observer": "2.1.5",
     "@solid-primitives/rootless": "1.5.2",

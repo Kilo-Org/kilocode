@@ -215,20 +215,32 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     azure: Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
       const auth = yield* dep.auth(provider.id)
-      const resource = iife(() => {
+      // kilocode_change start - prefer explicit Azure endpoint over resource name to avoid conflicting SDK options
+      const endpoint = iife(() => {
         return [
-          provider.options?.resourceName,
-          auth?.type === "api" ? auth.metadata?.resourceName : undefined,
-          env["AZURE_RESOURCE_NAME"],
-        ].find((name) => typeof name === "string" && name.trim() !== "")
+          provider.options?.baseURL,
+          auth?.type === "api" ? auth.metadata?.baseURL : undefined,
+          env["AZURE_OPENAI_ENDPOINT"],
+        ].find((url) => typeof url === "string" && url.trim() !== "")
       })
+      const resource = endpoint
+        ? undefined
+        : iife(() => {
+            return [
+              provider.options?.resourceName,
+              auth?.type === "api" ? auth.metadata?.resourceName : undefined,
+              env["AZURE_RESOURCE_NAME"],
+              env["AZURE_OPENAI_RESOURCE_NAME"],
+            ].find((name) => typeof name === "string" && name.trim() !== "")
+          })
+      // kilocode_change end
 
-      if (!resource && !provider.options?.baseURL) {
+      if (!resource && !endpoint) { // kilocode_change
         return {
           autoload: false,
           async getModel() {
             throw new Error(
-              "AZURE_RESOURCE_NAME is missing, set it using env var or reconnecting the azure provider and setting it",
+              "Azure resource name or endpoint is missing. Set AZURE_RESOURCE_NAME, AZURE_OPENAI_RESOURCE_NAME, AZURE_OPENAI_ENDPOINT, or reconnect the azure provider.", // kilocode_change
             )
           },
         }
@@ -245,7 +257,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           }
         },
         options: {
-          resourceName: resource,
+          ...(endpoint ? { baseURL: endpoint } : { resourceName: resource }), // kilocode_change
         },
         vars(_options): Record<string, string> {
           if (resource) {

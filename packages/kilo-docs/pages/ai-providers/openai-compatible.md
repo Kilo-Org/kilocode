@@ -1,6 +1,6 @@
 ---
 title: "Using OpenAI-Compatible Providers with Kilo Code"
-description: "Connect any OpenAI-compatible API endpoint to Kilo Code, including Azure OpenAI, Together AI, and self-hosted servers."
+description: "Connect OpenAI-compatible API endpoints like Together AI, Perplexity, and self-hosted servers."
 sidebar_label: OpenAI Compatible
 ---
 
@@ -14,6 +14,12 @@ Kilo Code supports a wide range of AI model providers that offer APIs compatible
 
 This document focuses on setting up providers _other than_ the official OpenAI API (which has its own [dedicated configuration page](/docs/ai-providers/openai)).
 
+{% callout type="warning" %}
+Do not use a custom OpenAI-compatible provider for Azure OpenAI GPT-5 deployments. Azure GPT-5 rejects the `max_tokens` parameter used by generic OpenAI-compatible providers and requires Azure-specific handling.
+
+Use Kilo Code's native `azure` provider instead. If your Azure deployment name differs from the model name you select in Kilo, map it with the model `id` field in `kilo.json`.
+{% /callout %}
+
 ## General Configuration
 
 {% tabs %}
@@ -21,7 +27,7 @@ This document focuses on setting up providers _other than_ the official OpenAI A
 
 The key to using an OpenAI-compatible provider is to configure two main settings:
 
-1.  **Base URL:** This is the API endpoint for the provider. It will _not_ be `https://api.openai.com/v1` (that's for the official OpenAI API).
+1.  **Base URL:** This is the API endpoint for the provider. It will _not_ be `https://api.openai.com/v1` (that's for the official OpenAI API). For Azure OpenAI GPT-5, do not enter your Azure endpoint here. Configure the native `azure` provider instead.
 2.  **API Key:** This is the secret key you obtain from the provider.
 3.  **Model ID:** This is the model name of the specific model.
 
@@ -53,7 +59,7 @@ You'll find these settings in the Kilo Code settings panel (click the {% codicon
 
 - **Provider ID** — A unique identifier (e.g., `my-provider`).
 - **Display name** — A human-readable name shown in the UI.
-- **Base URL** — The provider's OpenAI-compatible API endpoint (e.g., `https://api.your-provider.com/v1`). Kilo auto-fetches available models when a valid URL is entered.
+- **Base URL** — The provider's OpenAI-compatible API endpoint (e.g., `https://api.your-provider.com/v1`). Kilo auto-fetches available models when a valid URL is entered. For Azure OpenAI GPT-5, use the native `azure` provider instead.
 - **API key** — Your API key. Optional — leave empty if authentication is handled via headers.
 - **Models** — Add models manually or select from the auto-fetched list (see [Automatic Model Detection](#automatic-model-detection) below).
 - **Headers** (optional) — Custom HTTP headers as key-value pairs.
@@ -114,7 +120,7 @@ Then set your default model using the `provider-id/model-id` format:
 **Configuration fields:**
 
 - **`models`** — A map of model IDs to model definitions. Each model should include a `name` and `limit` with `context` and `output` token counts. If `limit.context` or `limit.output` is omitted, it defaults to `0`, which limits context management.
-- **`options.baseURL`** — The base URL of your OpenAI-compatible API endpoint.
+- **`options.baseURL`** — The base URL of your OpenAI-compatible API endpoint. For Azure OpenAI GPT-5, configure `provider.azure` instead.
 - **`options.apiKey`** — Your API key. Use any non-empty string (e.g., `"none"`) if the provider doesn't require authentication.
 
 You can also set the API key via an environment variable instead of putting it in the config file. Use the `env` field to specify which variable to read:
@@ -172,6 +178,7 @@ This enhancement allows you to:
 - **"Invalid API Key":** Double-check that you've entered the API key correctly.
 - **"Model Not Found":** Make sure you're using a valid model ID for your chosen provider.
 - **Connection Errors:** Verify the Base URL is correct and that your provider's API is accessible.
+- **Azure GPT-5 rejects `max_tokens`:** Azure GPT-5 deployments must use Kilo Code's native `azure` provider. Generic OpenAI-compatible custom providers send `max_tokens`, which Azure GPT-5 rejects because it expects `max_completion_tokens`.
 - **Unexpected Results:** If you're getting unexpected results, try a different model.
 
 By using an OpenAI-compatible provider, you can leverage the flexibility of Kilo Code with a wider range of AI models. Remember to always consult your provider's documentation for the most accurate and up-to-date information.

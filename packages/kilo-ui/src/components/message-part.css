@@ -40,12 +40,14 @@
   }
 }
 
-/* Hover-revealed "Open in Diff Viewer" icon button in the edit-tool header */
-[data-component="tool-trigger"] [data-slot="basic-tool-tool-info"]:has([data-component="edit-trigger"]) {
+/* Hover-revealed "Open in Diff Viewer" icon button in edit/write tool headers */
+[data-component="tool-trigger"] [data-slot="basic-tool-tool-info"]:has([data-component="edit-trigger"]),
+[data-component="tool-trigger"] [data-slot="basic-tool-tool-info"]:has([data-component="write-trigger"]) {
   flex: 1 1 auto;
 }
 
-[data-component="edit-trigger"] {
+[data-component="edit-trigger"],
+[data-component="write-trigger"] {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -58,7 +60,7 @@
     overflow: hidden;
   }
 
-  [data-slot="edit-trigger-actions"] {
+  [data-slot="tool-trigger-actions"] {
     flex-shrink: 0;
     margin-left: auto;
     display: inline-flex;
@@ -68,8 +70,8 @@
   }
 }
 
-[data-component="tool-trigger"]:hover [data-slot="edit-trigger-actions"],
-[data-slot="edit-trigger-actions"]:focus-within {
+[data-component="tool-trigger"]:hover [data-slot="tool-trigger-actions"],
+[data-slot="tool-trigger-actions"]:focus-within {
   opacity: 1;
 }
 

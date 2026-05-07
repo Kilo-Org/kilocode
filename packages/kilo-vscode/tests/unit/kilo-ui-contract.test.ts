@@ -136,10 +136,10 @@ describe("Edit tool diff-first click contract (source)", () => {
   const editBlockMatch = src.match(/ToolRegistry\.register\(\{\s*name:\s*"edit"[\s\S]*?(?=ToolRegistry\.register\(|$)/)
   const editBlock = editBlockMatch?.[0] ?? ""
 
-  it("edit tool derives before/after content from filediff or input", () => {
-    expect(editBlock).toContain("contents(diff)")
-    expect(editBlock).toMatch(/view\(\)\?\.before\s*\?\?.*filediff\?\.before\s*\?\?.*oldString/)
-    expect(editBlock).toMatch(/view\(\)\?\.after\s*\?\?.*filediff\?\.after\s*\?\?.*newString/)
+  it("edit tool renders from filediff.patch and falls back to tool input", () => {
+    expect(editBlock).toContain("normalize(diff)")
+    expect(editBlock).toMatch(/props\.input\.oldString\s*\?\?\s*""/)
+    expect(editBlock).toMatch(/props\.input\.newString\s*\?\?\s*""/)
   })
 })
 
@@ -151,14 +151,15 @@ describe("Write and apply_patch patch rendering contracts (source)", () => {
     src.match(/ToolRegistry\.register\(\{\s*name:\s*"apply_patch"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
 
   it("write tool can render from filediff.patch when input.content is stripped", () => {
-    expect(writeBlock).toContain("contents(diff)")
+    expect(writeBlock).toContain("normalize(diff)")
     expect(writeBlock).toContain("props.input.content || view()")
     expect(writeBlock).toContain('mode="diff"')
   })
 
   it("apply_patch tool can render from patch metadata without before/after", () => {
     expect(patchBlock).toContain("file.patch")
-    expect(patchBlock).toContain("contents({ file: file.relativePath, patch: file.patch")
+    expect(patchBlock).toContain("normalize({")
+    expect(patchBlock).toContain("file: file.relativePath")
     expect(patchBlock).toContain('mode="diff"')
   })
 })

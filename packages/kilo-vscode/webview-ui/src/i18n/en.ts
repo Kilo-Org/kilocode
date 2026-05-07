@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is required",
+  "provider.connect.prompt.required": "{{field}} is required",
+  "provider.connect.azure.endpointType.label": "Select Azure endpoint configuration",
+  "provider.connect.azure.endpointType.resourceName.label": "Resource name",
+  "provider.connect.azure.endpointType.resourceName.hint": "Build the endpoint from your Azure resource name",
+  "provider.connect.azure.endpointType.baseURL.label": "Full endpoint URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Use a custom Azure OpenAI endpoint",
+  "provider.connect.azure.resourceName.label": "Azure resource name",
+  "provider.connect.azure.resourceName.placeholder": "e.g. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI endpoint URL",
+  "provider.connect.azure.baseURL.placeholder": "e.g. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen gives you access to a curated set of reliable optimized models for coding agents.",
   "provider.connect.opencodeZen.line2":

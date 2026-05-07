@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-sleutel",
   "provider.connect.apiKey.placeholder": "API-sleutel",
   "provider.connect.apiKey.required": "API-sleutel is vereist",
+  "provider.connect.prompt.required": "{{field}} is verplicht",
+  "provider.connect.azure.endpointType.label": "Selecteer Azure-eindpuntconfiguratie",
+  "provider.connect.azure.endpointType.resourceName.label": "Resourcenaam",
+  "provider.connect.azure.endpointType.resourceName.hint": "Bouw het eindpunt op basis van uw Azure-resourcenaam",
+  "provider.connect.azure.endpointType.baseURL.label": "Volledige eindpunt-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Gebruik een aangepast Azure OpenAI-eindpunt",
+  "provider.connect.azure.resourceName.label": "Azure-resourcenaam",
+  "provider.connect.azure.resourceName.placeholder": "bijv. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-eindpunt-URL",
+  "provider.connect.azure.baseURL.placeholder": "bijv. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen geeft u toegang tot een geselecteerde set betrouwbare en geoptimaliseerde modellen voor programmeer-agents.",
   "provider.connect.opencodeZen.line2":

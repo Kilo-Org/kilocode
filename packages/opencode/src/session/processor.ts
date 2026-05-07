@@ -47,6 +47,7 @@ export interface Handle {
     },
   ) => Effect.Effect<void>
   readonly process: (streamInput: LLM.StreamInput) => Effect.Effect<Result>
+  readonly compactError?: () => ReturnType<typeof MessageV2.ContextOverflowError.prototype.toObject> | undefined // kilocode_change
 }
 
 type Input = {
@@ -73,6 +74,7 @@ interface ProcessorContext extends Input {
   snapshot: string | undefined
   blocked: boolean
   needsCompaction: boolean
+  compactionError: ReturnType<typeof MessageV2.ContextOverflowError.prototype.toObject> | undefined // kilocode_change
   currentText: MessageV2.TextPart | undefined
   reasoningMap: Record<string, MessageV2.ReasoningPart>
   stepStart: number // kilocode_change
@@ -130,6 +132,7 @@ export const layer: Layer.Layer<
         snapshot: initialSnapshot,
         blocked: false,
         needsCompaction: false,
+        compactionError: undefined, // kilocode_change
         currentText: undefined,
         reasoningMap: {},
         telemetry: input.telemetry, // kilocode_change
@@ -513,6 +516,11 @@ export const layer: Layer.Layer<
               isOverflow({ cfg: yield* config.get(), tokens: usage.tokens, model: ctx.model })
             ) {
               ctx.needsCompaction = true
+              // kilocode_change start
+              ctx.compactionError = new MessageV2.ContextOverflowError({
+                message: "Input exceeds context window of this model",
+              }).toObject()
+              // kilocode_change end
             }
             return
           }
@@ -643,6 +651,9 @@ export const layer: Layer.Layer<
       const halt = Effect.fn("SessionProcessor.halt")(function* (e: unknown) {
         slog.error("process", { error: errorMessage(e), stack: e instanceof Error ? e.stack : undefined })
         const error = parse(e)
+        // kilocode_change start
+        ctx.compactionError = MessageV2.ContextOverflowError.isInstance(error) ? error : ctx.compactionError
+        // kilocode_change end
         if (MessageV2.ContextOverflowError.isInstance(error)) {
           ctx.needsCompaction = true
           yield* bus.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
@@ -656,9 +667,16 @@ export const layer: Layer.Layer<
         yield* status.set(ctx.sessionID, { type: "idle" })
       })
 
+      // kilocode_change start
+      const output = {
+        compactError: () => ctx.compactionError,
+      }
+      // kilocode_change end
+
       const process = Effect.fn("SessionProcessor.process")(function* (streamInput: LLM.StreamInput) {
         slog.info("process")
         ctx.needsCompaction = false
+        ctx.compactionError = undefined // kilocode_change
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
 
         return yield* Effect.gen(function* () {
@@ -708,7 +726,7 @@ export const layer: Layer.Layer<
 
           if (ctx.needsCompaction) return "compact"
           if (ctx.blocked || ctx.assistantMessage.error) return "stop"
-          return "continue"
+          return "continue" // kilocode_change - remove once compactError is no longer Kilo-specific
         })
       })
 
@@ -718,6 +736,7 @@ export const layer: Layer.Layer<
         },
         updateToolCall,
         completeToolCall,
+        ...output, // kilocode_change
         process,
       } satisfies Handle
     })

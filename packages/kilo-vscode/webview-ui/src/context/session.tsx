@@ -2188,11 +2188,16 @@ export const SessionProvider: ParentComponent = (props) => {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  /** Per-session cost — only reads store.messages (not parts). */
+  /**
+   * Per-session **own cost** — reads `store.messages` for per-session
+   * propagated totals and `store.sessions` for parent links so each
+   * session's entry excludes the cost already propagated up from its
+   * descendants by the CLI backend.
+   */
   const familyCosts = createMemo<Map<string, number>>(() => {
     const id = currentSessionID()
     if (!id) return new Map()
-    return buildFamilyCosts(sessionFamily(id), store.messages)
+    return buildFamilyCosts(sessionFamily(id), store.messages, store.sessions)
   })
 
   /** Child session labels — only reads store.parts (not message costs). */

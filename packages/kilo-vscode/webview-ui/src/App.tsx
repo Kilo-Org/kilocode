@@ -135,7 +135,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
-  const openDiff = (diff: { file: string; before: string; after: string; additions: number; deletions: number }) => {
+  const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {
     vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
   }
 

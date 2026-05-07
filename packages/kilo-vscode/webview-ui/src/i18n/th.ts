@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
   "provider.connect.apiKey.placeholder": "คีย์ API",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
+  "provider.connect.prompt.required": "จำเป็นต้องระบุ {{field}}",
+  "provider.connect.azure.endpointType.label": "เลือกการกำหนดค่าปลายทางของ Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "ชื่อทรัพยากร",
+  "provider.connect.azure.endpointType.resourceName.hint": "สร้างปลายทางจากชื่อทรัพยากร Azure ของคุณ",
+  "provider.connect.azure.endpointType.baseURL.label": "URL ปลายทางแบบเต็ม",
+  "provider.connect.azure.endpointType.baseURL.hint": "ใช้ปลายทาง Azure OpenAI แบบกำหนดเอง",
+  "provider.connect.azure.resourceName.label": "ชื่อทรัพยากร Azure",
+  "provider.connect.azure.resourceName.placeholder": "เช่น my-models",
+  "provider.connect.azure.baseURL.label": "URL ปลายทาง Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "เช่น https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen ให้คุณเข้าถึงชุดโมเดลที่เชื่อถือได้และปรับแต่งแล้วสำหรับเอเจนต์การเขียนโค้ด",
   "provider.connect.opencodeZen.line2":

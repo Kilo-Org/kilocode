@@ -146,6 +146,7 @@ export function computeDefaultSelection(
 type PostMessage = (message: unknown) => void
 type GetErrorMessage = (error: unknown) => string
 type SetCachedConfig = (msg: unknown) => void
+type AuthMetadata = Record<string, string>
 
 interface ActionContext {
   client: KiloClient
@@ -176,6 +177,14 @@ function validateID(
   if ("value" in result) return result.value
   postError(ctx, requestId, providerID, action, result.error)
   return null
+}
+
+function cleanMetadata(input?: Record<string, unknown>): AuthMetadata | undefined {
+  const entries = Object.entries(input ?? {})
+    .map(([key, value]) => [key, typeof value === "string" ? value.trim() : ""] as const)
+    .filter(([key, value]) => key !== "" && value !== "")
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(entries)
 }
 
 async function configs(ctx: ActionContext) {
@@ -244,11 +253,19 @@ async function enableConfigured(ctx: ActionContext, id: string, config: Config) 
   await saveGlobal(ctx, { disabled_providers: disabled })
 }
 
-export async function connectProvider(ctx: ActionContext, requestId: string, providerID: string, apiKey: string) {
+export async function connectProvider(
+  ctx: ActionContext,
+  requestId: string,
+  providerID: string,
+  apiKey: string,
+  metadata?: Record<string, unknown>,
+) {
   const id = validateID(ctx, requestId, providerID, "connect")
   if (!id) return
   try {
-    await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
+    const meta = cleanMetadata(metadata)
+    const auth = meta ? { type: "api" as const, key: apiKey, metadata: meta } : { type: "api" as const, key: apiKey }
+    await ctx.client.auth.set({ providerID: id, auth }, { throwOnError: true })
     await ctx.disposeGlobal(`provider connect (${id})`)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
