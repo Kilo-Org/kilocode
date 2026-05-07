@@ -174,8 +174,10 @@ export class SourceController {
 
   private startPolling(source: DiffSource, epoch: number): void {
     this.stopPolling()
-    this.interval = setInterval(() => {
-      void this.runFetch(source, epoch, false)
+    this.interval = setInterval(async () => {
+      // Self-cancel when the tick reports the source is done
+      const keep = await this.runFetch(source, epoch, false)
+      if (!keep) this.stopPolling()
     }, DIFF_POLL_INTERVAL_MS)
   }
 
