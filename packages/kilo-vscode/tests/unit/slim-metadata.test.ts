@@ -13,12 +13,18 @@ function bytes(obj: unknown): number {
   return JSON.stringify(obj).length
 }
 
+function bigPatch() {
+  return `Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,1 +1,1 @@\n-${"x".repeat(70_000)}\n+${"y".repeat(70_000)}\n`
+}
+
 /**
  * Hard ceiling per slimmed tool state (JSON bytes).  Real slimmed parts
  * should be well under this.  If a slimmer leaks even one file-content
  * field (~50-500 KB each) the test blows past this immediately.
  */
 const MAX_SLIM_BYTES = 10_000
+const PATCH =
+  "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n+three\n"
 
 const BIG = "x".repeat(200_000) // 200 KB — typical file content size
 const DIAG = [
@@ -50,7 +56,7 @@ describe("slimPart", () => {
       output: "Edit applied successfully.",
       metadata: {
         diff: BIG,
-        filediff: { file: "/a.ts", before: BIG, after: BIG, additions: 3, deletions: 1 },
+        filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 3, deletions: 1 },
         diagnostics: { "/a.ts": DIAG },
       },
     })
@@ -63,6 +69,7 @@ describe("slimPart", () => {
       const slim = slimPart(heavy) as Record<string, any>
       const meta = slim.state.metadata
       expect(meta.filediff.file).toBe("/a.ts")
+      expect(meta.filediff.patch).toBe(PATCH)
       expect(meta.filediff.additions).toBe(3)
       expect(meta.filediff.deletions).toBe(1)
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
@@ -80,6 +87,19 @@ describe("slimPart", () => {
         metadata: { ...(heavy.state.metadata as object), newUpstreamBlob: BIG, otherData: BIG },
       })
       expect(bytes(slimPart(withUnknown))).toBeLessThan(MAX_SLIM_BYTES)
+    })
+
+    it("drops oversized filediff patches", () => {
+      const wide = part("edit", {
+        ...heavy.state,
+        metadata: {
+          ...(heavy.state.metadata as object),
+          filediff: { file: "/a.ts", patch: bigPatch(), before: BIG, after: BIG, additions: 1, deletions: 1 },
+        },
+      })
+      const slim = slimPart(wide) as Record<string, any>
+      expect(slim.state.metadata.filediff.patch).toBeUndefined()
+      expect(bytes(slim)).toBeLessThan(MAX_SLIM_BYTES)
     })
   })
 
@@ -100,6 +120,7 @@ describe("slimPart", () => {
             type: "update",
             before: BIG,
             after: BIG,
+            patch: PATCH,
             diff: BIG,
             additions: 5,
             deletions: 2,
@@ -130,6 +151,7 @@ describe("slimPart", () => {
       expect(meta.files[0].filePath).toBe("/a.ts")
       expect(meta.files[0].relativePath).toBe("a.ts")
       expect(meta.files[0].type).toBe("update")
+      expect(meta.files[0].patch).toBe(PATCH)
       expect(meta.files[0].additions).toBe(5)
       expect(meta.files[1].type).toBe("add")
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })
@@ -163,6 +185,28 @@ describe("slimPart", () => {
       })
       expect(bytes(slimPart(withUnknown))).toBeLessThan(MAX_SLIM_BYTES)
     })
+
+    it("drops oversized per-file patches", () => {
+      const wide = part("apply_patch", {
+        ...heavy.state,
+        metadata: {
+          ...(heavy.state.metadata as Record<string, unknown>),
+          files: [
+            {
+              filePath: "/a.ts",
+              relativePath: "a.ts",
+              type: "update",
+              patch: bigPatch(),
+              additions: 1,
+              deletions: 1,
+            },
+          ],
+        },
+      })
+      const slim = slimPart(wide) as Record<string, any>
+      expect(slim.state.metadata.files[0].patch).toBeUndefined()
+      expect(bytes(slim)).toBeLessThan(MAX_SLIM_BYTES)
+    })
   })
 
   // -----------------------------------------------------------------------
@@ -178,7 +222,7 @@ describe("slimPart", () => {
         diagnostics: { "/a.ts": DIAG },
         results: [
           {
-            filediff: { file: "/a.ts", before: BIG, after: BIG, additions: 1, deletions: 1 },
+            filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 1, deletions: 1 },
             diagnostics: { "/a.ts": DIAG },
             diff: BIG,
           },
@@ -195,6 +239,7 @@ describe("slimPart", () => {
       const slim = slimPart(heavy) as Record<string, any>
       const meta = slim.state.metadata
       expect(meta.results[0].filediff.file).toBe("/a.ts")
+      expect(meta.results[0].filediff.patch).toBe(PATCH)
       expect(meta.results[0].filediff.additions).toBe(1)
       expect(meta.results[0].diagnostics).toEqual({ "/a.ts": DIAG })
       expect(meta.results[1].filediff.file).toBe("/b.ts")
@@ -233,7 +278,7 @@ describe("slimPart", () => {
         filepath: "/a.ts",
         exists: true,
         diff: BIG,
-        filediff: { file: "/a.ts", before: BIG, after: BIG, additions: 100, deletions: 0 },
+        filediff: { file: "/a.ts", patch: PATCH, before: BIG, after: BIG, additions: 100, deletions: 0 },
         diagnostics: { "/a.ts": DIAG },
       },
     })
@@ -248,6 +293,7 @@ describe("slimPart", () => {
       expect(meta.filepath).toBe("/a.ts")
       expect(meta.exists).toBe(true)
       expect(meta.filediff.file).toBe("/a.ts")
+      expect(meta.filediff.patch).toBe(PATCH)
       expect(meta.filediff.additions).toBe(100)
       expect(meta.filediff.deletions).toBe(0)
       expect(meta.diagnostics).toEqual({ "/a.ts": DIAG })

@@ -141,6 +141,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API 키",
   "provider.connect.apiKey.placeholder": "API 키",
   "provider.connect.apiKey.required": "API 키가 필요합니다",
+  "provider.connect.prompt.required": "{{field}} 항목은 필수입니다",
+  "provider.connect.azure.endpointType.label": "Azure 엔드포인트 구성 선택",
+  "provider.connect.azure.endpointType.resourceName.label": "리소스 이름",
+  "provider.connect.azure.endpointType.resourceName.hint": "Azure 리소스 이름에서 엔드포인트를 빌드합니다",
+  "provider.connect.azure.endpointType.baseURL.label": "전체 엔드포인트 URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "사용자 지정 Azure OpenAI 엔드포인트 사용",
+  "provider.connect.azure.resourceName.label": "Azure 리소스 이름",
+  "provider.connect.azure.resourceName.placeholder": "예: my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI 엔드포인트 URL",
+  "provider.connect.azure.baseURL.placeholder": "예: https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen은 코딩 에이전트를 위해 최적화된 신뢰할 수 있는 엄선된 모델에 대한 액세스를 제공합니다.",
   "provider.connect.opencodeZen.line2": "단일 API 키로 Claude, GPT, Gemini, GLM 등 다양한 모델에 액세스할 수 있습니다.",
@@ -1039,6 +1049,13 @@ export const dict = {
   "settings.indexing.dimension.title": "벡터 차원",
   "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
   "settings.indexing.enable.title": "인덱싱 활성화",
+  "settings.indexing.globalEnable.title": "전역으로 활성화",
+  "settings.indexing.globalEnable.description": "모든 작업 영역에 대해 인덱싱을 활성화합니다.",
+  "settings.indexing.projectEnable.title": "이 프로젝트에 대해 활성화",
+  "settings.indexing.projectEnable.description":
+    "전역 인덱싱이 꺼져 있을 때 이 작업 영역에 대해 인덱싱을 활성화합니다.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "글로벌 인덱싱이 활성화되어 있어 이 프로젝트는 이미 포함되어 있습니다.",
   "settings.indexing.lancedbDirectory.description": "로컬 LanceDB 저장소의 선택적 디렉터리입니다.",
   "settings.indexing.lancedbDirectory.placeholder": "기본값 사용을 위해 비워두세요",
   "settings.indexing.lancedbDirectory.title": "LanceDB 디렉터리",
@@ -1160,6 +1177,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "인라인 작업을 트리거하는 스마트 키바인딩 사용",
   "settings.autocomplete.chatAutocomplete.title": "채팅 텍스트 영역 자동완성 활성화",
   "settings.autocomplete.chatAutocomplete.description": "채팅 텍스트 영역에서 자동완성 제안 표시",
+  "settings.autocomplete.modelsHint": "자동 완성에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.notifications.agent.title": "에이전트 완료",
   "settings.notifications.agent.description": "에이전트가 작업을 완료하면 알림 표시",
   "settings.notifications.permissions.title": "권한 요청",
@@ -1516,4 +1534,14 @@ export const dict = {
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
   "notifications.action.tryModelGeneric": "모델 시도",
+  "diffViewer.source.workspace.label": "로컬 변경 사항",
+  "diffViewer.source.workspace.tooltip":
+    "베이스 브랜치와 비교한 이 브랜치의 모든 변경 사항. 커밋되지 않은 파일(staged, unstaged, 추적되지 않음)과 아직 베이스에 반영되지 않은 로컬 커밋을 포함합니다.",
+  "diffViewer.source.session.label": "세션",
+  "diffViewer.source.session.tooltip":
+    "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
+  "diffViewer.group.session": "세션",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 }

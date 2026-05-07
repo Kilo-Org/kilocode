@@ -9,17 +9,11 @@
  * - Simpler flat structure without overflow containers
  */
 
-import { Component, createMemo, For, Show, createSignal, createEffect, on } from "solid-js"
-import { Dynamic } from "solid-js/web"
+import { Component, createMemo, For, Show, createEffect } from "solid-js"
 import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
-import { Collapsible } from "@kilocode/kilo-ui/collapsible"
-import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { useData } from "@kilocode/kilo-ui/context/data"
-import { useFileComponent } from "@kilocode/kilo-ui/context/file"
-import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { AssistantMessage } from "./AssistantMessage"
 import type {
@@ -32,21 +26,11 @@ import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
+import { useFeedback } from "../../context/feedback"
 import { visibleError } from "../../context/session-errors"
 import type { ErrorDisplayProps } from "./ErrorDisplay"
 import type { Message as WebMessage } from "../../types/messages"
-
-function getDirectory(path: string): string {
-  const sep = path.includes("/") ? "/" : "\\"
-  const idx = path.lastIndexOf(sep)
-  return idx === -1 ? "" : path.slice(0, idx + 1)
-}
-
-function getFilename(path: string): string {
-  const sep = path.includes("/") ? "/" : "\\"
-  const idx = path.lastIndexOf(sep)
-  return idx === -1 ? path : path.slice(idx + 1)
-}
 
 export interface VscodeTurn {
   id: string
@@ -64,10 +48,11 @@ interface VscodeSessionTurnProps {
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const data = useData()
   const i18n = useI18n()
-  const fileComponent = useFileComponent()
   const server = useServer()
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
+  const feedback = useFeedback()
 
   const emptyParts: SDKPart[] = []
   const emptyDiffs: SnapshotFileDiff[] = []
@@ -106,18 +91,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       .reverse()
   })
 
-  const [open, setOpen] = createSignal(false)
-  const [expanded, setExpanded] = createSignal<string[]>([])
-
-  createEffect(
-    on(
-      open,
-      (value, prev) => {
-        if (!value && prev) setExpanded([])
-      },
-      { defer: true },
-    ),
-  )
+  const openChanges = () => vscode.postMessage({ type: "openChanges", turnId: message().id })
 
   // Copy part ID — the last text part from the last assistant message.
   // Synthetic parts (e.g. "Initializing snapshot…" from the slow-repo guard)
@@ -179,103 +153,50 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={assistantMessages().length > 0}>
             <div class="vscode-session-turn-assistant">
               <For each={assistantMessages()}>
-                {(msg) => <AssistantMessage message={msg} showAssistantCopyPartID={showAssistantCopyPartID()} />}
+                {(amsg) => (
+                  <AssistantMessage
+                    message={amsg}
+                    showAssistantCopyPartID={showAssistantCopyPartID()}
+                    feedback={{
+                      enabled: feedback.telemetryEnabled(),
+                      rating: feedback.getRating(amsg.id),
+                      onRate: (next) =>
+                        feedback.rate({
+                          messageID: amsg.id,
+                          sessionID: amsg.sessionID,
+                          parentMessageID: amsg.parentID,
+                          providerID: amsg.providerID,
+                          modelID: amsg.modelID,
+                          variant: (amsg as SDKAssistantMessage & { variant?: string }).variant,
+                          next,
+                        }),
+                    }}
+                  />
+                )}
               </For>
             </div>
           </Show>
 
-          {/* Diff summary — shown after completion */}
+          {/* Diff summary — shown after completion. Click opens the changes view. */}
           <Show when={diffs().length > 0 && server.gitInstalled()}>
             <div class="vscode-session-turn-diffs" data-component="session-turn">
-              <Collapsible open={open()} onOpenChange={setOpen} variant="ghost">
-                <Collapsible.Trigger>
-                  <div data-component="session-turn-diffs-trigger">
-                    <div data-slot="session-turn-diffs-title">
-                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>{" "}
-                      <span data-slot="session-turn-diffs-count">
-                        {diffs().length} {i18n.t(diffs().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
-                      </span>
-                      <div data-slot="session-turn-diffs-meta">
-                        <DiffChanges changes={diffs()} variant="bars" />
-                        <Collapsible.Arrow />
-                      </div>
-                    </div>
-                  </div>
-                </Collapsible.Trigger>
-                <Collapsible.Content>
-                  <Show when={open()}>
-                    <div data-component="session-turn-diffs-content">
-                      <Accordion
-                        multiple
-                        style={{ "--sticky-accordion-offset": "40px" }}
-                        value={expanded()}
-                        onChange={(value) => setExpanded(Array.isArray(value) ? value : value ? [value] : [])}
-                      >
-                        <For each={diffs()}>
-                          {(diff) => {
-                            const active = createMemo(() => expanded().includes(diff.file))
-                            const [visible, setVisible] = createSignal(false)
-
-                            createEffect(
-                              on(
-                                active,
-                                (value) => {
-                                  if (!value) {
-                                    setVisible(false)
-                                    return
-                                  }
-                                  requestAnimationFrame(() => {
-                                    if (active()) setVisible(true)
-                                  })
-                                },
-                                { defer: true },
-                              ),
-                            )
-
-                            return (
-                              <Accordion.Item value={diff.file}>
-                                <StickyAccordionHeader>
-                                  <Accordion.Trigger>
-                                    <div data-slot="session-turn-diff-trigger">
-                                      <span data-slot="session-turn-diff-path">
-                                        <Show when={diff.file.includes("/")}>
-                                          <span data-slot="session-turn-diff-directory">
-                                            {`\u2066${getDirectory(diff.file)}\u2069`}
-                                          </span>
-                                        </Show>
-                                        <span data-slot="session-turn-diff-filename">{getFilename(diff.file)}</span>
-                                      </span>
-                                      <div data-slot="session-turn-diff-meta">
-                                        <span data-slot="session-turn-diff-changes">
-                                          <DiffChanges changes={diff} />
-                                        </span>
-                                        <span data-slot="session-turn-diff-chevron">
-                                          <Icon name="chevron-down" size="small" />
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </Accordion.Trigger>
-                                </StickyAccordionHeader>
-                                <Accordion.Content>
-                                  <Show when={visible()}>
-                                    <div data-slot="session-turn-diff-view" data-scrollable>
-                                      <Dynamic
-                                        component={fileComponent}
-                                        mode="diff"
-                                        fileDiff={normalize(diff).fileDiff}
-                                      />
-                                    </div>
-                                  </Show>
-                                </Accordion.Content>
-                              </Accordion.Item>
-                            )
-                          }}
-                        </For>
-                      </Accordion>
-                    </div>
-                  </Show>
-                </Collapsible.Content>
-              </Collapsible>
+              <button
+                type="button"
+                class="vscode-session-turn-diffs-trigger"
+                onClick={openChanges}
+                aria-label={i18n.t("ui.sessionReview.change.modified")}
+              >
+                <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>
+                <span data-slot="session-turn-diffs-count">
+                  {diffs().length} {i18n.t(diffs().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
+                </span>
+                <span data-slot="session-turn-diffs-meta">
+                  <DiffChanges changes={diffs()} variant="bars" />
+                </span>
+                <span data-slot="session-turn-diffs-chevron" aria-hidden="true">
+                  <Icon name="chevron-right" size="small" />
+                </span>
+              </button>
             </div>
           </Show>
 

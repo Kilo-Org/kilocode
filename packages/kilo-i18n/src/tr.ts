@@ -92,4 +92,9 @@ export const dict = {
     "Bu proje için Kilo anlık görüntülerini kapat. Kilo değişiklikleri için geri alma/yeniden yapmayı kaybedersiniz, ancak git her şeyi izlemeye devam eder.",
 
   "ui.messagePart.openInDiffViewer": "Fark görüntüleyicide aç",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Bu yardımcı oldu",
+  "ui.message.feedback.notHelpful": "Bu yardımcı olmadı",
+  "ui.message.feedback.clearRating": "Değerlendirmeyi temizle",
 }

@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.required": "APIキーが必要です",
+  "provider.connect.prompt.required": "{{field}}は必須です",
+  "provider.connect.azure.endpointType.label": "Azure エンドポイント構成の選択",
+  "provider.connect.azure.endpointType.resourceName.label": "リソース名",
+  "provider.connect.azure.endpointType.resourceName.hint": "Azure リソース名からエンドポイントを構築します",
+  "provider.connect.azure.endpointType.baseURL.label": "完全なエンドポイント URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "カスタム Azure OpenAI エンドポイントを使用します",
+  "provider.connect.azure.resourceName.label": "Azure リソース名",
+  "provider.connect.azure.resourceName.placeholder": "例：my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI エンドポイント URL",
+  "provider.connect.azure.baseURL.placeholder": "例：https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
   "provider.connect.opencodeZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
@@ -750,6 +760,13 @@ export const dict = {
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
+  "settings.indexing.globalEnable.title": "グローバルで有効にする",
+  "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.title": "このプロジェクトで有効にする",
+  "settings.indexing.projectEnable.description":
+    "グローバルなインデックス作成がオフの場合に、このワークスペースでのインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "グローバルインデックスが有効なため、このプロジェクトはすでにカバーされています。",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
   "settings.indexing.lancedbDirectory.title": "LanceDBディレクトリ",
@@ -1166,6 +1183,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "インラインタスクをトリガーするスマートキーバインドを使用",
   "settings.autocomplete.chatAutocomplete.title": "チャットの自動補完を有効にする",
   "settings.autocomplete.chatAutocomplete.description": "チャットテキストエリアに自動補完の提案を表示",
+  "settings.autocomplete.modelsHint": "オートコンプリートに使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.notifications.agent.title": "エージェント完了",
   "settings.notifications.agent.description": "エージェントがタスクを完了したら通知を表示",
   "settings.notifications.permissions.title": "権限リクエスト",
@@ -1531,4 +1549,14 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
+  "diffViewer.source.workspace.label": "ローカルの変更",
+  "diffViewer.source.workspace.tooltip":
+    "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
+  "diffViewer.source.session.label": "セッション",
+  "diffViewer.source.session.tooltip":
+    "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
+  "diffViewer.group.session": "セッション",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
 }

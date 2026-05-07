@@ -1,5 +1,54 @@
 # @kilocode/cli
 
+## 7.2.44
+
+### Minor Changes
+
+- [#9764](https://github.com/Kilo-Org/kilocode/pull/9764) [`9886674`](https://github.com/Kilo-Org/kilocode/commit/98866740afd7f6c2fd06fecda1ffc69c1703974e) - Migrate KiloClaw chat to the new kilo-chat backend. Replaces the single-channel Stream Chat integration with a multi-conversation experience that matches the web UX at app.kilo.ai/claw/kilo-chat: conversation list, reactions, typing indicators, editing, and action approvals. The TUI continues to render a single chat view backed by the user's primary conversation.
+
+- [#9718](https://github.com/Kilo-Org/kilocode/pull/9718) [`dcaccf3`](https://github.com/Kilo-Org/kilocode/commit/dcaccf38658415819b72390255b9f6555e4795e5) - Rate assistant responses with thumbs up/down. Click the thumbs buttons next to the copy button on any assistant message, or press `<leader>=` / `<leader>-` in the terminal UI. Only shown when telemetry is enabled; feedback is sent to Kilo to help improve model and prompt quality.
+
+### Patch Changes
+
+- [#9915](https://github.com/Kilo-Org/kilocode/pull/9915) [`bcb47be`](https://github.com/Kilo-Org/kilocode/commit/bcb47be3b0cf71990fd3ee1ec562a716aefe3571) - Preserve the selected thinking level after compacting a session.
+
+- [#9997](https://github.com/Kilo-Org/kilocode/pull/9997) [`de9f11e`](https://github.com/Kilo-Org/kilocode/commit/de9f11e3990a818ff6d7184f5ea85ee1409a475f) - Fix gpt-5 models failing with `Unsupported parameter: max_tokens` when accessed through custom OpenAI-compatible providers such as LiteLLM.
+
+- [#9993](https://github.com/Kilo-Org/kilocode/pull/9993) [`98f5f65`](https://github.com/Kilo-Org/kilocode/commit/98f5f65c1a8a543687ae5b308805eec1a2c23dca) - Support global and per-project codebase indexing enablement.
+
+- [#9975](https://github.com/Kilo-Org/kilocode/pull/9975) [`c1ea810`](https://github.com/Kilo-Org/kilocode/commit/c1ea8100e13f44a260edf2ac2c027bd69f72deb3) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Honor configured permission overrides in Ask and Plan modes, including persisted always-allow rules.
+
+- [#10006](https://github.com/Kilo-Org/kilocode/pull/10006) [`9e17137`](https://github.com/Kilo-Org/kilocode/commit/9e17137870556c69a141a6e18c63e67919375305) - Recover sessions when providers end a response with an error finish but no error details.
+
+- [#9921](https://github.com/Kilo-Org/kilocode/pull/9921) [`e5e9d0b`](https://github.com/Kilo-Org/kilocode/commit/e5e9d0ba37bd1065aea5a9a83834c6749121e5bd) - Remove custom providers from settings when disconnecting them so they do not reappear after being disabled and re-enabled.
+
+- Updated dependencies [[`9886674`](https://github.com/Kilo-Org/kilocode/commit/98866740afd7f6c2fd06fecda1ffc69c1703974e), [`e5e9d0b`](https://github.com/Kilo-Org/kilocode/commit/e5e9d0ba37bd1065aea5a9a83834c6749121e5bd)]:
+  - @kilocode/kilo-gateway@7.3.0
+  - @kilocode/sdk@7.3.0
+  - @kilocode/kilo-indexing@7.2.43
+  - @kilocode/kilo-telemetry@7.2.43
+  - @kilocode/plugin@7.2.43
+
+## 7.2.42
+
+### Minor Changes
+
+- [#9909](https://github.com/Kilo-Org/kilocode/pull/9909) [`9ffd047`](https://github.com/Kilo-Org/kilocode/commit/9ffd047962039d6b73d301d5d4e67560cd501c4f) - Detect and preserve UTF-32 (LE and BE) with BOM when reading and editing files. UTF-16 and UTF-32 without a BOM remain unsupported.
+
+### Patch Changes
+
+- [#9887](https://github.com/Kilo-Org/kilocode/pull/9887) [`d9453f0`](https://github.com/Kilo-Org/kilocode/commit/d9453f0da2b063041f6f98235220cde9129e162d) - Fix queued-turn auto-compaction so overflow recovery runs instead of exhausting compaction attempts.
+
+- [#9855](https://github.com/Kilo-Org/kilocode/pull/9855) [`59e8eff`](https://github.com/Kilo-Org/kilocode/commit/59e8effc3df8a03146f5ceddf95f79989b813417) - Respect project-specific semantic indexing decisions instead of enabling indexing globally across workspaces.
+
+- [#9928](https://github.com/Kilo-Org/kilocode/pull/9928) [`520922f`](https://github.com/Kilo-Org/kilocode/commit/520922ff39354c2df72317dee0f70035c52c24c5) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Prevent VS Code empty windows from starting codebase indexing against the home directory.
+
+- [#9843](https://github.com/Kilo-Org/kilocode/pull/9843) [`27d14d4`](https://github.com/Kilo-Org/kilocode/commit/27d14d432c33051e4bdd5863ea14b207758e9234) - Prompt before reading `.env` files even after broad read permissions were previously approved.
+
+- [#9924](https://github.com/Kilo-Org/kilocode/pull/9924) [`914bbdf`](https://github.com/Kilo-Org/kilocode/commit/914bbdfd0575e40554c39c6691e4264a63109953) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Restore Skill tool access for Plan, Ask, Explore, and other non-system agents so skill workflows are available by default.
+
+- [#9907](https://github.com/Kilo-Org/kilocode/pull/9907) [`d9d4dcd`](https://github.com/Kilo-Org/kilocode/commit/d9d4dcd37c6719652252da66b6a1ce27049beb47) - Recover sessions left unable to continue after an assistant turn was created but never started.
+
 ## 7.2.39
 
 ### Patch Changes

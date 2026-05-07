@@ -53,6 +53,7 @@ import { busy, createThrottledValue, useToolFade, useContextToolPending } from "
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
+import { contents } from "./session-diff"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -125,6 +126,12 @@ function DiagnosticsDisplay(props: { diagnostics: Diagnostic[] }): JSX.Element {
   )
 }
 
+export interface MessageFeedbackControls {
+  enabled?: boolean
+  rating?: "up" | "down"
+  onRate?: (rating: "up" | "down" | null) => void
+}
+
 export interface MessagePartProps {
   part: PartType
   message: MessageType
@@ -136,6 +143,7 @@ export interface MessagePartProps {
   turnDiffSummary?: () => JSX.Element
   animate?: boolean
   working?: boolean
+  feedback?: MessageFeedbackControls
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -971,6 +979,7 @@ export function Part(props: MessagePartProps) {
         turnDiffSummary={props.turnDiffSummary}
         animate={props.animate}
         working={props.working}
+        feedback={props.feedback}
       />
     </Show>
   )
@@ -1342,6 +1351,52 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
               />
             </Tooltip>
+            <Show when={props.feedback?.enabled}>
+              <Tooltip
+                value={
+                  props.feedback?.rating === "up"
+                    ? i18n.t("ui.message.feedback.clearRating")
+                    : i18n.t("ui.message.feedback.helpful")
+                }
+                placement="top"
+                gutter={4}
+              >
+                <IconButton
+                  icon={props.feedback?.rating === "up" ? "thumbs-up-filled" : "thumbs-up"}
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const next = props.feedback?.rating === "up" ? null : "up"
+                    props.feedback?.onRate?.(next)
+                  }}
+                  aria-pressed={props.feedback?.rating === "up"}
+                  aria-label={i18n.t("ui.message.feedback.helpful")}
+                />
+              </Tooltip>
+              <Tooltip
+                value={
+                  props.feedback?.rating === "down"
+                    ? i18n.t("ui.message.feedback.clearRating")
+                    : i18n.t("ui.message.feedback.notHelpful")
+                }
+                placement="top"
+                gutter={4}
+              >
+                <IconButton
+                  icon={props.feedback?.rating === "down" ? "thumbs-down-filled" : "thumbs-down"}
+                  size="normal"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const next = props.feedback?.rating === "down" ? null : "down"
+                    props.feedback?.onRate?.(next)
+                  }}
+                  aria-pressed={props.feedback?.rating === "down"}
+                  aria-label={i18n.t("ui.message.feedback.notHelpful")}
+                />
+              </Tooltip>
+            </Show>
           </div>
         </Show>
         <Show when={summary()}>
@@ -2064,8 +2119,13 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
-    const before = () => props.metadata?.filediff?.before ?? props.input.oldString ?? ""
-    const after = () => props.metadata?.filediff?.after ?? props.input.newString ?? ""
+    const view = createMemo(() => {
+      const diff = props.metadata?.filediff
+      if (!diff?.patch) return
+      return contents(diff)
+    })
+    const before = () => view()?.before ?? props.metadata?.filediff?.before ?? props.input.oldString ?? ""
+    const after = () => view()?.after ?? props.metadata?.filediff?.after ?? props.input.newString ?? ""
     const canOpenDiff = () => !!data.openDiff && !!path() && (before() !== "" || after() !== "")
     const canOpenFile = () => !!data.openFile && !!path()
 
@@ -2125,7 +2185,7 @@ ToolRegistry.register({
                 </div>
               </div>
               <Show when={canOpenDiff()}>
-                <span data-slot="edit-trigger-actions">
+                <span data-slot="tool-trigger-actions">
                   <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
                     <IconButton
                       icon="square-arrow-top-right"
@@ -2184,11 +2244,40 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
+    const view = createMemo(() => {
+      const diff = props.metadata?.filediff
+      if (!diff?.patch) return
+      return contents(diff)
+    })
+    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && (!!view() || !!props.input.content)
+    const canOpenFile = () => !!data.openFile && !!props.input.filePath
+
+    const openDiff = () => {
+      if (!data.openDiff || !props.input.filePath) return
+      const v = view()
+      data.openDiff({
+        file: props.metadata?.filediff?.file || props.input.filePath,
+        before: v?.before ?? "",
+        after: v?.after ?? props.input.content ?? "",
+        additions: props.metadata?.filediff?.additions ?? 0,
+        deletions: props.metadata?.filediff?.deletions ?? 0,
+      })
+    }
 
     const handleFileClick = (e: MouseEvent) => {
-      if (!data.openFile || !props.input.filePath) return
       e.stopPropagation()
-      data.openFile(props.input.filePath)
+      if (canOpenDiff()) {
+        openDiff()
+        return
+      }
+      if (canOpenFile()) {
+        data.openFile!(props.input.filePath!)
+      }
+    }
+
+    const handleOpenDiffClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      openDiff()
     }
 
     return (
@@ -2209,29 +2298,65 @@ ToolRegistry.register({
                       <ToolMetaLine
                         filename={name()}
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
+                        changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={data.openFile && props.input.filePath ? handleFileClick : undefined}
+                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
                 </div>
               </div>
+              <Show when={canOpenDiff()}>
+                <span data-slot="tool-trigger-actions">
+                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+                    <IconButton
+                      icon="square-arrow-top-right"
+                      size="small"
+                      variant="ghost"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleOpenDiffClick}
+                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+                    />
+                  </Tooltip>
+                </span>
+              </Show>
             </div>
           }
         >
-          <Show when={props.input.content && path()}>
-            <ToolFileAccordion path={path()}>
+          <Show when={(props.input.content || view()) && path()}>
+            <ToolFileAccordion
+              path={path()}
+              actions={
+                <Show when={!pending() && props.metadata.filediff}>
+                  {(diff) => <ToolChanges changes={diff()} animate={reveal()} />}
+                </Show>
+              }
+            >
               <div data-component="write-content">
-                <Dynamic
-                  component={fileComponent}
-                  mode="text"
-                  file={{
-                    name: props.input.filePath,
-                    contents: props.input.content,
-                    cacheKey: checksum(props.input.content),
-                  }}
-                  overflow="scroll"
-                />
+                <Show
+                  when={view()}
+                  fallback={
+                    <Dynamic
+                      component={fileComponent}
+                      mode="text"
+                      file={{
+                        name: props.input.filePath,
+                        contents: props.input.content,
+                        cacheKey: checksum(props.input.content),
+                      }}
+                      overflow="scroll"
+                    />
+                  }
+                >
+                  {(diff) => (
+                    <Dynamic
+                      component={fileComponent}
+                      mode="diff"
+                      before={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().before }}
+                      after={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().after }}
+                    />
+                  )}
+                </Show>
               </div>
             </ToolFileAccordion>
           </Show>
@@ -2246,6 +2371,7 @@ interface ApplyPatchFile {
   filePath: string
   relativePath: string
   type: "add" | "update" | "delete" | "move"
+  patch?: string
   diff: string
   before?: string
   after?: string
@@ -2261,6 +2387,13 @@ ToolRegistry.register({
     const i18n = useI18n()
     const fileComponent = useFileComponent()
     const files = createMemo(() => (props.metadata.files ?? []) as ApplyPatchFile[])
+    const view = (file: ApplyPatchFile) => {
+      if (file.patch)
+        return contents({ file: file.relativePath, patch: file.patch, additions: file.additions, deletions: file.deletions })
+      if (file.diff)
+        return contents({ file: file.relativePath, patch: file.diff, additions: file.additions, deletions: file.deletions })
+      if (file.before !== undefined || file.after !== undefined) return { before: file.before ?? "", after: file.after ?? "" }
+    }
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const single = createMemo(() => {
@@ -2398,15 +2531,17 @@ ToolRegistry.register({
                             </Accordion.Trigger>
                           </StickyAccordionHeader>
                           <Accordion.Content>
-                            <Show when={visible() && file.before !== undefined}>
-                              <div data-component="apply-patch-file-diff">
-                                <Dynamic
-                                  component={fileComponent}
-                                  mode="diff"
-                                  before={{ name: file.filePath, contents: file.before }}
-                                  after={{ name: file.movePath ?? file.filePath, contents: file.after }}
-                                />
-                              </div>
+                            <Show when={visible() && view(file)}>
+                              {(diff) => (
+                                <div data-component="apply-patch-file-diff">
+                                  <Dynamic
+                                    component={fileComponent}
+                                    mode="diff"
+                                    before={{ name: file.filePath, contents: diff().before }}
+                                    after={{ name: file.movePath ?? file.filePath, contents: diff().after }}
+                                  />
+                                </div>
+                              )}
                             </Show>
                           </Accordion.Content>
                         </Accordion.Item>
@@ -2446,15 +2581,17 @@ ToolRegistry.register({
                   </Switch>
                 }
               >
-                <Show when={file().before !== undefined}>
-                  <div data-component="apply-patch-file-diff">
-                    <Dynamic
-                      component={fileComponent}
-                      mode="diff"
-                      before={{ name: file().filePath, contents: file().before }}
-                      after={{ name: file().movePath ?? file().filePath, contents: file().after }}
-                    />
-                  </div>
+                <Show when={view(file())}>
+                  {(diff) => (
+                    <div data-component="apply-patch-file-diff">
+                      <Dynamic
+                        component={fileComponent}
+                        mode="diff"
+                        before={{ name: file().filePath, contents: diff().before }}
+                        after={{ name: file().movePath ?? file().filePath, contents: diff().after }}
+                      />
+                    </div>
+                  )}
                 </Show>
               </ToolFileAccordion>
             )}

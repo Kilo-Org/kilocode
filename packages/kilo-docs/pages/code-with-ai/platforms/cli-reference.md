@@ -598,7 +598,7 @@ Options:
       --path                  directory path to generate the agent file  [string]
       --description           what the agent should do  [string]
       --mode                  agent mode  [string] [choices: "all", "primary", "subagent"]
-      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, codesearch, lsp, skill"  [string]
+      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, lsp, skill"  [string]
   -m, --model                 model to use in the format of provider/model  [string]
 ```
 

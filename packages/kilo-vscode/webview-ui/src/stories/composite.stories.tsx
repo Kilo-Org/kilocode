@@ -1140,7 +1140,7 @@ export const McpToolExpanded: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 19. Diff summary — "Modified N files" collapsed header
+// 19. Diff summary — "Modified N files" banner (opens changes view on click)
 // ---------------------------------------------------------------------------
 
 const USER_MSG_ID = "user-msg-diff-001"
@@ -1152,7 +1152,7 @@ const mockDiffs = [
 ]
 
 export const DiffSummaryCollapsed: Story = {
-  name: "Diff Summary — Modified N files (collapsed)",
+  name: "Diff Summary — Modified N files",
   render: () => {
     const data = {
       ...defaultMockData,

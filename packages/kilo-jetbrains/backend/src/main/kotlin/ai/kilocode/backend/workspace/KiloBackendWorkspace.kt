@@ -16,6 +16,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -295,6 +296,7 @@ class KiloBackendWorkspace(
 
     private fun model(id: String, obj: JsonObject): ModelInfo {
         val cap = obj["capabilities"]?.jsonObject
+        val limit = obj["limit"]?.jsonObject
         return ModelInfo(
             id = obj.str("id") ?: id,
             name = obj.str("name") ?: id,
@@ -306,6 +308,13 @@ class KiloBackendWorkspace(
             status = obj.str("status"),
             recommendedIndex = obj.num("recommendedIndex"),
             variants = variants(obj),
+            limit = limit?.let {
+                ModelLimitInfo(
+                    context = it.long("context") ?: 0,
+                    input = it.long("input"),
+                    output = it.long("output") ?: 0,
+                )
+            },
         )
     }
 
@@ -361,3 +370,4 @@ private fun encode(value: String) = java.net.URLEncoder.encode(value, Charsets.U
 private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.contentOrNull
 private fun JsonObject?.bool(key: String) = this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
 private fun JsonObject.num(key: String) = this[key]?.jsonPrimitive?.doubleOrNull
+private fun JsonObject.long(key: String) = this[key]?.jsonPrimitive?.longOrNull

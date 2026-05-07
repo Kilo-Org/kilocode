@@ -131,7 +131,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     // ------ silent part types ------
 
-    fun `test step-start part is not rendered in panel`() {
+    fun `test step markers are not rendered in panel`() {
         model.upsertMessage(msg("a1", "assistant"))
         model.updateContent("a1", PartDto("g1", "ses", "a1", "step-start"))
         model.updateContent("a1", PartDto("g2", "ses", "a1", "step-finish"))

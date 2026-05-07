@@ -10,7 +10,7 @@
  * Options:
  *   --version <version>  Target upstream version (e.g., v1.1.49)
  *   --commit <hash>      Target upstream commit hash
- *   --base-branch <name> Base branch to merge into (default: main)
+ *   --base-branch <name> Base branch to merge into, or HEAD for current branch (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
  *   --no-worktrees       Don't create reference worktrees for manual resolution
@@ -25,7 +25,7 @@ import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
 import * as worktree from "./utils/worktree"
-import { loadConfig } from "./utils/config"
+import { loadConfig, resolveBaseBranch } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
 import { keepOursFiles, resetToOurs } from "./transforms/keep-ours"
@@ -219,7 +219,6 @@ async function main() {
   process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
 
   const options = parseArgs()
-  const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
   if (options.verbose) {
     logger.setVerbose(true)
@@ -247,6 +246,12 @@ async function main() {
 
   const currentBranch = await git.getCurrentBranch()
   logger.info(`Current branch: ${currentBranch}`)
+
+  const base = resolveBaseBranch(options.baseBranch, currentBranch)
+  const config = loadConfig(base ? { baseBranch: base } : undefined)
+  if (options.baseBranch === "HEAD") {
+    logger.info(`Resolved --base-branch HEAD to current branch: ${config.baseBranch}`)
+  }
 
   // Enable git rerere so conflict resolutions are recorded and reused across merges
   if (!options.dryRun) {

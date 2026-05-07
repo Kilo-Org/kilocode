@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
+        # kilocode_change start
+        with:
+          persist-credentials: false
+        # kilocode_change end
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun

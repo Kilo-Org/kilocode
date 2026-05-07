@@ -16,6 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
         with:
+          persist-credentials: false # kilocode_change
           fetch-depth: 0
 
       - name: Setup Bun

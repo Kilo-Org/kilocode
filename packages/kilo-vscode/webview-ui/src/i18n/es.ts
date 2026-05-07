@@ -137,6 +137,17 @@ export const dict = {
   "provider.connect.apiKey.label": "Clave API de {{provider}}",
   "provider.connect.apiKey.placeholder": "Clave API",
   "provider.connect.apiKey.required": "La clave API es obligatoria",
+  "provider.connect.prompt.required": "{{field}} es obligatorio",
+  "provider.connect.azure.endpointType.label": "Seleccionar configuración de endpoint de Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nombre del recurso",
+  "provider.connect.azure.endpointType.resourceName.hint":
+    "Crear el endpoint a partir del nombre de su recurso de Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "URL completa del endpoint",
+  "provider.connect.azure.endpointType.baseURL.hint": "Usar un endpoint de Azure OpenAI personalizado",
+  "provider.connect.azure.resourceName.label": "Nombre del recurso de Azure",
+  "provider.connect.azure.resourceName.placeholder": "p. ej. my-models",
+  "provider.connect.azure.baseURL.label": "URL del endpoint de Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "p. ej. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen te da acceso a un conjunto curado de modelos fiables optimizados para agentes de programación.",
   "provider.connect.opencodeZen.line2":
@@ -755,6 +766,13 @@ export const dict = {
   "settings.indexing.title": "Indexación",
   "settings.indexing.enable.title": "Habilitar indexación",
   "settings.indexing.enable.description": "Activar o desactivar la indexación semántica de la base de código.",
+  "settings.indexing.globalEnable.title": "Habilitar globalmente",
+  "settings.indexing.globalEnable.description": "Habilitar la indexación para cada área de trabajo.",
+  "settings.indexing.projectEnable.title": "Habilitar para este proyecto",
+  "settings.indexing.projectEnable.description":
+    "Habilitar la indexación para esta área de trabajo cuando la indexación global está desactivada.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "La indexación global está habilitada, por lo que este proyecto ya está cubierto.",
   "settings.indexing.provider.title": "Proveedor de embeddings",
   "settings.indexing.provider.description":
     "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",
@@ -1182,6 +1200,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Usar un atajo inteligente para activar tareas en línea",
   "settings.autocomplete.chatAutocomplete.title": "Habilitar autocompletado del chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugerencias de autocompletado en el chat",
+  "settings.autocomplete.modelsHint":
+    "Para elegir qué modelo se usa para el autocompletado, consulta la configuración de Modelos.",
   "settings.notifications.agent.title": "Finalización del agente",
   "settings.notifications.agent.description": "Mostrar notificación cuando el agente completa una tarea",
   "settings.notifications.permissions.title": "Solicitudes de permiso",
@@ -1555,4 +1575,14 @@ export const dict = {
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
   "notifications.action.tryModelGeneric": "Probar modelo",
+  "diffViewer.source.workspace.label": "Cambios locales",
+  "diffViewer.source.workspace.tooltip":
+    "Todos los cambios de esta rama respecto a la rama base. Incluye archivos sin commitear (staged, unstaged y no rastreados) y commits locales que todavía no están en la base.",
+  "diffViewer.source.session.label": "Sesión",
+  "diffViewer.source.session.tooltip":
+    "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
+  "diffViewer.group.session": "Sesión",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
 }

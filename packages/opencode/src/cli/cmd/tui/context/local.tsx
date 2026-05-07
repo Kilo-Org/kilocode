@@ -188,9 +188,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           favorite: modelStore.favorite,
           variant: modelStore.variant,
         }
-        state.writer = state.writer
-          .then(() => Filesystem.writeJson(filePath, data))
-          .catch(() => {})
+        state.writer = state.writer.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
         // kilocode_change end
       }
 

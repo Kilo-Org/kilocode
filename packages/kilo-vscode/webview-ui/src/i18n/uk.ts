@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "API-ключ {{provider}}",
   "provider.connect.apiKey.placeholder": "API-ключ",
   "provider.connect.apiKey.required": "API-ключ обов'язковий",
+  "provider.connect.prompt.required": "{{field}} є обов'язковим",
+  "provider.connect.azure.endpointType.label": "Виберіть конфігурацію кінцевої точки Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Назва ресурсу",
+  "provider.connect.azure.endpointType.resourceName.hint": "Створіть кінцеву точку з назви ресурсу Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "Повна URL-адреса кінцевої точки",
+  "provider.connect.azure.endpointType.baseURL.hint": "Використовувати спеціальну кінцеву точку Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Назва ресурсу Azure",
+  "provider.connect.azure.resourceName.placeholder": "напр. my-models",
+  "provider.connect.azure.baseURL.label": "URL-адреса кінцевої точки Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "напр. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen надає доступ до добірки надійних оптимізованих моделей для агентів кодування.",
   "provider.connect.opencodeZen.line2":
@@ -1041,6 +1051,12 @@ export const dict = {
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
   "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
+  "settings.indexing.globalEnable.title": "Увімкнути глобально",
+  "settings.indexing.globalEnable.description": "Увімкнути індексування для кожного робочого простору.",
+  "settings.indexing.projectEnable.title": "Увімкнути для цього проєкту",
+  "settings.indexing.projectEnable.description":
+    "Увімкнути індексування для цього робочого простору, коли глобальне індексування вимкнено.",
+  "settings.indexing.projectEnable.disabledTooltip": "Глобальне індексування ввімкнено, тому цей проєкт уже охоплено.",
   "settings.indexing.provider.title": "Провайдер ембедингів",
   "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
   "settings.indexing.model.title": "Модель ембедингів",
@@ -1172,6 +1188,7 @@ export const dict = {
     "Використовувати розумне прив'язування клавіш для активації підказок",
   "settings.autocomplete.chatAutocomplete.title": "Увімкнути автодоповнення в полі чату",
   "settings.autocomplete.chatAutocomplete.description": "Показувати підказки автодоповнення в полі введення чату",
+  "settings.autocomplete.modelsHint": "Щоб вибрати модель для автодоповнення, див. Налаштування моделей.",
 
   "settings.notifications.agent.title": "Завершення агента",
   "settings.notifications.agent.description": "Показувати сповіщення, коли агент завершить завдання",
@@ -1558,4 +1575,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
+  "diffViewer.source.workspace.label": "Локальні зміни",
+  "diffViewer.source.workspace.tooltip":
+    "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
+  "diffViewer.source.session.label": "Сесія",
+  "diffViewer.source.session.tooltip":
+    "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
+  "diffViewer.group.session": "Сесія",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 }

@@ -204,7 +204,7 @@ The only remaining conflicts are files with **actual code differences** - files 
 Options:
   --version <version>    Target upstream version (e.g., v1.1.49)
   --commit <hash>        Target upstream commit hash
-  --base-branch <name>   Base branch to merge into (default: main)
+  --base-branch <name>   Base branch to merge into; use HEAD for current branch (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
   --no-worktrees         Don't create reference worktrees
@@ -304,6 +304,8 @@ Tighten the blast radius with `--review-limit 0` (only `markers-only` and `cosme
 ## Using Custom Base Branches
 
 By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
+
+Passing `--base-branch HEAD` targets the currently checked-out branch without typing its full name.
 
 ### Incremental Merges
 

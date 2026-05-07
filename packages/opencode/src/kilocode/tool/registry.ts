@@ -71,21 +71,6 @@ export namespace KiloToolRegistry {
     })
   }
 
-  /** Override question-tool client gating (adds "vscode" to allowed clients) */
-  export function question(): boolean {
-    return ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL
-  }
-
-  /** Plan tool is always registered in Kilo (gated by agent permission instead) */
-  export function plan(): boolean {
-    return true
-  }
-
-  /** Suggest tool is only registered for cli and vscode clients */
-  export function suggest(tool: Tool.Def): Tool.Def[] {
-    return ["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool] : []
-  }
-
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def },
@@ -98,10 +83,5 @@ export namespace KiloToolRegistry {
       // The extension is the only client that can consume the Agent Manager start event.
       ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.agent_manager_tool === true ? [tools.manager] : []),
     ]
-  }
-
-  /** Check for E2E LLM URL (uses KILO_E2E_LLM_URL env var) */
-  export function e2e(): boolean {
-    return !!process.env["KILO_E2E_LLM_URL"]
   }
 }

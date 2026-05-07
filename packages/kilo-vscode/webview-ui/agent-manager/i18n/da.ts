@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åbn Terminal",
   "agentManager.tab.newOptions": "Flere nye faneindstillinger",
+  "agentManager.tabsMenu.label": "Søg i åbne faner",
+  "agentManager.tabsMenu.search": "Søg faner...",
+  "agentManager.tabsMenu.empty": "Ingen matchende faner",
+  "agentManager.tabsMenu.status.waiting": "Venter",
+  "agentManager.tabsMenu.status.working": "Arbejder",
+  "agentManager.tabsMenu.status.retry": "Igen",
 
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",

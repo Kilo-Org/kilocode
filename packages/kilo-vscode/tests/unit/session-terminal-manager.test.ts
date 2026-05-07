@@ -87,4 +87,9 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("if (!this.panelOpen)")
     expect(text).toContain("this.showExistingLocal()")
   })
+
+  it("exposes active terminal state for terminal context routing", () => {
+    const text = body("hasActiveTerminal")
+    expect(text).toContain("this.host.activeTerminal()")
+  })
 })

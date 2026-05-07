@@ -33,6 +33,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -154,6 +155,34 @@ describe("Agent Manager Provider Messages", () => {
     const body = getMethodBody("onAddSessionToWorktree")
     expect(body).toContain("agentManager.sessionAdded")
   })
+
+  it("state-mutating messages wait for state initialization", () => {
+    const body = getMethodBody("shouldWaitForState")
+    const messages = [
+      "agentManager.setTabOrder",
+      "agentManager.setWorktreeOrder",
+      "agentManager.persistSession",
+      "agentManager.forgetSession",
+      "agentManager.importFromBranch",
+      "agentManager.importFromPR",
+      "agentManager.importExternalWorktree",
+      "agentManager.importAllExternalWorktrees",
+      "agentManager.createSection",
+      "agentManager.moveToSection",
+    ]
+
+    for (const message of messages) {
+      expect(body, `${message} should wait for loaded state`).toContain(message)
+    }
+
+    expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+  })
+
+  it("async shutdown waits for terminal router cleanup", () => {
+    const body = getMethodBody("disposeAsync")
+    expect(body).toContain("await this.terminalRouter.dispose()")
+    expect(body).not.toContain("void this.terminalRouter.dispose()")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -232,6 +261,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
+  })
+
+  it("terminal context keeps the current active terminal when present", () => {
+    const text = body("onSessionMessage")
+    const check = text.indexOf("!this.terminalManager.hasActiveTerminal()")
+    const show = text.indexOf("this.terminalManager.showExisting(m.sessionID)")
+    expect(check).toBeGreaterThan(-1)
+    expect(show).toBeGreaterThan(-1)
+    expect(check, "active terminal check must guard session terminal reveal").toBeLessThan(show)
   })
 
   it("session routing handles clearSession for SSE re-registration", () => {

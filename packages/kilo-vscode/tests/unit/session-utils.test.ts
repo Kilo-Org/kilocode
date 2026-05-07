@@ -184,27 +184,106 @@ describe("childID", () => {
 
 describe("buildFamilyCosts", () => {
   it("returns empty map for empty family", () => {
-    expect(buildFamilyCosts(new Set(), {}).size).toBe(0)
+    expect(buildFamilyCosts(new Set(), {}, {}).size).toBe(0)
   })
 
-  it("sums costs per session, skipping zero-cost sessions", () => {
+  it("returns own-cost per session when there are no parent links", () => {
     const family = new Set(["s1", "s2", "s3"])
     const messages = {
       s1: [msg("m1", "assistant", 0.05), msg("m2", "assistant", 0.03)],
       s2: [msg("m3", "user", 999), msg("m4", "assistant", 0)],
       s3: [msg("m5", "assistant", 0.1)],
     }
-    const costs = buildFamilyCosts(family, messages)
+    const sessions = { s1: {}, s2: {}, s3: {} }
+    const costs = buildFamilyCosts(family, messages, sessions)
     expect(costs.size).toBe(2)
     expect(costs.get("s1")).toBeCloseTo(0.08)
     expect(costs.has("s2")).toBe(false)
     expect(costs.get("s3")).toBeCloseTo(0.1)
   })
 
+  it("subtracts each subagent's propagated total from its parent (single child)", () => {
+    // Backend contract: parent's message.info.cost already includes the
+    // child's total. Parent total $0.15 = parent own $0.05 + child $0.10.
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const sessions = { root: {}, child: { parentID: "root" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+    // Sum of own-costs equals root's propagated total.
+    const sum = [...costs.values()].reduce((s, c) => s + c, 0)
+    expect(sum).toBeCloseTo(0.15)
+  })
+
+  it("subtracts every direct child from a parent with multiple subagents", () => {
+    // Parent total $0.18 = parent own $0.05 + childA $0.10 + childB $0.03.
+    const family = new Set(["root", "a", "b"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.18)],
+      a: [msg("m2", "assistant", 0.1)],
+      b: [msg("m3", "assistant", 0.03)],
+    }
+    const sessions = { root: {}, a: { parentID: "root" }, b: { parentID: "root" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("a")).toBeCloseTo(0.1)
+    expect(costs.get("b")).toBeCloseTo(0.03)
+    const sum = [...costs.values()].reduce((s, c) => s + c, 0)
+    expect(sum).toBeCloseTo(0.18)
+  })
+
+  it("handles nested subagents (grandchildren) correctly", () => {
+    // root.total = root_own + child.total; child.total = child_own + grandchild.total.
+    // root.total = $0.05 + ($0.06 + $0.04) = $0.15.
+    const family = new Set(["root", "child", "grand"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+      grand: [msg("m3", "assistant", 0.04)],
+    }
+    const sessions = {
+      root: {},
+      child: { parentID: "root" },
+      grand: { parentID: "child" },
+    }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.06)
+    expect(costs.get("grand")).toBeCloseTo(0.04)
+    const sum = [...costs.values()].reduce((s, c) => s + c, 0)
+    expect(sum).toBeCloseTo(0.15)
+  })
+
+  it("drops sessions whose own-cost rounds to zero (pure dispatcher)", () => {
+    // Wrapper session that only spawned a subagent with no LLM calls of its own.
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.1)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const sessions = { root: {}, child: { parentID: "root" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.has("root")).toBe(false)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+  })
+
+  it("ignores parent links that point outside the family", () => {
+    const family = new Set(["s1"])
+    const messages = { s1: [msg("m1", "assistant", 0.07)] }
+    const sessions = { s1: { parentID: "not-in-family" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
+    expect(costs.get("s1")).toBeCloseTo(0.07)
+  })
+
   it("handles missing messages for a family member", () => {
     const family = new Set(["s1", "s2"])
     const messages = { s1: [msg("m1", "assistant", 0.01)] }
-    const costs = buildFamilyCosts(family, messages)
+    const sessions = { s1: {}, s2: { parentID: "s1" } }
+    const costs = buildFamilyCosts(family, messages, sessions)
     expect(costs.size).toBe(1)
     expect(costs.get("s1")).toBeCloseTo(0.01)
   })

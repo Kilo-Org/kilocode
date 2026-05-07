@@ -8,7 +8,7 @@
  */
 
 import { createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector, useContext } from "solid-js"
-import type { Component } from "solid-js"
+import type { Accessor, Component } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -90,6 +90,12 @@ export interface ModelSelectorBaseProps {
   clearLabel?: string
   /** Include the kilo-auto/small model in the list — defaults to false */
   includeAutoSmall?: boolean
+  /** Override the provider catalog for constrained selectors. */
+  models?: EnrichedModel[]
+  /** Show favorites group and favorite buttons — defaults to true. */
+  favorites?: boolean
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -98,7 +104,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // Session context is optional — ModelSelectorBase is also used in Settings
   // where SessionProvider may not be mounted.
   const session = useContext(SessionContext)
-  const activeModel = () => findModel(props.value)
+  const activeModel = () => {
+    const items = props.models
+    if (items) return items.find((m) => m.providerID === props.value?.providerID && m.id === props.value?.modelID)
+    return findModel(props.value)
+  }
 
   const [open, setOpen] = createSignal(false)
   const [expanded, setExpanded] = createSignal(false)
@@ -153,6 +163,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // Only show models from Kilo Gateway or connected providers.
   // kilo-auto/small is excluded unless includeAutoSmall is explicitly true.
   const visibleModels = createMemo(() => {
+    if (props.models) return props.models
     const c = connected()
     return models().filter((m) => {
       if (!props.includeAutoSmall && isSmall(m)) return false
@@ -184,11 +195,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // Live set of favorited keys — drives star icon visual state (filled vs outline).
   // Toggling never changes the list structure, so no items jump.
   const favoriteKeys = createMemo(() => {
+    if (props.favorites === false) return new Set<string>()
     if (!session) return new Set<string>()
     return new Set(session.favoriteModels().map((f) => modelKey(f.providerID, f.modelID)))
   })
 
   const favoriteModels = createMemo(() => {
+    if (props.favorites === false) return []
     if (!session || debouncedSearch()) return []
     const map = new Map(visibleModels().map((m) => [modelKey(m.providerID, m.id), m]))
     const list = session
@@ -523,6 +536,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       preferredExpandedHeight={800}
       minHeight={200}
       placement={props.placement ?? "top-start"}
+      deferDismiss={props.deferDismiss}
       open={open()}
       onOpenChange={setOpen}
       triggerAs={Button}
@@ -674,7 +688,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                 <span class="model-selector-item-provider-tag">{model.providerName}</span>
                               </Show>
                             </div>
-                            <Show when={session}>
+                            <Show when={session && props.favorites !== false}>
                               <button
                                 type="button"
                                 class={`model-selector-star${starred() ? " model-selector-star--active" : ""}`}
@@ -730,14 +744,19 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 // Chat-specific wrapper (backwards-compatible default export)
 // ---------------------------------------------------------------------------
 
-export const ModelSelector: Component = () => {
+interface ModelSelectorProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ModelSelector: Component<ModelSelectorProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ModelSelectorBase
-      value={session.selected()}
+      value={session.selected(id())}
       onSelect={(providerID, modelID) => {
-        session.selectModel(providerID, modelID)
+        session.selectModel(providerID, modelID, id())
       }}
       onPick={() => {
         requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))

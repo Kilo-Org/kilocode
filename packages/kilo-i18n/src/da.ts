@@ -92,4 +92,9 @@ export const dict = {
     "Slå Kilos snapshots fra for dette projekt. Du mister fortryd/gentag for Kilo-ændringer, men git sporer stadig alt.",
 
   "ui.messagePart.openInDiffViewer": "Åbn i diff-viser",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dette var nyttigt",
+  "ui.message.feedback.notHelpful": "Dette var ikke nyttigt",
+  "ui.message.feedback.clearRating": "Ryd bedømmelse",
 }

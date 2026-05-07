@@ -11,7 +11,7 @@ import fs from "fs/promises"
 import os from "os"
 import path from "path"
 import iconv from "iconv-lite"
-import { Encoding } from "../../src/kilocode/encoding"
+import * as Encoding from "../../src/kilocode/encoding"
 
 const BOM = {
   utf8: Buffer.from([0xef, 0xbb, 0xbf]),
