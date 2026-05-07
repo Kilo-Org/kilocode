@@ -12,7 +12,7 @@ Understanding the Wasteland starts with a handful of core concepts that show up 
 <!-- TODO: Federation - how instances share portable identity; what is NOT shared -->
 <!-- TODO: Rig identity - how a Gas Town rig is addressed (org/repo handle, DoltHub binding) -->
 <!-- TODO: Wanted Board - shared queue of tasks; BrowserFrame wl-wanted-board.png -->
-<!-- TODO: Wanted item lifecycle - include {% flowDiagram name="wanted-lifecycle" height="400" /%} -->
+{% flowDiagram name="wanted-lifecycle" height="400" /%}
 <!-- TODO: Claims - exclusive locking, TTL, abandon semantics -->
 <!-- TODO: Evidence - what counts, who submits (mayor via wl done) -->
 <!-- TODO: Stamps - multi-dimensional (quality, reliability, creativity), confidence, yearbook rule -->

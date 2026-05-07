@@ -10,7 +10,7 @@ The Wasteland is a federated work protocol built into Gas Town by Kilo that conn
 
 <!-- TODO: Hero paragraph positioning Wasteland as federated work protocol for Gas Towns -->
 <!-- TODO: What is the Wasteland? (from blog post source material) -->
-<!-- TODO: Federation model - include {% flowDiagram name="wasteland-federation" height="500" /%} -->
+{% flowDiagram name="wasteland-federation" height="500" /%}
 <!-- TODO: Table of roles (Rig, Validator, Administrator, Commons) -->
 <!-- TODO: Why use it through Gas Town by Kilo? -->
 <!-- TODO: Where to go next - links to Quick Start, Concepts, Workflow, Admin -->
