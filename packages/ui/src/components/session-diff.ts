@@ -38,19 +38,28 @@ export function contents(diff: ReviewDiff): DiffText {
   if (typeof diff.patch === "string") {
     const [patch] = parsePatch(diff.patch)
 
-    const beforeLines = []
-    const afterLines = []
+    const beforeLines: string[] = []
+    const afterLines: string[] = []
 
-    for (const hunk of patch.hunks) {
-      for (const line of hunk.lines) {
-        if (line.startsWith("-")) {
-          beforeLines.push(line.slice(1))
-        } else if (line.startsWith("+")) {
-          afterLines.push(line.slice(1))
-        } else {
-          // context line (starts with ' ')
-          beforeLines.push(line.slice(1))
-          afterLines.push(line.slice(1))
+    if (patch) {
+      for (const hunk of patch.hunks) {
+        // Pad with blank lines so hunk content lands at its real file line
+        // number. Without this, reconstructed before/after start at line 1
+        // regardless of where the hunk lives in the source file (e.g. a hunk
+        // at line 340 would render as 1).
+        while (beforeLines.length + 1 < hunk.oldStart) beforeLines.push("")
+        while (afterLines.length + 1 < hunk.newStart) afterLines.push("")
+
+        for (const line of hunk.lines) {
+          if (line.startsWith("-")) {
+            beforeLines.push(line.slice(1))
+          } else if (line.startsWith("+")) {
+            afterLines.push(line.slice(1))
+          } else {
+            // context line (starts with ' ')
+            beforeLines.push(line.slice(1))
+            afterLines.push(line.slice(1))
+          }
         }
       }
     }

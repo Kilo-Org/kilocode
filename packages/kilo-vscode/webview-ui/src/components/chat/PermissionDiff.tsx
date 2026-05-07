@@ -90,6 +90,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
             before={{ name: props.filediff.file, contents: resolved().before }}
             after={{ name: props.filediff.file, contents: resolved().after }}
             diffStyle="unified"
+            hunkSeparators="simple"
           />
         </Show>
       </div>

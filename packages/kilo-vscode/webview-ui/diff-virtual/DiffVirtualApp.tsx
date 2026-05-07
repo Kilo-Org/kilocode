@@ -127,6 +127,7 @@ const DiffVirtualContent: Component = () => {
                     before={{ name: d().file, contents: resolved().before }}
                     after={{ name: d().file, contents: resolved().after }}
                     diffStyle={style()}
+                    hunkSeparators="simple"
                   />
                 }
               >

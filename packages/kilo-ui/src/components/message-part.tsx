@@ -2214,6 +2214,7 @@ ToolRegistry.register({
                 <Dynamic
                   component={fileComponent}
                   mode="diff"
+                  hunkSeparators="simple"
                   before={{
                     name: path(),
                     contents: before(),
@@ -2328,6 +2329,7 @@ ToolRegistry.register({
                     <Dynamic
                       component={fileComponent}
                       mode="diff"
+                      hunkSeparators="simple"
                       before={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().before }}
                       after={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().after }}
                     />
@@ -2365,10 +2367,21 @@ ToolRegistry.register({
     const files = createMemo(() => (props.metadata.files ?? []) as ApplyPatchFile[])
     const view = (file: ApplyPatchFile) => {
       if (file.patch)
-        return contents({ file: file.relativePath, patch: file.patch, additions: file.additions, deletions: file.deletions })
+        return contents({
+          file: file.relativePath,
+          patch: file.patch,
+          additions: file.additions,
+          deletions: file.deletions,
+        })
       if (file.diff)
-        return contents({ file: file.relativePath, patch: file.diff, additions: file.additions, deletions: file.deletions })
-      if (file.before !== undefined || file.after !== undefined) return { before: file.before ?? "", after: file.after ?? "" }
+        return contents({
+          file: file.relativePath,
+          patch: file.diff,
+          additions: file.additions,
+          deletions: file.deletions,
+        })
+      if (file.before !== undefined || file.after !== undefined)
+        return { before: file.before ?? "", after: file.after ?? "" }
     }
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
@@ -2513,6 +2526,7 @@ ToolRegistry.register({
                                   <Dynamic
                                     component={fileComponent}
                                     mode="diff"
+                                    hunkSeparators="simple"
                                     before={{ name: file.filePath, contents: diff().before }}
                                     after={{ name: file.movePath ?? file.filePath, contents: diff().after }}
                                   />
@@ -2563,6 +2577,7 @@ ToolRegistry.register({
                       <Dynamic
                         component={fileComponent}
                         mode="diff"
+                        hunkSeparators="simple"
                         before={{ name: file().filePath, contents: diff().before }}
                         after={{ name: file().movePath ?? file().filePath, contents: diff().after }}
                       />
