@@ -57,6 +57,11 @@ export function activate(context: vscode.ExtensionContext) {
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
+        // Sync the CLI's PostHog client with the current consent state. The
+        // CLI reads KILO_TELEMETRY_LEVEL once at spawn, so without this call
+        // a fresh CLI started while VS Code telemetry was off would stay
+        // opted out for the rest of the session.
+        telemetry.setEnabled(vscode.env.isTelemetryEnabled)
       }
       try {
         remoteService.setClient(connectionService.getClient())
@@ -71,6 +76,14 @@ export function activate(context: vscode.ExtensionContext) {
       remoteService.setClient(null)
     }
   })
+
+  // Propagate runtime telemetry consent changes to the CLI subprocess so its
+  // PostHog client stays in sync with the user's VS Code telemetry setting.
+  context.subscriptions.push(
+    vscode.env.onDidChangeTelemetryEnabled((enabled) => {
+      telemetry.setEnabled(enabled)
+    }),
+  )
 
   // Prewarm the CLI backend early so autocomplete is ready before first editor use.
   ensureBackendForAutocomplete(connectionService)

@@ -251,8 +251,7 @@ function detail(entry: Entry): string {
 
 function describe(bucket: Bucket, count: number, dryRun: boolean): { label: string; action: string } {
   if (bucket === "markers-only") return { label: `markers-only (${count})`, action: dryRun ? "would reset" : "reset" }
-  if (bucket === "cosmetic-only")
-    return { label: `cosmetic-only (${count})`, action: dryRun ? "would reset" : "reset" }
+  if (bucket === "cosmetic-only") return { label: `cosmetic-only (${count})`, action: dryRun ? "would reset" : "reset" }
   if (bucket === "small-diff") return { label: `small-diff (${count})`, action: dryRun ? "would reset" : "reset" }
   if (bucket === "large-diff") return { label: `large-diff (${count})`, action: "skipped" }
   if (bucket === "identical") return { label: `identical (${count})`, action: "nothing to do" }

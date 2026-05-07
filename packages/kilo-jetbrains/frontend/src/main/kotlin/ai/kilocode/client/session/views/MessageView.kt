@@ -2,6 +2,7 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.SessionStyle
 import ai.kilocode.client.session.ui.SessionStyleTarget
@@ -42,6 +43,7 @@ class MessageView(
 
         // Populate content that already exists (e.g. after loadHistory)
         for ((_, content) in msg.parts) {
+            if (content is StepFinish) continue
             val view = ViewFactory.create(content)
             view.applyStyle(style)
             parts[content.id] = view
@@ -51,6 +53,7 @@ class MessageView(
 
     /** Add or update the renderer for [content]. */
     fun upsertPart(content: Content) {
+        if (content is StepFinish) return
         val existing = parts[content.id]
         if (existing != null) {
             existing.update(content)

@@ -4,6 +4,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -68,6 +69,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
     val aborts = mutableListOf<Pair<String, String>>()
+    val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
@@ -132,6 +134,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun abort(id: String, directory: String) {
         assertNotEdt("abort")
         aborts.add(id to directory)
+    }
+
+    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) {
+        assertNotEdt("compact")
+        compacts.add(Triple(id, directory, model))
     }
 
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> {

@@ -34,7 +34,7 @@ import type {
   ExperimentalConsoleSwitchOrgResponses,
   ExperimentalResourceListResponses,
   ExperimentalSessionListResponses,
-  ExperimentalWorkspaceAdaptorListResponses,
+  ExperimentalWorkspaceAdapterListResponses,
   ExperimentalWorkspaceCreateErrors,
   ExperimentalWorkspaceCreateResponses,
   ExperimentalWorkspaceListResponses,
@@ -221,6 +221,8 @@ import type {
   SyncStartResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
+  TelemetrySetEnabledErrors,
+  TelemetrySetEnabledResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -574,11 +576,11 @@ export class App extends HeyApiClient {
   }
 }
 
-export class Adaptor extends HeyApiClient {
+export class Adapter extends HeyApiClient {
   /**
-   * List workspace adaptors
+   * List workspace adapters
    *
-   * List all available workspace adaptors for the current project.
+   * List all available workspace adapters for the current project.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -598,8 +600,8 @@ export class Adaptor extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<ExperimentalWorkspaceAdaptorListResponses, unknown, ThrowOnError>({
-      url: "/experimental/workspace/adaptor",
+    return (options?.client ?? this.client).get<ExperimentalWorkspaceAdapterListResponses, unknown, ThrowOnError>({
+      url: "/experimental/workspace/adapter",
       ...options,
       ...params,
     })
@@ -793,9 +795,9 @@ export class Workspace extends HeyApiClient {
     })
   }
 
-  private _adaptor?: Adaptor
-  get adaptor(): Adaptor {
-    return (this._adaptor ??= new Adaptor({ client: this.client }))
+  private _adapter?: Adapter
+  get adapter(): Adapter {
+    return (this._adapter ??= new Adapter({ client: this.client }))
   }
 }
 
@@ -4936,6 +4938,45 @@ export class Telemetry extends HeyApiClient {
       },
     })
   }
+
+  /**
+   * Set PostHog telemetry enabled state
+   *
+   * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
+   */
+  public setEnabled<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TelemetrySetEnabledResponses, TelemetrySetEnabledErrors, ThrowOnError>(
+      {
+        url: "/telemetry/setEnabled",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
 }
 
 export class Remote extends HeyApiClient {
@@ -5787,7 +5828,7 @@ export class Claw extends HeyApiClient {
   /**
    * Get KiloClaw chat credentials
    *
-   * Fetch Stream Chat credentials for the user's KiloClaw instance
+   * Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.
    */
   public chatCredentials<ThrowOnError extends boolean = false>(
     parameters?: {

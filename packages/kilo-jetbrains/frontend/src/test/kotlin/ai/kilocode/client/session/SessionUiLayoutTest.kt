@@ -13,7 +13,10 @@ import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.QuestionPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.update.SessionControllerEvent
+import ai.kilocode.rpc.dto.MessageWithPartsDto
+import com.intellij.ui.components.JBScrollPane
 import javax.swing.JLayeredPane
 
 @Suppress("UnstableApiUsage")
@@ -41,6 +44,17 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(stack, connection.parent)
         assertEquals(1, root.overlay.componentCount)
         assertEquals(listOf(question, permission, connection, prompt), stack.components.toList())
+    }
+
+    fun `test header is docked above shared scroll pane and hidden while empty`() {
+        val root = find<SessionRootPanel>(ui)
+        val header = find<SessionHeaderPanel>(ui)
+        val scroll = find<JBScrollPane>(ui)
+
+        assertSame(root.content, header.parent.parent)
+        assertSame(scroll.parent, header.parent)
+        assertTrue(header.y <= scroll.y)
+        assertFalse(header.isVisible)
     }
 
     fun `test default focused component is prompt editor`() {
@@ -150,6 +164,21 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         settle()
 
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
+    }
+
+    fun `test existing session history shows header above scroll pane`() {
+        rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
+
+        ui = SessionUi(project, workspace, sessions, app, scope, id = "ses_test", displayMs = 0).apply {
+            setSize(800, 600)
+        }
+        settle()
+        layout()
+
+        val header = find<SessionHeaderPanel>(ui)
+        val scroll = find<JBScrollPane>(ui)
+        assertTrue(header.isVisible)
+        assertTrue(header.y + header.height <= scroll.y)
     }
 
     fun `test new session keeps loading body before recents delay`() {
