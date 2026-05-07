@@ -1,6 +1,7 @@
 ---
 title: "Wasteland Settings"
 description: "Wasteland connection settings in the Gas Town dashboard, DoltHub token setup, and rig identity"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}

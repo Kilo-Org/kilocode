@@ -1,6 +1,7 @@
 ---
 title: "Wasteland"
 description: "Federated work protocol connecting Gas Towns into a shared network of tasks, reputation, and collaboration"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}

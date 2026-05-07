@@ -1,6 +1,7 @@
 ---
 title: "Wasteland Troubleshooting"
 description: "Common Wasteland problems: connection failures, claim conflicts, DoltHub auth issues, and stuck evidence"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}

@@ -1,6 +1,7 @@
 ---
 title: "Wasteland Quick Start"
 description: "Connect your town to the Commons wasteland, claim your first wanted item, and submit evidence"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}

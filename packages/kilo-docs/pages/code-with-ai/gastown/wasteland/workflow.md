@@ -1,6 +1,7 @@
 ---
 title: "Wasteland Workflow"
 description: "End-to-end workflow for working on Wasteland items: browse, claim, work, submit evidence, and get stamped"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}

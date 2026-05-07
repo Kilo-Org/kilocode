@@ -1,6 +1,7 @@
 ---
 title: "Wasteland Concepts"
 description: "Core concepts: Wasteland instances, federation, Wanted Board, claims, evidence, stamps, reputation, DoltHub PRs, validators, and rig identity"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}

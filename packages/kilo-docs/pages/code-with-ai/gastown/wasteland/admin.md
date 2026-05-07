@@ -1,6 +1,7 @@
 ---
 title: "Wasteland Administration"
 description: "Running a Wasteland: posting wanted items, reviewing submissions, stamping, merging, and managing members"
+noindex: true
 ---
 
 # {% $markdoc.frontmatter.title %}
