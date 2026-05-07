@@ -113,15 +113,15 @@ const IndexingTab: Component = () => {
 
   const saveProvider = (next: ProviderId | undefined) => {
     if (next === "kilo") {
+      const model = knownKiloModel(cfg().model) ?? (kiloDefault() || undefined)
       updateIndexing({
         provider: next,
-        model: knownKiloModel(cfg().model) ?? kiloDefault(),
+        model,
         dimension: undefined,
       })
       return
     }
-    const model = selectedProvider() === "kilo" && knownKiloModel(cfg().model) ? undefined : cfg().model
-    updateIndexing({ provider: next, model, dimension: undefined })
+    updateIndexing({ provider: next, model: undefined, dimension: undefined })
   }
 
   const saveEnabled = (enabled: boolean) => {

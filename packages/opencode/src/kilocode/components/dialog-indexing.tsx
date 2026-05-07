@@ -218,7 +218,7 @@ function ProviderSelect(props: SubDialogProps) {
             : {
                 ...current,
                 provider,
-                model: indexing.provider === "kilo" && kiloModel(current.model) ? undefined : current.model,
+                model: undefined,
                 dimension: undefined,
               }
         const saved = await saveIndexing(sdk, sync, updated, toast)
