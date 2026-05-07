@@ -16,6 +16,8 @@ import {
   type SnapshotEnabledCheck,
 } from "./session"
 import { TURN_PREFIX, createTurnDiffSource, type TurnDiffFetch } from "./turn"
+import { STAGED_DESCRIPTOR, STAGED_SOURCE_ID, createStagedDiffSource } from "./staged"
+import { UNSTAGED_DESCRIPTOR, UNSTAGED_SOURCE_ID, createUnstagedDiffSource } from "./unstaged"
 
 export interface WorkspaceBranchesResult {
   branches: BranchListItem[]
@@ -76,7 +78,11 @@ export class DiffSourceCatalog implements vscode.Disposable {
   listAvailable(ctx: PanelContext): DiffSourceDescriptor[] {
     if (ctx.hidePicker) return []
     const out: DiffSourceDescriptor[] = []
-    if (ctx.workspaceRoot) out.push(WORKSPACE_DESCRIPTOR)
+    if (ctx.workspaceRoot) {
+      out.push(WORKSPACE_DESCRIPTOR)
+      out.push(STAGED_DESCRIPTOR)
+      out.push(UNSTAGED_DESCRIPTOR)
+    }
     if (ctx.sessionId) out.push(sessionDescriptor(ctx.sessionId))
     return out
   }
@@ -92,6 +98,9 @@ export class DiffSourceCatalog implements vscode.Disposable {
     if (id === WORKSPACE_SOURCE_ID) {
       return createWorktreeDiffSource(this.connection, { baseBranchOverride: this.baseBranchOverride })
     }
+
+    if (id === STAGED_SOURCE_ID) return createStagedDiffSource()
+    if (id === UNSTAGED_SOURCE_ID) return createUnstagedDiffSource()
 
     if (id.startsWith(TURN_PREFIX)) {
       const [sessionId, messageId] = id.slice(TURN_PREFIX.length).split(":")

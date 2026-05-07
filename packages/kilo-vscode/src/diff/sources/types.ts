@@ -12,7 +12,7 @@ export interface DiffSourceCapabilities {
  * hide-picker mode (e.g. `turn`) don't need matching i18n entries because
  * `DiffPickerHeader` never renders them.
  */
-export type DiffSourceType = "workspace" | "session" | "turn"
+export type DiffSourceType = "workspace" | "session" | "turn" | "staged" | "unstaged"
 
 export interface DiffSourceDescriptor {
   /** Unique within a panel context. E.g. "workspace", "session:<sessionId>". */

@@ -1,0 +1,91 @@
+// Shared parsing helpers for the staged / unstaged diff sources. Both run
+// off `git diff` variants and need the same name-status + numstat stitching.
+
+import * as fs from "fs/promises"
+import * as path from "path"
+import type { GitOps } from "../../agent-manager/GitOps"
+import { generatedLike } from "../../agent-manager/local-diff"
+import type { DiffFile } from "../types"
+
+export type Status = "added" | "deleted" | "modified"
+
+export interface FileEntry {
+  file: string
+  status: Status
+  additions: number
+  deletions: number
+  tracked: boolean
+}
+
+/** Parse `git diff --name-status` output into entries (status code + path). */
+export function parseNameStatus(stdout: string): { file: string; status: Status }[] {
+  const out: { file: string; status: Status }[] = []
+  for (const line of stdout.split("\n")) {
+    if (!line) continue
+    const parts = line.split("\t")
+    const code = parts[0]
+    const file = parts.slice(1).join("\t")
+    if (!code || !file) continue
+    out.push({ file, status: statusFromCode(code) })
+  }
+  return out
+}
+
+/** Parse `git diff --numstat` output into a per-file `{additions, deletions}` map. */
+export function parseNumstat(stdout: string): Map<string, { additions: number; deletions: number }> {
+  const map = new Map<string, { additions: number; deletions: number }>()
+  for (const line of stdout.split("\n")) {
+    if (!line.trim()) continue
+    const parts = line.split("\t")
+    if (parts.length < 3) continue
+    const additions = parts[0] === "-" ? 0 : parseInt(parts[0]!, 10) || 0
+    const deletions = parts[1] === "-" ? 0 : parseInt(parts[1]!, 10) || 0
+    const file = parts.slice(2).join("\t")
+    if (file) map.set(file, { additions, deletions })
+  }
+  return map
+}
+
+function statusFromCode(code: string): Status {
+  if (code.startsWith("A")) return "added"
+  if (code.startsWith("D")) return "deleted"
+  return "modified"
+}
+
+/**
+ * Build the summarized DiffFile shape the viewer expects. `before`/`after`
+ * are left empty — the controller fetches detail lazily through `fetchFile`.
+ */
+export function summarize(entry: FileEntry): DiffFile {
+  return {
+    file: entry.file,
+    before: "",
+    after: "",
+    additions: entry.additions,
+    deletions: entry.deletions,
+    status: entry.status,
+    tracked: entry.tracked,
+    generatedLike: generatedLike(entry.file),
+    summarized: true,
+    // Synthetic stamp keyed on the stats we actually polled: any change to
+    // the file's diff produces new additions/deletions, which invalidates
+    // the webview-side cached detail via mergeWorktreeDiffs.
+    stamp: `${entry.status}:${entry.additions}:${entry.deletions}`,
+  }
+}
+
+/**
+ * `git show <ref>:<file>` to dump file contents at a specific revision.
+ * Returns `""` on failure (binary, missing, etc.) — the caller decides
+ * whether to surface that as `summarized` or just empty.
+ */
+export async function showBlob(git: GitOps, dir: string, ref: string, file: string): Promise<string> {
+  const result = await git.execGit(["show", `${ref}:${file}`], dir)
+  return result.code === 0 ? result.stdout : ""
+}
+
+/** Read a working-tree file off disk. `""` on missing/unreadable. */
+export async function readDisk(dir: string, file: string): Promise<string> {
+  const full = path.join(dir, file)
+  return fs.readFile(full, "utf-8").catch(() => "")
+}
