@@ -1,4 +1,5 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
@@ -46,7 +47,13 @@ export interface ReadyMessage {
   extensionVersion?: string
   vscodeLanguage?: string
   languageOverride?: string
+  fontSize?: number
   workspaceDirectory?: string
+}
+
+export interface FontSizeChangedMessage {
+  type: "fontSizeChanged"
+  fontSize: number
 }
 
 export interface GitStatusMessage {
@@ -679,6 +686,7 @@ export interface AgentManagerSendInitialMessage {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
 }
 
@@ -719,9 +727,37 @@ export interface DiffViewerRevertFileResultMessage {
   message: string
 }
 
+export interface DiffViewerDiffFileMessage {
+  type: "diffViewer.diffFile"
+  file: string
+  diff: WorktreeFileDiff | null
+}
+
 export interface DiffViewerMarkdownRenderMessage {
   type: "diffViewer.markdownRender"
   render: boolean
+}
+
+export interface SetAvailableSourcesMessage {
+  type: "setAvailableSources"
+  descriptors: DiffSourceDescriptor[]
+  currentId: string
+}
+
+export interface DiffViewerCapabilitiesMessage {
+  type: "diffViewer.capabilities"
+  capabilities: DiffSourceCapabilities
+}
+
+/**
+ * Well-known notice kinds surfaced by a diff source. The webview maps these
+ * to translated user-facing messages. `undefined` clears any active notice.
+ */
+export type DiffViewerNotice = "snapshots-disabled"
+
+export interface DiffViewerNoticeMessage {
+  type: "diffViewer.notice"
+  notice: DiffViewerNotice | undefined
 }
 
 export interface ClearPendingPromptsMessage {
@@ -730,6 +766,11 @@ export interface ClearPendingPromptsMessage {
 
 export interface ExtensionDataReadyMessage {
   type: "extensionDataReady"
+}
+
+export interface TelemetryStateMessage {
+  type: "telemetryState"
+  enabled: boolean
 }
 
 // ============================================
@@ -819,6 +860,7 @@ export interface RemoteStatusMessage {
 
 export type ExtensionMessage =
   | ReadyMessage
+  | FontSizeChangedMessage
   | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
@@ -925,7 +967,11 @@ export type ExtensionMessage =
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
   | DiffViewerRevertFileResultMessage
+  | DiffViewerDiffFileMessage
   | DiffViewerMarkdownRenderMessage
+  | SetAvailableSourcesMessage
+  | DiffViewerCapabilitiesMessage
+  | DiffViewerNoticeMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
@@ -943,4 +989,5 @@ export type ExtensionMessage =
   | McpStatusLoadedMessage
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
+  | TelemetryStateMessage
   | RemoteStatusMessage

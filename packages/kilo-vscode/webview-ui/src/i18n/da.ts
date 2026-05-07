@@ -1170,6 +1170,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Brug en smart tastaturgenvej til at udløse inline-opgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofuldførelse",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofuldførelsesforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For at vælge hvilken model der bruges til autofuldførelse, se Modelindstillinger.",
   "settings.notifications.agent.title": "Agentafslutning",
   "settings.notifications.agent.description": "Vis notifikation, når agenten fuldfører en opgave",
   "settings.notifications.permissions.title": "Tilladelsesanmodninger",
@@ -1399,6 +1401,8 @@ export const dict = {
   "settings.display.layout.description": "Layouttilstand for chatgrænsefladen",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Stræk",
+  "settings.display.fontSize.title": "Skriftstørrelse",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
@@ -1534,4 +1538,14 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
+  "diffViewer.source.workspace.label": "Lokale ændringer",
+  "diffViewer.source.workspace.tooltip":
+    "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 }

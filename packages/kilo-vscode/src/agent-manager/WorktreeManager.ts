@@ -31,7 +31,7 @@ import {
 const TEMP_PREFIX = ".kilo-delete-"
 const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
-interface WorktreeInfo {
+export interface WorktreeInfo {
   branch: string
   path: string
   /** Bare branch name (e.g. "main"), without remote prefix. */

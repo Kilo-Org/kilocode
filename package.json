@@ -7,7 +7,9 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
-    "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup",
+    "dev:desktop": "bun --cwd packages/desktop-electron dev",
+    "dev:web": "bun --cwd packages/app dev",
+    "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "typecheck": "bun turbo typecheck",
@@ -31,8 +33,8 @@
       "@types/cross-spawn": "6.0.6",
       "@octokit/rest": "22.0.0",
       "@hono/zod-validator": "0.4.2",
-      "@opentui/core": "0.1.105",
-      "@opentui/solid": "0.1.105",
+      "@opentui/core": "0.2.2",
+      "@opentui/solid": "0.2.2",
       "ulid": "3.0.1",
       "@kobalte/core": "0.13.11",
       "@types/luxon": "3.7.1",
@@ -74,6 +76,8 @@
       "@solidjs/meta": "0.29.4",
       "@solidjs/router": "0.15.4",
       "@solidjs/start": "https://pkg.pr.new/@solidjs/start@dfb2020",
+      "@sentry/solid": "10.36.0",
+      "@sentry/vite-plugin": "4.6.0",
       "solid-js": "1.9.12",
       "vite-plugin-solid": "2.11.10",
       "@lydell/node-pty": "1.2.0-beta.10"
@@ -82,7 +86,6 @@
   "devDependencies": {
     "@actions/artifact": "5.0.1",
     "@tsconfig/bun": "catalog:",
-    "@types/bun": "catalog:",
     "@types/mime-types": "3.0.1",
     "@typescript/native-preview": "catalog:",
     "glob": "13.0.5",
@@ -93,6 +96,7 @@
     "semver": "^7.6.0",
     "sst": "3.18.10",
     "turbo": "2.8.13",
+    "@types/bun": "catalog:",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.27.10"
   },
@@ -143,9 +147,8 @@
   "patchedDependencies": {
     "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
-    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
-    "stream-chat@9.38.0": "patches/stream-chat@9.38.0.patch"
+    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.2.40",
+  "version": "7.2.42",
   "peerDependencies": {}
 }

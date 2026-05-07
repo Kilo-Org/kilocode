@@ -92,4 +92,9 @@ export const dict = {
     "أوقف لقطات Kilo لهذا المشروع. ستفقد ميزة التراجع/الإعادة لتعديلات Kilo، لكن git سيستمر في تتبع كل شيء.",
 
   "ui.messagePart.openInDiffViewer": "فتح في عارض الفروقات",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "كان هذا مفيدًا",
+  "ui.message.feedback.notHelpful": "لم يكن هذا مفيدًا",
+  "ui.message.feedback.clearRating": "مسح التقييم",
 }

@@ -452,6 +452,32 @@ class KiloCliDataParserTest {
     }
 
     @Test
+    fun `parseMessages - step finish part with tokens`() {
+        val raw = """[{
+            "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
+            "parts": [{
+                "id": "p1",
+                "sessionID": "s1",
+                "messageID": "m1",
+                "type": "step-finish",
+                "reason": "stop",
+                "cost": 0.005,
+                "tokens": { "input": 100, "output": 50, "reasoning": 10, "cache": { "read": 20, "write": 5 } }
+            }]
+        }]"""
+
+        val part = KiloCliDataParser.parseMessages(raw)[0].parts[0]
+        assertEquals("step-finish", part.type)
+        assertEquals("stop", part.reason)
+        assertEquals(0.005, part.cost)
+        assertEquals(100L, part.tokens?.input)
+        assertEquals(50L, part.tokens?.output)
+        assertEquals(10L, part.tokens?.reasoning)
+        assertEquals(20L, part.tokens?.cacheRead)
+        assertEquals(5L, part.tokens?.cacheWrite)
+    }
+
+    @Test
     fun `parseMessages - malformed JSON returns empty`() {
         assertEquals(emptyList(), KiloCliDataParser.parseMessages("not json"))
     }
@@ -617,6 +643,13 @@ class KiloCliDataParserTest {
         val prompt = PromptDto(parts = listOf(PromptPartDto("text", "line1\nline2\t\"quoted\"")))
         val result = KiloCliDataParser.buildPromptJson(prompt)
         assertTrue(result.contains("""line1\nline2\t\"quoted\""""))
+    }
+
+    @Test
+    fun `buildSummarizeJson - writes provider and model`() {
+        val result = KiloCliDataParser.buildSummarizeJson(ModelSelectionDto("anthropic", "claude-4"))
+
+        assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", result)
     }
 
     // ================================================================
@@ -864,6 +897,32 @@ class KiloCliDataParserTest {
         val result = KiloCliDataParser.parseChatEvent("session.compacted", data)
         assertNotNull(result)
         assertTrue(result is ChatEventDto.SessionCompacted)
+    }
+
+    @Test
+    fun `parseChatEvent - session updated`() {
+        val data = globalEvent("""
+            "type": "session.updated",
+            "properties": {
+                "sessionID": "ses_1",
+                "info": {
+                    "id": "ses_1",
+                    "projectID": "proj_1",
+                    "directory": "/tmp/project",
+                    "title": "Updated title",
+                    "version": "1",
+                    "time": { "created": 1.0, "updated": 2.0 },
+                    "summary": { "additions": 3, "deletions": 1, "files": 2 }
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.updated", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.SessionUpdated)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals("Updated title", result.session.title)
+        assertEquals(2, result.session.summary?.files)
     }
 
     @Test

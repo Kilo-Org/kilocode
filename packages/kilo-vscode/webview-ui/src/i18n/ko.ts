@@ -1160,6 +1160,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "인라인 작업을 트리거하는 스마트 키바인딩 사용",
   "settings.autocomplete.chatAutocomplete.title": "채팅 텍스트 영역 자동완성 활성화",
   "settings.autocomplete.chatAutocomplete.description": "채팅 텍스트 영역에서 자동완성 제안 표시",
+  "settings.autocomplete.modelsHint": "자동 완성에 사용되는 모델을 선택하려면 모델 설정을 참조하세요.",
   "settings.notifications.agent.title": "에이전트 완료",
   "settings.notifications.agent.description": "에이전트가 작업을 완료하면 알림 표시",
   "settings.notifications.permissions.title": "권한 요청",
@@ -1381,6 +1382,8 @@ export const dict = {
   "settings.display.layout.description": "채팅 인터페이스의 레이아웃 모드",
   "settings.display.layout.auto": "자동",
   "settings.display.layout.stretch": "늘리기",
+  "settings.display.fontSize.title": "글꼴 크기",
+  "settings.display.fontSize.description": "VS Code와 독립적으로 Kilo webview UI 글꼴 크기를 조정합니다.",
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
   "settings.display.reasoningAutoCollapse.description":
     "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
@@ -1514,4 +1517,14 @@ export const dict = {
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
   "notifications.action.tryModelGeneric": "모델 시도",
+  "diffViewer.source.workspace.label": "로컬 변경 사항",
+  "diffViewer.source.workspace.tooltip":
+    "베이스 브랜치와 비교한 이 브랜치의 모든 변경 사항. 커밋되지 않은 파일(staged, unstaged, 추적되지 않음)과 아직 베이스에 반영되지 않은 로컬 커밋을 포함합니다.",
+  "diffViewer.source.session.label": "세션",
+  "diffViewer.source.session.tooltip":
+    "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
+  "diffViewer.group.session": "세션",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 }

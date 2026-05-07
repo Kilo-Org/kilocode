@@ -23,7 +23,6 @@ import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
-import { CodeSearchTool } from "./codesearch"
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -111,7 +110,6 @@ export const layer: Layer.Layer<
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
     const bash = yield* BashTool
-    const codesearch = yield* CodeSearchTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
     const edit = yield* EditTool
@@ -161,7 +159,16 @@ export const layer: Layer.Layer<
                     ...(out.truncated && { outputPath: out.outputPath }),
                   },
                 }
-              }),
+              }).pipe(
+                Effect.withSpan("Tool.execute", {
+                  attributes: {
+                    "tool.name": id,
+                    "session.id": toolCtx.sessionID,
+                    "message.id": toolCtx.messageID,
+                    ...(toolCtx.callID ? { "tool.call_id": toolCtx.callID } : {}),
+                  },
+                }),
+              ),
           }
         }
 
@@ -203,7 +210,6 @@ export const layer: Layer.Layer<
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
-          code: Tool.init(codesearch),
           skill: Tool.init(skilltool),
           patch: Tool.init(patchtool),
           question: Tool.init(question),
@@ -231,7 +237,6 @@ export const layer: Layer.Layer<
             tool.fetch,
             tool.todo,
             tool.search,
-            tool.code,
             tool.skill,
             tool.patch,
             ...(KiloToolRegistry.plan() ? [tool.plan] : []), // kilocode_change
@@ -291,7 +296,7 @@ export const layer: Layer.Layer<
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
-        if (tool.id === CodeSearchTool.id || tool.id === WebSearchTool.id) {
+        if (tool.id === WebSearchTool.id) {
           return input.providerID === ProviderID.kilo || Flag.KILO_ENABLE_EXA // kilocode_change
         }
 

@@ -1158,6 +1158,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "ใช้ปุ่มลัดอัจฉริยะสำหรับงานอินไลน์",
   "settings.autocomplete.chatAutocomplete.title": "เปิดใช้งานเติมอัตโนมัติแชท",
   "settings.autocomplete.chatAutocomplete.description": "แสดงข้อเสนอแนะเติมอัตโนมัติในช่องแชท",
+  "settings.autocomplete.modelsHint": "เลือกโมเดลที่ใช้สำหรับการเติมอัตโนมัติได้ที่การตั้งค่าโมเดล",
   "settings.notifications.agent.title": "เอเจนต์เสร็จสิ้น",
   "settings.notifications.agent.description": "แสดงการแจ้งเตือนเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permissions.title": "คำขออนุญาต",
@@ -1380,6 +1381,8 @@ export const dict = {
   "settings.display.layout.description": "โหมดเค้าโครงสำหรับอินเทอร์เฟซแชท",
   "settings.display.layout.auto": "อัตโนมัติ",
   "settings.display.layout.stretch": "ยืด",
+  "settings.display.fontSize.title": "ขนาดฟอนต์",
+  "settings.display.fontSize.description": "ปรับขนาดฟอนต์ webview UI ของ Kilo แยกเป็นอิสระจาก VS Code.",
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
@@ -1513,4 +1516,14 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
+  "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.source.workspace.tooltip":
+    "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
+  "diffViewer.source.session.label": "เซสชัน",
+  "diffViewer.source.session.tooltip":
+    "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
+  "diffViewer.group.session": "เซสชัน",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
 }

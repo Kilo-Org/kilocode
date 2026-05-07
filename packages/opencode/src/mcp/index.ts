@@ -138,6 +138,11 @@ function isMcpConfigured(entry: McpEntry): entry is ConfigMCP.Info {
 
 const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_")
 
+function remoteURL(key: string, value: string) {
+  if (URL.canParse(value)) return new URL(value)
+  log.warn("invalid remote mcp url", { key })
+}
+
 // Convert MCP tool definition to AI SDK Tool type
 function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Tool {
   const inputSchema = mcpTool.inputSchema
@@ -275,7 +280,7 @@ export const layer = Layer.effect(
         (t) =>
           Effect.tryPromise({
             try: () => {
-              const client = new Client({ name: "opencode", version: InstallationVersion })
+              const client = new Client({ name: "kilo", version: InstallationVersion }) // kilocode_change
               return withTimeout(client.connect(t), timeout).then(() => client)
             },
             catch: (e) => (e instanceof Error ? e : new Error(String(e))),
@@ -291,6 +296,13 @@ export const layer = Layer.effect(
     ) {
       const oauthDisabled = mcp.oauth === false
       const oauthConfig = typeof mcp.oauth === "object" ? mcp.oauth : undefined
+      const url = remoteURL(key, mcp.url)
+      if (!url) {
+        return {
+          client: undefined as MCPClient | undefined,
+          status: { status: "failed" as const, error: `Invalid MCP URL for "${key}"` },
+        }
+      }
       let authProvider: McpOAuthProvider | undefined
 
       if (!oauthDisabled) {
@@ -315,14 +327,14 @@ export const layer = Layer.effect(
       const transports: Array<{ name: string; transport: TransportWithAuth }> = [
         {
           name: "StreamableHTTP",
-          transport: new StreamableHTTPClientTransport(new URL(mcp.url), {
+          transport: new StreamableHTTPClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
           }),
         },
         {
           name: "SSE",
-          transport: new SSEClientTransport(new URL(mcp.url), {
+          transport: new SSEClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
           }),
@@ -362,7 +374,7 @@ export const layer = Layer.effect(
                 return bus
                   .publish(TuiEvent.ToastShow, {
                     title: "MCP Authentication Required",
-                    message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
+                    message: `Server "${key}" requires authentication. Run: kilo mcp auth ${key}`, // kilocode_change
                     variant: "warning",
                     duration: 8000,
                   })
@@ -742,11 +754,15 @@ export const layer = Layer.effect(
       return mcpConfig
     })
 
-    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) { // kilocode_change
+    // kilocode_change start - `opts?: { callback?: boolean }` parameter is Kilo-specific
+    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) {
+      // kilocode_change end
       const mcpConfig = yield* getMcpConfig(mcpName)
       if (!mcpConfig) throw new Error(`MCP server ${mcpName} not found or disabled`)
       if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
       if (mcpConfig.oauth === false) throw new Error(`MCP server ${mcpName} has OAuth explicitly disabled`)
+      const url = remoteURL(mcpName, mcpConfig.url)
+      if (!url) throw new Error(`Invalid MCP URL for "${mcpName}"`)
 
       // OAuth config is optional - if not provided, we'll use auto-discovery
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
@@ -779,11 +795,11 @@ export const layer = Layer.effect(
         auth,
       )
 
-      const transport = new StreamableHTTPClientTransport(new URL(mcpConfig.url), { authProvider })
+      const transport = new StreamableHTTPClientTransport(url, { authProvider })
 
       return yield* Effect.tryPromise({
         try: () => {
-          const client = new Client({ name: "opencode", version: InstallationVersion })
+          const client = new Client({ name: "kilo", version: InstallationVersion }) // kilocode_change
           return client
             .connect(transport)
             .then(() => ({ authorizationUrl: "", oauthState, client }) satisfies AuthResult)
@@ -826,7 +842,8 @@ export const layer = Layer.effect(
       // kilocode_change start - bind only after redirect exists, and clean up if binding fails
       const mcpConfig = yield* getMcpConfig(mcpName)
       if (!mcpConfig) return { status: "failed", error: "MCP config not found after auth" } as Status
-      if (mcpConfig.type !== "remote") return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
+      if (mcpConfig.type !== "remote")
+        return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
       const err = yield* Effect.tryPromise({
         try: () => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri),

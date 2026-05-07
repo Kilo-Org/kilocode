@@ -125,7 +125,7 @@ const Settings: Component<SettingsProps> = (props) => {
           gap: "8px",
         }}
       >
-        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0, flex: 1 }}>
+        <h2 style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "600", margin: 0, flex: 1 }}>
           {language.t("sidebar.settings")}
         </h2>
         <Button variant="secondary" size="small" icon="edit" onClick={() => open("local")}>
@@ -240,7 +240,7 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
         <Tabs.Content value="autocomplete">
           <h3>{language.t("settings.autocomplete.title")}</h3>
-          <AutocompleteTab />
+          <AutocompleteTab onNavigateToModels={() => onTabChange("models")} />
         </Tabs.Content>
         <Tabs.Content value="notifications">
           <h3>{language.t("settings.notifications.title")}</h3>

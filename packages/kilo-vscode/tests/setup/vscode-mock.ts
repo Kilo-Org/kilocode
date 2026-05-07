@@ -71,6 +71,16 @@ const mockVscode = {
     showTextDocument: async () => {},
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
+    createOutputChannel: () => ({
+      name: "",
+      append: noop,
+      appendLine: noop,
+      replace: noop,
+      clear: noop,
+      show: noop,
+      hide: noop,
+      dispose: noop,
+    }),
     createStatusBarItem: () => ({
       text: "",
       tooltip: "",

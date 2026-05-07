@@ -33,6 +33,7 @@ export interface TabRenderDeps {
    *  getter so Solid tracks its reactivity inside rendered JSX. */
   visibleTabId: () => string | undefined
   isPending: (id: string) => boolean
+  isBusy: (id: string) => boolean
   tabLookup: () => Map<string, SessionInfo>
   adjacentHint: (id: string, activeId: string, ids: string[], prev: string, next: string) => string
   // Handlers
@@ -131,6 +132,7 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
     <SortableTab
       tab={s}
       active={active() && !deps.reviewActive()}
+      busy={deps.isBusy(s.id)}
       keybind={keybind()}
       closeKeybind={deps.kb().closeTab ?? ""}
       onSelect={() => {

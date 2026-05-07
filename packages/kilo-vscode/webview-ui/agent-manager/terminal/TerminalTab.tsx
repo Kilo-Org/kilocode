@@ -126,7 +126,7 @@ export const TerminalTab: Component<Props> = (props) => {
       convertEol: true,
       cursorBlink: true,
       fontFamily: cssVar("--vscode-editor-font-family", "Menlo, Monaco, 'Courier New', monospace"),
-      fontSize: 13,
+      fontSize: Number.parseFloat(cssVar("--font-size-base", "13px")),
       scrollback: 5000,
       theme: readTheme(),
       allowProposedApi: true,
@@ -218,6 +218,17 @@ export const TerminalTab: Component<Props> = (props) => {
     let resizeTimer: ReturnType<typeof setTimeout> | undefined
     let lastCols = term.cols
     let lastRows = term.rows
+    const syncSize = () => {
+      if (term.cols === lastCols && term.rows === lastRows) return
+      lastCols = term.cols
+      lastRows = term.rows
+      vscode.postMessage({
+        type: "agentManager.terminal.resize",
+        terminalId: props.terminalId,
+        cols: term.cols,
+        rows: term.rows,
+      })
+    }
     const ro = new ResizeObserver(() => {
       try {
         fit.fit()
@@ -228,17 +239,7 @@ export const TerminalTab: Component<Props> = (props) => {
         return
       }
       clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(() => {
-        if (term.cols === lastCols && term.rows === lastRows) return
-        lastCols = term.cols
-        lastRows = term.rows
-        vscode.postMessage({
-          type: "agentManager.terminal.resize",
-          terminalId: props.terminalId,
-          cols: term.cols,
-          rows: term.rows,
-        })
-      }, RESIZE_DEBOUNCE_MS)
+      resizeTimer = setTimeout(syncSize, RESIZE_DEBOUNCE_MS)
     })
     ro.observe(host)
 
@@ -277,6 +278,15 @@ export const TerminalTab: Component<Props> = (props) => {
       if (pendingFrame !== null) return
       pendingFrame = requestAnimationFrame(runRepaint)
     }
+    const fontSub = vscode.onMessage((message) => {
+      const size =
+        message.type === "fontSizeChanged" ? message.fontSize : message.type === "ready" ? message.fontSize : undefined
+      if (size === undefined) return
+      term.options.fontSize = size
+      fit.fit()
+      syncSize()
+      scheduleRepaint()
+    })
 
     let wasActive = props.active
     createEffect(() => {
@@ -319,6 +329,7 @@ export const TerminalTab: Component<Props> = (props) => {
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
+      fontSub()
       themeObserver.disconnect()
       clearTimeout(resizeTimer)
       ro.disconnect()

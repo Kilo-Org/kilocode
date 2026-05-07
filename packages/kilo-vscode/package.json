@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.2.40",
+  "version": "7.2.42",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -781,10 +781,22 @@
           "default": false,
           "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
         },
+        "kilo-code.new.extraCaCerts": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a PEM file containing extra CA certificates to trust when the Kilo backend makes HTTPS requests (sets NODE_EXTRA_CA_CERTS on the CLI process). Use this if you're behind a corporate proxy that performs SSL inspection. Leave empty to rely on the OS trust store."
+        },
         "kilo-code.new.autoApprove.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically."
+        },
+        "kilo-code.new.fontSize": {
+          "type": "number",
+          "default": 13,
+          "minimum": 10,
+          "maximum": 24,
+          "description": "Font size in pixels for the Kilo Code webview UI."
         },
         "kilo-code.new.browserAutomation.enabled": {
           "type": "boolean",
@@ -937,7 +949,6 @@
     "quick-lru": "^7.0.0",
     "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
-    "stream-chat": "9.38.0",
     "uri-js": "^4.4.1",
     "virtua": "catalog:",
     "web-tree-sitter": "^0.24.7",

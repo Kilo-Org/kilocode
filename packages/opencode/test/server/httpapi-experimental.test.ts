@@ -4,13 +4,13 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { GlobalBus } from "@/bus/global"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
-import { ExperimentalPaths } from "../../src/server/routes/instance/httpapi/experimental"
+import { ExperimentalPaths } from "../../src/server/routes/instance/httpapi/groups/experimental"
 import { Session } from "@/session/session"
 import { Database } from "@/storage/db"
 import * as Log from "@opencode-ai/core/util/log"
 import { Worktree } from "../../src/worktree"
 import { resetDatabase } from "../fixture/db"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
@@ -50,7 +50,7 @@ async function waitReady(directory: string) {
 
 afterEach(async () => {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = original
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await resetDatabase()
 })
 

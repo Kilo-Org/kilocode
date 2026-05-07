@@ -14,6 +14,8 @@ class SessionStyleTest : BasePlatformTestCase() {
 
         assertEquals(scheme.editorFontName, font.name)
         assertEquals(scheme.editorFontSize, font.size)
+        assertEquals(scheme.defaultForeground, style.editorForeground)
+        assertEquals(scheme.defaultBackground, style.editorBackground)
         assertEquals(Font.PLAIN, font.style)
     }
 

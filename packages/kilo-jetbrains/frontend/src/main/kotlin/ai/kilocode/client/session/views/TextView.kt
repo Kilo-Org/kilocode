@@ -28,10 +28,13 @@ class TextView(text: Text) : PartView() {
     override fun update(content: Content) {
         if (content !is Text) return
         md.set(content.content.toString())
+        refresh()
     }
 
     override fun appendDelta(delta: String) {
+        if (delta.isEmpty()) return
         md.append(delta)
+        refresh()
     }
 
     /** Current markdown source — used by tests to assert rendered content. */
@@ -42,6 +45,10 @@ class TextView(text: Text) : PartView() {
         if (md.font != style.transcriptFont) md.font = style.transcriptFont
         if (md.codeFont != style.editorFamily) md.codeFont = style.editorFamily
         if (!changed) return
+        refresh()
+    }
+
+    private fun refresh() {
         revalidate()
         repaint()
     }

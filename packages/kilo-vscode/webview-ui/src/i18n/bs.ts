@@ -1177,6 +1177,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Koristi pametnu prečicu za pokretanje inline zadataka",
   "settings.autocomplete.chatAutocomplete.title": "Omogući automatsko dovršavanje chata",
   "settings.autocomplete.chatAutocomplete.description": "Prikaži prijedloge automatskog dovršavanja u polju chata",
+  "settings.autocomplete.modelsHint":
+    "Da odaberete koji se model koristi za automatsko dovršavanje, pogledajte postavke Modela.",
   "settings.notifications.agent.title": "Završetak agenta",
   "settings.notifications.agent.description": "Prikaži obavijest kada agent završi zadatak",
   "settings.notifications.permissions.title": "Zahtjevi za dozvolu",
@@ -1410,6 +1412,8 @@ export const dict = {
   "settings.display.layout.description": "Način rasporeda za sučelje chata",
   "settings.display.layout.auto": "Automatski",
   "settings.display.layout.stretch": "Rastegni",
+  "settings.display.fontSize.title": "Veličina fonta",
+  "settings.display.fontSize.description": "Prilagodite veličinu fonta za Kilo webview UI nezavisno od VS Code-a.",
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
   "settings.display.reasoningAutoCollapse.description":
     "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
@@ -1544,4 +1548,14 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
+  "diffViewer.source.workspace.label": "Lokalne izmjene",
+  "diffViewer.source.workspace.tooltip":
+    "Sve promjene na ovoj grani u poređenju s osnovnom granom. Uključuje nekomitovane datoteke (staged, unstaged, nepraćene) i lokalne commitove koji još nisu u osnovi.",
+  "diffViewer.source.session.label": "Sesija",
+  "diffViewer.source.session.tooltip":
+    "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
+  "diffViewer.group.session": "Sesija",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
 }

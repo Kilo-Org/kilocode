@@ -1143,6 +1143,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "使用智能快捷键触发内联任务",
   "settings.autocomplete.chatAutocomplete.title": "启用聊天文本框自动补全",
   "settings.autocomplete.chatAutocomplete.description": "在聊天文本框中显示自动补全建议",
+  "settings.autocomplete.modelsHint": "若要选择用于自动补全的模型，请参阅模型设置。",
   "settings.notifications.agent.title": "智能体完成",
   "settings.notifications.agent.description": "智能体完成任务时显示通知",
   "settings.notifications.permissions.title": "权限请求",
@@ -1350,6 +1351,8 @@ export const dict = {
   "settings.display.layout.description": "聊天界面的布局模式",
   "settings.display.layout.auto": "自动",
   "settings.display.layout.stretch": "拉伸",
+  "settings.display.fontSize.title": "字体大小",
+  "settings.display.fontSize.description": "独立于 VS Code 调整 Kilo webview UI 的字体大小。",
   "settings.display.reasoningAutoCollapse.title": "自动折叠推理",
   "settings.display.reasoningAutoCollapse.description":
     "在智能体写完推理后折叠推理块。保持关闭可让推理保持展开，除非你手动折叠它。",
@@ -1480,4 +1483,12 @@ export const dict = {
   "notifications.action.close": "关闭",
   "notifications.action.tryModel": "尝试 {{model}}",
   "notifications.action.tryModelGeneric": "尝试模型",
+  "diffViewer.source.workspace.label": "本地更改",
+  "diffViewer.source.workspace.tooltip":
+    "此分支相对于基础分支的所有更改。包括未提交的文件（已暂存、未暂存、未跟踪）以及尚未合入基础分支的本地提交。",
+  "diffViewer.source.session.label": "会话",
+  "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
+  "diffViewer.group.session": "会话",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
 } satisfies Partial<Record<Keys, string>>

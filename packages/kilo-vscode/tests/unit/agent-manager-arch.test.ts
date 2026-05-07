@@ -33,6 +33,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -61,9 +62,14 @@ describe("Agent Manager CSS Prefix", () => {
     const matches = [...css.matchAll(/\.([a-z][a-z0-9-]*)/gi)]
     const names = [...new Set(matches.map((m) => m[1]))]
 
-    // VS Code sets these body classes on webview elements — they are scoping
-    // selectors for high contrast theme support, not agent-manager classes.
-    const host = new Set(["vscode-high-contrast", "vscode-high-contrast-light"])
+    // Exceptions:
+    // - VS Code sets these body classes on webview elements (scoping
+    //   selectors for high contrast theme support).
+    // - `kilo-diff-theme` is the shared Pierre diff theme utility defined
+    //   in webview-ui/src/styles/diff.css and reused across webviews.
+    // - `css` is matched from `@import "./diff.css"` file extension, not a
+    //   class selector.
+    const host = new Set(["vscode-high-contrast", "vscode-high-contrast-light", "kilo-diff-theme", "css"])
     const invalid = names.filter((n) => !n!.startsWith("am-") && !host.has(n!))
 
     expect(invalid, `Classes missing "am-" prefix: ${invalid.join(", ")}`).toEqual([])
@@ -149,6 +155,34 @@ describe("Agent Manager Provider Messages", () => {
     const body = getMethodBody("onAddSessionToWorktree")
     expect(body).toContain("agentManager.sessionAdded")
   })
+
+  it("state-mutating messages wait for state initialization", () => {
+    const body = getMethodBody("shouldWaitForState")
+    const messages = [
+      "agentManager.setTabOrder",
+      "agentManager.setWorktreeOrder",
+      "agentManager.persistSession",
+      "agentManager.forgetSession",
+      "agentManager.importFromBranch",
+      "agentManager.importFromPR",
+      "agentManager.importExternalWorktree",
+      "agentManager.importAllExternalWorktrees",
+      "agentManager.createSection",
+      "agentManager.moveToSection",
+    ]
+
+    for (const message of messages) {
+      expect(body, `${message} should wait for loaded state`).toContain(message)
+    }
+
+    expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+  })
+
+  it("async shutdown waits for terminal router cleanup", () => {
+    const body = getMethodBody("disposeAsync")
+    expect(body).toContain("await this.terminalRouter.dispose()")
+    expect(body).not.toContain("void this.terminalRouter.dispose()")
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -227,6 +261,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
+  })
+
+  it("terminal context keeps the current active terminal when present", () => {
+    const text = body("onSessionMessage")
+    const check = text.indexOf("!this.terminalManager.hasActiveTerminal()")
+    const show = text.indexOf("this.terminalManager.showExisting(m.sessionID)")
+    expect(check).toBeGreaterThan(-1)
+    expect(show).toBeGreaterThan(-1)
+    expect(check, "active terminal check must guard session terminal reveal").toBeLessThan(show)
   })
 
   it("session routing handles clearSession for SSE re-registration", () => {

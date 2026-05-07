@@ -1170,6 +1170,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Satır içi görevleri tetiklemek için akıllı tuş ataması kullan",
   "settings.autocomplete.chatAutocomplete.title": "Sohbet metin alanı otomatik tamamlamasını etkinleştir",
   "settings.autocomplete.chatAutocomplete.description": "Sohbet metin alanında otomatik tamamlama önerileri göster",
+  "settings.autocomplete.modelsHint":
+    "Otomatik tamamlama için kullanılacak modeli seçmek için Modeller ayarlarına bakın.",
 
   "settings.notifications.agent.title": "Ajan Tamamlanması",
   "settings.notifications.agent.description": "Ajan bir görevi tamamladığında bildirim göster",
@@ -1372,6 +1374,8 @@ export const dict = {
   "settings.display.layout.description": "Sohbet arayüzü için düzen modu",
   "settings.display.layout.auto": "Otomatik",
   "settings.display.layout.stretch": "Genişlet",
+  "settings.display.fontSize.title": "Yazı Tipi Boyutu",
+  "settings.display.fontSize.description": "Kilo webview UI yazı tipi boyutunu VS Code'dan bağımsız olarak ayarlayın.",
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
@@ -1555,4 +1559,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Kurallar sırayla değerlendirilir — son eşleşen kural kazanır. Bu, CLI arka ucundan çözümlenen kural kümesidir.",
   "settings.agentBehaviour.editMode.save": "Tamam",
+  "diffViewer.source.workspace.label": "Yerel değişiklikler",
+  "diffViewer.source.workspace.tooltip":
+    "Bu daldaki tüm değişiklikler, temel dal ile karşılaştırıldığında. Commitlenmemiş dosyaları (staged, unstaged, izlenmeyen) ve temelde henüz bulunmayan yerel commitleri içerir.",
+  "diffViewer.source.session.label": "Oturum",
+  "diffViewer.source.session.tooltip":
+    "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
+  "diffViewer.group.session": "Oturum",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
 }

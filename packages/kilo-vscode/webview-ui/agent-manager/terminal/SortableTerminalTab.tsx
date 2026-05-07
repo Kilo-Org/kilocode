@@ -56,9 +56,16 @@ export const SortableTerminalTab: Component<{
               onClick={props.onSelect}
               onMouseDown={props.onMiddleClick}
             >
-              <Icon name="console" size="small" />
+              <span class="am-tab-icon">
+                <Icon name="console" size="small" />
+              </span>
               <span class="am-tab-label">{props.label}</span>
-              <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
+              <TooltipKeybind
+                title={t("agentManager.tab.close")}
+                keybind={props.closeKeybind ?? ""}
+                placement="bottom"
+                class="am-tab-close-wrap"
+              >
                 <IconButton
                   icon="close-small"
                   size="small"

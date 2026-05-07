@@ -1191,6 +1191,8 @@ export const dict = {
     "Eine intelligente Tastenkombination zum Auslösen von Inline-Aufgaben verwenden",
   "settings.autocomplete.chatAutocomplete.title": "Chat-Textfeld-Autovervollständigung aktivieren",
   "settings.autocomplete.chatAutocomplete.description": "Autovervollständigungsvorschläge im Chat-Textfeld anzeigen",
+  "settings.autocomplete.modelsHint":
+    "Um zu wählen, welches Modell für die Autovervollständigung verwendet wird, siehe Modelleinstellungen.",
   "settings.notifications.agent.title": "Agent-Abschluss",
   "settings.notifications.agent.description": "Benachrichtigung anzeigen, wenn der Agent eine Aufgabe abschließt",
   "settings.notifications.permissions.title": "Berechtigungsanfragen",
@@ -1428,6 +1430,8 @@ export const dict = {
   "settings.display.layout.description": "Layout-Modus für die Chat-Oberfläche",
   "settings.display.layout.auto": "Automatisch",
   "settings.display.layout.stretch": "Gestreckt",
+  "settings.display.fontSize.title": "Schriftgröße",
+  "settings.display.fontSize.description": "Passen Sie die Schriftgröße der Kilo webview UI unabhängig von VS Code an.",
   "settings.display.reasoningAutoCollapse.title": "Reasoning automatisch einklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klappt Reasoning-Blöcke ein, nachdem der Agent sie fertig geschrieben hat. Deaktiviert lassen, damit Reasoning erweitert bleibt, sofern du es nicht manuell einklappst.",
@@ -1564,4 +1568,14 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
+  "diffViewer.source.workspace.label": "Lokale Änderungen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
+  "diffViewer.source.session.label": "Sitzung",
+  "diffViewer.source.session.tooltip":
+    "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
+  "diffViewer.group.session": "Sitzung",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
 } satisfies Partial<Record<Keys, string>>

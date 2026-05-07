@@ -11,6 +11,8 @@ import { basicAuth } from "hono/basic-auth"
 import { cors } from "hono/cors"
 import { compress } from "hono/compress"
 import * as KiloServer from "@/kilocode/server/server" // kilocode_change
+import * as ServerBackend from "./backend"
+import { isAllowedCorsOrigin, type CorsOptions } from "./cors"
 
 const log = Log.create({ service: "server" })
 
@@ -50,41 +52,27 @@ export const AuthMiddleware: MiddlewareHandler = (c, next) => {
   return basicAuth({ username, password })(c, next)
 }
 
-export const LoggerMiddleware: MiddlewareHandler = async (c, next) => {
-  const skip = c.req.path === "/log" || KiloServer.skipLogging(c.req.path) // kilocode_change
-  if (!skip) {
-    log.info("request", {
+export function LoggerMiddleware(backendAttributes: ServerBackend.Attributes): MiddlewareHandler {
+  return async (c, next) => {
+    const skip = c.req.path === "/log" || KiloServer.skipLogging(c.req.path) // kilocode_change
+    if (skip) return next()
+    const attributes = {
       method: c.req.method,
       path: c.req.path,
-    })
+      ...backendAttributes,
+    }
+    log.info("request", attributes)
+    const timer = log.time("request", attributes)
+    await next()
+    timer.stop()
   }
-  const timer = log.time("request", {
-    method: c.req.method,
-    path: c.req.path,
-  })
-  await next()
-  if (!skip) timer.stop()
 }
 
-export function CorsMiddleware(opts?: { cors?: string[] }): MiddlewareHandler {
+export function CorsMiddleware(opts?: CorsOptions): MiddlewareHandler {
   return cors({
     maxAge: 86_400,
     origin(input) {
-      if (!input) return
-
-      if (input.startsWith("http://localhost:")) return input
-      if (input.startsWith("http://127.0.0.1:")) return input
-      if (input === "tauri://localhost" || input === "http://tauri.localhost" || input === "https://tauri.localhost")
-        return input
-
-      if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) return input
-
-      // kilocode_change start
-      const kilo = KiloServer.corsOrigin(input)
-      if (kilo) return kilo
-      // kilocode_change end
-
-      if (opts?.cors?.includes(input)) return input
+      if (isAllowedCorsOrigin(input, opts)) return input
     },
   })
 }
