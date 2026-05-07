@@ -42,6 +42,9 @@ export enum TelemetryEvent {
   // Config Events
   TELEMETRY_DISABLED = "Telemetry Disabled",
 
+  // Feedback
+  FEEDBACK_SUBMITTED = "Feedback Submitted",
+
   // Errors
   ERROR = "Error",
 }

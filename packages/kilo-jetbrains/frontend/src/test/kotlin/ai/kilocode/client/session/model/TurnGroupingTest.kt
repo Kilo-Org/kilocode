@@ -239,8 +239,8 @@ class TurnGroupingTest : UsefulTestCase() {
             turn#u2: user#u2, assistant#a2
         """)
         // HistoryLoaded is the only event — no per-turn events
-        assertEquals(1, events.size)
-        assertTrue(events.single() is SessionModelEvent.HistoryLoaded)
+        assertEquals(1, visibleEvents().size)
+        assertTrue(visibleEvents().single() is SessionModelEvent.HistoryLoaded)
     }
 
     fun `test loadHistory with leading assistant messages groups them correctly`() {
@@ -254,7 +254,7 @@ class TurnGroupingTest : UsefulTestCase() {
             turn#a1: assistant#a1, assistant#a2
             turn#u1: user#u1
         """)
-        assertEquals(1, events.size)  // only HistoryLoaded
+        assertEquals(1, visibleEvents().size)  // only HistoryLoaded
     }
 
     fun `test loadHistory clears previous turns`() {
@@ -264,7 +264,7 @@ class TurnGroupingTest : UsefulTestCase() {
         model.loadHistory(listOf(withParts(msg("u2", "user"))))
 
         assertTurns("turn#u2: user#u2")
-        assertEquals(1, events.size)  // only HistoryLoaded
+        assertEquals(1, visibleEvents().size)  // only HistoryLoaded
     }
 
     fun `test loadHistory with empty list produces no turns`() {
@@ -274,7 +274,7 @@ class TurnGroupingTest : UsefulTestCase() {
         model.loadHistory(emptyList())
 
         assertTurns("(no turns)")
-        assertEquals(1, events.size)  // only HistoryLoaded
+        assertEquals(1, visibleEvents().size)  // only HistoryLoaded
     }
 
     // ------ clear ------
@@ -288,8 +288,8 @@ class TurnGroupingTest : UsefulTestCase() {
 
         assertTurns("(no turns)")
         // Cleared is the only event — no per-turn events
-        assertEquals(1, events.size)
-        assertTrue(events.single() is SessionModelEvent.Cleared)
+        assertEquals(1, visibleEvents().size)
+        assertTrue(visibleEvents().single() is SessionModelEvent.Cleared)
     }
 
     // ------ idempotency ------
@@ -350,6 +350,8 @@ class TurnGroupingTest : UsefulTestCase() {
             it is SessionModelEvent.TurnRemoved
     }
 
+    private fun visibleEvents(): List<SessionModelEvent> = events.filter { it !is SessionModelEvent.HeaderUpdated }
+
     private fun assertTurns(expected: String) {
         assertEquals(expected.trimIndent().trim(), model.toTurnsString().trim())
     }
@@ -359,6 +361,6 @@ class TurnGroupingTest : UsefulTestCase() {
     }
 
     private fun assertAllEvents(expected: String) {
-        assertEquals(expected.trimIndent().trim(), events.joinToString("\n"))
+        assertEquals(expected.trimIndent().trim(), visibleEvents().joinToString("\n"))
     }
 }

@@ -94,4 +94,9 @@ export const dict = {
     "Zet Kilo-snapshots uit voor dit project. Je verliest ongedaan maken/opnieuw doen van Kilo-wijzigingen, maar git blijft alles volgen.",
 
   "ui.messagePart.openInDiffViewer": "Openen in diff-viewer",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dit was nuttig",
+  "ui.message.feedback.notHelpful": "Dit was niet nuttig",
+  "ui.message.feedback.clearRating": "Beoordeling wissen",
 }

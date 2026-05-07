@@ -31,9 +31,8 @@ function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
     const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
     mcpRules[sanitized + "_*"] = "ask"
   }
-  // Mirrors agent.ts merge order: user, ask-specific (with mcpRules), user denies last
+  // Mirrors Ask agent merge order: defaults, ask-specific guard, user config, user denies last.
   return Permission.merge(
-    user,
     Permission.fromConfig({
       "*": "deny",
       bash: readOnlyBash,
@@ -53,6 +52,7 @@ function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
       codebase_search: "allow",
       ...mcpRules,
     }),
+    user,
     user.filter((r) => r.action === "deny"),
   )
 }
@@ -255,6 +255,13 @@ describe("Ask agent MCP permissions", () => {
     const ruleset = askRulesetWithMcp(["my-server"])
     const result = Permission.evaluate("my-server_read_file", "*", ruleset)
     expect(result.action).toBe("ask")
+  })
+
+  test("user config allow overrides MCP ask rules", () => {
+    const allow = Permission.fromConfig({ "my-server_read_file": "allow" })
+    const ruleset = askRulesetWithMcp(["my-server"], allow)
+    const result = Permission.evaluate("my-server_read_file", "*", ruleset)
+    expect(result.action).toBe("allow")
   })
 
   test("MCP tools disabled without server config", () => {

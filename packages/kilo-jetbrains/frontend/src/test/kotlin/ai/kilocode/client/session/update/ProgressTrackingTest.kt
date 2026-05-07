@@ -2,12 +2,13 @@ package ai.kilocode.client.session.update
 
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 
 /**
  * Verifies that:
- * 1. `step-start` and `step-finish` parts are silently dropped at the model level.
+ * 1. `step-start` parts are silently dropped while `step-finish` remains available to the timeline.
  * 2. [SessionState.Busy.text] carries the right progress string throughout a turn.
  * 3. [SessionModelEvent.StateChanged] fires with correct [SessionState.Busy] text
  *    as parts arrive.
@@ -15,7 +16,7 @@ import ai.kilocode.rpc.dto.MessageErrorDto
  */
 class ProgressTrackingTest : SessionControllerTestBase() {
 
-    // ------ silent part types ------
+    // ------ timeline marker parts ------
 
     fun `test step-start part is silently dropped from model`() {
         val (m, _, modelEvents) = prompted()
@@ -27,14 +28,14 @@ class ProgressTrackingTest : SessionControllerTestBase() {
         assertFalse(modelEvents.any { it is SessionModelEvent.ContentAdded })
     }
 
-    fun `test step-finish part is silently dropped from model`() {
+    fun `test step-finish part is stored for timeline`() {
         val (m, _, modelEvents) = prompted()
 
         emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
         emit(ChatEventDto.PartUpdated("ses_test", part("p2", "ses_test", "msg1", "step-finish")))
 
-        assertNull(m.model.message("msg1")!!.parts["p2"])
-        assertFalse(modelEvents.any { it is SessionModelEvent.ContentAdded })
+        assertTrue(m.model.message("msg1")!!.parts["p2"] is StepFinish)
+        assertTrue(modelEvents.any { it is SessionModelEvent.ContentAdded })
     }
 
     // ------ progress text per turn event ------

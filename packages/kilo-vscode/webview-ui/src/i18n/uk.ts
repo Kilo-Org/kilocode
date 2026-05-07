@@ -1172,6 +1172,7 @@ export const dict = {
     "Використовувати розумне прив'язування клавіш для активації підказок",
   "settings.autocomplete.chatAutocomplete.title": "Увімкнути автодоповнення в полі чату",
   "settings.autocomplete.chatAutocomplete.description": "Показувати підказки автодоповнення в полі введення чату",
+  "settings.autocomplete.modelsHint": "Щоб вибрати модель для автодоповнення, див. Налаштування моделей.",
 
   "settings.notifications.agent.title": "Завершення агента",
   "settings.notifications.agent.description": "Показувати сповіщення, коли агент завершить завдання",
@@ -1558,4 +1559,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
+  "diffViewer.source.workspace.label": "Локальні зміни",
+  "diffViewer.source.workspace.tooltip":
+    "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
+  "diffViewer.source.session.label": "Сесія",
+  "diffViewer.source.session.tooltip":
+    "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
+  "diffViewer.group.session": "Сесія",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 }

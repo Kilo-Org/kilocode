@@ -3,12 +3,13 @@ import { disconnectProvider, fetchProviderData, saveCustomProvider } from "../..
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
-function createCtx(existing: ExistingGlobal = { disabled_providers: [] }) {
+function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged: ExistingGlobal = existing) {
   const calls = {
     set: [] as Array<{ providerID: string; auth: { type: string; key: string } }>,
     remove: [] as Array<{ providerID: string }>,
     posts: [] as unknown[],
     config: [] as Array<{ config: Record<string, unknown> }>,
+    project: [] as Array<{ config: Record<string, unknown> }>,
     cached: [] as unknown[],
     refresh: 0,
     dispose: 0,
@@ -53,6 +54,13 @@ function createCtx(existing: ExistingGlobal = { disabled_providers: [] }) {
           },
         },
       },
+      config: {
+        get: async () => ({ data: merged }),
+        update: async (input: { config: Record<string, unknown> }) => {
+          calls.project.push(input)
+          return { data: input }
+        },
+      },
     },
     postMessage: (message: unknown) => calls.posts.push(message),
     getErrorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
@@ -79,6 +87,13 @@ function createProvider() {
     models: {
       "model-1": { name: "Model One" },
     },
+  }
+}
+
+function createSavedProvider() {
+  return {
+    npm: "@ai-sdk/openai-compatible",
+    ...createProvider(),
   }
 }
 
@@ -271,6 +286,76 @@ describe("disconnectProvider", () => {
     await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
 
     expect(calls.config).toHaveLength(0)
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes saved custom provider config when disconnecting", async () => {
+    const existing = {
+      disabled_providers: ["myprovider", "openai"],
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config).toEqual({
+      provider: { myprovider: null },
+      disabled_providers: ["openai"],
+    })
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes project custom provider config when it is not in global config", async () => {
+    const merged = {
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: [] }, merged)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(0)
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes both global and project custom provider config when project overrides global", async () => {
+    const global = {
+      disabled_providers: ["myprovider", "openai"],
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const merged = {
+      ...global,
+      provider: {
+        myprovider: {
+          ...createSavedProvider(),
+          name: "Project Provider",
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(global, merged)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: { myprovider: null },
+          disabled_providers: ["openai"],
+        },
+      },
+    ])
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
     expect(calls.refresh).toBe(1)
   })
 })

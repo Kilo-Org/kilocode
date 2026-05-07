@@ -294,9 +294,7 @@ if (flaky.length > 0) {
   if (process.env.GITHUB_ACTIONS === "true") {
     for (const r of sorted) {
       const repo = `packages/opencode/test/${r.file}`
-      console.log(
-        `::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`,
-      )
+      console.log(`::warning file=${repo},title=Flaky test file::passed on attempt ${r.attempts} of ${retries + 1}`)
     }
 
     const summary = process.env.GITHUB_STEP_SUMMARY

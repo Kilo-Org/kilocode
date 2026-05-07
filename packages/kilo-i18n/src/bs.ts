@@ -97,4 +97,9 @@ export const dict = {
     "Isključi Kilo snapshotove za ovaj projekat. Izgubićete poništi/vrati za izmjene koje napravi Kilo, ali git i dalje prati sve.",
 
   "ui.messagePart.openInDiffViewer": "Otvori u pregledniku razlika",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Ovo je bilo korisno",
+  "ui.message.feedback.notHelpful": "Ovo nije bilo korisno",
+  "ui.message.feedback.clearRating": "Obriši ocjenu",
 }

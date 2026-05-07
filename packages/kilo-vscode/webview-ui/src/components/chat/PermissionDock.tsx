@@ -9,7 +9,7 @@
  * The command buttons (Deny / Run) control the current command.
  */
 
-import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -111,48 +111,78 @@ export const PermissionDock: Component<{
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
+  const submit = (response: "once" | "reject") => {
+    if (props.responding) return
+    const { approved, denied } = collectRules()
+    props.onDecide(response, approved, denied)
+    focusPrompt()
+  }
+
+  const element = (e: KeyboardEvent) => (e.target instanceof Element ? e.target : undefined)
+
+  const control = (target: Element | undefined) =>
+    !!target?.closest(
+      "button, input, select, textarea, a[href], [contenteditable='true'], [role='button'], [role='menu'], [role='menuitem'], [role='listbox'], [role='option'], [role='combobox'], [role='textbox']",
+    )
+
+  const plain = (e: KeyboardEvent) =>
+    e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey && !e.isComposing
+
+  const skip = (e: KeyboardEvent, target: Element | undefined) => {
+    const local = !!target?.closest("[data-component='permission-shortcuts']")
+    const prompt = !!target?.closest("textarea.prompt-input")
+    const modal = !!target?.closest("[data-component='dialog'], [data-component='dropdown-menu-content']")
+    if (local) return e.key === "Enter"
+    if (modal) return true
+    if (prompt) return false
+    return control(target)
+  }
+
+  const handle = (e: KeyboardEvent, response: "once" | "reject") => {
+    e.preventDefault()
+    e.stopPropagation()
+    submit(response)
+  }
+
   const onRoot = (e: KeyboardEvent) => {
-    const tag = (e.target as HTMLElement).tagName
-
-    // Escape always denies — even from focused buttons — and stopPropagation
-    // prevents ChatView's global Escape handler from calling session.abort().
     if (e.key === "Escape") {
-      e.preventDefault()
-      e.stopPropagation()
-      if (props.responding) return
-      const { approved, denied } = collectRules()
-      props.onDecide("reject", approved, denied)
-      focusPrompt()
-      return
-    }
-
-    // Enter approves, but only when focus is on the dock wrapper itself.
-    // Skip buttons, inputs, and textareas so Enter activates the focused
-    // control (e.g. toggle/expand) instead of approving the permission.
-    if (tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return
-    if (e.key === "Enter") {
-      e.preventDefault()
-      e.stopPropagation()
-      if (props.responding) return
-      const { approved, denied } = collectRules()
-      props.onDecide("once", approved, denied)
-      focusPrompt()
+      handle(e, "reject")
       return
     }
   }
 
-  // Keep keyboard shortcuts when the webview already has focus, but do not
-  // steal focus from the editor, terminal, or other VS Code surfaces.
+  const onKey = (e: KeyboardEvent) => {
+    if (!document.hasFocus()) return
+    if (e.defaultPrevented) return
+    if (root.getClientRects().length === 0) return
+
+    const target = element(e)
+
+    // Preserve normal Enter behavior for controls inside the permission card,
+    // while allowing the shortcut when the prompt input still has focus.
+    if (skip(e, target)) return
+
+    if (e.key === "Escape") {
+      handle(e, "reject")
+      return
+    }
+
+    if (plain(e)) {
+      handle(e, "once")
+      return
+    }
+  }
+
+  // Listen only while this permission is rendered. This keeps shortcuts working
+  // when the prompt input owns focus without forcing focus onto the dock.
   createEffect(() => {
     void props.request.id
-    requestAnimationFrame(() => {
-      if (!document.hasFocus()) return
-      root?.focus()
-    })
+    document.addEventListener("keydown", onKey, true)
+    onCleanup(() => document.removeEventListener("keydown", onKey, true))
   })
 
   return (
-    <div ref={root} tabIndex={-1} onKeyDown={onRoot} style={{ outline: "none" }}>
+    <div ref={root} data-component="permission-shortcuts" onKeyDown={onRoot}>
       <DockPrompt
         kind="permission"
         header={

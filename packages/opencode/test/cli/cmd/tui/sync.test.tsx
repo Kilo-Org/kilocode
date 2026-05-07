@@ -11,7 +11,7 @@ import { SDKProvider, type EventSource } from "../../../../src/cli/cmd/tui/conte
 import { SyncProvider, useSync } from "../../../../src/cli/cmd/tui/context/sync"
 import { ToastProvider } from "../../../../src/cli/cmd/tui/ui/toast" // kilocode_change
 import { Instance } from "../../../../src/project/instance" // kilocode_change
-import { tmpdir } from "../../../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../../../fixture/fixture"
 
 const worktree = "/tmp/opencode"
 const directory = `${worktree}/packages/opencode`
@@ -93,21 +93,21 @@ async function mount() {
         <KVProvider>
           {/* kilocode_change start */}
           <ToastProvider>
-          {/* kilocode_change end */}
-          <SDKProvider url="http://test" directory={directory} fetch={calls.fetch} events={eventSource()}>
-            <ProjectProvider>
-              <SyncProvider>
-                <Probe
-                  onReady={(ctx) => {
-                    sync = ctx.sync
-                    kv = ctx.kv
-                    done()
-                  }}
-                />
-              </SyncProvider>
-            </ProjectProvider>
-          </SDKProvider>
-          {/* kilocode_change start */}
+            {/* kilocode_change end */}
+            <SDKProvider url="http://test" directory={directory} fetch={calls.fetch} events={eventSource()}>
+              <ProjectProvider>
+                <SyncProvider>
+                  <Probe
+                    onReady={(ctx) => {
+                      sync = ctx.sync
+                      kv = ctx.kv
+                      done()
+                    }}
+                  />
+                </SyncProvider>
+              </ProjectProvider>
+            </SDKProvider>
+            {/* kilocode_change start */}
           </ToastProvider>
           {/* kilocode_change end */}
         </KVProvider>
@@ -151,7 +151,7 @@ describe("tui sync", () => {
       expect(session.at(-1)?.searchParams.get("path")).toBeNull()
     } finally {
       app.renderer.destroy()
-      await Instance.disposeAll() // kilocode_change
+      await disposeAllInstances() // kilocode_change
       Global.Path.state = previous
     }
   })

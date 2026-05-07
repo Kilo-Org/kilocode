@@ -92,4 +92,9 @@ export const dict = {
     "Apaga las instantáneas de Kilo para este proyecto. Perderás deshacer/rehacer de los cambios de Kilo, pero git seguirá rastreando todo.",
 
   "ui.messagePart.openInDiffViewer": "Abrir en el visor de diferencias",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Esto fue útil",
+  "ui.message.feedback.notHelpful": "Esto no fue útil",
+  "ui.message.feedback.clearRating": "Borrar valoración",
 }
