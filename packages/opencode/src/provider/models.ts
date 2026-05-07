@@ -9,25 +9,8 @@ import { Hash } from "@opencode-ai/core/util/hash"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 // kilocode_change start
-import { Config } from "../config/config"
-import { ModelCache } from "./model-cache"
-import { Auth } from "../auth"
-import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
-// kilocode_change end
-
-// kilocode_change start
-const normalizeKiloBaseURL = (baseURL: string | undefined, org: string | undefined): string | undefined => {
-  if (!baseURL) return undefined
-  const trimmed = baseURL.replace(/\/+$/, "")
-  if (org) {
-    if (trimmed.includes("/api/organizations/")) return trimmed
-    if (trimmed.endsWith("/api")) return `${trimmed}/organizations/${org}`
-    return `${trimmed}/api/organizations/${org}`
-  }
-  if (trimmed.includes("/openrouter")) return trimmed
-  if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
-  return `${trimmed}/api/openrouter`
-}
+import { AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
+import { applyKiloProviders } from "@/kilocode/provider/models"
 // kilocode_change end
 
 const Cost = Schema.Struct({
@@ -191,80 +174,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
 
     // kilocode_change start
     const get = Effect.fn("ModelsDev.get")(function* () {
-      const providers = { ...(yield* cachedGet) }
-      delete providers["kilo"]
-
-      const config = yield* Effect.promise(() => Config.get())
-      const disabled = new Set(config.disabled_providers ?? [])
-      const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
-      const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
-      const apt = config.provider?.apertis?.options
-      const aptBase = apt?.baseURL ?? "https://api.apertis.ai/v1"
-      const aptFetch = {
-        ...(apt?.baseURL ? { baseURL: apt.baseURL } : {}),
-      }
-
-      if (kiloAllowed) {
-        const opts = config.provider?.kilo?.options
-        const auth = yield* Effect.promise(() => Auth.get("kilo"))
-        const org = opts?.kilocodeOrganizationId ?? (auth?.type === "oauth" ? auth.accountId : undefined)
-        const base = normalizeKiloBaseURL(opts?.baseURL, org)
-        const fetch = {
-          ...(base ? { baseURL: base } : {}),
-          ...(org ? { kilocodeOrganizationId: org } : {}),
-        }
-        const [kilo, apertis] = yield* Effect.all(
-          [
-            Effect.promise(() => ModelCache.fetch("kilo", fetch).catch(() => ({}))),
-            providers["apertis"]
-              ? Effect.succeed(null)
-              : Effect.promise(() => ModelCache.fetch("apertis", aptFetch).catch(() => ({}))),
-          ],
-          { concurrency: 2 },
-        )
-
-        providers["kilo"] = {
-          id: "kilo",
-          name: "Kilo Gateway",
-          env: ["KILO_API_KEY"],
-          api: KILO_OPENROUTER_BASE.endsWith("/") ? KILO_OPENROUTER_BASE : `${KILO_OPENROUTER_BASE}/`,
-          npm: "@kilocode/kilo-gateway",
-          models: kilo,
-        }
-        if (Object.keys(kilo).length === 0) {
-          yield* Effect.sync(() => void ModelCache.refresh("kilo", fetch).catch(() => {}))
-        }
-        if (!providers["apertis"] && apertis !== null) {
-          providers["apertis"] = {
-            id: "apertis",
-            name: "Apertis",
-            env: ["APERTIS_API_KEY"],
-            api: aptBase,
-            npm: "@ai-sdk/openai-compatible",
-            models: apertis,
-          }
-          if (Object.keys(apertis).length === 0) {
-            yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
-          }
-        }
-        return providers
-      }
-
-      if (!providers["apertis"]) {
-        const apertis = yield* Effect.promise(() => ModelCache.fetch("apertis", aptFetch).catch(() => ({})))
-        providers["apertis"] = {
-          id: "apertis",
-          name: "Apertis",
-          env: ["APERTIS_API_KEY"],
-          api: aptBase,
-          npm: "@ai-sdk/openai-compatible",
-          models: apertis,
-        }
-        if (Object.keys(apertis).length === 0) {
-          yield* Effect.sync(() => void ModelCache.refresh("apertis", aptFetch).catch(() => {}))
-        }
-      }
-      return providers
+      return yield* applyKiloProviders(yield* cachedGet)
     })
     // kilocode_change end
 
