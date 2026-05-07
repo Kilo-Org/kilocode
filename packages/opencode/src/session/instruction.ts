@@ -12,6 +12,7 @@ import type { MessageID } from "./schema"
 
 const FILES = [
   "AGENTS.md",
+  // kilocode_change - use KILO_* flag
   ...(Flag.KILO_DISABLE_CLAUDE_CODE_PROMPT ? [] : ["CLAUDE.md"]),
   "CONTEXT.md", // deprecated
 ]
@@ -63,6 +64,7 @@ export const layer: Layer.Layer<
       ...(Flag.KILO_CONFIG_DIR ? [path.join(Flag.KILO_CONFIG_DIR, "AGENTS.md")] : []),
       // kilocode_change end
       path.join(global.config, "AGENTS.md"),
+      // kilocode_change - use KILO_* flag
       ...(!Flag.KILO_DISABLE_CLAUDE_CODE_PROMPT ? [path.join(global.home, ".claude", "CLAUDE.md")] : []),
     ]
 
@@ -77,16 +79,16 @@ export const layer: Layer.Layer<
 
     const relative = Effect.fnUntraced(function* (instruction: string) {
       const ctx = yield* InstanceState.context
+      // kilocode_change - use KILO_* flag
       if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
         return yield* fs
           .globUp(instruction, ctx.directory, ctx.worktree)
           .pipe(Effect.catch(() => Effect.succeed([] as string[])))
       }
-      // kilocode_change - prefer KILO_CONFIG_DIR profile when set, else fall back to global.config
+      // kilocode_change start - prefer KILO_CONFIG_DIR profile when set, else fall back to global.config
       const root = Flag.KILO_CONFIG_DIR ?? global.config
-      return yield* fs
-        .globUp(instruction, root, root)
-        .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+      return yield* fs.globUp(instruction, root, root).pipe(Effect.catch(() => Effect.succeed([] as string[])))
+      // kilocode_change end
     })
 
     const read = Effect.fnUntraced(function* (filepath: string) {
@@ -121,6 +123,7 @@ export const layer: Layer.Layer<
       }
 
       // The first project-level match wins so we don't stack AGENTS.md/CLAUDE.md from every ancestor.
+      // kilocode_change - use KILO_* flag
       if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
         for (const file of FILES) {
           const matches = yield* fs.findUp(file, ctx.directory, ctx.worktree)
