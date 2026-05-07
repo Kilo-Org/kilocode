@@ -4,8 +4,12 @@ import fs from "fs/promises"
 import path from "path"
 import * as Config from "../../src/config/config"
 import { Instance } from "../../src/project/instance"
+import { ProjectTable } from "../../src/project/project.sql"
 import * as Log from "@opencode-ai/core/util/log"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
+import { SessionID } from "../../src/session/schema"
+import { SessionTable } from "../../src/session/session.sql"
+import { Database, eq } from "../../src/storage/db"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 
@@ -112,5 +116,51 @@ describe("Kilo experimental session worktree list", () => {
     } finally {
       await $`git worktree remove ${worktree} --force`.cwd(repo.path).quiet().nothrow()
     }
+  })
+
+  test("keeps sessions for removed worktrees visible after process restart", async () => {
+    await using repo = await tmpdir({ git: true })
+    const worktree = path.join(repo.path, "..", path.basename(repo.path) + "-stale")
+    const now = Date.now()
+    const session = SessionID.descending()
+
+    await Instance.provide({
+      directory: repo.path,
+      fn: async () => {
+        Database.use((db) => {
+          db.update(ProjectTable)
+            .set({ sandboxes: [worktree] })
+            .where(eq(ProjectTable.id, Instance.project.id))
+            .run()
+          db.insert(SessionTable)
+            .values({
+              id: session,
+              project_id: Instance.project.id,
+              slug: "stale",
+              directory: worktree,
+              path: "..",
+              title: "stale-worktree-session",
+              version: "test",
+              time_created: now,
+              time_updated: now,
+            })
+            .run()
+        })
+      },
+    })
+    await Instance.disposeAll()
+
+    const { Server } = await import("../../src/server/server")
+    const response = await Server.Default().app.request("/experimental/session?roots=true&worktrees=true", {
+      headers: { "x-kilo-directory": repo.path },
+    })
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as Item[]
+    const item = body.find((entry) => entry.id === session)
+
+    expect(item?.directory).toBe(worktree)
+    expect(item?.worktreeDirectory).toBe(worktree)
+    expect(item?.worktreeName).toBe(path.basename(worktree))
   })
 })
