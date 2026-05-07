@@ -768,6 +768,13 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.globalEnable.title": "Aktivér globalt",
+  "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
+  "settings.indexing.projectEnable.title": "Aktivér for dette projekt",
+  "settings.indexing.projectEnable.description":
+    "Aktivér indeksering for dette arbejdsområde, når global indeksering er slået fra.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktiveret, så dette projekt er allerede dækket.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
@@ -1170,6 +1177,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Brug en smart tastaturgenvej til at udløse inline-opgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofuldførelse",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofuldførelsesforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For at vælge hvilken model der bruges til autofuldførelse, se Modelindstillinger.",
   "settings.notifications.agent.title": "Agentafslutning",
   "settings.notifications.agent.description": "Vis notifikation, når agenten fuldfører en opgave",
   "settings.notifications.permissions.title": "Tilladelsesanmodninger",
@@ -1536,4 +1545,14 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
+  "diffViewer.source.workspace.label": "Lokale ændringer",
+  "diffViewer.source.workspace.tooltip":
+    "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 }

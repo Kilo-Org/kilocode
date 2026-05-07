@@ -145,4 +145,161 @@ describe("agent_manager tool", () => {
       ).pipe(Effect.scoped),
     )
   })
+
+  test("falls back to state when overview snapshot is stale", async () => {
+    const tool = await init()
+
+    await runtime.runPromise(
+      provideTmpdirInstance((dir) =>
+        Effect.promise(async () => {
+          await mkdir(path.join(dir, ".kilo"), { recursive: true })
+          const stale = new Date(Date.now() - 120_000).toISOString()
+          const now = new Date().toISOString()
+
+          await Bun.write(
+            path.join(dir, ".kilo", "agent-manager-overview.json"),
+            JSON.stringify({
+              version: 1,
+              generatedAt: stale,
+              root: dir,
+              active: {},
+              summary: {
+                total: 1,
+                running: 1,
+                waiting: 0,
+                idle: 0,
+                done: 0,
+                failed: 0,
+                stale: 0,
+                worktrees: 1,
+                localTabs: 0,
+              },
+              requests: [],
+              sections: [],
+              tabs: [],
+              worktrees: [
+                {
+                  id: "wt_stale",
+                  section: "Worktrees",
+                  name: "stale snapshot",
+                  path: path.join(dir, ".kilo", "worktrees", "stale"),
+                  branch: "stale",
+                  selected: false,
+                  status: "running",
+                  sessionIds: ["ses_stale"],
+                  tabIds: ["worktree:wt_stale:ses_stale"],
+                  stale: false,
+                },
+              ],
+              sessions: [],
+            }),
+          )
+
+          await Bun.write(
+            path.join(dir, ".kilo", "agent-manager.json"),
+            JSON.stringify({
+              worktrees: {
+                wt_live: {
+                  path: path.join(dir, ".kilo", "worktrees", "live"),
+                  branch: "live",
+                  parentBranch: "main",
+                  createdAt: now,
+                  label: "fallback state",
+                },
+              },
+              sessions: {
+                ses_live: { worktreeId: "wt_live", createdAt: now },
+              },
+            }),
+          )
+
+          const result = await runtime.runPromise(tool.execute({ action: "overview" }, ctx))
+          expect(result.output).toContain("Source: `fallback`")
+          expect(result.output).toContain("fallback state")
+          expect(result.output).toContain("ses_live")
+          expect(result.output).not.toContain("stale snapshot")
+        }),
+      ).pipe(Effect.scoped),
+    )
+  })
+
+  test("falls back to state when state is newer than snapshot", async () => {
+    const tool = await init()
+
+    await runtime.runPromise(
+      provideTmpdirInstance((dir) =>
+        Effect.promise(async () => {
+          await mkdir(path.join(dir, ".kilo"), { recursive: true })
+          const snap = new Date(Date.now() - 1_000).toISOString()
+          const now = new Date().toISOString()
+          const overview = path.join(dir, ".kilo", "agent-manager-overview.json")
+          const state = path.join(dir, ".kilo", "agent-manager.json")
+
+          await Bun.write(
+            overview,
+            JSON.stringify({
+              version: 1,
+              generatedAt: snap,
+              root: dir,
+              active: {},
+              summary: {
+                total: 1,
+                running: 1,
+                waiting: 0,
+                idle: 0,
+                done: 0,
+                failed: 0,
+                stale: 0,
+                worktrees: 1,
+                localTabs: 0,
+              },
+              requests: [],
+              sections: [],
+              tabs: [],
+              worktrees: [
+                {
+                  id: "wt_snapshot",
+                  section: "Worktrees",
+                  name: "new snapshot",
+                  path: path.join(dir, ".kilo", "worktrees", "snapshot"),
+                  branch: "snapshot",
+                  selected: false,
+                  status: "running",
+                  sessionIds: ["ses_snapshot"],
+                  tabIds: ["worktree:wt_snapshot:ses_snapshot"],
+                  stale: false,
+                },
+              ],
+              sessions: [],
+            }),
+          )
+
+          await Bun.sleep(20)
+          await Bun.write(
+            state,
+            JSON.stringify({
+              worktrees: {
+                wt_newer: {
+                  path: path.join(dir, ".kilo", "worktrees", "newer"),
+                  branch: "newer",
+                  parentBranch: "main",
+                  createdAt: now,
+                  label: "newer state",
+                },
+              },
+              sessions: {
+                ses_newer: { worktreeId: "wt_newer", createdAt: now },
+              },
+            }),
+          )
+
+          const result = await runtime.runPromise(tool.execute({ action: "overview" }, ctx))
+          expect(result.output).toContain("Source: `fallback`")
+          expect(result.output).toContain("newer state")
+          expect(result.output).toContain("ses_newer")
+          expect(result.output).not.toContain("new snapshot")
+        }),
+      ).pipe(Effect.scoped),
+    )
+  })
 })

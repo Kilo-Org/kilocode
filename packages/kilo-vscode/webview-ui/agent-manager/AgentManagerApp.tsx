@@ -1,6 +1,17 @@
 /** @jsxImportSource solid-js */
 
-import { For, Show, createSignal, createMemo, createEffect, on, onMount, onCleanup, type Component } from "solid-js"
+import {
+  For,
+  Show,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  onMount,
+  onCleanup,
+  type Component,
+  type JSX,
+} from "solid-js"
 import type {
   ExtensionMessage,
   AgentManagerRepoInfoMessage,
@@ -66,12 +77,13 @@ import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
 import { NotificationsProvider } from "../src/context/notifications"
+import { FeedbackProvider } from "../src/context/feedback"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { LanguageBridge, DataBridge } from "../src/App"
+import { LanguageBridge, DataBridge, MermaidDownloadBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
@@ -80,12 +92,14 @@ import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
+import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "./FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
+import { CurrentTabsMenu, createCurrentTabItems, focusCurrentTab } from "./CurrentTabsMenu"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import SectionHeader from "./SectionHeader"
@@ -103,12 +117,12 @@ import {
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
+import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
-import { buildOverviewSnapshot } from "./overview-snapshot"
-import { useTabScroll } from "./tab-scroll"
+import { createOverviewSnapshotSync } from "./overview-snapshot-sync"
+import { setTabWidths } from "./tab-widths"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
-
 const REVIEW_TAB_ID = "review"
 
 interface SetupState {
@@ -581,6 +595,13 @@ const AgentManagerContent: Component = () => {
 
   // Drag-and-drop state for tab reordering
   const [draggingTab, setDraggingTab] = createSignal<string | undefined>()
+
+  const freezeTabs = () => {
+    const bar = document.querySelector(".am-tab-bar")
+    if (bar instanceof HTMLElement && bar.matches(":hover")) setTabWidths(true)
+  }
+
+  const releaseTabs = () => setTabWidths(false)
   // Tab ordering: context key → ordered session ID array (recovered from extension state)
   const [worktreeTabOrder, setWorktreeTabOrder] = createSignal<Record<string, string[]>>({})
   // Sidebar worktree order (persisted to extension state)
@@ -797,67 +818,26 @@ const AgentManagerContent: Component = () => {
     return label !== wt.branch ? wt.branch : undefined
   }
 
-  const overviewTimer: { id?: ReturnType<typeof setTimeout> } = {}
-
-  const scheduleOverviewSnapshot = () => {
-    clearTimeout(overviewTimer.id)
-    overviewTimer.id = setTimeout(() => postOverviewSnapshot(), 500)
-  }
-
-  const trackStatus = () => {
-    const statuses = session.allStatusMap()
-    for (const item of managedSessions()) statuses[item.id]?.type
-    for (const id of localSessionIDs()) statuses[id]?.type
-  }
-
-  const postOverviewSnapshot = () => {
-    const root = server.workspaceDirectory()
-    if (!root) return
-    vscode.postMessage({
-      type: "agentManager.overviewSnapshot",
-      snapshot: buildOverviewSnapshot({
-        root,
-        selection: selection(),
-        localKey: LOCAL,
-        activeSessionId: session.currentSessionID(),
-        worktrees: worktrees(),
-        managedSessions: managedSessions(),
-        sections: sections(),
-        sessions: session.sessions(),
-        localSessionIds: localSessionIDs(),
-        statuses: session.allStatusMap(),
-        permissions: session.permissions(),
-        questions: session.questions(),
-        worktreeStats: worktreeStats(),
-        localStats: localStats(),
-        prStatuses: prStatuses(),
-        runStatuses: runStatuses(),
-        staleWorktreeIds: staleWorktreeIds(),
-        worktreeLabel,
-      }),
-    })
-  }
-
-  onCleanup(() => clearTimeout(overviewTimer.id))
-
-  createEffect(() => {
-    server.workspaceDirectory()
-    selection()
-    session.currentSessionID()
-    worktrees()
-    managedSessions()
-    sections()
-    session.sessions()
-    localSessionIDs()
-    trackStatus()
-    session.permissions()
-    session.questions()
-    worktreeStats()
-    localStats()
-    prStatuses()
-    runStatuses()
-    staleWorktreeIds()
-    scheduleOverviewSnapshot()
+  createOverviewSnapshotSync({
+    root: server.workspaceDirectory,
+    selection,
+    localKey: LOCAL,
+    activeSessionId: session.currentSessionID,
+    worktrees,
+    managedSessions,
+    sections,
+    sessions: session.sessions,
+    localSessionIds: localSessionIDs,
+    statuses: session.allStatusMap,
+    permissions: session.permissions,
+    questions: session.questions,
+    worktreeStats,
+    localStats,
+    prStatuses,
+    runStatuses,
+    staleWorktreeIds,
+    worktreeLabel,
+    post: (snapshot) => vscode.postMessage({ type: "agentManager.overviewSnapshot", snapshot }),
   })
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
@@ -886,6 +866,8 @@ const AgentManagerContent: Component = () => {
 
   /** True when a local session is actively working. */
   const isLocalBusy = (): boolean => isAnySessionBusy(localSessionIDs())
+
+  const isSessionBusy = (id: string): boolean => isAnySessionBusy([id])
 
   /** Worktrees sorted so that grouped items are always adjacent, respecting custom order if set. */
   const sortedWorktrees = createMemo(() => {
@@ -989,24 +971,7 @@ const AgentManagerContent: Component = () => {
     if (idx === -1) return
     const next = direction === "left" ? idx - 1 : idx + 1
     if (next < 0 || next >= ids.length) return
-    const targetId = ids[next]!
-    if (isTerminalTabId(targetId)) return termHandlers.activate(targetId)
-    terms.setActiveId(undefined)
-    if (targetId === REVIEW_TAB_ID) {
-      if (!reviewOpen()) setReviewOpenForSelection(true)
-      setReviewActive(true)
-      return
-    }
-    const target = tabLookup().get(targetId)
-    if (!target) return
-    setReviewActive(false)
-    if (isPending(target.id)) {
-      setActivePendingId(target.id)
-      session.clearCurrentSession()
-      return
-    }
-    setActivePendingId(undefined)
-    session.selectSession(target.id)
+    focusTab(ids[next]!)
   }
 
   const selectLocal = () => {
@@ -1111,6 +1076,8 @@ const AgentManagerContent: Component = () => {
     // Prevent Cmd/Ctrl shortcuts from triggering native browser actions
     const preventDefaults = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest("[data-agent-manager-native-text-shortcuts]")) return
       // Arrow navigation requires Alt modifier (Cmd+Alt+Arrow for tabs/sessions)
       if (e.altKey && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
         e.preventDefault()
@@ -1398,18 +1365,12 @@ const AgentManagerContent: Component = () => {
         if (ev.providerID && ev.modelID) {
           session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
         }
+        seedInitialVariant(session, ev)
 
         // Only send a message if there's text — otherwise just clear busy state
-        if (ev.text) {
-          vscode.postMessage({
-            type: "sendMessage",
-            text: ev.text,
-            sessionID: ev.sessionId,
-            providerID: ev.providerID,
-            modelID: ev.modelID,
-            agent: ev.agent,
-            files: ev.files,
-          })
+        const init = initialMessage(ev)
+        if (init) {
+          vscode.postMessage(init)
         }
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
@@ -1599,6 +1560,7 @@ const AgentManagerContent: Component = () => {
   // the <Show> unmount triggers heavy FileDiff cleanup but the tab bar
   // and chat view are already visible before that work runs.
   const closeReviewTab = () => {
+    freezeTabs()
     setReviewActive(false)
     setReviewOpenForSelection(false)
   }
@@ -1964,6 +1926,7 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ ...msg, worktreeId: sel })
   }
   const handleCloseTab = (sessionId: string) => {
+    freezeTabs()
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
     if (isActive) {
@@ -1992,6 +1955,7 @@ const AgentManagerContent: Component = () => {
   const handleTabMouseDown = (sessionId: string, e: MouseEvent) => {
     if (e.button === 1) {
       e.preventDefault()
+      e.stopPropagation()
       handleCloseTab(sessionId)
     }
   }
@@ -2020,6 +1984,7 @@ const AgentManagerContent: Component = () => {
     isPendingId: isPending,
     findTab: (id) => tabLookup().get(id),
     postMessage: (msg) => vscode.postMessage(msg as never),
+    onRemove: freezeTabs,
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
@@ -2050,7 +2015,6 @@ const AgentManagerContent: Component = () => {
       worktreeTabOrder()[key],
     ).map((item) => item.id)
   })
-
   const handleDragStart = (event: DragEvent) => {
     const id = event.draggable?.id
     if (typeof id === "string") setDraggingTab(id)
@@ -2100,6 +2064,37 @@ const AgentManagerContent: Component = () => {
       return term ? { id, title: term.title } : undefined
     }
     return activeTabs().find((s) => s.id === id)
+  })
+
+  const focusTab = (id: string) =>
+    focusCurrentTab({
+      id,
+      terms,
+      isTerminal: isTerminalTabId,
+      isPending,
+      reviewId: REVIEW_TAB_ID,
+      reviewOpen,
+      setReviewOpen: setReviewOpenForSelection,
+      setReviewActive,
+      tabLookup,
+      setActivePendingId,
+      clearSession: session.clearCurrentSession,
+      selectSession: session.selectSession,
+      activateTerminal: termHandlers.activate,
+    })
+
+  const tabMenuItems = createCurrentTabItems({
+    tabIds,
+    tabLookup,
+    statusMap: session.allStatusMap,
+    permissions: session.permissions,
+    questions: session.questions,
+    visibleTabId,
+    terms,
+    reviewId: REVIEW_TAB_ID,
+    isTerminal: isTerminalTabId,
+    isPending,
+    t,
   })
 
   // Close the currently active tab via keyboard shortcut.
@@ -2692,56 +2687,71 @@ const AgentManagerContent: Component = () => {
           >
             <DragDropSensors />
             <ConstrainDragYAxis />
-            <div class="am-tab-bar">
+            <div class="am-tab-bar" onPointerLeave={releaseTabs}>
               <div class="am-tab-scroll-area">
                 <div class={`am-tab-fade am-tab-fade-left ${tabScroll.showLeft() ? "am-tab-fade-visible" : ""}`} />
-                <div class="am-tab-list" ref={tabScroll.setRef}>
-                  <SortableProvider ids={tabIds()}>
-                    <For each={tabIds()}>
-                      {(id) =>
-                        renderTab(id, {
-                          terms,
-                          REVIEW_TAB_ID,
-                          tabIds,
-                          kb,
-                          reviewActive,
-                          currentSessionID: () => session.currentSessionID(),
-                          activePendingId,
-                          visibleTabId,
-                          isPending,
-                          tabLookup,
-                          adjacentHint,
-                          activateTerminal: termHandlers.activate,
-                          deactivateTerminal: termHandlers.deactivate,
-                          closeTerminal: termHandlers.closeTerminal,
-                          terminalMiddleClick: termHandlers.middleClick,
-                          closeReview: closeReviewTab,
-                          reviewMiddleClick: handleReviewTabMouseDown,
-                          selectReviewTab: () => setReviewActive(true),
-                          selectSessionTab,
-                          sessionMiddleClick: handleTabMouseDown,
-                          sessionClose: handleCloseTab,
-                          sessionFork: handleForkSession,
-                          reviewLabel: t("session.tab.review"),
-                          reviewTooltip: t("command.review.toggle"),
-                        })
-                      }
-                    </For>
-                  </SortableProvider>
+                <div class="am-tab-list-wrap">
+                  <div
+                    class="am-tab-list"
+                    ref={tabScroll.setRef}
+                    style={{ "--tab-count": `${tabIds().length}` } as JSX.CSSProperties}
+                  >
+                    <SortableProvider ids={tabIds()}>
+                      <For each={tabIds()}>
+                        {(id) =>
+                          renderTab(id, {
+                            terms,
+                            REVIEW_TAB_ID,
+                            tabIds,
+                            kb,
+                            reviewActive,
+                            currentSessionID: () => session.currentSessionID(),
+                            activePendingId,
+                            visibleTabId,
+                            isPending,
+                            isBusy: isSessionBusy,
+                            tabLookup,
+                            adjacentHint,
+                            activateTerminal: termHandlers.activate,
+                            deactivateTerminal: termHandlers.deactivate,
+                            closeTerminal: termHandlers.closeTerminal,
+                            terminalMiddleClick: termHandlers.middleClick,
+                            closeReview: closeReviewTab,
+                            reviewMiddleClick: handleReviewTabMouseDown,
+                            selectReviewTab: () => setReviewActive(true),
+                            selectSessionTab,
+                            sessionMiddleClick: handleTabMouseDown,
+                            sessionClose: handleCloseTab,
+                            sessionFork: handleForkSession,
+                            reviewLabel: t("session.tab.review"),
+                            reviewTooltip: t("command.review.toggle"),
+                          })
+                        }
+                      </For>
+                    </SortableProvider>
+                  </div>
+                  {renderNewTabButton({
+                    contextSelected: () => selection() !== null,
+                    kb,
+                    newSessionLabel: t("agentManager.session.new"),
+                    newTerminalLabel: t("agentManager.terminal.new"),
+                    newSessionMenuLabel: t("agentManager.session.newSession"),
+                    moreOptionsLabel: t("agentManager.tab.newOptions"),
+                    onNewSession: handleAddSession,
+                    onNewTerminal: () => termHandlers.requestNew(),
+                  })}
                 </div>
                 <div class={`am-tab-fade am-tab-fade-right ${tabScroll.showRight() ? "am-tab-fade-visible" : ""}`} />
               </div>
-              {renderNewTabButton({
-                contextSelected: () => selection() !== null,
-                kb,
-                newSessionLabel: t("agentManager.session.new"),
-                newTerminalLabel: t("agentManager.terminal.new"),
-                newSessionMenuLabel: t("agentManager.session.newSession"),
-                moreOptionsLabel: t("agentManager.tab.newOptions"),
-                onNewSession: handleAddSession,
-                onNewTerminal: () => termHandlers.requestNew(),
-              })}
               <div class="am-tab-actions">
+                <CurrentTabsMenu
+                  items={tabMenuItems}
+                  label={t("agentManager.tabsMenu.label")}
+                  searchLabel={t("agentManager.tabsMenu.search")}
+                  emptyLabel={t("agentManager.tabsMenu.empty")}
+                  activeId={visibleTabId}
+                  onSelect={focusTab}
+                />
                 {(() => {
                   const sel = () => selection()
                   const isWorktree = () => typeof sel() === "string" && sel() !== LOCAL
@@ -3154,6 +3164,7 @@ export const AgentManagerApp: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
+          <MermaidDownloadBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>
@@ -3165,13 +3176,15 @@ export const AgentManagerApp: Component = () => {
                           <DisplayProvider>
                             <NotificationsProvider>
                               <SessionProvider>
-                                <IndexingProvider>
-                                  <WorktreeModeProvider>
-                                    <DataBridge>
-                                      <AgentManagerContent />
-                                    </DataBridge>
-                                  </WorktreeModeProvider>
-                                </IndexingProvider>
+                                <FeedbackProvider>
+                                  <IndexingProvider>
+                                    <WorktreeModeProvider>
+                                      <DataBridge>
+                                        <AgentManagerContent />
+                                      </DataBridge>
+                                    </WorktreeModeProvider>
+                                  </IndexingProvider>
+                                </FeedbackProvider>
                               </SessionProvider>
                             </NotificationsProvider>
                           </DisplayProvider>

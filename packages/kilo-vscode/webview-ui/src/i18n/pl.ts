@@ -1147,6 +1147,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Użyj inteligentnego skrótu do wyzwalania zadań inline",
   "settings.autocomplete.chatAutocomplete.title": "Włącz autouzupełnianie czatu",
   "settings.autocomplete.chatAutocomplete.description": "Pokaż sugestie autouzupełniania w polu czatu",
+  "settings.autocomplete.modelsHint": "Aby wybrać model używany do autouzupełniania, zobacz Ustawienia modeli.",
   "settings.notifications.agent.title": "Zakończenie agenta",
   "settings.notifications.agent.description": "Pokaż powiadomienie po zakończeniu zadania przez agenta",
   "settings.notifications.permissions.title": "Żądania uprawnień",
@@ -1202,6 +1203,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Wymiar wektora",
   "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
+  "settings.indexing.globalEnable.title": "Włącz globalnie",
+  "settings.indexing.globalEnable.description": "Włącz indeksowanie dla każdego obszaru roboczego.",
+  "settings.indexing.projectEnable.title": "Włącz dla tego projektu",
+  "settings.indexing.projectEnable.description":
+    "Włącz indeksowanie dla tego obszaru roboczego, gdy globalne indeksowanie jest wyłączone.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globalne indeksowanie jest włączone, więc ten projekt jest już uwzględniony.",
   "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",
   "settings.indexing.lancedbDirectory.title": "Katalog LanceDB",
@@ -1541,4 +1549,14 @@ export const dict = {
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
   "notifications.action.tryModelGeneric": "Wypróbuj model",
+  "diffViewer.source.workspace.label": "Lokalne zmiany",
+  "diffViewer.source.workspace.tooltip":
+    "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
+  "diffViewer.source.session.label": "Sesja",
+  "diffViewer.source.session.tooltip":
+    "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
+  "diffViewer.group.session": "Sesja",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 }

@@ -92,4 +92,9 @@ export const dict = {
     "Вимкніть знімки Kilo для цього проєкту. Ви втратите скасування/повторення для змін Kilo, але git продовжить відстежувати все.",
 
   "ui.messagePart.openInDiffViewer": "Відкрити у переглядачі відмінностей",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Це було корисно",
+  "ui.message.feedback.notHelpful": "Це не було корисно",
+  "ui.message.feedback.clearRating": "Очистити оцінку",
 }

@@ -95,6 +95,18 @@ export const dict = {
   "ui.textField.copied": "Скопировано",
 
   "ui.imagePreview.alt": "Предпросмотр изображения",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Отрисовка диаграммы Mermaid...",
+  "ui.mermaid.renderError": "Не удалось отрисовать Mermaid: {{message}}",
+  "ui.mermaid.errorDefault": "Не удалось отрисовать диаграмму Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid отрисовал пустую диаграмму.",
+  "ui.mermaid.download": "Скачать",
+  "ui.mermaid.copySource": "Копировать исходный код Mermaid",
+  "ui.mermaid.copySvg": "Копировать SVG",
+  "ui.mermaid.copyPng": "Копировать PNG",
+  "ui.mermaid.downloadSvg": "Скачать SVG",
+  "ui.mermaid.downloadPng": "Скачать PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "прокручиваемый контент",
 
   "ui.tool.read": "Чтение",

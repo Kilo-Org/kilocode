@@ -3,7 +3,8 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
-import { DiffViewerProvider } from "./DiffViewerProvider"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -22,6 +23,10 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 
 let agentManager: AgentManagerProvider | undefined
+
+const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
+  panel.title = title || EXTENSION_DISPLAY_NAME
+}
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -52,6 +57,11 @@ export function activate(context: vscode.ExtensionContext) {
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
+        // Sync the CLI's PostHog client with the current consent state. The
+        // CLI reads KILO_TELEMETRY_LEVEL once at spawn, so without this call
+        // a fresh CLI started while VS Code telemetry was off would stay
+        // opted out for the rest of the session.
+        telemetry.setEnabled(vscode.env.isTelemetryEnabled)
       }
       try {
         remoteService.setClient(connectionService.getClient())
@@ -66,6 +76,14 @@ export function activate(context: vscode.ExtensionContext) {
       remoteService.setClient(null)
     }
   })
+
+  // Propagate runtime telemetry consent changes to the CLI subprocess so its
+  // PostHog client stays in sync with the user's VS Code telemetry setting.
+  context.subscriptions.push(
+    vscode.env.onDidChangeTelemetryEnabled((enabled) => {
+      telemetry.setEnabled(enabled)
+    }),
+  )
 
   // Prewarm the CLI backend early so autocomplete is ready before first editor use.
   ensureBackendForAutocomplete(connectionService)
@@ -174,7 +192,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+          tabTitle: panelTitleHandler(panel),
+        })
         tabProvider.setRemoteService(remoteService)
         tabProvider.setAutoApproveController(autoApprove)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
@@ -200,8 +220,10 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Create standalone diff viewer provider for the sidebar "Show Changes" action
-  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
+  const diffSourceCatalog = new DiffSourceCatalog(connectionService)
+  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService, diffSourceCatalog, {
+    sessionIdProvider: () => provider.getCurrentSessionId(),
+  })
   diffViewerProvider.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
@@ -326,9 +348,12 @@ export function activate(context: vscode.ExtensionContext) {
         autoApprove,
       )
     }),
-    vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
-      diffViewerProvider.openPanel()
-    }),
+    vscode.commands.registerCommand(
+      "kilo-code.new.showChanges",
+      (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string }) => {
+        diffViewerProvider.openFromCommand(arg)
+      },
+    ),
     vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {
       subAgentViewerProvider.openPanel(sessionID, title)
     }),
@@ -468,7 +493,9 @@ async function openKiloInNewTab(
     dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
   }
 
-  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+    tabTitle: panelTitleHandler(panel),
+  })
   tabProvider.setRemoteService(remoteService)
   tabProvider.setAutoApproveController(autoApprove)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>

@@ -16,6 +16,7 @@
 
 // Max chars to keep for truncated output fields (bash metadata.output etc.)
 const OUTPUT_CAP = 4000
+const PATCH_CAP = 64_000
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,11 +33,22 @@ function cap(v: unknown, limit = OUTPUT_CAP): string | undefined {
   return v.slice(0, limit) + `\n… (truncated, ${v.length - limit} chars omitted)`
 }
 
+function patch(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined
+  if (v.length > PATCH_CAP) return undefined
+  return v
+}
+
+function withPatch(v: unknown): { patch: string } | {} {
+  const kept = patch(v)
+  return kept ? { patch: kept } : {}
+}
+
 // ---------------------------------------------------------------------------
 // Per-tool slimmers
 // ---------------------------------------------------------------------------
 
-/** edit: strip filediff.before/after (webview falls back to input.oldString/newString). */
+/** edit: strip filediff.before/after while preserving bounded patches for inline diffs. */
 function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
@@ -50,6 +62,7 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   if (isObj(fd)) {
     result.filediff = {
       ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+      ...withPatch(fd.patch),
       additions: typeof fd.additions === "number" ? fd.additions : 0,
       deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
     }
@@ -59,7 +72,7 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** apply_patch: strip files[].before/after/diff, metadata.diff, + input.patchText. */
+/** apply_patch: strip full file contents and input patch text while preserving bounded rendered patches. */
 function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
@@ -67,14 +80,18 @@ function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
     const slim: Record<string, unknown> = {}
     if (meta.diagnostics) slim.diagnostics = meta.diagnostics
     if (Array.isArray(meta.files)) {
-      slim.files = (meta.files as Record<string, unknown>[]).map((f) => ({
-        filePath: f.filePath,
-        relativePath: f.relativePath,
-        type: f.type,
-        additions: f.additions,
-        deletions: f.deletions,
-        movePath: f.movePath,
-      }))
+      slim.files = (meta.files as Record<string, unknown>[]).map((f) => {
+        const diff = patch(f.patch) ?? patch(f.diff)
+        return {
+          filePath: f.filePath,
+          relativePath: f.relativePath,
+          type: f.type,
+          ...withPatch(diff),
+          additions: f.additions,
+          deletions: f.deletions,
+          movePath: f.movePath,
+        }
+      })
     }
     next.metadata = slim
   }
@@ -101,6 +118,7 @@ function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> 
         if (isObj(fd)) {
           rs.filediff = {
             ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+            ...withPatch(fd.patch),
             additions: typeof fd.additions === "number" ? fd.additions : 0,
             deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
           }
@@ -130,6 +148,7 @@ function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
     if (isObj(fd)) {
       slim.filediff = {
         ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+        ...withPatch(fd.patch),
         additions: typeof fd.additions === "number" ? fd.additions : 0,
         deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
       }

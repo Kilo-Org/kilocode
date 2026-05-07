@@ -65,6 +65,8 @@ export function registerCommitMessageService(
 
       const previousMessage = lastWorkspacePath === path ? lastGeneratedMessage : undefined
 
+      let userCancelled = false
+      let timedOut = false
       const controller = new AbortController()
 
       await vscode.window
@@ -76,13 +78,19 @@ export function registerCommitMessageService(
           },
           async (_progress, token) => {
             // Wire VS Code cancellation to abort the HTTP request
-            token.onCancellationRequested(() => controller.abort())
+            token.onCancellationRequested(() => {
+              userCancelled = true
+              controller.abort()
+            })
 
             // Client-side safety timeout (35s) — slightly longer than the
             // server-side 30s timeout so the server can respond with a proper
             // error first, but still ensures the spinner never hangs forever.
             const timeout = 35_000
-            const timer = setTimeout(() => controller.abort(), timeout)
+            const timer = setTimeout(() => {
+              timedOut = true
+              controller.abort()
+            }, timeout)
 
             try {
               const { data } = await client.commitMessage.generate(
@@ -100,8 +108,13 @@ export function registerCommitMessageService(
           },
         )
         .then(undefined, (error: unknown) => {
-          if (controller.signal.aborted) {
-            console.log("[Kilo New] Commit message generation was cancelled or timed out")
+          if (userCancelled) {
+            console.log("[Kilo New] Commit message generation was cancelled by user")
+            return
+          }
+          if (timedOut) {
+            console.log("[Kilo New] Commit message generation timed out")
+            vscode.window.showErrorMessage("Commit message generation timed out. Please try again.")
             return
           }
           const msg = getErrorMessage(error)

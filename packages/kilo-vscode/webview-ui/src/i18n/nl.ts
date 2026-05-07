@@ -1042,6 +1042,13 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
   "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
+  "settings.indexing.globalEnable.title": "Globaal inschakelen",
+  "settings.indexing.globalEnable.description": "Indexering inschakelen voor elke werkruimte.",
+  "settings.indexing.projectEnable.title": "Inschakelen voor dit project",
+  "settings.indexing.projectEnable.description":
+    "Indexering inschakelen voor deze werkruimte wanneer globale indexering is uitgeschakeld.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globale indexering is ingeschakeld, dus dit project is al opgenomen.",
   "settings.indexing.provider.title": "Embedding-provider",
   "settings.indexing.provider.description":
     "Kies de provider die wordt gebruikt om embeddings te genereren voor semantisch zoeken.",
@@ -1177,6 +1184,8 @@ export const dict = {
   "settings.autocomplete.chatAutocomplete.title": "Chat tekstveld automatisch aanvullen inschakelen",
   "settings.autocomplete.chatAutocomplete.description":
     "Toon suggesties voor automatisch aanvullen in het chat tekstveld",
+  "settings.autocomplete.modelsHint":
+    "Om te kiezen welk model wordt gebruikt voor automatisch aanvullen, zie de Modellen-instellingen.",
 
   "settings.notifications.agent.title": "Agent Voltooiing",
   "settings.notifications.agent.description": "Toon melding wanneer agent een taak voltooit",
@@ -1568,4 +1577,14 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
+  "diffViewer.source.workspace.label": "Lokale wijzigingen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle wijzigingen in deze branch vergeleken met de base branch. Inclusief niet-gecommitte bestanden (staged, unstaged, ungetrackt) en lokale commits die nog niet in de base zitten.",
+  "diffViewer.source.session.label": "Sessie",
+  "diffViewer.source.session.tooltip":
+    "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
+  "diffViewer.group.session": "Sessie",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 }

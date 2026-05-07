@@ -33,6 +33,7 @@ registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
+import { FeedbackProvider } from "./context/feedback"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
@@ -176,6 +177,27 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
       {props.children}
     </LanguageProvider>
   )
+}
+
+type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
+
+export const MermaidDownloadBridge: Component = () => {
+  const vscode = useVSCode()
+
+  onMount(() => {
+    const save = (event: Event) => {
+      const detail = (event as MermaidImageEvent).detail
+      if (!detail?.dataUrl || !detail.filename) return
+      event.preventDefault()
+      vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
+    }
+    window.addEventListener("kilo:save-image", save)
+    onCleanup(() => {
+      window.removeEventListener("kilo:save-image", save)
+    })
+  })
+
+  return null
 }
 
 // Inner app component that uses the contexts
@@ -342,6 +364,7 @@ const App: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
+          <MermaidDownloadBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>
@@ -354,9 +377,11 @@ const App: Component = () => {
                             <IndexingProvider>
                               <NotificationsProvider>
                                 <SessionProvider>
-                                  <DataBridge>
-                                    <AppContent />
-                                  </DataBridge>
+                                  <FeedbackProvider>
+                                    <DataBridge>
+                                      <AppContent />
+                                    </DataBridge>
+                                  </FeedbackProvider>
                                 </SessionProvider>
                               </NotificationsProvider>
                             </IndexingProvider>

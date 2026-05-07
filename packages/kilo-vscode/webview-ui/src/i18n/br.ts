@@ -1045,6 +1045,13 @@ export const dict = {
   "settings.indexing.title": "Indexação",
   "settings.indexing.enable.title": "Ativar indexação",
   "settings.indexing.enable.description": "Ativar ou desativar a indexação semântica da base de código.",
+  "settings.indexing.globalEnable.title": "Habilitar globalmente",
+  "settings.indexing.globalEnable.description": "Habilitar indexação para todos os workspaces.",
+  "settings.indexing.projectEnable.title": "Habilitar para este projeto",
+  "settings.indexing.projectEnable.description":
+    "Habilitar indexação para este workspace quando a indexação global estiver desativada.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "A indexação global está ativada, então este projeto já está coberto.",
   "settings.indexing.provider.title": "Provedor de embedding",
   "settings.indexing.provider.description": "Escolha o provedor usado para gerar embeddings para busca semântica.",
   "settings.indexing.model.title": "Modelo de embedding",
@@ -1176,6 +1183,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Usar um atalho inteligente para acionar tarefas inline",
   "settings.autocomplete.chatAutocomplete.title": "Ativar autocompletar do chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugestões de autocompletar no campo de chat",
+  "settings.autocomplete.modelsHint":
+    "Para escolher qual modelo é usado para autocompletar, veja as configurações de Modelos.",
   "settings.notifications.agent.title": "Conclusão do agente",
   "settings.notifications.agent.description": "Mostrar notificação quando o agente conclui uma tarefa",
   "settings.notifications.permissions.title": "Solicitações de permissão",
@@ -1550,4 +1559,14 @@ export const dict = {
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",
   "notifications.action.tryModelGeneric": "Experimentar modelo",
+  "diffViewer.source.workspace.label": "Alterações locais",
+  "diffViewer.source.workspace.tooltip":
+    "Todas as alterações desta branch em relação à branch base. Inclui arquivos não commitados (staged, unstaged e não rastreados) e commits locais que ainda não estão na base.",
+  "diffViewer.source.session.label": "Sessão",
+  "diffViewer.source.session.tooltip":
+    "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
+  "diffViewer.group.session": "Sessão",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Os snapshots estão desativados para este repositório. Edite seus arquivos de configuração para exibir as alterações da sessão.",
 }

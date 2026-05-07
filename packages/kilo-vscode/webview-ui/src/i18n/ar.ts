@@ -1026,6 +1026,11 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.globalEnable.title": "تمكين عام",
+  "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
+  "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
+  "settings.indexing.projectEnable.description": "تمكين الفهرسة لمساحة العمل هذه عندما تكون الفهرسة العامة متوقفة.",
+  "settings.indexing.projectEnable.disabledTooltip": "الفهرسة العامة مفعلة، لذا هذا المشروع مشمول بالفعل.",
   "settings.indexing.provider.title": "موفر التضمين",
   "settings.indexing.provider.description": "اختر الموفر المستخدم لإنشاء التضمينات للبحث الدلالي.",
   "settings.indexing.model.title": "نموذج التضمين",
@@ -1151,6 +1156,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "استخدام اختصار ذكي لتشغيل المهام المضمّنة",
   "settings.autocomplete.chatAutocomplete.title": "تمكين الإكمال التلقائي للدردشة",
   "settings.autocomplete.chatAutocomplete.description": "عرض اقتراحات الإكمال التلقائي في مربع الدردشة",
+  "settings.autocomplete.modelsHint": "لاختيار النموذج المستخدم للإكمال التلقائي، راجع إعدادات النماذج.",
   "settings.notifications.agent.title": "إكمال الوكيل",
   "settings.notifications.agent.description": "إظهار إشعار عند إكمال الوكيل لمهمة",
   "settings.notifications.permissions.title": "طلبات الأذونات",
@@ -1511,4 +1517,14 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
+  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.tooltip":
+    "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
+  "diffViewer.source.session.label": "الجلسة",
+  "diffViewer.source.session.tooltip":
+    "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
+  "diffViewer.group.session": "الجلسة",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 }

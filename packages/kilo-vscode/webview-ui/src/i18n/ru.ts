@@ -754,6 +754,13 @@ export const dict = {
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
   "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
+  "settings.indexing.globalEnable.title": "Включить глобально",
+  "settings.indexing.globalEnable.description": "Включить индексирование для каждого рабочего пространства.",
+  "settings.indexing.projectEnable.title": "Включить для этого проекта",
+  "settings.indexing.projectEnable.description":
+    "Включить индексирование для этого рабочего пространства, если глобальное индексирование отключено.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Глобальное индексирование включено, поэтому этот проект уже охвачен.",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.provider.title": "Провайдер эмбеддингов",
   "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",
@@ -1174,6 +1181,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Использовать умную клавишу для запуска встроенных задач",
   "settings.autocomplete.chatAutocomplete.title": "Включить автодополнение чата",
   "settings.autocomplete.chatAutocomplete.description": "Показывать предложения автодополнения в поле чата",
+  "settings.autocomplete.modelsHint": "Чтобы выбрать модель для автодополнения, см. настройки Моделей.",
   "settings.notifications.agent.title": "Завершение агента",
   "settings.notifications.agent.description": "Показать уведомление при завершении задачи агентом",
   "settings.notifications.permissions.title": "Запросы разрешений",
@@ -1541,4 +1549,14 @@ export const dict = {
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
   "notifications.action.tryModelGeneric": "Попробовать модель",
+  "diffViewer.source.workspace.label": "Локальные изменения",
+  "diffViewer.source.workspace.tooltip":
+    "Все изменения в этой ветке по сравнению с базовой. Включает незакоммиченные файлы (staged, unstaged, неотслеживаемые) и локальные коммиты, которых ещё нет в базе.",
+  "diffViewer.source.session.label": "Сессия",
+  "diffViewer.source.session.tooltip":
+    "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
+  "diffViewer.group.session": "Сессия",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
 }

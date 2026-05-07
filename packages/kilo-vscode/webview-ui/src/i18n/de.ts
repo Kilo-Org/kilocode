@@ -765,6 +765,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Vektordimension",
   "settings.indexing.enable.description": "Semantische Codebasis-Indizierung ein- oder ausschalten.",
   "settings.indexing.enable.title": "Indizierung aktivieren",
+  "settings.indexing.globalEnable.title": "Global aktivieren",
+  "settings.indexing.globalEnable.description": "Indizierung für jeden Workspace aktivieren.",
+  "settings.indexing.projectEnable.title": "Für dieses Projekt aktivieren",
+  "settings.indexing.projectEnable.description":
+    "Indizierung für diesen Workspace aktivieren, wenn die globale Indizierung deaktiviert ist.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Die globale Indizierung ist aktiviert, dieses Projekt wird also bereits erfasst.",
   "settings.indexing.lancedbDirectory.description": "Optionaler Ordner für den lokalen LanceDB-Speicher.",
   "settings.indexing.lancedbDirectory.placeholder": "Leer lassen für Standard",
   "settings.indexing.lancedbDirectory.title": "LanceDB-Ordner",
@@ -1191,6 +1198,8 @@ export const dict = {
     "Eine intelligente Tastenkombination zum Auslösen von Inline-Aufgaben verwenden",
   "settings.autocomplete.chatAutocomplete.title": "Chat-Textfeld-Autovervollständigung aktivieren",
   "settings.autocomplete.chatAutocomplete.description": "Autovervollständigungsvorschläge im Chat-Textfeld anzeigen",
+  "settings.autocomplete.modelsHint":
+    "Um zu wählen, welches Modell für die Autovervollständigung verwendet wird, siehe Modelleinstellungen.",
   "settings.notifications.agent.title": "Agent-Abschluss",
   "settings.notifications.agent.description": "Benachrichtigung anzeigen, wenn der Agent eine Aufgabe abschließt",
   "settings.notifications.permissions.title": "Berechtigungsanfragen",
@@ -1566,4 +1575,14 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
+  "diffViewer.source.workspace.label": "Lokale Änderungen",
+  "diffViewer.source.workspace.tooltip":
+    "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
+  "diffViewer.source.session.label": "Sitzung",
+  "diffViewer.source.session.tooltip":
+    "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
+  "diffViewer.group.session": "Sitzung",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
 } satisfies Partial<Record<Keys, string>>

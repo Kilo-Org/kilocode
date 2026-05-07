@@ -1,8 +1,10 @@
 import path from "node:path"
+import { stat } from "node:fs/promises"
 import { Instance } from "@/project/instance"
 
 const FILE = "agent-manager-overview.json"
 const STATE = "agent-manager.json"
+const MAX_AGE = 10_000
 
 type Status = "running" | "waiting" | "idle" | "done" | "failed" | "unknown"
 
@@ -211,6 +213,12 @@ async function json<T>(file: string): Promise<T | undefined> {
   const target = Bun.file(file)
   if (!(await target.exists())) return undefined
   return (await target.json()) as T
+}
+
+async function modified(file: string): Promise<number | undefined> {
+  return stat(file)
+    .then((info) => info.mtimeMs)
+    .catch(() => undefined)
 }
 
 function summary(
@@ -492,8 +500,13 @@ export async function readOverview(): Promise<AgentManagerOverview> {
     const file = path.join(dir, ".kilo", FILE)
     const snap = await json<AgentManagerOverview>(file).catch(() => undefined)
     if (snap) {
-      const age = Date.now() - Date.parse(snap.generatedAt)
-      return { ...snap, source: "snapshot", snapshotAgeMs: Number.isFinite(age) ? age : undefined }
+      const time = Date.parse(snap.generatedAt)
+      const age = Date.now() - time
+      const mtime = await modified(path.join(dir, ".kilo", STATE))
+      const current = Number.isFinite(age) && age <= MAX_AGE && (!mtime || mtime <= time)
+      if (current) {
+        return { ...snap, source: "snapshot", snapshotAgeMs: age }
+      }
     }
   }
   for (const dir of candidates()) {

@@ -26,7 +26,7 @@
     "typescript": "catalog:",
     "vite": "catalog:"
   },
-  "version": "7.2.42",
+  "version": "7.2.44",
   "dependencies": {},
   "peerDependencies": {}
 }

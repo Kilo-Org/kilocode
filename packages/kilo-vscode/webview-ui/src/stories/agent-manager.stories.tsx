@@ -14,6 +14,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
+import type { JSX } from "solid-js"
 import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
@@ -465,7 +466,7 @@ const MockTab = (props: { title: string; active?: boolean }) => (
         <TooltipKeybind title={props.title} keybind="⌘1" placement="bottom" inactive={props.active}>
           <div class={`am-tab ${props.active ? "am-tab-active" : ""}`}>
             <span class="am-tab-label">{props.title}</span>
-            <TooltipKeybind title="Close" keybind="⌘W" placement="bottom">
+            <TooltipKeybind title="Close" keybind="⌘W" placement="bottom" class="am-tab-close-wrap">
               <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
             </TooltipKeybind>
           </div>
@@ -480,9 +481,11 @@ const MockReviewTab = (props: { active?: boolean }) => (
   <div class="am-tab-sortable">
     <TooltipKeybind title="Toggle review" keybind="⌘⇧R" placement="bottom" inactive={props.active}>
       <div class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}>
-        <Icon name="layers" size="small" />
+        <span class="am-tab-icon">
+          <Icon name="layers" size="small" />
+        </span>
         <span class="am-tab-label">Review</span>
-        <TooltipKeybind title="Close" keybind="⌘W" placement="bottom">
+        <TooltipKeybind title="Close" keybind="⌘W" placement="bottom" class="am-tab-close-wrap">
           <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
         </TooltipKeybind>
       </div>
@@ -496,15 +499,19 @@ export const TabBarMultipleTabs: Story = {
     <StoryProviders noPadding>
       <div class="am-tab-bar">
         <div class="am-tab-scroll-area">
-          <div class="am-tab-list">
-            <MockTab title="Implement auth" active />
-            <MockTab title="Fix button styles" />
-            <MockTab title="Add unit tests" />
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "3" } as JSX.CSSProperties}>
+              <MockTab title="Implement auth" active />
+              <MockTab title="Fix button styles" />
+              <MockTab title="Add unit tests" />
+            </div>
+            <div class="am-split-button am-tab-add-split">
+              <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+                <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+              </TooltipKeybind>
+            </div>
           </div>
         </div>
-        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
-          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
-        </TooltipKeybind>
         <div class="am-tab-actions">
           <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
             <Icon name="layers" size="small" />
@@ -527,14 +534,18 @@ export const TabBarWithReviewTab: Story = {
     <StoryProviders noPadding>
       <div class="am-tab-bar">
         <div class="am-tab-scroll-area">
-          <div class="am-tab-list">
-            <MockTab title="Implement auth" />
-            <MockReviewTab active />
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "2" } as JSX.CSSProperties}>
+              <MockTab title="Implement auth" />
+              <MockReviewTab active />
+            </div>
+            <div class="am-split-button am-tab-add-split">
+              <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+                <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+              </TooltipKeybind>
+            </div>
           </div>
         </div>
-        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
-          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
-        </TooltipKeybind>
         <div class="am-tab-actions">
           <IconButton icon="expand" size="small" variant="ghost" label="Review" class="am-tab-diff-btn-active" />
           <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
@@ -550,13 +561,17 @@ export const TabBarSingleTab: Story = {
     <StoryProviders noPadding>
       <div class="am-tab-bar">
         <div class="am-tab-scroll-area">
-          <div class="am-tab-list">
-            <MockTab title="PR #6966 worktree checkout" active />
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="PR #6966 worktree checkout" active />
+            </div>
+            <div class="am-split-button am-tab-add-split">
+              <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+                <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+              </TooltipKeybind>
+            </div>
           </div>
         </div>
-        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
-          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
-        </TooltipKeybind>
         <div class="am-tab-actions">
           <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
             <Icon name="layers" size="small" />

@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify"
 import { fnv1a } from "../context/marked"
+import { mountMermaidActions } from "./markdown-mermaid-actions"
 
 const svgConfig = {
   USE_PROFILES: { html: true, svg: true, svgFilters: true },
@@ -10,10 +11,42 @@ const svgConfig = {
 
 type Mermaid = typeof import("mermaid").default
 
+export type MermaidLabels = {
+  rendering: string
+  renderError: (message: string) => string
+  errorDefault: string
+  errorEmpty: string
+  copied: string
+  copy: string
+  download: string
+  copySource: string
+  copySvg: string
+  copyPng: string
+  downloadSvg: string
+  downloadPng: string
+}
+
+const labels: MermaidLabels = {
+  rendering: "Rendering Mermaid diagram...",
+  renderError: (message) => `Mermaid render failed: ${message}`,
+  errorDefault: "Unable to render Mermaid diagram.",
+  errorEmpty: "Mermaid rendered an empty diagram.",
+  copied: "Copied",
+  copy: "Copy",
+  download: "Download",
+  copySource: "Copy Mermaid source",
+  copySvg: "Copy SVG",
+  copyPng: "Copy PNG",
+  downloadSvg: "Download SVG",
+  downloadPng: "Download PNG",
+}
+
 const cache: { promise?: Promise<Mermaid>; id: number; queue: Promise<void> } = {
   id: 0,
   queue: Promise.resolve(),
 }
+
+const actions = new WeakMap<HTMLElement, () => void>()
 
 async function load() {
   if (!cache.promise) {
@@ -26,11 +59,7 @@ function parse(color: string) {
   const value = color.trim()
   const hex = value.match(/^#([0-9a-f]{6})/i)
   if (hex?.[1]) {
-    return [
-      parseInt(hex[1].slice(0, 2), 16),
-      parseInt(hex[1].slice(2, 4), 16),
-      parseInt(hex[1].slice(4, 6), 16),
-    ]
+    return [parseInt(hex[1].slice(0, 2), 16), parseInt(hex[1].slice(2, 4), 16), parseInt(hex[1].slice(4, 6), 16)]
   }
 
   const short = value.match(/^#([0-9a-f]{3})/i)
@@ -70,7 +99,8 @@ function css(root: Element, names: string[], fallback: string) {
 
 function dark(root: Element, background: string) {
   if (document.body.classList.contains("vscode-light")) return false
-  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("vscode-high-contrast")) return true
+  if (document.body.classList.contains("vscode-dark") || document.body.classList.contains("vscode-high-contrast"))
+    return true
 
   const scheme = getComputedStyle(root).colorScheme
   if (scheme.includes("dark")) return true
@@ -90,10 +120,18 @@ function config(root: Element) {
   )
   const panel = css(root, ["--vscode-editorWidget-background", "--surface-raised-base", "--surface-base"], background)
   const alt = css(root, ["--vscode-input-background", "--surface-weak", "--surface-base"], panel)
-  const text = css(root, ["--vscode-editor-foreground", "--text-strong", "--vscode-foreground"], style.color || "#ffffff")
+  const text = css(
+    root,
+    ["--vscode-editor-foreground", "--text-strong", "--vscode-foreground"],
+    style.color || "#ffffff",
+  )
   const weak = css(root, ["--vscode-descriptionForeground", "--text-weak", "--vscode-foreground"], text)
   const border = css(root, ["--vscode-editorWidget-border", "--vscode-editorGroup-border", "--border-weak-base"], weak)
-  const accent = css(root, ["--vscode-textLink-foreground", "--vscode-charts-blue", "--text-interactive-base"], "#6cb6ff")
+  const accent = css(
+    root,
+    ["--vscode-textLink-foreground", "--vscode-charts-blue", "--text-interactive-base"],
+    "#6cb6ff",
+  )
   const critical = css(root, ["--vscode-errorForeground", "--vscode-charts-red", "--syntax-critical"], "#ff9580")
   const criticalBg = css(root, ["--vscode-inputValidation-errorBackground", "--surface-critical-base"], alt)
 
@@ -159,10 +197,14 @@ function sanitize(svg: string) {
   return DOMPurify.sanitize(svg, svgConfig)
 }
 
-function message(err: unknown) {
+function mergeLabels(input?: Partial<MermaidLabels>) {
+  return { ...labels, ...input }
+}
+
+function message(err: unknown, labels: MermaidLabels) {
   if (err instanceof Error) return err.message
   if (typeof err === "string") return err
-  return "Unable to render Mermaid diagram."
+  return labels.errorDefault
 }
 
 function panel(wrapper: HTMLElement) {
@@ -178,12 +220,115 @@ function panel(wrapper: HTMLElement) {
   return el
 }
 
-function fail(wrapper: HTMLElement, pre: HTMLPreElement, err: unknown) {
+function fail(wrapper: HTMLElement, pre: HTMLPreElement, err: unknown, labels: MermaidLabels) {
   const el = panel(wrapper)
   el.setAttribute("data-state", "error")
-  el.textContent = `Mermaid render failed: ${message(err)}`
+  el.textContent = labels.renderError(message(err, labels))
   wrapper.setAttribute("data-mermaid-state", "error")
   pre.hidden = false
+}
+
+function cleanupActions(el: HTMLElement) {
+  const dispose = actions.get(el)
+  if (!dispose) return
+  dispose()
+  actions.delete(el)
+}
+
+function serialize(svg: SVGSVGElement) {
+  const clone = svg.cloneNode(true) as SVGSVGElement
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+  return new XMLSerializer().serializeToString(clone)
+}
+
+function dataUrl(type: string, content: string) {
+  return `data:${type};base64,${btoa(unescape(encodeURIComponent(content)))}`
+}
+
+function size(svg: SVGSVGElement) {
+  const box = svg.viewBox.baseVal
+  const rect = svg.getBoundingClientRect()
+  const width = Math.max(Math.ceil(box?.width || rect.width || 1), 1)
+  const height = Math.max(Math.ceil(box?.height || rect.height || 1), 1)
+  return { width, height }
+}
+
+async function png(svg: SVGSVGElement) {
+  const source = serialize(svg)
+  const url = dataUrl("image/svg+xml", source)
+  const img = new Image()
+  const dims = size(svg)
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error("Unable to export Mermaid diagram."))
+    img.src = url
+  })
+
+  const canvas = document.createElement("canvas")
+  canvas.width = dims.width
+  canvas.height = dims.height
+  const ctx = canvas.getContext("2d")
+  if (!ctx) throw new Error("Unable to export Mermaid diagram.")
+  ctx.drawImage(img, 0, 0, dims.width, dims.height)
+  return canvas.toDataURL("image/png")
+}
+
+function download(url: string, filename: string) {
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+function save(url: string, filename: string) {
+  const event = new CustomEvent("kilo:save-image", {
+    bubbles: true,
+    cancelable: true,
+    detail: { dataUrl: url, filename },
+  })
+  window.dispatchEvent(event)
+  if (event.defaultPrevented) return
+  download(url, filename)
+}
+
+async function copyText(text: string) {
+  await navigator.clipboard.writeText(text)
+}
+
+async function copyPng(svg: SVGSVGElement) {
+  const url = await png(svg)
+  const blob = await (await fetch(url)).blob()
+  if (typeof ClipboardItem === "undefined") {
+    await navigator.clipboard.writeText(serialize(svg))
+    return
+  }
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
+}
+
+function renderActions(el: HTMLDivElement, pre: HTMLPreElement, source: string, labels: MermaidLabels) {
+  const svg = el.querySelector("svg")
+  if (!(svg instanceof SVGSVGElement)) return
+
+  cleanupActions(el)
+  const old = el.querySelector('[data-slot="markdown-mermaid-actions-root"]')
+  old?.remove()
+  const sourceText = pre.querySelector("code")?.textContent ?? source
+  const sourceSvg = () => serialize(svg)
+  const sourceSvgUrl = () => dataUrl("image/svg+xml", sourceSvg())
+
+  actions.set(
+    el,
+    mountMermaidActions(el, {
+      labels,
+      onCopySource: () => copyText(sourceText),
+      onCopySvg: () => copyText(sourceSvg()),
+      onCopyPng: () => copyPng(svg),
+      onDownloadSvg: () => save(sourceSvgUrl(), "mermaid-diagram.svg"),
+      onDownloadPng: async () => save(await png(svg), "mermaid-diagram.png"),
+    }),
+  )
 }
 
 export function preserveMermaid(fromEl: Element, toEl: Element) {
@@ -212,7 +357,8 @@ async function svg(renderer: Mermaid, source: string, cfg: ReturnType<typeof con
   })
 }
 
-export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boolean }) {
+export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boolean }, input?: Partial<MermaidLabels>) {
+  const label = mergeLabels(input)
   const blocks = Array.from(root.querySelectorAll('pre > code[data-lang="mermaid"]'))
   if (blocks.length === 0) return
 
@@ -223,7 +369,7 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
       if (!(pre instanceof HTMLPreElement)) continue
       if (!(wrapper instanceof HTMLElement)) continue
       if (wrapper.getAttribute("data-component") !== "markdown-code") continue
-      fail(wrapper, pre, err)
+      fail(wrapper, pre, err, label)
     }
   })
   if (!renderer) return
@@ -265,7 +411,7 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
     const el = panel(wrapper)
     if (!keep) {
       el.setAttribute("data-state", "rendering")
-      el.textContent = "Rendering Mermaid diagram..."
+      el.textContent = label.rendering
       pre.hidden = false
     } else {
       pre.hidden = true
@@ -276,15 +422,17 @@ export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boo
       if (signal.aborted || !root.isConnected || !wrapper.isConnected) return
 
       const safe = sanitize(result.svg)
-      if (!safe) throw new Error("Mermaid rendered an empty diagram.")
+      if (!safe) throw new Error(label.errorEmpty)
 
+      cleanupActions(el)
       el.setAttribute("data-state", "rendered")
       el.innerHTML = safe
+      renderActions(el, pre, source, label)
       wrapper.setAttribute("data-mermaid-state", "rendered")
       pre.hidden = true
     } catch (err) {
       if (signal.aborted || !root.isConnected || !wrapper.isConnected) return
-      fail(wrapper, pre, err)
+      fail(wrapper, pre, err, label)
     }
   }
 }

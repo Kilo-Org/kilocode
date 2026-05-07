@@ -7,6 +7,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -87,6 +88,10 @@ class KiloSessionService internal constructor(
     suspend fun recent(dir: String, limit: Int): List<SessionDto> =
         call { recent(dir, limit) }.sessions
 
+    /** Get a single session. */
+    suspend fun get(id: String, dir: String): SessionDto =
+        call { get(id, dir) }
+
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
         LOG.info("create: dir=$dir")
@@ -136,6 +141,11 @@ class KiloSessionService internal constructor(
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, dir: String) {
         call { abort(id, dir) }
+    }
+
+    /** Summarize/compact a session. */
+    suspend fun compact(id: String, dir: String, model: ModelSelectionDto) {
+        call { compact(id, dir, model) }
     }
 
     /** Load message history for a session. */

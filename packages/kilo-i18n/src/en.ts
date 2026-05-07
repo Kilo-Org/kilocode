@@ -99,4 +99,9 @@ export const dict = {
 
   // Edit-tool header: hover-revealed action opening the diff in a full tab.
   "ui.messagePart.openInDiffViewer": "Open in Diff Viewer",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "This was helpful",
+  "ui.message.feedback.notHelpful": "This wasn't helpful",
+  "ui.message.feedback.clearRating": "Clear rating",
 }

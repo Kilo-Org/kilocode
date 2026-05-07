@@ -17,6 +17,7 @@ import { createRoot } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../src/context/language"
@@ -45,6 +46,7 @@ export const ConstrainDragYAxis: Component = () => {
 export const SortableTab: Component<{
   tab: SessionInfo
   active: boolean
+  busy: boolean
   keybind?: string
   closeKeybind?: string
   onSelect: () => void
@@ -75,8 +77,18 @@ export const SortableTab: Component<{
               onClick={props.onSelect}
               onMouseDown={props.onMiddleClick}
             >
+              <Show when={props.busy}>
+                <span class="am-tab-icon">
+                  <Spinner class="am-worktree-spinner" />
+                </span>
+              </Show>
               <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
-              <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
+              <TooltipKeybind
+                title={t("agentManager.tab.close")}
+                keybind={props.closeKeybind ?? ""}
+                placement="bottom"
+                class="am-tab-close-wrap"
+              >
                 <IconButton
                   icon="close-small"
                   size="small"
@@ -148,9 +160,16 @@ export const SortableReviewTab: Component<{
           onClick={props.onSelect}
           onMouseDown={props.onMiddleClick}
         >
-          <Icon name="layers" size="small" />
+          <span class="am-tab-icon">
+            <Icon name="layers" size="small" />
+          </span>
           <span class="am-tab-label">{props.label}</span>
-          <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
+          <TooltipKeybind
+            title={t("agentManager.tab.close")}
+            keybind={props.closeKeybind ?? ""}
+            placement="bottom"
+            class="am-tab-close-wrap"
+          >
             <IconButton
               icon="close-small"
               size="small"

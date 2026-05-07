@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
   "agentManager.tab.newOptions": "Más opciones de nueva pestaña",
+  "agentManager.tabsMenu.label": "Buscar pestañas abiertas",
+  "agentManager.tabsMenu.search": "Buscar pestañas...",
+  "agentManager.tabsMenu.empty": "No hay pestañas coincidentes",
+  "agentManager.tabsMenu.status.waiting": "Espera",
+  "agentManager.tabsMenu.status.working": "En curso",
+  "agentManager.tabsMenu.status.retry": "Reintento",
 
   "agentManager.terminal.new": "Nueva pestaña de terminal",
   "agentManager.terminal.ended": "terminal finalizado — cierra la pestaña para descartar",

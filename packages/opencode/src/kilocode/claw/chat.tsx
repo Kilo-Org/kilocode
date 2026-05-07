@@ -3,19 +3,23 @@
 /**
  * KiloClaw chat panel
  *
- * Renders a scrollable message list and a textarea input for chatting
- * with the KiloClaw bot via Stream Chat.
+ * Renders a scrollable message list, a slash-command autocomplete popup,
+ * and a textarea for chatting with the KiloClaw bot via Kilo Chat.
+ * Conversation title and context-window usage live in the sidebar (mirrors
+ * the session route's layout).
  *
  * Visual style mirrors the session chat TUI (routes/session/index.tsx).
  */
 
-import { createEffect, createMemo, For, Show } from "solid-js"
-import { type KeyBinding, type MouseEvent, type TextareaRenderable } from "@opentui/core"
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js"
+import { type BoxRenderable, type KeyBinding, type MouseEvent, type TextareaRenderable } from "@opentui/core"
 import { useRenderer } from "@opentui/solid"
 import { useTheme } from "@tui/context/theme"
 import { SplitBorder, EmptyBorder } from "@tui/component/border"
 import { useKV } from "@tui/context/kv"
-import type { ChatMessage } from "./types"
+import { Spinner } from "@tui/component/spinner"
+import type { ChatMessage, TypingMember } from "./types"
+import { ClawAutocomplete, type ClawAutocompleteRef, type ClawSlashOption } from "./autocomplete"
 
 function UserMessageRow(props: { msg: ChatMessage; index: number }) {
   const { theme } = useTheme()
@@ -64,43 +68,85 @@ export function ClawChat(props: {
   loading: boolean
   error: string | null
   disabled: boolean
+  typingMembers: TypingMember[]
+  slashes: () => ClawSlashOption[]
+  botName: string
   onSend: (text: string) => Promise<boolean>
 }) {
   const { theme } = useTheme()
   const renderer = useRenderer()
   const kv = useKV()
   const [showScrollbar] = kv.signal("scrollbar_visible", true)
-  let input: TextareaRenderable
+  let input: TextareaRenderable | undefined
+  let inputAnchor: BoxRenderable | undefined
+  let auto: ClawAutocompleteRef | undefined
+  const [inputValue, setInputValue] = createSignal("")
 
-  const active = createMemo(() => !props.disabled && props.connected)
+  // Input is usable only when the instance is running, the WebSocket is
+  // connected, and the bot is online. Sending while the bot is offline
+  // would be silently dropped (no one to deliver to), so surface that as
+  // a disabled input rather than a message that vanishes.
+  const active = createMemo(() => !props.disabled && props.connected && props.online)
+
+  // Render the typing banner with friendly names. Bot members come in as
+  // `bot:kiloclaw:{sandboxId}` — the bot is the only non-self member in 1:1
+  // chats, so we resolve bot ids to the user-configured `botName` (which
+  // falls back to "KiloClaw" upstream) and render any human collaborators
+  // by their raw memberId.
+  const typingLabel = createMemo(() => {
+    const list = props.typingMembers
+    if (!list.length) return null
+    const names = list.map((m) => (m.memberId.startsWith("bot:") ? props.botName : m.memberId))
+    if (names.length === 1) return `${names[0]} is typing`
+    if (names.length === 2) return `${names[0]} and ${names[1]} are typing`
+    return `${names[0]} and ${names.length - 1} others are typing`
+  })
 
   const placeholder = createMemo(() => {
     if (props.error) return props.error
     if (props.loading) return "Connecting..."
     if (!props.connected) return "Chat unavailable"
     if (props.disabled) return "Instance is stopped"
-    return ""
+    if (!props.online) return `${props.botName} is offline`
+    return "Type a message... (/ for commands)"
   })
 
   const submit = async () => {
     if (!input) return
+    if (auto?.visible) return // let autocomplete consume Enter
     const text = input.plainText.trim()
     if (!text) return
     if (!active()) return
     const ok = await props.onSend(text)
-    if (ok) input.clear()
+    if (ok) {
+      input.clear()
+      setInputValue("")
+    }
   }
 
-  createEffect(() => {
-    if (active()) input?.focus()
-  })
-
-  // Stream Chat WebSocket events fire outside OpenTUI's render cycle.
-  // Track props driven by external callbacks and explicitly request a repaint.
+  // Repaint when external state arrives (events fire outside OpenTUI's
+  // render cycle).
   createEffect(() => {
     props.messages.length
     props.online
+    props.typingMembers.length
     renderer.requestRender()
+  })
+
+  // Drive the textarea's traits + focus from active() and autocomplete
+  // visibility. We always render the textarea (even while loading or
+  // disconnected) so the input area keeps a stable height; `traits.suspend`
+  // disables interaction without changing layout. Mirrors DialogPrompt's
+  // suspend-then-blur pattern so the cursor visibly leaves while inactive.
+  createEffect(() => {
+    if (!input || input.isDestroyed) return
+    const suspend = !active()
+    const status = props.loading ? "LOADING" : props.disabled ? "OFFLINE" : undefined
+    input.traits = auto?.visible
+      ? { capture: ["escape", "navigate", "submit", "tab"] as const, suspend, status }
+      : { suspend, status }
+    if (suspend) input.blur()
+    else input.focus()
   })
 
   return (
@@ -143,8 +189,15 @@ export function ClawChat(props: {
         </For>
       </scrollbox>
 
+      {/* Typing indicator */}
+      <Show when={typingLabel()}>
+        <box flexShrink={0} paddingLeft={2}>
+          <Spinner color={theme.textMuted}>{typingLabel()}</Spinner>
+        </box>
+      </Show>
+
       {/* Input area */}
-      <box flexShrink={0}>
+      <box flexShrink={0} ref={(r: BoxRenderable) => (inputAnchor = r)}>
         <box
           border={["left"]}
           borderColor={active() ? theme.primary : theme.textMuted}
@@ -162,26 +215,35 @@ export function ClawChat(props: {
             backgroundColor={theme.backgroundElement}
             flexGrow={1}
           >
-            <Show when={active()} fallback={<text fg={theme.textMuted}>{placeholder()}</text>}>
-              <textarea
-                ref={(r: TextareaRenderable) => {
-                  input = r
-                }}
-                placeholder="Type a message... (Enter to send)"
-                textColor={theme.text}
-                focusedTextColor={theme.text}
-                minHeight={2}
-                maxHeight={4}
-                cursorColor={theme.text}
-                focusedBackgroundColor={theme.backgroundElement}
-                onMouseDown={(e: MouseEvent) => e.target?.focus()}
-                keyBindings={[
-                  { name: "return", action: "submit" } satisfies KeyBinding,
-                  { name: "return", shift: true, action: "newline" } satisfies KeyBinding,
-                ]}
-                onSubmit={submit}
-              />
-            </Show>
+            <textarea
+              ref={(r: TextareaRenderable) => {
+                input = r
+              }}
+              placeholder={placeholder()}
+              placeholderColor={theme.textMuted}
+              textColor={active() ? theme.text : theme.textMuted}
+              focusedTextColor={active() ? theme.text : theme.textMuted}
+              minHeight={2}
+              maxHeight={4}
+              cursorColor={active() ? theme.text : theme.backgroundElement}
+              focusedBackgroundColor={theme.backgroundElement}
+              onMouseDown={(e: MouseEvent) => {
+                if (active()) e.target?.focus()
+              }}
+              onContentChange={() => {
+                if (!input) return
+                const value = input.plainText
+                setInputValue(value)
+                auto?.onInput(value)
+              }}
+              onCursorChange={() => auto?.onCursorChange()}
+              onKeyDown={(e) => auto?.onKeyDown(e)}
+              keyBindings={[
+                { name: "return", action: "submit" } satisfies KeyBinding,
+                { name: "return", shift: true, action: "newline" } satisfies KeyBinding,
+              ]}
+              onSubmit={submit}
+            />
           </box>
         </box>
         <box
@@ -211,6 +273,15 @@ export function ClawChat(props: {
           />
         </box>
       </box>
+
+      {/* Slash autocomplete popup, anchored to the textarea wrapper */}
+      <ClawAutocomplete
+        value={inputValue()}
+        slashes={props.slashes}
+        anchor={() => inputAnchor}
+        input={() => input}
+        ref={(r) => (auto = r)}
+      />
     </box>
   )
 }

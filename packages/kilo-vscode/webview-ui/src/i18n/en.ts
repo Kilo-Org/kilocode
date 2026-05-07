@@ -1004,6 +1004,11 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
   "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
+  "settings.indexing.globalEnable.title": "Enable globally",
+  "settings.indexing.globalEnable.description": "Enable indexing for every workspace.",
+  "settings.indexing.projectEnable.title": "Enable for this project",
+  "settings.indexing.projectEnable.description": "Enable indexing for this workspace when global indexing is off.",
+  "settings.indexing.projectEnable.disabledTooltip": "Global indexing is enabled, so this project is already covered.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
   "settings.indexing.model.title": "Embedding model",
@@ -1162,6 +1167,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Use a smart keybinding for triggering inline tasks",
   "settings.autocomplete.chatAutocomplete.title": "Enable chat textarea autocomplete",
   "settings.autocomplete.chatAutocomplete.description": "Show autocomplete suggestions in the chat textarea",
+  "settings.autocomplete.modelsHint": "To choose which model is used for autocompletions, see the Models settings.",
 
   "settings.notifications.agent.title": "Agent Completion",
   "settings.notifications.agent.description": "Show notification when agent completes a task",
@@ -1539,4 +1545,15 @@ export const dict = {
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
   "notifications.action.tryModelGeneric": "Try Model",
+
+  "diffViewer.source.workspace.label": "Local Changes",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
 }
