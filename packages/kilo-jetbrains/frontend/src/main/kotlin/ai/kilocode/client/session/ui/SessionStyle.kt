@@ -5,6 +5,7 @@ import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import java.awt.Color
 import java.awt.Font
 import kotlin.math.roundToInt
 
@@ -13,6 +14,8 @@ data class SessionStyle(
     val editorScheme: EditorColorsScheme,
     val editorFamily: String,
     val editorSize: Int,
+    val editorForeground: Color,
+    val editorBackground: Color,
     val transcriptFont: Font,
     val smallEditorFont: Font,
     val boldEditorFont: Font,
@@ -44,6 +47,8 @@ data class SessionStyle(
                 editorScheme = scheme,
                 editorFamily = family,
                 editorSize = size,
+                editorForeground = scheme.defaultForeground,
+                editorBackground = scheme.defaultBackground,
                 transcriptFont = Font(family, Font.PLAIN, size),
                 smallEditorFont = Font(family, Font.PLAIN, small),
                 boldEditorFont = Font(family, Font.BOLD, size),

@@ -87,6 +87,8 @@ class SessionMessageListPanel(
                 is SessionModelEvent.StateChanged,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.SessionUpdated,
+                is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
         }

@@ -51,6 +51,10 @@ const KeybindsSchema = Schema.Struct({
   messages_copy: keybind("<leader>y", "Copy message"),
   messages_undo: keybind("<leader>u", "Undo message"),
   messages_redo: keybind("<leader>r", "Redo message"),
+  // kilocode_change start - message feedback
+  messages_feedback_up: keybind("<leader>=", "Rate last assistant message helpful"),
+  messages_feedback_down: keybind("<leader>-", "Rate last assistant message not helpful"),
+  // kilocode_change end
   messages_toggle_conceal: keybind("<leader>h", "Toggle code block concealment in messages"),
   tool_details: keybind("none", "Toggle tool details visibility"),
   model_list: keybind("<leader>m", "List available models"),

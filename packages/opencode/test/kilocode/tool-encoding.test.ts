@@ -23,7 +23,7 @@ import { ReadTool } from "../../src/tool/read"
 import * as Tool from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 import { WriteTool } from "../../src/tool/write"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ctx = {
@@ -38,7 +38,7 @@ const ctx = {
 }
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const it = testEffect(

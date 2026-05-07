@@ -297,6 +297,9 @@ class KiloBackendWorkspaceTest {
         assertTrue(model.toolCall)
         assertEquals(2.0, model.recommendedIndex)
         assertEquals(listOf("low", "medium", "high"), model.variants)
+        assertEquals(200000L, model.limit?.context)
+        assertEquals(100000L, model.limit?.input)
+        assertEquals(16000L, model.limit?.output)
     }
 
     @Test
@@ -513,7 +516,7 @@ class KiloBackendWorkspaceTest {
                             "interleaved": false
                         },
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
-                        "limit": {"context": 200000, "output": 16000},
+                        "limit": {"context": 200000, "input": 100000, "output": 16000},
                         "status": "active",
                         "recommendedIndex": 2,
                         "variants": {"high": {}, "low": {}, "medium": {}},

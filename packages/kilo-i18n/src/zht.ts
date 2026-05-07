@@ -87,4 +87,9 @@ export const dict = {
     "關閉本專案的 Kilo 快照。你將失去對 Kilo 變更的撤銷/重做，但 git 仍會追蹤所有內容。",
 
   "ui.messagePart.openInDiffViewer": "在差異檢視器中開啟",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "這有幫助",
+  "ui.message.feedback.notHelpful": "這沒有幫助",
+  "ui.message.feedback.clearRating": "清除評分",
 }

@@ -11,6 +11,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -88,6 +89,9 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     override suspend fun abort(id: String, directory: String) =
         chat.abort(id, directory)
 
+    override suspend fun compact(id: String, directory: String, model: ModelSelectionDto) =
+        chat.compact(id, directory, model)
+
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
         chat.messages(id, directory)
 
@@ -108,6 +112,7 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
                 is ChatEventDto.QuestionReplied -> event.sessionID
                 is ChatEventDto.QuestionRejected -> event.sessionID
                 is ChatEventDto.SessionStatusChanged -> event.sessionID
+                is ChatEventDto.SessionUpdated -> event.sessionID
                 is ChatEventDto.SessionIdle -> event.sessionID
                 is ChatEventDto.SessionCompacted -> event.sessionID
                 is ChatEventDto.SessionDiffChanged -> event.sessionID

@@ -90,4 +90,9 @@ export const dict = {
     "이 프로젝트의 Kilo 스냅샷을 끕니다. Kilo 변경에 대한 실행 취소/다시 실행은 사용할 수 없지만 git은 여전히 모든 것을 추적합니다.",
 
   "ui.messagePart.openInDiffViewer": "Diff 뷰어에서 열기",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "도움이 됐어요",
+  "ui.message.feedback.notHelpful": "도움이 안 됐어요",
+  "ui.message.feedback.clearRating": "평가 지우기",
 }
