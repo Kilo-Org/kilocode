@@ -1,12 +1,12 @@
 // kilocode_change - new file
 import { afterEach, test, expect } from "bun:test"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 function action(name: string, ruleset: Permission.Ruleset) {

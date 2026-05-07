@@ -1536,4 +1536,14 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
+  "diffViewer.source.workspace.label": "Lokale ændringer",
+  "diffViewer.source.workspace.tooltip":
+    "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 }

@@ -92,4 +92,9 @@ export const dict = {
     "Désactivez les instantanés Kilo pour ce projet. Vous perdez l'annulation/restauration des modifications faites par Kilo, mais git continue de tout suivre.",
 
   "ui.messagePart.openInDiffViewer": "Ouvrir dans la visionneuse de différences",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "C'était utile",
+  "ui.message.feedback.notHelpful": "Ce n'était pas utile",
+  "ui.message.feedback.clearRating": "Effacer la notation",
 }

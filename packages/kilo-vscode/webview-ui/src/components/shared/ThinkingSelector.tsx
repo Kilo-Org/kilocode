@@ -7,7 +7,7 @@
  * ThinkingSelector     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, For, onCleanup, Show } from "solid-js"
+import { type Accessor, Component, createSignal, For, onCleanup, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -157,14 +157,19 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 // Chat-specific wrapper (backwards-compatible)
 // ---------------------------------------------------------------------------
 
-export const ThinkingSelector: Component = () => {
+interface ThinkingSelectorProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ThinkingSelectorBase
-      variants={session.variantList()}
-      value={session.currentVariant()}
-      onSelect={(value) => session.selectVariant(value)}
+      variants={session.variantList(id())}
+      value={session.currentVariant(id())}
+      onSelect={(value) => session.selectVariant(value, id())}
     />
   )
 }

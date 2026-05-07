@@ -1,9 +1,11 @@
 import { afterEach, describe, expect } from "bun:test"
-import { Effect } from "effect"
+import { ConfigProvider, Effect, Layer } from "effect"
 import type * as Scope from "effect/Scope"
+import { HttpRouter } from "effect/unstable/http"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { Instance } from "../../src/project/instance"
+import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
 import { Server } from "../../src/server/server"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -13,7 +15,7 @@ import { Session as SessionNs } from "@/session/session"
 import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { it } from "../lib/effect"
 
 const original = {
@@ -33,7 +35,27 @@ function app(backend: Backend, input?: { password?: string; username?: string })
   Flag.KILO_EXPERIMENTAL_HTTPAPI = backend === "httpapi"
   Flag.KILO_SERVER_PASSWORD = input?.password
   Flag.KILO_SERVER_USERNAME = input?.username
-  return backend === "httpapi" ? Server.Default().app : Server.Legacy().app
+  if (backend === "legacy") return Server.Legacy().app
+
+  const handler = HttpRouter.toWebHandler(
+    ExperimentalHttpApiServer.routes.pipe(
+      Layer.provide(
+        ConfigProvider.layer(
+          ConfigProvider.fromUnknown({
+            KILO_SERVER_PASSWORD: input?.password,
+            KILO_SERVER_USERNAME: input?.username,
+          }),
+        ),
+      ),
+    ),
+    { disableLogger: true },
+  ).handler
+  return {
+    fetch: (request: Request) => handler(request, ExperimentalHttpApiServer.context),
+    request(input: string | URL | Request, init?: RequestInit) {
+      return this.fetch(input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init))
+    },
+  }
 }
 
 function client(
@@ -123,7 +145,7 @@ function firstEvent(open: () => Promise<{ stream: AsyncIterator<unknown> }>) {
 }
 
 function record(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  return value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries(Object.entries(value)) : {}
 }
 
 function array(value: unknown) {
@@ -147,7 +169,7 @@ function sessionTitles(value: unknown) {
 
 function resetState() {
   return Effect.promise(async () => {
-    await Instance.disposeAll()
+    await disposeAllInstances()
     await resetDatabase()
   })
 }
@@ -253,7 +275,7 @@ afterEach(async () => {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = original.KILO_EXPERIMENTAL_HTTPAPI
   Flag.KILO_SERVER_PASSWORD = original.KILO_SERVER_PASSWORD
   Flag.KILO_SERVER_USERNAME = original.KILO_SERVER_USERNAME
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await resetDatabase()
 })
 
@@ -402,7 +424,7 @@ describe("HttpApi SDK", () => {
             lsp,
           }),
           project: { worktreeSelected: record(project.data).worktree === directory },
-          paths: { cwdSelected: record(paths.data).cwd === directory },
+          paths: { directorySelected: record(paths.data).directory === directory },
           file: record(file.data).content,
           hasProject: array(projects.data).length > 0,
           foundFile: JSON.stringify(findFiles.data).includes("hello.txt"),

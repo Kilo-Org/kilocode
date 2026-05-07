@@ -9,10 +9,6 @@ function rules(permission: string, ruleset?: Ruleset) {
 
 export namespace ExternalDirectoryPermission {
   export function evaluate(permission: string, pattern: string, ...sets: Array<Ruleset | undefined>) {
-    return evalRule(
-      permission,
-      pattern,
-      ...sets.map((set) => rules(permission, set)),
-    )
+    return evalRule(permission, pattern, ...sets.map((set) => rules(permission, set)))
   }
 }

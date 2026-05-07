@@ -262,6 +262,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("syncOnSessionSwitch")
   })
 
+  it("terminal context keeps the current active terminal when present", () => {
+    const text = body("onSessionMessage")
+    const check = text.indexOf("!this.terminalManager.hasActiveTerminal()")
+    const show = text.indexOf("this.terminalManager.showExisting(m.sessionID)")
+    expect(check).toBeGreaterThan(-1)
+    expect(show).toBeGreaterThan(-1)
+    expect(check, "active terminal check must guard session terminal reveal").toBeLessThan(show)
+  })
+
   it("session routing handles clearSession for SSE re-registration", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("clearSession")

@@ -50,14 +50,20 @@ class SessionMessageListPanel(
                 is SessionModelEvent.TurnUpdated -> onTurnUpdated(event.turn)
                 is SessionModelEvent.TurnRemoved -> onTurnRemoved(event.id)
 
-                is SessionModelEvent.ContentAdded ->
+                is SessionModelEvent.ContentAdded -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    refresh()
+                }
 
-                is SessionModelEvent.ContentUpdated ->
+                is SessionModelEvent.ContentUpdated -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    refresh()
+                }
 
-                is SessionModelEvent.ContentRemoved ->
+                is SessionModelEvent.ContentRemoved -> {
                     msgToView[event.messageId]?.removePart(event.contentId)
+                    refresh()
+                }
 
                 is SessionModelEvent.ContentDelta -> {
                     // Use the full current content from the model rather than
@@ -67,6 +73,7 @@ class SessionMessageListPanel(
                     // on first appendDelta and fires both events in sequence).
                     val content = model.content(event.messageId, event.contentId)
                     if (content != null) msgToView[event.messageId]?.upsertPart(content)
+                    refresh()
                 }
 
                 is SessionModelEvent.HistoryLoaded -> rebuild()
@@ -80,6 +87,8 @@ class SessionMessageListPanel(
                 is SessionModelEvent.StateChanged,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.SessionUpdated,
+                is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
         }

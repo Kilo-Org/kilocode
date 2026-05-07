@@ -3,7 +3,7 @@ import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
-import { resolveLocalDiffTarget } from "../review-utils"
+import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
@@ -417,7 +417,7 @@ export class AgentManagerProvider implements Disposable {
     }
 
     if (m.type === "requestTerminalContext") {
-      if (m.sessionID) this.terminalManager.showExisting(m.sessionID)
+      if (m.sessionID && !this.terminalManager.hasActiveTerminal()) this.terminalManager.showExisting(m.sessionID)
       return msg
     }
 

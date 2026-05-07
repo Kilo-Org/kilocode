@@ -430,12 +430,16 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     // kilocode_change start - safe fallback to kilo import if store lookup fails
     const values = createMemo(() => {
       const active = store.themes[store.active]
-      if (active) return resolveTheme(active, store.mode)
+      if (active) {
+        return resolveTheme(active, store.mode)
+      }
 
       const saved = kv.get("theme")
       if (typeof saved === "string") {
         const theme = store.themes[saved]
-        if (theme) return resolveTheme(theme, store.mode)
+        if (theme) {
+          return resolveTheme(theme, store.mode)
+        }
       }
 
       return resolveTheme(store.themes.kilo, store.mode) // kilocode_change

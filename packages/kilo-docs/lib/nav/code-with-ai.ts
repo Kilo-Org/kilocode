@@ -80,6 +80,7 @@ export const CodeWithAiNav: NavSection[] = [
         children: "Git Commit Generation",
       },
       { href: "/code-with-ai/features/speech-to-text", children: "Voice Transcription" },
+      { href: "/code-with-ai/features/message-feedback", children: "Message Feedback" },
       {
         href: "/code-with-ai/features/browser-use",
         children: "Agent Behavior",

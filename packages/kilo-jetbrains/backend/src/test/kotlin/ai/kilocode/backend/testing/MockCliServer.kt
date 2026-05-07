@@ -55,12 +55,16 @@ class MockCliServer : AutoCloseable {
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionStatuses = "{}"
+    @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
     @Volatile var sessionCreateStatus = 200
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
     @Volatile var sessionStatusesStatus = 200
+    @Volatile var summarizeStatus = 200
+    @Volatile var lastSummarizePath: String? = null
+    @Volatile var lastSummarizeBody: String? = null
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -173,11 +177,16 @@ class MockCliServer : AutoCloseable {
             val method = parts[0]
             val path = parts[1]
 
-            // Read all headers
+            var len = 0
             while (true) {
                 val header = input.readLine()
                 if (header.isNullOrBlank()) break
+                val parts = header.split(":", limit = 2)
+                if (parts.size == 2 && parts[0].equals("Content-Length", ignoreCase = true)) {
+                    len = parts[1].trim().toIntOrNull() ?: 0
+                }
             }
+            val body = if (len > 0) CharArray(len).also { input.read(it, 0, len) }.concatToString() else ""
 
             val output = BufferedWriter(OutputStreamWriter(socket.getOutputStream()))
             val bare = path.substringBefore("?")
@@ -218,6 +227,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, sessionGetStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "DELETE" ->
                     respond(output, sessionDeleteStatus, "true")
+                bare.matches(Regex("/session/ses_[^/]+/summarize")) && method == "POST" -> {
+                    lastSummarizePath = path
+                    lastSummarizeBody = body
+                    respond(output, summarizeStatus, summarizeResponse)
+                }
                 else -> respond(output, 404, """{"error":"Not found"}""")
             }
         } catch (_: SocketException) {
