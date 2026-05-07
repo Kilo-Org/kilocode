@@ -6,7 +6,7 @@ import {
   type IndexingTelemetryEvent,
   type VectorStoreSearchResult,
 } from "@kilocode/kilo-indexing/engine"
-import { toIndexingConfigInput } from "@kilocode/kilo-indexing/config"
+import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-indexing/config"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
 import {
   IndexingStatus,
@@ -159,6 +159,13 @@ export namespace KiloIndexing {
   export const Status = IndexingStatus
   export type Status = z.infer<typeof Status>
 
+  export function input(config?: IndexingConfig, global?: IndexingConfig) {
+    return toIndexingConfigInput({
+      ...config,
+      enabled: config?.enabled === true || global?.enabled === true,
+    })
+  }
+
   // Mirror of IndexingStatus using Effect Schema for BusEvent.define, which
   // requires a Schema.Top. The zod form above is kept for consumers that still
   // depend on the z.infer-derived type.
@@ -244,7 +251,12 @@ export namespace KiloIndexing {
     const root = path.join(Global.Path.state, "indexing")
     const manager = new CodeIndexManager(dir, root)
     const auth = await kiloAuth(cfg)
-    const input = enrichKilo(toIndexingConfigInput(indexingWithKiloDefault(cfg, auth) as Config.Indexing | undefined), auth)
+    const globalConfig = await Config.getGlobal()
+    const merged = indexingWithKiloDefault(
+      { ...cfg, indexing: { ...globalConfig.indexing, ...cfg.indexing } },
+      auth,
+    ) as Config.Indexing | undefined
+    const cfgInput = enrichKilo(input(merged, globalConfig.indexing), auth)
     const box = { status: pending() as Status | undefined }
     const current = () => box.status ?? normalizeIndexingStatus(manager)
     let disposed = false
@@ -284,8 +296,8 @@ export namespace KiloIndexing {
     if (hit.disposed) return base
 
     // kilocode_change start
-    const err = await LanceDBRuntime.ensure(input.vectorStoreProvider)
-      .then(() => manager.initialize(input))
+    const err = await LanceDBRuntime.ensure(cfgInput.vectorStoreProvider)
+      .then(() => manager.initialize(cfgInput))
       .then(
         () => undefined,
         (err) => err,

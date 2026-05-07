@@ -4,12 +4,10 @@ import { GitOps } from "../../agent-manager/GitOps"
 import { diffSummary, diffFile } from "../../agent-manager/local-diff"
 import type { WorktreeDiffEntry } from "../../agent-manager/types"
 import { WorktreeDiffClient, type DiffTarget } from "../shared/client"
-import { hashFileDiffs } from "../shared/hash"
 import { resolveLocalDiffTarget } from "../shared/target"
-import { DIFF_POLL_INTERVAL_MS } from "../polling"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
-import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
+import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 
 export const WORKSPACE_SOURCE_ID = "workspace"
 
@@ -21,137 +19,74 @@ export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
 }
 
 /**
- * Diffs between the local working tree and the base branch. Polls a summary
- * (one entry per changed file, no content) every {@link DIFF_POLL_INTERVAL_MS},
- * then loads `before`/`after`/`patch` per file on demand via {@link requestFile}.
- *
- * Mirrors the Agent Manager's `WorktreeDiffController` and runs entirely in
- * the extension host (no `kilo serve` round-trip)
+ * Diffs between the local working tree and the base branch. Each fetch returns
+ * a summary (one entry per changed file, no content); the viewer loads
+ * `before`/`after` per file on demand via `fetchFile`. Runs entirely in the
+ * extension host — no `kilo serve` round-trip.
  */
-export class WorktreeDiffSource implements DiffSource {
-  readonly descriptor = WORKSPACE_DESCRIPTOR
+export function createWorktreeDiffSource(connection: KiloConnectionService): DiffSource {
+  const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
+  const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
+  const git = new GitOps({ log })
 
-  private readonly git: GitOps
-  private readonly output: vscode.OutputChannel
-  private target: DiffTarget | undefined
-  private lastHash: string | undefined
-  private interval: ReturnType<typeof setInterval> | undefined
-  private post: DiffSourcePost | undefined
+  // Cached between fetches so repeated polling doesn't re-resolve the base
+  // branch every tick. Reset only on dispose (when the source is swapped out).
+  let target: DiffTarget | undefined
 
-  constructor(private readonly connection: KiloConnectionService) {
-    this.git = new GitOps({ log: (...args) => this.log(...args) })
-    this.output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
+  const resolveTarget = async (): Promise<DiffTarget | undefined> => {
+    if (target) return target
+    target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
+    return target
   }
 
-  async initialFetch(post: DiffSourcePost): Promise<void> {
-    this.post = post
-    post({ type: "loading", loading: true })
+  return {
+    descriptor: WORKSPACE_DESCRIPTOR,
 
-    const target = await this.resolveTarget()
-    if (!target) {
-      post({ type: "diffs", diffs: [] })
-      post({ type: "loading", loading: false })
-      return
-    }
+    async fetch(): Promise<DiffSourceFetch> {
+      const current = await resolveTarget()
+      if (!current) return { diffs: [] }
 
-    this.target = target
-    await this.fetchAndPost(target, post, true)
-    post({ type: "loading", loading: false })
-  }
-
-  start(post: DiffSourcePost): vscode.Disposable {
-    this.post = post
-    this.stopPolling()
-    this.interval = setInterval(() => {
-      void this.poll(post)
-    }, DIFF_POLL_INTERVAL_MS)
-
-    return new vscode.Disposable(() => this.stopPolling())
-  }
-
-  async revertFile(file: string): Promise<{ ok: boolean; message: string }> {
-    const target = this.target ?? (await this.resolveTarget())
-    if (!target) {
-      return { ok: false, message: "Could not resolve diff target" }
-    }
-
-    try {
-      const client = this.connection.getClient()
-      const diff = new WorktreeDiffClient(client, this.git, (...args) => this.log(...args))
-      const result = await diff.revertFile(target, file)
-      if (result.ok && this.post) void this.poll(this.post)
-      return result
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      this.log("Failed to revert file:", message)
-      return { ok: false, message }
-    }
-  }
-
-  async requestFile(file: string): Promise<DiffFile | null> {
-    if (!file) return null
-    const target = this.target ?? (await this.resolveTarget())
-    if (!target) return null
-    this.target = target
-
-    try {
-      const entry = await diffFile(this.git, target.directory, target.baseBranch, file, (...args) => this.log(...args))
-      if (!entry) return null
-      return toDiffFile(entry)
-    } catch (err) {
-      this.log("Failed to fetch worktree diff file:", err)
-      return null
-    }
-  }
-
-  dispose(): void {
-    this.stopPolling()
-    this.git.dispose()
-    this.output.dispose()
-    this.post = undefined
-    this.target = undefined
-    this.lastHash = undefined
-  }
-
-  private async resolveTarget(): Promise<DiffTarget | undefined> {
-    return await resolveLocalDiffTarget(this.git, (...args) => this.log(...args), getWorkspaceRoot())
-  }
-
-  private async fetchAndPost(target: DiffTarget, post: DiffSourcePost, force: boolean): Promise<void> {
-    try {
-      const entries = await diffSummary(this.git, target.directory, target.baseBranch, (...args) => this.log(...args))
+      const entries = await diffSummary(git, current.directory, current.baseBranch, log)
       const diffs = entries.map(toDiffFile)
-      const hash = hashFileDiffs(diffs as never)
-      if (!force && hash === this.lastHash) return
-      this.lastHash = hash
+      log(`Diff: ${diffs.length} file(s)`)
+      return { diffs }
+    },
 
-      this.log(`Diff: ${diffs.length} file(s)`)
-      post({ type: "diffs", diffs })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      this.log("Failed to fetch diff:", message)
-      if (force) post({ type: "error", message })
-    }
-  }
+    async fetchFile(file: string): Promise<DiffFile | null> {
+      if (!file) return null
+      const current = await resolveTarget()
+      if (!current) return null
 
-  private async poll(post: DiffSourcePost): Promise<void> {
-    const target = this.target
-    if (!target) {
-      await this.initialFetch(post)
-      return
-    }
-    await this.fetchAndPost(target, post, false)
-  }
+      try {
+        const entry = await diffFile(git, current.directory, current.baseBranch, file, log)
+        if (!entry) return null
+        return toDiffFile(entry)
+      } catch (err) {
+        log("Failed to fetch worktree diff file:", err)
+        return null
+      }
+    },
 
-  private stopPolling(): void {
-    if (this.interval) {
-      clearInterval(this.interval)
-      this.interval = undefined
-    }
-  }
+    async revert(file: string): Promise<{ ok: boolean; message: string }> {
+      const current = await resolveTarget()
+      if (!current) return { ok: false, message: "Could not resolve diff target" }
 
-  private log(...args: unknown[]): void {
-    appendOutput(this.output, "WorktreeDiffSource", ...args)
+      try {
+        const client = connection.getClient()
+        const diff = new WorktreeDiffClient(client, git, log)
+        return await diff.revertFile(current, file)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        log("Failed to revert file:", message)
+        return { ok: false, message }
+      }
+    },
+
+    dispose(): void {
+      git.dispose()
+      output.dispose()
+      target = undefined
+    },
   }
 }
 

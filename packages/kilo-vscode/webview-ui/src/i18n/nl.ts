@@ -1042,6 +1042,13 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Indexering inschakelen",
   "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
+  "settings.indexing.globalEnable.title": "Globaal inschakelen",
+  "settings.indexing.globalEnable.description": "Indexering inschakelen voor elke werkruimte.",
+  "settings.indexing.projectEnable.title": "Inschakelen voor dit project",
+  "settings.indexing.projectEnable.description":
+    "Indexering inschakelen voor deze werkruimte wanneer globale indexering is uitgeschakeld.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globale indexering is ingeschakeld, dus dit project is al opgenomen.",
   "settings.indexing.provider.title": "Embedding-provider",
   "settings.indexing.provider.description":
     "Kies de provider die wordt gebruikt om embeddings te genereren voor semantisch zoeken.",

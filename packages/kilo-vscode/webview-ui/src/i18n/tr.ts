@@ -1041,6 +1041,13 @@ export const dict = {
   "settings.indexing.status.title": "Durum",
   "settings.indexing.enable.title": "İndekslemeyi etkinleştir",
   "settings.indexing.enable.description": "Anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.globalEnable.title": "Genel olarak etkinleştir",
+  "settings.indexing.globalEnable.description": "Her çalışma alanı için dizine eklemeyi etkinleştir.",
+  "settings.indexing.projectEnable.title": "Bu proje için etkinleştir",
+  "settings.indexing.projectEnable.description":
+    "Genel dizine ekleme kapalı olduğunda bu çalışma alanı için dizine eklemeyi etkinleştir.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Küresel indeksleme etkinleştirildi, bu nedenle bu proje zaten kapsanıyor.",
   "settings.indexing.provider.title": "Yerleştirme sağlayıcısı",
   "settings.indexing.provider.description":
     "Anlamsal arama için yerleştirmeleri oluşturmak amacıyla kullanılacak sağlayıcıyı seçin.",

@@ -1,5 +1,34 @@
 # @kilocode/cli
 
+## 7.2.44
+
+### Minor Changes
+
+- [#9764](https://github.com/Kilo-Org/kilocode/pull/9764) [`9886674`](https://github.com/Kilo-Org/kilocode/commit/98866740afd7f6c2fd06fecda1ffc69c1703974e) - Migrate KiloClaw chat to the new kilo-chat backend. Replaces the single-channel Stream Chat integration with a multi-conversation experience that matches the web UX at app.kilo.ai/claw/kilo-chat: conversation list, reactions, typing indicators, editing, and action approvals. The TUI continues to render a single chat view backed by the user's primary conversation.
+
+- [#9718](https://github.com/Kilo-Org/kilocode/pull/9718) [`dcaccf3`](https://github.com/Kilo-Org/kilocode/commit/dcaccf38658415819b72390255b9f6555e4795e5) - Rate assistant responses with thumbs up/down. Click the thumbs buttons next to the copy button on any assistant message, or press `<leader>=` / `<leader>-` in the terminal UI. Only shown when telemetry is enabled; feedback is sent to Kilo to help improve model and prompt quality.
+
+### Patch Changes
+
+- [#9915](https://github.com/Kilo-Org/kilocode/pull/9915) [`bcb47be`](https://github.com/Kilo-Org/kilocode/commit/bcb47be3b0cf71990fd3ee1ec562a716aefe3571) - Preserve the selected thinking level after compacting a session.
+
+- [#9997](https://github.com/Kilo-Org/kilocode/pull/9997) [`de9f11e`](https://github.com/Kilo-Org/kilocode/commit/de9f11e3990a818ff6d7184f5ea85ee1409a475f) - Fix gpt-5 models failing with `Unsupported parameter: max_tokens` when accessed through custom OpenAI-compatible providers such as LiteLLM.
+
+- [#9993](https://github.com/Kilo-Org/kilocode/pull/9993) [`98f5f65`](https://github.com/Kilo-Org/kilocode/commit/98f5f65c1a8a543687ae5b308805eec1a2c23dca) - Support global and per-project codebase indexing enablement.
+
+- [#9975](https://github.com/Kilo-Org/kilocode/pull/9975) [`c1ea810`](https://github.com/Kilo-Org/kilocode/commit/c1ea8100e13f44a260edf2ac2c027bd69f72deb3) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Honor configured permission overrides in Ask and Plan modes, including persisted always-allow rules.
+
+- [#10006](https://github.com/Kilo-Org/kilocode/pull/10006) [`9e17137`](https://github.com/Kilo-Org/kilocode/commit/9e17137870556c69a141a6e18c63e67919375305) - Recover sessions when providers end a response with an error finish but no error details.
+
+- [#9921](https://github.com/Kilo-Org/kilocode/pull/9921) [`e5e9d0b`](https://github.com/Kilo-Org/kilocode/commit/e5e9d0ba37bd1065aea5a9a83834c6749121e5bd) - Remove custom providers from settings when disconnecting them so they do not reappear after being disabled and re-enabled.
+
+- Updated dependencies [[`9886674`](https://github.com/Kilo-Org/kilocode/commit/98866740afd7f6c2fd06fecda1ffc69c1703974e), [`e5e9d0b`](https://github.com/Kilo-Org/kilocode/commit/e5e9d0ba37bd1065aea5a9a83834c6749121e5bd)]:
+  - @kilocode/kilo-gateway@7.3.0
+  - @kilocode/sdk@7.3.0
+  - @kilocode/kilo-indexing@7.2.43
+  - @kilocode/kilo-telemetry@7.2.43
+  - @kilocode/plugin@7.2.43
+
 ## 7.2.42
 
 ### Minor Changes

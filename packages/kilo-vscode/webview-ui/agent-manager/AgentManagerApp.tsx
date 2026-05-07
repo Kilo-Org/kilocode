@@ -83,7 +83,7 @@ import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
 import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
-import { LanguageBridge, DataBridge } from "../src/App"
+import { LanguageBridge, DataBridge, MermaidDownloadBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
@@ -122,7 +122,6 @@ import { createMarkdownRender } from "./review-preferences"
 import { setTabWidths } from "./tab-widths"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
-
 const REVIEW_TAB_ID = "review"
 
 interface SetupState {
@@ -3141,6 +3140,7 @@ export const AgentManagerApp: Component = () => {
     <ThemeProvider defaultTheme="kilo-vscode">
       <DialogProvider>
         <VSCodeProvider>
+          <MermaidDownloadBridge />
           <ServerProvider>
             <LanguageBridge>
               <MarkedProvider>

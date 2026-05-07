@@ -1300,6 +1300,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         yield* revert.cleanup(session)
         // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
+        yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
@@ -1628,6 +1629,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 yield* sessions.updateMessage(handle.message)
                 return "break" as const
               }
+              // kilocode_change start
+              if (handle.message.finish === "error") {
+                KiloSessionProcessor.providerFinishError(handle.message)
+                yield* sessions.updateMessage(handle.message)
+                closeReasons.set(sessionID, "error")
+                return "break" as const
+              }
+              // kilocode_change end
             }
 
             // kilocode_change start
@@ -1684,6 +1693,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     ) {
       // kilocode_change start
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
+      yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID)),

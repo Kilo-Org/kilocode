@@ -1,10 +1,7 @@
-import * as vscode from "vscode"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
-import type { DiffFile } from "../types"
-import { hashFileDiffs } from "../shared/hash"
-import { DIFF_POLL_INTERVAL_MS } from "../polling"
-import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "./types"
 import { normalize, text } from "@kilocode/kilo-ui/session-diff"
+import type { DiffFile } from "../types"
+import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
 
 export type SessionDiffFetch = (params: { sessionID: string; directory?: string }) => Promise<SnapshotFileDiff[]>
 
@@ -26,109 +23,59 @@ export function sessionDescriptor(sessionId: string): DiffSourceDescriptor {
 }
 
 /**
- * Diff for the current session. Initial fetch + 2.5s polling with hash dedup
+ * Diff for the current session. Returns file diffs from the SDK's session
+ * snapshot endpoint, or a `snapshots-disabled` notice if snapshotting is
+ * turned off in the workspace config (in which case the controller stops
+ * polling because repeated fetches can't surface new data).
  */
-export class SessionDiffSource implements DiffSource {
-  readonly descriptor: DiffSourceDescriptor
+export function createSessionDiffSource(
+  sessionId: string,
+  fetch: SessionDiffFetch,
+  workspaceRoot?: string,
+  checkSnapshotsEnabled?: SnapshotEnabledCheck,
+): DiffSource {
+  // Cached across fetches so subsequent polling ticks skip the config lookup.
+  let snapshotsDisabled = false
 
-  private lastHash: string | undefined
-  private interval: ReturnType<typeof setInterval> | undefined
-  private disposed = false
+  return {
+    descriptor: sessionDescriptor(sessionId),
 
-  private snapshotsDisabled = false
+    async fetch(): Promise<DiffSourceFetch> {
+      if (snapshotsDisabled) {
+        return { diffs: [], notice: "snapshots-disabled", stopPolling: true }
+      }
 
-  constructor(
-    private readonly sessionId: string,
-    private readonly fetch: SessionDiffFetch,
-    private readonly workspaceRoot?: string,
-    private readonly checkSnapshotsEnabled?: SnapshotEnabledCheck,
-  ) {
-    this.descriptor = sessionDescriptor(sessionId)
-  }
-
-  async initialFetch(post: DiffSourcePost): Promise<void> {
-    post({ type: "loading", loading: true })
-
-    try {
-      if (this.checkSnapshotsEnabled) {
-        const enabled = await this.checkSnapshotsEnabled(this.workspaceRoot)
-        if (this.disposed) return
+      if (checkSnapshotsEnabled) {
+        const enabled = await checkSnapshotsEnabled(workspaceRoot)
         if (!enabled) {
-          this.snapshotsDisabled = true
-          post({ type: "notice", notice: "snapshots-disabled" })
-          post({ type: "diffs", diffs: [] })
-          return
+          snapshotsDisabled = true
+          return { diffs: [], notice: "snapshots-disabled", stopPolling: true }
         }
       }
 
-      const diffs = await this.fetchDiffs()
-      if (this.disposed) return
-      this.lastHash = hashFileDiffs(diffs as never)
-      post({ type: "diffs", diffs })
-    } catch (err) {
-      if (this.disposed) return
-      const message = err instanceof Error ? err.message : String(err)
-      post({ type: "error", message })
-    } finally {
-      if (!this.disposed) post({ type: "loading", loading: false })
-    }
+      const raw = await fetch({ sessionID: sessionId, directory: workspaceRoot })
+      return { diffs: raw.map(toSessionDiffFile) }
+    },
   }
+}
 
-  start(post: DiffSourcePost): vscode.Disposable {
-    this.stopPolling()
-    // Skip polling entirely when snapshots are disabled — nothing to fetch.
-    if (this.snapshotsDisabled) return new vscode.Disposable(() => {})
-    this.interval = setInterval(() => {
-      void this.poll(post)
-    }, DIFF_POLL_INTERVAL_MS)
-
-    return new vscode.Disposable(() => this.stopPolling())
-  }
-
-  dispose(): void {
-    this.disposed = true
-    this.stopPolling()
-    this.lastHash = undefined
-  }
-
-  private async fetchDiffs(): Promise<DiffFile[]> {
-    const raw = await this.fetch({ sessionID: this.sessionId, directory: this.workspaceRoot })
-    return raw.map((r) => {
-      // Empty patch means binary or summarized (>256 KB) — normalize() can't
-      // parse it, so short-circuit to empty strings.
-      const view = r.patch === "" ? null : normalize(r)
-      return {
-        file: r.file,
-        before: view ? text(view, "deletions") : "",
-        after: view ? text(view, "additions") : "",
-        additions: r.additions,
-        deletions: r.deletions,
-        status: r.status,
-        tracked: true,
-        generatedLike: false,
-        summarized: r.patch === "",
-      }
-    })
-  }
-
-  private async poll(post: DiffSourcePost): Promise<void> {
-    try {
-      const diffs = await this.fetchDiffs()
-      if (this.disposed) return
-      const hash = hashFileDiffs(diffs as never)
-      if (hash === this.lastHash) return
-      this.lastHash = hash
-      post({ type: "diffs", diffs })
-    } catch (err) {
-      if (this.disposed) return
-      console.log("[Kilo New] SessionDiffSource.poll error", err)
-    }
-  }
-
-  private stopPolling(): void {
-    if (this.interval) {
-      clearInterval(this.interval)
-      this.interval = undefined
-    }
+/**
+ * Project a backend `SnapshotFileDiff` onto the `DiffFile` shape the viewer
+ * expects. Shared with `createTurnDiffSource` since both hit the same endpoint.
+ */
+export function toSessionDiffFile(raw: SnapshotFileDiff): DiffFile {
+  // Empty patch means binary or summarized (>256 KB) — normalize() can't
+  // parse it, so short-circuit to empty strings.
+  const view = raw.patch === "" ? null : normalize(raw)
+  return {
+    file: raw.file,
+    before: view ? text(view, "deletions") : "",
+    after: view ? text(view, "additions") : "",
+    additions: raw.additions,
+    deletions: raw.deletions,
+    status: raw.status,
+    tracked: true,
+    generatedLike: false,
+    summarized: raw.patch === "",
   }
 }

@@ -186,7 +186,14 @@ const live: Layer.Layer<
             : undefined,
           topP: input.agent.topP ?? ProviderTransform.topP(input.model),
           topK: ProviderTransform.topK(input.model),
-          maxOutputTokens: ProviderTransform.maxOutputTokens(input.model),
+          // kilocode_change start - gpt-5 via @ai-sdk/openai-compatible proxies (e.g. LiteLLM)
+          // rejects `max_tokens`; OpenAI requires `max_completion_tokens` and the compatible
+          // SDK cannot rename the field, so drop the cap and let the upstream default apply.
+          maxOutputTokens:
+            input.model.api.npm === "@ai-sdk/openai-compatible" && input.model.api.id.toLowerCase().includes("gpt-5")
+              ? undefined
+              : ProviderTransform.maxOutputTokens(input.model),
+          // kilocode_change end
           options,
         },
       )

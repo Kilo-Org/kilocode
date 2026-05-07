@@ -768,6 +768,13 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.globalEnable.title": "Aktivér globalt",
+  "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
+  "settings.indexing.projectEnable.title": "Aktivér for dette projekt",
+  "settings.indexing.projectEnable.description":
+    "Aktivér indeksering for dette arbejdsområde, når global indeksering er slået fra.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktiveret, så dette projekt er allerede dækket.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",

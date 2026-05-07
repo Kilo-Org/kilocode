@@ -1203,6 +1203,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Wymiar wektora",
   "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
+  "settings.indexing.globalEnable.title": "Włącz globalnie",
+  "settings.indexing.globalEnable.description": "Włącz indeksowanie dla każdego obszaru roboczego.",
+  "settings.indexing.projectEnable.title": "Włącz dla tego projektu",
+  "settings.indexing.projectEnable.description":
+    "Włącz indeksowanie dla tego obszaru roboczego, gdy globalne indeksowanie jest wyłączone.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globalne indeksowanie jest włączone, więc ten projekt jest już uwzględniony.",
   "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",
   "settings.indexing.lancedbDirectory.title": "Katalog LanceDB",

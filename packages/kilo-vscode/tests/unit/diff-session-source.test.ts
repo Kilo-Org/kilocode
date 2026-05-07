@@ -1,7 +1,11 @@
 import { describe, it, expect } from "bun:test"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
-import { SessionDiffSource, type SessionDiffFetch, type SnapshotEnabledCheck } from "../../src/diff/sources/session"
-import type { DiffSourceMessage } from "../../src/diff/sources/types"
+import {
+  createSessionDiffSource,
+  sessionDescriptor,
+  type SessionDiffFetch,
+  type SnapshotEnabledCheck,
+} from "../../src/diff/sources/session"
 
 type FetchCall = { sessionID: string; directory?: string }
 
@@ -15,11 +19,6 @@ function recording(result: SnapshotFileDiff[] | Error): { fetch: SessionDiffFetc
   return { fetch, calls }
 }
 
-function collect(): { post: (msg: DiffSourceMessage) => void; messages: DiffSourceMessage[] } {
-  const messages: DiffSourceMessage[] = []
-  return { post: (msg) => messages.push(msg), messages }
-}
-
 const modifiedPatch = [
   "diff --git a/foo.ts b/foo.ts",
   "--- a/foo.ts",
@@ -30,20 +29,15 @@ const modifiedPatch = [
   "+new",
 ].join("\n")
 
-describe("SessionDiffSource.initialFetch", () => {
-  it("posts loading/diffs/loading for an empty session", async () => {
+describe("createSessionDiffSource.fetch", () => {
+  it("returns empty diffs for an empty session", async () => {
     const { fetch, calls } = recording([])
-    const source = new SessionDiffSource("s1", fetch, "/repo")
-    const { post, messages } = collect()
+    const source = createSessionDiffSource("s1", fetch, "/repo")
 
-    await source.initialFetch(post)
+    const result = await source.fetch()
 
     expect(calls).toEqual([{ sessionID: "s1", directory: "/repo" }])
-    expect(messages).toEqual([
-      { type: "loading", loading: true },
-      { type: "diffs", diffs: [] },
-      { type: "loading", loading: false },
-    ])
+    expect(result).toEqual({ diffs: [] })
   })
 
   it("converts patches into before/after diffs", async () => {
@@ -64,16 +58,13 @@ describe("SessionDiffSource.initialFetch", () => {
       },
     ]
     const { fetch } = recording(raw)
-    const source = new SessionDiffSource("s2", fetch, "/repo")
-    const { post, messages } = collect()
+    const source = createSessionDiffSource("s2", fetch, "/repo")
 
-    await source.initialFetch(post)
+    const result = await source.fetch()
 
-    const diffsMsg = messages.find((m) => m.type === "diffs")
-    if (diffsMsg?.type !== "diffs") throw new Error("expected diffs message")
-    expect(diffsMsg.diffs).toHaveLength(2)
+    expect(result.diffs).toHaveLength(2)
 
-    const foo = diffsMsg.diffs[0]!
+    const foo = result.diffs[0]!
     expect(foo.file).toBe("foo.ts")
     expect(foo.before).toBe("keep\nold\n")
     expect(foo.after).toBe("keep\nnew\n")
@@ -84,94 +75,80 @@ describe("SessionDiffSource.initialFetch", () => {
     expect(foo.generatedLike).toBe(false)
     expect(foo.summarized).toBe(false)
 
-    const big = diffsMsg.diffs[1]!
+    const big = result.diffs[1]!
     expect(big.summarized).toBe(true)
     expect(big.before).toBe("")
     expect(big.after).toBe("")
   })
 
-  it("reports an error when the fetch throws", async () => {
+  it("propagates errors from the underlying fetch", async () => {
     const { fetch } = recording(new Error("network down"))
-    const source = new SessionDiffSource("s3", fetch)
-    const { post, messages } = collect()
+    const source = createSessionDiffSource("s3", fetch)
 
-    await source.initialFetch(post)
-
-    expect(messages).toEqual([
-      { type: "loading", loading: true },
-      { type: "error", message: "network down" },
-      { type: "loading", loading: false },
-    ])
+    await expect(source.fetch()).rejects.toThrow("network down")
   })
 
   it("calls fetch without directory when workspaceRoot is not given", async () => {
     const { fetch, calls } = recording([])
-    const source = new SessionDiffSource("s4", fetch)
-    const { post } = collect()
+    const source = createSessionDiffSource("s4", fetch)
 
-    await source.initialFetch(post)
+    await source.fetch()
 
     expect(calls).toEqual([{ sessionID: "s4", directory: undefined }])
   })
 })
 
-describe("SessionDiffSource lifecycle", () => {
-  it("dispose does not throw", () => {
-    const { fetch } = recording([])
-    const source = new SessionDiffSource("s6", fetch)
-    source.dispose()
-  })
-
-  it("descriptor id encodes the session id", () => {
-    const { fetch } = recording([])
-    const source = new SessionDiffSource("abc", fetch)
+describe("createSessionDiffSource descriptor", () => {
+  it("encodes the session id in the descriptor", () => {
+    const source = createSessionDiffSource("abc", recording([]).fetch)
     expect(source.descriptor.id).toBe("session:abc")
     expect(source.descriptor.group).toBe("Session")
     expect(source.descriptor.capabilities).toEqual({ revert: false, comments: true })
   })
 
-  it("posts the snapshots-disabled notice and skips fetch when the check returns false", async () => {
+  it("exposes a stable descriptor helper", () => {
+    expect(sessionDescriptor("xyz").id).toBe("session:xyz")
+  })
+})
+
+describe("createSessionDiffSource snapshot check", () => {
+  it("returns the snapshots-disabled notice and skips fetch when the check returns false", async () => {
     const { fetch, calls } = recording([
       { file: "foo.ts", patch: modifiedPatch, additions: 1, deletions: 1, status: "modified" },
     ])
     const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => false
-    const source = new SessionDiffSource("s-disabled", fetch, "/repo", checkSnapshotsEnabled)
-    const { post, messages } = collect()
+    const source = createSessionDiffSource("s-disabled", fetch, "/repo", checkSnapshotsEnabled)
 
-    await source.initialFetch(post)
+    const result = await source.fetch()
 
     expect(calls).toEqual([])
-    expect(messages).toEqual([
-      { type: "loading", loading: true },
-      { type: "notice", notice: "snapshots-disabled" },
-      { type: "diffs", diffs: [] },
-      { type: "loading", loading: false },
-    ])
+    expect(result).toEqual({ diffs: [], notice: "snapshots-disabled", stopPolling: true })
+  })
+
+  it("caches the disabled state so subsequent fetches skip the config lookup", async () => {
+    const { fetch } = recording([])
+    let checks = 0
+    const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => {
+      checks++
+      return false
+    }
+    const source = createSessionDiffSource("s-cache", fetch, "/repo", checkSnapshotsEnabled)
+
+    await source.fetch()
+    await source.fetch()
+
+    expect(checks).toBe(1)
   })
 
   it("fetches normally when snapshots are enabled", async () => {
     const { fetch, calls } = recording([])
     const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => true
-    const source = new SessionDiffSource("s-enabled", fetch, "/repo", checkSnapshotsEnabled)
-    const { post, messages } = collect()
+    const source = createSessionDiffSource("s-enabled", fetch, "/repo", checkSnapshotsEnabled)
 
-    await source.initialFetch(post)
+    const result = await source.fetch()
 
     expect(calls).toEqual([{ sessionID: "s-enabled", directory: "/repo" }])
-    expect(messages.some((m) => m.type === "notice")).toBe(false)
-    expect(messages.filter((m) => m.type === "diffs")).toHaveLength(1)
-  })
-
-  it("start() is a no-op when snapshots are disabled", async () => {
-    const { fetch } = recording([])
-    const checkSnapshotsEnabled: SnapshotEnabledCheck = async () => false
-    const source = new SessionDiffSource("s-disabled-2", fetch, "/repo", checkSnapshotsEnabled)
-    const { post } = collect()
-
-    await source.initialFetch(post)
-    const disposable = source.start(post)
-    expect(typeof disposable.dispose).toBe("function")
-    // Disposing must not throw even though no interval was scheduled.
-    disposable.dispose()
+    expect(result.notice).toBeUndefined()
+    expect(result.stopPolling).toBeUndefined()
   })
 })

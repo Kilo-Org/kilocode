@@ -52,6 +52,7 @@ function createFetch() {
         return json([])
       case "/config":
       case "/experimental/resource":
+      case "/global/config": // kilocode_change
       case "/mcp":
       case "/provider/auth":
       case "/session/status":

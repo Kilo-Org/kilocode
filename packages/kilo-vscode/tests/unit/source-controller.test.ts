@@ -1,7 +1,6 @@
 import { describe, it, expect } from "bun:test"
-import * as vscode from "vscode"
 import { SourceController } from "../../src/diff/SourceController"
-import type { DiffSource, DiffSourceDescriptor, DiffSourcePost } from "../../src/diff/sources/types"
+import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "../../src/diff/sources/types"
 
 const WORKSPACE_DESC: DiffSourceDescriptor = {
   id: "workspace",
@@ -15,10 +14,6 @@ const SESSION_DESC: DiffSourceDescriptor = {
   type: "session",
   group: "Session",
   capabilities: { revert: false, comments: true },
-}
-
-function disposable(onDispose: () => void = () => {}): vscode.Disposable {
-  return new vscode.Disposable(onDispose)
 }
 
 function make(sources: Record<string, DiffSource>, descriptors?: DiffSourceDescriptor[]) {
@@ -41,25 +36,21 @@ const byType = (posted: unknown[], type: string) =>
   })
 
 describe("SourceController.activate", () => {
-  it("builds, fetches, and starts the source", async () => {
-    let starts = 0
+  it("builds, fetches, and posts available sources + capabilities + diffs", async () => {
+    let fetches = 0
     const source: DiffSource = {
       descriptor: SESSION_DESC,
-      async initialFetch(post) {
-        post({ type: "diffs", diffs: [] })
+      async fetch(): Promise<DiffSourceFetch> {
+        fetches++
+        return { diffs: [] }
       },
-      start() {
-        starts++
-        return disposable()
-      },
-      dispose() {},
     }
     const { controller, posted } = make({ "session:s1": source }, [WORKSPACE_DESC, SESSION_DESC])
 
     controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
     await controller.activate("session:s1")
 
-    expect(starts).toBe(1)
+    expect(fetches).toBe(1)
     expect(controller.currentId).toBe("session:s1")
 
     const available = byType(posted, "setAvailableSources")
@@ -70,32 +61,53 @@ describe("SourceController.activate", () => {
     const caps = byType(posted, "diffViewer.capabilities")
     expect(caps).toHaveLength(1)
     expect(caps[0]!.capabilities).toEqual({ revert: false, comments: true })
+
+    const diffs = byType(posted, "diffViewer.diffs")
+    expect(diffs).toHaveLength(1)
+    expect(diffs[0]!.diffs).toEqual([])
+
+    const loading = byType(posted, "diffViewer.loading")
+    expect(loading.map((m) => m.loading)).toEqual([true, false])
+
+    // Clean up the polling interval scheduled by activate().
+    controller.stop()
+  })
+
+  it("forwards notices from the source to the webview", async () => {
+    const source: DiffSource = {
+      descriptor: SESSION_DESC,
+      async fetch() {
+        return { diffs: [], notice: "snapshots-disabled", stopPolling: true }
+      },
+    }
+    const { controller, posted } = make({ "session:s1": source })
+
+    controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
+    await controller.activate("session:s1")
+
+    const notices = byType(posted, "diffViewer.notice")
+    expect(notices).toHaveLength(1)
+    expect(notices[0]!.notice).toBe("snapshots-disabled")
   })
 
   it("disposes the previous source when activating a new one", async () => {
     let workspaceDisposed = 0
-    let workspaceSubscriptionDisposed = false
     const workspace: DiffSource = {
       descriptor: WORKSPACE_DESC,
-      async initialFetch() {},
-      start() {
-        return disposable(() => {
-          workspaceSubscriptionDisposed = true
-        })
+      async fetch() {
+        return { diffs: [] }
       },
       dispose() {
         workspaceDisposed++
       },
     }
-    let sessionStarts = 0
+    let sessionFetches = 0
     const session: DiffSource = {
       descriptor: SESSION_DESC,
-      async initialFetch() {},
-      start() {
-        sessionStarts++
-        return disposable()
+      async fetch() {
+        sessionFetches++
+        return { diffs: [] }
       },
-      dispose() {},
     }
     const { controller } = make({ workspace, "session:s1": session })
 
@@ -104,31 +116,28 @@ describe("SourceController.activate", () => {
     await controller.activate("session:s1")
 
     expect(workspaceDisposed).toBe(1)
-    expect(workspaceSubscriptionDisposed).toBe(true)
-    expect(sessionStarts).toBe(1)
+    expect(sessionFetches).toBe(1)
     expect(controller.currentId).toBe("session:s1")
+
+    controller.stop()
   })
 
-  it("does not start polling if the controller is stopped during initialFetch", async () => {
+  it("drops a fetch result and disposes the source when stopped mid-fetch", async () => {
     let release: () => void = () => {}
-    let fetched = 0
-    let started = 0
+    let fetches = 0
     let disposed = 0
     const session: DiffSource = {
       descriptor: SESSION_DESC,
-      async initialFetch() {
-        fetched++
+      async fetch() {
+        fetches++
         await new Promise<void>((r) => (release = r))
-      },
-      start() {
-        started++
-        return disposable()
+        return { diffs: [] }
       },
       dispose() {
         disposed++
       },
     }
-    const { controller } = make({ "session:s1": session })
+    const { controller, posted } = make({ "session:s1": session })
 
     controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
     const activation = controller.activate("session:s1")
@@ -136,57 +145,51 @@ describe("SourceController.activate", () => {
     release()
     await activation
 
-    expect(fetched).toBe(1)
-    expect(started).toBe(0)
+    expect(fetches).toBe(1)
     expect(disposed).toBe(1)
+    // Fetch resolved after stop — its diffs must not leak to the webview.
+    expect(byType(posted, "diffViewer.diffs")).toEqual([])
   })
 
-  it("drops stale posts from a source that was swapped out", async () => {
-    let capturedPost: DiffSourcePost | undefined
+  it("drops a fetch result from a source that has been swapped out", async () => {
+    let release: () => void = () => {}
     const workspace: DiffSource = {
       descriptor: WORKSPACE_DESC,
-      async initialFetch(post) {
-        capturedPost = post
+      async fetch() {
+        await new Promise<void>((r) => (release = r))
+        return { diffs: [{ file: "stale.ts" } as never] }
       },
-      start() {
-        return disposable()
-      },
-      dispose() {},
     }
     const session: DiffSource = {
       descriptor: SESSION_DESC,
-      async initialFetch(post) {
-        post({ type: "diffs", diffs: [] })
+      async fetch() {
+        return { diffs: [] }
       },
-      start() {
-        return disposable()
-      },
-      dispose() {},
     }
     const { controller, posted } = make({ workspace, "session:s1": session })
 
     controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
-    await controller.activate("workspace")
+    const first = controller.activate("workspace")
     await controller.activate("session:s1")
+    release()
+    await first
 
-    posted.length = 0
-    capturedPost?.({ type: "diffs", diffs: [{ file: "stale.ts" } as never] })
+    const diffs = byType(posted, "diffViewer.diffs")
+    // Only the session source's empty diffs should have been posted.
+    expect(diffs).toHaveLength(1)
+    expect(diffs[0]!.diffs).toEqual([])
 
-    expect(byType(posted, "diffViewer.diffs")).toEqual([])
+    controller.stop()
   })
 })
 
 describe("SourceController.stop", () => {
-  it("disposes the active source and its start subscription", async () => {
+  it("disposes the active source", async () => {
     let disposed = 0
-    let subscriptionDisposed = false
     const session: DiffSource = {
       descriptor: SESSION_DESC,
-      async initialFetch() {},
-      start() {
-        return disposable(() => {
-          subscriptionDisposed = true
-        })
+      async fetch() {
+        return { diffs: [] }
       },
       dispose() {
         disposed++
@@ -200,7 +203,12 @@ describe("SourceController.stop", () => {
     controller.stop()
 
     expect(disposed).toBe(1)
-    expect(subscriptionDisposed).toBe(true)
+    expect(controller.currentId).toBeUndefined()
+  })
+
+  it("is a no-op when no source is active", () => {
+    const { controller } = make({})
+    controller.stop()
     expect(controller.currentId).toBeUndefined()
   })
 })
@@ -209,11 +217,9 @@ describe("SourceController.revertFile", () => {
   it("posts error when the active source does not support revert", async () => {
     const session: DiffSource = {
       descriptor: SESSION_DESC,
-      async initialFetch() {},
-      start() {
-        return disposable()
+      async fetch() {
+        return { diffs: [] }
       },
-      dispose() {},
     }
     const { controller, posted } = make({ "session:s1": session })
 
@@ -226,46 +232,51 @@ describe("SourceController.revertFile", () => {
     expect(results).toHaveLength(1)
     expect(results[0]!.status).toBe("error")
     expect(results[0]!.file).toBe("foo.ts")
+
+    controller.stop()
   })
 
-  it("posts success from a successful revert", async () => {
-    const calls: string[] = []
+  it("posts success from a successful revert and triggers a fresh fetch", async () => {
+    const reverts: string[] = []
+    let fetches = 0
     const workspace: DiffSource = {
       descriptor: WORKSPACE_DESC,
-      async initialFetch() {},
-      start() {
-        return disposable()
+      async fetch() {
+        fetches++
+        return { diffs: [] }
       },
-      async revertFile(file) {
-        calls.push(file)
+      async revert(file) {
+        reverts.push(file)
         return { ok: true, message: "Reverted" }
       },
-      dispose() {},
     }
     const { controller, posted } = make({ workspace })
 
     controller.setContext({ workspaceRoot: "/repo" })
     await controller.activate("workspace")
+    const fetchesAfterActivate = fetches
     posted.length = 0
     await controller.revertFile("foo.ts")
 
-    expect(calls).toEqual(["foo.ts"])
+    expect(reverts).toEqual(["foo.ts"])
     const results = byType(posted, "diffViewer.revertFileResult")
     expect(results[0]!.status).toBe("success")
     expect(results[0]!.message).toBe("Reverted")
+    // Successful revert triggers an immediate re-fetch to push updated diffs.
+    expect(fetches).toBe(fetchesAfterActivate + 1)
+
+    controller.stop()
   })
 
   it("posts error when the revert implementation throws", async () => {
     const workspace: DiffSource = {
       descriptor: WORKSPACE_DESC,
-      async initialFetch() {},
-      start() {
-        return disposable()
+      async fetch() {
+        return { diffs: [] }
       },
-      async revertFile() {
+      async revert() {
         throw new Error("boom")
       },
-      dispose() {},
     }
     const { controller, posted } = make({ workspace })
 
@@ -277,5 +288,61 @@ describe("SourceController.revertFile", () => {
     const results = byType(posted, "diffViewer.revertFileResult")
     expect(results[0]!.status).toBe("error")
     expect(results[0]!.message).toBe("boom")
+
+    controller.stop()
+  })
+})
+
+describe("SourceController.requestFile", () => {
+  it("posts null when the source does not support per-file detail", async () => {
+    const session: DiffSource = {
+      descriptor: SESSION_DESC,
+      async fetch() {
+        return { diffs: [] }
+      },
+    }
+    const { controller, posted } = make({ "session:s1": session })
+
+    controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
+    await controller.activate("session:s1")
+    posted.length = 0
+    await controller.requestFile("foo.ts")
+
+    const files = byType(posted, "diffViewer.diffFile")
+    expect(files).toHaveLength(1)
+    expect(files[0]!.file).toBe("foo.ts")
+    expect(files[0]!.diff).toBeNull()
+
+    controller.stop()
+  })
+
+  it("forwards the source's fetchFile result", async () => {
+    const detail = {
+      file: "foo.ts",
+      before: "a",
+      after: "b",
+      additions: 1,
+      deletions: 1,
+    }
+    const workspace: DiffSource = {
+      descriptor: WORKSPACE_DESC,
+      async fetch() {
+        return { diffs: [] }
+      },
+      async fetchFile(file) {
+        return file === "foo.ts" ? detail : null
+      },
+    }
+    const { controller, posted } = make({ workspace })
+
+    controller.setContext({ workspaceRoot: "/repo" })
+    await controller.activate("workspace")
+    posted.length = 0
+    await controller.requestFile("foo.ts")
+
+    const files = byType(posted, "diffViewer.diffFile")
+    expect(files[0]!.diff).toEqual(detail)
+
+    controller.stop()
   })
 })

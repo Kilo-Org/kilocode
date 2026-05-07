@@ -16,14 +16,13 @@ import {
 import {
   findMatchingSuggestion as _findMatchingSuggestion,
   applyFirstLineOnly as _applyFirstLineOnly,
-  countLines as _countLines,
-  shouldShowOnlyFirstLine as _shouldShowOnlyFirstLine,
-  getFirstLine as _getFirstLine,
   calcDebounceDelay,
   MatchingSuggestionWithFillIn as _MatchingSuggestionWithFillIn,
 } from "./inline-utils"
 import { FimPromptBuilder } from "./FillInTheMiddle"
-import { AutocompleteModel } from "../AutocompleteModel"
+import { hasValidCredentials } from "../fim"
+import type { KiloConnectionService } from "../../cli-backend"
+import { getAutocompleteModel } from "../../../shared/autocomplete-models"
 import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { RecentlyVisitedRangesService } from "../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
@@ -91,18 +90,6 @@ export function applyFirstLineOnly(
  */
 export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.inline-completion.accepted"
 
-export function countLines(text: string): number {
-  return _countLines(text)
-}
-
-export function shouldShowOnlyFirstLine(prefix: string, suggestion: string): boolean {
-  return _shouldShowOnlyFirstLine(prefix, suggestion)
-}
-
-export function getFirstLine(text: string): string {
-  return _getFirstLine(text)
-}
-
 export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
   if (text === "") {
     return []
@@ -120,7 +107,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   /** Tracks all pending/in-flight requests */
   private pendingRequests: PendingRequest[] = []
   private fimPromptBuilder: FimPromptBuilder
-  private model: AutocompleteModel
+  private contextProvider: AutocompleteContextProvider
+  private connectionService: KiloConnectionService
   private costTrackingCallback: CostTrackingCallback
   private getSettings: () => AutocompleteServiceSettings | null
   private recentlyVisitedRangesService: RecentlyVisitedRangesService
@@ -148,7 +136,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
   constructor(
     context: vscode.ExtensionContext,
-    model: AutocompleteModel,
+    modelId: string,
+    connectionService: KiloConnectionService,
     costTrackingCallback: CostTrackingCallback,
     getSettings: () => AutocompleteServiceSettings | null,
     workspacePath: string,
@@ -156,7 +145,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     onFatalError?: (status: number | null) => void,
   ) {
     this.telemetry = telemetry
-    this.model = model
+    this.connectionService = connectionService
     this.costTrackingCallback = costTrackingCallback
     this.getSettings = getSettings
     this.onFatalError = onFatalError ?? null
@@ -169,13 +158,13 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
     const ide = new VsCodeIde(context)
     this.contextService = new ContextRetrievalService(ide)
-    const contextProvider: AutocompleteContextProvider = {
+    this.contextProvider = {
       ide,
       contextService: this.contextService,
-      model,
+      modelId,
       ignoreController: this.ignoreController,
     }
-    this.fimPromptBuilder = new FimPromptBuilder(contextProvider)
+    this.fimPromptBuilder = new FimPromptBuilder(this.contextProvider)
 
     this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
     this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
@@ -229,17 +218,29 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
 
     const prompt = await this.fimPromptBuilder.getFimPrompts(
       autocompleteInput,
-      this.model.getModelName() ?? "codestral",
+      this.contextProvider.modelId || "codestral",
     )
 
     return { prompt, prefix, suffix }
+  }
+
+  /**
+   * Update the autocomplete model ID. The context provider (shared with the
+   * FIM prompt builder) is mutated in place so downstream consumers pick up
+   * the new value on the next request.
+   */
+  public setModel(modelId: string): void {
+    this.contextProvider.modelId = modelId
+  }
+
+  public getModelId(): string {
+    return this.contextProvider.modelId
   }
 
   private processSuggestion(
     suggestionText: string,
     prefix: string,
     suffix: string,
-    model: AutocompleteModel,
     telemetryContext: AutocompleteContext,
     languageId?: string,
   ): FillInAtCursorSuggestion {
@@ -252,7 +253,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       suggestion: suggestionText,
       prefix,
       suffix,
-      model: model.getModelName() || "",
+      model: this.contextProvider.modelId || "",
       languageId,
     })
 
@@ -343,14 +344,14 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     // Build telemetry context
     const telemetryContext: AutocompleteContext = {
       languageId: document.languageId,
-      modelId: this.model?.getModelName(),
-      provider: this.model?.getProviderDisplayName(),
+      modelId: this.contextProvider.modelId,
+      provider: getAutocompleteModel(this.contextProvider.modelId).provider,
     }
 
     this.telemetry?.captureSuggestionRequested(telemetryContext)
 
-    if (!this.model || !this.model.hasValidCredentials()) {
-      // bail if no model is available or no valid API credentials configured
+    if (!hasValidCredentials(this.connectionService)) {
+      // bail if no valid API credentials configured
       // this prevents errors when autocomplete is enabled but no provider is set up
       return []
     }
@@ -364,8 +365,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       // instead of sending a probe FIM request. If the user has added credits,
       // reset the backoff so autocomplete resumes.
       if (this.backoff.getFatalStatus() === 402 && this.backoff.shouldProbe()) {
-        const funded = await this.model.hasBalance()
-        if (funded) {
+        if (await this.hasBalance()) {
           this.backoff.reset()
           this.fatalNotified = false
         }
@@ -585,24 +585,24 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     // Build telemetry context for this request
     const telemetryContext: AutocompleteContext = {
       languageId,
-      modelId: this.model?.getModelName(),
-      provider: this.model?.getProviderDisplayName(),
+      modelId: this.contextProvider.modelId,
+      provider: getAutocompleteModel(this.contextProvider.modelId).provider,
     }
 
     // Defense-in-depth: credentials may become invalid between the provider gate and the actual
-    // debounced execution (e.g., profile reload calling AutocompleteModel.cleanup()).
-    // In that case, do not attempt an LLM call at all.
-    if (!this.model || !this.model.hasValidCredentials()) {
+    // debounced execution. In that case, do not attempt an LLM call at all.
+    if (!hasValidCredentials(this.connectionService)) {
       return
     }
 
     try {
-      // Curry processSuggestion with prefix, suffix, model, telemetry context, and languageId
+      // Curry processSuggestion with prefix, suffix, telemetry context, and languageId
       const curriedProcessSuggestion = (text: string) =>
-        this.processSuggestion(text, prefix, suffix, this.model, telemetryContext, languageId)
+        this.processSuggestion(text, prefix, suffix, telemetryContext, languageId)
 
       const result = await this.fimPromptBuilder.getFromFIM(
-        this.model,
+        this.connectionService,
+        this.contextProvider.modelId,
         prompt,
         curriedProcessSuggestion,
         controller.signal,
@@ -652,6 +652,21 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
         this.fatalNotified = true
         this.onFatalError?.(this.backoff.getFatalStatus())
       }
+    }
+  }
+
+  /**
+   * Check the user's credit balance via the profile endpoint.
+   * Returns true if the user has a positive balance, false otherwise.
+   * Returns false on any error (not connected, fetch failed, etc.).
+   */
+  private async hasBalance(): Promise<boolean> {
+    try {
+      const client = await this.connectionService.getClientAsync()
+      const result = await client.kilo.profile().catch(() => null)
+      return (result?.data?.balance?.balance ?? 0) > 0
+    } catch {
+      return false
     }
   }
 }
