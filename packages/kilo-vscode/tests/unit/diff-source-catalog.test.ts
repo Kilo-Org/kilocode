@@ -1,12 +1,12 @@
 import { describe, it, expect } from "bun:test"
 import type { KiloConnectionService } from "../../src/services/cli-backend"
 import { DiffSourceCatalog } from "../../src/diff/sources/catalog"
-import { SessionDiffSource, sessionDescriptor } from "../../src/diff/sources/session"
-import { WORKSPACE_DESCRIPTOR, WorktreeDiffSource } from "../../src/diff/sources/worktree"
+import { sessionDescriptor } from "../../src/diff/sources/session"
+import { WORKSPACE_DESCRIPTOR } from "../../src/diff/sources/worktree"
 
 // Minimal stand-in for the connection service — the catalog only holds a
-// reference and passes it to the source constructors, so we never exercise
-// any of its methods in these tests.
+// reference and passes it to the source factories, so we never exercise any
+// of its methods in these tests.
 const connection = {} as unknown as KiloConnectionService
 
 function makeCatalog(): DiffSourceCatalog {
@@ -67,18 +67,21 @@ describe("DiffSourceCatalog.defaultSourceId", () => {
 })
 
 describe("DiffSourceCatalog.build", () => {
-  it("builds a WorktreeDiffSource for 'workspace'", () => {
+  it("builds a workspace source for 'workspace'", () => {
     const src = makeCatalog().build("workspace", { workspaceRoot: "/repo" })
-    expect(src).toBeInstanceOf(WorktreeDiffSource)
     expect(src.descriptor.id).toBe("workspace")
-    src.dispose()
+    expect(src.descriptor.type).toBe("workspace")
+    expect(src.revert).toBeDefined()
+    expect(src.fetchFile).toBeDefined()
+    src.dispose?.()
   })
 
-  it("builds a SessionDiffSource for 'session:<id>'", () => {
+  it("builds a session source for 'session:<id>'", () => {
     const src = makeCatalog().build("session:s1", { workspaceRoot: "/repo", sessionId: "s1" })
-    expect(src).toBeInstanceOf(SessionDiffSource)
     expect(src.descriptor.id).toBe("session:s1")
-    src.dispose()
+    expect(src.descriptor.type).toBe("session")
+    expect(src.revert).toBeUndefined()
+    src.dispose?.()
   })
 
   it("throws on an empty session id", () => {

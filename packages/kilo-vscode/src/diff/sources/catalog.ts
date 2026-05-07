@@ -1,10 +1,10 @@
 import type { KiloConnectionService } from "../../services/cli-backend"
 import type { PanelContext } from "../types"
 import type { DiffSource, DiffSourceDescriptor } from "./types"
-import { WorktreeDiffSource, WORKSPACE_DESCRIPTOR, WORKSPACE_SOURCE_ID } from "./worktree"
+import { createWorktreeDiffSource, WORKSPACE_DESCRIPTOR, WORKSPACE_SOURCE_ID } from "./worktree"
 import {
   SESSION_PREFIX,
-  SessionDiffSource,
+  createSessionDiffSource,
   sessionDescriptor,
   sessionSourceId,
   type SessionDiffFetch,
@@ -45,12 +45,12 @@ export class DiffSourceCatalog {
   }
 
   build(id: string, ctx: PanelContext): DiffSource {
-    if (id === WORKSPACE_SOURCE_ID) return new WorktreeDiffSource(this.connection)
+    if (id === WORKSPACE_SOURCE_ID) return createWorktreeDiffSource(this.connection)
 
     if (id.startsWith(SESSION_PREFIX)) {
       const sessionId = id.slice(SESSION_PREFIX.length)
       if (!sessionId) throw new Error(`DiffSourceCatalog.build: empty session id in "${id}"`)
-      return new SessionDiffSource(sessionId, this.sessionFetch, ctx.workspaceRoot, this.checkSnapshotsEnabled)
+      return createSessionDiffSource(sessionId, this.sessionFetch, ctx.workspaceRoot, this.checkSnapshotsEnabled)
     }
 
     throw new Error(`DiffSourceCatalog.build: unknown source id "${id}"`)
