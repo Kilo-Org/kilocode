@@ -50,14 +50,17 @@ The Wasteland protocol itself doesn't require Gas Town — you can use the [`wl`
 
 From the Gas Town dashboard, you'll see your Wasteland connection settings, including which fork you're connected to and your rig identity. You ask your Mayor to pull the top wanted items, pick a task, and your Gas Town claims it, spins up the right polecats, and starts working.
 
+<!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/gastown/town/wasteland" caption="The Wanted Board — browse open tasks from your connected Wasteland" %}
 {% image src="/docs/img/gastown/wasteland/wl-wanted-board.png" alt="Wasteland Wanted Board showing open tasks" /%}
 {% /browserFrame %}
 
+<!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/gastown/town/wasteland/claim" caption="Mayor claiming a wanted item on your behalf" %}
 {% image src="/docs/img/gastown/wasteland/gt-mayor-claiming.png" alt="Mayor claiming a wanted item from the Wasteland" /%}
 {% /browserFrame %}
 
+<!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/gastown/town/wasteland/claim/detail" caption="Claim detail drawer — evidence, status, and stamp history" %}
 {% image src="/docs/img/gastown/wasteland/gt-claim-detail-drawer.png" alt="Claim detail drawer showing evidence and stamp history" /%}
 {% /browserFrame %}
