@@ -750,6 +750,13 @@ export const dict = {
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
+  "settings.indexing.globalEnable.title": "グローバルで有効にする",
+  "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.title": "このプロジェクトで有効にする",
+  "settings.indexing.projectEnable.description":
+    "グローバルなインデックス作成がオフの場合に、このワークスペースでのインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "グローバルインデックスが有効なため、このプロジェクトはすでにカバーされています。",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
   "settings.indexing.lancedbDirectory.title": "LanceDBディレクトリ",

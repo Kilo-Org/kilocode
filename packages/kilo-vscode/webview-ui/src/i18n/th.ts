@@ -745,6 +745,12 @@ export const dict = {
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
   "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
+  "settings.indexing.globalEnable.title": "เปิดใช้งานแบบโกลบอล",
+  "settings.indexing.globalEnable.description": "เปิดใช้งานการทำดัชนีสำหรับทุกพื้นที่ทำงาน",
+  "settings.indexing.projectEnable.title": "เปิดใช้งานสำหรับโปรเจกต์นี้",
+  "settings.indexing.projectEnable.description":
+    "เปิดใช้งานการทำดัชนีสำหรับพื้นที่ทำงานนี้เมื่อการทำดัชนีแบบโกลบอลถูกปิดใช้งาน",
+  "settings.indexing.projectEnable.disabledTooltip": "เปิดใช้งานการทำดัชนีระดับโลกแล้ว โปรเจ็กต์นี้จึงถูกรวมไว้แล้ว",
   "settings.indexing.provider.title": "ผู้ให้บริการการฝัง",
   "settings.indexing.provider.description": "เลือกผู้ให้บริการที่ใช้สร้างการฝังสำหรับการค้นหาเชิงความหมาย",
   "settings.indexing.model.title": "โมเดลการฝัง",

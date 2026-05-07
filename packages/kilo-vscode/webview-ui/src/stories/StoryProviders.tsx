@@ -284,12 +284,20 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
 
     const value = {
       config: createMemo(() => cfg()),
+      globalConfig: createMemo(() => cfg()),
       features,
       loading: () => false,
       isDirty: () => false,
       saving: () => false,
       saveError: () => null,
       updateConfig: (partial: Partial<Config>) => {
+        setCfg((prev) => {
+          const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
+          props.onConfigChange?.(next)
+          return next
+        })
+      },
+      updateGlobalConfig: (partial: Partial<Config>) => {
         setCfg((prev) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
           props.onConfigChange?.(next)

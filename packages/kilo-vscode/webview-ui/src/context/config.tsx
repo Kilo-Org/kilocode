@@ -22,12 +22,14 @@ export interface SaveError {
 
 interface ConfigContextValue {
   config: Accessor<Config>
+  globalConfig: Accessor<Config>
   features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
   isDirty: Accessor<boolean>
   saving: Accessor<boolean>
   saveError: Accessor<SaveError | null>
   updateConfig: (partial: Partial<Config>) => void
+  updateGlobalConfig: (partial: Partial<Config>) => void
   saveConfig: () => void
   discardConfig: () => void
 }
@@ -38,12 +40,15 @@ export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
 
   const [config, setConfig] = createSignal<Config>({})
+  const [globalConfig, setGlobalConfig] = createSignal<Config>({})
   const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
+  const [globalDraft, setGlobalDraft] = createSignal<Partial<Config>>({})
   const [isDirty, setIsDirty] = createSignal(false)
   // Last config received from the server — used to revert on discard
   const [saved, setSaved] = createSignal<Config>({})
+  const [savedGlobal, setSavedGlobal] = createSignal<Config>({})
   // True while a saveConfig() write is in-flight — used to clear draft on success
   // and to guard against stale configLoaded messages overwriting optimistic state.
   const [saving, setSaving] = createSignal(false)
@@ -63,7 +68,17 @@ export const ConfigProvider: ParentComponent = (props) => {
       setConfig(resolveConfig(message.config, draft(), isDirty()))
       setFeatures(message.features)
       setSaved(message.config)
+      if (message.globalConfig !== undefined) {
+        setGlobalConfig(stripNulls(deepMerge(message.globalConfig, globalDraft())))
+        setSavedGlobal(message.globalConfig)
+      }
       setLoading(false)
+      return
+    }
+    if (message.type === "globalConfigLoaded") {
+      if (saving()) return
+      setGlobalConfig(stripNulls(deepMerge(message.config, globalDraft())))
+      setSavedGlobal(message.config)
       return
     }
     if (message.type === "configUpdated") {
@@ -72,14 +87,23 @@ export const ConfigProvider: ParentComponent = (props) => {
         // Clear the draft now that the server has confirmed the write.
         setSaving(false)
         setDraft({})
+        setGlobalDraft({})
         setIsDirty(false)
         setSaveError(null)
         setConfig(message.config)
+        if (message.globalConfig !== undefined) {
+          setGlobalConfig(stripNulls(deepMerge(message.globalConfig, globalDraft())))
+          setSavedGlobal(message.globalConfig)
+        }
         setFeatures(message.features)
       } else {
         // configUpdated from a different source (e.g. PermissionDock save).
         // Re-apply the draft on top so pending settings changes are preserved.
         setConfig(resolveConfig(message.config, draft(), isDirty()))
+        if (message.globalConfig !== undefined) {
+          setGlobalConfig(stripNulls(deepMerge(message.globalConfig, globalDraft())))
+          setSavedGlobal(message.globalConfig)
+        }
         setFeatures(message.features)
       }
       setSaved(message.config)
@@ -131,9 +155,17 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
   }
 
+  function updateGlobalConfig(partial: Partial<Config>) {
+    setGlobalConfig((prev) => stripNulls(deepMerge(prev, partial)))
+    setGlobalDraft((prev) => deepMerge(prev as Config, partial))
+    setIsDirty(true)
+    setSaveError(null)
+  }
+
   function saveConfig() {
     const changes = draft()
-    if (Object.keys(changes).length === 0) return
+    const globals = globalDraft()
+    if (Object.keys(changes).length === 0 && Object.keys(globals).length === 0) return
     // Don't clear draft/isDirty yet — wait for configUpdated confirmation.
     // If the write fails, the save bar stays visible so the user can retry.
     setSaving(true)
@@ -142,24 +174,29 @@ export const ConfigProvider: ParentComponent = (props) => {
     // workspace's kilo.json instead of the global one. Send one message so the
     // extension confirms only after both scopes are saved.
     const split = splitConfigByScope(changes)
-    vscode.postMessage({ type: "updateConfig", config: split.global, projectConfig: split.project })
+    const next = deepMerge(split.global as Config, globals)
+    vscode.postMessage({ type: "updateConfig", config: next, projectConfig: split.project })
   }
 
   function discardConfig() {
     setConfig(saved())
+    setGlobalConfig(savedGlobal())
     setDraft({})
+    setGlobalDraft({})
     setIsDirty(false)
     setSaveError(null)
   }
 
   const value: ConfigContextValue = {
     config,
+    globalConfig,
     features,
     loading,
     isDirty,
     saving,
     saveError,
     updateConfig,
+    updateGlobalConfig,
     saveConfig,
     discardConfig,
   }

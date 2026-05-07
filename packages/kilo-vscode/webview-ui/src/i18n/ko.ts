@@ -1039,6 +1039,13 @@ export const dict = {
   "settings.indexing.dimension.title": "벡터 차원",
   "settings.indexing.enable.description": "의미적 코드베이스 인덱싱을 켜거나 끕니다.",
   "settings.indexing.enable.title": "인덱싱 활성화",
+  "settings.indexing.globalEnable.title": "전역으로 활성화",
+  "settings.indexing.globalEnable.description": "모든 작업 영역에 대해 인덱싱을 활성화합니다.",
+  "settings.indexing.projectEnable.title": "이 프로젝트에 대해 활성화",
+  "settings.indexing.projectEnable.description":
+    "전역 인덱싱이 꺼져 있을 때 이 작업 영역에 대해 인덱싱을 활성화합니다.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "글로벌 인덱싱이 활성화되어 있어 이 프로젝트는 이미 포함되어 있습니다.",
   "settings.indexing.lancedbDirectory.description": "로컬 LanceDB 저장소의 선택적 디렉터리입니다.",
   "settings.indexing.lancedbDirectory.placeholder": "기본값 사용을 위해 비워두세요",
   "settings.indexing.lancedbDirectory.title": "LanceDB 디렉터리",

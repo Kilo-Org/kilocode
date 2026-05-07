@@ -684,6 +684,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Dimension vectorielle",
   "settings.indexing.enable.description": "Activer ou désactiver l'indexation sémantique de la base de code.",
   "settings.indexing.enable.title": "Activer l'indexation",
+  "settings.indexing.globalEnable.title": "Activer globalement",
+  "settings.indexing.globalEnable.description": "Activer l'indexation pour chaque espace de travail.",
+  "settings.indexing.projectEnable.title": "Activer pour ce projet",
+  "settings.indexing.projectEnable.description":
+    "Activer l'indexation pour cet espace de travail lorsque l'indexation globale est désactivée.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "L'indexation globale est activée, ce projet est donc déjà pris en compte.",
   "settings.indexing.lancedbDirectory.description": "Répertoire optionnel pour le stockage local LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Laissez vide pour la valeur par défaut",
   "settings.indexing.lancedbDirectory.title": "Répertoire LanceDB",

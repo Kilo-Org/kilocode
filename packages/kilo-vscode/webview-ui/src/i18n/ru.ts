@@ -754,6 +754,13 @@ export const dict = {
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
   "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
+  "settings.indexing.globalEnable.title": "Включить глобально",
+  "settings.indexing.globalEnable.description": "Включить индексирование для каждого рабочего пространства.",
+  "settings.indexing.projectEnable.title": "Включить для этого проекта",
+  "settings.indexing.projectEnable.description":
+    "Включить индексирование для этого рабочего пространства, если глобальное индексирование отключено.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Глобальное индексирование включено, поэтому этот проект уже охвачен.",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.provider.title": "Провайдер эмбеддингов",
   "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",

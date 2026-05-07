@@ -3,6 +3,7 @@ import { Card } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { TextField } from "@kilocode/kilo-ui/text-field"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useConfig } from "../../context/config"
 import { formatIndexingLabel, useIndexing } from "../../context/indexing"
 import { useLanguage } from "../../context/language"
@@ -65,7 +66,7 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 }
 
 const IndexingTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, globalConfig, updateConfig, updateGlobalConfig } = useConfig()
   const indexing = useIndexing()
   const language = useLanguage()
   const [providerDrafts, setProviderDrafts] = createSignal<Record<string, string>>({})
@@ -73,6 +74,8 @@ const IndexingTab: Component = () => {
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
 
   const cfg = createMemo<IndexingConfig>(() => config().indexing ?? {})
+  const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
+  const globalOn = createMemo(() => globalCfg().enabled === true)
 
   const updateIndexing = (partial: IndexingConfig) => {
     updateConfig({ indexing: { ...cfg(), ...partial } })
@@ -142,17 +145,36 @@ const IndexingTab: Component = () => {
           </span>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.indexing.enable.title")}
-          description={language.t("settings.indexing.enable.description")}
-          last
+          title={language.t("settings.indexing.globalEnable.title")}
+          description={language.t("settings.indexing.globalEnable.description")}
         >
           <Switch
-            checked={cfg().enabled ?? false}
-            onChange={(checked) => updateIndexing({ enabled: checked })}
+            checked={globalCfg().enabled ?? false}
+            onChange={(checked) => updateGlobalConfig({ indexing: { enabled: checked } })}
             hideLabel
           >
-            {language.t("settings.indexing.enable.title")}
+            {language.t("settings.indexing.globalEnable.title")}
           </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.indexing.projectEnable.title")}
+          description={language.t("settings.indexing.projectEnable.description")}
+          last
+        >
+          <Tooltip
+            value={language.t("settings.indexing.projectEnable.disabledTooltip")}
+            placement="top"
+            inactive={!globalOn()}
+          >
+            <Switch
+              checked={cfg().enabled === true}
+              onChange={(checked) => updateIndexing({ enabled: checked })}
+              disabled={globalOn()}
+              hideLabel
+            >
+              {language.t("settings.indexing.projectEnable.title")}
+            </Switch>
+          </Tooltip>
         </SettingsRow>
       </Card>
 

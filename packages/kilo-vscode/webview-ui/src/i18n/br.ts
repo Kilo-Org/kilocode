@@ -1045,6 +1045,13 @@ export const dict = {
   "settings.indexing.title": "Indexação",
   "settings.indexing.enable.title": "Ativar indexação",
   "settings.indexing.enable.description": "Ativar ou desativar a indexação semântica da base de código.",
+  "settings.indexing.globalEnable.title": "Habilitar globalmente",
+  "settings.indexing.globalEnable.description": "Habilitar indexação para todos os workspaces.",
+  "settings.indexing.projectEnable.title": "Habilitar para este projeto",
+  "settings.indexing.projectEnable.description":
+    "Habilitar indexação para este workspace quando a indexação global estiver desativada.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "A indexação global está ativada, então este projeto já está coberto.",
   "settings.indexing.provider.title": "Provedor de embedding",
   "settings.indexing.provider.description": "Escolha o provedor usado para gerar embeddings para busca semântica.",
   "settings.indexing.model.title": "Modelo de embedding",

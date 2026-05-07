@@ -1041,6 +1041,12 @@ export const dict = {
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
   "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
+  "settings.indexing.globalEnable.title": "Увімкнути глобально",
+  "settings.indexing.globalEnable.description": "Увімкнути індексування для кожного робочого простору.",
+  "settings.indexing.projectEnable.title": "Увімкнути для цього проєкту",
+  "settings.indexing.projectEnable.description":
+    "Увімкнути індексування для цього робочого простору, коли глобальне індексування вимкнено.",
+  "settings.indexing.projectEnable.disabledTooltip": "Глобальне індексування ввімкнено, тому цей проєкт уже охоплено.",
   "settings.indexing.provider.title": "Провайдер ембедингів",
   "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
   "settings.indexing.model.title": "Модель ембедингів",
