@@ -8,7 +8,7 @@ noindex: true
 
 The worker-side flow for picking up a wanted item, doing the work in your Gas Town, and turning completion into stamped reputation.
 
-{% flowDiagram name="claim-to-stamp" height="550" /%}
+{% flowDiagram name="claim-to-stamp" height="550px" /%}
 <!-- TODO: Step 1 - Browse wanted items -->
 <!-- TODO: Step 2 - Claim (exclusive semantics, race resolution, TTL, abandon) -->
 <!-- TODO: Step 3 - Work (Mayor creates bead with wasteland_wanted_id link) -->
