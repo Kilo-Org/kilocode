@@ -1585,4 +1585,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
+
+  "diffViewer.baseBranch.auto": "Standard",
+  "diffViewer.baseBranch.default": "Standard",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Branches suchen",
+  "diffViewer.baseBranch.empty": "Keine passenden Branches",
+  "diffViewer.baseBranch.loading": "Branches werden geladen…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>

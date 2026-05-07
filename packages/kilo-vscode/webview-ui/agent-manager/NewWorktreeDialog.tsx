@@ -28,7 +28,7 @@ import {
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
 import { convertToMentionPath } from "../src/utils/path-mentions"
-import { BranchSelect, BranchSelectPopover } from "./BranchSelect"
+import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]

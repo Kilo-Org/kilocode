@@ -1503,4 +1503,12 @@ export const dict = {
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",
+
+  "diffViewer.baseBranch.auto": "預設",
+  "diffViewer.baseBranch.default": "預設",
+  "diffViewer.baseBranch.remote": "遠端",
+  "diffViewer.baseBranch.search": "搜尋分支",
+  "diffViewer.baseBranch.empty": "沒有相符的分支",
+  "diffViewer.baseBranch.loading": "正在載入分支…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>

@@ -132,6 +132,8 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.controller = undefined
     this.fontConfigDisposable?.dispose()
     this.fontConfigDisposable = undefined
+    // Clear any base branch override so the panel reopens with the auto base.
+    this.catalog.setBaseBranchOverride(undefined)
     this.disposePanel()
   }
 
@@ -165,10 +167,38 @@ export class DiffViewerProvider implements vscode.Disposable {
     "diffViewer.requestFile": (msg) => {
       if (typeof msg.file === "string") void this.controller?.requestFile(msg.file)
     },
+    "diffViewer.requestBranches": () => {
+      void this.sendBranches()
+    },
+    "diffViewer.setBaseBranch": (msg) => {
+      const branch = typeof msg.branch === "string" && msg.branch.length > 0 ? msg.branch : undefined
+      this.catalog.setBaseBranchOverride(branch)
+      void this.controller?.reactivate()
+      // Send fresh branch state so the picker reflects the new selection.
+      void this.sendBranches()
+    },
     openFile: (msg) => {
       if (typeof msg.filePath !== "string") return
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
     },
+  }
+
+  private async sendBranches(): Promise<void> {
+    if (!this.panel) return
+    try {
+      const result = await this.catalog.listWorkspaceBranches()
+      if (!result || !this.panel) return
+      void this.panel.webview.postMessage({
+        type: "diffViewer.branches",
+        branches: result.branches,
+        defaultBranch: result.defaultBranch,
+        autoBase: result.autoBase,
+        currentBase: result.currentBase,
+        isAuto: result.isAuto,
+      })
+    } catch (err) {
+      this.log("Failed to list workspace branches:", err instanceof Error ? err.message : String(err))
+    }
   }
 
   private onWebviewReady(): void {

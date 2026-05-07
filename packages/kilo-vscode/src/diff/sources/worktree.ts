@@ -18,13 +18,24 @@ export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
   capabilities: { revert: true, comments: true },
 }
 
+export interface WorktreeDiffSourceOptions {
+  /**
+   * When set, overrides the auto-resolved base branch. The HEAD side stays
+   * the current branch — only the comparison target changes. Reset on dispose.
+   */
+  baseBranchOverride?: string
+}
+
 /**
  * Diffs between the local working tree and the base branch. Each fetch returns
  * a summary (one entry per changed file, no content); the viewer loads
  * `before`/`after` per file on demand via `fetchFile`. Runs entirely in the
  * extension host — no `kilo serve` round-trip.
  */
-export function createWorktreeDiffSource(connection: KiloConnectionService): DiffSource {
+export function createWorktreeDiffSource(
+  connection: KiloConnectionService,
+  opts: WorktreeDiffSourceOptions = {},
+): DiffSource {
   const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
   const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
   const git = new GitOps({ log })
@@ -35,6 +46,16 @@ export function createWorktreeDiffSource(connection: KiloConnectionService): Dif
 
   const resolveTarget = async (): Promise<DiffTarget | undefined> => {
     if (target) return target
+    if (opts.baseBranchOverride) {
+      const root = getWorkspaceRoot()
+      if (!root) {
+        log("Local diff: no workspace root (override mode)")
+        return
+      }
+      target = { directory: root, baseBranch: opts.baseBranchOverride }
+      log(`Local diff: using override base=${opts.baseBranchOverride}`)
+      return target
+    }
     target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
     return target
   }

@@ -81,6 +81,18 @@ export class SourceController {
     if (keepPolling) this.startPolling(source, epoch)
   }
 
+  /**
+   * Rebuild the active source with current catalog state. Used when an
+   * external setting changes (e.g. base branch override) and the source
+   * needs to refetch with the new params, but the source id stays the same.
+   * No-op when nothing is active.
+   */
+  async reactivate(): Promise<void> {
+    const id = this.activeId
+    if (!id) return
+    await this.activate(id)
+  }
+
   async revertFile(file: string): Promise<void> {
     const source = this.active
     if (!source?.revert) {

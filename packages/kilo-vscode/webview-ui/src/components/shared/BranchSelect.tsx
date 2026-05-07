@@ -1,11 +1,11 @@
 // Reusable branch selector: search input + scrollable list with keyboard navigation
 
 import { type Component, For, Show, type JSXElement, type ParentProps } from "solid-js"
-import type { BranchInfo } from "../src/types/messages"
+import type { BranchInfo } from "../../types/messages"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { formatRelativeDate } from "../src/utils/date"
-import { DeferredPopover } from "../src/components/shared/DeferredPopover"
+import { formatRelativeDate } from "../../utils/date"
+import { DeferredPopover } from "./DeferredPopover"
 
 interface AutoOption {
   label: string
@@ -34,18 +34,32 @@ interface BranchSelectProps {
   autoOption?: AutoOption
 }
 
+type Placement = "top-start" | "bottom-start"
+
 interface BranchSelectPopoverProps extends ParentProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   trigger: JSXElement
+  /**
+   * Where the popover opens relative to the trigger. Defaults to `top-start`
+   * (the agent manager pattern: trigger sits near the bottom of its panel).
+   * Pass `bottom-start` for triggers near the top of a view (e.g. the diff
+   * viewer header).
+   */
+  placement?: Placement
+  /**
+   * Whether the popover should flip to the opposite side when there's not
+   * enough room. Defaults to `false` to match the agent manager behavior.
+   */
+  flip?: boolean
 }
 
 export const BranchSelectPopover: Component<BranchSelectPopoverProps> = (props) => (
   <DeferredPopover
     open={props.open}
     onOpenChange={props.onOpenChange}
-    placement="top-start"
-    flip={false}
+    placement={props.placement ?? "top-start"}
+    flip={props.flip ?? false}
     sameWidth
     portal={false}
     deferDismiss

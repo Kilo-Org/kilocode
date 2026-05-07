@@ -346,3 +346,49 @@ describe("SourceController.requestFile", () => {
     controller.stop()
   })
 })
+
+describe("SourceController.reactivate", () => {
+  it("rebuilds the active source via the build factory and refetches", async () => {
+    let builds = 0
+    let fetches = 0
+    const factory = (): DiffSource => {
+      builds++
+      return {
+        descriptor: WORKSPACE_DESC,
+        async fetch() {
+          fetches++
+          return { diffs: [], stopPolling: true }
+        },
+      }
+    }
+    const posted: unknown[] = []
+    const controller = new SourceController(
+      () => factory(),
+      () => [WORKSPACE_DESC],
+      (m) => posted.push(m),
+    )
+    controller.setContext({ workspaceRoot: "/repo" })
+    await controller.activate("workspace")
+    expect(builds).toBe(1)
+    expect(fetches).toBe(1)
+
+    await controller.reactivate()
+    expect(builds).toBe(2)
+    expect(fetches).toBe(2)
+
+    controller.stop()
+  })
+
+  it("is a no-op when nothing is active", async () => {
+    const posted: unknown[] = []
+    const controller = new SourceController(
+      () => {
+        throw new Error("should not build")
+      },
+      () => [],
+      (m) => posted.push(m),
+    )
+    await controller.reactivate()
+    expect(posted).toEqual([])
+  })
+})

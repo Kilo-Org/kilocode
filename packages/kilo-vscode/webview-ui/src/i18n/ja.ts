@@ -1549,4 +1549,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
+
+  "diffViewer.baseBranch.auto": "デフォルト",
+  "diffViewer.baseBranch.default": "デフォルト",
+  "diffViewer.baseBranch.remote": "リモート",
+  "diffViewer.baseBranch.search": "ブランチを検索",
+  "diffViewer.baseBranch.empty": "一致するブランチがありません",
+  "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -1559,4 +1559,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
+
+  "diffViewer.baseBranch.auto": "По умолчанию",
+  "diffViewer.baseBranch.default": "По умолчанию",
+  "diffViewer.baseBranch.remote": "Удалённая",
+  "diffViewer.baseBranch.search": "Поиск веток",
+  "diffViewer.baseBranch.empty": "Нет подходящих веток",
+  "diffViewer.baseBranch.loading": "Загрузка веток…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -1569,4 +1569,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Os snapshots estão desativados para este repositório. Edite seus arquivos de configuração para exibir as alterações da sessão.",
+
+  "diffViewer.baseBranch.auto": "Padrão",
+  "diffViewer.baseBranch.default": "Padrão",
+  "diffViewer.baseBranch.remote": "Remoto",
+  "diffViewer.baseBranch.search": "Buscar branches",
+  "diffViewer.baseBranch.empty": "Nenhum branch correspondente",
+  "diffViewer.baseBranch.loading": "Carregando branches…",
+  "diffViewer.baseBranch.none": "—",
 }

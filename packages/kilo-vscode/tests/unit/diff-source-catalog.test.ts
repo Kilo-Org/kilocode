@@ -122,3 +122,26 @@ describe("descriptor types", () => {
     expect(sessionDescriptor("s1").type).toBe("session")
   })
 })
+
+describe("DiffSourceCatalog.baseBranchOverride", () => {
+  it("starts undefined", () => {
+    expect(makeCatalog().getBaseBranchOverride()).toBeUndefined()
+  })
+
+  it("round-trips set/get", () => {
+    const cat = makeCatalog()
+    cat.setBaseBranchOverride("origin/release")
+    expect(cat.getBaseBranchOverride()).toBe("origin/release")
+    cat.setBaseBranchOverride(undefined)
+    expect(cat.getBaseBranchOverride()).toBeUndefined()
+  })
+
+  it("dispose clears branch git resources without throwing", () => {
+    const cat = makeCatalog()
+    cat.setBaseBranchOverride("foo")
+    cat.dispose()
+    // Override survives dispose; the provider clears it explicitly on panel
+    // close, so other paths can introspect after dispose.
+    expect(cat.getBaseBranchOverride()).toBe("foo")
+  })
+})

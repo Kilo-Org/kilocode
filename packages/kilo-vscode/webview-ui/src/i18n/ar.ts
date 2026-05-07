@@ -1527,4 +1527,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
+
+  "diffViewer.baseBranch.auto": "افتراضي",
+  "diffViewer.baseBranch.default": "افتراضي",
+  "diffViewer.baseBranch.remote": "بعيد",
+  "diffViewer.baseBranch.search": "البحث في الفروع",
+  "diffViewer.baseBranch.empty": "لا توجد فروع مطابقة",
+  "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -1574,4 +1574,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
+
+  "diffViewer.baseBranch.auto": "Predeterminada",
+  "diffViewer.baseBranch.default": "Predeterminada",
+  "diffViewer.baseBranch.remote": "Remota",
+  "diffViewer.baseBranch.search": "Buscar ramas",
+  "diffViewer.baseBranch.empty": "Sin ramas que coincidan",
+  "diffViewer.baseBranch.loading": "Cargando ramas…",
+  "diffViewer.baseBranch.none": "—",
 }

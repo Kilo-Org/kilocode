@@ -1534,4 +1534,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
+
+  "diffViewer.baseBranch.auto": "기본",
+  "diffViewer.baseBranch.default": "기본",
+  "diffViewer.baseBranch.remote": "원격",
+  "diffViewer.baseBranch.search": "브랜치 검색",
+  "diffViewer.baseBranch.empty": "일치하는 브랜치 없음",
+  "diffViewer.baseBranch.loading": "브랜치 로딩 중…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -1496,4 +1496,12 @@ export const dict = {
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
+
+  "diffViewer.baseBranch.auto": "默认",
+  "diffViewer.baseBranch.default": "默认",
+  "diffViewer.baseBranch.remote": "远程",
+  "diffViewer.baseBranch.search": "搜索分支",
+  "diffViewer.baseBranch.empty": "没有匹配的分支",
+  "diffViewer.baseBranch.loading": "正在加载分支…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>
