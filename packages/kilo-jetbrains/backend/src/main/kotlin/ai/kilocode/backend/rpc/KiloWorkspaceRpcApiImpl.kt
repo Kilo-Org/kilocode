@@ -24,6 +24,7 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.SkillDto
@@ -142,6 +143,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         status = m.status,
         recommendedIndex = m.recommendedIndex,
         variants = m.variants,
+        limit = m.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
     )
 
     private fun agents(d: AgentData) = AgentsDto(

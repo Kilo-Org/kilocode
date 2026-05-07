@@ -169,20 +169,6 @@ export function patchCustomLoaderResult(
   if (!result.options) return
 
   switch (providerID) {
-    case "anthropic": {
-      // Prepend claude-code beta flag to the anthropic-beta header
-      // TODO: Add adaptive thinking headers when @ai-sdk/anthropic supports it:
-      // adaptive-thinking-2026-01-28,effort-2025-11-24,max-effort-2026-01-24
-      const existing = result.options.headers?.["anthropic-beta"] ?? ""
-      const prefix = "claude-code-20250219"
-      if (!existing.includes(prefix)) {
-        result.options.headers = {
-          ...result.options.headers,
-          "anthropic-beta": existing ? `${prefix},${existing}` : prefix,
-        }
-      }
-      break
-    }
     case "openrouter":
     case "vercel":
     case "zenmux":

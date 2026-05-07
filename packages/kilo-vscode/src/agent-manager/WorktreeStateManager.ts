@@ -600,8 +600,9 @@ export class WorktreeStateManager {
     let pruned = 0
     for (const [id, s] of Object.entries(data.sessions ?? {})) {
       const ref = s.worktreeId
+      const session: ManagedSession = { id, worktreeId: s.worktreeId, createdAt: s.createdAt }
       if (ref === null) {
-        this.sessions.set(id, { id, ...s })
+        this.sessions.set(id, session)
         continue
       }
       // Skip orphaned sessions referencing a deleted worktree.
@@ -609,7 +610,7 @@ export class WorktreeStateManager {
         pruned++
         continue
       }
-      this.sessions.set(id, { id, ...s })
+      this.sessions.set(id, session)
     }
     for (const [id, sec] of Object.entries(data.sections ?? {})) {
       this.sections.set(id, { id, ...sec })

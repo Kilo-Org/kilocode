@@ -1515,8 +1515,14 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
-  "settings.indexing.kiloModel.title": "พรีเซ็ตโมเดล Kilo",
-  "settings.indexing.kiloModel.description": "เลือกโมเดล Kilo-hosted embeddings ที่รองรับ",
-  "settings.indexing.kiloSignIn.title": "จำเป็นต้องลงชื่อเข้าใช้ Kilo",
-  "settings.indexing.kiloSignIn.description": "ลงชื่อเข้าใช้ Kilo เพื่อใช้งาน hosted embeddings",
+  "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.source.workspace.tooltip":
+    "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
+  "diffViewer.source.session.label": "เซสชัน",
+  "diffViewer.source.session.tooltip":
+    "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
+  "diffViewer.group.session": "เซสชัน",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
 }

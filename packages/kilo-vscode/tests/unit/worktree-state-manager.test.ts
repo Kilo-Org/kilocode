@@ -77,6 +77,27 @@ describe("WorktreeStateManager", () => {
       expect(s.worktreeId).toBeNull()
     })
 
+    it("drops obsolete session prefs while loading state", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(
+        file,
+        JSON.stringify({
+          worktrees: {},
+          sessions: {
+            "local-1": {
+              worktreeId: null,
+              createdAt: new Date().toISOString(),
+              prefs: { agent: "code" },
+            },
+          },
+        }),
+      )
+
+      await manager.load()
+
+      expect(manager.getSession("local-1")).not.toHaveProperty("prefs")
+    })
+
     it("filters sessions by worktreeId", () => {
       const wt1 = manager.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
       const wt2 = manager.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main" })

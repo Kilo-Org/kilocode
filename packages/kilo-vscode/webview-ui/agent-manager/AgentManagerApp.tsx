@@ -77,6 +77,7 @@ import { ProviderProvider } from "../src/context/provider"
 import { ConfigProvider } from "../src/context/config"
 import { DisplayProvider } from "../src/context/display"
 import { NotificationsProvider } from "../src/context/notifications"
+import { FeedbackProvider } from "../src/context/feedback"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
@@ -114,6 +115,7 @@ import {
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
+import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
@@ -1407,18 +1409,12 @@ const AgentManagerContent: Component = () => {
         if (ev.providerID && ev.modelID) {
           session.setSessionModel(ev.sessionId, ev.providerID, ev.modelID)
         }
+        seedInitialVariant(session, ev)
 
         // Only send a message if there's text — otherwise just clear busy state
-        if (ev.text) {
-          vscode.postMessage({
-            type: "sendMessage",
-            text: ev.text,
-            sessionID: ev.sessionId,
-            providerID: ev.providerID,
-            modelID: ev.modelID,
-            agent: ev.agent,
-            files: ev.files,
-          })
+        const init = initialMessage(ev)
+        if (init) {
+          vscode.postMessage(init)
         }
         // Clear busy state — use worktreeId from the message directly
         // to avoid race condition where managedSessions() hasn't updated yet
@@ -3174,13 +3170,15 @@ export const AgentManagerApp: Component = () => {
                           <DisplayProvider>
                             <NotificationsProvider>
                               <SessionProvider>
-                                <IndexingProvider>
-                                  <WorktreeModeProvider>
-                                    <DataBridge>
-                                      <AgentManagerContent />
-                                    </DataBridge>
-                                  </WorktreeModeProvider>
-                                </IndexingProvider>
+                                <FeedbackProvider>
+                                  <IndexingProvider>
+                                    <WorktreeModeProvider>
+                                      <DataBridge>
+                                        <AgentManagerContent />
+                                      </DataBridge>
+                                    </WorktreeModeProvider>
+                                  </IndexingProvider>
+                                </FeedbackProvider>
                               </SessionProvider>
                             </NotificationsProvider>
                           </DisplayProvider>

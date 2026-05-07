@@ -1550,8 +1550,14 @@ export const dict = {
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",
   "notifications.action.tryModelGeneric": "Experimentar modelo",
-  "settings.indexing.kiloModel.title": "Predefinição de modelo Kilo",
-  "settings.indexing.kiloModel.description": "Escolha um modelo de Kilo-hosted embeddings suportado.",
-  "settings.indexing.kiloSignIn.title": "Login no Kilo obrigatório",
-  "settings.indexing.kiloSignIn.description": "Faça login no Kilo para usar hosted embeddings.",
+  "diffViewer.source.workspace.label": "Alterações locais",
+  "diffViewer.source.workspace.tooltip":
+    "Todas as alterações desta branch em relação à branch base. Inclui arquivos não commitados (staged, unstaged e não rastreados) e commits locais que ainda não estão na base.",
+  "diffViewer.source.session.label": "Sessão",
+  "diffViewer.source.session.tooltip":
+    "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
+  "diffViewer.group.session": "Sessão",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Os snapshots estão desativados para este repositório. Edite seus arquivos de configuração para exibir as alterações da sessão.",
 }

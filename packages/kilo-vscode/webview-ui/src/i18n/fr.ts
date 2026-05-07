@@ -1573,8 +1573,14 @@ export const dict = {
   "notifications.action.close": "Fermer",
   "notifications.action.tryModel": "Essayer {{model}}",
   "notifications.action.tryModelGeneric": "Essayer le modèle",
-  "settings.indexing.kiloModel.title": "Préréglage du modèle Kilo",
-  "settings.indexing.kiloModel.description": "Choisissez un modèle de Kilo-hosted embeddings pris en charge.",
-  "settings.indexing.kiloSignIn.title": "Connexion à Kilo requise",
-  "settings.indexing.kiloSignIn.description": "Connectez-vous à Kilo pour utiliser les hosted embeddings.",
+  "diffViewer.source.workspace.label": "Modifications locales",
+  "diffViewer.source.workspace.tooltip":
+    "Toutes les modifications de cette branche par rapport à la branche de base. Inclut les fichiers non commités (staged, unstaged, non suivis) et les commits locaux qui ne sont pas encore dans la branche de base.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 }

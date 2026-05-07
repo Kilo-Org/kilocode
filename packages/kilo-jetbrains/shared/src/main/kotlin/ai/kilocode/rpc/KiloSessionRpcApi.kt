@@ -3,6 +3,7 @@ package ai.kilocode.rpc
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -65,6 +66,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, directory: String)
+
+    /** Summarize/compact a session using the selected model. */
+    suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
 
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>

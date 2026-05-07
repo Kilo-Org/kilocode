@@ -6,6 +6,7 @@ import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
+import { Instance } from "@/project/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
@@ -159,6 +160,16 @@ export namespace KiloSessionPrompt {
   }
 
   /**
+   * Ensures the plan file directory exists. Pre-checks with `Filesystem.isDir`
+   * because `fs.mkdir(recursive: true)` still throws `EEXIST` on Windows
+   * OneDrive ReparsePoint directories in some Node versions (kilocode#9755).
+   */
+  export async function ensurePlanDir(dir: string) {
+    if (await Filesystem.isDir(dir)) return
+    await fs.mkdir(dir, { recursive: true })
+  }
+
+  /**
    * Injects plan-specific reminders into the user message when using the plan agent.
    * Ensures the plan file directory exists and tells the agent where to write.
    */
@@ -168,9 +179,9 @@ export namespace KiloSessionPrompt {
     userMessage: MessageV2.WithParts
   }) {
     if (input.agent.name !== "plan") return
-    const plan = Session.plan(input.session)
+    const plan = Session.plan(input.session, Instance.current)
     const exists = await Filesystem.exists(plan)
-    if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
+    if (!exists) await ensurePlanDir(path.dirname(plan))
     const info = exists
       ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
       : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`

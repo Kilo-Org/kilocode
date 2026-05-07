@@ -9,7 +9,7 @@ import path from "path"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import { EditTool } from "../../src/tool/edit"
 import { Instance } from "../../src/project/instance"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 import { LSP } from "../../src/lsp/lsp"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Format } from "../../src/format"
@@ -34,7 +34,7 @@ afterAll(async () => {
 })
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const resolve = () =>

@@ -13,6 +13,7 @@
 import { createSignal, createMemo, type ParentComponent } from "solid-js"
 import { VSCodeProvider } from "../context/vscode"
 import { ServerProvider } from "../context/server"
+import { FeedbackProvider } from "../context/feedback"
 import { ProviderContext } from "../context/provider"
 import { flattenModels, findModel as _findModel } from "../context/provider-utils"
 import { ConfigProvider, ConfigContext } from "../context/config"
@@ -214,6 +215,7 @@ export function mockSessionValue(overrides?: {
     getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
+    setSessionVariant: noop,
     revert: () => undefined,
     revertedCount: () => 0,
     summary: () => undefined,
@@ -317,46 +319,48 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
   return (
     <VSCodeProvider>
       <ServerProvider>
-        <ConfigWrapper config={props.config} onConfigChange={props.onConfigChange}>
-          <DisplayProvider>
-            <MockProviderProvider>
-              <DialogProvider>
-                <LanguageContext.Provider
-                  value={{
-                    locale,
-                    setLocale: noop,
-                    userOverride: () => "" as any,
-                    t,
-                  }}
-                >
-                  <I18nProvider value={{ locale: () => "en", t }}>
-                    <NotificationsContext.Provider value={notifications}>
-                      <SessionContext.Provider value={session as any}>
-                        <IndexingProvider>
-                          <DataProvider data={data()} directory="/project/">
-                            <DiffComponentProvider component={Diff}>
-                              <CodeComponentProvider component={Code}>
-                                <FileComponentProvider component={File}>
-                                  <MarkedProvider>
-                                    {props.noPadding ? (
-                                      props.children
-                                    ) : (
-                                      <div style={{ padding: "12px" }}>{props.children}</div>
-                                    )}
-                                  </MarkedProvider>
-                                </FileComponentProvider>
-                              </CodeComponentProvider>
-                            </DiffComponentProvider>
-                          </DataProvider>
-                        </IndexingProvider>
-                      </SessionContext.Provider>
-                    </NotificationsContext.Provider>
-                  </I18nProvider>
-                </LanguageContext.Provider>
-              </DialogProvider>
-            </MockProviderProvider>
-          </DisplayProvider>
-        </ConfigWrapper>
+        <FeedbackProvider>
+          <ConfigWrapper config={props.config} onConfigChange={props.onConfigChange}>
+            <DisplayProvider>
+              <MockProviderProvider>
+                <DialogProvider>
+                  <LanguageContext.Provider
+                    value={{
+                      locale,
+                      setLocale: noop,
+                      userOverride: () => "" as any,
+                      t,
+                    }}
+                  >
+                    <I18nProvider value={{ locale: () => "en", t }}>
+                      <NotificationsContext.Provider value={notifications}>
+                        <SessionContext.Provider value={session as any}>
+                          <IndexingProvider>
+                            <DataProvider data={data()} directory="/project/">
+                              <DiffComponentProvider component={Diff}>
+                                <CodeComponentProvider component={Code}>
+                                  <FileComponentProvider component={File}>
+                                    <MarkedProvider>
+                                      {props.noPadding ? (
+                                        props.children
+                                      ) : (
+                                        <div style={{ padding: "12px" }}>{props.children}</div>
+                                      )}
+                                    </MarkedProvider>
+                                  </FileComponentProvider>
+                                </CodeComponentProvider>
+                              </DiffComponentProvider>
+                            </DataProvider>
+                          </IndexingProvider>
+                        </SessionContext.Provider>
+                      </NotificationsContext.Provider>
+                    </I18nProvider>
+                  </LanguageContext.Provider>
+                </DialogProvider>
+              </MockProviderProvider>
+            </DisplayProvider>
+          </ConfigWrapper>
+        </FeedbackProvider>
       </ServerProvider>
     </VSCodeProvider>
   )

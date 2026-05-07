@@ -96,6 +96,13 @@ jobs:
           echo "cli_url=$URL" >> "$GITHUB_OUTPUT"
           echo "::notice::Testing CLI v${VERSION} via asset API: $URL"
 
+      # Harbor's default agent-setup timeout is 360s. The hello-world container
+      # (FROM ubuntu:24.04) needs apt-get update + apt-get install + a NodeSource
+      # curl|bash + apt install nodejs before the CLI even downloads, and on
+      # the Blacksmith runners that occasionally pushes past 6 min when an apt
+      # mirror or NodeSource cdn is slow, killing the run with
+      # AgentSetupTimeoutError. 600s gives enough headroom for transient
+      # mirror/cdn slowness while still finishing well under timeout-minutes.
       - name: Run smoke test — hello-world
         env:
           KILO_CLI_URL: ${{ steps.cli.outputs.cli_url }}
@@ -104,7 +111,8 @@ jobs:
           ./scripts/run_eval.sh \
             -m kilo/anthropic/claude-sonnet-4.6 \
             -d hello-world \
-            --job-name smoke-test-hello-world
+            --job-name smoke-test-hello-world \
+            --agent-setup-timeout 600
 
       - name: Run smoke test — log-summary-date-ranges
         env:
@@ -115,11 +123,18 @@ jobs:
             -m kilo/anthropic/claude-sonnet-4.6 \
             -d terminal-bench-sample \
             -t "log-summary-date-ranges" \
-            --job-name smoke-test-log-summary
+            --job-name smoke-test-log-summary \
+            --agent-setup-timeout 600
 
       - name: Validate results
         run: python3 scripts/validate_smoke_test.py jobs/smoke-test-*/
 
+      # Also upload the agent setup logs (stdout/stderr/return-code from the
+      # CLI install script) so we can see exactly which step stalls when the
+      # next AgentSetupTimeoutError happens. These come from the install
+      # script in kilo-bench, which uses `set -euo pipefail` (no `set -x`)
+      # and never echoes auth tokens or API keys, so the captured output is
+      # safe to upload.
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v7 # kilocode_change
@@ -128,5 +143,6 @@ jobs:
           path: |
             jobs/smoke-test-*/**/result.json
             jobs/smoke-test-*/**/trajectory.json
+            jobs/smoke-test-*/**/agent/setup/*.txt
           retention-days: 30
           if-no-files-found: warn

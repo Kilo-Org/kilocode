@@ -1541,8 +1541,14 @@ export const dict = {
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
   "notifications.action.tryModelGeneric": "Wypróbuj model",
-  "settings.indexing.kiloModel.title": "Ustawienie wstępne modelu Kilo",
-  "settings.indexing.kiloModel.description": "Wybierz obsługiwany model Kilo-hosted embeddings.",
-  "settings.indexing.kiloSignIn.title": "Wymagane logowanie do Kilo",
-  "settings.indexing.kiloSignIn.description": "Zaloguj się do Kilo, aby używać hosted embeddings.",
+  "diffViewer.source.workspace.label": "Lokalne zmiany",
+  "diffViewer.source.workspace.tooltip":
+    "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
+  "diffViewer.source.session.label": "Sesja",
+  "diffViewer.source.session.tooltip":
+    "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
+  "diffViewer.group.session": "Sesja",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 }
