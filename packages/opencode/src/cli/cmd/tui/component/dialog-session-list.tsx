@@ -193,7 +193,7 @@ export function DialogSessionList() {
           value: x.id,
           category,
           footer,
-          gutter: isWorking ? <Spinner /> : undefined,
+          gutter: isWorking ? () => <Spinner /> : undefined,
         }
       })
   })

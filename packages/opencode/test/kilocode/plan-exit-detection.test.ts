@@ -369,7 +369,7 @@ describe("plan_exit detection", () => {
       })
 
       const session = await Session.get(seeded.sessionID)
-      const plan = Session.plan(session)
+      const plan = Session.plan(session, Instance.current)
       await fs.mkdir(path.dirname(plan), { recursive: true })
       await Bun.write(plan, "Do implementation step 1")
 

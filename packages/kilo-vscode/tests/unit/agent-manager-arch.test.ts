@@ -33,6 +33,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -260,6 +261,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
+  })
+
+  it("terminal context keeps the current active terminal when present", () => {
+    const text = body("onSessionMessage")
+    const check = text.indexOf("!this.terminalManager.hasActiveTerminal()")
+    const show = text.indexOf("this.terminalManager.showExisting(m.sessionID)")
+    expect(check).toBeGreaterThan(-1)
+    expect(show).toBeGreaterThan(-1)
+    expect(check, "active terminal check must guard session terminal reveal").toBeLessThan(show)
   })
 
   it("session routing handles clearSession for SSE re-registration", () => {

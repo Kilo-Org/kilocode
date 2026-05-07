@@ -3,10 +3,10 @@ import path from "path"
 import { Skill } from "../../src/skill"
 import { Instance } from "../../src/project/instance"
 import { BUILTIN_SKILLS } from "../../src/kilocode/skills/builtin"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 test("built-in skills are present in empty project", async () => {

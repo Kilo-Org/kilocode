@@ -19,7 +19,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useFileComponent } from "@kilocode/kilo-ui/context/file"
-import { normalize } from "@kilocode/kilo-ui/session-diff"
+import { contents } from "@kilocode/kilo-ui/session-diff"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { AssistantMessage } from "./AssistantMessage"
 import type {
@@ -280,11 +280,17 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                 <Accordion.Content>
                                   <Show when={visible()}>
                                     <div data-slot="session-turn-diff-view" data-scrollable>
-                                      <Dynamic
-                                        component={fileComponent}
-                                        mode="diff"
-                                        fileDiff={normalize(diff).fileDiff}
-                                      />
+                                      {(() => {
+                                        const view = diff.patch === "" ? { before: "", after: "" } : contents(diff)
+                                        return (
+                                          <Dynamic
+                                            component={fileComponent}
+                                            mode="diff"
+                                            before={{ name: diff.file, contents: view.before }}
+                                            after={{ name: diff.file, contents: view.after }}
+                                          />
+                                        )
+                                      })()}
                                     </div>
                                   </Show>
                                 </Accordion.Content>
