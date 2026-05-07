@@ -145,8 +145,10 @@ describe("Edit tool diff-first click contract (source)", () => {
 
 describe("Write and apply_patch patch rendering contracts (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
-  const writeBlock = src.match(/ToolRegistry\.register\(\{\s*name:\s*"write"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
-  const patchBlock = src.match(/ToolRegistry\.register\(\{\s*name:\s*"apply_patch"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+  const writeBlock =
+    src.match(/ToolRegistry\.register\(\{\s*name:\s*"write"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+  const patchBlock =
+    src.match(/ToolRegistry\.register\(\{\s*name:\s*"apply_patch"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
 
   it("write tool can render from filediff.patch when input.content is stripped", () => {
     expect(writeBlock).toContain("contents(diff)")

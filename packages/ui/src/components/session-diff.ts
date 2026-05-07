@@ -85,7 +85,7 @@ function file(file: string, patch: string, before: string, after: string) {
 }
 
 export function normalize(diff: ReviewDiff): ViewDiff {
-  const next = contents(diff)
+  const next = contents(diff) // kilocode_change
   return {
     file: diff.file, // kilocode_change
     patch: next.patch, // kilocode_change
