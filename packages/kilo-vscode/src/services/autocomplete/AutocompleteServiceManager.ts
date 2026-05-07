@@ -2,12 +2,13 @@ import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "./shims/i18n"
 import { TelemetryProxy, TelemetryEventName } from "../telemetry"
-import { AutocompleteModel } from "./AutocompleteModel"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 import type { KiloConnectionService } from "../cli-backend"
+import { hasValidCredentials } from "./fim"
+import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -26,6 +27,7 @@ function readSettings(): AutocompleteServiceSettings {
     enableAutoTrigger: config.get<boolean>("enableAutoTrigger") ?? true,
     enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding") ?? true,
     enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete") ?? true,
+    model: getAutocompleteModel(config.get<string>("model") ?? "").id,
     snoozeUntil: config.get<number>("snoozeUntil"),
   }
 }
@@ -40,7 +42,7 @@ async function writeSettings(patch: Partial<AutocompleteServiceSettings>): Promi
 export class AutocompleteServiceManager {
   private static _instance: AutocompleteServiceManager | null = null
 
-  private readonly model: AutocompleteModel
+  private readonly connectionService: KiloConnectionService
   private readonly context: vscode.ExtensionContext
   private settings: AutocompleteServiceSettings | null = null
 
@@ -59,6 +61,7 @@ export class AutocompleteServiceManager {
   public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
   private unsubscribeState: (() => void) | null = null
+  private unsubscribeEvent: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {
     if (AutocompleteServiceManager._instance) {
@@ -68,10 +71,8 @@ export class AutocompleteServiceManager {
     }
 
     this.context = context
+    this.connectionService = connectionService
     AutocompleteServiceManager._instance = this
-
-    // Register Internal Components
-    this.model = new AutocompleteModel(connectionService)
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
 
@@ -79,18 +80,31 @@ export class AutocompleteServiceManager {
     this.codeActionProvider = new AutocompleteCodeActionProvider()
     this.inlineCompletionProvider = new AutocompleteInlineCompletionProvider(
       this.context,
-      this.model,
+      DEFAULT_AUTOCOMPLETE_MODEL.id,
+      connectionService,
       this.updateCostTracking.bind(this),
       () => this.settings,
       workspacePath,
       new AutocompleteTelemetry(),
+      (status) => this.handleFatalAutocompleteError(status),
     )
 
     // Reload when CLI backend connection state changes so autocomplete
     // picks up the connected state even if it wasn't ready at startup.
+    // Also reset error backoff — a reconnect may mean the user re-authenticated
+    // or added credits, so we should give autocomplete a fresh chance.
     this.unsubscribeState = connectionService.onStateChange(() => {
+      this.inlineCompletionProvider.resetBackoff()
       void this.load()
     })
+
+    // Reset error backoff when auth state changes (login, logout, org switch).
+    // The CLI emits global.disposed after these actions, which is the most
+    // reliable signal that credentials may have changed.
+    this.unsubscribeEvent = connectionService.onEventFiltered(
+      (event) => event.type === "global.disposed",
+      () => this.inlineCompletionProvider.resetBackoff(),
+    )
 
     void this.load()
   }
@@ -104,6 +118,10 @@ export class AutocompleteServiceManager {
 
   public async load() {
     this.settings = readSettings()
+
+    if (this.settings.model) {
+      this.inlineCompletionProvider.setModel(this.settings.model)
+    }
 
     await this.updateGlobalContext()
     this.updateStatusBar()
@@ -301,15 +319,36 @@ export class AutocompleteServiceManager {
   }
 
   private getCurrentModelName(): string {
-    return this.model.getModelName()
+    return this.inlineCompletionProvider.getModelId()
   }
 
   private getCurrentProviderName(): string {
-    return this.model.getProviderDisplayName()
+    return getAutocompleteModel(this.inlineCompletionProvider.getModelId()).provider
   }
 
   private hasNoUsableProvider(): boolean {
-    return !this.model.hasValidCredentials()
+    return !hasValidCredentials(this.connectionService)
+  }
+
+  /**
+   * Handle a fatal (non-retriable) autocomplete error such as 402 Payment Required.
+   * Shows a one-time notification to the user so they know autocomplete is paused.
+   */
+  private handleFatalAutocompleteError(status: number | null): void {
+    const msg =
+      status === 402
+        ? t("kilocode:autocomplete.creditsExhausted.message")
+        : t("kilocode:autocomplete.authError.message")
+
+    if (status === 402) {
+      vscode.window.showWarningMessage(msg, t("kilocode:autocomplete.creditsExhausted.addCredits")).then((choice) => {
+        if (choice === t("kilocode:autocomplete.creditsExhausted.addCredits")) {
+          vscode.env.openExternal(vscode.Uri.parse("https://app.kilo.ai/credits"))
+        }
+      })
+    } else {
+      vscode.window.showWarningMessage(msg)
+    }
   }
 
   private updateCostTracking(cost: number, _inputTokens: number, _outputTokens: number): void {
@@ -328,7 +367,6 @@ export class AutocompleteServiceManager {
       snoozed: this.isSnoozed(),
       model: this.getCurrentModelName(),
       provider: this.getCurrentProviderName(),
-      profileName: this.model.profileName,
       hasNoUsableProvider: this.hasNoUsableProvider(),
       totalSessionCost: this.sessionCost,
       completionCount: this.completionCount,
@@ -360,9 +398,11 @@ export class AutocompleteServiceManager {
       this.snoozeTimer = null
     }
 
-    // Unsubscribe from connection state changes
+    // Unsubscribe from connection state changes and SSE events
     this.unsubscribeState?.()
     this.unsubscribeState = null
+    this.unsubscribeEvent?.()
+    this.unsubscribeEvent = null
 
     // Dispose inline completion provider registration
     if (this.inlineCompletionProviderDisposable) {

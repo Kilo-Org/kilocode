@@ -45,7 +45,7 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilo",
+    replacement: "Kilo-Org/kilocode",
     description: "GitHub repo reference",
   },
 
@@ -59,13 +59,6 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
     pattern: /opencode\.ai(?!\/zen)/g,
     replacement: "kilo.ai",
     description: "Main domain (excluding zen)",
-  },
-
-  // Product name (specific phrases first)
-  {
-    pattern: /OpenCode Desktop/g,
-    replacement: "Kilo Desktop",
-    description: "Desktop app name",
   },
 
   // CLI commands
@@ -133,16 +126,6 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
   },
 ]
 
-// Patterns that should NOT be replaced (preserved as-is)
-const PRESERVE_PATTERNS = [
-  /opencode\.json/g, // Config filename
-  /\.opencode\//g, // Directory name
-  /\.opencode`/g, // Directory name in template strings
-  /"\.opencode"/g, // Directory name in quotes
-  /'\.opencode'/g, // Directory name in single quotes
-  /\/\/\s*kilocode_change/g, // Already has marker
-]
-
 /**
  * Check if a file matches any of the patterns
  */
@@ -167,16 +150,6 @@ export function applyBrandingTransforms(content: string, verbose = false): { res
     if (line.includes("// kilocode_change")) {
       transformed.push(line)
       continue
-    }
-
-    // Check if line has preserve patterns
-    let hasPreserve = false
-    for (const pattern of PRESERVE_PATTERNS) {
-      pattern.lastIndex = 0
-      if (pattern.test(line)) {
-        hasPreserve = true
-        pattern.lastIndex = 0
-      }
     }
 
     let result = line

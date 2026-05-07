@@ -1,11 +1,8 @@
 import { Server } from "../../server/server"
 import { cmd } from "./cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
-import { Flag } from "../../flag/flag"
-import { Instance } from "../../project/instance" // kilocode_change
-import { Workspace } from "../../control-plane/workspace"
-import { Project } from "../../project/project"
-import { Installation } from "../../installation"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { InstanceStore } from "../../project/instance-store" // kilocode_change
 
 export const ServeCommand = cmd({
   command: "serve",
@@ -16,22 +13,15 @@ export const ServeCommand = cmd({
       console.log("Warning: KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }
     const opts = await resolveNetworkOptions(args)
-    const server = Server.listen(opts)
+    const server = await Server.listen(opts)
     console.log(`kilo server listening on http://${server.hostname}:${server.port}`)
-
-    let workspaceSync: Array<ReturnType<typeof Workspace.startSyncing>> = []
-    // Only available in development right now
-    if (Installation.isLocal()) {
-      workspaceSync = Project.list().map((project) => Workspace.startSyncing(project))
-    }
 
     // kilocode_change start - graceful signal shutdown
     const abort = new AbortController()
     const shutdown = async () => {
       try {
-        await Instance.disposeAll()
+        await InstanceStore.disposeAllInstances()
         await server.stop(true)
-        await Promise.all(workspaceSync.map((item) => item.stop()))
       } finally {
         abort.abort()
       }

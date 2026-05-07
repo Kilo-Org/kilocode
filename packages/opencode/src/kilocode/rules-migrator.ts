@@ -5,7 +5,7 @@ import os from "os"
 export namespace RulesMigrator {
   // Only support .kilocoderules (no migration for .roorules or .clinerules)
   const LEGACY_RULE_FILE = ".kilocoderules"
-  const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
+  const home = () => process.env.KILO_TEST_HOME || process.env.HOME || process.env.USERPROFILE || os.homedir()
 
   // Directory-based rules (read from both .kilo and .kilocode)
   const KILO_RULES_DIRS = [".kilo/rules", ".kilocode/rules"]

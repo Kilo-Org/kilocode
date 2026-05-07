@@ -163,6 +163,68 @@ const errorToolPart: ToolPart = {
   },
 }
 
+// Completed edit tool with full filediff metadata — exercises canOpenDiff()
+// so the "Open in Diff Viewer" icon button renders in the trigger.
+const editCompletedPart: ToolPart = {
+  id: "part-tool-edit-done",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-edit-done",
+  tool: "edit",
+  state: {
+    status: "completed",
+    input: {
+      filePath: "src/counter.tsx",
+      oldString: "const [count, setCount] = createSignal(0)",
+      newString: "const [count, setCount] = createSignal(1)",
+    },
+    output: "File edited successfully",
+    title: "Edit file",
+    metadata: {
+      filediff: {
+        file: "src/counter.tsx",
+        before:
+          "import { createSignal } from 'solid-js'\n\nexport function Counter() {\n  const [count, setCount] = createSignal(0)\n  return <button onClick={() => setCount(count() + 1)}>{count()}</button>\n}\n",
+        after:
+          "import { createSignal } from 'solid-js'\n\nexport function Counter() {\n  const [count, setCount] = createSignal(1)\n  return <button onClick={() => setCount(count() + 1)}>{count()}</button>\n}\n",
+        additions: 1,
+        deletions: 1,
+      },
+    },
+    time: { start: now - 4000, end: now - 3500 },
+  },
+}
+
+// Completed write tool that creates a new file — exercises canOpenDiff() via
+// `props.input.content` so the "Open in Diff Viewer" icon button renders even
+// when metadata.filediff has no diff payload.
+const writeCompletedPart: ToolPart = {
+  id: "part-tool-write-done",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-write-done",
+  tool: "write",
+  state: {
+    status: "completed",
+    input: {
+      filePath: "src/greet.ts",
+      content: "export function greet(name: string) {\n  return `Hello, ${name}!`\n}\n",
+    },
+    output: "File written successfully",
+    title: "Write file",
+    metadata: {
+      filediff: {
+        file: "src/greet.ts",
+        additions: 3,
+        deletions: 0,
+      },
+    },
+    time: { start: now - 4000, end: now - 3500 },
+  },
+}
+
 // --- Reasoning part ---
 
 const reasoningPart: ReasoningPart = {
@@ -208,10 +270,13 @@ const mockDataReasoning = createMockData([reasoningPart, textPart])
 const mockDataBash = createMockData([bashCompleted])
 // Three context-group tools — exercises ContextToolGroupHeader collapse path
 const mockDataContextGroup = createMockData([completedToolPart, grepCompleted, globCompleted, textPart])
+// Completed edit tool with filediff — exercises the "Open in Diff Viewer" button path
+const mockDataEdit = createMockData([editCompletedPart])
+const mockDataWrite = createMockData([writeCompletedPart])
 
-function AllProviders(props: { children: any; data?: MockData }) {
+function AllProviders(props: { children: any; data?: MockData; onOpenDiff?: () => void }) {
   return (
-    <DataProvider data={props.data ?? mockData} directory="/project">
+    <DataProvider data={props.data ?? mockData} directory="/project" onOpenDiff={props.onOpenDiff}>
       <DiffComponentProvider component={Diff}>
         <CodeComponentProvider component={Code}>
           <FileComponentProvider component={File}>
@@ -349,6 +414,124 @@ export const WithBashToolExpanded: Story = {
 export const WithContextGroup: Story = {
   render: () => (
     <AllProviders data={mockDataContextGroup}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Completed edit tool with filediff → "Open in Diff Viewer" icon visible ---
+//
+// CSS :hover cannot be triggered reliably from Storybook `play` functions,
+// so the action slot is force-revealed via a scoped style override. This
+// captures the layout with the icon present so the visual regression
+// suite catches any regression in:
+//   - the `:has()` parent-grow rule on basic-tool-tool-info
+//   - the `margin-left: auto` pushing the action to the right
+//   - the icon-button ghost variant in the tool-trigger row
+export const WithEditToolOpenDiffAction: Story = {
+  name: "WithEditTool (open-diff action visible)",
+  render: () => (
+    <AllProviders data={mockDataEdit} onOpenDiff={() => {}}>
+      <style>{`[data-slot="tool-trigger-actions"] { opacity: 1 !important; }`}</style>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Completed write tool with content → "Open in Diff Viewer" icon visible ---
+export const WithWriteToolOpenDiffAction: Story = {
+  name: "WithWriteTool (open-diff action visible)",
+  render: () => (
+    <AllProviders data={mockDataWrite} onOpenDiff={() => {}}>
+      <style>{`[data-slot="tool-trigger-actions"] { opacity: 1 !important; }`}</style>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- All 5 tool hint error types in a single screenshot ---
+
+const hintErrors: ToolPart[] = [
+  {
+    id: "part-hint-001",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-001",
+    tool: "write",
+    state: {
+      status: "error",
+      input: { filePath: "src/config.ts" },
+      error:
+        "Error: File already exists — read it before overwriting it. Use the Read tool first to see its current contents.",
+      time: { start: now - 6000, end: now - 5500 },
+    },
+  },
+  {
+    id: "part-hint-002",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-002",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/app.tsx" },
+      error: "Error: File has been modified since it was last read. Please read it again before editing.",
+      time: { start: now - 5500, end: now - 5000 },
+    },
+  },
+  {
+    id: "part-hint-003",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-003",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/utils.ts" },
+      error: "Error: oldString and newString are identical. No changes were made.",
+      time: { start: now - 5000, end: now - 4500 },
+    },
+  },
+  {
+    id: "part-hint-004",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-004",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/index.ts" },
+      error:
+        "Error: oldString not found in file. The oldString must match exactly, including whitespace and indentation.",
+      time: { start: now - 4500, end: now - 4000 },
+    },
+  },
+  {
+    id: "part-hint-005",
+    sessionID: SESSION_ID,
+    messageID: ASST_MSG_ID,
+    type: "tool",
+    callID: "call-hint-005",
+    tool: "edit",
+    state: {
+      status: "error",
+      input: { filePath: "src/counter.tsx" },
+      error:
+        "Error: Found multiple matches for oldString. Provide more surrounding lines to identify the correct match.",
+      time: { start: now - 4000, end: now - 3500 },
+    },
+  },
+]
+
+const mockDataHintErrors = createMockData(hintErrors)
+
+export const ToolHintErrors: Story = {
+  render: () => (
+    <AllProviders data={mockDataHintErrors}>
       <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),

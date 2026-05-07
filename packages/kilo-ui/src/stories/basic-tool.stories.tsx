@@ -40,12 +40,7 @@ export const NoChildren: Story = {
 
 export const Locked: Story = {
   render: () => (
-    <BasicTool
-      icon="folder"
-      trigger={{ title: "Writing file", subtitle: "output.txt" }}
-      defaultOpen
-      locked
-    >
+    <BasicTool icon="folder" trigger={{ title: "Writing file", subtitle: "output.txt" }} defaultOpen locked>
       <pre style={{ padding: "8px", margin: 0, "font-size": "12px" }}>{"Hello, world!"}</pre>
     </BasicTool>
   ),

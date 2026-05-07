@@ -24,39 +24,6 @@
   min-height: 0;
   min-width: 0;
   --am-diff-count-size: 12px;
-  /* Inherit pierre diffs CSS vars from am-diff-panel */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
 }
 
 /* Review toolbar */
@@ -197,7 +164,7 @@
 
 /* Tighter diff line height in review mode */
 .am-review-layout {
-  --diffs-line-height: 20px;
+  --diffs-line-height: var(--kilo-font-size-20);
 }
 
 /* ─── File tree (GitHub-style) ─── */
@@ -207,7 +174,7 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-family: var(--font-family-sans, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
@@ -381,7 +348,7 @@
   border-radius: 8px;
   background: var(--surface-interactive-strong);
   color: var(--text-on-fill);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   line-height: 1;
   margin-left: 6px;
@@ -397,6 +364,44 @@
   color: var(--syntax-diff-delete, #da3319);
 }
 
+/* File tree revert button — always visible */
+
+.am-file-tree-file-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.am-file-tree-revert-btn {
+  flex-shrink: 0;
+  color: var(--text-weaker);
+}
+
+.am-file-tree-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
+/* Diff header revert button — always visible */
+
+.am-diff-revert-btn {
+  color: var(--text-weaker);
+}
+
+.am-diff-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
 /* File tree summary footer */
 
 .am-file-tree-summary {
@@ -405,7 +410,7 @@
   gap: 8px;
   padding: 8px 14px;
   border-top: 1px solid var(--border-weak-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   flex-shrink: 0;
 }
@@ -431,5 +436,5 @@
 .am-branch-hint {
   margin-left: auto;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }

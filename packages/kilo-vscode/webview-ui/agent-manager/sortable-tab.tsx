@@ -17,9 +17,11 @@ import { createRoot } from "solid-js"
 import type { SessionInfo } from "../src/types/messages"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../src/context/language"
+import { parseBindingTokens } from "./keybind-tokens"
 
 /** Lock drag movement to the X axis (horizontal-only tab dragging). */
 export const ConstrainDragYAxis: Component = () => {
@@ -44,6 +46,7 @@ export const ConstrainDragYAxis: Component = () => {
 export const SortableTab: Component<{
   tab: SessionInfo
   active: boolean
+  busy: boolean
   keybind?: string
   closeKeybind?: string
   onSelect: () => void
@@ -74,8 +77,18 @@ export const SortableTab: Component<{
               onClick={props.onSelect}
               onMouseDown={props.onMiddleClick}
             >
+              <Show when={props.busy}>
+                <span class="am-tab-icon">
+                  <Spinner class="am-worktree-spinner" />
+                </span>
+              </Show>
               <span class="am-tab-label">{props.tab.title || t("agentManager.session.untitled")}</span>
-              <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
+              <TooltipKeybind
+                title={t("agentManager.tab.close")}
+                keybind={props.closeKeybind ?? ""}
+                placement="bottom"
+                class="am-tab-close-wrap"
+              >
                 <IconButton
                   icon="close-small"
                   size="small"
@@ -92,7 +105,7 @@ export const SortableTab: Component<{
           </TooltipKeybind>
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
-          <ContextMenu.Content>
+          <ContextMenu.Content class="am-ctx-menu">
             <Show when={props.onFork}>
               <ContextMenu.Item onSelect={() => props.onFork?.()}>
                 <Icon name="branch" size="small" />
@@ -103,6 +116,13 @@ export const SortableTab: Component<{
             <ContextMenu.Item onSelect={props.onClose}>
               <Icon name="close" size="small" />
               <ContextMenu.ItemLabel>{t("agentManager.tab.close")}</ContextMenu.ItemLabel>
+              <Show when={props.closeKeybind}>
+                <span class="am-menu-shortcut">
+                  {parseBindingTokens(props.closeKeybind ?? "").map((token) => (
+                    <kbd class="am-menu-key">{token}</kbd>
+                  ))}
+                </span>
+              </Show>
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>
@@ -140,9 +160,16 @@ export const SortableReviewTab: Component<{
           onClick={props.onSelect}
           onMouseDown={props.onMiddleClick}
         >
-          <Icon name="layers" size="small" />
+          <span class="am-tab-icon">
+            <Icon name="layers" size="small" />
+          </span>
           <span class="am-tab-label">{props.label}</span>
-          <TooltipKeybind title={t("agentManager.tab.close")} keybind={props.closeKeybind ?? ""} placement="bottom">
+          <TooltipKeybind
+            title={t("agentManager.tab.close")}
+            keybind={props.closeKeybind ?? ""}
+            placement="bottom"
+            class="am-tab-close-wrap"
+          >
             <IconButton
               icon="close-small"
               size="small"

@@ -1,11 +1,12 @@
 import type { Argv } from "yargs"
 import { cmd } from "./cmd"
-import { Session } from "../../session"
+import { Session } from "@/session/session"
 import { bootstrap } from "../bootstrap"
-import { Database } from "../../storage/db"
+import { Database } from "@/storage/db"
 import { SessionTable } from "../../session/session.sql"
-import { Project } from "../../project/project"
+import { Project } from "@/project/project"
 import { Instance } from "../../project/instance"
+import { AppRuntime } from "@/effect/app-runtime"
 
 interface SessionStats {
   totalSessions: number
@@ -167,7 +168,9 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
     const batch = filteredSessions.slice(i, i + BATCH_SIZE)
 
     const batchPromises = batch.map(async (session) => {
-      const messages = await Session.messages({ sessionID: session.id })
+      const messages = await AppRuntime.runPromise(
+        Session.Service.use((svc) => svc.messages({ sessionID: session.id })),
+      )
 
       let sessionCost = 0
       let sessionTokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
@@ -190,7 +193,11 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
 
       for (const message of messages) {
         if (message.info.role === "assistant") {
-          sessionCost += message.info.cost || 0
+          // kilocode_change start - count propagated subagent cost once but keep child model stats (#6321)
+          const parts = message.parts.filter((part) => part.type === "step-finish")
+          const cost = parts.length ? parts.reduce((sum, part) => sum + part.cost, 0) : message.info.cost || 0
+          if (!session.parentID) sessionCost += message.info.cost || 0
+          // kilocode_change end
 
           const modelKey = `${message.info.providerID}/${message.info.modelID}`
           if (!sessionModelUsage[modelKey]) {
@@ -201,7 +208,7 @@ export async function aggregateSessionStats(days?: number, projectFilter?: strin
             }
           }
           sessionModelUsage[modelKey].messages++
-          sessionModelUsage[modelKey].cost += message.info.cost || 0
+          sessionModelUsage[modelKey].cost += cost // kilocode_change
 
           if (message.info.tokens) {
             sessionTokens.input += message.info.tokens.input || 0

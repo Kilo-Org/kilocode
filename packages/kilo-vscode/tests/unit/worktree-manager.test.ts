@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
+import { existsSync } from "node:fs"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
 import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
@@ -35,6 +36,12 @@ async function createTempRepo(): Promise<string> {
 function createManager(root: string): WorktreeManager {
   const logs: string[] = []
   return new WorktreeManager(root, (msg) => logs.push(msg))
+}
+
+// Test-only helper to verify metadata writes keep the temp worktree checkout clean.
+async function changedFiles(cwd: string): Promise<string[]> {
+  const raw = await simpleGit(cwd).raw(["status", "--porcelain", "--untracked-files=all", "--"])
+  return raw.trim().split("\n").filter(Boolean)
 }
 
 /** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
@@ -402,52 +409,65 @@ describe("WorktreeManager.removeWorktree", () => {
     expect(after.all).toContain(result.branch)
   })
 
-  it("returns quickly even with a dirty worktree", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
+  it(
+    "returns quickly even with a dirty worktree",
+    async () => {
+      const root = await createTempRepo()
+      const mgr = createManager(root)
 
-    const result = await mgr.createWorktree({ prompt: "dirty-wt" })
+      const result = await mgr.createWorktree({ prompt: "dirty-wt" })
 
-    // Make the worktree dirty with uncommitted files
-    await fs.writeFile(path.join(result.path, "dirty.txt"), "uncommitted")
-    for (let i = 0; i < 20; i++) {
-      await fs.writeFile(path.join(result.path, `bulk-${i}.txt`), "x".repeat(1000))
-    }
+      // Make the worktree dirty with uncommitted files
+      await fs.writeFile(path.join(result.path, "dirty.txt"), "uncommitted")
+      for (let i = 0; i < 20; i++) {
+        await fs.writeFile(path.join(result.path, `bulk-${i}.txt`), "x".repeat(1000))
+      }
 
-    const start = Date.now()
-    await mgr.removeWorktree(result.path)
-    const elapsed = Date.now() - start
+      const start = Date.now()
+      await mgr.removeWorktree(result.path)
+      const elapsed = Date.now() - start
 
-    // The blocking portion (rename + prune) should complete well under 5s.
-    // Old approach with git worktree remove (non-force then force) was much slower.
-    expect(elapsed).toBeLessThan(5000)
+      // The blocking portion (rename + prune) should complete well under 3s.
+      // Old approach with git worktree remove (non-force then force) was much slower.
+      expect(elapsed).toBeLessThan(3000)
 
-    // Original path should be gone immediately
-    const exists = await fs
-      .stat(result.path)
-      .then(() => true)
-      .catch(() => false)
-    expect(exists).toBe(false)
-  })
+      // Original path should be gone immediately
+      const exists = await fs
+        .stat(result.path)
+        .then(() => true)
+        .catch(() => false)
+      expect(exists).toBe(false)
+    },
+    { timeout: 15000 },
+  )
 
-  it("eventual cleanup: files are fully deleted after background rm", async () => {
-    const root = await createTempRepo()
-    const mgr = createManager(root)
+  it(
+    "eventual cleanup: files are fully deleted after background rm",
+    async () => {
+      const root = await createTempRepo()
+      const mgr = createManager(root)
 
-    const result = await mgr.createWorktree({ prompt: "eventual" })
-    await fs.writeFile(path.join(result.path, "data.txt"), "content")
+      const result = await mgr.createWorktree({ prompt: "eventual" })
+      await fs.writeFile(path.join(result.path, "data.txt"), "content")
 
-    await mgr.removeWorktree(result.path)
+      await mgr.removeWorktree(result.path)
 
-    // Wait for background rm to finish
-    await new Promise((r) => setTimeout(r, 500))
+      // Poll until background rm finishes (up to 5s)
+      const worktreesDir = path.join(root, ".kilo", "worktrees")
+      const deadline = Date.now() + 5000
+      while (Date.now() < deadline) {
+        const entries = await fs.readdir(worktreesDir)
+        if (!entries.some((e) => e.startsWith(".kilo-delete-"))) break
+        await new Promise((r) => setTimeout(r, 100))
+      }
 
-    // No .kilo-delete-* temp dirs should remain
-    const worktreesDir = path.join(root, ".kilo", "worktrees")
-    const entries = await fs.readdir(worktreesDir)
-    const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
-    expect(orphans).toHaveLength(0)
-  })
+      // No .kilo-delete-* temp dirs should remain
+      const entries = await fs.readdir(worktreesDir)
+      const orphans = entries.filter((e) => e.startsWith(".kilo-delete-"))
+      expect(orphans).toHaveLength(0)
+    },
+    { timeout: 10000 },
+  )
 })
 
 // ---------------------------------------------------------------------------
@@ -530,11 +550,24 @@ describe("WorktreeManager metadata", () => {
     const mgr = createManager(root)
     const result = await mgr.createWorktree({ prompt: "session-test" })
 
-    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch")
+    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch", "origin")
     const meta = await mgr.readMetadata(result.path)
 
     expect(meta?.sessionId).toBe("sess-abc-123")
     expect(meta?.parentBranch).toBe("feature-branch")
+    expect(meta?.remote).toBe("origin")
+  })
+
+  it("writes metadata outside the worktree checkout", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "session-status" })
+
+    await mgr.writeMetadata(result.path, "sess-clean-123", "feature-branch", "origin")
+
+    expect(existsSync(path.join(result.path, ".kilo", "session-id"))).toBe(false)
+    expect(existsSync(path.join(result.path, ".kilo", "metadata.json"))).toBe(false)
+    expect(await changedFiles(result.path)).toEqual([])
   })
 
   it("returns undefined when no metadata exists", async () => {

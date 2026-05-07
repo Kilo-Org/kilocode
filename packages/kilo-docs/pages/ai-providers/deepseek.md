@@ -1,4 +1,6 @@
 ---
+title: "Using DeepSeek with Kilo Code"
+description: "Connect DeepSeek's reasoning and coding models to Kilo Code. Setup guide for DeepSeek-V3 and DeepSeek-R1 in VS Code and the CLI."
 sidebar_label: DeepSeek
 ---
 
@@ -17,10 +19,54 @@ Kilo Code supports accessing models through the DeepSeek API, including `deepsee
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2.  **Select Provider:** Choose "DeepSeek" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your DeepSeek API key into the "DeepSeek API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add DeepSeek and enter your API key.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the API key as an environment variable or configure it in your `kilo.json` config file:
+
+**Environment variable:**
+
+```bash
+export DEEPSEEK_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "deepseek": {
+      "env": ["DEEPSEEK_API_KEY"],
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "deepseek/deepseek-chat",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

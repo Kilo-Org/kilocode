@@ -35,7 +35,7 @@ You can also run KiloClaw using:
 {% image src="/docs/img/kiloclaw/profile-claw-nav.png" alt="Profile page showing Claw navigation" width="400" caption="Claw navigation in profile sidebar" /%}
 
 3. Click **Create Instance**
-4. Select your preferred model from the dropdown. See all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
+4. Your instance will use **Kilo Auto Balanced** as the default model. You can optionally select a different model from the dropdown — see all available models at the [Kilo Leaderboard](https://kilo.ai/leaderboard#all-models).
 
 {% image src="/docs/img/kiloclaw/create-instance.png" alt="Create instance modal with model selection" width="600" caption="Model selection during instance creation" /%}
 
@@ -96,7 +96,7 @@ For more information on use cases:
 - [Dashboard Reference](/docs/kiloclaw/dashboard)
 - [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
 - [Troubleshooting](/docs/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/kiloclaw/pricing)
+- [KiloClaw Pricing](/docs/kiloclaw/faq/pricing)
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)
 - [Agent Manager](/docs/automate/agent-manager)
 - [OpenClaw Documentation](https://docs.openclaw.ai)

@@ -3,7 +3,10 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
 import { Config } from "../config/config"
+import { ConfigAgent } from "../config/agent"
+import { ConfigPermission } from "../config/permission"
 import { KilocodePaths } from "./paths"
+import type { OrganizationMode } from "@kilocode/kilo-gateway"
 
 export namespace ModesMigrator {
   // Kilocode mode structure
@@ -41,7 +44,7 @@ export namespace ModesMigrator {
     return DEFAULT_MODE_SLUGS.has(slug)
   }
 
-  export function convertPermissions(groups: KilocodeMode["groups"]): Config.Permission {
+  export function convertPermissions(groups: KilocodeMode["groups"]): ConfigPermission.Info {
     const permission: Record<string, any> = {}
     const allowedPermissions = new Set<string>()
 
@@ -77,7 +80,7 @@ export namespace ModesMigrator {
     return permission
   }
 
-  export function convertMode(mode: KilocodeMode): Config.Agent {
+  export function convertMode(mode: KilocodeMode): ConfigAgent.Info {
     const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
 
     return {
@@ -86,6 +89,42 @@ export namespace ModesMigrator {
       prompt,
       permission: convertPermissions(mode.groups),
     }
+  }
+
+  /**
+   * Convert a cloud OrganizationMode to a ConfigAgent.Info.
+   * Unlike legacy convertMode(), this does NOT skip default slugs —
+   * organization admins can intentionally override built-in agents.
+   */
+  export function convertOrganizationMode(mode: OrganizationMode): ConfigAgent.Info {
+    const cfg = mode.config
+    const prompt = [cfg.roleDefinition, cfg.customInstructions].filter(Boolean).join("\n\n")
+    const groups = cfg.groups ?? []
+    if (groups.length === 0) {
+      console.warn(
+        `[ModesMigrator] Organization mode "${mode.slug}" has no groups configured — all tool permissions will be denied`,
+      )
+    }
+
+    return {
+      mode: "primary",
+      description: cfg.description ?? cfg.whenToUse ?? mode.name,
+      prompt: prompt || undefined,
+      permission: convertPermissions(groups),
+      options: { source: "organization", displayName: mode.name },
+    }
+  }
+
+  /**
+   * Convert an array of cloud OrganizationModes to a ConfigAgent.Info record
+   * keyed by slug. All modes are included (no default-slug filtering).
+   */
+  export function convertOrganizationModes(modes: OrganizationMode[]): Record<string, ConfigAgent.Info> {
+    const result: Record<string, ConfigAgent.Info> = {}
+    for (const mode of modes) {
+      result[mode.slug] = convertOrganizationMode(mode)
+    }
+    return result
   }
 
   export async function readModesFile(filepath: string): Promise<KilocodeMode[]> {
@@ -102,7 +141,7 @@ export namespace ModesMigrator {
   }
 
   export interface MigrationResult {
-    agents: Record<string, Config.Agent>
+    agents: Record<string, ConfigAgent.Info>
     skipped: Array<{ slug: string; reason: string }>
   }
 

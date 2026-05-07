@@ -108,9 +108,13 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
           gap: "8px",
         }}
       >
-        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("profile.title")}</h2>
+        <h2 style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "600", margin: 0 }}>
+          {language.t("profile.title")}
+        </h2>
       </div>
-      <div style={{ padding: "16px" }}>
+      <div
+        style={{ padding: "16px", "max-width": "480px", margin: "0 auto", width: "100%", "box-sizing": "border-box" }}
+      >
         <Show
           when={props.profileData}
           fallback={
@@ -121,7 +125,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                   <>
                     <p
                       style={{
-                        "font-size": "13px",
+                        "font-size": "var(--kilo-font-size-13)",
                         color: "var(--vscode-descriptionForeground)",
                         margin: "0 0 8px 0",
                       }}
@@ -153,7 +157,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
               <Card>
                 <p
                   style={{
-                    "font-size": "14px",
+                    "font-size": "var(--kilo-font-size-14)",
                     "font-weight": "600",
                     color: "var(--vscode-foreground)",
                     margin: "0 0 4px 0",
@@ -163,7 +167,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                 </p>
                 <p
                   style={{
-                    "font-size": "12px",
+                    "font-size": "var(--kilo-font-size-12)",
                     color: "var(--vscode-descriptionForeground)",
                     margin: 0,
                   }}
@@ -177,7 +181,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                 <Card>
                   <p
                     style={{
-                      "font-size": "11px",
+                      "font-size": "var(--kilo-font-size-11)",
                       "text-transform": "uppercase",
                       "letter-spacing": "0.5px",
                       color: "var(--vscode-descriptionForeground)",
@@ -213,7 +217,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                     <div>
                       <p
                         style={{
-                          "font-size": "11px",
+                          "font-size": "var(--kilo-font-size-11)",
                           "text-transform": "uppercase",
                           "letter-spacing": "0.5px",
                           color: "var(--vscode-descriptionForeground)",
@@ -224,7 +228,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                       </p>
                       <p
                         style={{
-                          "font-size": "18px",
+                          "font-size": "var(--kilo-font-size-18)",
                           "font-weight": "600",
                           color: "var(--vscode-foreground)",
                           margin: 0,

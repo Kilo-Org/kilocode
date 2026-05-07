@@ -2,10 +2,10 @@ import { defineMain } from "storybook-solidjs-vite"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import tailwindcss from "@tailwindcss/vite"
+import { playgroundCss } from "./playground-css-plugin"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ui = path.resolve(here, "../../ui")
-const app = path.resolve(here, "../../app/src")
 const mocks = path.resolve(here, "./mocks")
 
 export default defineMain({
@@ -24,7 +24,7 @@ export default defineMain({
   async viteFinal(config) {
     const { mergeConfig, searchForWorkspaceRoot } = await import("vite")
     return mergeConfig(config, {
-      plugins: [tailwindcss()],
+      plugins: [tailwindcss(), playgroundCss()],
       resolve: {
         dedupe: ["solid-js", "solid-js/web", "@solidjs/meta"],
         alias: [
@@ -50,7 +50,6 @@ export default defineMain({
             find: /^@\/components\/dialog-select-model-unpaid$/,
             replacement: path.resolve(mocks, "app/components/dialog-select-model-unpaid.tsx"),
           },
-          { find: "@", replacement: app },
         ],
       },
       worker: {
@@ -58,7 +57,7 @@ export default defineMain({
       },
       server: {
         fs: {
-          allow: [searchForWorkspaceRoot(process.cwd()), ui, app, mocks],
+          allow: [searchForWorkspaceRoot(process.cwd()), ui, mocks], // kilocode_change
         },
       },
     })

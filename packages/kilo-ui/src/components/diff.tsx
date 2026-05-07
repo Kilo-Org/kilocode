@@ -1,8 +1,8 @@
-import { sampledChecksum } from "@opencode-ai/util/encode"
+import { sampledChecksum } from "@opencode-ai/core/util/encode"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
-import { createDefaultOptions, type DiffProps, styleVariables } from "@opencode-ai/ui/pierre"
+import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 
@@ -68,6 +68,7 @@ export function Diff<T>(props: DiffProps<T>) {
   const [local, others] = splitProps(props, [
     "before",
     "after",
+    "fileDiff",
     "class",
     "classList",
     "annotations",
@@ -79,6 +80,11 @@ export function Diff<T>(props: DiffProps<T>) {
   const mobile = createMediaQuery("(max-width: 640px)")
 
   const large = createMemo(() => {
+    if (local.fileDiff) {
+      const before = local.fileDiff.deletionLines.join("")
+      const after = local.fileDiff.additionLines.join("")
+      return Math.max(before.length, after.length) > 500_000
+    }
     const before = typeof local.before?.contents === "string" ? local.before.contents : ""
     const after = typeof local.after?.contents === "string" ? local.after.contents : ""
     return Math.max(before.length, after.length) > 500_000
@@ -140,6 +146,24 @@ export function Diff<T>(props: DiffProps<T>) {
     }
 
     host.removeAttribute("data-color-scheme")
+  }
+
+  // Patch a bug in @pierre/diffs where `grid-template-columns: 100% auto` is set
+  // for `line-info-basic` separators under `@media (pointer: fine)`, causing the
+  // expand button to consume 100% of the gutter width and overlap the separator
+  // content text. We inject into `@layer unsafe` which overrides `@layer base`.
+  let separatorPatchSheet: CSSStyleSheet | null = null
+  const patchSeparatorLayout = () => {
+    const root = getRoot()
+    if (!root) return
+    if (!separatorPatchSheet) {
+      separatorPatchSheet = new CSSStyleSheet()
+      separatorPatchSheet.replaceSync(
+        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } }`,
+      )
+    }
+    if (!root.adoptedStyleSheets.includes(separatorPatchSheet))
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, separatorPatchSheet]
   }
 
   const lineIndex = (split: boolean, element: HTMLElement) => {
@@ -216,6 +240,8 @@ export function Diff<T>(props: DiffProps<T>) {
       observer = undefined
       requestAnimationFrame(() => {
         if (token !== renderToken) return
+        // Clear the height pin now that Pierre has rendered new content.
+        container.style.minHeight = ""
         setSelectedLines(lastSelection)
         local.onRendered?.()
       })
@@ -255,6 +281,7 @@ export function Diff<T>(props: DiffProps<T>) {
 
     const root = getRoot()
     if (typeof MutationObserver === "undefined") {
+      container.style.minHeight = ""
       if (!root || !isReady(root)) return
       setSelectedLines(lastSelection)
       local.onRendered?.()
@@ -545,13 +572,14 @@ export function Diff<T>(props: DiffProps<T>) {
     const opts = options()
     const workerPool = large() ? getWorkerPool("unified") : getWorkerPool(props.diffStyle)
     const virtualizer = getVirtualizer()
-    const beforeContents = typeof local.before?.contents === "string" ? local.before.contents : ""
-    const afterContents = typeof local.after?.contents === "string" ? local.after.contents : ""
+    const annotations = untrack(() => local.annotations)
 
-    const cacheKey = (contents: string) => {
-      if (!large()) return sampledChecksum(contents, contents.length)
-      return sampledChecksum(contents)
-    }
+    // Preserve container height during re-render to prevent scroll jumps.
+    // When Pierre tears down the DOM (innerHTML = ""), the container collapses
+    // to 0 height, causing layout shifts that reset the scroll position of
+    // any ancestor scroller. Pinning min-height prevents the collapse.
+    const height = container.offsetHeight
+    if (height > 0) container.style.minHeight = `${height}px`
 
     instance?.cleanUp()
     instance = virtualizer
@@ -560,22 +588,32 @@ export function Diff<T>(props: DiffProps<T>) {
     setCurrent(instance)
 
     container.innerHTML = ""
-    instance.render({
-      oldFile: {
-        ...local.before,
-        contents: beforeContents,
-        cacheKey: cacheKey(beforeContents),
-      },
-      newFile: {
-        ...local.after,
-        contents: afterContents,
-        cacheKey: cacheKey(afterContents),
-      },
-      lineAnnotations: untrack(() => local.annotations),
-      containerWrapper: container,
-    })
+
+    if (local.fileDiff) {
+      instance.render({
+        fileDiff: local.fileDiff,
+        lineAnnotations: annotations,
+        containerWrapper: container,
+      })
+    } else {
+      const beforeContents = typeof local.before?.contents === "string" ? local.before.contents : ""
+      const afterContents = typeof local.after?.contents === "string" ? local.after.contents : ""
+
+      const cacheKey = (contents: string) => {
+        if (!large()) return sampledChecksum(contents, contents.length)
+        return sampledChecksum(contents)
+      }
+
+      instance.render({
+        oldFile: { ...local.before, contents: beforeContents, cacheKey: cacheKey(beforeContents) },
+        newFile: { ...local.after, contents: afterContents, cacheKey: cacheKey(afterContents) },
+        lineAnnotations: annotations,
+        containerWrapper: container,
+      })
+    }
 
     applyScheme()
+    patchSeparatorLayout()
 
     setRendered((value) => value + 1)
     notifyRendered()

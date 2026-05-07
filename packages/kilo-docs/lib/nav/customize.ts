@@ -20,9 +20,10 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/custom-subagents",
         children: "Custom Subagents",
+        platform: "new",
       },
       { href: "/customize/agents-md", children: "agents.md" },
-      { href: "/customize/workflows", children: "Workflows" },
+      { href: "/customize/workflows", children: "Workflows", platform: "new" },
       { href: "/customize/skills", children: "Skills" },
       {
         href: "/customize/prompt-engineering",
@@ -48,6 +49,7 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/context/large-projects",
         children: "Large Projects",
+        platform: "legacy",
       },
     ],
   },

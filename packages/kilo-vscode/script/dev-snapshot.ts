@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { $ } from "bun"
-import { join } from "node:path"
+import { join, dirname } from "node:path"
 import { tmpdir } from "node:os"
 import { rmSync, mkdirSync, existsSync } from "node:fs"
 
@@ -60,7 +60,10 @@ await $`bunx vsce package ${snapshotVersion} --no-update-package-json --no-depen
 
 if (shouldInstall) {
   const execPath = process.env.VSCODE_EXEC_PATH ?? ""
-  const cli = execPath.toLowerCase().includes("insiders") ? "code-insiders" : "code"
+  const isInsiders = execPath.toLowerCase().includes("insiders")
+  const name = isInsiders ? "code-insiders" : "code"
+  const winPath = process.platform === "win32" && execPath ? join(dirname(execPath), "bin", name + ".cmd") : ""
+  const cli = winPath && existsSync(winPath) ? winPath : name
   console.log(`\n🚀 Installing to ${cli}...`)
   await $`${cli} --force --install-extension ${vsixPath}`
 

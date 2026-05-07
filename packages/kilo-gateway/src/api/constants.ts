@@ -12,6 +12,24 @@ export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
 /** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
 export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
 
+/** Environment variable for custom Kilo Chat URL */
+export const KILO_CHAT_URL_ENV = "KILO_CHAT_URL"
+
+/** Default Kilo Chat URL (REST endpoint for messages, conversations, etc.) */
+export const KILO_DEFAULT_CHAT_URL = "https://chat.kiloapps.io"
+
+/** Base URL for Kilo Chat - can be overridden by KILO_CHAT_URL env var */
+export const KILO_CHAT_URL = process.env[KILO_CHAT_URL_ENV] || KILO_DEFAULT_CHAT_URL
+
+/** Environment variable for custom Event Service URL */
+export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"
+
+/** Default Event Service URL (WebSocket endpoint for kilo-chat events) */
+export const KILO_DEFAULT_EVENT_SERVICE_URL = "wss://events.kiloapps.io"
+
+/** Base URL for Event Service - can be overridden by EVENT_SERVICE_URL env var */
+export const KILO_EVENT_SERVICE_URL = process.env[KILO_EVENT_SERVICE_URL_ENV] || KILO_DEFAULT_EVENT_SERVICE_URL
+
 /** Default base URL for OpenRouter-compatible endpoint */
 export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 
@@ -27,8 +45,8 @@ export const DEFAULT_FREE_MODEL = "kilo-auto/free"
 /** Token expiration duration in milliseconds (1 year) */
 export const TOKEN_EXPIRATION_MS = 365 * 24 * 60 * 60 * 1000
 
-/** User-Agent header value for requests */
-export const USER_AGENT = "opencode-kilo-provider"
+/** User-Agent header base value for requests */
+export const USER_AGENT_BASE = "opencode-kilo-provider"
 
 /** Content-Type header value for requests */
 export const CONTENT_TYPE = "application/json"
@@ -69,3 +87,16 @@ export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
+
+export const PROMPTS = [
+  "codex",
+  "gemini",
+  "beast",
+  "anthropic",
+  "trinity",
+  "anthropic_without_todo",
+  "ling",
+  "gpt55",
+] as const
+
+export const AI_SDK_PROVIDERS = ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"] as const

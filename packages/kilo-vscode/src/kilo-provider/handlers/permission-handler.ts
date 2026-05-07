@@ -5,14 +5,42 @@
  * pending permissions after SSE reconnections. No vscode dependency.
  */
 
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+
+export type RecoverablePermission = PermissionRequest
 
 export interface PermissionContext {
   readonly client: KiloClient | null
   readonly currentSessionId: string | undefined
   readonly trackedSessionIds: Set<string>
+  readonly sessionDirectories: ReadonlyMap<string, string>
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
+  recordPermissionDirectory(requestID: string, directory: string): void
+  getPermissionDirectory(requestID: string): string | undefined
+  clearPermissionDirectory(requestID: string): void
+  prunePermissionDirectories(active: Set<string>): void
+}
+
+export function recoveryDirs(workspace: string, dirs: ReadonlyMap<string, string>) {
+  return [...new Set([workspace, ...dirs.values()])]
+}
+
+export function recoverablePermissions(perms: RecoverablePermission[], tracked: Set<string>, seen: Set<string>) {
+  return perms.filter((perm) => {
+    if (seen.has(perm.id)) return false
+    seen.add(perm.id)
+    return tracked.has(perm.sessionID)
+  })
+}
+
+function isNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const obj = error as Record<string, unknown>
+  if (obj.name === "NotFoundError") return true
+  if (typeof obj.status === "number" && obj.status === 404) return true
+  const data = obj.data as Record<string, unknown> | undefined
+  return data?.name === "NotFoundError"
 }
 
 /**
@@ -39,12 +67,17 @@ export async function handlePermissionResponse(
     return
   }
 
-  try {
-    const dir = ctx.getWorkspaceDirectory(target)
+  const dir = ctx.getPermissionDirectory(permissionId) ?? ctx.getWorkspaceDirectory(target)
 
-    // Save per-pattern rules before replying (reply deletes the pending request)
-    if (approvedAlways.length > 0 || deniedAlways.length > 0) {
-      await ctx.client.permission.saveAlwaysRules(
+  const staleCleanup = () => {
+    ctx.clearPermissionDirectory(permissionId)
+    ctx.postMessage({ type: "permissionError", permissionID: permissionId, stale: true })
+    void fetchAndSendPendingPermissions(ctx)
+  }
+
+  if (approvedAlways.length > 0 || deniedAlways.length > 0) {
+    const saveResult = await ctx.client.permission
+      .saveAlwaysRules(
         {
           requestID: permissionId,
           directory: dir,
@@ -53,15 +86,31 @@ export async function handlePermissionResponse(
         },
         { throwOnError: true },
       )
+      .then(() => "ok" as const)
+      .catch((error: unknown) => {
+        if (isNotFoundError(error)) return "stale" as const
+        console.error("[Kilo New] KiloProvider: Failed to save always-rules:", error)
+        ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+        return "error" as const
+      })
+    if (saveResult === "stale") {
+      staleCleanup()
+      return
     }
+    if (saveResult === "error") return
+  }
 
-    await ctx.client.permission.reply(
-      { requestID: permissionId, reply: response, directory: dir },
-      { throwOnError: true },
-    )
-  } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
-    ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+  const replyResult = await ctx.client.permission
+    .reply({ requestID: permissionId, reply: response, directory: dir }, { throwOnError: true })
+    .then(() => "ok" as const)
+    .catch((error: unknown) => {
+      if (isNotFoundError(error)) return "stale" as const
+      console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+      ctx.postMessage({ type: "permissionError", permissionID: permissionId })
+      return "error" as const
+    })
+  if (replyResult === "stale") {
+    staleCleanup()
   }
 }
 
@@ -74,25 +123,30 @@ export async function handlePermissionResponse(
 export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Promise<void> {
   if (!ctx.client) return
   try {
-    const dir = ctx.getWorkspaceDirectory()
-    const { data } = await ctx.client.permission.list({ directory: dir })
-    if (!data) return
-    for (const perm of data) {
-      if (!ctx.trackedSessionIds.has(perm.sessionID)) continue
-      ctx.postMessage({
-        type: "permissionRequest",
-        permission: {
-          id: perm.id,
-          sessionID: perm.sessionID,
-          toolName: perm.permission,
-          patterns: perm.patterns,
-          always: perm.always,
-          args: perm.metadata,
-          message: `Permission required: ${perm.permission}`,
-          tool: perm.tool,
-        },
-      })
+    const dirs = recoveryDirs(ctx.getWorkspaceDirectory(), ctx.sessionDirectories)
+
+    const seen = new Set<string>()
+    for (const dir of dirs) {
+      const { data } = await ctx.client.permission.list({ directory: dir })
+      if (!data) continue
+      for (const perm of recoverablePermissions(data, ctx.trackedSessionIds, seen)) {
+        ctx.recordPermissionDirectory(perm.id, dir)
+        ctx.postMessage({
+          type: "permissionRequest",
+          permission: {
+            id: perm.id,
+            sessionID: perm.sessionID,
+            toolName: perm.permission,
+            patterns: perm.patterns,
+            always: perm.always,
+            args: perm.metadata,
+            message: `Permission required: ${perm.permission}`,
+            tool: perm.tool,
+          },
+        })
+      }
     }
+    ctx.prunePermissionDirectories(seen)
   } catch (error) {
     console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
   }

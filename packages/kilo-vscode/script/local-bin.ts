@@ -20,13 +20,47 @@ const forceRebuild = process.argv.includes("--force")
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
+const coreDir = join(packagesDir, "core")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
+const versionFile = join(targetBinDir, ".cli-version")
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
+}
+
+async function cliSourceHash(): Promise<string | null> {
+  try {
+    const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
+    const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
+    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}` || null
+  } catch {
+    return null
+  }
+}
+
+async function isDirty(): Promise<boolean> {
+  try {
+    const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
+    const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
+    return opencodeResult.text().trim().length > 0 || coreResult.text().trim().length > 0
+  } catch {
+    return false
+  }
+}
+
+async function isStale(): Promise<boolean> {
+  if (await isDirty()) return true
+  const hash = await cliSourceHash()
+  if (!hash) return false // can't determine — assume fresh
+  try {
+    const stored = (await Bun.file(versionFile).text()).trim()
+    return stored !== hash
+  } catch {
+    return true // no version file — treat as stale
+  }
 }
 
 function platformTag(): string {
@@ -88,8 +122,8 @@ async function ensureBuiltBinary(): Promise<string> {
     `No prebuilt binary found under ${relative(kiloVscodeDir, join(opencodeDir, "dist"))} - attempting build via bun.`,
   )
 
-  const bunFile = Bun.file(await Bun.which("bun"))
-  if (!(await bunFile.exists())) {
+  const bunPath = Bun.which("bun")
+  if (!bunPath) {
     throw new Error(
       `Bun is required to build the CLI binary, but was not found on PATH. ` +
         `Install bun, or build the CLI separately in ${opencodeDir} and re-run.`,
@@ -114,8 +148,12 @@ async function ensureBuiltBinary(): Promise<string> {
 
 async function main() {
   const targetFile = Bun.file(targetBinPath)
+  const exists = await targetFile.exists()
 
-  if ((await targetFile.exists()) && !forceRebuild) {
+  const stale = exists && !forceRebuild && (await isStale())
+  const rebuild = forceRebuild || stale
+
+  if (exists && !rebuild) {
     const st = statSync(targetBinPath)
     log(
       `CLI binary already present at ${relative(kiloVscodeDir, targetBinPath)} (${Math.round(st.size / 1024 / 1024)}MB). Use --force to rebuild.`,
@@ -123,8 +161,8 @@ async function main() {
     return
   }
 
-  if ((await targetFile.exists()) && forceRebuild) {
-    log(`Removing existing binary (--force).`)
+  if (exists && rebuild) {
+    log(stale ? `CLI source has changed — rebuilding.` : `Removing existing binary (--force).`)
     rmSync(targetBinPath)
     // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
     const distDir = join(opencodeDir, "dist")
@@ -143,6 +181,10 @@ async function main() {
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
   chmodSync(targetBinPath, 0o755)
+
+  // Record the CLI source version so future runs detect when a rebuild is needed
+  const hash = await cliSourceHash()
+  if (hash) await Bun.write(versionFile, hash + "\n")
 
   log(`Copied CLI binary from ${relative(packagesDir, sourceBinPath)} -> ${relative(kiloVscodeDir, targetBinPath)}`)
 }

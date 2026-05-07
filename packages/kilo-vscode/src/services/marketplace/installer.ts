@@ -1,9 +1,8 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import * as os from "os"
-import { execFile } from "child_process"
-import { promisify } from "util"
 import * as yaml from "yaml"
+import { exec } from "../../util/process"
 import type {
   MarketplaceItem,
   SkillMarketplaceItem,
@@ -15,8 +14,6 @@ import type {
   RemoveResult,
 } from "./types"
 import { MarketplacePaths } from "./paths"
-
-const exec = promisify(execFile)
 
 export class MarketplaceInstaller {
   constructor(private paths: MarketplacePaths) {}

@@ -1,4 +1,7 @@
+import { Context, Effect, Layer } from "effect"
 import { Instance } from "@/project/instance"
+import { InstanceState } from "@/effect/instance-state"
+import { makeRuntime } from "@/effect/run-service"
 import path from "path"
 import { $ } from "bun"
 
@@ -91,18 +94,36 @@ async function resolveProjectId(): Promise<string | undefined> {
   return getProjectIdFromGit(dir)
 }
 
-/**
- * Per-project cached state for project ID
- */
-const state = Instance.state(async () => {
-  const id = await resolveProjectId()
-  return { id }
-})
+export namespace KiloProjectID {
+  export interface Interface {
+    readonly get: () => Effect.Effect<string | undefined>
+  }
+
+  export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloProjectID") {}
+
+  export const layer = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const state = yield* InstanceState.make(
+        Effect.fn("KiloProjectID.state")(function* () {
+          return { id: yield* Effect.promise(() => resolveProjectId()) }
+        }),
+      )
+      return Service.of({
+        get: () => InstanceState.use(state, (s) => s.id),
+      })
+    }),
+  )
+
+  export const defaultLayer = layer
+}
+
+const { runPromise } = makeRuntime(KiloProjectID.Service, KiloProjectID.defaultLayer)
 
 /**
  * Get the project ID for the current Instance context (cached per-project)
  * @returns Normalized project ID or undefined
  */
 export async function getKiloProjectId(): Promise<string | undefined> {
-  return (await state()).id
+  return runPromise((svc) => svc.get())
 }

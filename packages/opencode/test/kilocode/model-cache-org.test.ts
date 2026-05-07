@@ -3,7 +3,11 @@
 // should use the organization-specific endpoint, not the personal endpoint.
 
 import { test, expect, mock } from "bun:test"
+import { Effect } from "effect"
 import path from "path"
+import * as Log from "@opencode-ai/core/util/log"
+
+Log.init({ print: false })
 
 // Capture the options passed to fetchKiloModels
 let captured: any = undefined
@@ -23,21 +27,7 @@ mock.module("@kilocode/kilo-gateway", () => ({
   KILO_OPENROUTER_BASE: "https://api.kilo.ai/api/openrouter",
 }))
 
-// Mock BunProc and default plugins to prevent actual installations during tests
-mock.module("../../src/bun/index", () => ({
-  BunProc: {
-    install: async (pkg: string) => {
-      const lastAtIndex = pkg.lastIndexOf("@")
-      return lastAtIndex > 0 ? pkg.substring(0, lastAtIndex) : pkg
-    },
-    run: async () => {
-      throw new Error("BunProc.run should not be called in tests")
-    },
-    which: () => process.execPath,
-    InstallFailedError: class extends Error {},
-  },
-}))
-
+// Mock default plugins to prevent actual installations during tests
 const mockPlugin = () => ({})
 mock.module("opencode-copilot-auth", () => ({ default: mockPlugin }))
 mock.module("opencode-anthropic-auth", () => ({ default: mockPlugin }))
@@ -61,7 +51,7 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
+    init: Effect.promise(async () => {
       // Simulate an OAuth login where user selected an enterprise organization
       await Auth.set("kilo", {
         type: "oauth",
@@ -70,7 +60,7 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
         expires: Date.now() + 3600000,
         accountId: "org-enterprise-123",
       })
-    },
+    }).pipe(Effect.asVoid),
     fn: async () => {
       // Reset captured and cache
       captured = undefined
@@ -100,7 +90,7 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
+    init: Effect.promise(async () => {
       // Simulate an OAuth login for a personal account (no accountId)
       await Auth.set("kilo", {
         type: "oauth",
@@ -108,7 +98,7 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
         refresh: "test-refresh-token",
         expires: Date.now() + 3600000,
       })
-    },
+    }).pipe(Effect.asVoid),
     fn: async () => {
       captured = undefined
       ModelCache.clear("kilo")
@@ -135,7 +125,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
+    init: Effect.promise(async () => {
       await Auth.set("kilo", {
         type: "oauth",
         access: "token-clear-test",
@@ -143,7 +133,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
         expires: Date.now() + 3600000,
         accountId: "org-clear",
       })
-    },
+    }).pipe(Effect.asVoid),
     fn: async () => {
       // Populate cache
       captured = undefined

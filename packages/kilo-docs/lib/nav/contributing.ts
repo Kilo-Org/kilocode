@@ -13,10 +13,6 @@ export const ContributingNav: NavSection[] = [
         href: "/contributing/ecosystem",
         children: "Ecosystem",
       },
-      {
-        href: "/contributing/cline-to-kilo-migration",
-        children: "Cline to Kilo Migration",
-      },
     ],
   },
   {
@@ -41,6 +37,10 @@ export const ContributingNav: NavSection[] = [
           {
             href: "/contributing/architecture/benchmarking",
             children: "Benchmarking",
+          },
+          {
+            href: "/contributing/architecture/config-schema",
+            children: "CLI Config Schema",
           },
           {
             href: "/contributing/architecture/enterprise-mcp-controls",
@@ -69,6 +69,10 @@ export const ContributingNav: NavSection[] = [
           {
             href: "/contributing/architecture/voice-transcription",
             children: "Voice Transcription",
+          },
+          {
+            href: "/contributing/architecture/per-message-feedback",
+            children: "Per-Message Feedback",
           },
         ],
       },

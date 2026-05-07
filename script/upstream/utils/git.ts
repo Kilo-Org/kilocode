@@ -4,6 +4,10 @@
  */
 
 import { $ } from "bun"
+import { rm } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 export interface BranchInfo {
   current: string
@@ -55,7 +59,7 @@ export async function hasUpstreamRemote(): Promise<boolean> {
 }
 
 export async function fetchUpstream(): Promise<void> {
-  const result = await $`git fetch upstream`.quiet().nothrow()
+  const result = await $`git fetch upstream --tags --force`.quiet().nothrow()
   if (result.exitCode !== 0) {
     throw new Error(`Failed to fetch upstream: ${result.stderr.toString()}`)
   }
@@ -122,7 +126,12 @@ export async function commit(message: string): Promise<void> {
 }
 
 export async function merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
-  const result = await $`git merge ${branch}`.nothrow()
+  // Force zdiff3 markers even if the contributor's local config has drifted:
+  // conflicts carry the base version (|||||||) alongside ours/theirs so mergiraf
+  // has the common ancestor for structural heuristics and any remaining manual
+  // resolution is dramatically easier. `postinstall` (script/setup-git.ts) sets
+  // this repo-wide as well; the `-c` override here is belt-and-suspenders.
+  const result = await $`git -c merge.conflictStyle=zdiff3 merge ${branch}`.nothrow()
 
   if (result.exitCode === 0) {
     return { success: true, conflicts: [] }
@@ -146,6 +155,12 @@ export async function hasUncommittedChanges(): Promise<boolean> {
   return result.trim().length > 0
 }
 
+export async function restoreDirectories(dirs: string[]): Promise<void> {
+  for (const dir of dirs) {
+    await $`git restore ${dir}`.quiet().nothrow()
+  }
+}
+
 export async function stageAll(): Promise<void> {
   await $`git add -A`
 }
@@ -164,6 +179,16 @@ export async function getCommitMessage(ref: string): Promise<string> {
 export async function getCommitHash(ref: string): Promise<string> {
   const result = await $`git rev-parse ${ref}`.text()
   return result.trim()
+}
+
+/**
+ * Check if `commit` is an ancestor of `ref` (i.e. reachable from `ref`).
+ * Uses `git merge-base --is-ancestor`, which exits 0 for yes, 1 for no.
+ * Any other exit code (e.g. unknown commit) is treated as "not an ancestor".
+ */
+export async function isAncestor(commit: string, ref = "HEAD"): Promise<boolean> {
+  const result = await $`git merge-base --is-ancestor ${commit} ${ref}`.quiet().nothrow()
+  return result.exitCode === 0
 }
 
 export async function getTagsForCommit(commit: string): Promise<string[]> {
@@ -246,6 +271,11 @@ export async function ensureRerere(): Promise<void> {
   await $`git config rerere.autoupdate true`.quiet()
 }
 
+async function reset(dir: string): Promise<void> {
+  await $`git -C ${dir} reset -q --hard`.quiet().nothrow()
+  await $`git -C ${dir} clean -fdx`.quiet().nothrow()
+}
+
 /**
  * Train the rerere cache from past merge commits in the repo history.
  * Implements the same logic as git's contrib/rerere-train.sh:
@@ -256,14 +286,14 @@ export async function ensureRerere(): Promise<void> {
  * Returns the number of resolutions learned.
  */
 export async function trainRerere(grep: string): Promise<number> {
-  // Save the current HEAD so we can restore it afterwards
-  const headResult = await $`git symbolic-ref -q HEAD`.quiet().nothrow()
-  const branch = headResult.exitCode === 0 ? headResult.stdout.toString().trim() : null
-  const originalHead = branch ?? (await $`git rev-parse --verify HEAD`.text()).trim()
+  const head = (await $`git rev-parse --verify HEAD`.text()).trim()
+  const dir = join(tmpdir(), `kilo-rerere-train-${randomUUID()}`)
 
   let learned = 0
 
   try {
+    await $`git worktree add --detach ${dir} ${head}`.quiet()
+
     // Find all merge commits matching the grep pattern (merges have multiple parents)
     const revList = await $`git rev-list --parents --all --grep=${grep}`.quiet().nothrow()
     if (revList.exitCode !== 0 || !revList.stdout.toString().trim()) return 0
@@ -280,45 +310,45 @@ export async function trainRerere(grep: string): Promise<number> {
 
       const [commit, parent1, ...otherParents] = parts
 
+      await reset(dir)
+
       // Checkout the first parent
-      const coResult = await $`git checkout -q ${parent1}`.quiet().nothrow()
+      const coResult = await $`git -C ${dir} checkout -q ${parent1}`.quiet().nothrow()
       if (coResult.exitCode !== 0) continue
 
       // Attempt the merge - we expect it to fail with conflicts
-      const mergeResult = await $`git merge --no-gpg-sign ${otherParents}`.quiet().nothrow()
+      const mergeResult = await $`git -C ${dir} merge --no-gpg-sign ${otherParents}`.quiet().nothrow()
       if (mergeResult.exitCode === 0) {
         // Cleanly merged — no conflicts to learn from, reset and skip
-        await $`git reset -q --hard`.quiet().nothrow()
+        await reset(dir)
         continue
       }
 
       // Check if rerere recorded a pre-image (MERGE_RR exists and is non-empty)
-      const mergeRR = Bun.file(`${process.env.GIT_DIR || ".git"}/MERGE_RR`)
-      const hasMergeRR = await mergeRR.exists().catch(() => false)
+      const rr = await $`git -C ${dir} rev-parse --git-path MERGE_RR`.text()
+      const hasMergeRR = await Bun.file(rr.trim())
+        .exists()
+        .catch(() => false)
       if (!hasMergeRR) {
-        await $`git reset -q --hard`.quiet().nothrow()
+        await reset(dir)
         continue
       }
 
       // Record the conflict pre-image
-      await $`git rerere`.quiet().nothrow()
+      await $`git -C ${dir} rerere`.quiet().nothrow()
 
       // Apply the actual resolution by checking out the merge commit's tree
-      await $`git checkout -q ${commit} -- .`.quiet().nothrow()
+      await $`git -C ${dir} checkout -q ${commit} -- .`.quiet().nothrow()
 
       // Record the resolution post-image
-      await $`git rerere`.quiet().nothrow()
+      await $`git -C ${dir} rerere`.quiet().nothrow()
 
       learned++
-      await $`git reset -q --hard`.quiet().nothrow()
+      await reset(dir)
     }
   } finally {
-    // Always restore original branch
-    if (branch) {
-      await $`git checkout ${branch.replace("refs/heads/", "")}`.quiet().nothrow()
-    } else {
-      await $`git checkout ${originalHead}`.quiet().nothrow()
-    }
+    await $`git worktree remove --force ${dir}`.quiet().nothrow()
+    await rm(dir, { recursive: true, force: true })
   }
 
   return learned

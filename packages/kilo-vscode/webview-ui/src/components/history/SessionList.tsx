@@ -2,6 +2,7 @@
  * SessionList component
  * Displays all sessions grouped by date, with context menu for rename/delete.
  * Uses kilo-ui List component for keyboard navigation and accessibility.
+ * Header/back button are owned by the parent HistoryView.
  */
 
 import { Component, Show, createSignal, onMount, type JSX } from "solid-js"
