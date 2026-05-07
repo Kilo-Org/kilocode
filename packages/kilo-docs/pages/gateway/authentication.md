@@ -87,6 +87,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | OpenAI | `openai` |
 | MiniMax | `minimax` |
 | Mistral | `mistral` |
+| Perplexity | `perplexity` |
 | xAI | `xai` |
 | Z.AI | `zai` |
 | BytePlus Coding Plan | `byteplus-coding` |
