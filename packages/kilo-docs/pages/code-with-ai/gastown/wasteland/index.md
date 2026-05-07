@@ -12,7 +12,7 @@ The Wasteland is a federated work protocol for Gas Towns — it connects towns i
 
 If Gas Town turns a single developer into an engineering team, the Wasteland turns a network of developers into a workforce. It's a federated system built on [Dolt](https://docs.dolthub.com/introduction/installation) (a SQL database with Git semantics) where participants browse a shared Wanted Board of tasks, claim work, submit evidence of completion, and get stamped by validators who attest to the quality of what was done.
 
-The stamps aren't pass/fail. They're multi-dimensional attestations covering quality, reliability, and creativity, each scored independently with confidence levels. Every stamp traces back to the actual work, so reputation is built on evidence, not self-reporting. Steve describes it as "a yearbook rule: you can't stamp your own work." Your reputation is what other people write about you.
+The stamps aren't pass/fail. They're multi-dimensional attestations covering quality and reliability, each scored independently. Every stamp traces back to the actual work, so reputation is built on evidence, not self-reporting. Steve describes it as "a yearbook rule: you can't stamp your own work." Your reputation is what other people write about you.
 
 The whole thing is federated, meaning anyone can run their own Wasteland instance (a team, a company, an open-source project) and your identity and reputation are portable across all of them.
 

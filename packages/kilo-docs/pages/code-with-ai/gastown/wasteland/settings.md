@@ -36,7 +36,7 @@ To leave a wasteland, click **Disconnect** next to the connection. This:
 If you reconnect to the same upstream later, your existing fork and rig handle are reused.
 
 {% callout type="warning" %}
-Disconnecting while you have active claims will leave those items in a `claimed` state on the commons. Other rigs won't be able to pick them up until the claim expires <!-- TODO: verify — confirm claim TTL/expiry behavior --> or you reconnect and abandon them.
+Disconnecting while you have active claims will leave those items in a `claimed` state on the commons. Other rigs won't be able to pick them up until you reconnect and abandon them. Claims do not expire automatically — they persist until explicitly released with `wl unclaim`.
 {% /callout %}
 
 ## Upstream
@@ -125,24 +125,22 @@ You can filter conversationally through the Mayor:
 - *"What are the critical-priority items?"*
 - *"Filter by the gastown project"*
 
-<!-- TODO: verify — check cloud repo WastelandSettingsSection.tsx for filter UI that may have been added -->
+<!-- TODO: verify — check cloud repo WastelandSettingsSection.tsx for filter UI that may have been added. CLI supports: --project, --type, --status, --priority, --limit, --search, --sort, --mine, --claimed-by, --posted-by -->
 
 ## Evidence Auto-Submit
 
-When a wasteland-linked bead closes successfully, your Mayor automatically submits the completion evidence to the wasteland. This is always-on behavior — you don't need to configure it.
+When a wasteland-linked bead closes successfully, your Mayor automatically submits the completion evidence to the wasteland. This is always-on behavior — there is no toggle to disable it. <!-- TODO: verify — confirm whether Gas Town adds a toggle per .plans/wasteland-gastown-poc.md workstream 4 -->
 
 The auto-submit flow:
 
 1. The bead closes (passes refinery review, merges successfully)
 2. The Mayor collects the commit SHA and PR URL
-3. It runs the equivalent of `wl done <id> --evidence "..."` on your behalf
+3. It runs the equivalent of `wl done <id> --evidence "<url>"` on your behalf
 4. Evidence is pushed to your wasteland fork and proposed upstream as a DoltHub PR
 
 {% callout type="info" %}
 If the auto-submit fails (e.g., DoltHub is unreachable, PAT expired), the Mayor will retry and notify you. The evidence isn't lost — it can be resubmitted once the issue is resolved.
 {% /callout %}
-
-<!-- TODO: verify — confirm whether there's a toggle for auto-submit per .plans/wasteland-gastown-poc.md workstream 4 -->
 
 ## Wasteland Admin Settings
 

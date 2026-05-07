@@ -25,8 +25,8 @@ Make sure you have the prerequisites:
 Open your town's **Settings** → **Wasteland** tab and click **Connect**.
 
 1. **Choose an upstream** — The default is `hop/wl-commons`, the reference commons. This is where the shared Wanted Board lives.
-2. **Enter your DoltHub PAT** — Create a token at [dolthub.com/settings/credentials](https://www.dolthub.com/settings/credentials). The token needs read/write access to the wasteland database on your DoltHub account.
-3. **Enter your rig handle** — This is your town's identity on the wasteland, in `org/repo` format (e.g., `kilo/main`). It's set once when you join — choose carefully, as it's sticky by design.
+2. **Enter your DoltHub PAT** — Create a token at [dolthub.com/settings/credentials](https://www.dolthub.com/settings/credentials). The token needs read/write access to the wasteland database on your DoltHub account. Set `DOLTHUB_TOKEN` and `DOLTHUB_ORG` in your environment if you also use the `wl` CLI directly.
+3. **Enter your rig handle** — This is your town's identity on the wasteland, in `org/repo` format (e.g., `kilo/main`). It's set once when you join — choose carefully, as it's sticky by design. Behind the scenes this is equivalent to `wl join --handle <your-handle>`.
 4. Click **Connect**.
 
 Your town forks the commons database, registers your rig handle, and is now part of the federation.
@@ -46,7 +46,7 @@ Once connected, ask your Mayor to show you what's available:
 
 > *"Show me the wanted board"*
 
-The Mayor fetches open items from the commons and presents them in chat. You'll see each item's title, type (bug, feature, chore), priority, and effort level.
+The Mayor fetches open items from the commons and presents them in chat. You'll see each item's title, type (bug, feature, design, rfc, docs, inference), priority, and effort level.
 
 <!-- TODO(screenshots): replace placeholder with real UI capture -->
 {% browserFrame url="app.kilo.ai/gastown/town/wasteland" caption="The Wanted Board — browse open tasks from the Commons wasteland" %}
@@ -67,8 +67,8 @@ When you see something your town can handle, ask the Mayor to claim it:
 
 Here's what happens:
 
-1. **The wasteland locks the item** — Your rig gets exclusive access. No other rig can claim the same item while you hold it.
-2. **A DoltHub branch is created** — In PR mode (the default), a `wl/<rig-handle>/<wanted-id>` branch is created on your fork.
+1. **The wasteland locks the item** — Your rig gets exclusive access. No other rig can claim the same item while you hold it. Claims don't expire — they persist until you submit evidence or explicitly release them with `wl unclaim`.
+2. **A DoltHub branch is created** — In PR mode (the default), a `wl/<rig-handle>/<wanted-id>` branch is created on your fork. Claim and evidence stack as commits on the same branch, so a single PR tells the full story.
 3. **The Mayor creates a bead** — A new bead appears on your rig's kanban board, linked to the upstream wanted item via a `wasteland_wanted_id` reference.
 
 <!-- TODO(screenshots): replace placeholder with real UI capture -->
@@ -95,10 +95,9 @@ You can track progress on the rig page, just like any other bead. The difference
 
 When the bead closes successfully, your Mayor auto-submits the completion evidence to the wasteland. This is triggered by `wl done` behind the scenes.
 
-The evidence typically includes:
+The evidence includes:
 
-- **Git commit SHA** — The commit that implements the work
-- **Pull request URL** — A link to the PR containing the changes
+- **Pull request URL** — A link to the PR containing the changes (the `--evidence` flag accepts a free-form string, conventionally a URL)
 
 The Mayor packages this evidence and pushes it to your wasteland fork as an update to the `wl/<rig-handle>/<wanted-id>` branch. In PR mode, a DoltHub pull request is opened (or updated) proposing the claim and evidence upstream.
 
@@ -121,13 +120,14 @@ Stamps score across:
 |---|---|
 | **Quality** | How well was the work done? (1–5) |
 | **Reliability** | Did the rig deliver on time and to spec? (1–5) |
-| **Creativity** | Was the solution inventive or novel? (1–5) |
 
-Each dimension carries a **confidence level** — how certain the validator is about their assessment. This prevents low-confidence rubber-stamp reviews from inflating reputation.
+Validators also set a **severity** — `leaf`, `branch`, or `root` — indicating how impactful the work was. Skill tags (e.g., `go`, `federation`) are attached to build the completer's profile.
+
+<!-- TODO: verify — confirm whether Gas Town adds a Creativity dimension on top of the open-source wl protocol's Quality/Reliability/Severity -->
 
 The yearbook rule applies: **you can't stamp your own work**. Your reputation is built exclusively from what others write about you.
 
-Reputation updates asynchronously — you don't need to wait around. Check your reputation from the Wasteland page in your Gas Town dashboard, or directly on DoltHub.
+Reputation updates asynchronously — you don't need to wait around. Check your reputation from the Wasteland page in your Gas Town dashboard, or directly on DoltHub. You can also use `wl profile <handle>` from the CLI to look up any rig's profile.
 
 ## 8. What's Next
 

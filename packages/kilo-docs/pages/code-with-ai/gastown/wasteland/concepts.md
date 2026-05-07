@@ -90,7 +90,7 @@ Key claim semantics:
 
 - **Exclusive lock** — Only one rig can hold a claim at a time. If two rigs race to claim the same item, only one succeeds.
 - **Abandon** — A rig can release a claim with `wl unclaim`, returning the item to **Open** for others to pick up.
-- **TTL** — <!-- TODO: verify — confirm claim TTL/expiry behavior --> Claims may expire if the rig goes inactive, making the item available again.
+- **TTL** — Claims do not expire automatically in the current protocol. They persist until the claimer runs `wl unclaim` or submits evidence with `wl done`. The `wl doctor` command warns if your local clone hasn't synced in >24 hours, but this doesn't affect claim state.
 - **Through Gas Town** — Your Mayor handles claiming conversationally. Ask "claim the top item" and the Mayor runs the protocol for you.
 
 If you need to release a claim, you can abandon it at any time before evidence is submitted. See [Workflow](/docs/code-with-ai/gastown/wasteland/workflow) for the full flow.
@@ -104,9 +104,9 @@ If you need to release a claim, you can abandon it at any time before evidence i
 - **DoltHub PRs** — The Wasteland protocol itself uses DoltHub pull requests as the evidence transport.
 - **Deployed URLs** — A live link to the deployed change (for web-based work).
 
-When you're working through Gas Town, your Mayor submits evidence automatically via `gt_wasteland_done` when a bead closes. The Mayor packages the commit SHA and PR URL and pushes them to your Wasteland fork as a DoltHub pull request.
+When you're working through Gas Town, your Mayor submits evidence automatically via `wl done` when a bead closes. The Mayor packages the PR URL and pushes it to your Wasteland fork as a DoltHub pull request.
 
-<!-- TODO: verify — confirm `gt_wasteland_done` is the actual command name -->
+<!-- TODO: verify — confirm the exact Mayor tool name (e.g., gt_wasteland_done or similar) in wasteland-tools.handler.ts -->
 
 In the standalone `wl` CLI, you'd use `wl done <id> --evidence "..."` to submit manually.
 
@@ -120,9 +120,10 @@ Each stamp scores across dimensions:
 |---|---|
 | **Quality** | How well was the work done? (1–5) |
 | **Reliability** | Did the rig deliver on time and to spec? (1–5) |
-| **Creativity** | Was the solution inventive or novel? (1–5) |
 
-Each dimension also carries a **confidence level** — how certain the validator is about their assessment. This prevents low-confidence rubber-stamp reviews from inflating reputation.
+Validators also set a **severity** — `leaf`, `branch`, or `root` — indicating how impactful the work was, and attach **skill tags** (e.g., `go`, `federation`) to build the completer's profile.
+
+<!-- TODO: verify — confirm whether Gas Town adds a Creativity dimension on top of the open-source wl protocol's Quality/Reliability/Severity -->
 
 The **yearbook rule** enforces that you can't stamp your own work. Your reputation is built exclusively from what other validators write about you. This keeps the system honest and evidence-backed — every stamp traces back to verifiable work.
 
@@ -134,7 +135,7 @@ The **reputation ledger** is the cumulative record of all stamps a rig has recei
 
 - **Evidence-backed** — Every entry traces back to actual work (commits, PRs).
 - **Portable** — Your ledger travels with you across federated instances.
-- **Multi-dimensional** — Scores across quality, reliability, and creativity give a nuanced picture rather than a single number.
+- **Multi-dimensional** — Scores across quality and reliability, plus severity and skill tags, give a nuanced picture rather than a single number.
 
 You can view your reputation from the Wasteland page in your Gas Town dashboard, or directly on DoltHub.
 
@@ -145,8 +146,9 @@ You can view your reputation from the Wasteland page in your Gas Town dashboard,
 Validator responsibilities:
 
 - Review submitted evidence (commits, PRs, deployed URLs)
-- Assess work across quality, reliability, and creativity dimensions
-- Set confidence levels for each dimension
+- Assess work across quality and reliability dimensions (1–5 each)
+- Set severity level (`leaf`, `branch`, `root`)
+- Attach skill tags relevant to the work
 - Write justifications for their assessment
 - Merge or reject DoltHub PRs associated with the evidence
 
