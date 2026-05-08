@@ -4,7 +4,16 @@ import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
-import { INDEX_REF, parseNameStatus, parseNumstat, showBlob, summarize, type FileEntry } from "./git-status"
+import {
+  blobSize,
+  INDEX_REF,
+  MAX_DETAIL_BYTES,
+  parseNameStatus,
+  parseNumstat,
+  showBlob,
+  summarize,
+  type FileEntry,
+} from "./git-status"
 
 export const STAGED_SOURCE_ID = "staged"
 
@@ -70,6 +79,13 @@ export function createStagedDiffSource(): DiffSource {
       // skip impossible reads (e.g. HEAD: for an added file).
       const entry = await fileEntry(git, dir, file, log)
       if (!entry) return null
+
+      const beforeBytes = entry.status === "added" ? 0 : await blobSize(git, dir, "HEAD", file)
+      const afterBytes = entry.status === "deleted" ? 0 : await blobSize(git, dir, INDEX_REF, file)
+      if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
+        log("Staged detail skipped: file too large", { file, beforeBytes, afterBytes, cap: MAX_DETAIL_BYTES })
+        return summarize(entry)
+      }
 
       // For added: HEAD has no blob. For deleted: index has no blob.
       const before = entry.status === "added" ? "" : await showBlob(git, dir, "HEAD", file)

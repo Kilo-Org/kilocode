@@ -7,6 +7,8 @@ import type { GitOps } from "../../agent-manager/GitOps"
 import { generatedLike } from "../../agent-manager/local-diff"
 import type { DiffFile } from "../types"
 
+export { MAX_DETAIL_BYTES } from "../../agent-manager/local-diff"
+
 export type Status = "added" | "deleted" | "modified"
 
 export interface FileEntry {
@@ -89,6 +91,32 @@ export async function showBlob(git: GitOps, dir: string, ref: string, file: stri
 
 /** Read a working-tree file off disk. `""` on missing/unreadable. */
 export async function readDisk(dir: string, file: string): Promise<string> {
-  const full = path.join(dir, file)
+  const full = resolveInside(dir, file)
+  if (!full) return ""
   return fs.readFile(full, "utf-8").catch(() => "")
+}
+
+// Used to size-cap detail reads without materializing the blob. Mirrors
+// local-diff.ts's `blobSize` helper.
+export async function blobSize(git: GitOps, dir: string, ref: string, file: string): Promise<number> {
+  const result = await git.execGit(["cat-file", "-s", `${ref}:${file}`], dir)
+  if (result.code !== 0) return 0
+  return parseInt(result.stdout.trim(), 10) || 0
+}
+
+export async function fileSize(dir: string, file: string): Promise<number> {
+  const full = resolveInside(dir, file)
+  if (!full) return 0
+  const stat = await fs.stat(full).catch(() => undefined)
+  return stat?.size ?? 0
+}
+
+// Rejects absolute paths and any `..` traversal that would escape `dir`.
+// Returns the resolved path when safe, `undefined` otherwise.
+export function resolveInside(dir: string, file: string): string | undefined {
+  if (path.isAbsolute(file)) return undefined
+  const full = path.resolve(dir, file)
+  const base = path.resolve(dir)
+  if (full !== base && !full.startsWith(base + path.sep)) return undefined
+  return full
 }

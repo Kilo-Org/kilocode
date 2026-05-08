@@ -1,12 +1,23 @@
 import * as fs from "fs/promises"
-import * as path from "path"
 import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
 import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
-import { INDEX_REF, parseNameStatus, parseNumstat, readDisk, showBlob, summarize, type FileEntry } from "./git-status"
+import {
+  blobSize,
+  fileSize,
+  INDEX_REF,
+  MAX_DETAIL_BYTES,
+  parseNameStatus,
+  parseNumstat,
+  readDisk,
+  resolveInside,
+  showBlob,
+  summarize,
+  type FileEntry,
+} from "./git-status"
 
 export const UNSTAGED_SOURCE_ID = "unstaged"
 
@@ -57,7 +68,9 @@ export function createUnstagedDiffSource(): DiffSource {
     const out: FileEntry[] = []
     for (const file of result.stdout.split("\n")) {
       if (!file.trim()) continue
-      const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
+      const full = resolveInside(dir, file)
+      if (!full) continue
+      const stat = await fs.stat(full).catch(() => undefined)
       if (!stat) continue
       out.push({
         file,
@@ -94,6 +107,13 @@ export function createUnstagedDiffSource(): DiffSource {
 
       const entry = await fileEntry(git, dir, file, log)
       if (!entry) return null
+
+      const beforeBytes = !entry.tracked || entry.status === "added" ? 0 : await blobSize(git, dir, INDEX_REF, file)
+      const afterBytes = entry.status === "deleted" ? 0 : await fileSize(dir, file)
+      if (beforeBytes > MAX_DETAIL_BYTES || afterBytes > MAX_DETAIL_BYTES) {
+        log("Unstaged detail skipped: file too large", { file, beforeBytes, afterBytes, cap: MAX_DETAIL_BYTES })
+        return summarize(entry)
+      }
 
       // Untracked: no index blob, after = disk content.
       // Tracked added/modified/deleted: before = index blob (or "" for added),
@@ -157,7 +177,14 @@ async function fileEntry(
   }
 
   // Untracked branch: confirm via fs.stat that the file actually exists.
-  const stat = await fs.stat(path.join(dir, file)).catch(() => undefined)
+  // `resolveInside` rejects absolute paths and `..` segments so a crafted
+  // webview message can't read outside the workspace.
+  const full = resolveInside(dir, file)
+  if (!full) {
+    log("Unstaged file rejected: outside workspace", { file })
+    return undefined
+  }
+  const stat = await fs.stat(full).catch(() => undefined)
   if (!stat) {
     log("Unstaged file not found", { file })
     return undefined
