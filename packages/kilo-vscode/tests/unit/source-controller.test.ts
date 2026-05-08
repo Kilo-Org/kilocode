@@ -346,3 +346,31 @@ describe("SourceController.requestFile", () => {
     controller.stop()
   })
 })
+
+describe("SourceController.refresh", () => {
+  it("runs a one-shot active source fetch without restarting polling", async () => {
+    let fetches = 0
+    const source: DiffSource = {
+      descriptor: SESSION_DESC,
+      async fetch() {
+        fetches++
+        return { diffs: [{ file: `file-${fetches}.ts` } as never] }
+      },
+    }
+    const { controller, posted } = make({ "session:s1": source })
+
+    controller.setContext({ workspaceRoot: "/repo", sessionId: "s1" })
+    await controller.activate("session:s1", { poll: false })
+    posted.length = 0
+
+    await controller.refresh()
+
+    expect(fetches).toBe(2)
+    const diffs = byType(posted, "diffViewer.diffs")
+    expect(diffs).toHaveLength(1)
+    expect(diffs[0]!.diffs).toEqual([{ file: "file-2.ts" }])
+    expect(byType(posted, "diffViewer.loading").map((m) => m.loading)).toEqual([true, false])
+
+    controller.stop()
+  })
+})

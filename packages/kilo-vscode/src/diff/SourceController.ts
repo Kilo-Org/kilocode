@@ -1,7 +1,49 @@
 import { hashFileDiffs } from "./shared/hash"
 import { DIFF_POLL_INTERVAL_MS } from "./polling"
-import type { DiffSource, DiffSourceDescriptor } from "./sources/types"
+import type { DiffSource, DiffSourceCapabilities, DiffSourceDescriptor, DiffSourceNotice } from "./sources/types"
+import type { DiffFile } from "./types"
 import type { PanelContext } from "./types"
+
+type Messages = {
+  available?: (descriptors: DiffSourceDescriptor[], id: string) => unknown
+  capabilities?: (capabilities: DiffSourceCapabilities) => unknown
+  loading?: (source: DiffSource, loading: boolean) => unknown
+  diffs: (source: DiffSource, diffs: DiffFile[]) => unknown
+  notice?: (source: DiffSource, notice: DiffSourceNotice | undefined) => unknown
+  diffFile: (source: DiffSource | undefined, file: string, diff: DiffFile | null) => unknown
+  revertFileResult: (source: DiffSource | undefined, file: string, result: { ok: boolean; message: string }) => unknown
+  unsupportedRevert: (source: DiffSource | undefined, file: string) => unknown
+}
+
+type ActivateOptions = { poll?: boolean; fetch?: boolean }
+
+const viewerMessages: Messages = {
+  available: (descriptors, id) => ({
+    type: "setAvailableSources",
+    descriptors,
+    currentId: id,
+  }),
+  capabilities: (capabilities) => ({
+    type: "diffViewer.capabilities",
+    capabilities,
+  }),
+  loading: (_source, loading) => ({ type: "diffViewer.loading", loading }),
+  diffs: (_source, diffs) => ({ type: "diffViewer.diffs", diffs }),
+  notice: (_source, notice) => ({ type: "diffViewer.notice", notice }),
+  diffFile: (_source, file, diff) => ({ type: "diffViewer.diffFile", file, diff }),
+  revertFileResult: (_source, file, result) => ({
+    type: "diffViewer.revertFileResult",
+    file,
+    status: result.ok ? "success" : "error",
+    message: result.message,
+  }),
+  unsupportedRevert: (_source, file) => ({
+    type: "diffViewer.revertFileResult",
+    file,
+    status: "error",
+    message: "Revert is not supported for the current source",
+  }),
+}
 
 /**
  * Owns the active DiffSource for a panel: builds it via the injected `build`
@@ -30,6 +72,7 @@ export class SourceController {
     private readonly build: (id: string, ctx: PanelContext) => DiffSource,
     private readonly listAvailable: (ctx: PanelContext) => DiffSourceDescriptor[],
     private readonly post: (msg: unknown) => void,
+    private readonly messages: Messages = viewerMessages,
   ) {}
 
   setContext(ctx: PanelContext): void {
@@ -38,6 +81,10 @@ export class SourceController {
 
   get currentId(): string | undefined {
     return this.activeId
+  }
+
+  get isPolling(): boolean {
+    return this.interval !== undefined
   }
 
   /** Dispose the active source and bump the epoch so in-flight fetches are dropped. */
@@ -55,7 +102,7 @@ export class SourceController {
    * Disposes any previously active source. Throws if the catalog can't build
    * the id — callers should catch and log.
    */
-  async activate(id: string): Promise<void> {
+  async activate(id: string, opts: ActivateOptions = {}): Promise<void> {
     const ctx = this.ctx
     if (!ctx) return
     this.stop()
@@ -65,31 +112,21 @@ export class SourceController {
     const source = this.build(id, ctx)
     this.active = source
 
-    this.post({
-      type: "setAvailableSources",
-      descriptors: this.listAvailable(ctx),
-      currentId: id,
-    })
-    this.post({
-      type: "diffViewer.capabilities",
-      capabilities: source.descriptor.capabilities,
-    })
+    this.send(this.messages.available?.(this.listAvailable(ctx), id))
+    this.send(this.messages.capabilities?.(source.descriptor.capabilities))
+
+    if (opts.fetch === false) return
 
     const keepPolling = await this.runFetch(source, epoch, true)
     // Prevents the polling interval from starting after teardown or swap.
     if (this.epoch !== epoch || this.activeId !== id) return
-    if (keepPolling) this.startPolling(source, epoch)
+    if (opts.poll !== false && keepPolling) this.startPolling(source, epoch)
   }
 
   async revertFile(file: string): Promise<void> {
     const source = this.active
     if (!source?.revert) {
-      this.post({
-        type: "diffViewer.revertFileResult",
-        file,
-        status: "error",
-        message: "Revert is not supported for the current source",
-      })
+      this.send(this.messages.unsupportedRevert(source, file))
       return
     }
 
@@ -98,17 +135,20 @@ export class SourceController {
       const message = err instanceof Error ? err.message : String(err)
       return { ok: false, message }
     })
-    this.post({
-      type: "diffViewer.revertFileResult",
-      file,
-      status: result.ok ? "success" : "error",
-      message: result.message,
-    })
+    this.send(this.messages.revertFileResult(source, file, result))
     // Push fresh diffs immediately after a successful revert so the webview
     // doesn't have to wait for the next polling tick.
     if (result.ok && this.epoch === epoch && this.active === source) {
       await this.runFetch(source, epoch, false)
     }
+  }
+
+  /** Run an immediate fetch against the active source without changing polling state. */
+  async refresh(): Promise<void> {
+    const source = this.active
+    if (!source) return
+    const epoch = this.epoch
+    await this.runFetch(source, epoch, true)
   }
 
   /**
@@ -120,14 +160,18 @@ export class SourceController {
   async requestFile(file: string): Promise<void> {
     const source = this.active
     const epoch = this.epoch
-    if (!source?.fetchFile) {
-      this.post({ type: "diffViewer.diffFile", file, diff: null })
+    if (!source) {
+      this.send(this.messages.diffFile(undefined, file, null))
+      return
+    }
+    if (!source.fetchFile) {
+      this.send(this.messages.diffFile(source, file, null))
       return
     }
     const diff = await source.fetchFile(file).catch(() => null)
     // Drop the response if the source has been disposed/swapped while we waited.
     if (this.epoch !== epoch) return
-    this.post({ type: "diffViewer.diffFile", file, diff })
+    this.send(this.messages.diffFile(source, file, diff))
   }
 
   dispose(): void {
@@ -140,20 +184,20 @@ export class SourceController {
    * requests a stop or the epoch has moved on.
    */
   private async runFetch(source: DiffSource, epoch: number, initial: boolean): Promise<boolean> {
-    if (initial) this.post({ type: "diffViewer.loading", loading: true })
+    if (initial) this.send(this.messages.loading?.(source, true))
 
     try {
       const result = await source.fetch()
       if (this.epoch !== epoch) return false
 
       if (result.notice !== undefined) {
-        this.post({ type: "diffViewer.notice", notice: result.notice })
+        this.send(this.messages.notice?.(source, result.notice))
       }
 
       const hash = hashFileDiffs(result.diffs as never)
       if (initial || hash !== this.lastHash) {
         this.lastHash = hash
-        this.post({ type: "diffViewer.diffs", diffs: result.diffs })
+        this.send(this.messages.diffs(source, result.diffs))
       }
 
       return !result.stopPolling
@@ -167,9 +211,14 @@ export class SourceController {
       return true
     } finally {
       if (initial && this.epoch === epoch) {
-        this.post({ type: "diffViewer.loading", loading: false })
+        this.send(this.messages.loading?.(source, false))
       }
     }
+  }
+
+  private send(msg: unknown): void {
+    if (msg === undefined) return
+    this.post(msg)
   }
 
   private startPolling(source: DiffSource, epoch: number): void {
