@@ -12,6 +12,7 @@ import { Dynamic } from "solid-js/web"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -67,6 +68,7 @@ interface AssistantMessageProps {
   message: SDKAssistantMessage
   showAssistantCopyPartID?: string | null
   showTokenThroughput?: boolean
+  feedback?: MessageFeedbackControls
 }
 
 function TodoToolCard(props: { part: ToolPart }) {
@@ -204,6 +206,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                   message={props.message as SDKMessage}
                                   showAssistantCopyPartID={props.showAssistantCopyPartID}
                                   reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                  feedback={props.feedback}
                                   animate={
                                     part.type === "tool" &&
                                     ((part as unknown as ToolPart).state?.status === "pending" ||

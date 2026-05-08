@@ -962,6 +962,7 @@ it.live(
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        yield* Effect.sleep(50) // kilocode_change - let b attach to a's done deferred before gate resolves
         gate.resolve()
 
         const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1319,6 +1320,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1328,7 +1330,9 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell to actually be running before forking loop
+        yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+        // kilocode_change end
 
         const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* Effect.sleep(50)
@@ -1357,6 +1361,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1366,7 +1371,9 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell to actually be running before forking loop callers
+        yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+        // kilocode_change end
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)

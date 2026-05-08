@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
   "agentManager.tab.newOptions": "더 많은 새 탭 옵션",
+  "agentManager.tabsMenu.label": "열린 탭 검색",
+  "agentManager.tabsMenu.search": "탭 검색...",
+  "agentManager.tabsMenu.empty": "일치하는 탭 없음",
+  "agentManager.tabsMenu.status.waiting": "대기",
+  "agentManager.tabsMenu.status.working": "작업 중",
+  "agentManager.tabsMenu.status.retry": "재시도",
 
   "agentManager.terminal.new": "새 터미널 탭",
   "agentManager.terminal.ended": "터미널 종료됨 — 탭을 닫아 해제",

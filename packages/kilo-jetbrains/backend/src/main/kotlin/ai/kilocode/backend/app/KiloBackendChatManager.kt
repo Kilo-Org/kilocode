@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -49,6 +50,7 @@ class KiloBackendChatManager(
             "session.turn.close",
             "session.error",
             "session.status",
+            "session.updated",
             "session.idle",
             "session.compacted",
             "session.diff",
@@ -153,6 +155,37 @@ class KiloBackendChatManager(
                 return
             }
             log.debug { "${ChatLogSummary.sid(id)} kind=abort op=abort ok=true code=${response.code}" }
+        }
+    }
+
+    // ------ compact ------
+
+    fun compact(id: String, dir: String, model: ModelSelectionDto) {
+        log.info("${ChatLogSummary.sid(id)} kind=compact ${ChatLogSummary.dir(dir)} model=${model.providerID}/${model.modelID} op=summarize")
+        val http = requireClient()
+        val url = requireBase()
+        val body = KiloCliDataParser.buildSummarizeJson(model)
+        val request = Request.Builder()
+            .url("$url/session/$id/summarize?directory=${encode(dir)}")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+
+        try {
+            http.newCall(request).execute().use { response ->
+                val code = response.code
+                if (!response.isSuccessful) {
+                    val raw = response.body?.string()
+                    log.warn("summarize failed: HTTP $code")
+                    raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=compact op=summarize error=${ChatLogSummary.body(it)}" } }
+                    throw RuntimeException("summarize failed: HTTP $code")
+                }
+                log.debug { "${ChatLogSummary.sid(id)} kind=compact op=summarize ok=true code=$code" }
+            }
+        } catch (e: RuntimeException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("${ChatLogSummary.sid(id)} kind=compact op=summarize dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+            throw RuntimeException("summarize HTTP call failed: ${e.message}", e)
         }
     }
 

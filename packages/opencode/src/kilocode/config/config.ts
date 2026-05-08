@@ -117,7 +117,7 @@ export namespace KilocodeConfig {
   }
 
   function stripGlobalIndexing(info: Config.Info): Config.Info {
-    // Indexing provider/storage settings can be global, but enablement is a per-project decision.
+    // Indexing provider/storage settings can be global, but enablement is exposed separately from project enablement.
     if (info.indexing?.enabled === undefined) return info
     const indexing = Object.fromEntries(Object.entries(info.indexing).filter(([key]) => key !== "enabled"))
     if (Object.keys(indexing).length > 0) return { ...info, indexing }

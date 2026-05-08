@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
+  "provider.connect.prompt.required": "{{field}} مطلوب",
+  "provider.connect.azure.endpointType.label": "حدد تكوين نقطة نهاية Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "اسم المورد",
+  "provider.connect.azure.endpointType.resourceName.hint": "قم بإنشاء نقطة النهاية من اسم مورد Azure الخاص بك",
+  "provider.connect.azure.endpointType.baseURL.label": "URL الكامل لنقطة النهاية",
+  "provider.connect.azure.endpointType.baseURL.hint": "استخدم نقطة نهاية Azure OpenAI مخصصة",
+  "provider.connect.azure.resourceName.label": "اسم مورد Azure",
+  "provider.connect.azure.resourceName.placeholder": "على سبيل المثال: my-models",
+  "provider.connect.azure.baseURL.label": "URL نقطة نهاية Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "على سبيل المثال: https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "يمنحك OpenCode Zen الوصول إلى مجموعة مختارة من النماذج الموثوقة والمحسنة لوكلاء البرمجة.",
   "provider.connect.opencodeZen.line2":
@@ -1026,8 +1036,17 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.globalEnable.title": "تمكين عام",
+  "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
+  "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
+  "settings.indexing.projectEnable.description": "تمكين الفهرسة لمساحة العمل هذه عندما تكون الفهرسة العامة متوقفة.",
+  "settings.indexing.projectEnable.disabledTooltip": "الفهرسة العامة مفعلة، لذا هذا المشروع مشمول بالفعل.",
   "settings.indexing.provider.title": "موفر التضمين",
   "settings.indexing.provider.description": "اختر الموفر المستخدم لإنشاء التضمينات للبحث الدلالي.",
+  "settings.indexing.kiloModel.title": "إعداد مسبق لنموذج Kilo",
+  "settings.indexing.kiloModel.description": "اختر نموذج تضمين مدعومًا ومستضافًا بواسطة Kilo.",
+  "settings.indexing.kiloSignIn.title": "تسجيل الدخول إلى Kilo مطلوب",
+  "settings.indexing.kiloSignIn.description": "سجّل الدخول إلى Kilo لاستخدام التضمينات المستضافة.",
   "settings.indexing.model.title": "نموذج التضمين",
   "settings.indexing.model.description": "تجاوز نموذج التضمين الافتراضي للموفر المحدد.",
   "settings.indexing.dimension.title": "بُعد المتجه",
@@ -1151,6 +1170,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "استخدام اختصار ذكي لتشغيل المهام المضمّنة",
   "settings.autocomplete.chatAutocomplete.title": "تمكين الإكمال التلقائي للدردشة",
   "settings.autocomplete.chatAutocomplete.description": "عرض اقتراحات الإكمال التلقائي في مربع الدردشة",
+  "settings.autocomplete.modelsHint": "لاختيار النموذج المستخدم للإكمال التلقائي، راجع إعدادات النماذج.",
   "settings.notifications.agent.title": "إكمال الوكيل",
   "settings.notifications.agent.description": "إظهار إشعار عند إكمال الوكيل لمهمة",
   "settings.notifications.permissions.title": "طلبات الأذونات",
@@ -1511,9 +1531,15 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
-  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.label": "الفرع",
   "diffViewer.source.workspace.tooltip":
     "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
+  "diffViewer.source.staged.label": "مُهيّأ",
+  "diffViewer.source.staged.tooltip":
+    "الملفات التي أضفت تغييراتها إلى منطقة التهيئة في git (`git add`)، كما ستظهر في الالتزام التالي.",
+  "diffViewer.source.unstaged.label": "غير مُهيّأ",
+  "diffViewer.source.unstaged.tooltip":
+    "الملفات المعدّلة في شجرة العمل ولكن لم يتم تهيئتها بعد، بالإضافة إلى الملفات غير المتتبعة (الجديدة).",
   "diffViewer.source.session.label": "الجلسة",
   "diffViewer.source.session.tooltip":
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
@@ -1521,4 +1547,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
+
+  "diffViewer.baseBranch.auto": "افتراضي",
+  "diffViewer.baseBranch.default": "افتراضي",
+  "diffViewer.baseBranch.remote": "بعيد",
+  "diffViewer.baseBranch.search": "البحث في الفروع",
+  "diffViewer.baseBranch.empty": "لا توجد فروع مطابقة",
+  "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
+  "diffViewer.baseBranch.none": "—",
 }

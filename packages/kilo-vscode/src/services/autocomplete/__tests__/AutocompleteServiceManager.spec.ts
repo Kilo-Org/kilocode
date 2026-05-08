@@ -61,26 +61,6 @@ vi.mock("vscode", () => {
   }
 })
 
-vi.mock("../AutocompleteModel", () => {
-  class AutocompleteModel {
-    public profileName = "test-profile"
-
-    public getModelName(): string {
-      return "test-model"
-    }
-
-    public getProviderDisplayName(): string {
-      return "test-provider"
-    }
-
-    public hasValidCredentials(): boolean {
-      return true
-    }
-  }
-
-  return { AutocompleteModel }
-})
-
 vi.mock("../AutocompleteStatusBar", () => {
   class AutocompleteStatusBar {
     public update = vi.fn()
@@ -99,6 +79,14 @@ vi.mock("../classic-auto-complete/AutocompleteInlineCompletionProvider", () => {
   class AutocompleteInlineCompletionProvider {
     public provideInlineCompletionItems_Internal = vi.fn()
     public dispose = vi.fn()
+    public resetBackoff = vi.fn()
+    private modelId = "test-model"
+    public setModel(id: string) {
+      this.modelId = id
+    }
+    public getModelId(): string {
+      return this.modelId
+    }
 
     constructor(..._args: any[]) {}
   }
@@ -164,7 +152,12 @@ async function createManager(): Promise<AutocompleteServiceManager> {
     postStateToWebview: vi.fn().mockResolvedValue(undefined),
   }
 
-  const connection = { onStateChange: vi.fn().mockReturnValue(() => {}), ...cline }
+  const connection = {
+    onStateChange: vi.fn().mockReturnValue(() => {}),
+    onEventFiltered: vi.fn().mockReturnValue(() => {}),
+    getConnectionState: vi.fn().mockReturnValue("connected"),
+    ...cline,
+  }
 
   const manager = new AutocompleteServiceManager(context, connection as any)
 

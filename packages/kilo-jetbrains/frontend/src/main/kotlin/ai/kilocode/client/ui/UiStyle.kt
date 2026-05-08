@@ -51,6 +51,14 @@ object UiStyle {
         internal const val BORDER_DELTA = 64
         internal const val HOVER_ALPHA = 0.35f
 
+        val timelineRead: Color = JBColor(Color(0x37, 0x94, 0xff), Color(0x37, 0x94, 0xff))
+        val timelineWrite: Color = JBColor(Color(0x00, 0x7f, 0xd4), Color(0x00, 0x7f, 0xd4))
+        val timelineTool: Color = JBColor(Color(0x00, 0x7a, 0xcc), Color(0x00, 0x7a, 0xcc))
+        val timelineSuccess: Color = JBColor.namedColor("Label.successForeground", UIUtil.getLabelSuccessForeground())
+        val timelineError: Color = JBColor(Color(0xf4, 0x87, 0x71), Color(0xf4, 0x87, 0x71))
+        val timelineText: Color = JBColor(Color(0x9d, 0x9d, 0x9d), Color(0x9d, 0x9d, 0x9d))
+        val timelineStep: Color = JBColor(Color(0x4d, 0x4d, 0x4d), Color(0x4d, 0x4d, 0x4d))
+
         fun bg(): Color = UIUtil.getPanelBackground()
 
         fun fg(): Color = UIUtil.getLabelForeground()
@@ -68,6 +76,8 @@ object UiStyle {
         fun panelHover(): Color = JBColor.lazy { blend(panel(), line(), HOVER_ALPHA) }
 
         fun header(): Color = panel()
+
+        fun headerBar(): Color = JBUI.CurrentTheme.ToolWindow.headerBackground(false)
 
         /** Local hover color for collapsible transcript card headers. */
         fun headerHover(): Color = panelHover()

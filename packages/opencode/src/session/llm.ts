@@ -3,11 +3,11 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer, Record } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
-import { mergeDeep, pipe } from "remeda"
+import { mergeDeep } from "remeda"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
-import { Instance } from "@/project/instance"
+import { InstanceState } from "@/effect/instance-state"
 import type { Agent } from "@/agent/agent"
 import type { MessageV2 } from "./message-v2"
 import { Plugin } from "@/plugin"
@@ -35,6 +35,10 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer"
 const log = Log.create({ service: "llm" })
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 type Result = Awaited<ReturnType<typeof streamText>>
+
+// Avoid re-instantiating remeda's deep merge types in this hot LLM path; the runtime behavior is still mergeDeep.
+const mergeOptions = (target: Record<string, any>, source: Record<string, any> | undefined): Record<string, any> =>
+  mergeDeep(target, source ?? {}) as Record<string, any>
 
 export type StreamInput = {
   user: MessageV2.User
@@ -145,12 +149,7 @@ const live: Layer.Layer<
             sessionID: input.sessionID,
             providerOptions: item.options,
           })
-      const options: Record<string, any> = pipe(
-        base,
-        mergeDeep(input.model.options),
-        mergeDeep(input.agent.options),
-        mergeDeep(variant),
-      )
+      const options = mergeOptions(mergeOptions(mergeOptions(base, input.model.options), input.agent.options), variant)
       if (isOpenaiOauth) {
         // kilocode_change start - prepend soul to instructions
         options.instructions = SystemPrompt.soul() + "\n" + system.join("\n")
@@ -187,7 +186,14 @@ const live: Layer.Layer<
             : undefined,
           topP: input.agent.topP ?? ProviderTransform.topP(input.model),
           topK: ProviderTransform.topK(input.model),
-          maxOutputTokens: ProviderTransform.maxOutputTokens(input.model),
+          // kilocode_change start - gpt-5 via @ai-sdk/openai-compatible proxies (e.g. LiteLLM)
+          // rejects `max_tokens`; OpenAI requires `max_completion_tokens` and the compatible
+          // SDK cannot rename the field, so drop the cap and let the upstream default apply.
+          maxOutputTokens:
+            input.model.api.npm === "@ai-sdk/openai-compatible" && input.model.api.id.toLowerCase().includes("gpt-5")
+              ? undefined
+              : ProviderTransform.maxOutputTokens(input.model),
+          // kilocode_change end
           options,
         },
       )
@@ -291,7 +297,7 @@ const live: Layer.Layer<
 
         const bridge = yield* EffectBridge.make()
         const approvedToolsForSession = new Set<string>()
-        workflowModel.approvalHandler = Instance.bind(async (approvalTools) => {
+        workflowModel.approvalHandler = InstanceState.bind(async (approvalTools) => {
           const uniqueNames = [...new Set(approvalTools.map((t: { name: string }) => t.name))] as string[]
           // Auto-approve tools that were already approved in this session
           // (prevents infinite approval loops for server-side MCP tools)
@@ -353,6 +359,10 @@ const live: Layer.Layer<
           })
         : undefined
 
+      const opencodeProjectID = input.model.providerID.startsWith("opencode")
+        ? (yield* InstanceState.context).project.id
+        : undefined
+
       return streamText({
         onError(error) {
           l.error("stream error", {
@@ -392,7 +402,7 @@ const live: Layer.Layer<
         headers: {
           ...(input.model.providerID.startsWith("kilo") // kilocode_change
             ? {
-                "x-kilo-project": Instance.project.id,
+                "x-kilo-project": opencodeProjectID,
                 "x-kilo-session": input.sessionID,
                 "x-kilo-request": input.user.id,
                 "x-kilo-client": Flag.KILO_CLIENT,

@@ -138,6 +138,17 @@ export const dict = {
   "provider.connect.apiKey.label": "Clé API {{provider}}",
   "provider.connect.apiKey.placeholder": "Clé API",
   "provider.connect.apiKey.required": "La clé API est requise",
+  "provider.connect.prompt.required": "{{field}} est requis",
+  "provider.connect.azure.endpointType.label": "Sélectionner la configuration du point de terminaison Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nom de la ressource",
+  "provider.connect.azure.endpointType.resourceName.hint":
+    "Créer le point de terminaison à partir du nom de votre ressource Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "URL complète du point de terminaison",
+  "provider.connect.azure.endpointType.baseURL.hint": "Utiliser un point de terminaison Azure OpenAI personnalisé",
+  "provider.connect.azure.resourceName.label": "Nom de la ressource Azure",
+  "provider.connect.azure.resourceName.placeholder": "ex. my-models",
+  "provider.connect.azure.baseURL.label": "URL du point de terminaison Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "ex. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen vous donne accès à un ensemble sélectionné de modèles fiables et optimisés pour les agents de codage.",
   "provider.connect.opencodeZen.line2":
@@ -684,6 +695,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Dimension vectorielle",
   "settings.indexing.enable.description": "Activer ou désactiver l'indexation sémantique de la base de code.",
   "settings.indexing.enable.title": "Activer l'indexation",
+  "settings.indexing.globalEnable.title": "Activer globalement",
+  "settings.indexing.globalEnable.description": "Activer l'indexation pour chaque espace de travail.",
+  "settings.indexing.projectEnable.title": "Activer pour ce projet",
+  "settings.indexing.projectEnable.description":
+    "Activer l'indexation pour cet espace de travail lorsque l'indexation globale est désactivée.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "L'indexation globale est activée, ce projet est donc déjà pris en compte.",
   "settings.indexing.lancedbDirectory.description": "Répertoire optionnel pour le stockage local LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Laissez vide pour la valeur par défaut",
   "settings.indexing.lancedbDirectory.title": "Répertoire LanceDB",
@@ -691,6 +709,10 @@ export const dict = {
   "settings.indexing.model.title": "Modèle d'embedding",
   "settings.indexing.provider.description":
     "Choisissez le fournisseur utilisé pour générer les embeddings pour la recherche sémantique.",
+  "settings.indexing.kiloModel.title": "Préréglage de modèle Kilo",
+  "settings.indexing.kiloModel.description": "Choisissez un modèle d'embedding hébergé par Kilo pris en charge.",
+  "settings.indexing.kiloSignIn.title": "Connexion à Kilo requise",
+  "settings.indexing.kiloSignIn.description": "Connectez-vous à Kilo pour utiliser les embeddings hébergés.",
   "settings.indexing.provider.title": "Fournisseur d'embedding",
   "settings.indexing.providerField.description": "Paramètre de connexion spécifique au fournisseur.",
   "settings.indexing.qdrantApiKey.description": "Clé API optionnelle pour l'instance Qdrant.",
@@ -1194,6 +1216,8 @@ export const dict = {
     "Utiliser un raccourci intelligent pour déclencher les tâches en ligne",
   "settings.autocomplete.chatAutocomplete.title": "Activer l'autocomplétion du chat",
   "settings.autocomplete.chatAutocomplete.description": "Afficher les suggestions d'autocomplétion dans le chat",
+  "settings.autocomplete.modelsHint":
+    "Pour choisir le modèle utilisé pour l'autocomplétion, consultez les paramètres des Modèles.",
   "settings.notifications.agent.title": "Achèvement de l'agent",
   "settings.notifications.agent.description": "Afficher une notification lorsque l'agent termine une tâche",
   "settings.notifications.permissions.title": "Demandes d'autorisation",
@@ -1573,9 +1597,15 @@ export const dict = {
   "notifications.action.close": "Fermer",
   "notifications.action.tryModel": "Essayer {{model}}",
   "notifications.action.tryModelGeneric": "Essayer le modèle",
-  "diffViewer.source.workspace.label": "Modifications locales",
+  "diffViewer.source.workspace.label": "Branche",
   "diffViewer.source.workspace.tooltip":
     "Toutes les modifications de cette branche par rapport à la branche de base. Inclut les fichiers non commités (staged, unstaged, non suivis) et les commits locaux qui ne sont pas encore dans la branche de base.",
+  "diffViewer.source.staged.label": "Indexé",
+  "diffViewer.source.staged.tooltip":
+    "Fichiers avec des modifications que vous avez ajoutées à la zone de staging de git (`git add`), tels qu'ils apparaîtront dans le prochain commit.",
+  "diffViewer.source.unstaged.label": "Non indexé",
+  "diffViewer.source.unstaged.tooltip":
+    "Fichiers modifiés dans votre arborescence de travail mais pas encore indexés, plus les fichiers non suivis (nouveaux).",
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
@@ -1583,4 +1613,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
+
+  "diffViewer.baseBranch.auto": "Par défaut",
+  "diffViewer.baseBranch.default": "Par défaut",
+  "diffViewer.baseBranch.remote": "Distante",
+  "diffViewer.baseBranch.search": "Rechercher des branches",
+  "diffViewer.baseBranch.empty": "Aucune branche correspondante",
+  "diffViewer.baseBranch.loading": "Chargement des branches…",
+  "diffViewer.baseBranch.none": "—",
 }

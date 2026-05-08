@@ -6,7 +6,7 @@ import * as Tool from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
 import * as Log from "@opencode-ai/core/util/log"
-import { Instance } from "../project/instance"
+import { containsPath, type InstanceContext } from "../project/instance-context"
 import { lazy } from "@/util/lazy"
 import { Language, type Node } from "web-tree-sitter"
 
@@ -14,6 +14,7 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
@@ -383,7 +384,13 @@ export const BashTool = Tool.define(
       return yield* resolvePath(next, cwd, shell)
     })
 
-    const collect = Effect.fn("BashTool.collect")(function* (root: Node, cwd: string, ps: boolean, shell: string) {
+    const collect = Effect.fn("BashTool.collect")(function* (
+      root: Node,
+      cwd: string,
+      ps: boolean,
+      shell: string,
+      instance: InstanceContext,
+    ) {
       const scan: Scan = {
         dirs: new Set<string>(),
         patterns: new Set<string>(),
@@ -410,7 +417,7 @@ export const BashTool = Tool.define(
           for (const arg of pathArgs(command, ps)) {
             const resolved = yield* argPath(arg, cwd, ps, shell)
             log.info("resolved path", { arg, resolved })
-            if (!resolved || Instance.containsPath(resolved)) continue
+            if (!resolved || containsPath(resolved, instance)) continue
             const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
             scan.dirs.add(dir)
             if (kind !== "read") scan.access = "unknown" // kilocode_change
@@ -613,6 +620,7 @@ export const BashTool = Tool.define(
 
         return {
           description: DESCRIPTION.replaceAll("${directory}", instance.directory)
+            .replaceAll("${tmp}", Global.Path.tmp)
             .replaceAll("${os}", process.platform)
             .replaceAll("${shell}", name)
             .replaceAll("${chaining}", chain)
@@ -621,9 +629,10 @@ export const BashTool = Tool.define(
           parameters: Parameters,
           execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
             Effect.gen(function* () {
+              const executeInstance = yield* InstanceState.context
               const cwd = params.workdir
-                ? yield* resolvePath(params.workdir, Instance.directory, shell)
-                : Instance.directory
+                ? yield* resolvePath(params.workdir, executeInstance.directory, shell)
+                : executeInstance.directory
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
@@ -634,9 +643,9 @@ export const BashTool = Tool.define(
                   const tree = yield* Effect.acquireRelease(parse(params.command, ps), (tree) =>
                     Effect.sync(() => tree.delete()),
                   )
-                  const scan = yield* collect(tree.rootNode, cwd, ps, shell)
+                  const scan = yield* collect(tree.rootNode, cwd, ps, shell, executeInstance)
                   // kilocode_change start
-                  if (!Instance.containsPath(cwd)) {
+                  if (!containsPath(cwd, executeInstance)) {
                     scan.dirs.add(cwd)
                     scan.access = "unknown"
                   }

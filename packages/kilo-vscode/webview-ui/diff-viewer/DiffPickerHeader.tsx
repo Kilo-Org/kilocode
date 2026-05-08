@@ -1,4 +1,4 @@
-import type { Component } from "solid-js"
+import type { Component, JSXElement } from "solid-js"
 import { createSignal, Show } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -9,6 +9,12 @@ interface DiffPickerHeaderProps {
   descriptors: DiffSourceDescriptor[]
   currentId: string | undefined
   onSelect: (id: string) => void
+  /**
+   * Optional accessory rendered to the right of the source select. Used to
+   * mount the base branch picker only when the active source is `workspace`
+   * (the parent decides; the header just hosts).
+   */
+  accessory?: JSXElement
 }
 
 const GROUP_KEYS: Record<DiffSourceDescriptor["group"], string> = {
@@ -76,6 +82,7 @@ export const DiffPickerHeader: Component<DiffPickerHeaderProps> = (props) => {
           }}
         </Select>
       </Show>
+      <Show when={props.accessory}>{props.accessory}</Show>
     </div>
   )
 }

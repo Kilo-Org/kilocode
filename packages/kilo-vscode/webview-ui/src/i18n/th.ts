@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "คีย์ API ของ {{provider}}",
   "provider.connect.apiKey.placeholder": "คีย์ API",
   "provider.connect.apiKey.required": "ต้องใช้คีย์ API",
+  "provider.connect.prompt.required": "จำเป็นต้องระบุ {{field}}",
+  "provider.connect.azure.endpointType.label": "เลือกการกำหนดค่าปลายทางของ Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "ชื่อทรัพยากร",
+  "provider.connect.azure.endpointType.resourceName.hint": "สร้างปลายทางจากชื่อทรัพยากร Azure ของคุณ",
+  "provider.connect.azure.endpointType.baseURL.label": "URL ปลายทางแบบเต็ม",
+  "provider.connect.azure.endpointType.baseURL.hint": "ใช้ปลายทาง Azure OpenAI แบบกำหนดเอง",
+  "provider.connect.azure.resourceName.label": "ชื่อทรัพยากร Azure",
+  "provider.connect.azure.resourceName.placeholder": "เช่น my-models",
+  "provider.connect.azure.baseURL.label": "URL ปลายทาง Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "เช่น https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen ให้คุณเข้าถึงชุดโมเดลที่เชื่อถือได้และปรับแต่งแล้วสำหรับเอเจนต์การเขียนโค้ด",
   "provider.connect.opencodeZen.line2":
@@ -745,8 +755,18 @@ export const dict = {
   "settings.indexing.title": "การสร้างดัชนี",
   "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
   "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมาย",
+  "settings.indexing.globalEnable.title": "เปิดใช้งานแบบโกลบอล",
+  "settings.indexing.globalEnable.description": "เปิดใช้งานการทำดัชนีสำหรับทุกพื้นที่ทำงาน",
+  "settings.indexing.projectEnable.title": "เปิดใช้งานสำหรับโปรเจกต์นี้",
+  "settings.indexing.projectEnable.description":
+    "เปิดใช้งานการทำดัชนีสำหรับพื้นที่ทำงานนี้เมื่อการทำดัชนีแบบโกลบอลถูกปิดใช้งาน",
+  "settings.indexing.projectEnable.disabledTooltip": "เปิดใช้งานการทำดัชนีระดับโลกแล้ว โปรเจ็กต์นี้จึงถูกรวมไว้แล้ว",
   "settings.indexing.provider.title": "ผู้ให้บริการการฝัง",
   "settings.indexing.provider.description": "เลือกผู้ให้บริการที่ใช้สร้างการฝังสำหรับการค้นหาเชิงความหมาย",
+  "settings.indexing.kiloModel.title": "พรีเซ็ตโมเดล Kilo",
+  "settings.indexing.kiloModel.description": "เลือกโมเดลการฝังที่ Kilo โฮสต์และรองรับ",
+  "settings.indexing.kiloSignIn.title": "ต้องลงชื่อเข้าใช้ Kilo",
+  "settings.indexing.kiloSignIn.description": "ลงชื่อเข้าใช้ Kilo เพื่อใช้การฝังแบบโฮสต์",
   "settings.indexing.model.title": "โมเดลการฝัง",
   "settings.indexing.model.description": "แทนที่โมเดลการฝังเริ่มต้นสำหรับผู้ให้บริการที่เลือก",
   "settings.indexing.dimension.title": "ขนาดเวกเตอร์",
@@ -1158,6 +1178,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "ใช้ปุ่มลัดอัจฉริยะสำหรับงานอินไลน์",
   "settings.autocomplete.chatAutocomplete.title": "เปิดใช้งานเติมอัตโนมัติแชท",
   "settings.autocomplete.chatAutocomplete.description": "แสดงข้อเสนอแนะเติมอัตโนมัติในช่องแชท",
+  "settings.autocomplete.modelsHint": "เลือกโมเดลที่ใช้สำหรับการเติมอัตโนมัติได้ที่การตั้งค่าโมเดล",
   "settings.notifications.agent.title": "เอเจนต์เสร็จสิ้น",
   "settings.notifications.agent.description": "แสดงการแจ้งเตือนเมื่อเอเจนต์ทำงานเสร็จ",
   "settings.notifications.permissions.title": "คำขออนุญาต",
@@ -1515,9 +1536,15 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
-  "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.source.workspace.label": "สาขา",
   "diffViewer.source.workspace.tooltip":
     "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "ไฟล์ที่มีการเปลี่ยนแปลงที่คุณได้เพิ่มเข้าสู่พื้นที่ staging ของ git (`git add`) ตามที่จะปรากฏในคอมมิตถัดไป",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "ไฟล์ที่ถูกแก้ไขในแผนผังการทำงานแต่ยังไม่ได้ staged และไฟล์ที่ไม่ได้ติดตาม (ใหม่)",
   "diffViewer.source.session.label": "เซสชัน",
   "diffViewer.source.session.tooltip":
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",
@@ -1525,4 +1552,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "ปิดใช้งานสแนปช็อตสำหรับที่เก็บนี้ กรุณาแก้ไขไฟล์การกำหนดค่าเพื่อแสดงการเปลี่ยนแปลงของเซสชัน",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.SessionStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -44,14 +45,14 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test title shown instead of name when title is set`() {
-        val t = Tool("p1", "bash").also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
+        val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
         val view = ToolView(t)
         assertTrue(view.labelText().contains("Install deps"))
         assertTrue(view.labelText().contains("Shell"))
     }
 
     fun `test blank title falls back to tool name`() {
-        val t = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED; it.title = "   " }
+        val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "   " }
         val view = ToolView(t)
         assertTrue(view.labelText().contains("Shell"))
     }
@@ -297,14 +298,14 @@ class ToolViewTest : BasePlatformTestCase() {
 
     fun `test update changes state icon`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING))
-        val updated = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED }
+        val updated = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED }
         view.update(updated)
         assertFalse(view.labelText().contains("Running"))
     }
 
     fun `test update changes title`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING, title = "old"))
-        val updated = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED; it.title = "new title" }
+        val updated = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "new title" }
         view.update(updated)
         assertTrue(view.labelText().contains("new title"))
     }
@@ -319,14 +320,14 @@ class ToolViewTest : BasePlatformTestCase() {
     // ---- contentId ------
 
     fun `test contentId matches Tool id`() {
-        val view = ToolView(Tool("part99", "edit").also { it.state = ToolExecState.PENDING })
+        val view = ToolView(Tool("part99", "edit", toolKind("edit")).also { it.state = ToolExecState.PENDING })
         assertEquals("part99", view.contentId)
     }
 
     // ---- helpers ------
 
     private fun tool(id: String, name: String, state: ToolExecState, title: String? = null): Tool =
-        Tool(id, name).also { it.state = state; it.title = title }
+        Tool(id, name, toolKind(name)).also { it.state = state; it.title = title }
 
     private fun assertEditorFont(font: java.awt.Font, style: SessionStyle) {
         assertEquals(style.editorFamily, font.name)

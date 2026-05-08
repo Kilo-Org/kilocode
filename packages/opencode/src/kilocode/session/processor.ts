@@ -3,7 +3,7 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
-import type { MessageV2 } from "@/session/message-v2"
+import { MessageV2 } from "@/session/message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -19,6 +19,8 @@ export namespace KiloSessionProcessor {
   export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
   export const REASONING_LENGTH_WARNING =
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
+  export const PROVIDER_FINISH_ERROR_MESSAGE =
+    "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
   export function reviewTelemetry(command: string): ReviewTelemetry | undefined {
     if (command === "local-review" || command === "local-review-uncommitted") {
@@ -165,5 +167,17 @@ export namespace KiloSessionProcessor {
     }
     log.warn("length stop", { messageID: input.msg.id })
     return OUTPUT_LENGTH_WARNING
+  }
+
+  export function providerFinishError(msg: MessageV2.Assistant) {
+    if (msg.finish !== "error") return false
+    if (msg.error) return false
+    const err = new MessageV2.APIError({
+      message: PROVIDER_FINISH_ERROR_MESSAGE,
+      isRetryable: true,
+    }).toObject()
+    msg.error = err
+    log.warn("provider finish error", { messageID: msg.id })
+    return err
   }
 }

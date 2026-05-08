@@ -15057,6 +15057,7 @@
             "description": "Embedding provider to use for codebase indexing",
             "type": "string",
             "enum": [
+              "kilo",
               "openai",
               "ollama",
               "openai-compatible",
@@ -15082,6 +15083,22 @@
             "description": "Vector store backend (default: qdrant)",
             "type": "string",
             "enum": ["lancedb", "qdrant"]
+          },
+          "kilo": {
+            "description": "Kilo-hosted embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "organizationId": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           },
           "openai": {
             "description": "OpenAI embedding provider options",

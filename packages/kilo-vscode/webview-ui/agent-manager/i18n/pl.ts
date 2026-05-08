@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
   "agentManager.tab.newOptions": "Więcej opcji nowej karty",
+  "agentManager.tabsMenu.label": "Szukaj otwartych kart",
+  "agentManager.tabsMenu.search": "Szukaj kart...",
+  "agentManager.tabsMenu.empty": "Brak pasujących kart",
+  "agentManager.tabsMenu.status.waiting": "Czeka",
+  "agentManager.tabsMenu.status.working": "Pracuje",
+  "agentManager.tabsMenu.status.retry": "Ponów",
 
   "agentManager.terminal.new": "Nowa karta terminala",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",

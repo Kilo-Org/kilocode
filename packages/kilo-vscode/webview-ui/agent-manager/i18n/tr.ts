@@ -53,6 +53,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminali Aç",
   "agentManager.tab.newOptions": "Daha fazla yeni sekme seçeneği",
+  "agentManager.tabsMenu.label": "Açık sekmeleri ara",
+  "agentManager.tabsMenu.search": "Sekmelerde ara...",
+  "agentManager.tabsMenu.empty": "Eşleşen sekme yok",
+  "agentManager.tabsMenu.status.waiting": "Bekliyor",
+  "agentManager.tabsMenu.status.working": "Çalışıyor",
+  "agentManager.tabsMenu.status.retry": "Yeniden",
 
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
