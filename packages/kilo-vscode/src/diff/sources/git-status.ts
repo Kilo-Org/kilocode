@@ -17,6 +17,7 @@ export interface FileEntry {
   additions: number
   deletions: number
   tracked: boolean
+  stamp?: string
 }
 
 /** Parse `git diff --name-status` output into entries (status code + path). */
@@ -71,8 +72,10 @@ export function summarize(entry: FileEntry): DiffFile {
     summarized: true,
     // Synthetic stamp keyed on the stats we actually polled: any change to
     // the file's diff produces new additions/deletions, which invalidates
-    // the webview-side cached detail via mergeWorktreeDiffs.
-    stamp: `${entry.status}:${entry.additions}:${entry.deletions}`,
+    // the webview-side cached detail via mergeWorktreeDiffs. Callers can
+    // supply a custom stamp (see `FileEntry.stamp`) when additions/deletions
+    // aren't a reliable change signal — notably untracked files.
+    stamp: entry.stamp ?? `${entry.status}:${entry.additions}:${entry.deletions}`,
   }
 }
 

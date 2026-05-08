@@ -82,6 +82,12 @@ export function createUnstagedDiffSource(): DiffSource {
         additions: 0,
         deletions: 0,
         tracked: false,
+        // Untracked entries always have additions/deletions = 0 (numstat
+        // can't compute them without an index blob), so fold size+mtime
+        // into the stamp. Editing the file changes mtime → the webview
+        // cache invalidates and refetches detail. Without this the user
+        // sees stale before/after content while polling continues.
+        stamp: `added:untracked:${stat.size}:${stat.mtimeMs}`,
       })
     }
     return out
@@ -139,7 +145,11 @@ export function createUnstagedDiffSource(): DiffSource {
         tracked: entry.tracked,
         generatedLike: generatedLike(file),
         summarized,
-        stamp: `${entry.status}:${additions}:${entry.deletions}`,
+        // Match the summary stamp so cache invalidation is consistent across
+        // summarize → fetchFile transitions. `entry.stamp` is set for
+        // untracked entries (size:mtime); tracked entries fall back to the
+        // numstat-derived stamp.
+        stamp: entry.stamp ?? `${entry.status}:${additions}:${entry.deletions}`,
       }
     },
 
@@ -200,6 +210,7 @@ async function fileEntry(
     additions: 0,
     deletions: 0,
     tracked: false,
+    stamp: `added:untracked:${stat.size}:${stat.mtimeMs}`,
   }
 }
 
