@@ -946,6 +946,7 @@
     "ignore": "^7.0.3",
     "js-tiktoken": "^1.0.18",
     "lru-cache": "^11.0.2",
+    "marked": "catalog:",
     "openai": "^4.85.4",
     "quick-lru": "^7.0.0",
     "simple-git": "3.35.2",

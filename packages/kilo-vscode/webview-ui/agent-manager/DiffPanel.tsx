@@ -66,7 +66,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     delete: t("common.delete"),
   })
   const [open, setOpen] = createSignal<string[]>([])
-  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
+  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number; endLine?: number } | null>(
+    null,
+  )
   const [editing, setEditing] = createSignal<string | null>(null)
   let nextId = 0
   // Tracks the session key for which auto-open has already run. When the
@@ -240,6 +242,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
+          return
+        }
+        if (currentDraft.endLine !== undefined && currentDraft.endLine > max) {
+          setDraft(null)
+          draftMeta = null
         }
       },
     ),
@@ -287,7 +294,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     if (draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side, line: range.start })
+      setDraft({ file, side, line: range.start, endLine: range.end })
     })
   }
 
@@ -559,7 +566,17 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                               />
                             }
                           >
-                            <MarkdownDiffView diff={diff} />
+                            <MarkdownDiffView
+                              diff={diff}
+                              annotations={annotationsForFile(diff.file)}
+                              renderAnnotation={buildAnnotation}
+                              enableGutterUtility={true}
+                              onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                              onLineNumberClick={(event) => {
+                                if (event.annotationSide === "deletions") return
+                                props.onOpenFile?.(diff.file, event.lineNumber)
+                              }}
+                            />
                           </Show>
                         </Show>
                       </Show>
