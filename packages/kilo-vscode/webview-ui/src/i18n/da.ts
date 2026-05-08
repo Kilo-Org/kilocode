@@ -788,6 +788,10 @@ export const dict = {
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
+  "settings.indexing.kiloModel.title": "Kilo-modelpreset",
+  "settings.indexing.kiloModel.description": "Vælg en understøttet Kilo-hostet embedding-model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-login kræves",
+  "settings.indexing.kiloSignIn.description": "Log ind på Kilo for at bruge hostede embeddings.",
   "settings.indexing.model.title": "Embedding-model",
   "settings.indexing.model.description": "Overskriv standard embedding-modellen for den valgte udbyder.",
   "settings.indexing.providerField.description": "Udbyderspecifik forbindelsesindstilling.",

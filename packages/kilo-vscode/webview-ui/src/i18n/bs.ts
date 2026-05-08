@@ -783,6 +783,10 @@ export const dict = {
   "settings.indexing.model.title": "Model embeddinga",
   "settings.indexing.provider.description":
     "Odaberite provajdera koji se koristi za generiranje embeddinga za semantičku pretragu.",
+  "settings.indexing.kiloModel.title": "Preset Kilo modela",
+  "settings.indexing.kiloModel.description": "Odaberite podržani model embeddinga hostovan na Kilo.",
+  "settings.indexing.kiloSignIn.title": "Potrebna je prijava na Kilo",
+  "settings.indexing.kiloSignIn.description": "Prijavite se na Kilo za korištenje hostovanih embeddinga.",
   "settings.indexing.provider.title": "Provajder embeddinga",
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",

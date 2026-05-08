@@ -1,5 +1,5 @@
 ---
-title: "Kilo CLI"
+title: "Kilo Code CLI: Run the AI Coding Agent from Your Terminal"
 description: "Using Kilo Code from the command line"
 platform: new
 ---
@@ -8,7 +8,7 @@ platform: new
 This documentation applies only to Kilo version 1.0 and later. Users running versions below 1.0 should upgrade before proceeding.
 {% /callout %}
 
-# Kilo CLI
+# Kilo Code CLI: AI Coding Agent in Your Terminal
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 

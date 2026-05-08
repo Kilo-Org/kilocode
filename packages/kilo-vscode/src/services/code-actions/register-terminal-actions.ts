@@ -10,6 +10,10 @@ export function registerTerminalActions(
   agentManager?: AgentManagerProvider,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : provider)
+  const reveal = async () => {
+    await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+    await provider.waitForReady()
+  }
 
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.terminalAddToContext", async (args: any) => {
@@ -25,8 +29,12 @@ export function registerTerminalActions(
         terminalContent: content,
         userInput: "",
       })
-      target().postMessage({ type: "appendChatBoxMessage", text: prompt })
-      target().postMessage({ type: "action", action: "focusInput" })
+      const view = target()
+      if (view === provider) {
+        await reveal()
+      }
+      view.postMessage({ type: "appendChatBoxMessage", text: prompt })
+      view.postMessage({ type: "action", action: "focusInput" })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.terminalFixCommand", async (args: any) => {
@@ -42,7 +50,11 @@ export function registerTerminalActions(
         terminalContent: content,
         userInput: "",
       })
-      target().postMessage({ type: "triggerTask", text: prompt })
+      const view = target()
+      if (view === provider) {
+        await reveal()
+      }
+      view.postMessage({ type: "triggerTask", text: prompt })
     }),
 
     vscode.commands.registerCommand("kilo-code.new.terminalExplainCommand", async (args: any) => {
@@ -58,7 +70,11 @@ export function registerTerminalActions(
         terminalContent: content,
         userInput: "",
       })
-      target().postMessage({ type: "triggerTask", text: prompt })
+      const view = target()
+      if (view === provider) {
+        await reveal()
+      }
+      view.postMessage({ type: "triggerTask", text: prompt })
     }),
   )
 }

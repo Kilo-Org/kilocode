@@ -10,7 +10,7 @@ import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config, FeatureFlags, IndexingStatus } from "./config"
+import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -284,6 +284,11 @@ export interface IndexingStatusLoadedMessage {
   status: IndexingStatus
 }
 
+export interface KiloEmbeddingModelsLoadedMessage {
+  type: "kiloEmbeddingModelsLoaded"
+  catalog: KiloEmbeddingModelCatalog
+}
+
 export interface ProvidersLoadedMessage {
   type: "providersLoaded"
   providers: Record<string, Provider>
@@ -329,7 +334,7 @@ export interface ChatCompletionResultMessage {
 
 export interface FileSearchItem {
   path: string
-  type: "file" | "folder"
+  type: "file" | "folder" | "opened-file"
 }
 
 export interface FileSearchResultMessage {
@@ -910,6 +915,7 @@ export type ExtensionMessage =
   | DeviceAuthCancelledMessage
   | NavigateMessage
   | IndexingStatusLoadedMessage
+  | KiloEmbeddingModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage

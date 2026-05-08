@@ -34,6 +34,7 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import { FeedbackProvider } from "./context/feedback"
+import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
@@ -375,15 +376,17 @@ const App: Component = () => {
                         <ConfigProvider>
                           <DisplayProvider>
                             <IndexingProvider>
-                              <NotificationsProvider>
-                                <SessionProvider>
-                                  <FeedbackProvider>
-                                    <DataBridge>
-                                      <AppContent />
-                                    </DataBridge>
-                                  </FeedbackProvider>
-                                </SessionProvider>
-                              </NotificationsProvider>
+                              <KiloEmbeddingModelsProvider>
+                                <NotificationsProvider>
+                                  <SessionProvider>
+                                    <FeedbackProvider>
+                                      <DataBridge>
+                                        <AppContent />
+                                      </DataBridge>
+                                    </FeedbackProvider>
+                                  </SessionProvider>
+                                </NotificationsProvider>
+                              </KiloEmbeddingModelsProvider>
                             </IndexingProvider>
                           </DisplayProvider>
                         </ConfigProvider>

@@ -776,6 +776,10 @@ export const dict = {
   "settings.indexing.provider.title": "Proveedor de embeddings",
   "settings.indexing.provider.description":
     "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",
+  "settings.indexing.kiloModel.title": "Preajuste de modelo de Kilo",
+  "settings.indexing.kiloModel.description": "Elige un modelo de embeddings alojado por Kilo compatible.",
+  "settings.indexing.kiloSignIn.title": "Se requiere iniciar sesión en Kilo",
+  "settings.indexing.kiloSignIn.description": "Inicia sesión en Kilo para usar embeddings alojados.",
   "settings.indexing.model.title": "Modelo de embeddings",
   "settings.indexing.model.description":
     "Anular el modelo de embeddings predeterminado para el proveedor seleccionado.",

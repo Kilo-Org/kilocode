@@ -15,14 +15,17 @@ import {
   normalizeIndexingStatus,
 } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
+import { Auth } from "@/auth"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
+import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
 
 const log = Log.create({ service: "kilocode-indexing" })
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
@@ -63,6 +66,39 @@ function pending(): z.infer<typeof IndexingStatus> {
     processedFiles: 0,
     totalFiles: 0,
     percent: 0,
+  }
+}
+
+async function kiloAuth(cfg: Awaited<ReturnType<typeof Config.get>>): Promise<KiloIndexingAuth> {
+  const auth = await Auth.get("kilo")
+  return resolveKiloIndexingAuth({ config: cfg, auth })
+}
+
+function enrichKilo(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloIndexingAuth) {
+  if (input.embedderProvider !== "kilo") return input
+
+  return {
+    ...input,
+    kiloApiKey: input.kiloApiKey ?? auth.apiKey,
+    kiloBaseUrl: input.kiloBaseUrl ?? auth.baseUrl,
+    kiloOrganizationId: input.kiloOrganizationId ?? auth.organizationId,
+  }
+}
+
+async function model(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloIndexingAuth) {
+  if (input.embedderProvider !== "kilo") return input
+  if (input.modelId && input.modelDimension) return input
+
+  const catalog = await fetchKiloEmbeddingModelCatalog({ baseURL: auth.baseUrl, token: auth.apiKey })
+  const id = input.modelId ? (catalog.aliases[input.modelId] ?? input.modelId) : catalog.defaultModel
+  const found = catalog.models.find((item) => item.id === id)
+  if (!found) return { ...input, modelId: id || input.modelId }
+
+  return {
+    ...input,
+    modelId: found.id,
+    modelDimension: input.modelDimension ?? found.dimension,
+    searchMinScore: input.searchMinScore ?? found.scoreThreshold,
   }
 }
 
@@ -232,8 +268,13 @@ export namespace KiloIndexing {
     log.info("initializing project indexing", { workspacePath: dir })
     const root = path.join(Global.Path.state, "indexing")
     const manager = new CodeIndexManager(dir, root)
+    const auth = await kiloAuth(cfg)
     const globalConfig = await Config.getGlobal()
-    const cfgInput = input(cfg.indexing, globalConfig.indexing)
+    const merged = indexingWithKiloDefault(
+      { ...cfg, indexing: { ...globalConfig.indexing, ...cfg.indexing } },
+      auth,
+    ) as Config.Indexing | undefined
+    const cfgInput = await model(enrichKilo(input(merged, globalConfig.indexing), auth), auth)
     const box = { status: pending() as Status | undefined }
     const current = () => box.status ?? normalizeIndexingStatus(manager)
     let disposed = false

@@ -1550,6 +1550,10 @@ export const dict = {
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",
   "notifications.action.tryModelGeneric": "Probeer model",
+  "settings.indexing.kiloModel.title": "Kilo-model voorinstelling",
+  "settings.indexing.kiloModel.description": "Kies een ondersteund Kilo-hosted embeddings model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-aanmelding vereist",
+  "settings.indexing.kiloSignIn.description": "Log in op Kilo om hosted embeddings te gebruiken.",
   // Missing translations - English fallbacks until translated
   "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
   "settings.agentBehaviour.createMode.button": "Aanmaken",
