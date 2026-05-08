@@ -53,6 +53,7 @@ interface DiffPanelProps {
   onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
+  initialOpenFiles?: string[]
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -157,7 +158,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         // New context: initialize open state from the diff policy.
         if (key !== initializedKey) {
           initializedKey = key
-          setOpen(initialOpenFiles(diffs))
+          setOpen(props.initialOpenFiles ?? initialOpenFiles(diffs))
           return
         }
 

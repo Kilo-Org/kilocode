@@ -111,6 +111,56 @@ export const DiffPanelWithDiffs: Story = {
   ),
 }
 
+const diffPanelButtonStoryStyle: JSX.CSSProperties = {
+  display: "flex",
+  "flex-direction": "column",
+  "max-height": "48px",
+  overflow: "hidden",
+  border: "1px solid var(--border-weak-base)",
+}
+
+export const DiffPanelBulkActionExpandAll: Story = {
+  name: "DiffPanel — bulk action expand all",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={diffPanelButtonStoryStyle}>
+        <DiffPanel
+          diffs={mockDiffs}
+          loading={false}
+          diffStyle="unified"
+          onDiffStyleChange={() => {}}
+          comments={[]}
+          onCommentsChange={() => {}}
+          onClose={() => {}}
+          onExpand={() => {}}
+          initialOpenFiles={[]}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const DiffPanelBulkActionCollapseAll: Story = {
+  name: "DiffPanel — bulk action collapse all",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={diffPanelButtonStoryStyle}>
+        <DiffPanel
+          diffs={mockDiffs}
+          loading={false}
+          diffStyle="unified"
+          onDiffStyleChange={() => {}}
+          comments={[]}
+          onCommentsChange={() => {}}
+          onClose={() => {}}
+          onExpand={() => {}}
+          initialOpenFiles={mockDiffs.map((diff) => diff.file)}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 // ---------------------------------------------------------------------------
 // FullScreenDiffView
 // ---------------------------------------------------------------------------
