@@ -173,7 +173,7 @@
     "ripgrep": "0.3.1",
     "rotating-file-stream": "3.2.9",
     "semver": "^7.6.3",
-    "simple-git": "3.35.2",
+    "simple-git": "3.36.0",
     "solid-js": "catalog:",
     "strip-ansi": "7.1.2",
     "tree-sitter-bash": "0.25.0",
