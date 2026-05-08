@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test"
 import { mergeWorktreeDiffs } from "../../webview-ui/agent-manager/diff-state"
-import { initialOpenFiles } from "../../webview-ui/agent-manager/diff-open-policy"
+import {
+  EXTREME_DIFF_CHANGED_LINES,
+  expandableOpenFiles,
+  initialOpenFiles,
+} from "../../webview-ui/agent-manager/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 function diff(overrides: Partial<WorktreeFileDiff>): WorktreeFileDiff {
@@ -48,15 +52,26 @@ describe("agent manager diff state", () => {
     expect(result.stale).toEqual(new Set(["src/app.ts"]))
   })
 
-  it("does not auto-open generated-like files or large diff sets", () => {
+  it("opens reviewable diffs initially", () => {
     expect(
       initialOpenFiles([
         diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
         diff({ file: "node_modules/pkg/index.js", generatedLike: true, additions: 3 }),
+        diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
     ).toEqual(["src/app.ts"])
 
     const many = Array.from({ length: 26 }, (_, i) => diff({ file: `src/${i}.ts` }))
-    expect(initialOpenFiles(many)).toEqual([])
+    expect(initialOpenFiles(many)).toHaveLength(26)
+  })
+
+  it("expands only reviewable files from the bulk action", () => {
+    expect(
+      expandableOpenFiles([
+        diff({ file: "src/app.ts", generatedLike: false, additions: 3 }),
+        diff({ file: "src/generated.ts", generatedLike: true, additions: 3 }),
+        diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
+      ]),
+    ).toEqual(["src/app.ts"])
   })
 })

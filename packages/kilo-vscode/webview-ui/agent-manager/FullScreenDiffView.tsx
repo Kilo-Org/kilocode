@@ -29,7 +29,7 @@ import {
   type AnnotationLabels,
   type AnnotationMeta,
 } from "./review-annotations"
-import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
+import { LONG_DIFF_MARKER_FILE_COUNT, expandableOpenFiles, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 
@@ -82,8 +82,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = null
-  // Tracks the session key for which auto-open has already run. When the
-  // key changes (different worktree) we re-expand. Within the same key,
+  // Tracks the session key for which initial open state has already run. When the
+  // key changes (different worktree) we expand reviewable files. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
   let rootRef: HTMLDivElement | undefined
@@ -133,9 +133,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
-  // Unified auto-open effect: tracks both sessionKey and diffs in a single effect
+  // Unified open-state effect: tracks both sessionKey and diffs in a single effect
   // to eliminate the race condition between the old separate sessionKey-reset and
-  // diffs-watch effects. Uses the session key to decide when auto-expand is needed
+  // diffs-watch effects. Uses the session key to decide when initialization is needed
   // vs when we just prune stale entries from the open list.
   createEffect(
     on(
@@ -342,8 +342,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleExpandAll = () => {
-    const allOpen = open().length === props.diffs.length
-    setOpen(allOpen ? [] : props.diffs.map((d) => d.file))
+    setOpen(open().length > 0 ? [] : expandableOpenFiles(props.diffs))
   }
 
   const syncActiveFileFromScroll = () => {
@@ -449,7 +448,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         <div class="am-review-toolbar-right">
           <Button size="small" variant="ghost" onClick={handleExpandAll}>
             <Icon name="chevron-grabber-vertical" size="small" />
-            {open().length === props.diffs.length ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
+            {open().length > 0 ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
           </Button>
           <Show when={comments().length > 0 && props.canComment !== false}>
             <TooltipKeybind
