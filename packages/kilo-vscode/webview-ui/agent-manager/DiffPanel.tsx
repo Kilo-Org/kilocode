@@ -339,7 +339,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   }))
   const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
   const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
-  const openIcon = () => (allOpen() ? "compress" : "chevron-grabber-vertical")
+  const openIcon = () => (allOpen() ? "files-collapse" : "files-expand")
 
   return (
     <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
