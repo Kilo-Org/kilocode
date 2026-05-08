@@ -6,7 +6,7 @@ import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
-import { parseNameStatus, parseNumstat, readDisk, showBlob, summarize, type FileEntry } from "./git-status"
+import { INDEX_REF, parseNameStatus, parseNumstat, readDisk, showBlob, summarize, type FileEntry } from "./git-status"
 
 export const UNSTAGED_SOURCE_ID = "unstaged"
 
@@ -98,7 +98,7 @@ export function createUnstagedDiffSource(): DiffSource {
       // Untracked: no index blob, after = disk content.
       // Tracked added/modified/deleted: before = index blob (or "" for added),
       // after = disk content (or "" for deleted).
-      const before = !entry.tracked || entry.status === "added" ? "" : await showBlob(git, dir, "", file)
+      const before = !entry.tracked || entry.status === "added" ? "" : await showBlob(git, dir, INDEX_REF, file)
       const after = entry.status === "deleted" ? "" : await readDisk(dir, file)
       const summarized = before === "" && after === "" && entry.status === "modified"
 

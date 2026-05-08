@@ -74,10 +74,13 @@ export function summarize(entry: FileEntry): DiffFile {
   }
 }
 
+// Used to tell Git "read the file from the staging area" instead of from a commit.
+export const INDEX_REF = ""
+
 /**
  * `git show <ref>:<file>` to dump file contents at a specific revision.
- * Returns `""` on failure (binary, missing, etc.) — the caller decides
- * whether to surface that as `summarized` or just empty.
+ * Returns `""` on failure (binary, missing, etc.) — the caller decides whether
+ * to surface that as `summarized` or just empty.
  */
 export async function showBlob(git: GitOps, dir: string, ref: string, file: string): Promise<string> {
   const result = await git.execGit(["show", `${ref}:${file}`], dir)

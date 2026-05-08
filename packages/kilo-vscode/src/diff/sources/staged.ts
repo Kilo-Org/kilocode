@@ -1,9 +1,10 @@
 import * as vscode from "vscode"
 import { GitOps } from "../../agent-manager/GitOps"
+import { generatedLike } from "../../agent-manager/local-diff"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "./types"
-import { parseNameStatus, parseNumstat, showBlob, summarize, type FileEntry } from "./git-status"
+import { INDEX_REF, parseNameStatus, parseNumstat, showBlob, summarize, type FileEntry } from "./git-status"
 
 export const STAGED_SOURCE_ID = "staged"
 
@@ -72,7 +73,7 @@ export function createStagedDiffSource(): DiffSource {
 
       // For added: HEAD has no blob. For deleted: index has no blob.
       const before = entry.status === "added" ? "" : await showBlob(git, dir, "HEAD", file)
-      const after = entry.status === "deleted" ? "" : await showBlob(git, dir, "", file)
+      const after = entry.status === "deleted" ? "" : await showBlob(git, dir, INDEX_REF, file)
       const summarized = before === "" && after === "" && entry.status === "modified"
       return {
         file,
@@ -82,7 +83,7 @@ export function createStagedDiffSource(): DiffSource {
         deletions: entry.deletions,
         status: entry.status,
         tracked: true,
-        generatedLike: false,
+        generatedLike: generatedLike(file),
         summarized,
         stamp: `${entry.status}:${entry.additions}:${entry.deletions}`,
       }

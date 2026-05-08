@@ -136,12 +136,10 @@ describe("DiffSourceCatalog.baseBranchOverride", () => {
     expect(cat.getBaseBranchOverride()).toBeUndefined()
   })
 
-  it("dispose clears branch git resources without throwing", () => {
+  it("dispose clears the override and branch git resources without throwing", () => {
     const cat = makeCatalog()
     cat.setBaseBranchOverride("foo")
     cat.dispose()
-    // Override survives dispose; the provider clears it explicitly on panel
-    // close, so other paths can introspect after dispose.
-    expect(cat.getBaseBranchOverride()).toBe("foo")
+    expect(cat.getBaseBranchOverride()).toBeUndefined()
   })
 })

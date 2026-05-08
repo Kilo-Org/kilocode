@@ -163,6 +163,7 @@ export class DiffSourceCatalog implements vscode.Disposable {
   }
 
   dispose(): void {
+    this.baseBranchOverride = undefined
     this.branchGit?.dispose()
     this.branchGit = undefined
     this.branchOutput?.dispose()
