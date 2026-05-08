@@ -140,6 +140,8 @@ export function tui(input: {
     process.on("exit", resetTerminalState) // kilocode_change
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
+    // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
+    void renderer.getPalette({ size: 16 }).catch(() => undefined)
     const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
 
     await render(() => {
@@ -310,6 +312,9 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     renderer.clearSelection()
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
+  const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
+    kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
+  )
 
   KiloApp.useSessionEffects({ route, sdk, sync }) // kilocode_change
 
@@ -760,6 +765,31 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       category: "System",
       onSelect: (dialog) => {
         kv.set("file_context_enabled", !kv.get("file_context_enabled", true))
+        dialog.clear()
+      },
+    },
+    {
+      title: pasteSummaryEnabled() ? "Disable paste summary" : "Enable paste summary",
+      value: "app.toggle.paste_summary",
+      category: "System",
+      onSelect: (dialog) => {
+        setPasteSummaryEnabled((prev) => {
+          const next = !prev
+          kv.set("paste_summary_enabled", next)
+          return next
+        })
+        dialog.clear()
+      },
+    },
+    {
+      title: kv.get("session_directory_filter_enabled", true)
+        ? "Disable session directory filtering"
+        : "Enable session directory filtering",
+      value: "app.toggle.session_directory_filter",
+      category: "System",
+      onSelect: async (dialog) => {
+        kv.set("session_directory_filter_enabled", !kv.get("session_directory_filter_enabled", true))
+        await sync.session.refresh()
         dialog.clear()
       },
     },

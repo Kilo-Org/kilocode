@@ -46,7 +46,7 @@ const BrowserTab: Component = () => {
       >
         <p
           style={{
-            "font-size": "12px",
+            "font-size": "var(--kilo-font-size-12)",
             color: "var(--vscode-descriptionForeground)",
             margin: 0,
             "line-height": "1.5",

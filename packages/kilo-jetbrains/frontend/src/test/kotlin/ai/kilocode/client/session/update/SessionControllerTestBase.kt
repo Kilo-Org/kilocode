@@ -13,6 +13,7 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -23,6 +24,8 @@ import ai.kilocode.rpc.dto.ModelDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
@@ -125,7 +128,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs)
+        return controller(id, flushMs, true, displayMs = displayMs)
     }
 
     protected fun controller(
@@ -133,6 +136,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long,
         condense: Boolean,
         displayMs: Long = Long.MAX_VALUE,
+        session: SessionDto? = null,
+        beforeUpdate: () -> Boolean = { false },
+        afterUpdate: (Boolean) -> Unit = {},
     ): SessionController {
         val root = Root()
         val m = SessionController(
@@ -143,9 +149,12 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
           app,
           scope,
           root,
-          flushMs,
-          condense,
-          displayMs
+           flushMs,
+           condense,
+           displayMs,
+           session = session,
+            beforeUpdate = beforeUpdate,
+            afterUpdate = afterUpdate,
         )
         controllers.add(m)
         roots[m] = root
@@ -192,7 +201,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         Disposer.register(parent, disposable)
         m.model.addListener(disposable) { event ->
             assertTrue("Model listener must be called on EDT", ApplicationManager.getApplication().isDispatchThread)
-            events.add(event)
+            if (event !is SessionModelEvent.HeaderUpdated) events.add(event)
         }
         return events
     }
@@ -238,7 +247,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
 
     /** Create a controller, attach both listeners, send initial prompt, and flush. */
     protected fun prompted(): Triple<SessionController, MutableList<SessionControllerEvent>, MutableList<SessionModelEvent>> {
-        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller()
         val events = collect(m)
@@ -246,6 +255,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flush()
         edt { m.prompt("go") }
         flush()
+        modelEvents.clear()
         return Triple(m, events, modelEvents)
     }
 
@@ -269,7 +279,11 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     }
 
     protected fun assertModelEvents(expected: String, events: List<SessionModelEvent>) {
-        assertEquals(expected.trimIndent().trim(), events.joinToString("\n"))
+        val act = events
+            .filter { it !is SessionModelEvent.HeaderUpdated }
+            .filter { it !is SessionModelEvent.SessionUpdated }
+            .joinToString("\n")
+        assertEquals(expected.trimIndent().trim(), act)
     }
 
     protected fun snapshot(c: SessionController) = Snapshot(
@@ -310,6 +324,15 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         title = title,
     )
 
+    protected fun session(id: String, title: String = "Session $id", dir: String = "/test") = SessionDto(
+        id = id,
+        projectID = "prj",
+        directory = dir,
+        title = title,
+        version = "1",
+        time = SessionTimeDto(created = 1.0, updated = 2.0),
+    )
+
     protected fun workspaceReady(
         agents: List<AgentDto> = listOf(AgentDto(name = "code", displayName = "Code", mode = "code")),
         default: String = "code",
@@ -321,7 +344,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             ),
         ),
         connected: List<String> = listOf("kilo"),
-        defaults: Map<String, String> = mapOf("kilo" to "gpt-5"),
+        defaults: Map<String, String> = emptyMap(),
     ) = KiloWorkspaceStateDto(
         status = KiloWorkspaceStatusDto.READY,
         agents = AgentsDto(agents = agents, all = agents, default = default),

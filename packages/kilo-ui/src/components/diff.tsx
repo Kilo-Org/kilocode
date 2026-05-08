@@ -2,7 +2,7 @@ import { sampledChecksum } from "@opencode-ai/core/util/encode"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
-import { createDefaultOptions, type DiffProps, styleVariables } from "@opencode-ai/ui/pierre"
+import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 
@@ -156,6 +156,7 @@ export function Diff<T>(props: DiffProps<T>) {
   const [local, others] = splitProps(props, [
     "before",
     "after",
+    "fileDiff",
     "class",
     "classList",
     "annotations",
@@ -167,8 +168,14 @@ export function Diff<T>(props: DiffProps<T>) {
   const mobile = createMediaQuery("(max-width: 640px)")
   const [visible, setVisible] = createSignal(false)
 
-  const before = createMemo(() => (typeof local.before?.contents === "string" ? local.before.contents : ""))
-  const after = createMemo(() => (typeof local.after?.contents === "string" ? local.after.contents : ""))
+  const before = createMemo(() => {
+    if (local.fileDiff) return local.fileDiff.deletionLines.join("")
+    return typeof local.before?.contents === "string" ? local.before.contents : ""
+  })
+  const after = createMemo(() => {
+    if (local.fileDiff) return local.fileDiff.additionLines.join("")
+    return typeof local.after?.contents === "string" ? local.after.contents : ""
+  })
 
   const estimate = createMemo(() => {
     const value = Math.max(lines(before()), lines(after())) * ESTIMATED_LINE_HEIGHT
@@ -675,13 +682,7 @@ export function Diff<T>(props: DiffProps<T>) {
     const opts = options()
     const workerPool = large() ? getWorkerPool("unified") : getWorkerPool(props.diffStyle)
     const virtualizer = getVirtualizer()
-    const beforeContents = before()
-    const afterContents = after()
-
-    const cacheKey = (contents: string) => {
-      if (!large()) return sampledChecksum(contents, contents.length)
-      return sampledChecksum(contents)
-    }
+    const annotations = untrack(() => local.annotations)
 
     // Preserve container height during re-render to prevent scroll jumps.
     // When Pierre tears down the DOM (innerHTML = ""), the container collapses
@@ -697,20 +698,29 @@ export function Diff<T>(props: DiffProps<T>) {
     setCurrent(instance)
 
     container.innerHTML = ""
-    instance.render({
-      oldFile: {
-        ...local.before,
-        contents: beforeContents,
-        cacheKey: cacheKey(beforeContents),
-      },
-      newFile: {
-        ...local.after,
-        contents: afterContents,
-        cacheKey: cacheKey(afterContents),
-      },
-      lineAnnotations: untrack(() => local.annotations),
-      containerWrapper: container,
-    })
+
+    if (local.fileDiff) {
+      instance.render({
+        fileDiff: local.fileDiff,
+        lineAnnotations: annotations,
+        containerWrapper: container,
+      })
+    } else {
+      const beforeContents = before()
+      const afterContents = after()
+
+      const cacheKey = (contents: string) => {
+        if (!large()) return sampledChecksum(contents, contents.length)
+        return sampledChecksum(contents)
+      }
+
+      instance.render({
+        oldFile: { ...local.before, contents: beforeContents, cacheKey: cacheKey(beforeContents) },
+        newFile: { ...local.after, contents: afterContents, cacheKey: cacheKey(afterContents) },
+        lineAnnotations: annotations,
+        containerWrapper: container,
+      })
+    }
 
     applyScheme()
     patchSeparatorLayout()

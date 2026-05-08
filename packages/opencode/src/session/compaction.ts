@@ -18,6 +18,8 @@ import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
 import { fn } from "@/util/fn"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
+import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -439,21 +441,20 @@ export const layer: Layer.Layer<
         sessionID: input.sessionID,
         model,
       })
-      const result = yield* processor.process({
+      // kilocode_change start
+      const result = yield* KiloCompactionPayloadRecovery.process({
+        processor,
         user: userMessage,
         agent,
         sessionID: input.sessionID,
-        tools: {},
-        system: [],
-        messages: [
-          ...modelMessages,
-          {
-            role: "user",
-            content: [{ type: "text", text: nextPrompt }],
-          },
-        ],
         model,
+        messages: modelMessages,
+        prompt: nextPrompt,
+        recovery: selected.head,
+        updateMessage: session.updateMessage,
+        updatePart: session.updatePart,
       })
+      // kilocode_change end
 
       if (result === "compact") {
         processor.message.error = new MessageV2.ContextOverflowError({
@@ -583,6 +584,9 @@ export const layer: Layer.Layer<
         auto: input.auto,
         overflow: input.overflow,
       })
+      // kilocode_change start - keep auto-compaction markers visible during queued turns
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      // kilocode_change end
     })
 
     return Service.of({

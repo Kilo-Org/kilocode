@@ -25,8 +25,6 @@ function clean(diff: unknown): PermissionFileDiff | undefined {
   return {
     file,
     ...(text(item.patch) !== undefined ? { patch: text(item.patch) } : {}),
-    ...(text(item.before) !== undefined ? { before: text(item.before) } : {}),
-    ...(text(item.after) !== undefined ? { after: text(item.after) } : {}),
     additions: num(item.additions),
     deletions: num(item.deletions),
   }

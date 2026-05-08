@@ -12,9 +12,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -56,6 +58,9 @@ class KiloBackendWorkspace(
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_MS = 1000L
         private val json = Json { ignoreUnknownKeys = true }
+        private val EFFORT_ORDER = listOf("none", "minimal", "low", "medium", "high", "xhigh", "max")
+            .withIndex()
+            .associate { it.value to it.index }
     }
 
     private val _state = MutableStateFlow<KiloWorkspaceState>(KiloWorkspaceState.Pending)
@@ -291,6 +296,7 @@ class KiloBackendWorkspace(
 
     private fun model(id: String, obj: JsonObject): ModelInfo {
         val cap = obj["capabilities"]?.jsonObject
+        val limit = obj["limit"]?.jsonObject
         return ModelInfo(
             id = obj.str("id") ?: id,
             name = obj.str("name") ?: id,
@@ -300,7 +306,21 @@ class KiloBackendWorkspace(
             toolCall = cap.bool("toolcall"),
             free = obj.bool("isFree"),
             status = obj.str("status"),
+            recommendedIndex = obj.num("recommendedIndex"),
+            variants = variants(obj),
+            limit = limit?.let {
+                ModelLimitInfo(
+                    context = it.long("context") ?: 0,
+                    input = it.long("input"),
+                    output = it.long("output") ?: 0,
+                )
+            },
         )
+    }
+
+    private fun variants(obj: JsonObject): List<String> {
+        val raw = obj["variants"]?.jsonObject?.keys?.toList() ?: return emptyList()
+        return raw.sortedWith(compareBy<String> { EFFORT_ORDER[it] ?: Int.MAX_VALUE }.thenBy { it })
     }
 
     private fun fetch(path: String): String {
@@ -349,3 +369,5 @@ class KiloBackendWorkspace(
 private fun encode(value: String) = java.net.URLEncoder.encode(value, Charsets.UTF_8)
 private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.contentOrNull
 private fun JsonObject?.bool(key: String) = this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
+private fun JsonObject.num(key: String) = this[key]?.jsonPrimitive?.doubleOrNull
+private fun JsonObject.long(key: String) = this[key]?.jsonPrimitive?.longOrNull

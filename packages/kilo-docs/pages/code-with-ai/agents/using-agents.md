@@ -99,9 +99,9 @@ You can hold `shift` to move backwards through the list of modes, for example ‚å
 | Aspect | Details |
 |---|---|
 | **Description** | A knowledgeable technical assistant focused on answering questions without changing your codebase |
-| **Tool Access** | Read-only tools only (cannot edit files or run commands) |
-| **Ideal For** | Code explanation, concept exploration, and technical learning |
-| **Special Features** | Optimized for informative responses without modifying your project |
+| **Tool Access** | Read-only tools (`read`, `glob`, `grep`, `list`), read-only bash commands (`cat`, `grep`, `git log`, `git diff`, `jq`, etc.), and MCP tools (with user approval). All write operations are blocked. |
+| **Ideal For** | Code explanation, concept exploration, technical learning, and project investigation |
+| **Special Features** | Can run read-only commands and inspect your project without modifying it. MCP tools require approval for each call. |
 
 ### plan
 
@@ -155,9 +155,9 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 | Aspect | Details |
 |---|---|
 | **Description** | A knowledgeable technical assistant focused on answering questions without changing your codebase |
-| **Tool Access** | Read-only tools only (cannot edit files or run commands) |
-| **Ideal For** | Code explanation, concept exploration, and technical learning |
-| **Special Features** | Optimized for informative responses without modifying your project |
+| **Tool Access** | Read-only tools (`read`, `glob`, `grep`, `list`), read-only bash commands (`cat`, `grep`, `git log`, `git diff`, `jq`, etc.), and MCP tools (with user approval). All write operations are blocked. |
+| **Ideal For** | Code explanation, concept exploration, technical learning, and project investigation |
+| **Special Features** | Can run read-only commands and inspect your project without modifying it. MCP tools require approval for each call. |
 
 ### plan
 

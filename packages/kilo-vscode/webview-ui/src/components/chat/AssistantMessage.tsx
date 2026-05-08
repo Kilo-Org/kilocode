@@ -10,6 +10,7 @@
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -20,6 +21,7 @@ import { useData } from "@kilocode/kilo-ui/context/data"
 import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
+import { snapshotProgress } from "../../context/session-utils"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
@@ -39,7 +41,7 @@ function isRenderable(part: SDKPart): boolean {
     // Always render question tool parts — active ones get the inline QuestionDock
     return true
   }
-  if (part.type === "text") return !!(part as SDKPart & { text: string }).text?.trim()
+  if (part.type === "text") return !snapshotProgress(part) && !!(part as SDKPart & { text: string }).text?.trim()
   if (part.type === "reasoning") return !!(part as SDKPart & { text: string }).text?.trim()
   return !!PART_MAPPING[part.type]
 }
@@ -62,6 +64,7 @@ function matchToolRequest<T extends { tool?: { callID: string; messageID: string
 interface AssistantMessageProps {
   message: SDKAssistantMessage
   showAssistantCopyPartID?: string | null
+  feedback?: MessageFeedbackControls
 }
 
 function TodoToolCard(props: { part: ToolPart }) {
@@ -167,6 +170,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                   message={props.message as SDKMessage}
                                   showAssistantCopyPartID={props.showAssistantCopyPartID}
                                   reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                  feedback={props.feedback}
                                   animate={
                                     part.type === "tool" &&
                                     ((part as unknown as ToolPart).state?.status === "pending" ||

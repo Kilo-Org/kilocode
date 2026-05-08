@@ -309,6 +309,93 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
+  it.live("explicit external directory allows are not shadowed by ask plan broad denies", () =>
+    withDir({ git: true }, (dir) =>
+      Effect.gen(function* () {
+        const root = path.resolve(path.dirname(dir), "legacy")
+        const glob = path.join(root, "*")
+        const ruleset: Permission.Ruleset = [
+          { permission: "external_directory", pattern: "*", action: "ask" },
+          { permission: "external_directory", pattern: glob, action: "allow" },
+          { permission: "*", pattern: "*", action: "deny" },
+        ]
+
+        const result = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset,
+          hardRuleset: ruleset,
+        })
+        expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
+  it.live("saved external directory approvals survive ask plan hard rules", () =>
+    withDir({ git: true }, (dir) =>
+      Effect.gen(function* () {
+        const root = path.resolve(path.dirname(dir), "legacy")
+        const glob = path.join(root, "*")
+        const asking = yield* ask({
+          id: PermissionID.make("permission_external_seed"),
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset: [{ permission: "external_directory", pattern: "*", action: "ask" }],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* reply({ requestID: PermissionID.make("permission_external_seed"), reply: "always" })
+        yield* Fiber.join(asking)
+
+        const result = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset: [
+            { permission: "external_directory", pattern: "*", action: "ask" },
+            { permission: "*", pattern: "*", action: "deny" },
+          ],
+          hardRuleset: [{ permission: "*", pattern: "*", action: "deny" }],
+        })
+        expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
+  it.live("explicit external directory denies still win over ask plan exceptions", () =>
+    withDir({ git: true }, (dir) =>
+      Effect.gen(function* () {
+        const root = path.resolve(path.dirname(dir), "legacy")
+        const glob = path.join(root, "*")
+        const exit = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "external_directory",
+          patterns: [glob],
+          metadata: { filepath: path.join(root, "main.ts"), parentDir: root },
+          always: [glob],
+          ruleset: [
+            { permission: "external_directory", pattern: glob, action: "allow" },
+            { permission: "external_directory", pattern: glob, action: "deny" },
+            { permission: "*", pattern: "*", action: "deny" },
+          ],
+          hardRuleset: [
+            { permission: "*", pattern: "*", action: "deny" },
+            { permission: "external_directory", pattern: glob, action: "deny" },
+          ],
+        }).pipe(Effect.exit)
+        expectFailure(exit, Permission.DeniedError)
+      }),
+    ),
+  )
+
   it.live("accepts hierarchy patterns from metadata.rules", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {

@@ -49,6 +49,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åpne Terminal",
   "agentManager.tab.newOptions": "Flere alternativer for ny fane",
+  "agentManager.tabsMenu.label": "Søk i åpne faner",
+  "agentManager.tabsMenu.search": "Søk i faner...",
+  "agentManager.tabsMenu.empty": "Ingen treffende faner",
+  "agentManager.tabsMenu.status.waiting": "Venter",
+  "agentManager.tabsMenu.status.working": "Jobber",
+  "agentManager.tabsMenu.status.retry": "Igjen",
 
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal avsluttet — lukk fanen for å avvise",

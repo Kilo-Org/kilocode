@@ -41,6 +41,8 @@ There are two primary config files:
 - **Global config:** `~/.config/kilo/kilo.jsonc` — applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\kilo.jsonc`.
 - **Project config:** `kilo.jsonc` in your project root, or `.kilo/kilo.jsonc` for a cleaner setup. The `.kilo/` version takes priority if both exist.
 
+Use **Local Config** or **Global Config** in the Settings header to open the matching config file from VS Code. If multiple config files are available, choose the exact file from the picker. If the recommended file does not exist yet, Kilo creates it before opening it.
+
 {% callout type="warning" %}
 If you check config files into version control, make sure they do not contain API keys or other secrets (e.g., `provider.*.options.apiKey`). Use environment variables for credentials instead.
 {% /callout %}
@@ -66,6 +68,10 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 ```
 
 Valid values are `expanded` and `collapsed`.
+
+### Markdown Diff Rendering
+
+Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.
 
 ### Export and Import
 
@@ -193,6 +199,7 @@ Available experimental toggles include:
 - **LSP integration** — expose language server diagnostics to the agent
 - **Paste summary** — summarize large clipboard pastes before including them
 - **Batch tool** — allow the agent to batch multiple tool calls in one step
+- **Agent Manager Tool** - allow agents to start Agent Manager local and worktree sessions from chat
 - **OpenTelemetry** — enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -202,6 +209,7 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
   "experimental": {
     "codebase_search": true,
     "batch_tool": false,
+    "agent_manager_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
     "mcp_timeout": 30000

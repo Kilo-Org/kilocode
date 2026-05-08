@@ -1,4 +1,4 @@
-export type FileSearchItem = { path: string; type: "file" | "folder" }
+export type FileSearchItem = { path: string; type: "file" | "folder" | "opened-file" }
 
 const normalize = (p: string) => p.replaceAll("\\", "/")
 const trim = (p: string) => normalize(p).replace(/\/+$/, "")
@@ -18,9 +18,20 @@ function rank(query: string, p: string): number {
   return 4
 }
 
-export function mergeFileSearchItems(input: { query: string; files: string[]; folders: string[] }): FileSearchItem[] {
+export function mergeFileSearchItems(input: {
+  query: string
+  files: string[]
+  folders: string[]
+  open?: Set<string>
+}): FileSearchItem[] {
   const query = normalize(input.query).trim().toLowerCase()
-  const files = input.files.map((p) => ({ path: normalize(p), type: "file" as const }))
+  const open = new Set([...(input.open ?? [])].map(normalize))
+  const files = input.files.map((p) => {
+    const path = normalize(p)
+    return { path, type: open.has(path) ? ("opened-file" as const) : ("file" as const) }
+  })
+  const pinned = files.filter((item) => item.type === "opened-file")
+  const rest = files.filter((item) => !open.has(item.path))
   // Dedup folders against themselves; a file and a folder that share a stem are distinct entries.
   const seen = new Set<string>()
   const folders = input.folders
@@ -40,6 +51,6 @@ export function mergeFileSearchItems(input: { query: string; files: string[]; fo
 
   const sorted = [...folders].sort((a, b) => a.rank - b.rank || a.index - b.index)
   const boosted = sorted.filter((x) => x.rank <= 1).map((x) => x.item)
-  const rest = sorted.filter((x) => x.rank > 1).map((x) => x.item)
-  return [...boosted, ...files, ...rest]
+  const other = sorted.filter((x) => x.rank > 1).map((x) => x.item)
+  return [...pinned, ...boosted, ...rest, ...other]
 }

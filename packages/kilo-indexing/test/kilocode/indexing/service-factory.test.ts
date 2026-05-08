@@ -1,6 +1,6 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test"
 import path from "path"
-import { mockEmbeddingsCreate, openAIMockFactory } from "./embedders/__helpers__/openai-mock"
+import { mockEmbeddingsCreate, openAIMockFactory, setOpenAIConstructorHook } from "./embedders/__helpers__/openai-mock"
 
 mock.module("openai", openAIMockFactory)
 import { CodeIndexServiceFactory } from "../../../src/indexing/service-factory"
@@ -26,6 +26,7 @@ function createFactory(input?: Partial<ConstructorParameters<typeof CodeIndexCon
 describe("CodeIndexServiceFactory", () => {
   beforeEach(() => {
     mockEmbeddingsCreate.mockReset()
+    setOpenAIConstructorHook(undefined)
   })
 
   test("uses default LanceDB directory when config is unset", () => {
@@ -150,6 +151,32 @@ describe("CodeIndexServiceFactory", () => {
       model: "openai/text-embedding-3-small",
       encoding_format: "base64",
       dimensions: 1024,
+    })
+  })
+
+  test("creates Kilo embedder with Cloud-provided model", async () => {
+    const factory = createFactory({
+      embedderProvider: "kilo",
+      openAiKey: undefined,
+      kiloApiKey: "kilo-token",
+      kiloOrganizationId: "org_123",
+      modelId: "mistralai/mistral-embed-2312",
+      modelDimension: 1024,
+    })
+
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: [0.1, 0.2] }],
+      usage: { prompt_tokens: 1, total_tokens: 1 },
+    })
+
+    const embedder = factory.createEmbedder()
+    await embedder.createEmbeddings(["hello"])
+
+    expect(embedder.embedderInfo).toEqual({ name: "kilo" })
+    expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+      input: ["hello"],
+      model: "mistralai/mistral-embed-2312",
+      encoding_format: "base64",
     })
   })
 })

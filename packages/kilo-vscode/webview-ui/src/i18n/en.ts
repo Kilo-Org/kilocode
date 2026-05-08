@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is required",
+  "provider.connect.prompt.required": "{{field}} is required",
+  "provider.connect.azure.endpointType.label": "Select Azure endpoint configuration",
+  "provider.connect.azure.endpointType.resourceName.label": "Resource name",
+  "provider.connect.azure.endpointType.resourceName.hint": "Build the endpoint from your Azure resource name",
+  "provider.connect.azure.endpointType.baseURL.label": "Full endpoint URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Use a custom Azure OpenAI endpoint",
+  "provider.connect.azure.resourceName.label": "Azure resource name",
+  "provider.connect.azure.resourceName.placeholder": "e.g. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI endpoint URL",
+  "provider.connect.azure.baseURL.placeholder": "e.g. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen gives you access to a curated set of reliable optimized models for coding agents.",
   "provider.connect.opencodeZen.line2":
@@ -1004,8 +1014,17 @@ export const dict = {
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
   "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
+  "settings.indexing.globalEnable.title": "Enable globally",
+  "settings.indexing.globalEnable.description": "Enable indexing for every workspace.",
+  "settings.indexing.projectEnable.title": "Enable for this project",
+  "settings.indexing.projectEnable.description": "Enable indexing for this workspace when global indexing is off.",
+  "settings.indexing.projectEnable.disabledTooltip": "Global indexing is enabled, so this project is already covered.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
+  "settings.indexing.kiloModel.title": "Kilo model preset",
+  "settings.indexing.kiloModel.description": "Choose a supported Kilo-hosted embedding model.",
+  "settings.indexing.kiloSignIn.title": "Kilo sign-in required",
+  "settings.indexing.kiloSignIn.description": "Sign in to Kilo to use hosted embeddings.",
   "settings.indexing.model.title": "Embedding model",
   "settings.indexing.model.description": "Override the default embedding model for the selected provider.",
   "settings.indexing.dimension.title": "Vector dimension",
@@ -1162,6 +1181,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Use a smart keybinding for triggering inline tasks",
   "settings.autocomplete.chatAutocomplete.title": "Enable chat textarea autocomplete",
   "settings.autocomplete.chatAutocomplete.description": "Show autocomplete suggestions in the chat textarea",
+  "settings.autocomplete.modelsHint": "To choose which model is used for autocompletions, see the Models settings.",
 
   "settings.notifications.agent.title": "Agent Completion",
   "settings.notifications.agent.description": "Show notification when agent completes a task",
@@ -1393,6 +1413,8 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.fontSize.title": "Font Size",
+  "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
@@ -1537,4 +1559,15 @@ export const dict = {
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
   "notifications.action.tryModelGeneric": "Try Model",
+
+  "diffViewer.source.workspace.label": "Local Changes",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
 }

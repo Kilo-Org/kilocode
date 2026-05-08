@@ -29,7 +29,7 @@ import {
   type AnnotationLabels,
   type AnnotationMeta,
 } from "./review-annotations"
-import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
+import { LONG_DIFF_MARKER_FILE_COUNT, expandableOpenFiles, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 
@@ -52,6 +52,10 @@ interface FullScreenDiffViewProps {
   onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
+  /** Defaults to true. Hides the per-file Revert action when false. */
+  canRevert?: boolean
+  /** Defaults to true. Disables comment creation and "Send all" when false. */
+  canComment?: boolean
   onClose: () => void
 }
 
@@ -72,14 +76,16 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     delete: t("common.delete"),
   })
   const [open, setOpen] = createSignal<string[]>([])
-  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number } | null>(null)
+  const [draft, setDraft] = createSignal<{ file: string; side: AnnotationSide; line: number; endLine?: number } | null>(
+    null,
+  )
   const [editing, setEditing] = createSignal<string | null>(null)
   const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
   let draftMeta: AnnotationMeta | null = null
-  // Tracks the session key for which auto-open has already run. When the
-  // key changes (different worktree) we re-expand. Within the same key,
+  // Tracks the session key for which initial open state has already run. When the
+  // key changes (different worktree) we expand reviewable files. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
   let rootRef: HTMLDivElement | undefined
@@ -129,9 +135,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     focusRoot()
   }
 
-  // Unified auto-open effect: tracks both sessionKey and diffs in a single effect
+  // Unified open-state effect: tracks both sessionKey and diffs in a single effect
   // to eliminate the race condition between the old separate sessionKey-reset and
-  // diffs-watch effects. Uses the session key to decide when auto-expand is needed
+  // diffs-watch effects. Uses the session key to decide when initialization is needed
   // vs when we just prune stale entries from the open list.
   createEffect(
     on(
@@ -251,6 +257,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         if (currentDraft.line < 1 || currentDraft.line > max) {
           setDraft(null)
           draftMeta = null
+          return
+        }
+        if (currentDraft.endLine !== undefined && currentDraft.endLine > max) {
+          setDraft(null)
+          draftMeta = null
         }
       },
     ),
@@ -288,10 +299,11 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleGutterClick = (file: string, range: SelectedLineRange) => {
+    if (props.canComment === false) return
     if (draft()) return
     const side: AnnotationSide = range.side === "deletions" ? "deletions" : "additions"
     preserveScroll(() => {
-      setDraft({ file, side, line: range.start })
+      setDraft({ file, side, line: range.start, endLine: range.end })
     })
   }
 
@@ -310,6 +322,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     if (!(e.metaKey || e.ctrlKey)) return
     const target = e.target
     if (keepNativeFocus(target)) return
+    if (props.canComment === false) return
     if (comments().length === 0) return
     e.preventDefault()
     e.stopPropagation()
@@ -336,8 +349,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   }
 
   const handleExpandAll = () => {
-    const allOpen = open().length === props.diffs.length
-    setOpen(allOpen ? [] : props.diffs.map((d) => d.file))
+    setOpen(open().length > 0 ? [] : expandableOpenFiles(props.diffs))
   }
 
   const syncActiveFileFromScroll = () => {
@@ -443,9 +455,9 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
         <div class="am-review-toolbar-right">
           <Button size="small" variant="ghost" onClick={handleExpandAll}>
             <Icon name="chevron-grabber-vertical" size="small" />
-            {open().length === props.diffs.length ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
+            {open().length > 0 ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
           </Button>
-          <Show when={comments().length > 0}>
+          <Show when={comments().length > 0 && props.canComment !== false}>
             <TooltipKeybind
               title={t("agentManager.review.sendAllToChat")}
               keybind={sendAllKeybind()}
@@ -469,7 +481,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
               activeFile={activeFile()}
               onFileSelect={handleFileSelect}
               comments={comments()}
-              onRevertFile={props.onRevertFile}
+              onRevertFile={props.canRevert !== false ? props.onRevertFile : undefined}
               revertingFiles={props.revertingFiles}
             />
           </div>
@@ -567,7 +579,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     />
                                   </Tooltip>
                                 </Show>
-                                <Show when={props.onRevertFile}>
+                                <Show when={props.onRevertFile && props.canRevert !== false}>
                                   <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
                                     <IconButton
                                       icon="discard"
@@ -631,7 +643,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                     diffStyle={props.diffStyle}
                                     annotations={annotationsForFile(diff.file)}
                                     renderAnnotation={buildAnnotation}
-                                    enableGutterUtility={true}
+                                    enableGutterUtility={props.canComment !== false}
                                     onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
                                     onLineNumberClick={(event) => {
                                       if (event.annotationSide === "deletions") return
@@ -640,7 +652,17 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                   />
                                 }
                               >
-                                <MarkdownDiffView diff={diff} />
+                                <MarkdownDiffView
+                                  diff={diff}
+                                  annotations={annotationsForFile(diff.file)}
+                                  renderAnnotation={buildAnnotation}
+                                  enableGutterUtility={props.canComment !== false}
+                                  onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                  onLineNumberClick={(event) => {
+                                    if (event.annotationSide === "deletions") return
+                                    props.onOpenFile?.(diff.file, event.lineNumber)
+                                  }}
+                                />
                               </Show>
                             </Show>
                           </Show>

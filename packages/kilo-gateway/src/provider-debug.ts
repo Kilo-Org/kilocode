@@ -1,9 +1,10 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import type { Provider as SDK } from "ai"
 import type { KiloProviderOptions } from "./types.js"
-import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
+import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+import { ANONYMOUS_API_KEY } from "./api/constants.js"
+import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 
 /**
  * Debug version of createKilo with extensive logging
@@ -18,16 +19,7 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
   console.log("  - Source:", options.kilocodeToken ? "kilocodeToken" : options.apiKey ? "apiKey" : "none")
   console.log("  - Value:", apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : "MISSING!")
 
-  // Determine base URL
-  const baseApiUrl = getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, apiKey ?? "")
-  console.log("🌐 [KILO DEBUG] Base URL resolved:", baseApiUrl)
-
-  // Build OpenRouter URL - only append /openrouter/ if not already present
-  const openRouterUrl = baseApiUrl.includes("/openrouter")
-    ? baseApiUrl
-    : baseApiUrl.endsWith("/")
-      ? `${baseApiUrl}openrouter/`
-      : `${baseApiUrl}/openrouter/`
+  const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
   console.log("🔗 [KILO DEBUG] OpenRouter URL:", openRouterUrl)
 
   // Merge custom headers with defaults

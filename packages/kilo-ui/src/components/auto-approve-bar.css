@@ -13,7 +13,7 @@
   }
 
   [data-slot="auto-approve-label"] {
-    font-size: 13px;
+    font-size: var(--kilo-font-size-13);
     color: var(--text-base);
     flex: 1;
   }

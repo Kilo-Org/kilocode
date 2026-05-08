@@ -11,7 +11,7 @@ test("recommends skip for hosted package globs", () => {
 })
 
 test("does not recommend skip for unrelated packages", () => {
-  expect(getRecommendation("packages/app/package.json", [], ["packages/web/**"]).recommendation).toBe(
+  expect(getRecommendation("packages/ui/package.json", [], ["packages/web/**"]).recommendation).toBe(
     "package-transform",
   )
 })

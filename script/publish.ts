@@ -92,8 +92,6 @@ if (Script.release) {
   // kilocode_change end
 
   // kilocode_change start
-  // await import(`../packages/desktop/scripts/finalize-latest-json.ts`)
-  // await import(`../packages/desktop-electron/scripts/finalize-latest-yml.ts`)
   // kilocode_change end
 
   // kilocode_change start - mark prerelease GitHub releases accordingly
@@ -101,7 +99,9 @@ if (Script.release) {
   // Use an absolute path for the CHANGELOG because the imported SDK build
   // script chdirs into packages/sdk/js, so a relative path would miss the file
   // and fall through to the "No notable changes" default.
+  const kind = Script.preview ? "pre-release" : "release"
   const flags = Script.preview ? ["--draft=false", "--prerelease"] : ["--draft=false"]
+  flags.push("--title", `v${Script.version} (${kind})`)
   const changelogPath = fileURLToPath(new URL("../packages/kilo-vscode/CHANGELOG.md", import.meta.url))
   const changelog = await Bun.file(changelogPath)
     .text()

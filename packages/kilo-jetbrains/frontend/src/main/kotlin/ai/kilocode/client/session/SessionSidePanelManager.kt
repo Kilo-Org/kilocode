@@ -9,13 +9,14 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import java.awt.BorderLayout
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 class SessionSidePanelManager(
     private val project: Project,
     private val root: Workspace,
-    private val create: (Project, Workspace, SessionManager, String?, Boolean) -> SessionUi = { project, workspace, manager, id, loading ->
-        service<SessionUiFactory>().create(project, workspace, manager, id, loading)
+    private val create: (Project, Workspace, SessionManager, String?, Boolean, SessionDto?) -> SessionUi = { project, workspace, manager, id, loading, session ->
+        service<SessionUiFactory>().create(project, workspace, manager, id, loading, session)
     },
     private val resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
 ) : SessionManager, Disposable {
@@ -30,17 +31,19 @@ class SessionSidePanelManager(
     private val all = mutableSetOf<SessionUi>()
     private var current: SessionUi? = null
 
+    val defaultFocusedComponent: JComponent? get() = current?.defaultFocusedComponent
+
     override fun newSession() {
         val active = current
         if (active?.blank == true) return
         register(active)
-        show(create(project, root, this, null, active == null))
+        show(create(project, root, this, null, active == null, null))
     }
 
     override fun openSession(session: SessionDto) {
         register(current)
         val ui = opened.getOrPut(session.id) {
-            create(project, resolve(session.directory), this, session.id, false).also {
+            create(project, resolve(session.directory), this, session.id, false, session).also {
                 all.add(it)
             }
         }

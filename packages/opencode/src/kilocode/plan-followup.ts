@@ -236,7 +236,7 @@ export namespace PlanFollowup {
 
     // Fall back to plan file on disk
     const session = await Session.get(SessionID.make(input.sessionID))
-    const file = Bun.file(Session.plan(session))
+    const file = Bun.file(Session.plan(session, Instance.current))
     const plan = await file.text().catch(() => "")
     return plan.trim()
   }
@@ -351,7 +351,7 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session)
+          const file = Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
           const todoList = formatTodos(todos)
 

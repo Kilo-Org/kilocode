@@ -10,7 +10,7 @@
  * Options:
  *   --version <version>  Target upstream version (e.g., v1.1.49)
  *   --commit <hash>      Target upstream commit hash
- *   --base-branch <name> Base branch to merge into (default: main)
+ *   --base-branch <name> Base branch to merge into, or HEAD for current branch (default: main)
  *   --dry-run            Preview changes without applying them
  *   --no-push            Don't push branches to remote
  *   --no-worktrees       Don't create reference worktrees for manual resolution
@@ -25,31 +25,18 @@ import * as logger from "./utils/logger"
 import * as version from "./utils/version"
 import * as report from "./utils/report"
 import * as worktree from "./utils/worktree"
-import { defaultConfig, loadConfig, type MergeConfig } from "./utils/config"
+import { loadConfig, resolveBaseBranch } from "./utils/config"
 import { transformAll as transformPackageNames } from "./transforms/package-names"
 import { preserveAllVersions } from "./transforms/preserve-versions"
 import { keepOursFiles, resetToOurs } from "./transforms/keep-ours"
-import { skipFiles, skipSpecificFiles } from "./transforms/skip-files"
+import { skipFiles } from "./transforms/skip-files"
 import { transformConflictedI18n, transformAllI18n } from "./transforms/transform-i18n"
 // New transforms for auto-resolving more conflict types
-import {
-  transformConflictedTakeTheirs,
-  shouldTakeTheirs,
-  transformAllTakeTheirs,
-} from "./transforms/transform-take-theirs"
-import { transformConflictedTauri, isTauriFile, transformAllTauri } from "./transforms/transform-tauri"
-import {
-  transformConflictedPackageJson,
-  isPackageJson,
-  transformAllPackageJson,
-} from "./transforms/transform-package-json"
-import { transformConflictedScripts, isScriptFile, transformAllScripts } from "./transforms/transform-scripts"
-import {
-  transformConflictedExtensions,
-  isExtensionFile,
-  transformAllExtensions,
-} from "./transforms/transform-extensions"
-import { transformConflictedWeb, isWebFile, transformAllWeb } from "./transforms/transform-web"
+import { transformConflictedTakeTheirs, transformAllTakeTheirs } from "./transforms/transform-take-theirs"
+import { transformConflictedPackageJson, transformAllPackageJson } from "./transforms/transform-package-json"
+import { transformConflictedScripts, transformAllScripts } from "./transforms/transform-scripts"
+import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
+import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
 
 interface MergeOptions {
@@ -232,7 +219,6 @@ async function main() {
   process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
 
   const options = parseArgs()
-  const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 
   if (options.verbose) {
     logger.setVerbose(true)
@@ -260,6 +246,12 @@ async function main() {
 
   const currentBranch = await git.getCurrentBranch()
   logger.info(`Current branch: ${currentBranch}`)
+
+  const base = resolveBaseBranch(options.baseBranch, currentBranch)
+  const config = loadConfig(base ? { baseBranch: base } : undefined)
+  if (options.baseBranch === "HEAD") {
+    logger.info(`Resolved --base-branch HEAD to current branch: ${config.baseBranch}`)
+  }
 
   // Enable git rerere so conflict resolutions are recorded and reused across merges
   if (!options.dryRun) {
@@ -470,14 +462,6 @@ async function main() {
     logger.success(`Transformed ${brandingCount} files with Kilo branding`)
   }
 
-  // 6e. Transform Tauri/Desktop config files
-  logger.info("Transforming Tauri/Desktop config files...")
-  const tauriPreResults = await transformAllTauri({ dryRun: false, verbose: options.verbose })
-  const tauriPreCount = tauriPreResults.filter((r) => r.action === "transformed" && r.replacements > 0).length
-  if (tauriPreCount > 0) {
-    logger.success(`Transformed ${tauriPreCount} Tauri config files`)
-  }
-
   // 6f. Transform package.json files (names, deps, Kilo injections)
   logger.info("Transforming package.json files...")
   const pkgPreResults = await transformAllPackageJson({ dryRun: false, verbose: options.verbose })
@@ -626,26 +610,6 @@ async function main() {
             `${takeFlagged.length} branding file(s) have kilocode_change markers — flagged for manual resolution`,
           )
           flaggedFiles.push(...takeFlagged)
-        }
-      }
-
-      // Transform Tauri files
-      conflictedFiles = await git.getConflictedFiles()
-      if (conflictedFiles.length > 0) {
-        const tauriResults = await transformConflictedTauri(conflictedFiles, {
-          dryRun: false,
-          verbose: options.verbose,
-        })
-        const tauriCount = tauriResults.filter((r) => r.action === "transformed").length
-        if (tauriCount > 0) {
-          logger.success(`Auto-resolved ${tauriCount} Tauri conflicts`)
-        }
-        const tauriFlagged = tauriResults.filter((r) => r.action === "flagged").map((r) => r.file)
-        if (tauriFlagged.length > 0) {
-          logger.warn(
-            `${tauriFlagged.length} Tauri file(s) have kilocode_change markers — flagged for manual resolution`,
-          )
-          flaggedFiles.push(...tauriFlagged)
         }
       }
 

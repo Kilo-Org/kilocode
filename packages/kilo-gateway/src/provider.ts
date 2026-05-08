@@ -4,9 +4,10 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
-import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
+import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+import { ANONYMOUS_API_KEY } from "./api/constants.js"
+import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 
 /**
  * Create a KiloCode provider instance
@@ -28,15 +29,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
 
-  // Determine base URL
-  const baseApiUrl = getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, apiKey ?? "")
-
-  // Build OpenRouter URL - only append /openrouter/ if not already present
-  const openRouterUrl = baseApiUrl.includes("/openrouter")
-    ? baseApiUrl
-    : baseApiUrl.endsWith("/")
-      ? `${baseApiUrl}openrouter/`
-      : `${baseApiUrl}/openrouter/`
+  const openRouterUrl = resolveKiloOpenRouterBaseUrl({ baseURL: options.baseURL, token: apiKey })
 
   // Merge custom headers with defaults
   const customHeaders = {

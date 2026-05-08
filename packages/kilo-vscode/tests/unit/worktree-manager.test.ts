@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test"
 import os from "node:os"
 import path from "node:path"
 import fs from "node:fs/promises"
+import { existsSync } from "node:fs"
 import { WorktreeManager } from "../../src/agent-manager/WorktreeManager"
 import { generateBranchName, sanitizeBranchName, versionedName } from "../../src/agent-manager/branch-name"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
@@ -35,6 +36,12 @@ async function createTempRepo(): Promise<string> {
 function createManager(root: string): WorktreeManager {
   const logs: string[] = []
   return new WorktreeManager(root, (msg) => logs.push(msg))
+}
+
+// Test-only helper to verify metadata writes keep the temp worktree checkout clean.
+async function changedFiles(cwd: string): Promise<string[]> {
+  const raw = await simpleGit(cwd).raw(["status", "--porcelain", "--untracked-files=all", "--"])
+  return raw.trim().split("\n").filter(Boolean)
 }
 
 /** Create a temp repo with a bare origin remote so origin/<branch> refs exist. */
@@ -543,11 +550,24 @@ describe("WorktreeManager metadata", () => {
     const mgr = createManager(root)
     const result = await mgr.createWorktree({ prompt: "session-test" })
 
-    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch")
+    await mgr.writeMetadata(result.path, "sess-abc-123", "feature-branch", "origin")
     const meta = await mgr.readMetadata(result.path)
 
     expect(meta?.sessionId).toBe("sess-abc-123")
     expect(meta?.parentBranch).toBe("feature-branch")
+    expect(meta?.remote).toBe("origin")
+  })
+
+  it("writes metadata outside the worktree checkout", async () => {
+    const root = await createTempRepo()
+    const mgr = createManager(root)
+    const result = await mgr.createWorktree({ prompt: "session-status" })
+
+    await mgr.writeMetadata(result.path, "sess-clean-123", "feature-branch", "origin")
+
+    expect(existsSync(path.join(result.path, ".kilo", "session-id"))).toBe(false)
+    expect(existsSync(path.join(result.path, ".kilo", "metadata.json"))).toBe(false)
+    expect(await changedFiles(result.path)).toEqual([])
   })
 
   it("returns undefined when no metadata exists", async () => {

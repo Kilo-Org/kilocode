@@ -5,6 +5,7 @@ import {
   buildTextAfterMentionSelect,
   buildFileAttachments,
   buildMentionResults,
+  filterMentionResults,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -71,6 +72,21 @@ describe("buildMentionResults", () => {
     const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
     expect(result).toEqual([{ type: "folder", value: "src" }])
   })
+
+  it("preserves opened file result type", () => {
+    const result = buildMentionResults("src", [{ path: "src/index.ts", type: "opened-file" }])
+    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }])
+  })
+})
+
+describe("filterMentionResults", () => {
+  it("keeps matching file results for the latest query", () => {
+    const result = filterMentionResults("gi", [
+      { type: "file", value: "README.md" },
+      { type: "file", value: "src/git.ts" },
+    ])
+    expect(result).toEqual([{ type: "file", value: "src/git.ts" }])
+  })
 })
 
 describe("syncMentionedPaths", () => {
@@ -127,19 +143,66 @@ describe("buildTextAfterMentionSelect", () => {
     expect(result).toBe("hello @src/component.ts world")
   })
 
-  it("handles @mention at start of string", () => {
+  it("handles @mention at start of string and appends trailing space", () => {
     const result = buildTextAfterMentionSelect("@par", "", "foo.ts")
-    expect(result).toBe("@foo.ts")
+    expect(result).toBe("@foo.ts ")
   })
 
-  it("preserves space prefix before @mention", () => {
+  it("preserves space prefix before @mention and appends trailing space", () => {
     const result = buildTextAfterMentionSelect("text @par", "", "foo.ts")
-    expect(result).toBe("text @foo.ts")
+    expect(result).toBe("text @foo.ts ")
   })
 
   it("appends suffix after replacement", () => {
     const result = buildTextAfterMentionSelect("before @q", " after text", "file.ts")
     expect(result).toContain("after text")
+  })
+
+  it("appends a trailing space when there is no text after the cursor", () => {
+    const result = buildTextAfterMentionSelect("hello @par", "", "src/foo.ts")
+    expect(result).toBe("hello @src/foo.ts ")
+  })
+
+  it("appends a trailing space when the next char is not whitespace", () => {
+    const result = buildTextAfterMentionSelect("hello @par", "tail", "src/foo.ts")
+    expect(result).toBe("hello @src/foo.ts tail")
+  })
+
+  it("does not double-space when a space already follows the cursor", () => {
+    const result = buildTextAfterMentionSelect("hello @par", " tail", "src/foo.ts")
+    expect(result).toBe("hello @src/foo.ts tail")
+  })
+
+  it("does not add a space when a newline follows the cursor", () => {
+    const result = buildTextAfterMentionSelect("hello @par", "\nnext line", "src/foo.ts")
+    expect(result).toBe("hello @src/foo.ts\nnext line")
+  })
+
+  it("does not add a space when a tab follows the cursor", () => {
+    const result = buildTextAfterMentionSelect("hello @par", "\tnext", "src/foo.ts")
+    expect(result).toBe("hello @src/foo.ts\tnext")
+  })
+
+  it("works consistently for special mention tokens (terminal)", () => {
+    const result = buildTextAfterMentionSelect("hello @term", "", "terminal")
+    expect(result).toBe("hello @terminal ")
+  })
+
+  it("works consistently for special mention tokens (git-changes)", () => {
+    const result = buildTextAfterMentionSelect("hello @git", "", "git-changes")
+    expect(result).toBe("hello @git-changes ")
+  })
+
+  it("places inserted space before the original suffix so cursor lands naturally", () => {
+    // selectMention computes cursor position as text.length - after.length,
+    // which places the cursor at the start of the original `after` segment.
+    // Verify that an inserted space lives between the path and the cursor.
+    const before = "hello @par"
+    const after = "tail"
+    const result = buildTextAfterMentionSelect(before, after, "foo.ts")
+    const cursor = result.length - after.length
+    expect(result.slice(cursor - 1, cursor)).toBe(" ")
+    expect(result.slice(cursor)).toBe("tail")
   })
 })
 

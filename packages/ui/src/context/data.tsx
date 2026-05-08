@@ -35,8 +35,9 @@ export type OpenFileFn = (filePath: string, line?: number, column?: number) => v
 
 export type OpenDiffFn = (diff: {
   file: string
-  before: string
-  after: string
+  before?: string // kilocode_change - optional, kilo uses `patch`
+  after?: string // kilocode_change - optional, kilo uses `patch`
+  patch?: string // kilocode_change
   additions: number
   deletions: number
 }) => void

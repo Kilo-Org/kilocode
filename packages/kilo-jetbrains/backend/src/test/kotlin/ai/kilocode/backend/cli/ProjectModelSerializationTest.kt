@@ -52,7 +52,7 @@ class ProjectModelSerializationTest {
                             "toolcall": true,
                             "input": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
                             "output": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
-                            "interleaved": false
+                            "interleaved": {"field":"reasoning_content"}
                         },
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
                         "limit": {"context": 200000, "output": 16000},
@@ -102,7 +102,7 @@ class ProjectModelSerializationTest {
                             "toolcall": false,
                             "input": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
                             "output": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
-                            "interleaved": false
+                            "interleaved": {"field":"reasoning_content"}
                         },
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
                         "limit": {"context": 8000, "output": 4000},
@@ -171,7 +171,7 @@ class ProjectModelSerializationTest {
         assertEquals(true, obj.native)
         assertEquals(false, obj.hidden)
         assertEquals("#FF5733", obj.color)
-        assertEquals(5, obj.steps)
+        assertEquals(5.0, obj.steps)
     }
 
     @Test

@@ -1,5 +1,6 @@
 import { lstat } from "fs/promises" // kilocode_change
 import { Effect, Option, Schema, Scope } from "effect"
+import { NonNegativeInt } from "@/util/schema"
 import { createReadStream } from "fs"
 import * as path from "path"
 import { Readable } from "stream" // kilocode_change
@@ -8,12 +9,12 @@ import * as Tool from "./tool"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
-import { isImageAttachment, isPdfAttachment, sniffAttachmentMime } from "@/util/media"
+import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
-import { Encoding } from "../kilocode/encoding"
+import * as Encoding from "../kilocode/encoding"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -23,6 +24,7 @@ const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const DIRECTORY_CONCURRENCY = 8 // kilocode_change
+const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
 
 // `offset` and `limit` were originally `z.coerce.number()` — the runtime
 // coercion was useful when the tool was called from a shell but serves no
@@ -31,10 +33,10 @@ const DIRECTORY_CONCURRENCY = 8 // kilocode_change
 // unchanged; purely CLI-facing uses must now send numbers rather than strings.
 export const Parameters = Schema.Struct({
   filePath: Schema.String.annotate({ description: "The absolute path to the file or directory to read" }),
-  offset: Schema.optional(Schema.Number).annotate({
+  offset: Schema.optional(NonNegativeInt).annotate({
     description: "The line number to start reading from (1-indexed)",
   }),
-  limit: Schema.optional(Schema.Number).annotate({
+  limit: Schema.optional(NonNegativeInt).annotate({
     description: "The maximum number of lines to read (defaults to 2000)",
   }),
 })
@@ -143,9 +145,9 @@ export const ReadTool = Tool.define(
 
       if (bytes.length === 0) return false
 
-      // kilocode_change start - UTF-16 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
-      if (Encoding.hasUtf16Bom(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength), bytes.length))
-        return false
+      // kilocode_change start - UTF-16/32 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
+      const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      if (Encoding.hasUtf16Bom(buf, bytes.length) || Encoding.hasUtf32Bom(buf, bytes.length)) return false
       // kilocode_change end
 
       let nonPrintableCount = 0
@@ -164,7 +166,11 @@ export const ReadTool = Tool.define(
       filepath: string
       content: string
     }
-    const readDirectoryFiles = Effect.fn("ReadTool.readDirectoryFiles")(function* (filepath: string, items: string[]) {
+    const readDirectoryFiles = Effect.fn("ReadTool.readDirectoryFiles")(function* (
+      filepath: string,
+      items: string[],
+      directory: string,
+    ) {
       const entries = yield* fs.readDirectoryEntries(filepath).pipe(Effect.catch(() => Effect.succeed([])))
       const types = new Map(entries.map((entry) => [entry.name, entry.type]))
       const files = yield* Effect.forEach(
@@ -181,7 +187,7 @@ export const ReadTool = Tool.define(
             Effect.catch(() => Effect.void),
           )
           if (!file) return
-          const rel = path.relative(Instance.directory, child).replaceAll("\\", "/")
+          const rel = path.relative(directory, child).replaceAll("\\", "/")
           const note = file.cut || file.more ? "\n\n(File truncated)" : ""
           return {
             filepath: child,
@@ -198,18 +204,15 @@ export const ReadTool = Tool.define(
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context,
     ) {
-      if (params.offset !== undefined && params.offset < 1) {
-        return yield* Effect.fail(new Error("offset must be greater than or equal to 1"))
-      }
-
+      const instance = yield* InstanceState.context
       let filepath = params.filePath
       if (!path.isAbsolute(filepath)) {
-        filepath = path.resolve(Instance.directory, filepath)
+        filepath = path.resolve(instance.directory, filepath)
       }
       if (process.platform === "win32") {
         filepath = AppFileSystem.normalizePath(filepath)
       }
-      const title = path.relative(Instance.worktree, filepath)
+      const title = path.relative(instance.worktree, filepath)
 
       const stat = yield* fs.stat(filepath).pipe(
         Effect.catchIf(
@@ -235,13 +238,13 @@ export const ReadTool = Tool.define(
       if (stat.type === "Directory") {
         const items = yield* list(filepath)
         const limit = params.limit ?? DEFAULT_READ_LIMIT
-        const offset = params.offset ?? 1
+        const offset = params.offset || 1
         const start = offset - 1
         const sliced = items.slice(start, start + limit)
         const truncated = start + sliced.length < items.length
         // kilocode_change start
         const expand = Boolean(ctx.extra?.["includeDirectoryFiles"])
-        const loaded = expand ? yield* readDirectoryFiles(filepath, sliced) : []
+        const loaded = expand ? yield* readDirectoryFiles(filepath, sliced, instance.directory) : []
         const content = loaded.map((item) => item.content).join("\n\n")
         // kilocode_change end
 
@@ -274,7 +277,9 @@ export const ReadTool = Tool.define(
       const sample = yield* readSample(filepath, Number(stat.size), SAMPLE_BYTES)
 
       const mime = sniffAttachmentMime(sample, AppFileSystem.mimeType(filepath))
-      if (isImageAttachment(mime) || isPdfAttachment(mime)) {
+      const isImage = SUPPORTED_IMAGE_MIMES.has(mime)
+
+      if (isImage || isPdfAttachment(mime)) {
         const bytes = yield* fs.readFile(filepath)
         const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
         return {
@@ -300,7 +305,7 @@ export const ReadTool = Tool.define(
       }
 
       const file = yield* Effect.promise(() =>
-        lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset ?? 1 }),
+        lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 }),
       )
       if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
         return yield* Effect.fail(

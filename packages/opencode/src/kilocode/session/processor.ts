@@ -3,16 +3,43 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
-import type { MessageV2 } from "@/session/message-v2"
+import { MessageV2 } from "@/session/message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+
+export type ReviewTelemetry = {
+  mode: "review"
+  feature: "code_reviews"
+  command: "local-review" | "local-review-uncommitted"
+}
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
   export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
   export const REASONING_LENGTH_WARNING =
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
+  export const PROVIDER_FINISH_ERROR_MESSAGE =
+    "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
+
+  export function reviewTelemetry(command: string): ReviewTelemetry | undefined {
+    if (command === "local-review" || command === "local-review-uncommitted") {
+      return { mode: "review", feature: "code_reviews", command }
+    }
+  }
+
+  export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      const meta: Record<string, unknown> | undefined = part.metadata
+      if (!meta) continue
+      if (meta.mode !== "review") continue
+      if (meta.feature !== "code_reviews") continue
+      const command = meta.command
+      if (command !== "local-review" && command !== "local-review-uncommitted") continue
+      return { mode: "review", feature: "code_reviews", command }
+    }
+  }
 
   /**
    * Track LLM completion telemetry for a finished step.
@@ -24,11 +51,13 @@ export namespace KiloSessionProcessor {
     tokens: { input: number; output: number; cache: { read: number; write: number } }
     cost: number
     elapsed: number
+    telemetry?: ReviewTelemetry
   }) {
     const { tokens } = input
     if (tokens.input > 0 || tokens.output > 0 || tokens.cache.write > 0 || tokens.cache.read > 0) {
       Telemetry.trackLlmCompletion({
         taskId: input.sessionID,
+        ...(input.telemetry ?? {}),
         apiProvider: input.model.providerID,
         modelId: input.model.id,
         inputTokens: tokens.input,
@@ -138,5 +167,17 @@ export namespace KiloSessionProcessor {
     }
     log.warn("length stop", { messageID: input.msg.id })
     return OUTPUT_LENGTH_WARNING
+  }
+
+  export function providerFinishError(msg: MessageV2.Assistant) {
+    if (msg.finish !== "error") return false
+    if (msg.error) return false
+    const err = new MessageV2.APIError({
+      message: PROVIDER_FINISH_ERROR_MESSAGE,
+      isRetryable: true,
+    }).toObject()
+    msg.error = err
+    log.warn("provider finish error", { messageID: msg.id })
+    return err
   }
 }
