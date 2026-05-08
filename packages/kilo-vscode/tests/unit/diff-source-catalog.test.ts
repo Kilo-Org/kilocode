@@ -123,23 +123,9 @@ describe("descriptor types", () => {
   })
 })
 
-describe("DiffSourceCatalog.baseBranchOverride", () => {
-  it("starts undefined", () => {
-    expect(makeCatalog().getBaseBranchOverride()).toBeUndefined()
-  })
-
-  it("round-trips set/get", () => {
+describe("DiffSourceCatalog.dispose", () => {
+  it("disposes without throwing when no branch resources were created", () => {
     const cat = makeCatalog()
-    cat.setBaseBranchOverride("origin/release")
-    expect(cat.getBaseBranchOverride()).toBe("origin/release")
-    cat.setBaseBranchOverride(undefined)
-    expect(cat.getBaseBranchOverride()).toBeUndefined()
-  })
-
-  it("dispose clears the override and branch git resources without throwing", () => {
-    const cat = makeCatalog()
-    cat.setBaseBranchOverride("foo")
-    cat.dispose()
-    expect(cat.getBaseBranchOverride()).toBeUndefined()
+    expect(() => cat.dispose()).not.toThrow()
   })
 })

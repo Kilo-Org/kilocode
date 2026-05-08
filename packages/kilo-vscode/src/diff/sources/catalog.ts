@@ -68,13 +68,6 @@ export class DiffSourceCatalog implements vscode.Disposable {
   private branchGit: GitOps | undefined
   private branchOutput: vscode.OutputChannel | undefined
 
-  /**
-   * In-memory override for the workspace source's base branch. Reset when
-   * the user picks "Default" or when the panel is disposed (the catalog
-   * outlives panels but `clearBaseBranchOverride` is exposed for tests).
-   */
-  private baseBranchOverride: string | undefined
-
   constructor(private readonly connection: KiloConnectionService) {}
 
   listAvailable(ctx: PanelContext): DiffSourceDescriptor[] {
@@ -98,7 +91,7 @@ export class DiffSourceCatalog implements vscode.Disposable {
 
   build(id: string, ctx: PanelContext): DiffSource {
     if (id === WORKSPACE_SOURCE_ID) {
-      return createWorktreeDiffSource(this.connection, { baseBranchOverride: this.baseBranchOverride })
+      return createWorktreeDiffSource(this.connection, { baseBranchOverride: ctx.baseBranchOverride })
     }
 
     if (id === STAGED_SOURCE_ID) return createStagedDiffSource()
@@ -121,25 +114,7 @@ export class DiffSourceCatalog implements vscode.Disposable {
     throw new Error(`DiffSourceCatalog.build: unknown source id "${id}"`)
   }
 
-  /**
-   * Set or clear the workspace source's base branch override. Pass
-   * `undefined` to fall back to the auto-resolved base. The change only
-   * takes effect when the source is rebuilt — callers should reactivate
-   * the controller.
-   */
-  setBaseBranchOverride(branch: string | undefined): void {
-    this.baseBranchOverride = branch
-  }
-
-  getBaseBranchOverride(): string | undefined {
-    return this.baseBranchOverride
-  }
-
-  /**
-   * List branches and resolve the auto base for the workspace picker.
-   * Returns `undefined` when there's no workspace root.
-   */
-  async listWorkspaceBranches(): Promise<WorkspaceBranchesResult | undefined> {
+  async listWorkspaceBranches(override: string | undefined): Promise<WorkspaceBranchesResult | undefined> {
     const root = getWorkspaceRoot()
     if (!root) return undefined
 
@@ -150,20 +125,19 @@ export class DiffSourceCatalog implements vscode.Disposable {
       git.currentBranch(root),
     ])
     const autoBase = autoTarget?.baseBranch
-    const currentBase = this.baseBranchOverride ?? autoBase
+    const currentBase = override ?? autoBase
     const currentBranch = head && head !== "HEAD" ? head : undefined
     return {
       branches,
       defaultBranch,
       autoBase,
       currentBase,
-      isAuto: !this.baseBranchOverride,
+      isAuto: !override,
       currentBranch,
     }
   }
 
   dispose(): void {
-    this.baseBranchOverride = undefined
     this.branchGit?.dispose()
     this.branchGit = undefined
     this.branchOutput?.dispose()

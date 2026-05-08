@@ -29,6 +29,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private panelDisposables: vscode.Disposable[] = []
   private commentHandler: CommentHandler | undefined
   private fontConfigDisposable: vscode.Disposable | undefined
+  private baseBranchOverride: string | undefined
   private readonly sessionIdProvider: () => string | undefined
   private readonly output: vscode.OutputChannel
 
@@ -47,12 +48,12 @@ export class DiffViewerProvider implements vscode.Disposable {
   }
 
   openPanel(ctx: PanelContext): void {
-    this.ctx = ctx
+    this.ctx = { ...ctx, baseBranchOverride: this.baseBranchOverride }
 
     if (this.panel && this.controller) {
       this.panel.reveal(this.panel.viewColumn ?? vscode.ViewColumn.One)
-      this.controller.setContext(ctx)
-      const nextId = this.catalog.defaultSourceId(ctx)
+      this.controller.setContext(this.ctx)
+      const nextId = this.catalog.defaultSourceId(this.ctx)
       if (nextId && nextId !== this.controller.currentId) this.swap(nextId)
       return
     }
@@ -132,8 +133,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.controller = undefined
     this.fontConfigDisposable?.dispose()
     this.fontConfigDisposable = undefined
-    // Clear any base branch override so the panel reopens with the auto base.
-    this.catalog.setBaseBranchOverride(undefined)
+    this.baseBranchOverride = undefined
     this.disposePanel()
   }
 
@@ -172,9 +172,12 @@ export class DiffViewerProvider implements vscode.Disposable {
     },
     "diffViewer.setBaseBranch": (msg) => {
       const branch = typeof msg.branch === "string" && msg.branch.length > 0 ? msg.branch : undefined
-      this.catalog.setBaseBranchOverride(branch)
+      this.baseBranchOverride = branch
+      if (this.ctx) {
+        this.ctx = { ...this.ctx, baseBranchOverride: branch }
+        this.controller?.setContext(this.ctx)
+      }
       void this.controller?.reactivate()
-      // Send fresh branch state so the picker reflects the new selection.
       void this.sendBranches()
     },
     openFile: (msg) => {
@@ -186,7 +189,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private async sendBranches(): Promise<void> {
     if (!this.panel) return
     try {
-      const result = await this.catalog.listWorkspaceBranches()
+      const result = await this.catalog.listWorkspaceBranches(this.baseBranchOverride)
       if (!result || !this.panel) return
       void this.panel.webview.postMessage({
         type: "diffViewer.branches",
