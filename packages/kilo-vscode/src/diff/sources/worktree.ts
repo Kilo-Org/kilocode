@@ -52,9 +52,14 @@ export function createWorktreeDiffSource(
         log("Local diff: no workspace root (override mode)")
         return
       }
-      target = { directory: root, baseBranch: opts.baseBranchOverride }
-      log(`Local diff: using override base=${opts.baseBranchOverride}`)
-      return target
+      const resolved = await resolveOverrideRef(git, root, opts.baseBranchOverride, log)
+      if (!resolved) {
+        log(`Local diff: override base="${opts.baseBranchOverride}" could not be resolved, falling back to auto`)
+      } else {
+        target = { directory: root, baseBranch: resolved }
+        log(`Local diff: using override base=${resolved}`)
+        return target
+      }
     }
     target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
     return target
@@ -109,6 +114,27 @@ export function createWorktreeDiffSource(
       target = undefined
     },
   }
+}
+
+// Branches surfaced by `parseForEachRefOutput` come as short names (e.g.
+// `feature` for `refs/remotes/origin/feature`), which `git merge-base` can't
+// resolve when there's no local branch of the same name. Try the short name
+// first, then `origin/<name>` before giving up.
+async function resolveOverrideRef(
+  git: GitOps,
+  dir: string,
+  name: string,
+  log: (...args: unknown[]) => void,
+): Promise<string | undefined> {
+  const direct = await git.execGit(["rev-parse", "--verify", "--quiet", name], dir)
+  if (direct.code === 0) return name
+  const remote = `origin/${name}`
+  const viaRemote = await git.execGit(["rev-parse", "--verify", "--quiet", remote], dir)
+  if (viaRemote.code === 0) {
+    log(`override "${name}" not a local ref, resolved to "${remote}"`)
+    return remote
+  }
+  return undefined
 }
 
 /**
