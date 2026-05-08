@@ -242,7 +242,10 @@ export class GitOps {
         "refs/remotes/origin/",
       ],
       cwd,
-    ).catch(() => "")
+    ).catch((err) => {
+      this.log("listBranches: for-each-ref failed", err instanceof Error ? err.message : String(err))
+      return ""
+    })
     const { locals, remotes, dates } = parseForEachRefOutput(raw)
     return { branches: buildBranchList(locals, remotes, dates, def), defaultBranch: def }
   }
