@@ -167,10 +167,16 @@ export function DialogModel(props: { providerID?: string }) {
     if (needle) {
       const filteredProviders = fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj)
       const filteredPopular = fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj)
-      // kilocode_change start - Partition Kilo Gateway results first (preserves fuzzysort order)
-      const kilo = filteredProviders.filter((x) => x.value.providerID === "kilo")
-      const rest = filteredProviders.filter((x) => x.value.providerID !== "kilo")
-      return [...kilo, ...rest, ...filteredPopular]
+      // kilocode_change start - Recommended Kilo Gateway models first (like the VS Code extension),
+      // then remaining results preserving fuzzysort order
+      const ranks = kiloRank()
+      const recommended = filteredProviders
+        .filter((x) => x.value.providerID === "kilo" && ranks.get(x.value.modelID) !== Infinity)
+        .sort((a, b) => (ranks.get(a.value.modelID) ?? Infinity) - (ranks.get(b.value.modelID) ?? Infinity))
+      const rest = filteredProviders.filter(
+        (x) => x.value.providerID !== "kilo" || ranks.get(x.value.modelID) === Infinity,
+      )
+      return [...recommended, ...rest, ...filteredPopular]
       // kilocode_change end
     }
 
