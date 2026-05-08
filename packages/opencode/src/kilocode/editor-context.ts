@@ -1,4 +1,6 @@
 export interface EditorContext {
+  directory?: string
+  worktree?: string
   visibleFiles?: string[]
   openTabs?: string[]
   activeFile?: string
@@ -38,6 +40,12 @@ function timestamp(): string {
 
 export function environmentDetails(ctx?: EditorContext): string {
   const lines: string[] = [`Current time: ${timestamp()}`]
+  if (ctx?.directory) {
+    lines.push(`Working directory: ${ctx.directory}`)
+  }
+  if (ctx?.worktree) {
+    lines.push(`Workspace root folder: ${ctx.worktree}`)
+  }
   if (ctx?.activeFile) {
     lines.push(`Active file: ${ctx.activeFile}`)
   }

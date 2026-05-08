@@ -2560,14 +2560,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       parts.push({ type: "text", text })
 
-      const editorContext = await this.gatherEditorContext()
-
-      if (messageID) {
-        this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
-      }
-
       const sid = resolved!.sid
       const dir = resolved!.dir
+      const editorContext = await this.gatherEditorContext(dir)
+
+      if (messageID) {
+        this.connectionService.recordMessageSessionId(messageID, sid)
+      }
+
       await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Message request", () =>
         this.withRetry(
           () =>
@@ -3253,8 +3253,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return controller
   }
 
-  private async gatherEditorContext(): Promise<EditorContext> {
-    const workspaceDir = this.getWorkspaceDirectory()
+  private async gatherEditorContext(dir?: string): Promise<EditorContext> {
+    const workspaceDir = dir ?? this.getWorkspaceDirectory()
     const controller = await this.getIgnoreController(workspaceDir)
 
     const toRelative = (fsPath: string): string | undefined => {

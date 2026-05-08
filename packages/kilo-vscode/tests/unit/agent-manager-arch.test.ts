@@ -25,6 +25,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/MarkdownAnnotationLayer.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/markdown-comment-ranges.ts"),
   path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),

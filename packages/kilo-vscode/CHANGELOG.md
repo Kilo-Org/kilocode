@@ -1,5 +1,21 @@
 # kilo-code
 
+## 7.2.47
+
+### Minor Changes
+
+- [#9851](https://github.com/Kilo-Org/kilocode/pull/9851) [`9de7c98`](https://github.com/Kilo-Org/kilocode/commit/9de7c986e78683015631d14fabd513c3123ff330) - Support Kilo-hosted embeddings as a selectable code indexing provider.
+
+### Patch Changes
+
+- [#10016](https://github.com/Kilo-Org/kilocode/pull/10016) [`d2ae16a`](https://github.com/Kilo-Org/kilocode/commit/d2ae16a9216f0de6e1cb08950f739108515e7998) - Support configuring Azure OpenAI resource names or endpoint URLs from the provider settings flow, and document using the native Azure provider for GPT-5 family deployments.
+
+- [#10017](https://github.com/Kilo-Org/kilocode/pull/10017) [`d9560d8`](https://github.com/Kilo-Org/kilocode/commit/d9560d8feb1b55509098090d4c09a8e0eaf90823) - Fix the task cost shown at the top of the chat double-counting subagent costs. Sessions that spawned subagents were overreporting their totals because the backend already rolls descendant costs up into the parent session, and the webview was then summing them again.
+
+- [#10015](https://github.com/Kilo-Org/kilocode/pull/10015) [`556b5e4`](https://github.com/Kilo-Org/kilocode/commit/556b5e47e0a2eeb037bd5e950451688362485e2b) - Collapse the Auto-Approve Exceptions list by default when it has more than 5 entries.
+
+- [#10008](https://github.com/Kilo-Org/kilocode/pull/10008) [`f539f59`](https://github.com/Kilo-Org/kilocode/commit/f539f59210e79a1e028ea6b2021283f7f9f89bf2) - Show an "Open in Diff Viewer" icon on Write tool calls (matching the Edit tool), so the changes can be inspected in a full diff tab.
+
 ## 7.2.44
 
 ### Minor Changes

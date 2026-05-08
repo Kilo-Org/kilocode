@@ -1470,44 +1470,39 @@ const AgentManagerContent: Component = () => {
     }
   })
 
+  const selectedDiffSessionId = () => {
+    const sel = selection()
+    if (sel === LOCAL) return LOCAL
+    if (!sel) return undefined
+
+    const current = session.currentSessionID()
+    if (current) {
+      const item = managedSessions().find((entry) => entry.id === current)
+      if (item?.worktreeId === sel) return current
+    }
+
+    return managedSessions().find((entry) => entry.worktreeId === sel)?.id
+  }
+
+  const currentDiffSessionId = createMemo(selectedDiffSessionId)
+
   // Start/stop diff watch when panel opens/closes, review tab opens, or session changes
   createEffect(() => {
     const panel = diffOpen()
     const review = reviewActive()
-    const sel = selection()
-    const id = session.currentSessionID()
-    if (panel) {
-      if (sel === LOCAL) {
-        // For local tab, diff against unpushed changes using LOCAL sentinel
-        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: LOCAL })
-        return
-      } else if (id) {
-        const ms = managedSessions().find((s) => s.id === id)
-        if (ms?.worktreeId) {
-          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
-          return
-        }
-      }
-      vscode.postMessage({ type: "agentManager.stopDiffWatch" })
-      return
-    }
-    if (review) {
-      // Review tab is open but no specific session — use local sentinel for local,
-      // or any session in the selected worktree.
-      if (sel === LOCAL) {
-        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: LOCAL })
+
+    if (panel || review) {
+      const id = currentDiffSessionId()
+      if (id) {
+        vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: id })
         return
       }
-      if (sel) {
-        const managed = managedSessions().find((ms) => ms.worktreeId === sel)
-        if (managed) {
-          vscode.postMessage({ type: "agentManager.startDiffWatch", sessionId: managed.id })
-          return
-        }
-      }
       vscode.postMessage({ type: "agentManager.stopDiffWatch" })
+      setDiffLoading(false)
       return
     }
+
+    setDiffLoading(false)
     vscode.postMessage({ type: "agentManager.stopDiffWatch" })
   })
 
@@ -1561,20 +1556,6 @@ const AgentManagerContent: Component = () => {
       if (data[sid]) return data[sid]!
     }
     return []
-  })
-
-  const currentDiffSessionId = createMemo(() => {
-    const sel = selection()
-    if (sel === LOCAL) return LOCAL
-
-    const current = session.currentSessionID()
-    if (current) {
-      const item = managedSessions().find((entry) => entry.id === current)
-      if (sel && item?.worktreeId === sel) return current
-    }
-
-    if (!sel) return undefined
-    return managedSessions().find((entry) => entry.worktreeId === sel)?.id
   })
 
   const diffSessionKey = createMemo(() => {

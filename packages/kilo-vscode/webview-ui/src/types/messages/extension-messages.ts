@@ -334,7 +334,7 @@ export interface ChatCompletionResultMessage {
 
 export interface FileSearchItem {
   path: string
-  type: "file" | "folder"
+  type: "file" | "folder" | "opened-file"
 }
 
 export interface FileSearchResultMessage {

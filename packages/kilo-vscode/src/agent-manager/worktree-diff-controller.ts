@@ -37,6 +37,8 @@ export class WorktreeDiffController {
   private session: string | undefined
   private hash: string | undefined
   private target: Target | undefined
+  /** Monotonic token for the active diff watch. Async work drops results when this changes. */
+  private epoch = 0
   private applying: string | undefined
 
   constructor(private readonly ctx: WorktreeDiffControllerContext) {}
@@ -148,16 +150,22 @@ export class WorktreeDiffController {
   }
 
   public async request(sessionId: string): Promise<void> {
+    const epoch = this.session === sessionId ? this.epoch : ++this.epoch
+    this.session = sessionId
+    this.target = undefined
     await this.ready("stateReady rejected, continuing diff resolve:")
+    if (!this.current(epoch, sessionId)) return
 
     const target = await this.resolve(sessionId)
     if (!target) return
+    if (!this.current(epoch, sessionId)) return
 
     this.target = { sessionId, ...target }
     this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
 
     try {
       const files = await this.ctx.localDiff(target.directory, target.baseBranch)
+      if (!this.current(epoch, sessionId)) return
       this.ctx.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
       this.hash = hashFileDiffs(files)
       this.session = sessionId
@@ -165,23 +173,30 @@ export class WorktreeDiffController {
     } catch (error) {
       this.ctx.log("Failed to fetch worktree diff:", error)
     } finally {
-      this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId, loading: false })
+      if (this.current(epoch, sessionId)) {
+        this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId, loading: false })
+      }
     }
   }
 
   public async requestFile(sessionId: string, file: string): Promise<void> {
     if (!file) return
+    const epoch = this.epoch
     await this.ready("stateReady rejected, continuing diff detail resolve:")
+    if (!this.current(epoch, sessionId)) return
 
     const target = this.target?.sessionId === sessionId ? this.target : await this.resolve(sessionId)
     if (!target) return
+    if (!this.current(epoch, sessionId)) return
 
     this.target = { sessionId, directory: target.directory, baseBranch: target.baseBranch }
 
     try {
       const data = await this.ctx.localDiffFile(target.directory, target.baseBranch, file)
+      if (!this.current(epoch, sessionId)) return
       this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: data })
     } catch (error) {
+      if (!this.current(epoch, sessionId)) return
       this.ctx.log("Failed to fetch worktree diff file:", error)
       this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: null })
     }
@@ -196,10 +211,11 @@ export class WorktreeDiffController {
     this.stop()
     this.session = sessionId
     this.hash = undefined
+    const epoch = this.epoch
     this.ctx.log(`Starting diff polling for session ${sessionId}`)
 
     void this.request(sessionId).then(() => {
-      if (this.session !== sessionId) return
+      if (!this.current(epoch, sessionId)) return
       this.interval = setInterval(() => {
         void this.poll(sessionId)
       }, DIFF_POLL_INTERVAL_MS)
@@ -207,6 +223,7 @@ export class WorktreeDiffController {
   }
 
   public stop(): void {
+    this.epoch++
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = undefined
@@ -217,11 +234,13 @@ export class WorktreeDiffController {
   }
 
   private async poll(sessionId: string): Promise<void> {
+    const epoch = this.epoch
     const target = this.target?.sessionId === sessionId ? this.target : undefined
     if (!target) return
 
     try {
       const files = await this.ctx.localDiff(target.directory, target.baseBranch)
+      if (!this.current(epoch, sessionId)) return
       const hash = hashFileDiffs(files)
       if (hash === this.hash && this.session === sessionId) return
       this.hash = hash
@@ -230,6 +249,10 @@ export class WorktreeDiffController {
     } catch (error) {
       this.ctx.log("Failed to poll worktree diff:", error)
     }
+  }
+
+  private current(epoch: number, sessionId: string): boolean {
+    return this.epoch === epoch && this.session === sessionId
   }
 
   private async resolve(sessionId: string): Promise<{ directory: string; baseBranch: string } | undefined> {

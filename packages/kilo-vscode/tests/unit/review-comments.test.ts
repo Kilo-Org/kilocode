@@ -7,6 +7,7 @@ import {
   getFilename,
   type ReviewComment,
 } from "../../webview-ui/agent-manager/review-comments"
+import { markdownCommentBlocks } from "../../webview-ui/agent-manager/markdown-comment-ranges"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 function diff(file: string, before: string, after: string): WorktreeFileDiff {
@@ -183,6 +184,55 @@ describe("extractLines", () => {
 
   it("handles empty content", () => {
     expect(extractLines("", 1, 1)).toBe("")
+  })
+})
+
+// ── markdownCommentBlocks ───────────────────────────────────────────────────
+
+describe("markdownCommentBlocks", () => {
+  it("keeps fenced code blocks as one selectable range", () => {
+    const result = markdownCommentBlocks("# Demo\n\n```ts\nconst value = 1\nconsole.log(value)\n```\n\nAfter")
+    expect(result).toContainEqual({ type: "block", start: 3, end: 6 })
+  })
+
+  it("maps table comments to rendered rows, not separator lines", () => {
+    const result = markdownCommentBlocks("| Area | Status |\n|---|---|\n| Tables | Pass |\n| Lists | Pass |")
+    expect(result).toEqual([
+      {
+        type: "table",
+        start: 1,
+        end: 4,
+        rows: [
+          { start: 1, end: 1 },
+          { start: 3, end: 3 },
+          { start: 4, end: 4 },
+        ],
+      },
+    ])
+  })
+
+  it("maps list comments to whole list items", () => {
+    const result = markdownCommentBlocks("- First\n  continued\n- [x] Second\n- Third")
+    expect(result).toEqual([
+      {
+        type: "list",
+        start: 1,
+        end: 4,
+        items: [
+          { start: 1, end: 2 },
+          { start: 3, end: 3 },
+          { start: 4, end: 4 },
+        ],
+      },
+    ])
+  })
+
+  it("keeps blockquotes and paragraphs as rendered blocks", () => {
+    const result = markdownCommentBlocks("> Quote\n> Continued\n\nParagraph line one\nparagraph line two")
+    expect(result).toEqual([
+      { type: "block", start: 1, end: 2 },
+      { type: "block", start: 4, end: 5 },
+    ])
   })
 })
 

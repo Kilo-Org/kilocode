@@ -1,5 +1,21 @@
 # @kilocode/cli
 
+## 7.2.47
+
+### Minor Changes
+
+- [#9851](https://github.com/Kilo-Org/kilocode/pull/9851) [`9de7c98`](https://github.com/Kilo-Org/kilocode/commit/9de7c986e78683015631d14fabd513c3123ff330) - Support Kilo-hosted embeddings as a selectable code indexing provider.
+
+### Patch Changes
+
+- [#10016](https://github.com/Kilo-Org/kilocode/pull/10016) [`d2ae16a`](https://github.com/Kilo-Org/kilocode/commit/d2ae16a9216f0de6e1cb08950f739108515e7998) - Support configuring Azure OpenAI resource names or endpoint URLs from the provider settings flow, and document using the native Azure provider for GPT-5 family deployments.
+
+- [#10014](https://github.com/Kilo-Org/kilocode/pull/10014) [`4b88379`](https://github.com/Kilo-Org/kilocode/commit/4b883792fb8219cf5c4d811ce23b930f6a597ddf) - Improved accuracy of Kilo Gateway cost reporting.
+
+- [#10012](https://github.com/Kilo-Org/kilocode/pull/10012) [`0363006`](https://github.com/Kilo-Org/kilocode/commit/03630064ad865b31cb9e3ed591acd6f07ece4d0c) - Recover compaction when large tool results or media attachments exceed provider payload limits.
+
+- [#9969](https://github.com/Kilo-Org/kilocode/pull/9969) [`eb77fbc`](https://github.com/Kilo-Org/kilocode/commit/eb77fbc13b382eb46c5158165124c6e015449a21) - Prevent an infinite agent loop when a provider ends the response stream without a terminal stop reason.
+
 ## 7.2.44
 
 ### Minor Changes

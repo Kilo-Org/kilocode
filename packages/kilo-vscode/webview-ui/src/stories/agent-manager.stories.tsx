@@ -10,6 +10,7 @@ import { FileTree } from "../../agent-manager/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
+import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
@@ -106,6 +107,75 @@ export const DiffPanelWithDiffs: Story = {
           onClose={() => {}}
           onExpand={() => {}}
         />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const buttonFixtureStyle: JSX.CSSProperties = {
+  display: "inline-flex",
+  "align-items": "center",
+  gap: "10px",
+  padding: "8px",
+  background: "var(--surface-base)",
+  border: "1px solid var(--border-weak-base)",
+  "border-radius": "6px",
+}
+
+const buttonFixtureLabelStyle: JSX.CSSProperties = {
+  color: "var(--text-weak)",
+  "font-size": "var(--font-size-small)",
+}
+
+export const InlineDiffBulkActionExpandAllButton: Story = {
+  name: "Inline Diff — expand all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Inline diff action</span>
+        <IconButton icon="files-expand" size="small" variant="ghost" label="Expand All" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const InlineDiffBulkActionCollapseAllButton: Story = {
+  name: "Inline Diff — collapse all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Inline diff action</span>
+        <IconButton icon="files-collapse" size="small" variant="ghost" label="Collapse All" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffBulkActionExpandAllButton: Story = {
+  name: "Full-screen Diff — expand all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Full-screen diff action</span>
+        <Button size="small" variant="ghost">
+          <Icon name="chevron-grabber-vertical" size="small" />
+          Expand All
+        </Button>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffBulkActionCollapseAllButton: Story = {
+  name: "Full-screen Diff — collapse all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Full-screen diff action</span>
+        <Button size="small" variant="ghost">
+          <Icon name="chevron-grabber-vertical" size="small" />
+          Collapse All
+        </Button>
       </div>
     </StoryProviders>
   ),
