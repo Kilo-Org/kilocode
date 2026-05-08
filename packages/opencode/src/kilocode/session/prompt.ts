@@ -139,7 +139,12 @@ export namespace KiloSessionPrompt {
     cache: EnvCache
   }) {
     if (input.cache.user !== input.lastUser.id) {
-      input.cache.block = environmentDetails(input.lastUser.editorContext)
+      const inst = Instance.current
+      input.cache.block = environmentDetails({
+        ...input.lastUser.editorContext,
+        directory: inst.directory,
+        worktree: inst.worktree,
+      })
       input.cache.user = input.lastUser.id
     }
     if (!input.cache.block) return
