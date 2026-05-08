@@ -16,6 +16,7 @@ export const KiloClawNav: NavSection[] = [
           { href: "/kiloclaw/control-ui/changing-models", children: "Changing Models" },
           { href: "/kiloclaw/control-ui/exec-approvals", children: "Exec Approvals" },
           { href: "/kiloclaw/control-ui/version-pinning", children: "Version Pinning" },
+          { href: "/kiloclaw/control-ui/recover-with-kilo", children: "Recover with Kilo" },
         ],
       },
       {
