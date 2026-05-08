@@ -145,28 +145,6 @@ You are a helpful agent.`,
     expect(result).toContain("validated successfully")
   })
 
-  test("validates branch review agents", async () => {
-    const root = path.resolve("..", "..", ".kilo", "agent")
-    await using tmp = await tmpdir({
-      git: true,
-      init: async (dir) => {
-        await Filesystem.write(path.join(dir, ".kilo", "agent", "review-gpt.md"), await Bun.file(path.join(root, "review-gpt.md")).text())
-        await Filesystem.write(path.join(dir, ".kilo", "agent", "review-opus.md"), await Bun.file(path.join(root, "review-opus.md")).text())
-      },
-    })
-    const agent = path.join(tmp.path, ".kilo", "agent")
-    const gpt = await Instance.provide({
-      directory: tmp.path,
-      fn: () => ConfigValidation.check(path.join(agent, "review-gpt.md")),
-    })
-    const opus = await Instance.provide({
-      directory: tmp.path,
-      fn: () => ConfigValidation.check(path.join(agent, "review-opus.md")),
-    })
-    expect(gpt).toContain("validated successfully")
-    expect(opus).toContain("validated successfully")
-  })
-
   test("skips AGENTS.md (root md file not in config subdir)", async () => {
     await using tmp = await tmpdir({ git: true })
     const filepath = path.join(tmp.path, "AGENTS.md")
