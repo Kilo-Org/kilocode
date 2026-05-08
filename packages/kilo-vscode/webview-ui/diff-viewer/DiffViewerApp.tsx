@@ -49,6 +49,7 @@ const DiffViewerContent: Component = () => {
   const [autoBase, setAutoBase] = createSignal<string | undefined>(undefined)
   const [currentBase, setCurrentBase] = createSignal<string | undefined>(undefined)
   const [isAuto, setIsAuto] = createSignal(true)
+  const [currentBranch, setCurrentBranch] = createSignal<string | undefined>(undefined)
   const [branchesLoading, setBranchesLoading] = createSignal(false)
 
   const isWorkspaceSource = () => {
@@ -153,6 +154,7 @@ const DiffViewerContent: Component = () => {
       setAutoBase(msg.autoBase)
       setCurrentBase(msg.currentBase)
       setIsAuto(msg.isAuto)
+      setCurrentBranch(msg.currentBranch)
       setBranchesLoading(false)
       return
     }
@@ -223,6 +225,7 @@ const DiffViewerContent: Component = () => {
                 autoBase={autoBase()}
                 currentBase={currentBase()}
                 isAuto={isAuto()}
+                currentBranch={currentBranch()}
                 onSelect={onBaseBranchSelect}
               />
             </Show>

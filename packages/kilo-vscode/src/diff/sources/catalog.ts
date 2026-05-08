@@ -28,6 +28,8 @@ export interface WorkspaceBranchesResult {
   currentBase: string | undefined
   /** True when no override is active and `currentBase === autoBase`. */
   isAuto: boolean
+  /** Currently checked-out branch (HEAD). Undefined when detached or unresolved. */
+  currentBranch: string | undefined
 }
 
 /**
@@ -142,18 +144,21 @@ export class DiffSourceCatalog implements vscode.Disposable {
     if (!root) return undefined
 
     const git = this.ensureBranchGit()
-    const [{ branches, defaultBranch }, autoTarget] = await Promise.all([
+    const [{ branches, defaultBranch }, autoTarget, head] = await Promise.all([
       git.listBranches(root),
       resolveLocalDiffTarget(git, this.branchLog, root),
+      git.currentBranch(root),
     ])
     const autoBase = autoTarget?.baseBranch
     const currentBase = this.baseBranchOverride ?? autoBase
+    const currentBranch = head && head !== "HEAD" ? head : undefined
     return {
       branches,
       defaultBranch,
       autoBase,
       currentBase,
       isAuto: !this.baseBranchOverride,
+      currentBranch,
     }
   }
 

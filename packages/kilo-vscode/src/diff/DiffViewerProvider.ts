@@ -195,6 +195,7 @@ export class DiffViewerProvider implements vscode.Disposable {
         autoBase: result.autoBase,
         currentBase: result.currentBase,
         isAuto: result.isAuto,
+        currentBranch: result.currentBranch,
       })
     } catch (err) {
       this.log("Failed to list workspace branches:", err instanceof Error ? err.message : String(err))

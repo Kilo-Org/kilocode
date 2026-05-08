@@ -11,6 +11,8 @@ interface BaseBranchPickerProps {
   autoBase: string | undefined
   currentBase: string | undefined
   isAuto: boolean
+  /** Currently checked-out branch (HEAD). Hidden when undefined. */
+  currentBranch: string | undefined
   onSelect: (branch: string | undefined) => void
 }
 
@@ -73,59 +75,71 @@ export const BaseBranchPicker: Component<BaseBranchPickerProps> = (props) => {
   }
 
   return (
-    <BranchSelectPopover
-      open={open()}
-      onOpenChange={(value) => {
-        setOpen(value)
-        if (!value) {
-          setSearch("")
-          setHighlight(0)
+    <span class="diff-base-picker">
+      <Show when={props.currentBranch}>
+        <span class="diff-base-current" title={props.currentBranch}>
+          <span class="diff-base-current-name">{props.currentBranch}</span>
+        </span>
+        <span class="diff-base-arrow" aria-hidden="true">
+          →
+        </span>
+      </Show>
+      <BranchSelectPopover
+        open={open()}
+        onOpenChange={(value) => {
+          setOpen(value)
+          if (!value) {
+            setSearch("")
+            setHighlight(0)
+          }
+        }}
+        placement="bottom-start"
+        flip
+        trigger={
+          <button class="am-selector-trigger diff-base-trigger" type="button">
+            <span class="am-selector-left">
+              <Show when={!props.currentBranch}>
+                <Icon name="branch" size="small" />
+              </Show>
+              <span class="am-selector-value">{triggerLabel()}</span>
+              <Show when={props.isAuto}>
+                <span class="am-branch-badge">{t("diffViewer.baseBranch.default")}</span>
+              </Show>
+            </span>
+            <span class="am-selector-right">
+              <Icon name="selector" size="small" />
+            </span>
+          </button>
         }
-      }}
-      placement="bottom-start"
-      flip
-      trigger={
-        <button class="am-selector-trigger diff-base-trigger" type="button">
-          <span class="am-selector-left">
-            <Icon name="branch" size="small" />
-            <span class="am-selector-value">{triggerLabel()}</span>
-            <Show when={props.isAuto}>
-              <span class="am-branch-badge">{t("diffViewer.baseBranch.default")}</span>
-            </Show>
-          </span>
-          <span class="am-selector-right">
-            <Icon name="selector" size="small" />
-          </span>
-        </button>
-      }
-    >
-      <BranchSelect
-        branches={filtered()}
-        loading={props.loading}
-        search={search()}
-        onSearch={(v) => {
-          setSearch(v)
-          setHighlight(0)
-        }}
-        onSelect={(b) => choose(b.name)}
-        onSearchKeyDown={onKeyDown}
-        selected={props.currentBase}
-        highlighted={highlight() >= 0 ? highlight() : undefined}
-        onHighlight={setHighlight}
-        defaultName={props.defaultBranch}
-        searchPlaceholder={t("diffViewer.baseBranch.search")}
-        emptyLabel={t("diffViewer.baseBranch.empty")}
-        loadingLabel={t("diffViewer.baseBranch.loading")}
-        defaultLabel={t("diffViewer.baseBranch.default")}
-        remoteLabel={t("diffViewer.baseBranch.remote")}
-        autoOption={{
-          label: t("diffViewer.baseBranch.auto"),
-          hint: props.autoBase,
-          active: props.isAuto,
-          highlighted: highlight() === -1,
-          onSelect: () => choose(undefined),
-        }}
-      />
-    </BranchSelectPopover>
+      >
+        <BranchSelect
+          branches={filtered()}
+          loading={props.loading}
+          search={search()}
+          onSearch={(v) => {
+            setSearch(v)
+            setHighlight(0)
+          }}
+          onSelect={(b) => choose(b.name)}
+          onSearchKeyDown={onKeyDown}
+          selected={props.currentBase}
+          highlighted={highlight() >= 0 ? highlight() : undefined}
+          onHighlight={setHighlight}
+          defaultName={props.defaultBranch}
+          searchPlaceholder={t("diffViewer.baseBranch.search")}
+          emptyLabel={t("diffViewer.baseBranch.empty")}
+          loadingLabel={t("diffViewer.baseBranch.loading")}
+          defaultLabel={t("diffViewer.baseBranch.default")}
+          remoteLabel={t("diffViewer.baseBranch.remote")}
+          autoOption={{
+            label: t("diffViewer.baseBranch.auto"),
+            hint: props.autoBase,
+            active: props.isAuto,
+            highlighted: highlight() === -1,
+            onSelect: () => choose(undefined),
+          }}
+        />
+      </BranchSelectPopover>
+    </span>
   )
 }

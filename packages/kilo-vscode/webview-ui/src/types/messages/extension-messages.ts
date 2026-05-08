@@ -775,6 +775,7 @@ export interface DiffViewerBranchesLoadedMessage {
   autoBase: string | undefined
   currentBase: string | undefined
   isAuto: boolean
+  currentBranch: string | undefined
 }
 
 export interface ClearPendingPromptsMessage {
