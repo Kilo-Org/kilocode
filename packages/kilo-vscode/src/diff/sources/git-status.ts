@@ -89,10 +89,24 @@ export async function showBlob(git: GitOps, dir: string, ref: string, file: stri
   return result.code === 0 ? result.stdout : ""
 }
 
-/** Read a working-tree file off disk. `""` on missing/unreadable. */
+/**
+ * Read a working-tree file off disk, matching git's blob semantics for
+ * symlinks: when the entry is a symlink, return its target string (what git
+ * stores as the blob) rather than following it and reading the target file's
+ * contents. `""` on missing/unreadable.
+ *
+ * Following symlinks here would be both incorrect (mismatches the index
+ * "before" side from `git show :file`) and unsafe — an untracked symlink
+ * pointing at e.g. `~/.aws/credentials` would otherwise be surfaced in the
+ * diff viewer despite `resolveInside` (which is purely lexical).
+ */
 export async function readDisk(dir: string, file: string): Promise<string> {
   const full = resolveInside(dir, file)
   if (!full) return ""
+  const lstat = await fs.lstat(full).catch(() => undefined)
+  if (!lstat) return ""
+  if (lstat.isSymbolicLink()) return fs.readlink(full).catch(() => "")
+  if (!lstat.isFile()) return ""
   return fs.readFile(full, "utf-8").catch(() => "")
 }
 
@@ -104,10 +118,15 @@ export async function blobSize(git: GitOps, dir: string, ref: string, file: stri
   return parseInt(result.stdout.trim(), 10) || 0
 }
 
+/**
+ * Size of the working-tree entry at `file`. Uses `lstat` so symlinks report
+ * the link's own size (length of the target string) instead of resolving to
+ * whatever the link points at — see `readDisk` for why.
+ */
 export async function fileSize(dir: string, file: string): Promise<number> {
   const full = resolveInside(dir, file)
   if (!full) return 0
-  const stat = await fs.stat(full).catch(() => undefined)
+  const stat = await fs.lstat(full).catch(() => undefined)
   return stat?.size ?? 0
 }
 

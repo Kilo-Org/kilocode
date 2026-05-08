@@ -70,7 +70,11 @@ export function createUnstagedDiffSource(): DiffSource {
       if (!file.trim()) continue
       const full = resolveInside(dir, file)
       if (!full) continue
-      const stat = await fs.stat(full).catch(() => undefined)
+      // `lstat` so an untracked symlink listed by `ls-files --others` is
+      // recognized via the link itself rather than its target. `readDisk`
+      // returns the target string for symlinks (matching git's blob), so
+      // we never read whatever is on the other side.
+      const stat = await fs.lstat(full).catch(() => undefined)
       if (!stat) continue
       out.push({
         file,
@@ -176,15 +180,16 @@ async function fileEntry(
     }
   }
 
-  // Untracked branch: confirm via fs.stat that the file actually exists.
+  // Untracked branch: confirm via fs.lstat that the file actually exists.
   // `resolveInside` rejects absolute paths and `..` segments so a crafted
-  // webview message can't read outside the workspace.
+  // webview message can't read outside the workspace; `lstat` (vs `stat`)
+  // ensures we don't follow symlinks into arbitrary filesystem locations.
   const full = resolveInside(dir, file)
   if (!full) {
     log("Unstaged file rejected: outside workspace", { file })
     return undefined
   }
-  const stat = await fs.stat(full).catch(() => undefined)
+  const stat = await fs.lstat(full).catch(() => undefined)
   if (!stat) {
     log("Unstaged file not found", { file })
     return undefined
