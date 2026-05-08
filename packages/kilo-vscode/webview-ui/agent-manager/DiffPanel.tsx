@@ -25,6 +25,7 @@ import { LONG_DIFF_MARKER_FILE_COUNT, expandableOpenFiles, initialOpenFiles, isL
 import { DiffEndMarker } from "./DiffEndMarker"
 import { treeOrder } from "./file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
+import { diffToken } from "./diff-state"
 
 // --- Data model ---
 
@@ -75,6 +76,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // key changes (different worktree) we expand reviewable files. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
+  const requested = new Map<string, string>()
 
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the accordion matches the tree grouping.
@@ -168,14 +170,31 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
 
   createEffect(
     on(
+      () => props.sessionKey,
+      () => {
+        requested.clear()
+      },
+    ),
+  )
+
+  createEffect(
+    on(
       () => [open(), props.diffs] as const,
       ([next]) => {
+        const files = new Set(next)
+        for (const file of requested.keys()) {
+          if (!files.has(file)) requested.delete(file)
+        }
+        if (!props.onRequestDiff) return
         const loading = props.loadingFiles ?? new Set<string>()
         for (const file of next) {
           if (loading.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
           if (!diff || diff.summarized !== true) continue
-          props.onRequestDiff?.(file)
+          const value = diffToken(diff)
+          if (requested.get(file) === value) continue
+          requested.set(file, value)
+          props.onRequestDiff(file)
         }
       },
       { defer: true },
