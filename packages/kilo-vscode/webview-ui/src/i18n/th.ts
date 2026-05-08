@@ -1532,9 +1532,15 @@ export const dict = {
   "notifications.action.close": "ปิด",
   "notifications.action.tryModel": "ลองใช้ {{model}}",
   "notifications.action.tryModelGeneric": "ลองใช้โมเดล",
-  "diffViewer.source.workspace.label": "การเปลี่ยนแปลงในเครื่อง",
+  "diffViewer.source.workspace.label": "สาขา",
   "diffViewer.source.workspace.tooltip":
     "การเปลี่ยนแปลงทั้งหมดบนสาขานี้เมื่อเทียบกับสาขาเบส รวมถึงไฟล์ที่ยังไม่ได้คอมมิต (staged, unstaged, untracked) และคอมมิตในเครื่องที่ยังไม่มีในเบส",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "ไฟล์ที่มีการเปลี่ยนแปลงที่คุณได้เพิ่มเข้าสู่พื้นที่ staging ของ git (`git add`) ตามที่จะปรากฏในคอมมิตถัดไป",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "ไฟล์ที่ถูกแก้ไขในแผนผังการทำงานแต่ยังไม่ได้ staged และไฟล์ที่ไม่ได้ติดตาม (ใหม่)",
   "diffViewer.source.session.label": "เซสชัน",
   "diffViewer.source.session.tooltip":
     "ไฟล์ที่ Kilo แก้ไขในช่วงเซสชันปัจจุบัน โดยอิงจากสแน็ปช็อตต่อเทิร์น จะรีเซ็ตเมื่อเริ่มเซสชันใหม่",

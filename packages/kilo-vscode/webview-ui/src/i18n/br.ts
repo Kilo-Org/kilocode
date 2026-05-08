@@ -1569,9 +1569,15 @@ export const dict = {
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",
   "notifications.action.tryModelGeneric": "Experimentar modelo",
-  "diffViewer.source.workspace.label": "Alterações locais",
+  "diffViewer.source.workspace.label": "Branch",
   "diffViewer.source.workspace.tooltip":
     "Todas as alterações desta branch em relação à branch base. Inclui arquivos não commitados (staged, unstaged e não rastreados) e commits locais que ainda não estão na base.",
+  "diffViewer.source.staged.label": "Preparado",
+  "diffViewer.source.staged.tooltip":
+    "Arquivos com alterações que você adicionou à área de preparação do git (`git add`), como aparecerão no próximo commit.",
+  "diffViewer.source.unstaged.label": "Não preparado",
+  "diffViewer.source.unstaged.tooltip":
+    "Arquivos modificados na sua árvore de trabalho mas ainda não preparados, mais arquivos não rastreados (novos).",
   "diffViewer.source.session.label": "Sessão",
   "diffViewer.source.session.tooltip":
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",

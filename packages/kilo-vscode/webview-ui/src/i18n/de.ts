@@ -1585,9 +1585,15 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
-  "diffViewer.source.workspace.label": "Lokale Änderungen",
+  "diffViewer.source.workspace.label": "Branch",
   "diffViewer.source.workspace.tooltip":
     "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Dateien mit Änderungen, die du zu gits Staging-Bereich hinzugefügt hast (`git add`), wie sie im nächsten Commit erscheinen werden.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Dateien, die in deinem Arbeitsbaum geändert, aber noch nicht gestaged wurden, plus nicht verfolgte (neue) Dateien.",
   "diffViewer.source.session.label": "Sitzung",
   "diffViewer.source.session.tooltip":
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",

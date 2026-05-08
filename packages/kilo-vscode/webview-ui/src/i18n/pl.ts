@@ -1559,9 +1559,15 @@ export const dict = {
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
   "notifications.action.tryModelGeneric": "Wypróbuj model",
-  "diffViewer.source.workspace.label": "Lokalne zmiany",
+  "diffViewer.source.workspace.label": "Gałąź",
   "diffViewer.source.workspace.tooltip":
     "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Pliki ze zmianami dodanymi do obszaru przygotowania git (`git add`), tak jak pojawią się w następnym commicie.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Pliki zmodyfikowane w drzewie roboczym, ale jeszcze nieprzygotowane, plus nieśledzone (nowe) pliki.",
   "diffViewer.source.session.label": "Sesja",
   "diffViewer.source.session.tooltip":
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
