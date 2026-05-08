@@ -14,14 +14,14 @@ function makeCatalog(): DiffSourceCatalog {
 }
 
 describe("DiffSourceCatalog.listAvailable", () => {
-  it("returns workspace + session when both are available", () => {
+  it("returns workspace + staged + unstaged + session when both are available", () => {
     const out = makeCatalog().listAvailable({ workspaceRoot: "/repo", sessionId: "s1" })
-    expect(out.map((d) => d.id)).toEqual(["workspace", "session:s1"])
+    expect(out.map((d) => d.id)).toEqual(["workspace", "staged", "unstaged", "session:s1"])
   })
 
-  it("returns only workspace when sessionId is missing", () => {
+  it("returns workspace + staged + unstaged when sessionId is missing", () => {
     const out = makeCatalog().listAvailable({ workspaceRoot: "/repo" })
-    expect(out.map((d) => d.id)).toEqual(["workspace"])
+    expect(out.map((d) => d.id)).toEqual(["workspace", "staged", "unstaged"])
   })
 
   it("returns only session when workspaceRoot is missing", () => {
