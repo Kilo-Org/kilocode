@@ -49,7 +49,7 @@
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.4",
-      "dompurify": "3.3.3",
+      "dompurify": "3.4.2",
       "drizzle-kit": "1.0.0-beta.19-d95b7a4",
       "drizzle-orm": "1.0.0-beta.19-d95b7a4",
       "effect": "4.0.0-beta.57",
@@ -141,7 +141,7 @@
     "smol-toml": ">=1.6.1",
     "fastify": ">=5.8.3",
     "diff": "8.0.4",
-    "dompurify": "3.3.3",
+    "dompurify": "3.4.2",
     "happy-dom": ">=20.8.9"
   },
   "patchedDependencies": {
@@ -149,6 +149,6 @@
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.2.44",
+  "version": "7.2.48",
   "peerDependencies": {}
 }

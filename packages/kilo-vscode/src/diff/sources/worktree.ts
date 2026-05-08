@@ -18,13 +18,24 @@ export const WORKSPACE_DESCRIPTOR: DiffSourceDescriptor = {
   capabilities: { revert: true, comments: true },
 }
 
+export interface WorktreeDiffSourceOptions {
+  /**
+   * When set, overrides the auto-resolved base branch. The HEAD side stays
+   * the current branch — only the comparison target changes. Reset on dispose.
+   */
+  baseBranchOverride?: string
+}
+
 /**
  * Diffs between the local working tree and the base branch. Each fetch returns
  * a summary (one entry per changed file, no content); the viewer loads
  * `before`/`after` per file on demand via `fetchFile`. Runs entirely in the
  * extension host — no `kilo serve` round-trip.
  */
-export function createWorktreeDiffSource(connection: KiloConnectionService): DiffSource {
+export function createWorktreeDiffSource(
+  connection: KiloConnectionService,
+  opts: WorktreeDiffSourceOptions = {},
+): DiffSource {
   const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
   const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
   const git = new GitOps({ log })
@@ -35,6 +46,21 @@ export function createWorktreeDiffSource(connection: KiloConnectionService): Dif
 
   const resolveTarget = async (): Promise<DiffTarget | undefined> => {
     if (target) return target
+    if (opts.baseBranchOverride) {
+      const root = getWorkspaceRoot()
+      if (!root) {
+        log("Local diff: no workspace root (override mode)")
+        return
+      }
+      const resolved = await resolveOverrideRef(git, root, opts.baseBranchOverride, log)
+      if (!resolved) {
+        log(`Local diff: override base="${opts.baseBranchOverride}" could not be resolved, falling back to auto`)
+      } else {
+        target = { directory: root, baseBranch: resolved }
+        log(`Local diff: using override base=${resolved}`)
+        return target
+      }
+    }
     target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
     return target
   }
@@ -88,6 +114,27 @@ export function createWorktreeDiffSource(connection: KiloConnectionService): Dif
       target = undefined
     },
   }
+}
+
+// Branches surfaced by `parseForEachRefOutput` come as short names (e.g.
+// `feature` for `refs/remotes/origin/feature`), which `git merge-base` can't
+// resolve when there's no local branch of the same name. Try the short name
+// first, then `origin/<name>` before giving up.
+async function resolveOverrideRef(
+  git: GitOps,
+  dir: string,
+  name: string,
+  log: (...args: unknown[]) => void,
+): Promise<string | undefined> {
+  const direct = await git.execGit(["rev-parse", "--verify", "--quiet", name], dir)
+  if (direct.code === 0) return name
+  const remote = `origin/${name}`
+  const viaRemote = await git.execGit(["rev-parse", "--verify", "--quiet", remote], dir)
+  if (viaRemote.code === 0) {
+    log(`override "${name}" not a local ref, resolved to "${remote}"`)
+    return remote
+  }
+  return undefined
 }
 
 /**

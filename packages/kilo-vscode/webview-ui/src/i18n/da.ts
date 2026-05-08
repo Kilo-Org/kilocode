@@ -788,6 +788,10 @@ export const dict = {
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
+  "settings.indexing.kiloModel.title": "Kilo-modelpreset",
+  "settings.indexing.kiloModel.description": "Vælg en understøttet Kilo-hostet embedding-model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-login kræves",
+  "settings.indexing.kiloSignIn.description": "Log ind på Kilo for at bruge hostede embeddings.",
   "settings.indexing.model.title": "Embedding-model",
   "settings.indexing.model.description": "Overskriv standard embedding-modellen for den valgte udbyder.",
   "settings.indexing.providerField.description": "Udbyderspecifik forbindelsesindstilling.",
@@ -1555,9 +1559,15 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
-  "diffViewer.source.workspace.label": "Lokale ændringer",
+  "diffViewer.source.workspace.label": "Gren",
   "diffViewer.source.workspace.tooltip":
     "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Filer med ændringer, du har tilføjet til gits staging-område (`git add`), som de vil fremgå i den næste commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Filer ændret i dit arbejdsbibliotek, men ikke stagede endnu, samt ikke-sporede (nye) filer.",
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
@@ -1565,4 +1575,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -1430,6 +1430,7 @@ export type IndexingConfig = {
    * Embedding provider to use for codebase indexing
    */
   provider?:
+    | "kilo"
     | "openai"
     | "ollama"
     | "openai-compatible"
@@ -1451,6 +1452,14 @@ export type IndexingConfig = {
    * Vector store backend (default: qdrant)
    */
   vectorStore?: "lancedb" | "qdrant"
+  /**
+   * Kilo-hosted embedding provider options
+   */
+  kilo?: {
+    apiKey?: string
+    baseUrl?: string
+    organizationId?: string
+  }
   /**
    * OpenAI embedding provider options
    */
@@ -6333,6 +6342,25 @@ export type NetworkRejectResponses = {
 }
 
 export type NetworkRejectResponse = NetworkRejectResponses[keyof NetworkRejectResponses]
+
+export type IndexingStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/indexing/status"
+}
+
+export type IndexingStatusResponses = {
+  /**
+   * Indexing status
+   */
+  200: IndexingStatus
+}
+
+export type IndexingStatusResponse = IndexingStatusResponses[keyof IndexingStatusResponses]
 
 export type SuggestionListData = {
   body?: never

@@ -32,6 +32,7 @@ import { SessionContext } from "../context/session"
 import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
+import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
@@ -353,21 +354,23 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
                           <IndexingProvider>
-                            <DataProvider data={data()} directory="/project/">
-                              <DiffComponentProvider component={Diff}>
-                                <CodeComponentProvider component={Code}>
-                                  <FileComponentProvider component={File}>
-                                    <MarkedProvider>
-                                      {props.noPadding ? (
-                                        props.children
-                                      ) : (
-                                        <div style={{ padding: "12px" }}>{props.children}</div>
-                                      )}
-                                    </MarkedProvider>
-                                  </FileComponentProvider>
-                                </CodeComponentProvider>
-                              </DiffComponentProvider>
-                            </DataProvider>
+                            <KiloEmbeddingModelsProvider>
+                              <DataProvider data={data()} directory="/project/">
+                                <DiffComponentProvider component={Diff}>
+                                  <CodeComponentProvider component={Code}>
+                                    <FileComponentProvider component={File}>
+                                      <MarkedProvider>
+                                        {props.noPadding ? (
+                                          props.children
+                                        ) : (
+                                          <div style={{ padding: "12px" }}>{props.children}</div>
+                                        )}
+                                      </MarkedProvider>
+                                    </FileComponentProvider>
+                                  </CodeComponentProvider>
+                                </DiffComponentProvider>
+                              </DataProvider>
+                            </KiloEmbeddingModelsProvider>
                           </IndexingProvider>
                         </SessionContext.Provider>
                       </NotificationsContext.Provider>

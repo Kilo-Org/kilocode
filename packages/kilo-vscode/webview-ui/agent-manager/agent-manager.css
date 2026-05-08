@@ -1859,11 +1859,16 @@ body.am-wt-dragging-active * {
 }
 
 .am-markdown-pane {
+  position: relative;
   min-width: 0;
   padding: 16px 20px 24px;
   background: var(--vscode-editor-background, var(--surface-base));
   color: var(--vscode-editor-foreground, var(--text-base));
   overflow-x: auto;
+}
+
+.am-markdown-pane[data-comments="true"] {
+  padding: 12px 20px 20px 64px;
 }
 
 .am-markdown-pane-title {
@@ -1875,8 +1880,94 @@ body.am-wt-dragging-active * {
   letter-spacing: 0.04em;
 }
 
+.am-markdown-pane[data-comments="true"] .am-markdown-pane-title {
+  margin: 0 0 12px;
+}
+
 .am-markdown-pane [data-component="markdown"] {
   max-width: 900px;
+}
+
+.am-markdown-gutter-layer {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 56px;
+  pointer-events: none;
+}
+
+.am-markdown-target {
+  position: absolute;
+  left: 0;
+  width: 56px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-top: 2px;
+  box-sizing: border-box;
+  color: var(--text-weak);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--font-size-small);
+  user-select: none;
+  pointer-events: auto;
+}
+
+.am-markdown-comment-button,
+.am-markdown-line-number {
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 20px;
+}
+
+.am-markdown-comment-button {
+  width: 18px;
+  padding: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.am-markdown-target:hover .am-markdown-comment-button,
+.am-markdown-comment-button:focus-visible {
+  opacity: 1;
+}
+
+.am-markdown-comment-button:hover,
+.am-markdown-comment-button:focus-visible {
+  color: var(--text-base);
+  background: var(--surface-interactive-base);
+}
+
+.am-markdown-line-number {
+  min-width: 24px;
+  padding: 0 4px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.am-markdown-line-number:hover,
+.am-markdown-line-number:focus-visible {
+  color: var(--text-base);
+}
+
+.am-markdown-body {
+  min-width: 0;
+}
+
+.am-markdown-inline-annotations {
+  min-width: 0;
+}
+
+.am-markdown-list-annotation {
+  list-style: none;
+  margin: 0 0 8px;
+}
+
+.am-markdown-table-annotation td {
+  padding: 0;
+  border: none;
 }
 
 @media (max-width: 840px) {

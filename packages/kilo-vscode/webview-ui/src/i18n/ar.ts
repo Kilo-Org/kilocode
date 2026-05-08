@@ -1043,6 +1043,10 @@ export const dict = {
   "settings.indexing.projectEnable.disabledTooltip": "الفهرسة العامة مفعلة، لذا هذا المشروع مشمول بالفعل.",
   "settings.indexing.provider.title": "موفر التضمين",
   "settings.indexing.provider.description": "اختر الموفر المستخدم لإنشاء التضمينات للبحث الدلالي.",
+  "settings.indexing.kiloModel.title": "إعداد مسبق لنموذج Kilo",
+  "settings.indexing.kiloModel.description": "اختر نموذج تضمين مدعومًا ومستضافًا بواسطة Kilo.",
+  "settings.indexing.kiloSignIn.title": "تسجيل الدخول إلى Kilo مطلوب",
+  "settings.indexing.kiloSignIn.description": "سجّل الدخول إلى Kilo لاستخدام التضمينات المستضافة.",
   "settings.indexing.model.title": "نموذج التضمين",
   "settings.indexing.model.description": "تجاوز نموذج التضمين الافتراضي للموفر المحدد.",
   "settings.indexing.dimension.title": "بُعد المتجه",
@@ -1527,9 +1531,15 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
-  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.label": "الفرع",
   "diffViewer.source.workspace.tooltip":
     "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
+  "diffViewer.source.staged.label": "مُهيّأ",
+  "diffViewer.source.staged.tooltip":
+    "الملفات التي أضفت تغييراتها إلى منطقة التهيئة في git (`git add`)، كما ستظهر في الالتزام التالي.",
+  "diffViewer.source.unstaged.label": "غير مُهيّأ",
+  "diffViewer.source.unstaged.tooltip":
+    "الملفات المعدّلة في شجرة العمل ولكن لم يتم تهيئتها بعد، بالإضافة إلى الملفات غير المتتبعة (الجديدة).",
   "diffViewer.source.session.label": "الجلسة",
   "diffViewer.source.session.tooltip":
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
@@ -1537,4 +1547,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
+
+  "diffViewer.baseBranch.auto": "افتراضي",
+  "diffViewer.baseBranch.default": "افتراضي",
+  "diffViewer.baseBranch.remote": "بعيد",
+  "diffViewer.baseBranch.search": "البحث في الفروع",
+  "diffViewer.baseBranch.empty": "لا توجد فروع مطابقة",
+  "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
+  "diffViewer.baseBranch.none": "—",
 }

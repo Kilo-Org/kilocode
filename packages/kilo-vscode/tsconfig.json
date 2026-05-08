@@ -3,10 +3,11 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true /* enable all strict type-checking options */,
+    "skipLibCheck": true,
     "types": ["node", "vscode", "mocha"]
     /* Additional Checks */
     // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */

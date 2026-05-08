@@ -2,7 +2,7 @@ import { useTerminalDimensions } from "@opentui/solid" // kilocode_change
 import { createEffect, createMemo, createSignal, Show } from "solid-js" // kilocode_change
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
-import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
+import { map, pipe, flatMap, entries, filter, sortBy, take, groupBy } from "remeda" // kilocode_change
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useDialog } from "@tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
@@ -67,12 +67,12 @@ export function DialogModel(props: { providerID?: string }) {
 
   const options = createMemo(() => {
     const needle = query().trim()
-    const showSections = showExtra() && needle.length === 0
+    // kilocode_change: removed showSections guard — sections are always built; empty ones are hidden naturally
     const favorites = connected() ? local.model.favorite() : []
     const recents = local.model.recent()
 
     function toOptions(items: typeof favorites, category: string) {
-      if (!showSections) return []
+      if (!showExtra()) return [] // kilocode_change
       return items.flatMap((item) => {
         const provider = sync.data.provider.find((x) => x.id === item.providerID)
         if (!provider) return []
@@ -135,7 +135,7 @@ export function DialogModel(props: { providerID?: string }) {
             },
           })),
           filter((x) => {
-            if (!showSections) return true
+            // kilocode_change: always dedupe favorites/recents (upstream only did this when showSections was true)
             if (favorites.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
               return false
             if (recents.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
@@ -164,15 +164,20 @@ export function DialogModel(props: { providerID?: string }) {
         )
       : []
 
+    // kilocode_change start - Filter per-section to preserve group headers while typing
     if (needle) {
-      const filteredProviders = fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj)
-      const filteredPopular = fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj)
-      // kilocode_change start - Partition Kilo Gateway results first (preserves fuzzysort order)
-      const kilo = filteredProviders.filter((x) => x.value.providerID === "kilo")
-      const rest = filteredProviders.filter((x) => x.value.providerID !== "kilo")
-      return [...kilo, ...rest, ...filteredPopular]
-      // kilocode_change end
+      const rank = <U extends { title: string; category?: string }>(items: U[]) =>
+        fuzzysort.go(needle, items, { keys: ["title", "category"] }).map((x) => x.obj)
+      // rank within each provider category to preserve category order
+      const rankedProviders = pipe(
+        providerOptions,
+        groupBy((x) => x.category ?? ""),
+        entries(),
+        flatMap(([_, items]) => rank(items)),
+      )
+      return [...rank(favoriteOptions), ...rank(recentOptions), ...rankedProviders, ...rank(popularProviders)]
     }
+    // kilocode_change end
 
     return [...favoriteOptions, ...recentOptions, ...providerOptions, ...popularProviders]
   })
@@ -235,7 +240,7 @@ export function DialogModel(props: { providerID?: string }) {
             if (!next) return
             setPreview(next)
           }}
-          flat={true}
+          // kilocode_change: removed flat={true} to keep section headers visible while filtering
           skipFilter={true}
           title={title()}
           current={local.model.current()}

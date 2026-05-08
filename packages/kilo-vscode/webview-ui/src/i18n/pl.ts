@@ -1227,6 +1227,10 @@ export const dict = {
   "settings.indexing.model.title": "Model osadzania",
   "settings.indexing.provider.description":
     "Wybierz dostawcę używanego do generowania osadzeń dla wyszukiwania semantycznego.",
+  "settings.indexing.kiloModel.title": "Preset modelu Kilo",
+  "settings.indexing.kiloModel.description": "Wybierz obsługiwany model osadzania hostowany przez Kilo.",
+  "settings.indexing.kiloSignIn.title": "Wymagane logowanie do Kilo",
+  "settings.indexing.kiloSignIn.description": "Zaloguj się do Kilo, aby używać hostowanych osadzeń.",
   "settings.indexing.provider.title": "Dostawca osadzania",
   "settings.indexing.providerField.description": "Ustawienie połączenia specyficzne dla dostawcy.",
   "settings.indexing.qdrantApiKey.description": "Opcjonalny klucz API dla instancji Qdrant.",
@@ -1559,9 +1563,15 @@ export const dict = {
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
   "notifications.action.tryModelGeneric": "Wypróbuj model",
-  "diffViewer.source.workspace.label": "Lokalne zmiany",
+  "diffViewer.source.workspace.label": "Gałąź",
   "diffViewer.source.workspace.tooltip":
     "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Pliki ze zmianami dodanymi do obszaru przygotowania git (`git add`), tak jak pojawią się w następnym commicie.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Pliki zmodyfikowane w drzewie roboczym, ale jeszcze nieprzygotowane, plus nieśledzone (nowe) pliki.",
   "diffViewer.source.session.label": "Sesja",
   "diffViewer.source.session.tooltip":
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
@@ -1569,4 +1579,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

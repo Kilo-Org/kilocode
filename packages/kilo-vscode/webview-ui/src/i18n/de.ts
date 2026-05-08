@@ -789,6 +789,10 @@ export const dict = {
   "settings.indexing.model.title": "Embedding-Modell",
   "settings.indexing.provider.description":
     "Wählen Sie den Anbieter, der für die Generierung von Embeddings für die semantische Suche verwendet wird.",
+  "settings.indexing.kiloModel.title": "Kilo-Modellvoreinstellung",
+  "settings.indexing.kiloModel.description": "Wählen Sie ein unterstütztes von Kilo gehostetes Embedding-Modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-Anmeldung erforderlich",
+  "settings.indexing.kiloSignIn.description": "Melden Sie sich bei Kilo an, um gehostete Embeddings zu verwenden.",
   "settings.indexing.provider.title": "Embedding-Anbieter",
   "settings.indexing.providerField.description": "Anbieterspezifische Verbindungseinstellung.",
   "settings.indexing.qdrantApiKey.description": "Optionaler API-Schlüssel für die Qdrant-Instanz.",
@@ -1585,9 +1589,15 @@ export const dict = {
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
   "notifications.action.tryModelGeneric": "Modell ausprobieren",
-  "diffViewer.source.workspace.label": "Lokale Änderungen",
+  "diffViewer.source.workspace.label": "Branch",
   "diffViewer.source.workspace.tooltip":
     "Alle Änderungen in diesem Branch im Vergleich zum Base-Branch. Enthält nicht committete Dateien (gestaged, ungestaged, nicht getrackt) und lokale Commits, die noch nicht im Base-Branch sind.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Dateien mit Änderungen, die du zu gits Staging-Bereich hinzugefügt hast (`git add`), wie sie im nächsten Commit erscheinen werden.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Dateien, die in deinem Arbeitsbaum geändert, aber noch nicht gestaged wurden, plus nicht verfolgte (neue) Dateien.",
   "diffViewer.source.session.label": "Sitzung",
   "diffViewer.source.session.tooltip":
     "Von Kilo während der aktuellen Sitzung geänderte Dateien, basierend auf Snapshots pro Runde. Wird beim Start einer neuen Sitzung zurückgesetzt.",
@@ -1595,4 +1605,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
+
+  "diffViewer.baseBranch.auto": "Standard",
+  "diffViewer.baseBranch.default": "Standard",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Branches suchen",
+  "diffViewer.baseBranch.empty": "Keine passenden Branches",
+  "diffViewer.baseBranch.loading": "Branches werden geladen…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>

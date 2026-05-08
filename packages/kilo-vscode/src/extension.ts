@@ -221,6 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   const diffSourceCatalog = new DiffSourceCatalog(connectionService)
+  context.subscriptions.push(diffSourceCatalog)
   const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService, diffSourceCatalog, {
     sessionIdProvider: () => provider.getCurrentSessionId(),
   })

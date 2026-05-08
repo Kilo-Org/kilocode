@@ -709,6 +709,10 @@ export const dict = {
   "settings.indexing.model.title": "Modèle d'embedding",
   "settings.indexing.provider.description":
     "Choisissez le fournisseur utilisé pour générer les embeddings pour la recherche sémantique.",
+  "settings.indexing.kiloModel.title": "Préréglage de modèle Kilo",
+  "settings.indexing.kiloModel.description": "Choisissez un modèle d'embedding hébergé par Kilo pris en charge.",
+  "settings.indexing.kiloSignIn.title": "Connexion à Kilo requise",
+  "settings.indexing.kiloSignIn.description": "Connectez-vous à Kilo pour utiliser les embeddings hébergés.",
   "settings.indexing.provider.title": "Fournisseur d'embedding",
   "settings.indexing.providerField.description": "Paramètre de connexion spécifique au fournisseur.",
   "settings.indexing.qdrantApiKey.description": "Clé API optionnelle pour l'instance Qdrant.",
@@ -1593,9 +1597,15 @@ export const dict = {
   "notifications.action.close": "Fermer",
   "notifications.action.tryModel": "Essayer {{model}}",
   "notifications.action.tryModelGeneric": "Essayer le modèle",
-  "diffViewer.source.workspace.label": "Modifications locales",
+  "diffViewer.source.workspace.label": "Branche",
   "diffViewer.source.workspace.tooltip":
     "Toutes les modifications de cette branche par rapport à la branche de base. Inclut les fichiers non commités (staged, unstaged, non suivis) et les commits locaux qui ne sont pas encore dans la branche de base.",
+  "diffViewer.source.staged.label": "Indexé",
+  "diffViewer.source.staged.tooltip":
+    "Fichiers avec des modifications que vous avez ajoutées à la zone de staging de git (`git add`), tels qu'ils apparaîtront dans le prochain commit.",
+  "diffViewer.source.unstaged.label": "Non indexé",
+  "diffViewer.source.unstaged.tooltip":
+    "Fichiers modifiés dans votre arborescence de travail mais pas encore indexés, plus les fichiers non suivis (nouveaux).",
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
@@ -1603,4 +1613,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
+
+  "diffViewer.baseBranch.auto": "Par défaut",
+  "diffViewer.baseBranch.default": "Par défaut",
+  "diffViewer.baseBranch.remote": "Distante",
+  "diffViewer.baseBranch.search": "Rechercher des branches",
+  "diffViewer.baseBranch.empty": "Aucune branche correspondante",
+  "diffViewer.baseBranch.loading": "Chargement des branches…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -1538,6 +1538,10 @@ export const dict = {
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",
   "notifications.action.tryModelGeneric": "Modeli Dene",
+  "settings.indexing.kiloModel.title": "Kilo model önayarı",
+  "settings.indexing.kiloModel.description": "Desteklenen bir Kilo-hosted embeddings modeli seçin.",
+  "settings.indexing.kiloSignIn.title": "Kilo oturumu açmak gerekiyor",
+  "settings.indexing.kiloSignIn.description": "Hosted embeddings kullanmak için Kilo'da oturum açın.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
@@ -1576,9 +1580,15 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Kurallar sırayla değerlendirilir — son eşleşen kural kazanır. Bu, CLI arka ucundan çözümlenen kural kümesidir.",
   "settings.agentBehaviour.editMode.save": "Tamam",
-  "diffViewer.source.workspace.label": "Yerel değişiklikler",
+  "diffViewer.source.workspace.label": "Dal",
   "diffViewer.source.workspace.tooltip":
     "Bu daldaki tüm değişiklikler, temel dal ile karşılaştırıldığında. Commitlenmemiş dosyaları (staged, unstaged, izlenmeyen) ve temelde henüz bulunmayan yerel commitleri içerir.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "git'in hazırlama alanına eklediğin (`git add`) değişiklikleri içeren dosyalar. Bir sonraki commit'te görüneceği gibi.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Çalışma ağacında değiştirilmiş ancak henüz staged edilmemiş dosyalar, artı takip edilmeyen (yeni) dosyalar.",
   "diffViewer.source.session.label": "Oturum",
   "diffViewer.source.session.tooltip":
     "Geçerli oturum sırasında Kilo tarafından değiştirilen dosyalar, tur başı anlık görüntülere dayanır. Yeni bir oturum başlatıldığında sıfırlanır.",
@@ -1586,4 +1596,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Bu depoda anlık görüntüler devre dışı bırakılmıştır. Oturum değişikliklerini görüntülemek için yapılandırma dosyalarınızı düzenleyin.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

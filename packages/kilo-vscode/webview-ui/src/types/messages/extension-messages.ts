@@ -10,7 +10,7 @@ import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config, FeatureFlags, IndexingStatus } from "./config"
+import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -284,6 +284,11 @@ export interface IndexingStatusLoadedMessage {
   status: IndexingStatus
 }
 
+export interface KiloEmbeddingModelsLoadedMessage {
+  type: "kiloEmbeddingModelsLoaded"
+  catalog: KiloEmbeddingModelCatalog
+}
+
 export interface ProvidersLoadedMessage {
   type: "providersLoaded"
   providers: Record<string, Provider>
@@ -329,7 +334,7 @@ export interface ChatCompletionResultMessage {
 
 export interface FileSearchItem {
   path: string
-  type: "file" | "folder"
+  type: "file" | "folder" | "opened-file"
 }
 
 export interface FileSearchResultMessage {
@@ -762,6 +767,22 @@ export interface DiffViewerNoticeMessage {
   notice: DiffViewerNotice | undefined
 }
 
+/**
+ * Branch list and current base state for the workspace source's base picker.
+ * Sent in response to `diffViewer.requestBranches`. `currentBase` is the
+ * active base (override when set, otherwise `autoBase`); `isAuto` is true
+ * when no override is active.
+ */
+export interface DiffViewerBranchesLoadedMessage {
+  type: "diffViewer.branches"
+  branches: BranchInfo[]
+  defaultBranch: string
+  autoBase: string | undefined
+  currentBase: string | undefined
+  isAuto: boolean
+  currentBranch: string | undefined
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -894,6 +915,7 @@ export type ExtensionMessage =
   | DeviceAuthCancelledMessage
   | NavigateMessage
   | IndexingStatusLoadedMessage
+  | KiloEmbeddingModelsLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage
@@ -974,6 +996,7 @@ export type ExtensionMessage =
   | SetAvailableSourcesMessage
   | DiffViewerCapabilitiesMessage
   | DiffViewerNoticeMessage
+  | DiffViewerBranchesLoadedMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage

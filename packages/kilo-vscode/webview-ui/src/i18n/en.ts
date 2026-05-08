@@ -1021,6 +1021,10 @@ export const dict = {
   "settings.indexing.projectEnable.disabledTooltip": "Global indexing is enabled, so this project is already covered.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
+  "settings.indexing.kiloModel.title": "Kilo model preset",
+  "settings.indexing.kiloModel.description": "Choose a supported Kilo-hosted embedding model.",
+  "settings.indexing.kiloSignIn.title": "Kilo sign-in required",
+  "settings.indexing.kiloSignIn.description": "Sign in to Kilo to use hosted embeddings.",
   "settings.indexing.model.title": "Embedding model",
   "settings.indexing.model.description": "Override the default embedding model for the selected provider.",
   "settings.indexing.dimension.title": "Vector dimension",
@@ -1556,9 +1560,15 @@ export const dict = {
   "notifications.action.tryModel": "Try {{model}}",
   "notifications.action.tryModelGeneric": "Try Model",
 
-  "diffViewer.source.workspace.label": "Local Changes",
+  "diffViewer.source.workspace.label": "Branch",
   "diffViewer.source.workspace.tooltip":
     "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Files with changes you've added to git's staging area (`git add`), as they will appear in the next commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Files modified in your working tree but not yet staged, plus untracked (new) files.",
   "diffViewer.source.session.label": "Session",
   "diffViewer.source.session.tooltip":
     "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
@@ -1566,4 +1576,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

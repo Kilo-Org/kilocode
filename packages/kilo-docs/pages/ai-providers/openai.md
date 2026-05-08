@@ -10,6 +10,10 @@ Kilo Code supports accessing models directly through the official OpenAI API.
 
 **Website:** [https://openai.com/](https://openai.com/)
 
+{% callout type="tip" %}
+**Already have a ChatGPT Plus or Pro subscription?** You can use it to access OpenAI's Codex models inside Kilo Code — no separate API key or pay-as-you-go charges needed. See the [ChatGPT Plus/Pro provider page](/docs/ai-providers/openai-chatgpt-plus-pro) for setup instructions.
+{% /callout %}
+
 ## Getting an API Key
 
 1.  **Sign Up/Sign In:** Go to the [OpenAI Platform](https://platform.openai.com/). Create an account or sign in.

@@ -783,6 +783,10 @@ export const dict = {
   "settings.indexing.model.title": "Model embeddinga",
   "settings.indexing.provider.description":
     "Odaberite provajdera koji se koristi za generiranje embeddinga za semantičku pretragu.",
+  "settings.indexing.kiloModel.title": "Preset Kilo modela",
+  "settings.indexing.kiloModel.description": "Odaberite podržani model embeddinga hostovan na Kilo.",
+  "settings.indexing.kiloSignIn.title": "Potrebna je prijava na Kilo",
+  "settings.indexing.kiloSignIn.description": "Prijavite se na Kilo za korištenje hostovanih embeddinga.",
   "settings.indexing.provider.title": "Provajder embeddinga",
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",
@@ -1565,9 +1569,15 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
-  "diffViewer.source.workspace.label": "Lokalne izmjene",
+  "diffViewer.source.workspace.label": "Grana",
   "diffViewer.source.workspace.tooltip":
     "Sve promjene na ovoj grani u poređenju s osnovnom granom. Uključuje nekomitovane datoteke (staged, unstaged, nepraćene) i lokalne commitove koji još nisu u osnovi.",
+  "diffViewer.source.staged.label": "Pripremljeno",
+  "diffViewer.source.staged.tooltip":
+    "Datoteke s promjenama koje ste dodali u git pripremno područje (`git add`), kako će se pojaviti u sljedećem commitu.",
+  "diffViewer.source.unstaged.label": "Nepripremljeno",
+  "diffViewer.source.unstaged.tooltip":
+    "Datoteke izmijenjene u radnom stablu ali još nisu pripremljene, plus nepraćene (nove) datoteke.",
   "diffViewer.source.session.label": "Sesija",
   "diffViewer.source.session.tooltip":
     "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
@@ -1575,4 +1585,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -35,7 +35,6 @@ In the terminal, two keybinds rate the most recent assistant message:
 
 {% /tab %}
 {% /tabs %}
-
 ## Why it matters
 
 Your feedback is the most direct way to tell us what's working and what isn't. We use it to tune the prompts behind Kilo's behavior, pick better default models, and find and fix problems faster than we could on our own.
@@ -73,4 +72,3 @@ With telemetry off, pressing the feedback keybinds shows a message saying feedba
 
 {% /tab %}
 {% /tabs %}
-

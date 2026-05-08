@@ -5,6 +5,7 @@ import {
   buildTextAfterMentionSelect,
   buildFileAttachments,
   buildMentionResults,
+  filterMentionResults,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -70,6 +71,21 @@ describe("buildMentionResults", () => {
   it("includes folder results", () => {
     const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
     expect(result).toEqual([{ type: "folder", value: "src" }])
+  })
+
+  it("preserves opened file result type", () => {
+    const result = buildMentionResults("src", [{ path: "src/index.ts", type: "opened-file" }])
+    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }])
+  })
+})
+
+describe("filterMentionResults", () => {
+  it("keeps matching file results for the latest query", () => {
+    const result = filterMentionResults("gi", [
+      { type: "file", value: "README.md" },
+      { type: "file", value: "src/git.ts" },
+    ])
+    expect(result).toEqual([{ type: "file", value: "src/git.ts" }])
   })
 })
 

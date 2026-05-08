@@ -1220,6 +1220,10 @@ export const dict = {
     "Global indeksering er aktivert, så dette prosjektet er allerede dekket.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
+  "settings.indexing.kiloModel.title": "Kilo-modellforhåndsvalg",
+  "settings.indexing.kiloModel.description": "Velg en støttet Kilo-hostet embedding-modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-pålogging kreves",
+  "settings.indexing.kiloSignIn.description": "Logg inn på Kilo for å bruke hostede embeddings.",
   "settings.indexing.model.title": "Embedding-modell",
   "settings.indexing.model.description": "Overstyr standard embedding-modell for den valgte leverandøren.",
   "settings.indexing.vectorStore.title": "Vektordatabase",
@@ -1550,9 +1554,14 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
-  "diffViewer.source.workspace.label": "Lokale endringer",
+  "diffViewer.source.workspace.label": "Gren",
   "diffViewer.source.workspace.tooltip":
     "Alle endringer på denne grenen sammenlignet med basegrenen. Inkluderer ikke-committede filer (staged, unstaged, usporede) og lokale commits som ennå ikke er i basen.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Filer med endringer du har lagt til i gits staging-område (`git add`), slik de vil vises i neste commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip": "Filer endret i arbeidstreet, men ikke staget ennå, pluss usporet (nye) filer.",
   "diffViewer.source.session.label": "Økt",
   "diffViewer.source.session.tooltip":
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
@@ -1560,4 +1569,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>

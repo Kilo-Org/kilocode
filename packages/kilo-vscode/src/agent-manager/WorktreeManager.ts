@@ -11,7 +11,7 @@ import * as fs from "fs"
 import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
-import { type GitOps, nonInteractiveEnv } from "./GitOps"
+import { type GitOps, isKiloOwnedSshCommand, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import { markNoIndex } from "../util/spotlight"
 import {
@@ -691,7 +691,13 @@ export class WorktreeManager {
       // Use non-interactive env to prevent SSH passphrase popups.
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
-        await simpleGit(this.root).env(nonInteractiveEnv()).fetch(remote, branch)
+        // Only opt into simple-git's allowUnsafeSshCommand when the SSH command
+        // is the fixed value Kilo injects — never for an inherited one, which
+        // could be attacker-controlled.
+        const env = nonInteractiveEnv()
+        await simpleGit(this.root, { unsafe: { allowUnsafeSshCommand: isKiloOwnedSshCommand(env) } })
+          .env(env)
+          .fetch(remote, branch, { "--quiet": null, "--no-tags": null })
         WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {

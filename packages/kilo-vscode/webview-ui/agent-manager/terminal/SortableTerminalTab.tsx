@@ -50,6 +50,7 @@ export const SortableTerminalTab: Component<{
             keybind={props.keybind ?? ""}
             placement="bottom"
             inactive={props.active}
+            openDelay={0}
           >
             <div
               class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}
@@ -65,6 +66,7 @@ export const SortableTerminalTab: Component<{
                 keybind={props.closeKeybind ?? ""}
                 placement="bottom"
                 class="am-tab-close-wrap"
+                openDelay={0}
               >
                 <IconButton
                   icon="close-small"
