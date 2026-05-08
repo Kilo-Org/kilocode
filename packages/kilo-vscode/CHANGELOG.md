@@ -1,5 +1,37 @@
 # kilo-code
 
+## 7.2.48
+
+### Minor Changes
+
+- [#10054](https://github.com/Kilo-Org/kilocode/pull/10054) [`e5d8c4f`](https://github.com/Kilo-Org/kilocode/commit/e5d8c4f18d6abc81d0caa73575f3bf42a7c3b8fd) - Support commenting on rendered Markdown lines in diff reviewers.
+
+### Patch Changes
+
+- [#10066](https://github.com/Kilo-Org/kilocode/pull/10066) [`3cf5d15`](https://github.com/Kilo-Org/kilocode/commit/3cf5d151ff03f086db5882ce525be904a716e20b) - Open the Kilo Code sidebar before adding selected code or terminal output to chat context.
+
+- [#10051](https://github.com/Kilo-Org/kilocode/pull/10051) [`2d50e1f`](https://github.com/Kilo-Org/kilocode/commit/2d50e1f2dda5533196425b55e5915ee2a49334b6) - Harden git operations against malicious repositories and environment variables by upgrading the underlying git library.
+
+- [#10055](https://github.com/Kilo-Org/kilocode/pull/10055) [`f9fa1a7`](https://github.com/Kilo-Org/kilocode/commit/f9fa1a7efd46453ad7d603262c42c1f266dc4bc9) - Open reviewable Agent Manager diffs by default while keeping generated or extreme files collapsed.
+
+- [#10057](https://github.com/Kilo-Org/kilocode/pull/10057) [`05b10d9`](https://github.com/Kilo-Org/kilocode/commit/05b10d975dd2604eda5ef3583626bdb4b68255e2) - Improve the diff viewer bulk expand and collapse control so it reflects the current file state.
+
+- [#10064](https://github.com/Kilo-Org/kilocode/pull/10064) [`ebda89b`](https://github.com/Kilo-Org/kilocode/commit/ebda89b34ae8f46a99f5b492327bfc9e96dfb562) - Stop repeatedly reloading non-renderable Agent Manager diff previews.
+
+- [#10058](https://github.com/Kilo-Org/kilocode/pull/10058) [`eb8334d`](https://github.com/Kilo-Org/kilocode/commit/eb8334db016e7942ce3f99a55353e2e10cfadf39) - Keep Agent Manager promoted sessions aware of their worktree location.
+
+- [#10063](https://github.com/Kilo-Org/kilocode/pull/10063) [`d08238d`](https://github.com/Kilo-Org/kilocode/commit/d08238d5d12e66eaebf9872e653c35539c0ef65e) - Improve Changes diff responsiveness when switching worktrees by deferring offscreen diff rendering and ignoring stale diff updates.
+
+- [#10053](https://github.com/Kilo-Org/kilocode/pull/10053) [`09a7be8`](https://github.com/Kilo-Org/kilocode/commit/09a7be8fcdab92263b4c589523f2011fd086b0c3) - Improve @ file search relevance and keep mention suggestions responsive while typing.
+
+- [#10067](https://github.com/Kilo-Org/kilocode/pull/10067) [`c451d00`](https://github.com/Kilo-Org/kilocode/commit/c451d007e8050c114846ff86fce6470104954ade) - Keep Agent Manager review diffs responsive during worktree diff refreshes.
+
+- [#10059](https://github.com/Kilo-Org/kilocode/pull/10059) [`5456c96`](https://github.com/Kilo-Org/kilocode/commit/5456c962dd83631c7b1625d5adfaad2a3e0cf320) - Speed up Agent Manager worktree creation when refreshing the base branch by avoiding unnecessary tag fetches.
+
+- Updated dependencies [[`924f034`](https://github.com/Kilo-Org/kilocode/commit/924f034e12f3455f8cb69bb112541f887f4adfe5), [`05b10d9`](https://github.com/Kilo-Org/kilocode/commit/05b10d975dd2604eda5ef3583626bdb4b68255e2), [`d08238d`](https://github.com/Kilo-Org/kilocode/commit/d08238d5d12e66eaebf9872e653c35539c0ef65e)]:
+  - @kilocode/kilo-indexing@7.2.48
+  - @kilocode/kilo-ui@7.2.48
+
 ## 7.2.47
 
 ### Minor Changes

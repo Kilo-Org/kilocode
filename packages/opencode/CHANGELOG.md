@@ -1,5 +1,18 @@
 # @kilocode/cli
 
+## 7.2.48
+
+### Patch Changes
+
+- [#10051](https://github.com/Kilo-Org/kilocode/pull/10051) [`2d50e1f`](https://github.com/Kilo-Org/kilocode/commit/2d50e1f2dda5533196425b55e5915ee2a49334b6) - Harden git operations against malicious repositories and environment variables by upgrading the underlying git library.
+
+- [#10050](https://github.com/Kilo-Org/kilocode/pull/10050) [`f1ae973`](https://github.com/Kilo-Org/kilocode/commit/f1ae973c537045d7b41766563aaa24b51be1072e) - Suggest local code reviews after more completed changes while still avoiding small edits and repeated suggestions.
+
+- [#10060](https://github.com/Kilo-Org/kilocode/pull/10060) [`0cc0415`](https://github.com/Kilo-Org/kilocode/commit/0cc04158d0cd256ddce306bd330af3c3a328f8be) - Harden markdown rendering against malicious HTML by picking up the latest DOMPurify security fixes.
+
+- Updated dependencies [[`924f034`](https://github.com/Kilo-Org/kilocode/commit/924f034e12f3455f8cb69bb112541f887f4adfe5)]:
+  - @kilocode/kilo-indexing@7.2.48
+
 ## 7.2.47
 
 ### Minor Changes
