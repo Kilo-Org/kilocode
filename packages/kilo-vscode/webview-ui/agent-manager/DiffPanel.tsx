@@ -366,22 +366,14 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         <div class="am-diff-header-actions">
           <Show when={props.diffs.length > 0}>
             <Tooltip
-              value={
-                open().length > 0
-                  ? t("ui.sessionReview.collapseAll")
-                  : t("ui.sessionReview.expandAll")
-              }
+              value={open().length > 0 ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
               placement="bottom"
             >
               <IconButton
                 icon="chevron-grabber-vertical"
                 size="small"
                 variant="ghost"
-                label={
-                  open().length > 0
-                    ? t("ui.sessionReview.collapseAll")
-                    : t("ui.sessionReview.expandAll")
-                }
+                label={open().length > 0 ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
                 onClick={handleExpandAll}
               />
             </Tooltip>
