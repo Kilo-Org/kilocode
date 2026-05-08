@@ -263,6 +263,20 @@ function providerCfg(url: string) {
   }
 }
 
+// kilocode_change start - multi-model command subtask test helpers
+function model(name: string) {
+  return {
+    ...cfg.provider.test.models["test-model"],
+    id: name,
+    name,
+  }
+}
+
+function text(input: Record<string, unknown>) {
+  return JSON.stringify(input.messages)
+}
+// kilocode_change end
+
 const user = Effect.fn("test.user")(function* (sessionID: SessionID, text: string) {
   const session = yield* Session.Service
   const msg = yield* session.updateMessage({
@@ -1428,6 +1442,139 @@ unix(
     ),
   30_000,
 )
+
+// kilocode_change start - command subtasks can target multiple models before synthesis
+it.live("command subtasks run with configured models and synthesize", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const { prompt, sessions, chat } = yield* boot()
+      yield* llm.textMatch((hit) => hit.body.model === "gpt-review", "gpt review found bug")
+      yield* llm.textMatch((hit) => hit.body.model === "opus-review", "opus review found risk")
+      yield* llm.textMatch(
+        (hit) => hit.body.model === "main-review" && text(hit.body).includes("Synthesize the subtask tool outputs"),
+        "synthesized both reviewers",
+      )
+
+      const result = yield* prompt.command({
+        sessionID: chat.id,
+        command: "multi-review",
+        arguments: "src/app.ts",
+      })
+
+      expect(result.info.role).toBe("assistant")
+      expect(result.parts.some((part) => part.type === "text" && part.text.includes("synthesized"))).toBe(true)
+
+      const inputs = yield* llm.inputs
+      expect(inputs.some((input) => input.model === "gpt-review" && text(input).includes("Review src/app.ts"))).toBe(true)
+      expect(inputs.some((input) => input.model === "opus-review" && text(input).includes("Review src/app.ts"))).toBe(true)
+      expect(inputs.some((input) => input.model === "main-review" && text(input).includes("gpt review found bug"))).toBe(true)
+      expect(inputs.some((input) => input.model === "main-review" && text(input).includes("opus review found risk"))).toBe(true)
+      expect(yield* llm.pending).toBe(0)
+
+      const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+      const wrappers = msgs.filter((item) => item.info.role === "assistant" && item.info.agent.startsWith("review-"))
+      expect(wrappers).toHaveLength(2)
+      const summaries = msgs.filter(
+        (item) =>
+          item.info.role === "user" &&
+          item.parts.some(
+            (part) => part.type === "text" && part.text === "Synthesize the subtask tool outputs above and continue with your task.",
+          ),
+      )
+      expect(summaries).toHaveLength(1)
+    }),
+    {
+      git: true,
+      config: (url) => ({
+        ...providerCfg(url),
+        provider: {
+          ...providerCfg(url).provider,
+          test: {
+            ...providerCfg(url).provider.test,
+            models: {
+              ...providerCfg(url).provider.test.models,
+              "main-review": model("main-review"),
+              "gpt-review": model("gpt-review"),
+              "opus-review": model("opus-review"),
+            },
+          },
+        },
+        command: {
+          "multi-review": {
+            template: "Review $ARGUMENTS",
+            agent: "code",
+            model: "test/main-review",
+            subtasks: [
+              { agent: "review-gpt", model: "test/gpt-review", description: "gpt review" },
+              { agent: "review-opus", model: "test/opus-review", description: "opus review" },
+            ],
+            synthesize: true,
+          },
+        },
+        agent: {
+          "review-gpt": { mode: "subagent" },
+          "review-opus": { mode: "subagent" },
+        },
+      }),
+    },
+  ),
+)
+
+it.live("command subtask true still creates one subtask and synthesizes", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const { prompt, chat } = yield* boot()
+      yield* llm.textMatch((hit) => hit.body.model === "single-review", "single reviewer output")
+      yield* llm.textMatch(
+        (hit) => hit.body.model === "test-model" && text(hit.body).includes("Summarize the task tool output"),
+        "single summary output",
+      )
+
+      const result = yield* prompt.command({
+        sessionID: chat.id,
+        command: "single-review",
+        arguments: "src/app.ts",
+      })
+
+      expect(result.info.role).toBe("assistant")
+      expect(result.parts.some((part) => part.type === "text" && part.text.includes("single summary"))).toBe(true)
+
+      const inputs = yield* llm.inputs
+      expect(inputs.filter((input) => input.model === "single-review")).toHaveLength(1)
+      expect(inputs.filter((input) => text(input).includes("Summarize the task tool output"))).toHaveLength(1)
+      expect(yield* llm.pending).toBe(0)
+    }),
+    {
+      git: true,
+      config: (url) => ({
+        ...providerCfg(url),
+        provider: {
+          ...providerCfg(url).provider,
+          test: {
+            ...providerCfg(url).provider.test,
+            models: {
+              ...providerCfg(url).provider.test.models,
+              "single-review": model("single-review"),
+            },
+          },
+        },
+        command: {
+          "single-review": {
+            template: "Review $ARGUMENTS",
+            agent: "reviewer",
+            model: "test/single-review",
+            subtask: true,
+            description: "single review",
+          },
+        },
+        agent: {
+          reviewer: { mode: "subagent" },
+        },
+      }),
+    },
+  ),
+)
+// kilocode_change end
 
 unix(
   "cancel interrupts shell and resolves cleanly",

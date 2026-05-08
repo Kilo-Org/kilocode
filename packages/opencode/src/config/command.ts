@@ -12,6 +12,7 @@ import * as ConfigMarkdown from "./markdown"
 import { ConfigModelID } from "./model-id"
 // kilocode_change start
 import { KilocodeConfig } from "@/kilocode/config/config"
+import { KiloCommandSubtasks } from "@/kilocode/command/subtasks"
 import type { Warning } from "./config"
 // kilocode_change end
 
@@ -23,6 +24,10 @@ export const Info = Schema.Struct({
   agent: Schema.optional(Schema.String),
   model: Schema.optional(ConfigModelID),
   subtask: Schema.optional(Schema.Boolean),
+  // kilocode_change start - multi-model command subtasks
+  subtasks: Schema.optional(Schema.mutable(Schema.Array(KiloCommandSubtasks.Entry))),
+  synthesize: Schema.optional(Schema.Boolean),
+  // kilocode_change end
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 
 export type Info = Schema.Schema.Type<typeof Info>

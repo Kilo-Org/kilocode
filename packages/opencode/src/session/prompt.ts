@@ -8,6 +8,7 @@ import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kil
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
+import { KiloCommandSubtasks } from "@/kilocode/command/subtasks" // kilocode_change
 import z from "zod"
 import * as EffectZod from "@/util/effect-zod"
 import { SessionID, MessageID, PartID } from "./schema"
@@ -751,24 +752,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       if (!task.command) return
 
-      const summaryUserMsg: MessageV2.User = {
-        id: MessageID.ascending(),
+      // kilocode_change start - reuse command subtask follow-up creation
+      yield* insertSubtaskSynthesis({
         sessionID,
-        role: "user",
-        time: { created: Date.now() },
-        agent: lastUser.agent,
-        model: lastUser.model,
-        editorContext: lastUser.editorContext, // kilocode_change — preserve editor context
-      }
-      yield* sessions.updateMessage(summaryUserMsg)
-      yield* sessions.updatePart({
-        id: PartID.ascending(),
-        messageID: summaryUserMsg.id,
-        sessionID,
-        type: "text",
+        lastUser,
         text: "Summarize the task tool output above and continue with your task.",
-        synthetic: true,
-      } satisfies MessageV2.TextPart)
+      })
+      // kilocode_change end
     })
 
     const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput, ready?: Latch.Latch) {
@@ -937,6 +927,34 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       if (Option.isSome(match) && match.value.info.role === "user") return match.value.info.model
       return yield* provider.defaultModel()
     })
+
+    // kilocode_change start - shared synthetic follow-up for command subtask synthesis
+    const insertSubtaskSynthesis = Effect.fn("SessionPrompt.insertSubtaskSynthesis")(function* (input: {
+      sessionID: SessionID
+      lastUser: MessageV2.User
+      text: string
+    }) {
+      const msg: MessageV2.User = {
+        id: MessageID.ascending(),
+        sessionID: input.sessionID,
+        role: "user",
+        time: { created: Date.now() },
+        agent: input.lastUser.agent,
+        model: input.lastUser.model,
+        editorContext: input.lastUser.editorContext,
+      }
+      yield* sessions.updateMessage(msg)
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      yield* sessions.updatePart({
+        id: PartID.ascending(),
+        messageID: msg.id,
+        sessionID: input.sessionID,
+        type: "text",
+        text: input.text,
+        synthetic: true,
+      } satisfies MessageV2.TextPart)
+    })
+    // kilocode_change end
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent || (yield* agents.defaultAgent())
@@ -1449,6 +1467,28 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             }).pipe(Effect.ignore, Effect.forkIn(scope))
 
           const model = yield* getModel(lastUser.model.providerID, lastUser.model.modelID, sessionID)
+
+          // kilocode_change start - execute multi-subtask command batches in parallel once
+          const batch = KiloCommandSubtasks.pending({ user: lastUser, messages: msgs })
+          if (batch) {
+            yield* Effect.forEach(
+              batch.tasks,
+              (task) =>
+                handleSubtask({ task: { ...task, command: undefined }, model, lastUser, sessionID, session, msgs }),
+              { concurrency: "unbounded", discard: true },
+            )
+            const cmd = yield* commands.get(batch.command)
+            if (cmd?.synthesize === true) {
+              yield* insertSubtaskSynthesis({
+                sessionID,
+                lastUser,
+                text: KiloCommandSubtasks.synthesis(),
+              })
+            }
+            continue
+          }
+          // kilocode_change end
+
           const task = tasks.pop()
 
           if (task?.type === "subtask") {
@@ -1791,6 +1831,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       const templateParts = yield* resolvePromptParts(template)
+      const promptText = templateParts.find((y) => y.type === "text")?.text ?? "" // kilocode_change
       // kilocode_change start - mark local review commands for completion telemetry
       const telemetry = KiloSessionProcessor.reviewTelemetry(input.command)
       if (telemetry) {
@@ -1798,6 +1839,39 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           if (part.type !== "text") continue
           part.metadata = { ...part.metadata, ...telemetry }
         }
+      }
+      // kilocode_change end
+      // kilocode_change start - expand multi-model command subtasks
+      if (KiloCommandSubtasks.has(cmd)) {
+        const parts = KiloCommandSubtasks.build({
+          subtasks: cmd.subtasks,
+          prompt: promptText,
+          command: input.command,
+          model: cmd.model,
+        })
+        for (const part of parts) {
+          if (part.model) yield* getModel(part.model.providerID, part.model.modelID, input.sessionID)
+        }
+        yield* plugin.trigger(
+          "command.execute.before",
+          { command: input.command, sessionID: input.sessionID, arguments: input.arguments },
+          { parts },
+        )
+        const result = yield* prompt({
+          sessionID: input.sessionID,
+          messageID: input.messageID,
+          model: taskModel,
+          agent: agentName,
+          parts,
+          variant: input.variant,
+        })
+        yield* bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: result.info.id,
+        })
+        return result
       }
       // kilocode_change end
       const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
@@ -1809,7 +1883,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               description: cmd.description ?? "",
               command: input.command,
               model: { providerID: taskModel.providerID, modelID: taskModel.modelID },
-              prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
+              prompt: promptText, // kilocode_change
             },
           ]
         : [...templateParts, ...(input.parts ?? [])]

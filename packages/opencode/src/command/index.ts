@@ -12,6 +12,7 @@ import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
+import { KiloCommandSubtasks } from "@/kilocode/command/subtasks" // kilocode_change
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 
@@ -40,6 +41,8 @@ export const Info = Schema.Struct({
   // Some command templates are lazy promises from MCP prompt resolution.
   template: Schema.Unknown.annotate({ [ZodOverride]: z.promise(z.string()).or(z.string()) }),
   subtask: Schema.optional(Schema.Boolean),
+  subtasks: Schema.optional(Schema.mutable(Schema.Array(KiloCommandSubtasks.Entry))), // kilocode_change
+  synthesize: Schema.optional(Schema.Boolean), // kilocode_change
   hints: Schema.Array(Schema.String),
 })
   .annotate({ identifier: "Command" })
@@ -122,6 +125,8 @@ export const layer = Layer.effect(
             return command.template
           },
           subtask: command.subtask,
+          subtasks: command.subtasks, // kilocode_change
+          synthesize: command.synthesize, // kilocode_change
           hints: hints(command.template),
         }
       }
