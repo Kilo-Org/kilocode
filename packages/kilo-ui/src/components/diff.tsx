@@ -469,7 +469,10 @@ export function Diff<T>(props: DiffProps<T>) {
 
   const setSelectedLines = (range: SelectedLineRange | null) => {
     const active = current()
-    if (!active) return
+    if (!active) {
+      lastSelection = range
+      return
+    }
 
     const fixed = fixSelection(range)
     if (fixed === undefined) {
