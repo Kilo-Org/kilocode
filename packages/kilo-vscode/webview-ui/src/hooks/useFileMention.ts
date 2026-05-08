@@ -137,7 +137,7 @@ export function useFileMention(
       setMentionResults((prev) => {
         const next = filterMentionResults(query, prev)
         if (next.length) return next
-        return prev.length ? prev : buildMentionResults(query, [], git?.() ?? true)
+        return buildMentionResults(query, [], git?.() ?? true)
       })
       setMentionIndex(0)
       requestFileSearch(query)

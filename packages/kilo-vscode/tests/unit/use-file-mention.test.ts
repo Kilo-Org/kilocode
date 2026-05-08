@@ -49,6 +49,43 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("does not keep stale file results visible for unrelated queries", async () => {
+    const posted: WebviewMessage[] = []
+    const handlers = new Set<(message: ExtensionMessage) => void>()
+    const ctx = {
+      postMessage: (message: WebviewMessage) => posted.push(message),
+      onMessage: (handler: (message: ExtensionMessage) => void) => {
+        handlers.add(handler)
+        return () => handlers.delete(handler)
+      },
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.onInput("@read", 5)
+    await wait(170)
+
+    for (const handler of handlers) {
+      handler({
+        type: "fileSearchResult",
+        requestId: "file-search-1",
+        dir: "/repo",
+        paths: ["README.md"],
+        items: [{ path: "README.md", type: "file" }],
+      })
+    }
+
+    mention.onInput("@zz", 3)
+
+    expect(mention.mentionResults()).toEqual([])
+
+    dispose.fn?.()
+  })
+
   it("filters visible results synchronously while a new search is pending", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()
