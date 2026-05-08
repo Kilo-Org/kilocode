@@ -268,7 +268,7 @@ export class WorktreeDiffController {
 
   private async revertFile(sessionId: string, file: string): Promise<{ ok: boolean; message: string }> {
     await this.ready("stateReady rejected, continuing revert resolve:")
-    const target = await this.ensureTarget(sessionId)
+    const target = await this.resolveTarget(sessionId)
     if (!target) return { ok: false, message: "Could not resolve diff target" }
 
     try {
@@ -284,6 +284,10 @@ export class WorktreeDiffController {
   private async ensureTarget(sessionId: string): Promise<Target | undefined> {
     if (this.controller.currentId !== sessionId) return undefined
     if (this.target?.sessionId === sessionId) return this.target
+    return await this.resolveTarget(sessionId)
+  }
+
+  private async resolveTarget(sessionId: string): Promise<Target | undefined> {
     const target = await this.resolve(sessionId)
     if (!target) return undefined
     this.target = { sessionId, ...target }
