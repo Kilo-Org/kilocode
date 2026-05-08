@@ -14,3 +14,15 @@ export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   return expandableOpenFiles(diffs)
 }
+
+export function allOpenFiles(diffs: WorktreeFileDiff[], open: string[]): boolean {
+  const targets = expandableOpenFiles(diffs)
+  if (targets.length === 0) return false
+  const files = new Set(open)
+  return targets.every((file) => files.has(file))
+}
+
+export function toggleOpenFiles(diffs: WorktreeFileDiff[], open: string[]): string[] {
+  if (allOpenFiles(diffs, open)) return []
+  return expandableOpenFiles(diffs)
+}

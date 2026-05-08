@@ -21,7 +21,13 @@ import {
   type AnnotationLabels,
   type AnnotationMeta,
 } from "./review-annotations"
-import { LONG_DIFF_MARKER_FILE_COUNT, expandableOpenFiles, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
+import {
+  LONG_DIFF_MARKER_FILE_COUNT,
+  allOpenFiles,
+  initialOpenFiles,
+  isLargeDiffFile,
+  toggleOpenFiles,
+} from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
 import { treeOrder } from "./file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
@@ -321,7 +327,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   }
 
   const handleExpandAll = () => {
-    setOpen(open().length > 0 ? [] : expandableOpenFiles(props.diffs))
+    setOpen(toggleOpenFiles(props.diffs, open()))
   }
 
   const totals = createMemo(() => ({
@@ -331,6 +337,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     large: props.diffs.filter((diff) => isLargeDiffFile(diff)).length,
     collapsed: Math.max(props.diffs.length - open().length, 0),
   }))
+  const allOpen = createMemo(() => allOpenFiles(props.diffs, open()))
+  const openLabel = () => (allOpen() ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll"))
+  const openIcon = () => (allOpen() ? "compress" : "chevron-grabber-vertical")
 
   return (
     <div class="am-diff-panel" onKeyDown={handleKeyDown} onMouseDown={handleRootMouseDown} tabIndex={-1} ref={rootRef}>
@@ -372,15 +381,12 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         </div>
         <div class="am-diff-header-actions">
           <Show when={props.diffs.length > 0}>
-            <Tooltip
-              value={open().length > 0 ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
-              placement="bottom"
-            >
+            <Tooltip value={openLabel()} placement="bottom">
               <IconButton
-                icon="chevron-grabber-vertical"
+                icon={openIcon()}
                 size="small"
                 variant="ghost"
-                label={open().length > 0 ? t("ui.sessionReview.collapseAll") : t("ui.sessionReview.expandAll")}
+                label={openLabel()}
                 onClick={handleExpandAll}
               />
             </Tooltip>

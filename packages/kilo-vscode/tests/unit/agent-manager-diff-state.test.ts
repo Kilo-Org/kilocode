@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test"
 import { mergeWorktreeDiffs } from "../../webview-ui/agent-manager/diff-state"
 import {
   EXTREME_DIFF_CHANGED_LINES,
+  allOpenFiles,
   expandableOpenFiles,
   initialOpenFiles,
+  toggleOpenFiles,
 } from "../../webview-ui/agent-manager/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
@@ -73,5 +75,25 @@ describe("agent manager diff state", () => {
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
     ).toEqual(["src/app.ts"])
+  })
+
+  it("toggles reviewable files based on whether every reviewable file is open", () => {
+    const diffs = [
+      diff({ file: "src/app.ts" }),
+      diff({ file: "src/panel.ts" }),
+      diff({ file: "src/generated.ts", generatedLike: true }),
+      diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
+    ]
+
+    expect(allOpenFiles(diffs, [])).toBe(false)
+    expect(allOpenFiles(diffs, ["stale.ts"])).toBe(false)
+    expect(allOpenFiles(diffs, ["src/app.ts"])).toBe(false)
+    expect(allOpenFiles(diffs, ["src/app.ts", "src/panel.ts"])).toBe(true)
+    expect(allOpenFiles(diffs, ["stale.ts", "src/app.ts", "src/panel.ts", "src/generated.ts"])).toBe(true)
+
+    expect(toggleOpenFiles(diffs, [])).toEqual(["src/app.ts", "src/panel.ts"])
+    expect(toggleOpenFiles(diffs, ["stale.ts"])).toEqual(["src/app.ts", "src/panel.ts"])
+    expect(toggleOpenFiles(diffs, ["src/app.ts"])).toEqual(["src/app.ts", "src/panel.ts"])
+    expect(toggleOpenFiles(diffs, ["src/app.ts", "src/panel.ts"])).toEqual([])
   })
 })
