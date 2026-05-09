@@ -15,7 +15,7 @@ import { type KiloConnectionService, ServerStartupError } from "./services/cli-b
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
-import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { buildWebviewHtml, getFontFamilyConfig, getWebviewFontSize } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
 import {
   TelemetryProxy,
@@ -57,6 +57,7 @@ import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { handleFileSearch } from "./kilo-provider/file-search"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
+import { watchFontFamilyConfig } from "./kilo-provider/font-family"
 import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
@@ -1114,6 +1115,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     })
     this.webviewMessageDisposable = watchFontSizeConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
+    this.webviewMessageDisposable = watchFontFamilyConfig((msg) => this.postMessage(msg), this.webviewMessageDisposable)
   }
 
   private openExternal(url: unknown): void {
@@ -1270,6 +1272,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscodeLanguage: vscode.env.language,
           languageOverride: langConfig.get<string>("language"),
           fontSize: getWebviewFontSize(),
+          fontFamily: langConfig.get<string>("fontFamily") ?? "",
           workspaceDirectory: this.getProjectDirectory(this.currentSession?.id),
         })
       }
@@ -3370,6 +3373,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Kilo Code",
       port: this.connectionService.getServerInfo()?.port,
+      fontFamily: getFontFamilyConfig(),
       extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
     })
   }

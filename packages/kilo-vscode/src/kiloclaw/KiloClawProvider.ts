@@ -14,7 +14,7 @@ import * as vscode from "vscode"
 import { homedir } from "os"
 import type { KiloConnectionService } from "../services/cli-backend"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { buildWebviewHtml } from "../utils"
+import { buildWebviewHtml, getFontFamilyConfig } from "../utils"
 import { watchFontSizeConfig } from "../kilo-provider/font-size"
 import { TokenManager } from "./token-manager"
 import { KiloChatApiError, KiloChatClient } from "./kilo-chat-client"
@@ -145,6 +145,7 @@ export class KiloClawProvider implements vscode.Disposable {
       styleUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "dist", "kiloclaw.css")),
       iconsBaseUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.uri, "assets", "icons")),
       title: "KiloClaw",
+      fontFamily: getFontFamilyConfig(),
     })
 
     const msgSub = panel.webview.onDidReceiveMessage((msg: KiloClawInMessage) => this.onMessage(msg))

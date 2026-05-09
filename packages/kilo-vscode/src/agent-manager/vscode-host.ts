@@ -10,7 +10,7 @@ import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } fr
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
-import { buildWebviewHtml } from "../utils"
+import { buildWebviewHtml, getFontFamilyConfig } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 import type { AutoApproveController } from "../commands/toggle-auto-approve"
@@ -82,6 +82,7 @@ export class VscodeHost implements Host {
       iconsBaseUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Agent Manager",
       port,
+      fontFamily: getFontFamilyConfig(),
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {

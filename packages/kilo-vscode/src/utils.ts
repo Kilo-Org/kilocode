@@ -6,6 +6,11 @@ function getNonce(): string {
   return crypto.randomBytes(16).toString("hex")
 }
 
+/** Reads the kilo-code.new.fontFamily VS Code setting and returns it, or empty string if not set. */
+export function getFontFamilyConfig(): string {
+  return vscode.workspace.getConfiguration("kilo-code.new").get<string>("fontFamily") ?? ""
+}
+
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 function clamp(size: number) {
@@ -40,10 +45,15 @@ export function buildWebviewHtml(
     title: string
     port?: number
     extraStyles?: string
+    fontFamily?: string
   },
 ): string {
   const nonce = getNonce()
   const csp = buildCspString(webview.cspSource, nonce, opts.port)
+  const fontFamilyCss = opts.fontFamily
+    ? `\n    :root { --vscode-font-family: '${opts.fontFamily}', sans-serif; }`
+    : ""
+  const extraStyles = [opts.extraStyles, fontFamilyCss].filter(Boolean).join("\n")
 
   return `<!DOCTYPE html>
 <html lang="en" data-theme="kilo-vscode">
@@ -76,7 +86,7 @@ export function buildWebviewHtml(
     }
     #root {
       height: 100%;
-    }${opts.extraStyles ? `\n    ${opts.extraStyles}` : ""}
+    }${extraStyles ? `\n    ${extraStyles}` : ""}
   </style>
 </head>
 <body>

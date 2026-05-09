@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { buildWebviewHtml, getWebviewFontSize } from "./utils"
+import { buildWebviewHtml, getFontFamilyConfig, getWebviewFontSize } from "./utils"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { appendOutput, getWorkspaceRoot } from "./review-utils"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "./review-settings"
@@ -114,6 +114,7 @@ export class DiffVirtualProvider implements vscode.Disposable {
       styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "diff-virtual.css")),
       iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
       title: "Diff Virtual",
+      fontFamily: getFontFamilyConfig(),
       extraStyles: "#root { display: flex; flex-direction: column; height: 100%; }",
     })
   }
