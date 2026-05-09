@@ -16,6 +16,7 @@ import {
   type PermissionOption,
   type PlanEntry,
   type PromptRequest,
+  type PromptResponse,
   type ResumeSessionRequest,
   type ResumeSessionResponse,
   type Role,
@@ -53,6 +54,7 @@ import { applyPatch } from "diff"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
 import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
+import { isRecord } from "@/util/record" // kilocode_change
 
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
@@ -488,6 +490,13 @@ export class Agent implements ACPAgent {
           })
 
         if (!message || message.info.role !== "assistant") return
+
+        // kilocode_change start - ACP has no dedicated error update; send stored assistant errors as visible text.
+        if (message.info.error) {
+          await this.sendErrorMessage(sessionId, message.info.id, formatACPError(message.info.error))
+          return
+        }
+        // kilocode_change end
 
         const part = message.parts.find((p) => p.id === props.partID)
         if (!part) return
@@ -1117,6 +1126,26 @@ export class Agent implements ACPAgent {
     return output
   }
 
+  // kilocode_change start
+  private async sendErrorMessage(sessionId: string, messageId: string, text: string) {
+    await this.connection
+      .sessionUpdate({
+        sessionId,
+        update: {
+          sessionUpdate: "agent_message_chunk",
+          messageId,
+          content: {
+            type: "text",
+            text,
+          },
+        },
+      })
+      .catch((error) => {
+        log.error("failed to send error to ACP", { error })
+      })
+  }
+  // kilocode_change end
+
   private async toolStart(sessionId: string, part: ToolPart) {
     if (this.toolStarts.has(part.callID)) return
     this.toolStarts.add(part.callID)
@@ -1483,7 +1512,9 @@ export class Agent implements ACPAgent {
         agent,
         directory,
       })
+      if (response.error) return this.errorResponse(sessionID, response.error) // kilocode_change
       const msg = response.data?.info
+      if (msg?.error) return this.errorResponse(sessionID, msg.error, msg.id) // kilocode_change
 
       await sendUsageUpdate(this.connection, this.sdk, sessionID, directory)
 
@@ -1506,7 +1537,9 @@ export class Agent implements ACPAgent {
         agent,
         directory,
       })
+      if (response.error) return this.errorResponse(sessionID, response.error) // kilocode_change
       const msg = response.data?.info
+      if (msg?.error) return this.errorResponse(sessionID, msg.error, msg.id) // kilocode_change
 
       await sendUsageUpdate(this.connection, this.sdk, sessionID, directory)
 
@@ -1538,6 +1571,26 @@ export class Agent implements ACPAgent {
       _meta: {},
     }
   }
+
+  // kilocode_change start
+  private async errorResponse(
+    sessionId: string,
+    error: unknown,
+    messageId = crypto.randomUUID(),
+  ): Promise<PromptResponse> {
+    const text = formatACPError(error)
+    await this.sendErrorMessage(sessionId, messageId, text)
+    return {
+      stopReason: "refusal" as const,
+      _meta: {
+        error: {
+          message: text,
+          raw: error,
+        },
+      },
+    }
+  }
+  // kilocode_change end
 
   async cancel(params: CancelNotification) {
     const session = this.sessionManager.get(params.sessionId)
@@ -1594,6 +1647,46 @@ function toLocations(toolName: string, input: Record<string, any>): { path: stri
       return []
   }
 }
+
+// kilocode_change start
+function formatACPError(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === "string") return error
+
+  const obj = isRecord(error) ? error : undefined
+  const msg = obj ? messageFromACPData(obj) : undefined
+  if (msg) return msg
+
+  const text = JSON.stringify(error)
+  if (text && text !== "{}") return text
+  return "Unexpected error"
+}
+
+function messageFromACPData(data: Record<string, unknown>): string | undefined {
+  const msg = data["message"]
+  if (typeof msg === "string" && msg) return msg
+
+  const body = data["data"]
+  if (isRecord(body)) {
+    const nested = messageFromACPData(body)
+    if (nested) return nested
+  }
+
+  const err = data["error"]
+  if (typeof err === "string" && err) return err
+  if (isRecord(err)) {
+    const nested = messageFromACPData(err)
+    if (nested) return nested
+  }
+
+  const errors = data["errors"] ?? data["issues"]
+  if (!Array.isArray(errors)) return undefined
+  const [first] = errors
+  if (typeof first === "string" && first) return first
+  if (isRecord(first)) return messageFromACPData(first)
+  return undefined
+}
+// kilocode_change end
 
 async function defaultModel(config: ACPConfig, cwd?: string): Promise<{ providerID: ProviderID; modelID: ModelID }> {
   const sdk = config.sdk
