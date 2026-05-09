@@ -1577,6 +1577,8 @@ export const dict = {
     "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
   "diffViewer.group.session": "Sesja",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Karta Zmian Już Otwarta",
+  "changesPanel.popover.description": "Karta Zmian jest już otwarta i została przeniesiona na wierzch.",
   "diffViewer.notice.snapshotsDisabled":
     "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
 

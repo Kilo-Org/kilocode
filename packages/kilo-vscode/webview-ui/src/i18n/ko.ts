@@ -1552,6 +1552,8 @@ export const dict = {
     "현재 세션 동안 Kilo가 변경한 파일로, 턴별 스냅샷을 기반으로 합니다. 새 세션을 시작하면 초기화됩니다.",
   "diffViewer.group.session": "세션",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "이미 열려 있는 탭",
+  "changesPanel.popover.description": "변경 탭이 이미 열려 있으며 앞으로 가져왔습니다.",
   "diffViewer.notice.snapshotsDisabled":
     "이 리포지토리에서 스냅샷이 비활성화되어 있습니다. 세션 변경 사항을 표시하려면 구성 파일을 편집하세요.",
 

@@ -1573,6 +1573,8 @@ export const dict = {
     "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Ændringer-fanen Allerede Åben",
+  "changesPanel.popover.description": "Ændringer-fanen er allerede åben og er blevet bragt til forgrunden.",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
 

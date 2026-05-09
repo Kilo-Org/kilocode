@@ -352,6 +352,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "kilo-code.new.showChanges",
       (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string }) => {
+        if (diffViewerProvider.isPanelOpen()) {
+          provider.postMessage({ type: "changesPanelAlreadyOpen" })
+        }
         diffViewerProvider.openFromCommand(arg)
       },
     ),

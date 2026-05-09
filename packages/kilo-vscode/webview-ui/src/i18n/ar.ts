@@ -1545,6 +1545,8 @@ export const dict = {
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
   "diffViewer.group.session": "الجلسة",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "تبويب التغييرات مفتوح بالفعل",
+  "changesPanel.popover.description": "تم سحب تبويب التغييرات إلى المقدمة بالفعل.",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
 

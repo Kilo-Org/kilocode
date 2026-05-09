@@ -1520,6 +1520,8 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在目前工作階段中變更的檔案，依據每輪快照。開始新工作階段時重置。",
   "diffViewer.group.session": "工作階段",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "變更分頁已開啟",
+  "changesPanel.popover.description": "變更分頁已經開啟並帶到最前方。",
   "diffViewer.notice.snapshotsDisabled": "此存放庫的快照已停用。請編輯設定檔以顯示工作階段的變更。",
 
   "diffViewer.baseBranch.auto": "預設",

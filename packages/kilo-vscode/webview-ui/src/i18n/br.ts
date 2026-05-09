@@ -1587,6 +1587,8 @@ export const dict = {
     "Arquivos modificados pelo Kilo durante a sessão atual, com base em snapshots por turno. Reinicia ao começar uma nova sessão.",
   "diffViewer.group.session": "Sessão",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Aba de Alterações Já Aberta",
+  "changesPanel.popover.description": "A aba de Alterações já está aberta e foi trazida para a frente.",
   "diffViewer.notice.snapshotsDisabled":
     "Os snapshots estão desativados para este repositório. Edite seus arquivos de configuração para exibir as alterações da sessão.",
 

@@ -1593,6 +1593,8 @@ export const dict = {
     "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
   "diffViewer.group.session": "Sesión",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Pestaña Cambios Ya Abierta",
+  "changesPanel.popover.description": "La pestaña Cambios ya está abierta y se ha traído al frente.",
   "diffViewer.notice.snapshotsDisabled":
     "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
 

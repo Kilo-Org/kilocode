@@ -1567,6 +1567,8 @@ export const dict = {
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
   "diffViewer.group.session": "Økt",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Endringer-fanen Allerede Åpen",
+  "changesPanel.popover.description": "Endringer-fanen er allerede åpen og er blitt brakt til forgrunnen.",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
 

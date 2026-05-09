@@ -10,6 +10,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Popover } from "@kilocode/kilo-ui/popover"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
 import { TaskHeader } from "./TaskHeader"
@@ -114,6 +115,10 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         setRepoBranch(msg.branch)
         return
       }
+      if (msg.type === "changesPanelAlreadyOpen") {
+        setPopoverOpen(true)
+        return
+      }
       if (msg.type !== "continueInWorktreeProgress") return
       const m = msg as { status: string; error?: string }
       if (m.status === "done") {
@@ -146,6 +151,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     vscode.postMessage({ type: "agentManager.createWorktree", baseBranch: repoBranch()! })
 
   const openAgentManager = () => vscode.postMessage({ type: "openAgentManager" })
+
+  const [popoverOpen, setPopoverOpen] = createSignal(false)
+
+  createEffect(() => {
+    if (popoverOpen()) {
+      const t = setTimeout(() => setPopoverOpen(false), 3000)
+      onCleanup(() => clearTimeout(t))
+    }
+  })
 
   const openChanges = () => vscode.postMessage({ type: "openChanges" })
 
@@ -280,24 +294,32 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 </Button>
               </Tooltip>
               <Tooltip value={changesTooltip()} placement="top" class="session-move-changes-trigger">
-                <Button
-                  variant="ghost"
-                  size="small"
-                  class="session-move-changes"
-                  classList={{
-                    "session-move-changes--empty": !session.worktreeStats()?.files,
-                    "session-move-changes--has-changes": !!session.worktreeStats()?.files,
-                  }}
-                  onClick={openChanges}
-                  aria-label={language.t("command.session.show.changes")}
-                >
-                  <Icon name="layers" size="small" />
-                  <Show when={session.worktreeStats()?.files}>
-                    <span class="session-diff-add">+{session.worktreeStats()!.additions}</span>
-                    <span class="session-diff-del">-{session.worktreeStats()!.deletions}</span>
-                    <span class="session-move-dot" aria-hidden="true" />
-                  </Show>
-                </Button>
+                <Popover
+                  placement="top"
+                  open={popoverOpen()}
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      class="session-move-changes"
+                      classList={{
+                        "session-move-changes--empty": !session.worktreeStats()?.files,
+                        "session-move-changes--has-changes": !!session.worktreeStats()?.files,
+                      }}
+                      onClick={openChanges}
+                      aria-label={language.t("command.session.show.changes")}
+                    >
+                      <Icon name="layers" size="small" />
+                      <Show when={session.worktreeStats()?.files}>
+                        <span class="session-diff-add">+{session.worktreeStats()!.additions}</span>
+                        <span class="session-diff-del">-{session.worktreeStats()!.deletions}</span>
+                        <span class="session-move-dot" aria-hidden="true" />
+                      </Show>
+                    </Button>
+                  }
+                  title={language.t("changesPanel.popover.title")}
+                  description={language.t("changesPanel.popover.description")}
+                />
               </Tooltip>
             </>
           </Show>

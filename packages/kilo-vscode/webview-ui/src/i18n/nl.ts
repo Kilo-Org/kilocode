@@ -1605,6 +1605,8 @@ export const dict = {
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
   "diffViewer.group.session": "Sessie",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Wijzigingen Tabblad Al Geopend",
+  "changesPanel.popover.description": "Het tabblad Wijzigingen is al geopend en naar de voorgrond gehaald.",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
 

@@ -61,6 +61,10 @@ export class DiffViewerProvider implements vscode.Disposable {
     this.createPanel()
   }
 
+  isPanelOpen(): boolean {
+    return !!this.panel
+  }
+
   /**
    * Entry point for the `kilo-code.new.showChanges` command. Composes the
    * PanelContext from the arg + injected session/workspace lookups so

@@ -5,6 +5,11 @@
   border: 1px solid var(--border-base);
   overflow: hidden;
 
+  [data-slot="popover-description"] {
+    padding: 8px 12px;
+    margin: 0;
+  }
+
   [data-slot="popover-body"] {
     padding: 0;
   }

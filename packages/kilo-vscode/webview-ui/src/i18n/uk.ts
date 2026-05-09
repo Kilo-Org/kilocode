@@ -1593,6 +1593,8 @@ export const dict = {
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
   "diffViewer.group.session": "Сесія",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Вкладка Вже Відкрита",
+  "changesPanel.popover.description": "Вкладка вже відкрита і була виведена на передній план.",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
 

@@ -1611,6 +1611,8 @@ export const dict = {
     "Fichiers modifiés par Kilo pendant la session actuelle, basé sur des snapshots par tour. Réinitialisé lors du démarrage d'une nouvelle session.",
   "diffViewer.group.session": "Session",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "Onglet Modifications Déjà Ouvert",
+  "changesPanel.popover.description": "L'onglet Modifications est déjà ouvert et a été ramené au premier plan.",
   "diffViewer.notice.snapshotsDisabled":
     "Les instantanés sont désactivés pour ce dépôt. Veuillez modifier vos fichiers de configuration pour afficher les changements de la session.",
 

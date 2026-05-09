@@ -1513,6 +1513,8 @@ export const dict = {
   "diffViewer.source.session.tooltip": "Kilo 在当前会话中更改的文件，基于每轮快照。开始新会话时重置。",
   "diffViewer.group.session": "会话",
   "diffViewer.group.git": "Git",
+  "changesPanel.popover.title": "更改标签页已打开",
+  "changesPanel.popover.description": "更改标签页已经打开并已置于最前面。",
   "diffViewer.notice.snapshotsDisabled": "此仓库的快照已禁用。请编辑配置文件以显示会话变更。",
 
   "diffViewer.baseBranch.auto": "默认",

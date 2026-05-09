@@ -56,6 +56,10 @@ export interface FontSizeChangedMessage {
   fontSize: number
 }
 
+export interface ChangesPanelAlreadyOpenMessage {
+  type: "changesPanelAlreadyOpen"
+}
+
 export interface GitStatusMessage {
   type: "gitStatus"
   repo: boolean
@@ -1016,3 +1020,4 @@ export type ExtensionMessage =
   | ExtensionDataReadyMessage
   | TelemetryStateMessage
   | RemoteStatusMessage
+  | ChangesPanelAlreadyOpenMessage
