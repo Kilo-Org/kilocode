@@ -1604,7 +1604,8 @@ export const dict = {
   "diffViewer.group.session": "Sitzung",
   "diffViewer.group.git": "Git",
   "changesPanel.popover.title": "Änderungen-Bereits Offen",
-  "changesPanel.popover.description": "Die Änderungen-Registerkarte ist bereits geöffnet und in den Vordergrund geholt worden.",
+  "changesPanel.popover.description":
+    "Die Änderungen-Registerkarte ist bereits geöffnet und in den Vordergrund geholt worden.",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots sind für dieses Repository deaktiviert. Bitte bearbeite deine Konfigurationsdateien, um die Sitzungsänderungen anzuzeigen.",
 

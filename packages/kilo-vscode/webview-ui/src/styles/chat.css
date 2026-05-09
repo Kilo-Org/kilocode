@@ -22,38 +22,3 @@
 @import "./suggest-bar.css";
 @import "./settings.css";
 @import "./high-contrast.css";
-
-/* Changes button popover */
-.changes-popover {
-  position: absolute;
-  top: -140px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: 6px;
-  padding: 12px 12px 20px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  min-width: 200px;
-  max-width: 250px;
-  font-size: var(--font-size-base);
-  line-height: 1.4;
-}
-
-.changes-popover-title {
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 8px;
-}
-
-.changes-popover-description {
-  color: var(--color-text-secondary);
-  margin: 0;
-  margin-bottom: 4px;
-}
-
-.changes-button-wrapper {
-  position: relative;
-  display: inline-block;
-}

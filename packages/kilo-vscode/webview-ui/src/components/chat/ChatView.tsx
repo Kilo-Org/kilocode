@@ -55,6 +55,13 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const [transferring, setTransferring] = createSignal(false)
   const [transferDetail, setTransferDetail] = createSignal("")
   const [repoBranch, setRepoBranch] = createSignal<string>()
+  const [popoverOpen, setPopoverOpen] = createSignal(false)
+  createEffect(() => {
+    if (popoverOpen()) {
+      const t = setTimeout(() => setPopoverOpen(false), 3000)
+      onCleanup(() => clearTimeout(t))
+    }
+  })
   let worktreeRef: HTMLDivElement | undefined
 
   // Permissions and questions scoped to this session's family (self + subagents).
@@ -151,15 +158,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     vscode.postMessage({ type: "agentManager.createWorktree", baseBranch: repoBranch()! })
 
   const openAgentManager = () => vscode.postMessage({ type: "openAgentManager" })
-
-  const [popoverOpen, setPopoverOpen] = createSignal(false)
-
-  createEffect(() => {
-    if (popoverOpen()) {
-      const t = setTimeout(() => setPopoverOpen(false), 3000)
-      onCleanup(() => clearTimeout(t))
-    }
-  })
 
   const openChanges = () => vscode.postMessage({ type: "openChanges" })
 
