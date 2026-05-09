@@ -16,7 +16,8 @@ import { applyFontSize, clampFontSize, readFontSize } from "../font-size"
 function applyFontFamily(family: string) {
   const root = document.documentElement
   if (family) {
-    root.style.setProperty("--vscode-font-family", `'${family}', sans-serif`)
+    const escaped = family.replace(/'/g, "\\'")
+    root.style.setProperty("--vscode-font-family", `'${escaped}', sans-serif`)
   } else {
     root.style.removeProperty("--vscode-font-family")
   }

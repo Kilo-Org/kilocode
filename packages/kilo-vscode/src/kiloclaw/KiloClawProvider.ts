@@ -16,6 +16,7 @@ import type { KiloConnectionService } from "../services/cli-backend"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { buildWebviewHtml, getFontFamilyConfig } from "../utils"
 import { watchFontSizeConfig } from "../kilo-provider/font-size"
+import { watchFontFamilyConfig } from "../kilo-provider/font-family"
 import { TokenManager } from "./token-manager"
 import { KiloChatApiError, KiloChatClient } from "./kilo-chat-client"
 import { EventServiceClient, WebSocketAuthError } from "./event-service-client"
@@ -174,6 +175,8 @@ export class KiloClawProvider implements vscode.Disposable {
     this.subs.push(unsub)
     const font = watchFontSizeConfig((msg) => this.post(msg))
     this.subs.push(() => font.dispose())
+    const fontFamily = watchFontFamilyConfig((msg) => this.post(msg))
+    this.subs.push(() => fontFamily.dispose())
   }
 
   private post(msg: KiloClawOutMessage): void {

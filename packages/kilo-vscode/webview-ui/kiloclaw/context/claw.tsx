@@ -181,6 +181,15 @@ export function ClawProvider(props: { children: JSX.Element }) {
       applyFontSize(msg.fontSize)
       return
     }
+    if (msg?.type === "fontFamilyChanged") {
+      const root = document.documentElement
+      if (msg.fontFamily) {
+        root.style.setProperty("--vscode-font-family", `'${msg.fontFamily.replace(/'/g, "\\'")}', sans-serif`)
+      } else {
+        root.style.removeProperty("--vscode-font-family")
+      }
+      return
+    }
     if (!msg?.type?.startsWith("kiloclaw.")) return
     const active = activeConversationId()
     if (handleConversationMessage(msg, active)) return

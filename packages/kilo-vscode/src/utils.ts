@@ -11,6 +11,11 @@ export function getFontFamilyConfig(): string {
   return vscode.workspace.getConfiguration("kilo-code.new").get<string>("fontFamily") ?? ""
 }
 
+/** Escapes a font family name for safe CSS injection (single quotes, angle brackets, backslashes). */
+function sanitizeFontFamily(name: string): string {
+  return name.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/</g, "\\3c ")
+}
+
 const SIZES = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 function clamp(size: number) {
@@ -51,7 +56,7 @@ export function buildWebviewHtml(
   const nonce = getNonce()
   const csp = buildCspString(webview.cspSource, nonce, opts.port)
   const fontFamilyCss = opts.fontFamily
-    ? `\n    :root { --vscode-font-family: '${opts.fontFamily}', sans-serif; }`
+    ? `\n    :root { --vscode-font-family: '${sanitizeFontFamily(opts.fontFamily)}', sans-serif; }`
     : ""
   const extraStyles = [opts.extraStyles, fontFamilyCss].filter(Boolean).join("\n")
 
