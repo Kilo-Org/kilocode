@@ -157,6 +157,7 @@ export class Agent implements ACPAgent {
   private eventStarted = false
   private bashSnapshots = new Map<string, string>()
   private toolStarts = new Set<string>()
+  private errors = new Set<string>() // kilocode_change
   private permissionQueues = new Map<string, Promise<void>>()
   private permissionOptions: PermissionOption[] = [
     { optionId: "once", kind: "allow_once", name: "Allow once" },
@@ -1135,6 +1136,8 @@ export class Agent implements ACPAgent {
 
   // kilocode_change start
   private async sendErrorMessage(sessionId: string, messageId: string, text: string) {
+    if (this.errors.has(messageId)) return
+    this.errors.add(messageId)
     await this.connection
       .sessionUpdate({
         sessionId,
@@ -1661,6 +1664,8 @@ function formatACPError(error: unknown): string {
   if (typeof error === "string") return error
 
   const obj = isRecord(error) ? error : undefined
+  if (obj?.["name"] === "MessageOutputLengthError") return "Output length limit reached"
+
   const msg = obj ? messageFromACPData(obj) : undefined
   if (msg) return msg
 
