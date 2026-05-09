@@ -99,7 +99,7 @@ export class ServerManager {
       const proxyStrictSSL = vscode.workspace.getConfiguration("http").get<boolean>("proxyStrictSSL", true)
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
         cwd: spawnCwd,
-        env: {
+        env: normalizeProxyEnv({
           NODE_USE_SYSTEM_CA: "1",
           ...(extraCaCerts && { NODE_EXTRA_CA_CERTS: extraCaCerts }),
           ...(!proxyStrictSSL && { NODE_TLS_REJECT_UNAUTHORIZED: "0" }),
@@ -110,6 +110,10 @@ export class ServerManager {
           // HTTP_PROXY / HTTPS_PROXY / NO_PROXY env vars that Bun's fetch and
           // most HTTP clients already respect.
           ...buildProxyEnv(),
+          // Remote-SSH may provide only one casing or only http_proxy in the
+          // extension host environment. Normalize the final child env after
+          // merging process.env and VS Code settings so HTTPS streaming clients
+          // see the proxy variables they expect.
           // Force mimalloc (the allocator Bun ships with) to return freed pages
           // to the OS immediately instead of retaining them in its arenas.
           // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
@@ -131,7 +135,7 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
-        },
+        }),
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
       })
@@ -261,6 +265,50 @@ export class ServerStartupError extends Error {
 
 function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
+type EnvMap = Record<string, string | undefined>
+
+function normalizeProxyUrl(value: string | undefined): string | undefined {
+  const trimmed = value?.trim()
+  if (!trimmed) return undefined
+  return trimmed.replace(/\/$/, "")
+}
+
+/**
+ * Normalize proxy-related environment variables before spawning the CLI backend.
+ *
+ * VS Code Remote-SSH can expose only one proxy casing (for example, lowercase
+ * `http_proxy`) in the extension host environment. HTTPS streaming clients in
+ * the bundled CLI may look for `https_proxy`/`HTTPS_PROXY` instead, so mirror
+ * the non-empty values across common lowercase/uppercase variants after all
+ * process.env and VS Code `http.proxy` settings have been merged.
+ */
+export function normalizeProxyEnv<T extends EnvMap>(env: T): T {
+  const next = { ...env }
+  const httpProxy = normalizeProxyUrl(next.http_proxy) ?? normalizeProxyUrl(next.HTTP_PROXY)
+  const httpsProxy = normalizeProxyUrl(next.https_proxy) ?? normalizeProxyUrl(next.HTTPS_PROXY) ?? httpProxy
+  const allProxy = normalizeProxyUrl(next.all_proxy) ?? normalizeProxyUrl(next.ALL_PROXY)
+  const noProxy = next.no_proxy?.trim() || next.NO_PROXY?.trim() || undefined
+
+  if (httpProxy) {
+    next.http_proxy = httpProxy
+    next.HTTP_PROXY = httpProxy
+  }
+  if (httpsProxy) {
+    next.https_proxy = httpsProxy
+    next.HTTPS_PROXY = httpsProxy
+  }
+  if (allProxy) {
+    next.all_proxy = allProxy
+    next.ALL_PROXY = allProxy
+  }
+  if (noProxy) {
+    next.no_proxy = noProxy
+    next.NO_PROXY = noProxy
+  }
+
+  return next as T
 }
 
 /**

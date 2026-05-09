@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "bun:test"
 import * as vscode from "vscode"
-import { buildProxyEnv } from "../../src/services/cli-backend/server-manager"
+import { buildProxyEnv, normalizeProxyEnv } from "../../src/services/cli-backend/server-manager"
 
 type Info = { globalValue?: unknown; workspaceValue?: unknown; workspaceFolderValue?: unknown }
 type WorkspaceStub = {
@@ -133,6 +133,54 @@ describe("buildProxyEnv", () => {
       http_proxy: "",
       https_proxy: "",
       no_proxy: "",
+    })
+  })
+})
+
+describe("normalizeProxyEnv", () => {
+  it("mirrors a Remote-SSH lowercase http_proxy into HTTPS and uppercase variants", () => {
+    expect(normalizeProxyEnv({ http_proxy: "http://127.0.0.1:58119/" })).toEqual({
+      HTTP_PROXY: "http://127.0.0.1:58119",
+      HTTPS_PROXY: "http://127.0.0.1:58119",
+      http_proxy: "http://127.0.0.1:58119",
+      https_proxy: "http://127.0.0.1:58119",
+    })
+  })
+
+  it("mirrors uppercase HTTPS and ALL proxy values into lowercase variants", () => {
+    expect(
+      normalizeProxyEnv({
+        HTTPS_PROXY: "http://proxy.corp.example:8443/",
+        ALL_PROXY: "socks5h://127.0.0.1:58120/",
+      }),
+    ).toEqual({
+      HTTPS_PROXY: "http://proxy.corp.example:8443",
+      https_proxy: "http://proxy.corp.example:8443",
+      ALL_PROXY: "socks5h://127.0.0.1:58120",
+      all_proxy: "socks5h://127.0.0.1:58120",
+    })
+  })
+
+  it("mirrors no_proxy casing without URL normalization", () => {
+    expect(normalizeProxyEnv({ no_proxy: "localhost,127.0.0.1,10.0.0.0/8" })).toEqual({
+      NO_PROXY: "localhost,127.0.0.1,10.0.0.0/8",
+      no_proxy: "localhost,127.0.0.1,10.0.0.0/8",
+    })
+  })
+
+  it("preserves explicit empty proxy clears", () => {
+    expect(
+      normalizeProxyEnv({
+        HTTP_PROXY: "",
+        HTTPS_PROXY: "",
+        http_proxy: "",
+        https_proxy: "",
+      }),
+    ).toEqual({
+      HTTP_PROXY: "",
+      HTTPS_PROXY: "",
+      http_proxy: "",
+      https_proxy: "",
     })
   })
 })
