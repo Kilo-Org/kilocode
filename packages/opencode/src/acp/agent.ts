@@ -16,7 +16,7 @@ import {
   type PermissionOption,
   type PlanEntry,
   type PromptRequest,
-  type PromptResponse,
+  type PromptResponse, // kilocode_change
   type ResumeSessionRequest,
   type ResumeSessionResponse,
   type Role,
@@ -63,6 +63,13 @@ const decodeTodos = Schema.decodeUnknownResult(Schema.fromJsonString(Schema.Arra
 const DEFAULT_VARIANT_VALUE = "default"
 
 const log = Log.create({ service: "acp-agent" })
+
+// kilocode_change start
+function uuid(seed: string) {
+  const hash = Hash.fast(seed).padStart(32, "0").slice(0, 32)
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}-${hash.slice(16, 20)}-${hash.slice(20)}` as const
+}
+// kilocode_change end
 
 async function getContextLimit(
   sdk: KiloClient,
@@ -493,7 +500,7 @@ export class Agent implements ACPAgent {
 
         // kilocode_change start - ACP has no dedicated error update; send stored assistant errors as visible text.
         if (message.info.error) {
-          await this.sendErrorMessage(sessionId, message.info.id, formatACPError(message.info.error))
+          await this.sendErrorMessage(sessionId, uuid(message.info.id), formatACPError(message.info.error))
           return
         }
         // kilocode_change end
@@ -1514,7 +1521,7 @@ export class Agent implements ACPAgent {
       })
       if (response.error) return this.errorResponse(sessionID, response.error) // kilocode_change
       const msg = response.data?.info
-      if (msg?.error) return this.errorResponse(sessionID, msg.error, msg.id) // kilocode_change
+      if (msg?.error) return this.errorResponse(sessionID, msg.error, uuid(msg.id)) // kilocode_change
 
       await sendUsageUpdate(this.connection, this.sdk, sessionID, directory)
 
@@ -1539,7 +1546,7 @@ export class Agent implements ACPAgent {
       })
       if (response.error) return this.errorResponse(sessionID, response.error) // kilocode_change
       const msg = response.data?.info
-      if (msg?.error) return this.errorResponse(sessionID, msg.error, msg.id) // kilocode_change
+      if (msg?.error) return this.errorResponse(sessionID, msg.error, uuid(msg.id)) // kilocode_change
 
       await sendUsageUpdate(this.connection, this.sdk, sessionID, directory)
 
