@@ -203,7 +203,8 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
 
   await Instance.provide({
     directory: tmp.path,
-    fn: async () => { // kilocode_change
+    fn: async () => {
+      // kilocode_change
       openShouldFail = false // kilocode_change
 
       const events: Array<{ mcpName: string; url: string }> = []
@@ -259,7 +260,8 @@ test("open() is called with the authorization URL", async () => {
 
   await Instance.provide({
     directory: tmp.path,
-    fn: async () => { // kilocode_change
+    fn: async () => {
+      // kilocode_change
       openShouldFail = false // kilocode_change
       openCalledWith = undefined
 

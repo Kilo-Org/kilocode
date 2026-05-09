@@ -9,10 +9,7 @@
 import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
-import {
-  getKiloEmbeddingModel,
-  normalizeKiloEmbeddingModelId,
-} from "@kilocode/kilo-indexing/embedding-models"
+import { getKiloEmbeddingModel, normalizeKiloEmbeddingModelId } from "@kilocode/kilo-indexing/embedding-models"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { createResource } from "solid-js"
@@ -522,13 +519,17 @@ export function DialogIndexing(props: DialogIndexingProps) {
           }
           case "projectToggle": {
             if (globalCfg().enabled) {
-              toast.show({ message: "Global indexing is enabled, so this project is already covered.", variant: "info" })
+              toast.show({
+                message: "Global indexing is enabled, so this project is already covered.",
+                variant: "info",
+              })
               dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
               break
             }
             const current = getIndexing(sync)
             const enabled = !indexing.enabled
-            const updated = enabled && !current.provider && hasKiloAuth(sync) ? { ...defaultIndexing(sync), enabled } : { enabled }
+            const updated =
+              enabled && !current.provider && hasKiloAuth(sync) ? { ...defaultIndexing(sync), enabled } : { enabled }
             await saveProjectIndexing(sdk, sync, updated, toast)
             dialog.replace(() => <DialogIndexing useSDK={props.useSDK} />)
             break

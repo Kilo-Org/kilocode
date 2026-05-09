@@ -274,19 +274,22 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       payload: typeof PromptPayload.Type
     }) {
-      // kilocode_change - cast to bridge schema-readonly→PromptInput-mutable; matches legacy Hono session.ts
-      yield* promptSvc.prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput).pipe(
-        Effect.catchCause((cause) =>
-          Effect.gen(function* () {
-            yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
-            yield* bus.publish(Session.Event.Error, {
-              sessionID: ctx.params.sessionID,
-              error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
-            })
-          }),
-        ),
-        Effect.forkIn(scope, { startImmediately: true }),
-      )
+      // kilocode_change start - cast to bridge schema-readonly→PromptInput-mutable; matches legacy Hono session.ts
+      yield* promptSvc
+        .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput)
+        .pipe(
+          Effect.catchCause((cause) =>
+            Effect.gen(function* () {
+              yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
+              yield* bus.publish(Session.Event.Error, {
+                sessionID: ctx.params.sessionID,
+                error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
+              })
+            }),
+          ),
+          Effect.forkIn(scope, { startImmediately: true }),
+        )
+      // kilocode_change end
       return HttpApiSchema.NoContent.make()
     })
 

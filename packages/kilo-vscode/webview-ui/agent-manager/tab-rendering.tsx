@@ -174,7 +174,7 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
   return (
     <Show when={deps.contextSelected()}>
       <div class="am-split-button am-tab-add-split">
-        <TooltipKeybind title={deps.newSessionLabel} keybind={deps.kb().newTab ?? ""} placement="bottom">
+        <TooltipKeybind title={deps.newSessionLabel} keybind={deps.kb().newTab ?? ""} placement="bottom" openDelay={0}>
           <IconButton
             icon="plus"
             size="small"

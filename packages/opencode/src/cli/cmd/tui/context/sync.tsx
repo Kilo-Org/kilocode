@@ -98,6 +98,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         all: [],
         default: {},
         connected: [],
+        failed: [], // kilocode_change
       },
       console_state: emptyConsoleState,
       provider_auth: {},

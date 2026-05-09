@@ -82,7 +82,14 @@ export const ProjectRoutes = lazy(() =>
           Project.Service.use((svc) => svc.initGit({ directory: dir, project: prev })),
         )
         if (next.id === prev.id && next.vcs === prev.vcs && next.worktree === prev.worktree) return c.json(next)
-        await InstanceStore.reloadInstance({ directory: dir, worktree: dir, project: next, init: await getBootstrapRunEffect() })
+        // kilocode_change start
+        await InstanceStore.reloadInstance({
+          directory: dir,
+          worktree: dir,
+          project: next,
+          init: await getBootstrapRunEffect(),
+        })
+        // kilocode_change end
         return c.json(next)
       },
     )

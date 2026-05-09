@@ -7,6 +7,7 @@ import { ModelsDev } from "@/provider/models"
 import { ProviderAuth } from "@/provider/auth"
 import { ProviderID } from "@/provider/schema"
 import { mapValues, pickBy } from "remeda" // kilocode_change
+import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
 import { Effect } from "effect"
@@ -50,12 +51,21 @@ export const ProviderRoutes = lazy(() =>
             mapValues(filtered, (x) => Provider.fromModelsDevProvider(x)),
             connected,
           )
-          // kilocode_change start: Filter out providers with no models to prevent crashes
-          const validProviders = pickBy(providers, (item) => Object.keys(item.models).length > 0)
+          // kilocode_change start
+          const failed = ModelCache.failedProviders()
+          // Keep connected or failed providers even when they have 0 models so /connect can re-auth them.
+          // Note: connected only contains providers whose model list is non-empty after Provider.Service.list(),
+          // so failed must be checked explicitly for providers whose fetch returned an error.
+          const failedSet = new Set(failed)
+          const validProviders = pickBy(
+            providers,
+            (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
+          )
           return {
             all: Object.values(validProviders),
-            default: Provider.defaultModelIDs(validProviders),
+            default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
             connected: Object.keys(connected),
+            failed,
           }
           // kilocode_change end
         }),

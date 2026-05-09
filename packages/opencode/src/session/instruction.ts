@@ -84,9 +84,7 @@ export const layer: Layer.Layer<
       }
       // kilocode_change - prefer KILO_CONFIG_DIR profile when set, else fall back to global.config
       const root = Flag.KILO_CONFIG_DIR ?? global.config
-      return yield* fs
-        .globUp(instruction, root, root)
-        .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+      return yield* fs.globUp(instruction, root, root).pipe(Effect.catch(() => Effect.succeed([] as string[]))) // kilocode_change
     })
 
     const read = Effect.fnUntraced(function* (filepath: string) {

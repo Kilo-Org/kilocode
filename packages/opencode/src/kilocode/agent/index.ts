@@ -432,13 +432,7 @@ export function patchAgents(
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(
-      defaults,
-      askGuard(kilo.mcpRules),
-      user,
-      askEditGuard(),
-      denies(user),
-    ),
+    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
     native: true,
   }

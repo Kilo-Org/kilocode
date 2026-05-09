@@ -71,6 +71,7 @@ export const SortableTab: Component<{
             keybind={props.keybind ?? ""}
             placement="bottom"
             inactive={props.active}
+            openDelay={0}
           >
             <div
               class={`am-tab ${props.active ? "am-tab-active" : ""}`}
@@ -88,6 +89,7 @@ export const SortableTab: Component<{
                 keybind={props.closeKeybind ?? ""}
                 placement="bottom"
                 class="am-tab-close-wrap"
+                openDelay={0}
               >
                 <IconButton
                   icon="close-small"
@@ -154,7 +156,13 @@ export const SortableReviewTab: Component<{
       class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}
       data-tab-id={props.id}
     >
-      <TooltipKeybind title={props.tooltip} keybind={props.keybind ?? ""} placement="bottom" inactive={props.active}>
+      <TooltipKeybind
+        title={props.tooltip}
+        keybind={props.keybind ?? ""}
+        placement="bottom"
+        inactive={props.active}
+        openDelay={0}
+      >
         <div
           class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}
           onClick={props.onSelect}
@@ -169,6 +177,7 @@ export const SortableReviewTab: Component<{
             keybind={props.closeKeybind ?? ""}
             placement="bottom"
             class="am-tab-close-wrap"
+            openDelay={0}
           >
             <IconButton
               icon="close-small"

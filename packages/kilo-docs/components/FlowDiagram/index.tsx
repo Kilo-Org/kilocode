@@ -16,12 +16,11 @@ export function FlowDiagram({ name, height = "400px" }: { name: string; height?:
   const [cssLoaded, setCssLoaded] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      import("@xyflow/react"),
-      import("@xyflow/react/dist/style.css").then(() => setCssLoaded(true)),
-    ]).then(([xyflow]) => {
-      setMod(xyflow)
-    })
+    Promise.all([import("@xyflow/react"), import("@xyflow/react/dist/style.css").then(() => setCssLoaded(true))]).then(
+      ([xyflow]) => {
+        setMod(xyflow)
+      },
+    )
   }, [])
 
   const diagram = diagrams[name]
