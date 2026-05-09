@@ -272,7 +272,7 @@ type EnvMap = Record<string, string | undefined>
 function normalizeProxyUrl(value: string | undefined): string | undefined {
   const trimmed = value?.trim()
   if (!trimmed) return undefined
-  return trimmed.replace(/\/$/, "")
+  return trimmed.replace(/\/+$/, "")
 }
 
 /**
@@ -287,7 +287,9 @@ function normalizeProxyUrl(value: string | undefined): string | undefined {
 export function normalizeProxyEnv<T extends EnvMap>(env: T): T {
   const next = { ...env }
   const httpProxy = normalizeProxyUrl(next.http_proxy) ?? normalizeProxyUrl(next.HTTP_PROXY)
-  const httpsProxy = normalizeProxyUrl(next.https_proxy) ?? normalizeProxyUrl(next.HTTPS_PROXY) ?? httpProxy
+  const hasHttpsProxyKey = "https_proxy" in next || "HTTPS_PROXY" in next
+  const httpsProxy =
+    normalizeProxyUrl(next.https_proxy) ?? normalizeProxyUrl(next.HTTPS_PROXY) ?? (hasHttpsProxyKey ? undefined : httpProxy)
   const allProxy = normalizeProxyUrl(next.all_proxy) ?? normalizeProxyUrl(next.ALL_PROXY)
   const noProxy = next.no_proxy?.trim() || next.NO_PROXY?.trim() || undefined
 

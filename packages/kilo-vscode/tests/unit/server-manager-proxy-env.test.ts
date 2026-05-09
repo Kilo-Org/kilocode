@@ -139,7 +139,7 @@ describe("buildProxyEnv", () => {
 
 describe("normalizeProxyEnv", () => {
   it("mirrors a Remote-SSH lowercase http_proxy into HTTPS and uppercase variants", () => {
-    expect(normalizeProxyEnv({ http_proxy: "http://127.0.0.1:58119/" })).toEqual({
+    expect(normalizeProxyEnv({ http_proxy: "http://127.0.0.1:58119//" })).toEqual({
       HTTP_PROXY: "http://127.0.0.1:58119",
       HTTPS_PROXY: "http://127.0.0.1:58119",
       http_proxy: "http://127.0.0.1:58119",
@@ -180,6 +180,21 @@ describe("normalizeProxyEnv", () => {
       HTTP_PROXY: "",
       HTTPS_PROXY: "",
       http_proxy: "",
+      https_proxy: "",
+    })
+  })
+
+  it("does not derive HTTPS from ambient HTTP proxy when HTTPS proxy was explicitly cleared", () => {
+    expect(
+      normalizeProxyEnv({
+        http_proxy: "http://ambient.example:3128",
+        HTTPS_PROXY: "",
+        https_proxy: "",
+      }),
+    ).toEqual({
+      HTTP_PROXY: "http://ambient.example:3128",
+      http_proxy: "http://ambient.example:3128",
+      HTTPS_PROXY: "",
       https_proxy: "",
     })
   })
