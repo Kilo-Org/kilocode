@@ -1258,6 +1258,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecteer een agent om te configureren…",
   "settings.agentBehaviour.modelOverride.title": "Model Overschrijven",
   "settings.agentBehaviour.modelOverride.description": "Overschrijf het standaard model voor deze agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Overschrijven",
+  "settings.agentBehaviour.variantOverride.description": "Overschrijf de modelvariant voor deze agent",
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",

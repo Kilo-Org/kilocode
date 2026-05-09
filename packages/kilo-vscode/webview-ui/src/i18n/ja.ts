@@ -1245,6 +1245,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "設定するエージェントを選択…",
   "settings.agentBehaviour.modelOverride.title": "モデルオーバーライド",
   "settings.agentBehaviour.modelOverride.description": "このエージェントのデフォルトモデルを上書き",
+  "settings.agentBehaviour.variantOverride.title": "バリアントオーバーライド",
+  "settings.agentBehaviour.variantOverride.description": "このエージェントのモデルバリアントを上書き",
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
   "settings.agentBehaviour.prompt.description": "このエージェントの追加システムプロンプト",
   "settings.agentBehaviour.temperature.title": "温度",

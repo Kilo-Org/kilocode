@@ -1250,6 +1250,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Виберіть агента для налаштування…",
   "settings.agentBehaviour.modelOverride.title": "Перевизначення моделі",
   "settings.agentBehaviour.modelOverride.description": "Перевизначити стандартну модель для цього агента",
+  "settings.agentBehaviour.variantOverride.title": "Перевизначення варіанту",
+  "settings.agentBehaviour.variantOverride.description": "Перевизначити варіант моделі для цього агента",
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",

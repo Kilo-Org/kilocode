@@ -1239,6 +1239,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "구성할 에이전트를 선택하세요…",
   "settings.agentBehaviour.modelOverride.title": "모델 재정의",
   "settings.agentBehaviour.modelOverride.description": "이 에이전트의 기본 모델 재정의",
+  "settings.agentBehaviour.variantOverride.title": "변형 재정의",
+  "settings.agentBehaviour.variantOverride.description": "이 에이전트의 모델 변형 재정의",
   "settings.agentBehaviour.prompt.title": "사용자 정의 프롬프트",
   "settings.agentBehaviour.prompt.description": "이 에이전트의 추가 시스템 프롬프트",
   "settings.agentBehaviour.temperature.title": "온도",

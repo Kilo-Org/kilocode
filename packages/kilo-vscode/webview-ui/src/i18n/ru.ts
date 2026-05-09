@@ -1253,6 +1253,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Выберите агента для настройки…",
   "settings.agentBehaviour.modelOverride.title": "Переопределение модели",
   "settings.agentBehaviour.modelOverride.description": "Переопределить модель по умолчанию для этого агента",
+  "settings.agentBehaviour.variantOverride.title": "Переопределение варианта",
+  "settings.agentBehaviour.variantOverride.description": "Переопределить вариант модели для этого агента",
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
   "settings.agentBehaviour.prompt.description": "Дополнительный системный промпт для этого агента",
   "settings.agentBehaviour.temperature.title": "Температура",

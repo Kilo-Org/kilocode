@@ -1250,6 +1250,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Wybierz agenta do konfiguracji…",
   "settings.agentBehaviour.modelOverride.title": "Nadpisanie modelu",
   "settings.agentBehaviour.modelOverride.description": "Nadpisz domyślny model dla tego agenta",
+  "settings.agentBehaviour.variantOverride.title": "Nadpisanie wariantu",
+  "settings.agentBehaviour.variantOverride.description": "Nadpisz wariant modelu dla tego agenta",
   "settings.agentBehaviour.prompt.title": "Niestandardowy prompt",
   "settings.agentBehaviour.prompt.description": "Dodatkowy prompt systemowy dla tego agenta",
   "settings.agentBehaviour.temperature.title": "Temperatura",

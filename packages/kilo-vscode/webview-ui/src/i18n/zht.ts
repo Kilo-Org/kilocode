@@ -1187,6 +1187,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",
   "settings.agentBehaviour.modelOverride.title": "模型覆寫",
   "settings.agentBehaviour.modelOverride.description": "覆寫此 Agent 的預設模型",
+  "settings.agentBehaviour.variantOverride.title": "模型變體覆寫",
+  "settings.agentBehaviour.variantOverride.description": "覆寫此 Agent 的模型變體",
   "settings.agentBehaviour.prompt.title": "自訂提示詞",
   "settings.agentBehaviour.prompt.description": "此 Agent 的附加系統提示詞",
   "settings.agentBehaviour.temperature.title": "溫度",

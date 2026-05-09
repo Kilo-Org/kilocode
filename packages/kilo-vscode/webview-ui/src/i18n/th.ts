@@ -1236,6 +1236,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "เลือกเอเจนต์เพื่อกำหนดค่า…",
   "settings.agentBehaviour.modelOverride.title": "แทนที่โมเดล",
   "settings.agentBehaviour.modelOverride.description": "แทนที่โมเดลเริ่มต้นของเอเจนต์นี้",
+  "settings.agentBehaviour.variantOverride.title": "แทนที่ตัวแปรโมเดล",
+  "settings.agentBehaviour.variantOverride.description": "แทนที่ตัวแปรของโมเดลสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
   "settings.agentBehaviour.prompt.description": "พรอมต์ระบบเพิ่มเติมสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.temperature.title": "อุณหภูมิ",

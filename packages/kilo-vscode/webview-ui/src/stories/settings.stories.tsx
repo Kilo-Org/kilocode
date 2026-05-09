@@ -126,7 +126,8 @@ export const AgentBehaviourEditCustomMode: Story = {
       reviewer: {
         description: "Review code for quality and best practices",
         prompt: "You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: "kilo/anthropic/claude-sonnet-4-6",
+        variant: "high",
         temperature: 0.3,
         permission: {
           read: "allow",

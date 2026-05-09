@@ -1250,6 +1250,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Vælg en agent at konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modeloverstyring",
   "settings.agentBehaviour.modelOverride.description": "Tilsidesæt standardmodellen for denne agent",
+  "settings.agentBehaviour.variantOverride.title": "Variantoverstyring",
+  "settings.agentBehaviour.variantOverride.description": "Tilsidesæt modelvarianten for denne agent",
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
   "settings.agentBehaviour.prompt.description": "Yderligere systemprompt for denne agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",

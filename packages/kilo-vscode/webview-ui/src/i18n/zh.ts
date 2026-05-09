@@ -1218,6 +1218,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
   "settings.agentBehaviour.modelOverride.description": "覆盖此智能体的默认模型",
+  "settings.agentBehaviour.variantOverride.title": "模型变体覆盖",
+  "settings.agentBehaviour.variantOverride.description": "覆盖此智能体的模型变体",
   "settings.agentBehaviour.prompt.title": "自定义提示词",
   "settings.agentBehaviour.prompt.description": "此智能体的附加系统提示词",
   "settings.agentBehaviour.temperature.title": "温度",

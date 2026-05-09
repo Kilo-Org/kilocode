@@ -23,14 +23,32 @@ export interface ThinkingSelectorBaseProps {
   value: string | undefined
   /** Called when the user picks a variant */
   onSelect: (value: string) => void
+  /** Called when the user clears selection via default row. */
+  onClear?: () => void
+  /** Include default/unset row at top. */
+  allowClear?: boolean
+  /** Label for default/unset row. */
+  clearLabel?: string
+  /** Popover placement — defaults to top-start. */
+  placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
+  /** Listen for the global prompt trigger event. Defaults to true. */
+  globalTrigger?: boolean
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
   const [focused, setFocused] = createSignal(-1)
   let listRef: HTMLDivElement | undefined
+
+  const rows = () => (props.allowClear ? [undefined, ...props.variants] : props.variants)
+  const clearLabel = () => props.clearLabel ?? "Not set"
+
+  function display(value: string | undefined) {
+    if (!value) return clearLabel()
+    return value.charAt(0).toUpperCase() + value.slice(1)
+  }
 
   function focusItem(idx: number) {
     const items = listRef?.querySelectorAll<HTMLElement>("[role=option]")
@@ -47,7 +65,8 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   function onOpen(val: boolean) {
     setOpen(val)
     if (val) {
-      const idx = props.variants.findIndex((v) => v === props.value)
+      const items = rows()
+      const idx = items.findIndex((v) => v === props.value)
       requestAnimationFrame(() => focusItem(idx >= 0 ? idx : 0))
       return
     }
@@ -55,20 +74,29 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   }
 
   const onTrigger = () => {
-    if (props.variants.length === 0) return
+    if (rows().length === 0) return
     onOpen(true)
   }
-  window.addEventListener("openVariantPicker", onTrigger)
-  onCleanup(() => window.removeEventListener("openVariantPicker", onTrigger))
+  if (props.globalTrigger ?? true) {
+    window.addEventListener("openVariantPicker", onTrigger)
+    onCleanup(() => window.removeEventListener("openVariantPicker", onTrigger))
+  }
 
-  function pick(value: string) {
+  function pick(value: string | undefined) {
+    if (value === undefined) {
+      props.onClear?.()
+      onOpen(false)
+      return
+    }
     props.onSelect(value)
     onOpen(false)
   }
 
   function onKeyDown(e: KeyboardEvent) {
-    const len = props.variants.length
+    const items = rows()
+    const len = items.length
     const cur = focused()
+    if (len === 0) return
     if (e.key === "ArrowDown") {
       e.preventDefault()
       focusItem((cur + 1) % len)
@@ -91,7 +119,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     }
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
-      if (cur >= 0 && cur < len) pick(props.variants[cur])
+      if (cur >= 0 && cur < len) pick(items[cur])
       return
     }
     if (e.key === "Escape") {
@@ -101,16 +129,11 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     }
   }
 
-  const label = () => {
-    const v = props.value
-    return v ? v.charAt(0).toUpperCase() + v.slice(1) : ""
-  }
-
   return (
-    <Show when={props.variants.length > 0}>
+    <Show when={rows().length > 0}>
       <PopupSelector
         expanded={false}
-        placement="top-start"
+        placement={props.placement ?? "top-start"}
         preferredWidth={180}
         minHeight={100}
         deferDismiss={props.deferDismiss}
@@ -120,7 +143,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
         triggerProps={{ variant: "ghost", size: "small" }}
         trigger={
           <>
-            <span class="thinking-selector-trigger-label">{label()}</span>
+            <span class="thinking-selector-trigger-label">{display(props.value)}</span>
             <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
               <path d="M8 4l4 5H4l4-5z" />
             </svg>
@@ -135,7 +158,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
             onKeyDown={onKeyDown}
             style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
           >
-            <For each={props.variants}>
+            <For each={rows()}>
               {(v, i) => (
                 <div
                   class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
@@ -145,7 +168,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
                   onClick={() => pick(v)}
                   onFocus={() => setFocused(i())}
                 >
-                  <span class="thinking-selector-item-name">{v.charAt(0).toUpperCase() + v.slice(1)}</span>
+                  <span class="thinking-selector-item-name">{display(v)}</span>
                 </div>
               )}
             </For>

@@ -1250,6 +1250,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Yapılandırmak için bir ajan seçin…",
   "settings.agentBehaviour.modelOverride.title": "Model Geçersiz Kılma",
   "settings.agentBehaviour.modelOverride.description": "Bu ajan için varsayılan modeli geçersiz kıl",
+  "settings.agentBehaviour.variantOverride.title": "Varyant Geçersiz Kılma",
+  "settings.agentBehaviour.variantOverride.description": "Bu ajan için model varyantını geçersiz kıl",
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",

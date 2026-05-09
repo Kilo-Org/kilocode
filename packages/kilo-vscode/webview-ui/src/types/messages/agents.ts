@@ -30,6 +30,7 @@ export interface AgentInfo {
 
 export interface AgentConfig {
   model?: string | null
+  variant?: string | null
   prompt?: string | null
   description?: string | null
   mode?: "subagent" | "primary" | "all"

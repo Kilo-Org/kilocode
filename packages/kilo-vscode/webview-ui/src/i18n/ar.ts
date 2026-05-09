@@ -1228,6 +1228,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "اختر وكيلاً للتهيئة…",
   "settings.agentBehaviour.modelOverride.title": "تجاوز النموذج",
   "settings.agentBehaviour.modelOverride.description": "تجاوز النموذج الافتراضي لهذا الوكيل",
+  "settings.agentBehaviour.variantOverride.title": "تجاوز المتغير",
+  "settings.agentBehaviour.variantOverride.description": "تجاوز متغير النموذج لهذا الوكيل",
   "settings.agentBehaviour.prompt.title": "موجه مخصص",
   "settings.agentBehaviour.prompt.description": "موجه نظام إضافي لهذا الوكيل",
   "settings.agentBehaviour.temperature.title": "الحرارة",
