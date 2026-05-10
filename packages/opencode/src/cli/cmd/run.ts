@@ -295,12 +295,7 @@ export const RunCommand = cmd({
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
-        // kilocode_change end
-        .option("dangerously-skip-permissions", {
-          type: "boolean",
-          describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
-          default: false,
-        })
+      // kilocode_change end
     )
   },
   handler: async (args) => {
