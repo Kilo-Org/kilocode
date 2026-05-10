@@ -3,11 +3,6 @@ import { getKiloUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
 import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
-export type KiloModelsResult = {
-  models: Record<string, any>
-  error?: { kind: "unauthorized" | "network" | "schema" | "http"; status?: number }
-}
-
 /**
  * OpenRouter model schema
  */
@@ -68,13 +63,13 @@ function parseApiPrice(price: string | null | undefined): number | undefined {
  * Fetch models from Kilo API (OpenRouter-compatible endpoint)
  *
  * @param options - Configuration options
- * @returns Typed result with models and optional error info
+ * @returns Record of models in ModelsDev.Model format
  */
 export async function fetchKiloModels(options?: {
   kilocodeToken?: string
   kilocodeOrganizationId?: string
   baseURL?: string
-}): Promise<KiloModelsResult> {
+}): Promise<Record<string, any>> {
   const token = options?.kilocodeToken
   const organizationId = options?.kilocodeOrganizationId
 
@@ -89,60 +84,54 @@ export async function fetchKiloModels(options?: {
   // Construct models endpoint
   const modelsURL = `${finalBaseURL}/models`
 
-  const response = await fetch(modelsURL, {
-    headers: {
-      ...getDefaultHeaders(),
-      ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
-  }).catch((err: unknown) => err as Error)
+  try {
+    // Fetch models with timeout
+    const response = await fetch(modelsURL, {
+      headers: {
+        ...getDefaultHeaders(),
+        ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
+    })
 
-  if (response instanceof Error) {
-    return { models: {}, error: { kind: "network" } }
-  }
-
-  if (!response.ok) {
-    // 401 with auth credentials: fall back to unauthenticated public endpoint
-    if (response.status === 401 && (token || organizationId)) {
-      return fetchKiloModels({})
-    }
-    const kind = response.status === 401 || response.status === 403 ? "unauthorized" : "http"
-    return { models: {}, error: { kind, status: response.status } }
-  }
-
-  const json = await response.json().catch(() => null)
-
-  if (json === null) {
-    return { models: {}, error: { kind: "schema" } }
-  }
-
-  // Validate response schema
-  const result = openRouterModelsResponseSchema.safeParse(json)
-
-  if (!result.success) {
-    return { models: {}, error: { kind: "schema" } }
-  }
-
-  // Transform models to ModelsDev.Model format
-  const models: Record<string, any> = {}
-
-  for (const model of result.data.data) {
-    // Skip image generation models
-    if (model.architecture?.output_modalities?.includes("image")) {
-      continue
+    if (!response.ok) {
+      throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`)
     }
 
-    // Skip models that don't support tools — Kilo requires tool calling
-    if (!model.supported_parameters?.includes("tools")) {
-      continue
+    const json = await response.json()
+
+    // Validate response schema
+    const result = openRouterModelsResponseSchema.safeParse(json)
+
+    if (!result.success) {
+      console.error("Kilo models response validation failed:", result.error.format())
+      return {}
     }
 
-    const transformedModel = transformToModelDevFormat(model)
-    models[model.id] = transformedModel
-  }
+    // Transform models to ModelsDev.Model format
+    const models: Record<string, any> = {}
 
-  return { models }
+    for (const model of result.data.data) {
+      // Skip image generation models
+      if (model.architecture?.output_modalities?.includes("image")) {
+        continue
+      }
+
+      // Skip models that don't support tools — Kilo requires tool calling
+      if (!model.supported_parameters?.includes("tools")) {
+        continue
+      }
+
+      const transformedModel = transformToModelDevFormat(model)
+      models[model.id] = transformedModel
+    }
+
+    return models
+  } catch (error) {
+    console.error("Error fetching Kilo models:", error)
+    return {}
+  }
 }
 
 /**

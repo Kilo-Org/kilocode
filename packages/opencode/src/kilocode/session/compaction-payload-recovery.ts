@@ -26,7 +26,10 @@ export namespace KiloCompactionPayloadRecovery {
     ].join("\n\n")
   }
 
-  export function strip(input: { messages: MessageV2.WithParts[]; update: Update }) {
+  export function strip(input: {
+    messages: MessageV2.WithParts[]
+    update: Update
+  }) {
     return Effect.forEach(
       input.messages,
       (msg) =>

@@ -5128,7 +5128,6 @@ export type ProviderListResponses = {
       [key: string]: string
     }
     connected: Array<string>
-    failed: Array<string>
   }
 }
 
