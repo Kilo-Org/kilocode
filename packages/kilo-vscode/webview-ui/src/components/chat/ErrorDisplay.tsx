@@ -40,7 +40,10 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
   const oauth = createMemo(() => {
     const err = auth()
     if (!err) return false
-    return err.providerID === "openai" && (provider.authMethods()[err.providerID] ?? []).some((method) => method.type === "oauth")
+    return (
+      err.providerID === "openai" &&
+      (provider.authMethods()[err.providerID] ?? []).some((method) => method.type === "oauth")
+    )
   })
 
   const errorText = createMemo(() => {
@@ -110,7 +113,9 @@ export const ErrorDisplay: Component<ErrorDisplayProps> = (props) => {
           <p data-slot="auth-prompt-description">
             {oauth()
               ? t("error.providerAuth.chatgpt.description")
-              : t("error.providerAuth.description", { provider: authProvider()?.name ?? auth()?.providerID ?? "provider" })}
+              : t("error.providerAuth.description", {
+                  provider: authProvider()?.name ?? auth()?.providerID ?? "provider",
+                })}
           </p>
           <Button variant="primary" onClick={connectProvider}>
             {oauth() ? t("settings.providers.action.signInChatGPT") : t("common.connect")}
