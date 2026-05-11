@@ -13,14 +13,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
-        # kilocode_change start
-        with:
-          fetch-depth: 0
+        with: # kilocode_change
+          fetch-depth: 0 # kilocode_change
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-        # kilocode_change end
       # kilocode_change start
       - name: Warn on missing changeset
         if: github.event_name == 'pull_request'
