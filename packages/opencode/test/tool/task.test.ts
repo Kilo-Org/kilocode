@@ -383,6 +383,7 @@ describe("tool.task", () => {
           // kilocode_change end
           expect(seen?.tools).toEqual({
             todowrite: false,
+            task: false, // kilocode_change - Kilo disallows nested subagents
             bash: false,
             read: false,
           })
