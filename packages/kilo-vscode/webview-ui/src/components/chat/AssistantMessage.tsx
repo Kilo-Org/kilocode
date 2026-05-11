@@ -67,19 +67,26 @@ interface AssistantMessageProps {
   feedback?: MessageFeedbackControls
 }
 
+type ToolStateProps = {
+  input?: Record<string, unknown>
+  metadata?: Record<string, unknown>
+  output?: string
+  status?: string
+}
+
 function TodoToolCard(props: { part: ToolPart }) {
   const render = ToolRegistry.render(props.part.tool)
-  const state = props.part.state as any
+  const state = () => props.part.state as ToolStateProps
   return (
     <Show when={render}>
       {(renderFn) => (
         <Dynamic
           component={renderFn()}
-          input={state?.input ?? {}}
-          metadata={state?.metadata ?? {}}
+          input={state()?.input ?? {}}
+          metadata={state()?.metadata ?? {}}
           tool={props.part.tool}
-          output={state?.output}
-          status={state?.status}
+          output={state()?.output}
+          status={state()?.status}
           defaultOpen
           reveal={false}
         />
@@ -90,23 +97,23 @@ function TodoToolCard(props: { part: ToolPart }) {
 
 function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
-  const state = props.part.state as any
+  const state = () => props.part.state as ToolStateProps
   return (
     <Show when={render}>
       {(card) => (
         <Dynamic
           component={card() as unknown as Component<Record<string, unknown>>}
-          input={state?.input ?? {}}
-          metadata={state?.metadata ?? {}}
+          input={state()?.input ?? {}}
+          metadata={state()?.metadata ?? {}}
           partMetadata={props.part.metadata ?? {}}
           tool={props.part.tool}
           partID={props.part.id}
           callID={props.part.callID}
-          output={state?.output}
-          status={state?.status}
+          output={state()?.output}
+          status={state()?.status}
           defaultOpen={props.defaultOpen}
           animate
-          reveal={state?.status === "pending" || state?.status === "running"}
+          reveal={state()?.status === "pending" || state()?.status === "running"}
         />
       )}
     </Show>

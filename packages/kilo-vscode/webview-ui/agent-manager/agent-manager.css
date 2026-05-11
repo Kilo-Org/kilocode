@@ -1028,8 +1028,17 @@ button.am-section-toggle:hover .am-section-label {
   border-bottom: 1px solid var(--border-weak-base);
   background: var(--surface-base);
   height: 36px;
-  padding: 0 4px;
   flex-shrink: 0;
+}
+
+.am-tab-leading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 0 4px;
+  border-right: 1px solid var(--border-weak-base);
 }
 
 .am-tab-list {
@@ -1050,7 +1059,6 @@ button.am-section-toggle:hover .am-section-label {
 .am-tab-list-wrap {
   display: flex;
   align-items: stretch;
-  gap: 4px;
   min-width: 0;
   flex: 0 1 auto;
   max-width: 100%;
@@ -1066,10 +1074,27 @@ button.am-section-toggle:hover .am-section-label {
   position: relative;
   display: flex;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   align-items: stretch;
   height: 100%;
   overflow: hidden;
+}
+
+/* Fixed add-button area after the scrollable tab list */
+.am-tab-add-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: stretch;
+  padding-right: 4px;
+}
+
+.am-tab-add-separator {
+  width: 1px;
+  align-self: stretch;
+  margin-right: 4px;
+  background: var(--border-weak-base);
+  flex-shrink: 0;
 }
 
 /* Fade indicators for overflow */
@@ -1109,18 +1134,21 @@ button.am-section-toggle:hover .am-section-label {
   font-size: var(--kilo-font-size-12);
   cursor: pointer;
   white-space: nowrap;
-  border: none;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-bottom-width: 2px;
+  border-radius: 0;
   min-width: 0;
   width: 100%;
   height: 100%;
   transition:
-    background-color 120ms ease,
+    background 120ms ease,
     border-color 120ms ease,
     color 120ms ease;
 }
 
-.am-tab:hover {
+.am-tab:hover,
+.am-tab:focus-visible {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
   color: var(--text-base);
 }
 
@@ -1151,6 +1179,24 @@ button.am-section-toggle:hover .am-section-label {
   white-space: nowrap;
 }
 
+.am-tab-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+}
+
+.am-tab-tooltip[data-component="tooltip-trigger"] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  padding-right: 27px;
+  margin-right: -27px;
+}
+
 .am-tab-close-wrap {
   display: inline-flex;
   align-items: center;
@@ -1160,6 +1206,8 @@ button.am-section-toggle:hover .am-section-label {
   flex-shrink: 0;
   opacity: 0;
   pointer-events: none;
+  position: relative;
+  z-index: 1;
   transition: opacity 100ms ease;
 }
 
@@ -1209,6 +1257,11 @@ button.am-section-toggle:hover .am-section-label {
   height: 100%;
   min-width: 0;
   width: 100%;
+}
+
+.am-tab-sortable > .am-tab,
+.am-tab-sortable > [data-slot="context-menu-trigger"] > .am-tab {
+  height: 100%;
 }
 
 .am-tab-dragging {
@@ -1273,7 +1326,6 @@ body.am-wt-dragging-active * {
 .am-tab-add-split {
   flex-shrink: 0;
   align-self: center;
-  margin-right: 2px;
 }
 
 .am-tab-actions {
@@ -1281,8 +1333,11 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  align-self: stretch;
   margin-left: auto;
+  padding-left: 6px;
   padding-right: 4px;
+  border-left: 1px solid var(--border-weak-base);
 }
 
 .am-tabs-menu-trigger {
@@ -1936,8 +1991,8 @@ body.am-wt-dragging-active * {
 
 .am-markdown-comment-button:hover,
 .am-markdown-comment-button:focus-visible {
-  color: var(--text-base);
-  background: var(--surface-interactive-base);
+  color: var(--vscode-button-foreground, var(--icon-invert-base, #fff));
+  background: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base)));
 }
 
 .am-markdown-line-number {
