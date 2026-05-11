@@ -6,9 +6,9 @@ platform: new
 
 # Agent Property Reference
 
-This page documents every configuration property you can set on an agent in Kilo Code. Properties apply to both built-in agents (like `build` and `plan`) when overriding them and to custom agents you create.
+This page documents every configuration property you can set on an agent in Kilo Code. Properties apply to both built-in agents (like `code` and `plan`) when overriding them and to custom agents you create.
 
-Agents are configured either as entries in the `agent` key of `kilo.jsonc`, or as Markdown files with YAML frontmatter placed in `.kilo/agents/` (project) or `~/.config/kilo/agent/` (global). See [Custom Modes](/docs/customize/custom-modes) and [Custom Subagents](/docs/customize/custom-subagents) for setup instructions.
+Agents are configured either as entries in the `agent` key of `kilo.jsonc`, or as Markdown files with YAML frontmatter placed in `.kilo/agents/` (project) or `~/.config/kilo/agents/` (global). See [Custom Modes](/docs/customize/custom-modes) and [Custom Subagents](/docs/customize/custom-subagents) for setup instructions.
 
 ---
 
