@@ -92,6 +92,10 @@ type CompletedCompaction = {
   summary: string | undefined
 }
 
+// kilocode_change start - allow safe pruning at cache-invalidating boundaries
+export type PruneReason = "normal" | "post-compaction" | "payload-limit"
+// kilocode_change end
+
 function summaryText(message: MessageV2.WithParts) {
   const text = message.parts
     .filter((part): part is MessageV2.TextPart => part.type === "text")
@@ -188,7 +192,7 @@ export interface Interface {
     tokens: MessageV2.Assistant["tokens"]
     model: Provider.Model
   }) => Effect.Effect<boolean>
-  readonly prune: (input: { sessionID: SessionID }) => Effect.Effect<void>
+  readonly prune: (input: { sessionID: SessionID; reason?: PruneReason }) => Effect.Effect<void>
   readonly process: (input: {
     parentID: MessageID
     messages: MessageV2.WithParts[]
@@ -296,10 +300,12 @@ export const layer: Layer.Layer<
 
     // goes backwards through parts until there are PRUNE_PROTECT tokens worth of tool
     // calls, then erases output of older tool calls to free context space
-    const prune = Effect.fn("SessionCompaction.prune")(function* (input: { sessionID: SessionID }) {
+    const prune = Effect.fn("SessionCompaction.prune")(function* (input: { sessionID: SessionID; reason?: PruneReason }) {
       const cfg = yield* config.get()
-      if (!cfg.compaction?.prune) return
-      log.info("pruning")
+      const reason = input.reason ?? "normal"
+      if (cfg.compaction?.prune === false) return
+      if (reason === "normal" && cfg.compaction?.prune !== true) return
+      log.info("pruning", { reason })
 
       const msgs = yield* session
         .messages({ sessionID: input.sessionID })
@@ -338,7 +344,7 @@ export const layer: Layer.Layer<
             yield* session.updatePart(part)
           }
         }
-        log.info("pruned", { count: toPrune.length })
+        log.info("pruned", { reason, count: toPrune.length })
       }
     })
 
@@ -557,7 +563,10 @@ export const layer: Layer.Layer<
       }
 
       if (processor.message.error) return "stop"
-      if (result === "continue") yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
+      if (result === "continue") {
+        yield* prune({ sessionID: input.sessionID, reason: "post-compaction" }) // kilocode_change
+        yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
+      }
       return result
     })
 
@@ -616,7 +625,7 @@ export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"];
   return runPromise((svc) => svc.isOverflow(input))
 }
 
-export async function prune(input: { sessionID: SessionID }) {
+export async function prune(input: { sessionID: SessionID; reason?: PruneReason }) {
   return runPromise((svc) => svc.prune(input))
 }
 
