@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 7.2.49
+
+### Patch Changes
+
+- [#10076](https://github.com/Kilo-Org/kilocode/pull/10076) [`c48b31c`](https://github.com/Kilo-Org/kilocode/commit/c48b31c3ec077ea88549a1f1f025b558a1f8abf6) - Fix garbled diff and additions/deletions counts shown by `apply_patch` when updating a non-UTF-8 file.
+
+- [#10077](https://github.com/Kilo-Org/kilocode/pull/10077) [`1cf0943`](https://github.com/Kilo-Org/kilocode/commit/1cf09437f9d6cf8227f28d6a85a84d4766f26bc0) - Speed up reading large files: the `read` tool now streams UTF-8 content from disk and stops once the line/byte cap is reached, instead of loading the whole file into memory first.
+
 ## 7.2.48
 
 ### Patch Changes
