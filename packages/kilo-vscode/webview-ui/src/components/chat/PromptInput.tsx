@@ -934,6 +934,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Show when={ghost.text()}>
               <span class="prompt-input-ghost-text">{ghost.text()}</span>
             </Show>
+            {/* A trailing newline is collapsed in a <div> with white-space: pre-wrap
+                but renders as a real empty line in the <textarea>. Without this
+                <br>, the overlay ends up ~1 line shorter than the textarea, which
+                desyncs scrollTop and makes the visible caret appear one line off
+                from where the textarea actually inserts text. */}
+            <Show when={text().endsWith("\n")}>
+              <br />
+            </Show>
           </div>
           <textarea
             ref={textareaRef}
