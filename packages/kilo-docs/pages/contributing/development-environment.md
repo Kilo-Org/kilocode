@@ -177,9 +177,10 @@ Before a commit is finalized, the `.husky/pre-commit` hook runs:
 
 Before changes are pushed to the remote repository, the `.husky/pre-push` hook runs:
 
-1.  **Branch Check**: Prevents pushing directly to the `main` branch.
-2.  **Compilation**: Runs `npm run compile` to ensure the project builds successfully.
-3.  **Changeset Check**: Checks if a changeset file exists in `.changeset/` and reminds you to create one using `npm run changeset` if necessary.
+1.  **Bun Version Check**: Verifies your Bun version matches the root `package.json` requirement.
+2.  **Type Checking**: Runs `bun typecheck` to ensure the project typechecks successfully.
+
+Changeset enforcement happens in the PR `typecheck` workflow. Its `changeset` job fails release-note-worthy product changes that do not include a `.changeset/*.md` file.
 
 These hooks help maintain code quality and consistency. If you encounter issues with commits or pushes, check the output from these hooks for error messages.
 

@@ -13,9 +13,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
+        with:
+          fetch-depth: 0 # kilocode_change
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Check changeset
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bun run script/check-changeset.ts --base "$BASE_SHA"
+
+      # kilocode_change end
       - name: Run typecheck
         run: bun typecheck
