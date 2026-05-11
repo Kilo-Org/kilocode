@@ -102,6 +102,44 @@ function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void 
 }
 
 describe("Kilo task nesting", () => {
+  it.live("allows primary agents to delegate one level to a subagent", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        let seen: SessionPrompt.PromptInput | undefined
+        const promptOps = stubOps({ onPrompt: (input) => (seen = input) })
+
+        const result = yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "explore",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        const kids = yield* sessions.children(chat.id)
+        expect(kids).toHaveLength(1)
+        expect(kids[0]?.id).toBe(result.metadata.sessionId)
+        expect(kids[0]?.parentID).toBe(chat.id)
+        expect(seen?.sessionID).toBe(result.metadata.sessionId)
+        expect(seen?.agent).toBe("explore")
+      }),
+    ),
+  )
+
   it.live("disables nested task tool even when global task permission allows it", () =>
     provideTmpdirInstance(
       () =>
