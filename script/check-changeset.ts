@@ -42,8 +42,6 @@ const scopes = [
   "packages/opencode/src/",
   "packages/plugin/package.json",
   "packages/plugin/src/",
-  "packages/sdk/js/package.json",
-  "packages/sdk/js/src/",
 ]
 
 function run(cmd: string, args: string[]) {
@@ -83,7 +81,6 @@ function skipped(file: string) {
   if (lower.includes("/test/") || lower.includes("/tests/") || lower.includes("/__tests__/")) return true
   if (lower.includes("/fixture/") || lower.includes("/fixtures/")) return true
   if (lower.includes("/stories/") || lower.match(/\.(test|spec|stories)\.[^.]+$/)) return true
-  if (lower.startsWith("packages/sdk/js/src/gen/")) return true
   return false
 }
 
