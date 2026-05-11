@@ -38,7 +38,7 @@ function valid(auth: Auth) {
   return auth.access && auth.expires > Date.now()
 }
 
-function changed(auth: Auth, refresh: string) {
+function usable(auth: Auth, refresh: string) {
   return auth.refresh !== refresh || valid(auth)
 }
 
@@ -60,7 +60,11 @@ function recoverable(err: unknown) {
 
 export async function refreshCodexAuth(input: Input) {
   const inflight = pending.get(input.auth.refresh)
-  if (inflight) return inflight
+  if (inflight) {
+    const next = await inflight
+    assign(input.auth, next)
+    return next
+  }
 
   const promise = (async () => {
     const fresh = await input.getAuth()
@@ -85,7 +89,7 @@ export async function refreshCodexAuth(input: Input) {
 
       const latest = await input.getAuth()
       const next = oauth(latest)
-      if (next && changed(next, input.auth.refresh)) return next
+      if (next && usable(next, input.auth.refresh)) return next
 
       throw new CodexAuthExpiredError()
     }

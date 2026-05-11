@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { APICallError } from "ai"
 import { MessageV2 } from "../../src/session/message-v2"
-import { CodexAuthExpiredError } from "../../src/kilocode/provider/codex-refresh"
 import { ProviderTransform } from "@/provider/transform"
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../../src/provider/schema"
@@ -1248,18 +1247,6 @@ describe("session.message-v2.fromError", () => {
       name: "UnknownError",
       data: {
         message: "123",
-      },
-    })
-  })
-
-  test("serializes expired Codex auth as ProviderAuthError", () => {
-    const result = MessageV2.fromError(new CodexAuthExpiredError(), { providerID: ProviderID.make("openai") })
-
-    expect(result).toStrictEqual({
-      name: "ProviderAuthError",
-      data: {
-        providerID: "openai",
-        message: "Your ChatGPT sign-in expired or was revoked. Sign in with ChatGPT again to continue using Codex models.",
       },
     })
   })

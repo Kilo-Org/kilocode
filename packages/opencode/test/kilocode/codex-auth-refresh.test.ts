@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { CodexAuthExpiredError, refreshCodexAuth } from "../../src/kilocode/provider/codex-refresh"
 import type { PluginInput } from "@kilocode/plugin"
+import { MessageV2 } from "../../src/session/message-v2"
+import { ProviderID } from "../../src/provider/schema"
 
 type Auth = {
   type: "oauth"
@@ -29,28 +31,41 @@ function plugin(persist: (auth: Auth) => void): PluginInput {
 }
 
 describe("Codex auth refresh", () => {
+  test("serializes expired Codex auth as ProviderAuthError", () => {
+    const result = MessageV2.fromError(new CodexAuthExpiredError(), { providerID: ProviderID.make("openai") })
+
+    expect(result).toStrictEqual({
+      name: "ProviderAuthError",
+      data: {
+        providerID: "openai",
+        message: "Your ChatGPT sign-in expired or was revoked. Sign in with ChatGPT again to continue using Codex models.",
+      },
+    })
+  })
+
   test("coalesces concurrent refreshes and persists rotated tokens", async () => {
     const calls: string[] = []
     const writes: Auth[] = []
-    const auth = expired()
+    const first = expired()
+    const second = expired()
     const refresh = async (token: string) => {
       calls.push(token)
       await new Promise((resolve) => setTimeout(resolve, 1))
       return { id_token: "", access_token: "next-access", refresh_token: "next-refresh", expires_in: 60 }
     }
 
-    const [first, second] = await Promise.all([
+    const [a, b] = await Promise.all([
       refreshCodexAuth({
         input: plugin((auth) => writes.push(auth)),
-        getAuth: async () => auth,
-        auth,
+        getAuth: async () => first,
+        auth: first,
         refresh,
         account: () => undefined,
       }),
       refreshCodexAuth({
         input: plugin((auth) => writes.push(auth)),
-        getAuth: async () => auth,
-        auth,
+        getAuth: async () => second,
+        auth: second,
         refresh,
         account: () => undefined,
       }),
@@ -58,8 +73,10 @@ describe("Codex auth refresh", () => {
 
     expect(calls).toEqual(["old-refresh"])
     expect(writes).toHaveLength(1)
+    expect(a.access).toBe("next-access")
+    expect(b.refresh).toBe("next-refresh")
     expect(first.access).toBe("next-access")
-    expect(second.refresh).toBe("next-refresh")
+    expect(second.access).toBe("next-access")
   })
 
   test("uses a newer stored token after refresh 401", async () => {
