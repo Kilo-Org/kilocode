@@ -51,6 +51,7 @@ tsconfig.tsbuildinfo
 .kilo/pnpm-lock.yaml
 .kilo/bun.lock
 .kilo/yarn.lock
+.kilo/node_modules
 .kilo/plans/*upstream-merge-report-*.md
 .kilocode/.gitignore
 .kilocode/package.json
@@ -58,6 +59,7 @@ tsconfig.tsbuildinfo
 .kilocode/pnpm-lock.yaml
 .kilocode/bun.lock
 .kilocode/yarn.lock
+.kilocode/node_modules
 
 # Test Artifacts
 packages/app/.artifacts/
