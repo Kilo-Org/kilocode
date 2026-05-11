@@ -123,6 +123,8 @@ function mockNotificationsValue(items: KilocodeNotification[] = []) {
   return {
     notifications: () => items,
     filteredNotifications: () => items,
+    dismissedIds: () => [],
+    loaded: () => true,
     dismiss: noop,
   }
 }

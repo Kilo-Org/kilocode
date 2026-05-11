@@ -13,6 +13,7 @@ import { ChatView } from "../components/chat/ChatView"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
+import { FreeTierSignInBanner } from "../components/chat/FreeTierSignInBanner"
 import { MessageList } from "../components/chat/MessageList"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
@@ -229,6 +230,38 @@ export const SuggestBarReview: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const FreeTierSignInBannerStory: Story = {
+  name: "FreeTierSignInBanner — auto free nudge",
+  render: () => {
+    const server = {
+      connectionState: () => "connected" as const,
+      serverInfo: () => undefined,
+      extensionVersion: () => "1.0.0",
+      errorMessage: () => undefined,
+      errorDetails: () => undefined,
+      isConnected: () => true,
+      profileData: () => null,
+      profileLoaded: () => true,
+      deviceAuth: () => ({ status: "idle" as const }),
+      startLogin: () => {},
+      goToLogin: () => {},
+      vscodeLanguage: () => "en",
+      languageOverride: () => undefined,
+      workspaceDirectory: () => "/project",
+      gitInstalled: () => true,
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID}>
+        <ServerContext.Provider value={server as any}>
+          <div style={{ width: "100%" }}>
+            <FreeTierSignInBanner />
+          </div>
+        </ServerContext.Provider>
+      </StoryProviders>
+    )
+  },
 }
 
 const toolUserID = "user-msg-spacing-001"
@@ -674,6 +707,7 @@ const mockServer = {
     balance: { balance: 5.0 },
     currentOrgId: "org-1",
   }),
+  profileLoaded: () => true,
   deviceAuth: () => ({ status: "idle" as const }),
   startLogin: () => {},
   goToLogin: () => {},

@@ -1,0 +1,42 @@
+/* ============================================
+   Free Tier Sign-In Banner
+   ============================================ */
+
+[data-component="free-tier-signin-banner"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--background-base) 88%, var(--vscode-textLink-foreground) 12%);
+
+  [data-slot="free-tier-signin-banner-copy"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  [data-slot="free-tier-signin-banner-icon"] {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-info, var(--vscode-textLink-foreground));
+    flex-shrink: 0;
+  }
+
+  [data-slot="free-tier-signin-banner-text"] {
+    min-width: 0;
+    color: var(--text-base);
+    font-size: var(--kilo-font-size-12);
+    line-height: 1.4;
+  }
+
+  [data-slot="free-tier-signin-banner-actions"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+}

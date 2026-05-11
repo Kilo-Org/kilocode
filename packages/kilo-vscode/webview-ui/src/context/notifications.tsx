@@ -14,6 +14,8 @@ import type { KilocodeNotification, ExtensionMessage } from "../types/messages"
 interface NotificationsContextValue {
   notifications: Accessor<KilocodeNotification[]>
   filteredNotifications: Accessor<KilocodeNotification[]>
+  dismissedIds: Accessor<string[]>
+  loaded: Accessor<boolean>
   dismiss: (id: string) => void
 }
 
@@ -23,11 +25,13 @@ export const NotificationsProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const [notifications, setNotifications] = createSignal<KilocodeNotification[]>([])
   const [dismissedIds, setDismissedIds] = createSignal<string[]>([])
+  const [loaded, setLoaded] = createSignal(false)
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "notificationsLoaded") {
       setNotifications(message.notifications)
       setDismissedIds(message.dismissedIds)
+      setLoaded(true)
     }
   })
 
@@ -64,6 +68,8 @@ export const NotificationsProvider: ParentComponent = (props) => {
   const value: NotificationsContextValue = {
     notifications,
     filteredNotifications,
+    dismissedIds,
+    loaded,
     dismiss,
   }
 

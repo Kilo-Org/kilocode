@@ -598,6 +598,9 @@ export const dict = {
   "terminal.connectionLost.description":
     "The terminal connection was interrupted. This can happen when the server restarts.",
 
+  "chat.signInBanner.text":
+    "You're using Auto Free. Sign in to unlock 500+ models, including Auto Balanced — a great mix of capability and price.",
+
   "common.closeTab": "Close tab",
   "common.signIn": "Sign in",
   "common.signOut": "Sign out",
