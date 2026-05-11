@@ -1603,9 +1603,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               msgs = yield* MessageV2.filterCompactedEffect(sessionID)
               msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
               msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
+              yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
               KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
               msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
               modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
+              const nextSize = Buffer.byteLength(JSON.stringify(modelMsgs))
+              if (nextSize > REQUEST_PRUNE_BYTES) log.warn("payload still large after pruning", { size: nextSize })
             }
             // kilocode_change end
             const system = [...env, ...instructions, ...(skills ? [skills] : [])]
