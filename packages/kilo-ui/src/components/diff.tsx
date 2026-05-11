@@ -256,10 +256,7 @@ export function Diff<T>(props: DiffProps<T>) {
     host.removeAttribute("data-color-scheme")
   }
 
-  // Patch a bug in @pierre/diffs where `grid-template-columns: 100% auto` is set
-  // for `line-info-basic` separators under `@media (pointer: fine)`, causing the
-  // expand button to consume 100% of the gutter width and overlap the separator
-  // content text. We inject into `@layer unsafe` which overrides `@layer base`.
+  // Patch Pierre shadow styles for Kilo-specific layout and contrast tweaks.
   let separatorPatchSheet: CSSStyleSheet | null = null
   const patchSeparatorLayout = () => {
     const root = getRoot()
@@ -267,7 +264,7 @@ export function Diff<T>(props: DiffProps<T>) {
     if (!separatorPatchSheet) {
       separatorPatchSheet = new CSSStyleSheet()
       separatorPatchSheet.replaceSync(
-        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } }`,
+        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } [data-utility-button] { background-color: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base))); color: var(--vscode-button-foreground, var(--icon-invert-base, #fff)); } }`,
       )
     }
     if (!root.adoptedStyleSheets.includes(separatorPatchSheet))

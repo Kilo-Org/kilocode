@@ -421,6 +421,15 @@ async function main() {
   await git.createBranch(opencodeBranch)
   logger.info(`Created opencode branch: ${opencodeBranch}`)
 
+  const prior = await git.findLatestCompatCommit(config.baseBranch, targetVersion.commit)
+  if (prior) {
+    logger.info(
+      `Found previous compatibility base: ${prior.message} (${prior.commit.slice(0, 8)}) from upstream ${prior.upstream.slice(0, 8)}`,
+    )
+  } else {
+    logger.warn("No previous compatibility base found; merge base will remain pristine upstream")
+  }
+
   // Step 6: Apply ALL transformations to opencode branch (pre-merge)
   // This reduces conflicts by transforming upstream code to Kilo conventions BEFORE merging
   logger.step(6, 8, "Applying transformations to opencode branch (pre-merge)...")
@@ -508,13 +517,25 @@ async function main() {
 
   // Commit all transformations
   await git.stageAll()
-  await git.commit(`refactor: kilo compat for ${targetVersion.tag}`)
+  const compatMessage = `refactor: kilo compat for ${targetVersion.tag}`
+  if (prior) {
+    const tree = await git.writeTree()
+    const commit = await git.createCommit(tree, compatMessage, prior.commit)
+    await git.updateBranch(opencodeBranch, commit)
+    await git.checkout(opencodeBranch)
+  } else {
+    await git.commit(compatMessage)
+  }
   logger.success("Committed pre-merge transformations")
 
   // Step 7: Merge into Kilo branch
   logger.step(7, 8, "Merging into Kilo branch...")
 
   await git.checkout(kiloBranch)
+  if (prior) {
+    const linked = await git.recordAncestor(targetVersion.commit, `merge: record upstream ${targetVersion.tag}`)
+    if (linked) logger.info(`Recorded upstream ${targetVersion.tag} as Kilo branch ancestry`)
+  }
   const mergeResult = await git.merge(opencodeBranch)
 
   if (!mergeResult.success) {

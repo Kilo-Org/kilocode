@@ -1991,8 +1991,8 @@ body.am-wt-dragging-active * {
 
 .am-markdown-comment-button:hover,
 .am-markdown-comment-button:focus-visible {
-  color: var(--text-base);
-  background: var(--surface-interactive-base);
+  color: var(--vscode-button-foreground, var(--icon-invert-base, #fff));
+  background: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base)));
 }
 
 .am-markdown-line-number {
