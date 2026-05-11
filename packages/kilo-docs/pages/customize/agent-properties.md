@@ -188,6 +188,11 @@ permission:
 | `websearch` | Web searches |
 | `todowrite` | Todo list management |
 | `external_directory` | Access to files outside the project root |
+| `skill` | Loading agent skills |
+| `lsp` | Language server protocol queries |
+| `question` | Asking the user clarifying questions |
+| `doom_loop` | Recovery prompts when the agent appears stuck |
+| `agent_manager` | Agent Manager tool (Kilo-specific, requires experimental flag) |
 
 **Rule evaluation:** Rules are applied in order and the **last matching rule wins**. Place broad wildcard rules (`"*"`) before specific ones so the specific rules take precedence.
 
@@ -243,11 +248,11 @@ disable: true
 
 ---
 
-## Provider-specific pass-through options
+## `options`
 
-Any key in the agent config that does not match a documented property is passed through directly to the model provider. This allows you to use model-specific parameters.
+**Type:** `object` (Record of string keys to any values)
 
-For example, to set OpenAI reasoning effort:
+An explicit map of provider-specific parameters to pass to the model. This is the canonical way to set model-specific options that Kilo does not define as first-class properties.
 
 ```jsonc
 {
@@ -255,13 +260,39 @@ For example, to set OpenAI reasoning effort:
     "deep-thinker": {
       "description": "Thorough reasoning for complex architectural decisions",
       "model": "openai/o3",
-      "reasoningEffort": "high"
+      "options": {
+        "reasoningEffort": "high"
+      }
     }
   }
 }
 ```
 
-**Guidance:** Consult your provider's documentation for available parameters. These options are not validated by Kilo and are forwarded as-is to the underlying API.
+**Shorthand:** Any key you place directly in the agent config that does not match a known property (`model`, `variant`, `temperature`, `top_p`, `prompt`, `description`, `mode`, `hidden`, `color`, `steps`, `permission`, `disable`, `options`) is automatically collected into `options` during config normalization. The shorthand and the explicit `options` block are merged, so these two configs are equivalent:
+
+```jsonc
+// Shorthand form — unknown key is promoted into options automatically
+{ "agent": { "deep-thinker": { "model": "openai/o3", "reasoningEffort": "high" } } }
+
+// Explicit form — identical effect
+{ "agent": { "deep-thinker": { "model": "openai/o3", "options": { "reasoningEffort": "high" } } } }
+```
+
+**Guidance:** Prefer the explicit `options` block for clarity — it makes provider-specific parameters easy to spot during code review. Consult your provider's documentation for available parameters. These values are not validated by Kilo.
+
+---
+
+## `variant`
+
+**Type:** `string`
+
+Sets the default model variant for this agent. Only applies when the agent has a `model` pinned and the user has not manually selected a different variant. Model variants are provider- and model-specific (for example, a "thinking" mode on models that expose extended reasoning modes).
+
+```yaml
+variant: thinking
+```
+
+**Guidance:** Leave unset unless you are working with a model that exposes named variants and you want the agent to always use a specific one. Variants are model-specific — check your provider's documentation for available options.
 
 ---
 
