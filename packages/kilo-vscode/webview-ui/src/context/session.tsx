@@ -1192,8 +1192,13 @@ export const SessionProvider: ParentComponent = (props) => {
             // Append text delta to text or reasoning parts
             ;(existing as { text: string }).text += delta.textDelta
           } else {
-            // Replace entire part
-            parts[effectiveMessageID][existingIndex] = part
+            // Preserve the proxy identity so Solid does not remount tool UI
+            // during streaming updates and restart pending animations.
+            const target = existing as unknown as Record<string, unknown>
+            for (const key of Object.keys(target)) {
+              if (!(key in part)) delete target[key]
+            }
+            Object.assign(existing, part)
           }
         } else {
           // Add new part
