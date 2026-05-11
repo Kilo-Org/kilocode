@@ -1,5 +1,7 @@
 # @kilocode/cli
 
+## 7.2.50
+
 ## 7.2.49
 
 ### Patch Changes

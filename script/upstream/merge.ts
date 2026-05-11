@@ -33,11 +33,16 @@ import { skipFiles } from "./transforms/skip-files"
 import { transformConflictedI18n, transformAllI18n } from "./transforms/transform-i18n"
 // New transforms for auto-resolving more conflict types
 import { transformConflictedTakeTheirs, transformAllTakeTheirs } from "./transforms/transform-take-theirs"
-import { transformConflictedPackageJson, transformAllPackageJson } from "./transforms/transform-package-json"
+import {
+  transformConflictedPackageJson,
+  transformAllPackageJson,
+  reconcileAllPackageJson,
+} from "./transforms/transform-package-json"
 import { transformConflictedScripts, transformAllScripts } from "./transforms/transform-scripts"
 import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
 import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
+import { writeVersion } from "./utils/upstream"
 
 interface MergeOptions {
   version?: string
@@ -508,6 +513,11 @@ async function main() {
   const keepOursResults = await resetToOurs(config.keepOurs, { dryRun: false, verbose: options.verbose })
   logger.success(`Reset ${keepOursResults.length} files to Kilo's version`)
 
+  // 6k. Record the last merged upstream tag so future automation can find it
+  // without walking ls-remote + isAncestor for every tag.
+  const versionFile = await writeVersion(targetVersion.tag)
+  logger.success(`Recorded ${targetVersion.tag} in ${versionFile.split("/").pop()}`)
+
   // Clean untracked build artifacts from Kilo-specific directories.
   // These packages don't exist in upstream, so their .gitignore files are absent
   // on the opencode branch. Artifacts like bin/, out/, .next/ etc. would otherwise
@@ -728,6 +738,24 @@ async function main() {
       }
     }
 
+    // Reconcile every package.json that the merge touched, regardless of
+    // whether it was conflicted, auto-resolved by rerere, or merged textually.
+    // rerere can replay stale resolutions that bypass our package.json
+    // transform entirely, so always run our merge logic as the final word for
+    // package.json content. Skip files that are still conflicted so the user
+    // can resolve them manually instead of silently overwriting markers.
+    const stillConflicted = new Set(await git.getConflictedFiles())
+    const reconcileResults = await reconcileAllPackageJson({
+      oursRef: baseSha,
+      theirsRef: opencodeBranch,
+      verbose: options.verbose,
+      skip: stillConflicted,
+    })
+    const reconcileCount = reconcileResults.filter((r) => r.action === "transformed" && r.changes.length > 0).length
+    if (reconcileCount > 0) {
+      logger.success(`Reconciled ${reconcileCount} package.json file(s) post-merge`)
+    }
+
     // Check remaining conflicts
     const remaining = await git.getConflictedFiles()
     // Combine git-reported conflicts with files flagged due to kilocode_change markers
@@ -785,6 +813,17 @@ async function main() {
     }
   } else {
     logger.success("Merge completed without conflicts!")
+    // Same reconcile pass as the conflict path: ensure rerere or git's textual
+    // merge can't slip stale package.json resolutions through.
+    const reconcileResults = await reconcileAllPackageJson({
+      oursRef: baseSha,
+      theirsRef: opencodeBranch,
+      verbose: options.verbose,
+    })
+    const reconcileCount = reconcileResults.filter((r) => r.action === "transformed" && r.changes.length > 0).length
+    if (reconcileCount > 0) {
+      logger.success(`Reconciled ${reconcileCount} package.json file(s) post-merge`)
+    }
     await git.stageAll()
     const hasChanges = await git.hasUncommittedChanges()
     if (hasChanges) {

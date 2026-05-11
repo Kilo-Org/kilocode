@@ -4,6 +4,7 @@ import {
   calcTotalCost,
   calcContextUsage,
   buildFamilyCosts,
+  buildFamilyParents,
   buildFamilyLabels,
   buildCostBreakdown,
   collapseCostBreakdown,
@@ -287,6 +288,83 @@ describe("buildFamilyCosts", () => {
     expect(costs.size).toBe(1)
     expect(costs.get("s1")).toBeCloseTo(0.01)
   })
+
+  it("subtracts child totals using task parent links when session metadata is missing", () => {
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const parts = { m1: [toolPart("task", "child", { subagent_type: "explore" })] }
+    const parents = buildFamilyParents(family, messages, parts)
+    const costs = buildFamilyCosts(family, messages, { root: {} }, parents)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+  })
+
+  it("returns own costs for a nested propagated subagent chain", () => {
+    const ids = ["root", "a", "b", "c"]
+    const own = new Map<string, number>([
+      ["root", 1],
+      ["a", 2],
+      ["b", 3],
+      ["c", 4],
+    ])
+    const total = ids.reduce((sum, sid) => sum + own.get(sid)!, 0)
+    const subtree = (index: number) => ids.slice(index).reduce((sum, sid) => sum + own.get(sid)!, 0)
+    const messages = Object.fromEntries(ids.map((sid, index) => [sid, [msg(`m-${sid}`, "assistant", subtree(index))]]))
+    const sessions = Object.fromEntries(ids.map((sid, index) => [sid, index === 0 ? {} : { parentID: ids[index - 1] }]))
+
+    const costs = buildFamilyCosts(new Set(ids), messages, sessions)
+    const sum = [...costs.values()].reduce((acc, cost) => acc + cost, 0)
+    const bad = ids.reduce((acc, _sid, index) => acc + subtree(index), 0)
+
+    expect(bad).toBe(30)
+    expect(costs.get("root")).toBe(1)
+    expect(costs.get("a")).toBe(2)
+    expect(costs.get("b")).toBe(3)
+    expect(costs.get("c")).toBe(4)
+    expect(sum).toBe(total)
+  })
+
+  it("returns own costs for a nested chain using task-derived parent links", () => {
+    const ids = ["root", "a", "b", "c"]
+    const own = { root: 1, a: 2, b: 3, c: 4 }
+    const subtree = (index: number) => ids.slice(index).reduce((sum, sid) => sum + own[sid as keyof typeof own], 0)
+    const messages = Object.fromEntries(ids.map((sid, index) => [sid, [msg(`m-${sid}`, "assistant", subtree(index))]]))
+    const parts = Object.fromEntries(
+      ids
+        .slice(0, -1)
+        .map((sid, index) => [`m-${sid}`, [toolPart("task", ids[index + 1], { subagent_type: "explore" })]]),
+    )
+    const parents = buildFamilyParents(new Set(ids), messages, parts)
+    const costs = buildFamilyCosts(new Set(ids), messages, { root: {} }, parents)
+    const sum = [...costs.values()].reduce((acc, cost) => acc + cost, 0)
+
+    expect(parents.size).toBe(3)
+    expect(costs.get("root")).toBe(1)
+    expect(costs.get("a")).toBe(2)
+    expect(costs.get("b")).toBe(3)
+    expect(costs.get("c")).toBe(4)
+    expect(sum).toBe(10)
+  })
+})
+
+describe("buildFamilyParents", () => {
+  it("derives child-to-parent links from task tool parts", () => {
+    const family = new Set(["root", "child"])
+    const messages = { root: [msg("m1", "assistant")], child: [msg("m2", "assistant")] }
+    const parts = { m1: [toolPart("task", "child", { subagent_type: "general" })] }
+    const parents = buildFamilyParents(family, messages, parts)
+    expect(parents.get("child")).toBe("root")
+  })
+
+  it("ignores task parts that point outside the family", () => {
+    const family = new Set(["root"])
+    const messages = { root: [msg("m1", "assistant")] }
+    const parts = { m1: [toolPart("task", "orphan", { subagent_type: "general" })] }
+    expect(buildFamilyParents(family, messages, parts).size).toBe(0)
+  })
 })
 
 describe("buildFamilyLabels", () => {
@@ -493,5 +571,18 @@ describe("collapseCostBreakdown", () => {
     const aggregated = result[9]
     expect(aggregated.label).toBe("12 older sessions")
     expect(aggregated.cost).toBeCloseTo(0.05 * 12)
+  })
+
+  it("collapses older nested rows after own-cost correction, not subtree totals", () => {
+    const items = [
+      { label: "This session", cost: 1 },
+      ...Array.from({ length: 10 }, (_, i) => ({ label: "explore", cost: i + 2 })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+    const hidden = result.at(-1)
+    const shown = result.reduce((sum, item) => sum + item.cost, 0)
+
+    expect(hidden).toEqual({ label: "2 older sessions", cost: 2 + 3 })
+    expect(shown).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11)
   })
 })

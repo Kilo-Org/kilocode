@@ -39,6 +39,7 @@ import {
   computeStatus,
   calcContextUsage,
   buildFamilyCosts,
+  buildFamilyParents,
   buildFamilyLabels,
   buildCostBreakdown,
   childID,
@@ -2195,14 +2196,16 @@ export const SessionProvider: ParentComponent = (props) => {
 
   /**
    * Per-session **own cost** — reads `store.messages` for per-session
-   * propagated totals and `store.sessions` for parent links so each
+   * propagated totals and task metadata as a fallback for parent links so each
    * session's entry excludes the cost already propagated up from its
    * descendants by the CLI backend.
    */
   const familyCosts = createMemo<Map<string, number>>(() => {
     const id = currentSessionID()
     if (!id) return new Map()
-    return buildFamilyCosts(sessionFamily(id), store.messages, store.sessions)
+    const family = sessionFamily(id)
+    const parents = buildFamilyParents(family, store.messages as any, store.parts as any)
+    return buildFamilyCosts(family, store.messages, store.sessions, parents)
   })
 
   /** Child session labels — only reads store.parts (not message costs). */
