@@ -62,7 +62,12 @@ file.
 
 Use `script/upstream/find-conflict-markers.sh <file>` to jump to each region,
 then read enough surrounding lines to understand the code — not just the
-conflict hunk. Specifically check:
+conflict hunk. The script also accepts a list of files in one call
+(`script/upstream/find-conflict-markers.sh file1 file2 ...`), which prints a
+`===== <file> =====` header before each file's matches. Use the batch form
+to triage all conflicted files at once instead of running a `for` loop —
+loops aren't covered by the agent's bash allowlist and will pause for
+permission. Specifically check:
 
 - is this a plain 3-way on a single expression, or a structural refactor?
 - does upstream rename/move something that invalidates a HEAD-only declaration?
