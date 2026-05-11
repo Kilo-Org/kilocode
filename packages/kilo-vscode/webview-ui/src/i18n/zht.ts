@@ -459,6 +459,10 @@ export const dict = {
   "error.promotionLimit.title": "您需要註冊才能繼續",
   "error.promotionLimit.description": "免費註冊以繼續探索500多個模型。只需2分鐘，無需信用卡。或稍後再來。",
   "error.promotionLimit.action": "註冊",
+  "error.providerAuth.title": "{{provider}} 已將您登出",
+  "error.providerAuth.description": "請重新連接 {{provider}}，然後再次發送訊息。",
+  "error.providerAuth.chatgpt.title": "OpenAI 已將您登出",
+  "error.providerAuth.chatgpt.description": "請再次登入 ChatGPT，然後重新發送訊息以繼續使用 Codex 模型。",
 
   "error.chain.unknown": "未知錯誤",
   "error.chain.causedBy": "原因：",

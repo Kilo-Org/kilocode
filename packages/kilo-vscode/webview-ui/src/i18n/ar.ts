@@ -462,6 +462,11 @@ export const dict = {
   "error.promotionLimit.description":
     "سجّل مجانًا للمتابعة واستكشاف أكثر من 500 نموذج. يستغرق دقيقتين، بدون بطاقة ائتمان. أو عُد لاحقًا.",
   "error.promotionLimit.action": "التسجيل",
+  "error.providerAuth.title": "تم تسجيل خروجك من {{provider}}",
+  "error.providerAuth.description": "أعد الاتصال بـ {{provider}}، ثم أرسل رسالتك مرة أخرى.",
+  "error.providerAuth.chatgpt.title": "تسجيل الدخول باستخدام ChatGPT مرة أخرى",
+  "error.providerAuth.chatgpt.description":
+    "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
   "error.chain.unknown": "خطأ غير معروف",
   "error.chain.causedBy": "بسبب:",

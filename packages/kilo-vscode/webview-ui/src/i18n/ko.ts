@@ -465,6 +465,11 @@ export const dict = {
   "error.promotionLimit.description":
     "무료로 가입하여 500개 이상의 모델을 탐색하세요. 2분이면 완료, 신용카드 불필요. 또는 나중에 다시 오세요.",
   "error.promotionLimit.action": "가입하기",
+  "error.providerAuth.title": "{{provider}}에서 로그아웃되었습니다",
+  "error.providerAuth.description": "{{provider}}에 다시 연결한 후 메시지를 다시 보내주세요.",
+  "error.providerAuth.chatgpt.title": "OpenAI에서 로그아웃되었습니다",
+  "error.providerAuth.chatgpt.description":
+    "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
   "error.chain.unknown": "알 수 없는 오류",
   "error.chain.causedBy": "원인:",
