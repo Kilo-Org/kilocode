@@ -2,10 +2,10 @@
 // kilocode_change - new file
 
 /**
- * Fails pull requests that change user-facing product code without adding a
+ * Warns when pull requests change user-facing product code without adding a
  * changeset. The path filter is intentionally conservative: docs, tests, CI,
  * and repository tooling do not need release notes, while product source paths
- * do unless a maintainer deliberately narrows this list.
+ * should usually have one unless the change is internal.
  */
 
 import { spawnSync } from "node:child_process"
@@ -68,6 +68,10 @@ function changeset(file: string) {
   return file.startsWith(".changeset/") && file.endsWith(".md") && file !== ".changeset/README.md"
 }
 
+function escape(value: string) {
+  return value.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A")
+}
+
 function scoped(file: string) {
   return scopes.some((scope) => (scope.endsWith("/") ? file.startsWith(scope) : file === scope))
 }
@@ -98,11 +102,17 @@ if (triggers.length === 0) {
   process.exit(0)
 }
 
-console.error("This PR changes user-facing product files but does not include a changeset.")
-console.error("Add one with: bunx changeset add")
-console.error("Skip changesets only for internal refactors, CI tweaks, test-only changes, or docs-only changes.")
-console.error("")
-console.error("Files that triggered this check:")
-for (const file of triggers.slice(0, 25)) console.error(`- ${file}`)
-if (triggers.length > 25) console.error(`- ...and ${triggers.length - 25} more`)
-process.exit(1)
+const msg = "This PR changes product files without a changeset. Add one if the change is user-facing."
+
+if (process.env.GITHUB_ACTIONS === "true") {
+  console.log(`::warning title=Missing changeset::${escape(msg)}`)
+}
+
+console.warn(msg)
+console.warn("Run: bunx changeset add")
+console.warn("Skip changesets for internal refactors, CI tweaks, test-only changes, or docs-only changes.")
+console.warn("")
+console.warn("Files that triggered this warning:")
+for (const file of triggers.slice(0, 25)) console.warn(`- ${file}`)
+if (triggers.length > 25) console.warn(`- ...and ${triggers.length - 25} more`)
+process.exit(0)
