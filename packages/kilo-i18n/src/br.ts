@@ -92,4 +92,9 @@ export const dict = {
     "Desligue os snapshots do Kilo para este projeto. Você perde desfazer/refazer das mudanças feitas pelo Kilo, mas o git continua rastreando tudo.",
 
   "ui.messagePart.openInDiffViewer": "Abrir no Visualizador de Diferenças",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Isso foi útil",
+  "ui.message.feedback.notHelpful": "Isso não foi útil",
+  "ui.message.feedback.clearRating": "Limpar avaliação",
 }

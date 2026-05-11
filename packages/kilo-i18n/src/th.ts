@@ -92,4 +92,9 @@ export const dict = {
     "ปิดสแน็ปช็อตของ Kilo สำหรับโปรเจกต์นี้ คุณจะสูญเสียการยกเลิก/ทำซ้ำสำหรับการเปลี่ยนแปลงของ Kilo แต่ git ยังคงติดตามทุกอย่าง",
 
   "ui.messagePart.openInDiffViewer": "เปิดในตัวดูความแตกต่าง",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "สิ่งนี้มีประโยชน์",
+  "ui.message.feedback.notHelpful": "สิ่งนี้ไม่มีประโยชน์",
+  "ui.message.feedback.clearRating": "ล้างการให้คะแนน",
 }

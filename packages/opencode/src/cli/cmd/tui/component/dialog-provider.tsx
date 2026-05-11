@@ -33,14 +33,20 @@ export function createDialogProviderOptions() {
       map((provider) => {
         const consoleManaged = isConsoleManagedProvider(sync.data.console_state.consoleManagedProviders, provider.id)
         const connected = sync.data.provider_next.connected.includes(provider.id)
+        // kilocode_change start
+        const failed = sync.data.provider_next.failed ?? []
+        const failedGutter = KiloProvider.renderGutter(provider.id, failed, theme)
+        const failedDesc = KiloProvider.failedDescription(provider.id, failed)
+        const baseDesc = KiloProvider.PROVIDER_DESCRIPTIONS[provider.id]
+        // kilocode_change end
 
         return {
           title: KiloProvider.PROVIDER_TITLES[provider.id] ?? provider.name, // kilocode_change
           value: provider.id,
-          description: KiloProvider.PROVIDER_DESCRIPTIONS[provider.id], // kilocode_change
+          description: failedDesc ?? baseDesc, // kilocode_change
           footer: consoleManaged ? sync.data.console_state.activeOrgName : undefined,
           category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Other",
-          gutter: connected && onboarded() ? <text fg={theme.success}>✓</text> : undefined,
+          gutter: failedGutter ?? (connected && onboarded() ? () => <text fg={theme.success}>✓</text> : undefined), // kilocode_change
           async onSelect() {
             if (consoleManaged) return
 

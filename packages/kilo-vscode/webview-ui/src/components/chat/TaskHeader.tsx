@@ -78,6 +78,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return undefined
   })
 
+  const hasTimeline = createMemo(() => {
+    for (const m of session.messages()) {
+      if (m.role !== "assistant") continue
+      if (session.getParts(m.id).some((p) => p.type !== "step-start")) return true
+    }
+    return false
+  })
+
   const fmtNum = (n: number): string => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
     if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
@@ -166,7 +174,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
       </div>
       {/* Expanded graph section: timeline + context bar + token breakdown */}
-      <Show when={expanded() && session.messages().some((m) => m.role === "assistant")}>
+      <Show when={expanded() && hasTimeline()}>
         <div data-component="task-header-graph">
           <TaskTimeline />
           <div data-slot="task-header-graph-row">

@@ -39,6 +39,7 @@ import {
   computeStatus,
   calcContextUsage,
   buildFamilyCosts,
+  buildFamilyParents,
   buildFamilyLabels,
   buildCostBreakdown,
   childID,
@@ -1192,8 +1193,13 @@ export const SessionProvider: ParentComponent = (props) => {
             // Append text delta to text or reasoning parts
             ;(existing as { text: string }).text += delta.textDelta
           } else {
-            // Replace entire part
-            parts[effectiveMessageID][existingIndex] = part
+            // Preserve the proxy identity so Solid does not remount tool UI
+            // during streaming updates and restart pending animations.
+            const target = existing as unknown as Record<string, unknown>
+            for (const key of Object.keys(target)) {
+              if (!(key in part)) delete target[key]
+            }
+            Object.assign(existing, part)
           }
         } else {
           // Add new part
@@ -2188,11 +2194,18 @@ export const SessionProvider: ParentComponent = (props) => {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  /** Per-session cost — only reads store.messages (not parts). */
+  /**
+   * Per-session **own cost** — reads `store.messages` for per-session
+   * propagated totals and task metadata as a fallback for parent links so each
+   * session's entry excludes the cost already propagated up from its
+   * descendants by the CLI backend.
+   */
   const familyCosts = createMemo<Map<string, number>>(() => {
     const id = currentSessionID()
     if (!id) return new Map()
-    return buildFamilyCosts(sessionFamily(id), store.messages)
+    const family = sessionFamily(id)
+    const parents = buildFamilyParents(family, store.messages as any, store.parts as any)
+    return buildFamilyCosts(family, store.messages, store.sessions, parents)
   })
 
   /** Child session labels — only reads store.parts (not message costs). */

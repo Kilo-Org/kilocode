@@ -22,8 +22,8 @@ describe("model info panel price formatting", () => {
     expect(fmtCachedPrice({ input: 0, output: 0, cache: { read: 0, write: 0 } })).toBe("Free")
   })
 
-  test("fmtCachedPrice returns N/A without cache read", () => {
-    expect(fmtCachedPrice({ input: 3, output: 15, cache: { read: 0, write: 0 } })).toBe("N/A")
+  test("fmtCachedPrice returns null without cache read", () => {
+    expect(fmtCachedPrice({ input: 3, output: 15, cache: { read: 0, write: 0 } })).toBeNull()
   })
 
   test("avgPrice uses cache weighted formula when cache read exists", () => {

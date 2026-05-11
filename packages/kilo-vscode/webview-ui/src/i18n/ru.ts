@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API ключ",
   "provider.connect.apiKey.placeholder": "API ключ",
   "provider.connect.apiKey.required": "API ключ обязателен",
+  "provider.connect.prompt.required": "{{field}} обязательно",
+  "provider.connect.azure.endpointType.label": "Выберите конфигурацию конечной точки Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Имя ресурса",
+  "provider.connect.azure.endpointType.resourceName.hint": "Создать конечную точку из имени ресурса Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "Полный URL конечной точки",
+  "provider.connect.azure.endpointType.baseURL.hint": "Использовать пользовательскую конечную точку Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Имя ресурса Azure",
+  "provider.connect.azure.resourceName.placeholder": "например, my-models",
+  "provider.connect.azure.baseURL.label": "URL конечной точки Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "например, https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen даёт вам доступ к отобранным надёжным оптимизированным моделям для агентов программирования.",
   "provider.connect.opencodeZen.line2":
@@ -754,9 +764,20 @@ export const dict = {
   "settings.indexing.title": "Индексация",
   "settings.indexing.enable.title": "Включить индексацию",
   "settings.indexing.enable.description": "Включить или отключить семантическую индексацию кодовой базы.",
+  "settings.indexing.globalEnable.title": "Включить глобально",
+  "settings.indexing.globalEnable.description": "Включить индексирование для каждого рабочего пространства.",
+  "settings.indexing.projectEnable.title": "Включить для этого проекта",
+  "settings.indexing.projectEnable.description":
+    "Включить индексирование для этого рабочего пространства, если глобальное индексирование отключено.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Глобальное индексирование включено, поэтому этот проект уже охвачен.",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.provider.title": "Провайдер эмбеддингов",
   "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",
+  "settings.indexing.kiloModel.title": "Предустановка модели Kilo",
+  "settings.indexing.kiloModel.description": "Выберите поддерживаемую модель эмбеддингов, размещенную в Kilo.",
+  "settings.indexing.kiloSignIn.title": "Требуется вход в Kilo",
+  "settings.indexing.kiloSignIn.description": "Войдите в Kilo, чтобы использовать размещенные эмбеддинги.",
   "settings.indexing.model.title": "Модель эмбеддингов",
   "settings.indexing.model.description": "Переопределить модель эмбеддингов по умолчанию для выбранного провайдера.",
   "settings.indexing.dimension.title": "Размерность вектора",
@@ -1174,6 +1195,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Использовать умную клавишу для запуска встроенных задач",
   "settings.autocomplete.chatAutocomplete.title": "Включить автодополнение чата",
   "settings.autocomplete.chatAutocomplete.description": "Показывать предложения автодополнения в поле чата",
+  "settings.autocomplete.modelsHint": "Чтобы выбрать модель для автодополнения, см. настройки Моделей.",
   "settings.notifications.agent.title": "Завершение агента",
   "settings.notifications.agent.description": "Показать уведомление при завершении задачи агентом",
   "settings.notifications.permissions.title": "Запросы разрешений",
@@ -1541,9 +1563,15 @@ export const dict = {
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
   "notifications.action.tryModelGeneric": "Попробовать модель",
-  "diffViewer.source.workspace.label": "Локальные изменения",
+  "diffViewer.source.workspace.label": "Ветка",
   "diffViewer.source.workspace.tooltip":
     "Все изменения в этой ветке по сравнению с базовой. Включает незакоммиченные файлы (staged, unstaged, неотслеживаемые) и локальные коммиты, которых ещё нет в базе.",
+  "diffViewer.source.staged.label": "Проиндексировано",
+  "diffViewer.source.staged.tooltip":
+    "Файлы с изменениями, добавленные в индекс git (`git add`), как они появятся в следующем коммите.",
+  "diffViewer.source.unstaged.label": "Непроиндексировано",
+  "diffViewer.source.unstaged.tooltip":
+    "Файлы, изменённые в рабочем дереве, но ещё не проиндексированные, плюс неотслеживаемые (новые) файлы.",
   "diffViewer.source.session.label": "Сессия",
   "diffViewer.source.session.tooltip":
     "Файлы, изменённые Kilo в текущей сессии, на основе снимков по ходу. Сбрасывается при начале новой сессии.",
@@ -1551,4 +1579,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Снимки отключены для этого репозитория. Пожалуйста, отредактируйте файлы конфигурации, чтобы отображать изменения сессии.",
+
+  "diffViewer.baseBranch.auto": "По умолчанию",
+  "diffViewer.baseBranch.default": "По умолчанию",
+  "diffViewer.baseBranch.remote": "Удалённая",
+  "diffViewer.baseBranch.search": "Поиск веток",
+  "diffViewer.baseBranch.empty": "Нет подходящих веток",
+  "diffViewer.baseBranch.loading": "Загрузка веток…",
+  "diffViewer.baseBranch.none": "—",
 }

@@ -101,8 +101,11 @@ jobs:
       # curl|bash + apt install nodejs before the CLI even downloads, and on
       # the Blacksmith runners that occasionally pushes past 6 min when an apt
       # mirror or NodeSource cdn is slow, killing the run with
-      # AgentSetupTimeoutError. 600s gives enough headroom for transient
-      # mirror/cdn slowness while still finishing well under timeout-minutes.
+      # AgentSetupTimeoutError. Doubling the multiplier to 2 gives enough
+      # headroom for transient mirror/cdn slowness while still finishing well
+      # under timeout-minutes. Note: --timeout-multiplier scales every timeout
+      # uniformly (setup, agent, verifier, env build), but they're all upper
+      # limits so this is harmless.
       - name: Run smoke test — hello-world
         env:
           KILO_CLI_URL: ${{ steps.cli.outputs.cli_url }}
@@ -112,7 +115,7 @@ jobs:
             -m kilo/anthropic/claude-sonnet-4.6 \
             -d hello-world \
             --job-name smoke-test-hello-world \
-            --agent-setup-timeout 600
+            --timeout-multiplier 2
 
       - name: Run smoke test — log-summary-date-ranges
         env:
@@ -124,7 +127,7 @@ jobs:
             -d terminal-bench-sample \
             -t "log-summary-date-ranges" \
             --job-name smoke-test-log-summary \
-            --agent-setup-timeout 600
+            --timeout-multiplier 2
 
       - name: Validate results
         run: python3 scripts/validate_smoke_test.py jobs/smoke-test-*/

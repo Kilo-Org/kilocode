@@ -44,7 +44,7 @@ export interface Section {
   name: string
   /** Color label (e.g. "Red", "Blue") mapped to VS Code theme CSS vars at render time, or null for default. */
   color: string | null
-  /** Position among top-level sidebar children (sections and ungrouped worktrees). */
+  /** Position among sections. Ungrouped worktrees are always rendered above sections. */
   order: number
   collapsed: boolean
 }
@@ -334,6 +334,14 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  private ordered(order: string[]): string[] {
+    const idx = new Map(order.map((id, i) => [id, i] as const))
+    return [...this.worktrees.values()]
+      .filter((wt) => !wt.sectionId)
+      .sort((a, b) => (idx.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (idx.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+      .map((wt) => wt.id)
+  }
+
   private setNormalizedWorktreeOrder(order: string[]): boolean {
     const valid = new Set<string>()
     for (const sec of this.sections.values()) valid.add(sec.id)
@@ -351,17 +359,22 @@ export class WorktreeStateManager {
     for (const sec of [...this.sections.values()].sort((a, b) => a.order - b.order)) add(sec.id)
     for (const wt of this.worktrees.values()) add(wt.id)
 
+    const normalized = [
+      ...this.ordered(result),
+      ...result.filter((id) => this.sections.has(id)),
+      ...result.filter((id) => this.worktrees.get(id)?.sectionId),
+    ]
+
     const changed =
-      result.length !== this.worktreeOrder.length || result.some((id, idx) => id !== this.worktreeOrder[idx])
-    this.worktreeOrder = result
+      normalized.length !== this.worktreeOrder.length || normalized.some((id, idx) => id !== this.worktreeOrder[idx])
+    this.worktreeOrder = normalized
     return this.syncSectionOrder() || changed
   }
 
   private syncSectionOrder(): boolean {
     const top = this.worktreeOrder.filter((id) => {
       if (this.sections.has(id)) return true
-      const wt = this.worktrees.get(id)
-      return !!wt && !wt.sectionId
+      return false
     })
     const index = new Map(top.map((id, idx) => [id, idx] as const))
     const changes = [...this.sections.values()].map((sec) => {
