@@ -4,6 +4,7 @@ import {
   calcTotalCost,
   calcContextUsage,
   buildFamilyCosts,
+  buildFamilyParents,
   buildFamilyLabels,
   buildCostBreakdown,
   collapseCostBreakdown,
@@ -286,6 +287,36 @@ describe("buildFamilyCosts", () => {
     const costs = buildFamilyCosts(family, messages, sessions)
     expect(costs.size).toBe(1)
     expect(costs.get("s1")).toBeCloseTo(0.01)
+  })
+
+  it("subtracts child totals using task parent links when session metadata is missing", () => {
+    const family = new Set(["root", "child"])
+    const messages = {
+      root: [msg("m1", "assistant", 0.15)],
+      child: [msg("m2", "assistant", 0.1)],
+    }
+    const parts = { m1: [toolPart("task", "child", { subagent_type: "explore" })] }
+    const parents = buildFamilyParents(family, messages, parts)
+    const costs = buildFamilyCosts(family, messages, { root: {} }, parents)
+    expect(costs.get("root")).toBeCloseTo(0.05)
+    expect(costs.get("child")).toBeCloseTo(0.1)
+  })
+})
+
+describe("buildFamilyParents", () => {
+  it("derives child-to-parent links from task tool parts", () => {
+    const family = new Set(["root", "child"])
+    const messages = { root: [msg("m1", "assistant")], child: [msg("m2", "assistant")] }
+    const parts = { m1: [toolPart("task", "child", { subagent_type: "general" })] }
+    const parents = buildFamilyParents(family, messages, parts)
+    expect(parents.get("child")).toBe("root")
+  })
+
+  it("ignores task parts that point outside the family", () => {
+    const family = new Set(["root"])
+    const messages = { root: [msg("m1", "assistant")] }
+    const parts = { m1: [toolPart("task", "orphan", { subagent_type: "general" })] }
+    expect(buildFamilyParents(family, messages, parts).size).toBe(0)
   })
 })
 
