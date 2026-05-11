@@ -10,6 +10,7 @@ import { Bus } from "../bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { createKiloClient } from "@kilocode/sdk"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "@/session/session"
 import { NamedError } from "@opencode-ai/core/util/error"
@@ -124,11 +125,7 @@ export const layer = Layer.effect(
         const client = createKiloClient({
           baseUrl: "http://localhost:4096",
           directory: ctx.directory,
-          headers: Flag.KILO_SERVER_PASSWORD
-            ? {
-                Authorization: `Basic ${Buffer.from(`${Flag.KILO_SERVER_USERNAME ?? "opencode"}:${Flag.KILO_SERVER_PASSWORD}`).toString("base64")}`,
-              }
-            : undefined,
+          headers: ServerAuth.headers(),
           fetch: async (...args) => Server.Default().app.fetch(...args),
         })
         const cfg = yield* config.get()
