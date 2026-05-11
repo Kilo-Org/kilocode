@@ -122,9 +122,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           <Show when={!props.turn.partial}>
             <div
               class="vscode-session-turn-user"
-              data-revert-disabled={
-                assistantMessages().length > 0 && session.status() !== "idle" ? "" : undefined
-              }
+              data-revert-disabled={assistantMessages().length > 0 && session.status() !== "idle" ? "" : undefined}
               title={
                 assistantMessages().length > 0 && session.status() !== "idle"
                   ? language.t("revert.disabled.agentBusy")
