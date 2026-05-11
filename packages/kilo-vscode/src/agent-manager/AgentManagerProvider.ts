@@ -32,6 +32,8 @@ import { WorktreeImporter } from "./worktree-importer"
 import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
+import { controlFromTool, parseControlRequest, type ControlRequest } from "./tool-control"
+import { inspectFromTool, parseInspectRequest, type InspectRequest } from "./tool-inspect"
 
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -69,6 +71,8 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubControl: (() => void) | undefined
+  private unsubInspect: (() => void) | undefined
   private closing: Promise<void> | undefined
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
@@ -160,6 +164,14 @@ export class AgentManagerProvider implements Disposable {
     this.unsubTool = this.connectionService.onEventFiltered(
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
+    )
+    this.unsubControl = this.connectionService.onEventFiltered(
+      (event) => (event as { type?: string }).type === "kilocode.agent_manager.control",
+      (event, directory) => this.onControlEvent(event, directory),
+    )
+    this.unsubInspect = this.connectionService.onEventFiltered(
+      (event) => (event as { type?: string }).type === "kilocode.agent_manager.inspect",
+      (event, directory) => this.onInspectEvent(event, directory),
     )
   }
 
@@ -870,6 +882,22 @@ export class AgentManagerProvider implements Disposable {
     void this.startToolRequest(req)
   }
 
+  private onControlEvent(event: unknown, directory?: string): void {
+    const properties = (event as { properties?: unknown }).properties
+    const req = parseControlRequest(properties)
+    if (!req) return
+    if (directory) req.directory = directory
+    void this.controlToolRequest(req)
+  }
+
+  private onInspectEvent(event: unknown, directory?: string): void {
+    const properties = (event as { properties?: unknown }).properties
+    const req = parseInspectRequest(properties)
+    if (!req) return
+    if (directory) req.directory = directory
+    void this.inspectToolRequest(req)
+  }
+
   private async startToolRequest(req: ToolRequest): Promise<void> {
     await startFromTool(
       {
@@ -897,6 +925,65 @@ export class AgentManagerProvider implements Disposable {
       },
       req,
     )
+  }
+
+  private async controlToolRequest(req: ControlRequest): Promise<void> {
+    await controlFromTool(
+      {
+        getClient: () => this.connectionService.getClient(),
+        getRoot: () => this.getRoot(),
+        getState: () => this.getStateManager(),
+        getPanel: () => this.panel,
+        openPanel: (preserveFocus) => this.openPanel(preserveFocus),
+        waitReady: (context) => this.waitForStateReady(context),
+        respond: (requestID, res) => this.respondControl(requestID, res),
+        push: () => this.pushState(),
+        post: (msg) => this.postToWebview(msg as AgentManagerOutMessage),
+        capture: (event, props) => this.host.capture(event, props),
+        log: (...args) => this.log(...args),
+        error: (msg) => this.host.showError(msg),
+      },
+      req,
+    )
+  }
+
+  private async inspectToolRequest(req: InspectRequest): Promise<void> {
+    await inspectFromTool(
+      {
+        getClient: () => this.connectionService.getClient(),
+        getRoot: () => this.getRoot(),
+        getState: () => this.getStateManager(),
+        waitReady: (context) => this.waitForStateReady(context),
+        localDiff: (dir, base) => localDiffSummary(this.gitOps, dir, base, (...args) => this.log(...args)),
+        aheadBehind: (dir, base) => this.gitOps.aheadBehind(dir, base),
+        respond: (requestID, output) => this.respondInspect(requestID, { output }),
+        fail: (requestID, error) => this.respondInspect(requestID, { error }),
+        log: (...args) => this.log(...args),
+      },
+      req,
+    )
+  }
+
+  private async respondInspect(requestID: string, body: { output?: string; error?: string }): Promise<void> {
+    await this.connectionService
+      .getClient()
+      .postKilocodeAgentManagerInspectRespond({ requestID, ...body }, { throwOnError: true })
+  }
+
+  private async respondControl(
+    requestID: string,
+    body: {
+      action: string
+      applied: boolean
+      message: string
+      sessionID?: string
+      worktreeID?: string
+      sectionID?: string
+    },
+  ): Promise<void> {
+    await this.connectionService
+      .getClient()
+      .postKilocodeAgentManagerControlRespond({ requestID, ...body }, { throwOnError: true })
   }
 
   // ---------------------------------------------------------------------------
@@ -1697,6 +1784,8 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubControl?.()
+    this.unsubInspect?.()
     this.connectionService.unregisterFocused("agent-manager")
     this.connectionService.registerOpen("agent-manager", [])
     this.diffs.stop()

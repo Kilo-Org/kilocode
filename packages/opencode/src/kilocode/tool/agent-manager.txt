@@ -1,6 +1,16 @@
-Start Agent Manager sessions in the VS Code extension.
+Start and control Agent Manager sessions in the VS Code extension.
 
-Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
+Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, prompt existing Agent Manager sessions, stop sessions, or organize Agent Manager sections.
+
+Actions:
+- `start` (default): create Agent Manager sessions.
+- `prompt`: send a narrow follow-up prompt to an existing Agent Manager session.
+- `stop`: abort an active Agent Manager session.
+- `create_section`: create a board section by name.
+- `rename_section`: rename a board section by ID or current name. Provide `newSectionName`.
+- `remove_section`: remove a board section by ID or name. Cards inside the section are ungrouped, not deleted.
+- `move_to_section`: move a worktree-backed card to a section by worktree ID or session ID.
+- `ungroup`: move a worktree-backed card out of its current section by worktree ID or session ID.
 
 Modes:
 - `worktree`: creates a new Agent Manager git worktree for each task, like the New Worktree dialog.
@@ -9,5 +19,11 @@ Modes:
 Each task may provide a prompt, a short display name, and a branch name. Keep display names short because Agent Manager cards are narrow. Branch names are sanitized before worktree creation. The agent, model, reasoning, and base branch settings always use the normal defaults.
 
 By default, multiple tasks are started as independent Agent Manager sessions. Set `versions` to true only when all tasks are alternate versions of the same work that should be compared together. Versioned worktrees are grouped in Agent Manager and branch names may receive version suffixes.
+
+For `prompt`, use targeted operational follow-ups, for example asking an agent to inspect red checks, summarize a blocker, or explain scope before continuing.
+
+For `move_to_section` and `ungroup`, moving by `sessionID` only works for worktree-backed sessions. Local sessions cannot be moved into sections by this action.
+
+For `remove_section`, only the section is removed. Sessions and worktrees are preserved and contained cards become ungrouped.
 
 Do not use this for ordinary subagent research. Use the `task` tool for internal subagents, and use this only when the user wants visible Agent Manager sessions in the extension.

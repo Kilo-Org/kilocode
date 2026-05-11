@@ -56,6 +56,7 @@ import { experimentalHandlers } from "./handlers/experimental"
 import { fileHandlers } from "./handlers/file"
 import { globalHandlers } from "./handlers/global"
 import { instanceHandlers } from "./handlers/instance"
+import { kilocodeHandlers } from "./handlers/kilocode" // kilocode_change
 import { mcpHandlers } from "./handlers/mcp"
 import { permissionHandlers } from "./handlers/permission"
 import { projectHandlers } from "./handlers/project"
@@ -108,6 +109,7 @@ const instanceApiRoutes = HttpApiBuilder.layer(InstanceHttpApi).pipe(
     experimentalHandlers,
     fileHandlers,
     instanceHandlers,
+    kilocodeHandlers, // kilocode_change
     mcpHandlers,
     projectHandlers,
     ptyHandlers,

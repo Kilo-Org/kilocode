@@ -614,6 +614,33 @@ export type EventKilocodeAgentManagerStart = {
   }
 }
 
+export type EventKilocodeAgentManagerControl = {
+  type: "kilocode.agent_manager.control"
+  properties: {
+    requestID: string
+    sessionID: string
+    action: "prompt" | "stop" | "create_section" | "rename_section" | "remove_section" | "move_to_section" | "ungroup"
+    targetSessionID?: string
+    prompt?: string
+    worktreeID?: string
+    sectionID?: string
+    sectionName?: string
+    newSectionName?: string
+    color?: string
+    createIfMissing?: boolean
+  }
+}
+
+export type EventKilocodeAgentManagerInspect = {
+  type: "kilocode.agent_manager.inspect"
+  properties: {
+    requestID: string
+    sessionID: string
+    targetSessionID: string
+    tail?: number
+  }
+}
+
 export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
@@ -1358,6 +1385,8 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventCommandExecuted
     | EventKilocodeAgentManagerStart
+    | EventKilocodeAgentManagerControl
+    | EventKilocodeAgentManagerInspect
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventWorkspaceReady
@@ -2513,6 +2542,8 @@ export type Event =
   | EventSessionCompacted
   | EventCommandExecuted
   | EventKilocodeAgentManagerStart
+  | EventKilocodeAgentManagerControl
+  | EventKilocodeAgentManagerInspect
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
@@ -6967,6 +6998,46 @@ export type KilocodeSessionImportPartResponses = {
 
 export type KilocodeSessionImportPartResponse =
   KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
+
+export type PostKilocodeAgentManagerInspectRespondData = {
+  body?: {
+    requestID: string
+    output?: string
+    error?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/agent-manager/inspect/respond"
+}
+
+export type PostKilocodeAgentManagerInspectRespondResponses = {
+  200: unknown
+}
+
+export type PostKilocodeAgentManagerControlRespondData = {
+  body?: {
+    requestID: string
+    action: string
+    applied: boolean
+    message: string
+    sessionID?: string
+    worktreeID?: string
+    sectionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/agent-manager/control/respond"
+}
+
+export type PostKilocodeAgentManagerControlRespondResponses = {
+  200: unknown
+}
 
 export type KilocodeHeapSnapshotData = {
   body?: never

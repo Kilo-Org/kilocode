@@ -164,7 +164,8 @@ export class CodeIndexConfigManager {
     // LanceDB doesn't need a qdrant URL; qdrant does
     const hasStore = isLancedb || !!qdrant
 
-    if (provider === "kilo") return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
+    if (provider === "kilo")
+      return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
     if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
     if (provider === "ollama") return !!(this.ollamaOptions?.baseUrl && hasStore)
     if (provider === "openai-compatible")

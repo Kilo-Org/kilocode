@@ -307,7 +307,7 @@ export const layer: Layer.Layer<
           // kilocode_change start
           !!process.env["KILO_E2E_LLM_URL"] ||
           (input.modelID.includes("gpt-") && !input.modelID.includes("oss") && !input.modelID.includes("gpt-4"))
-          // kilocode_change end
+        // kilocode_change end
         if (tool.id === ApplyPatchTool.id) return usePatch
         if (tool.id === EditTool.id) return !usePatch // kilocode_change
 

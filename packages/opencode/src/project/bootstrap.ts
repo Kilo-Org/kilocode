@@ -46,9 +46,14 @@ export const layer = Layer.effect(
       yield* plugin.init()
       yield* Effect.promise(() => KilocodeBootstrap.init()).pipe(Effect.forkDetach) // kilocode_change
       yield* Effect.all(
-        [lsp, /* shareNext, kilocode_change - handled by KilocodeBootstrap */ format, file, fileWatcher, vcs, snapshot].map(
-          (s) => Effect.forkDetach(s.init()),
-        ),
+        [
+          lsp,
+          /* shareNext, kilocode_change - handled by KilocodeBootstrap */ format,
+          file,
+          fileWatcher,
+          vcs,
+          snapshot,
+        ].map((s) => Effect.forkDetach(s.init())),
       ).pipe(Effect.withSpan("InstanceBootstrap.init"))
 
       const projectID = ctx.project.id

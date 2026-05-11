@@ -130,6 +130,8 @@ import type {
   PermissionRuleset,
   PermissionSaveAlwaysRulesErrors,
   PermissionSaveAlwaysRulesResponses,
+  PostKilocodeAgentManagerControlRespondResponses,
+  PostKilocodeAgentManagerInspectRespondResponses,
   ProjectCurrentResponses,
   ProjectInitGitResponses,
   ProjectListResponses,
@@ -6050,6 +6052,94 @@ export class KiloClient extends HeyApiClient {
   constructor(args?: { client?: Client; key?: string }) {
     super(args)
     KiloClient.__registry.set(this, args?.key)
+  }
+
+  public postKilocodeAgentManagerInspectRespond<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      requestID?: string
+      output?: string
+      error?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "requestID" },
+            { in: "body", key: "output" },
+            { in: "body", key: "error" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      PostKilocodeAgentManagerInspectRespondResponses,
+      unknown,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent-manager/inspect/respond",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public postKilocodeAgentManagerControlRespond<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      requestID?: string
+      action?: string
+      applied?: boolean
+      message?: string
+      sessionID?: string
+      worktreeID?: string
+      sectionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "requestID" },
+            { in: "body", key: "action" },
+            { in: "body", key: "applied" },
+            { in: "body", key: "message" },
+            { in: "body", key: "sessionID" },
+            { in: "body", key: "worktreeID" },
+            { in: "body", key: "sectionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      PostKilocodeAgentManagerControlRespondResponses,
+      unknown,
+      ThrowOnError
+    >({
+      url: "/kilocode/agent-manager/control/respond",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 
   private _global?: Global

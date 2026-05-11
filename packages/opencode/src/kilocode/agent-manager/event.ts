@@ -21,6 +21,41 @@ export const AgentManagerStart = Schema.Struct({
 
 export type AgentManagerStart = Schema.Schema.Type<typeof AgentManagerStart>
 
+export const AgentManagerControl = Schema.Struct({
+  requestID: Schema.String,
+  sessionID: SessionID,
+  action: Schema.Literals([
+    "prompt",
+    "stop",
+    "create_section",
+    "rename_section",
+    "remove_section",
+    "move_to_section",
+    "ungroup",
+  ]),
+  targetSessionID: Schema.optional(Schema.String),
+  prompt: Schema.optional(Schema.String),
+  worktreeID: Schema.optional(Schema.String),
+  sectionID: Schema.optional(Schema.String),
+  sectionName: Schema.optional(Schema.String),
+  newSectionName: Schema.optional(Schema.String),
+  color: Schema.optional(Schema.String),
+  createIfMissing: Schema.optional(Schema.Boolean),
+})
+
+export type AgentManagerControl = Schema.Schema.Type<typeof AgentManagerControl>
+
+export const AgentManagerInspect = Schema.Struct({
+  requestID: Schema.String,
+  sessionID: SessionID,
+  targetSessionID: Schema.String,
+  tail: Schema.optional(Schema.Int.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(50))),
+})
+
+export type AgentManagerInspect = Schema.Schema.Type<typeof AgentManagerInspect>
+
 export const AgentManagerEvent = {
   Start: BusEvent.define("kilocode.agent_manager.start", AgentManagerStart),
+  Control: BusEvent.define("kilocode.agent_manager.control", AgentManagerControl),
+  Inspect: BusEvent.define("kilocode.agent_manager.inspect", AgentManagerInspect),
 }

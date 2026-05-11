@@ -235,7 +235,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           })
       // kilocode_change end
 
-      if (!resource && !endpoint) { // kilocode_change
+      if (!resource && !endpoint) {
+        // kilocode_change
         return {
           autoload: false,
           async getModel() {

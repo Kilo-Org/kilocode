@@ -17,7 +17,13 @@ function Chevron() {
   return (
     <span data-slot="markdown-mermaid-chevron" aria-hidden="true">
       <svg viewBox="0 0 16 16" fill="none">
-        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" />
+        <path
+          d="M4 6L8 10L12 6"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.6"
+        />
       </svg>
     </span>
   )

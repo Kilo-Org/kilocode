@@ -22,7 +22,7 @@ const writeConfig = (dir: string, agent: Config.Info["agent"]) =>
     ),
   )
 
-it.live("agent color parsed from project config",  () =>
+it.live("agent color parsed from project config", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped()
     yield* writeConfig(dir, {
@@ -30,7 +30,7 @@ it.live("agent color parsed from project config",  () =>
       plan: { color: "primary" },
     })
 
-    yield*  Effect.gen(function* () {
+    yield* Effect.gen(function* () {
       const cfg = yield* Effect.promise(() => AppRuntime.runPromise(Config.Service.use((svc) => svc.get())))
       expect(cfg.agent?.["code"]?.color).toBe("#FFA500") // kilocode_change
       expect(cfg.agent?.["plan"]?.color).toBe("primary")
@@ -38,7 +38,7 @@ it.live("agent color parsed from project config",  () =>
   }),
 )
 
-it.live("Agent.get includes color from config",  () =>
+it.live("Agent.get includes color from config", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped()
     yield* writeConfig(dir, {

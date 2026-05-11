@@ -13,12 +13,7 @@ export class KiloEmbedder implements IEmbedder {
   private readonly embedder: OpenAICompatibleEmbedder
   private readonly model: string
 
-  constructor(input: {
-    apiKey: string
-    baseUrl?: string
-    organizationId?: string
-    modelId?: string
-  }) {
+  constructor(input: { apiKey: string; baseUrl?: string; organizationId?: string; modelId?: string }) {
     if (!input.apiKey) throw new Error("Kilo API key is required for embedding.")
 
     if (!input.modelId) throw new Error("Kilo embedding model is required.")

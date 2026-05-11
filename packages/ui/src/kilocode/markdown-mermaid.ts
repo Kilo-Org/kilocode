@@ -357,7 +357,11 @@ async function svg(renderer: Mermaid, source: string, cfg: ReturnType<typeof con
   })
 }
 
-export async function renderMermaid(root: HTMLDivElement, signal: { aborted: boolean }, input?: Partial<MermaidLabels>) {
+export async function renderMermaid(
+  root: HTMLDivElement,
+  signal: { aborted: boolean },
+  input?: Partial<MermaidLabels>,
+) {
   const label = mergeLabels(input)
   const blocks = Array.from(root.querySelectorAll('pre > code[data-lang="mermaid"]'))
   if (blocks.length === 0) return

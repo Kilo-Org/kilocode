@@ -1,0 +1,9 @@
+Inspect an existing Agent Manager session in the VS Code extension.
+
+Use this tool after an Agent Manager overview or when the user asks you to inspect a specific Agent Manager session. It returns a bounded, read-only snapshot of the session state, latest prompt/output, recent conversation tail, pending input/permission state, and worktree context with a lightweight diff summary when the session is worktree-backed.
+
+This tool is read-only. It does not create sessions, send prompts, stop sessions, move cards, create sections, apply diffs, or mutate git state.
+
+Inputs:
+- `sessionID`: the Agent Manager session ID to inspect.
+- `tail`: optional number of recent messages to include. Defaults to a small bounded tail and is capped by the extension.

@@ -22,10 +22,12 @@ describe("Kilo indexing auth resolution", () => {
     expect(resolveKiloIndexingAuth({ provider: { options: { kilocodeToken: "provider-token" } } }).apiKey).toBe(
       "provider-token",
     )
-    expect(resolveKiloIndexingAuth({ auth: { type: "oauth", access: "oauth-token", accountId: "org_oauth" } })).toEqual({
-      apiKey: "oauth-token",
-      organizationId: "org_oauth",
-    })
+    expect(resolveKiloIndexingAuth({ auth: { type: "oauth", access: "oauth-token", accountId: "org_oauth" } })).toEqual(
+      {
+        apiKey: "oauth-token",
+        organizationId: "org_oauth",
+      },
+    )
     expect(resolveKiloIndexingAuth({ env: { KILO_API_KEY: "env-token", KILO_ORG_ID: "org_env" } })).toEqual({
       apiKey: "env-token",
       organizationId: "org_env",

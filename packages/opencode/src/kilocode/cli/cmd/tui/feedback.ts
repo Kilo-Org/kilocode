@@ -28,9 +28,9 @@ export function submitFeedback(rating: "up" | "down", dialog: DialogContext, ctx
     return
   }
   const revertID = ctx.session()?.revert?.messageID
-  const lastAssistant = ctx.messages().findLast(
-    (msg): msg is AssistantMessage => msg.role === "assistant" && (!revertID || msg.id < revertID),
-  )
+  const lastAssistant = ctx
+    .messages()
+    .findLast((msg): msg is AssistantMessage => msg.role === "assistant" && (!revertID || msg.id < revertID))
   if (!lastAssistant) {
     ctx.toast.show({ message: "No assistant messages found", variant: "error" })
     dialog.clear()

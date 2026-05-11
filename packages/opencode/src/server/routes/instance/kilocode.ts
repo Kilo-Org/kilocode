@@ -10,10 +10,22 @@ import { lazy } from "@/util/lazy"
 import { errors } from "../../error"
 import { SessionImportRoutes } from "@/kilocode/session-import/routes"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
+import { AgentManagerControlBridge } from "@/kilocode/agent-manager/control"
+import { AgentManagerInspectBridge } from "@/kilocode/agent-manager/inspect"
 
 export const KilocodeRoutes = lazy(() =>
   new Hono()
     .route("/session-import", SessionImportRoutes())
+    .post("/agent-manager/inspect/respond", validator("json", AgentManagerInspectBridge.Response.zod), async (c) => {
+      return c.json(
+        AgentManagerInspectBridge.respond(c.req.valid("json") as typeof AgentManagerInspectBridge.Response.Type),
+      )
+    })
+    .post("/agent-manager/control/respond", validator("json", AgentManagerControlBridge.Response.zod), async (c) => {
+      return c.json(
+        AgentManagerControlBridge.respond(c.req.valid("json") as typeof AgentManagerControlBridge.Response.Type),
+      )
+    })
     .post(
       "/heap/snapshot",
       describeRoute({
