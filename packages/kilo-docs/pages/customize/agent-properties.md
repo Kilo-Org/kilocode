@@ -28,7 +28,7 @@ description: Reviews code for security vulnerabilities and suggests fixes
 
 ## `model`
 
-**Type:** `string` (format: `provider/model-id`)
+**Type:** `string` (format: `provider/model-id`) | **UI label:** Model Override
 
 Pins a specific model for this agent. If not set, primary agents use the globally configured model and subagents inherit the model of the primary agent that invoked them.
 
@@ -91,7 +91,7 @@ mode: subagent
 
 ## `steps`
 
-**Type:** `number`
+**Type:** `number` | **UI label:** Max Steps
 
 The maximum number of agentic iterations (tool-call rounds) the agent can perform before being forced to respond with text only. When the limit is reached, the agent is instructed to summarize what it has done and list any remaining tasks.
 
@@ -112,7 +112,7 @@ steps: 20
 
 ## `temperature`
 
-**Type:** `number` (range: `0.0` – `1.0`)
+**Type:** `number` (range: `0.0` – `2.0`)
 
 Controls the randomness of the model's output. Lower values make responses more focused and deterministic; higher values increase creativity and variability. If not set, the model's default temperature is used (typically `0` for most models).
 
@@ -127,6 +127,7 @@ temperature: 0.1
 | `0.0–0.2` | Code analysis, planning, structured tasks where consistency matters |
 | `0.3–0.5` | General development work — a balance of consistency and adaptability |
 | `0.6–1.0` | Brainstorming, documentation drafting, creative tasks |
+| `1.0–2.0` | Highly creative or exploratory tasks (model-dependent — many models cap at 1.0) |
 
 **Tradeoffs:** Lower temperature improves predictability and reduces surprising outputs, which is usually desirable for agentic coding tasks. Higher temperature can help when you want more varied suggestions or are doing creative work, but increases the chance of unexpected behavior.
 
@@ -134,7 +135,7 @@ temperature: 0.1
 
 ## `top_p`
 
-**Type:** `number` (range: `0.0` – `1.0`)
+**Type:** `number` (range: `0.0` – `1.0`) | **UI label:** Top P
 
 An alternative to `temperature` for controlling response diversity. The model only considers the top `p` fraction of the probability distribution when sampling. Lower values are more focused; higher values are more diverse.
 
@@ -148,7 +149,7 @@ top_p: 0.9
 
 ## `permission`
 
-**Type:** `object`
+**Type:** `object` | **UI label:** Per-Agent Permissions
 
 An ordered set of rules that controls which tools this agent can use. Each permission key can be set to:
 
@@ -202,9 +203,9 @@ permission:
 
 ## `hidden`
 
-**Type:** `boolean` | **Default:** `false`
+**Type:** `boolean` | **Default:** `false` | **UI label:** Hidden
 
-When `true`, hides the agent from the `@` autocomplete menu in the chat UI. The agent can still be invoked programmatically by other agents via the Task tool.
+When `true`, hides the agent from the mode switcher and `@` mention menu in the chat input. The agent can still be invoked programmatically by other agents via the Task tool.
 
 ```yaml
 hidden: true
@@ -236,7 +237,7 @@ color: accent
 
 ## `disable`
 
-**Type:** `boolean` | **Default:** `false`
+**Type:** `boolean` | **Default:** `false` | **UI label:** Disabled
 
 When `true`, removes the agent entirely — it will not appear in the picker, cannot be `@` mentioned, and cannot be invoked by other agents.
 
