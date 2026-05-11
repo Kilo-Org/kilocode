@@ -22,22 +22,25 @@ const writeConfig = (dir: string, agent: Config.Info["agent"]) =>
     ),
   )
 
+// kilocode_change start
 it.live("agent color parsed from project config", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped()
     yield* writeConfig(dir, {
-      code: { color: "#FFA500" }, // kilocode_change
+      code: { color: "#FFA500" },
       plan: { color: "primary" },
     })
 
     yield* Effect.gen(function* () {
       const cfg = yield* Effect.promise(() => AppRuntime.runPromise(Config.Service.use((svc) => svc.get())))
-      expect(cfg.agent?.["code"]?.color).toBe("#FFA500") // kilocode_change
+      expect(cfg.agent?.["code"]?.color).toBe("#FFA500")
       expect(cfg.agent?.["plan"]?.color).toBe("primary")
     }).pipe(provideInstance(dir))
   }),
 )
+// kilocode_change end
 
+// kilocode_change start
 it.live("Agent.get includes color from config", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped()
@@ -54,6 +57,7 @@ it.live("Agent.get includes color from config", () =>
     }).pipe(provideInstance(dir))
   }),
 )
+// kilocode_change end
 
 test("Color.hexToAnsiBold converts valid hex to ANSI", () => {
   const result = Color.hexToAnsiBold("#FFA500")

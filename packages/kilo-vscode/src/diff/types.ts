@@ -8,6 +8,8 @@ export interface PanelContext {
    * open in a fixed view (e.g. a specific turn's diff)
    */
   hidePicker?: boolean
+  /** User-picked base branch for the workspace source. Undefined = auto. */
+  baseBranchOverride?: string
 }
 
 /** Mirrors `WorktreeFileDiff` in webview-ui/src/types/messages/agent-manager.ts. */

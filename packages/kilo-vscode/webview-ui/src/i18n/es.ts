@@ -1579,9 +1579,15 @@ export const dict = {
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
   "notifications.action.tryModelGeneric": "Probar modelo",
-  "diffViewer.source.workspace.label": "Cambios locales",
+  "diffViewer.source.workspace.label": "Rama",
   "diffViewer.source.workspace.tooltip":
     "Todos los cambios de esta rama respecto a la rama base. Incluye archivos sin commitear (staged, unstaged y no rastreados) y commits locales que todavía no están en la base.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Archivos con cambios que has añadido al área de preparación de git (`git add`), tal como aparecerán en el próximo commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Archivos modificados en tu árbol de trabajo pero que aún no están en el área de preparación, más archivos no rastreados (nuevos).",
   "diffViewer.source.session.label": "Sesión",
   "diffViewer.source.session.tooltip":
     "Archivos modificados por Kilo durante la sesión actual, basado en snapshots por turno. Se reinicia al empezar una nueva sesión.",
@@ -1589,4 +1595,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Las instantáneas están deshabilitadas para este repositorio. Edita tus archivos de configuración para mostrar los cambios de la sesión.",
+
+  "diffViewer.baseBranch.auto": "Predeterminada",
+  "diffViewer.baseBranch.default": "Predeterminada",
+  "diffViewer.baseBranch.remote": "Remota",
+  "diffViewer.baseBranch.search": "Buscar ramas",
+  "diffViewer.baseBranch.empty": "Sin ramas que coincidan",
+  "diffViewer.baseBranch.loading": "Cargando ramas…",
+  "diffViewer.baseBranch.none": "—",
 }

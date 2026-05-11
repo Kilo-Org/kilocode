@@ -1579,9 +1579,15 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
-  "diffViewer.source.workspace.label": "Локальні зміни",
+  "diffViewer.source.workspace.label": "Гілка",
   "diffViewer.source.workspace.tooltip":
     "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Файли зі змінами, доданими до області підготовки git (`git add`), як вони з'являться в наступному коміті.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Файли, змінені в робочому дереві, але ще не підготовлені, плюс невідстежувані (нові) файли.",
   "diffViewer.source.session.label": "Сесія",
   "diffViewer.source.session.tooltip":
     "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
@@ -1589,4 +1595,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

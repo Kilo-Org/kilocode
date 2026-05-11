@@ -33,7 +33,7 @@ export {
   getKiloDefaultModel,
   promptOrganizationSelection,
 } from "./api/profile.js"
-export { fetchKiloModels } from "./api/models.js"
+export { fetchKiloModels, type KiloModelsResult } from "./api/models.js"
 export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,

@@ -274,7 +274,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID }
       payload: typeof PromptPayload.Type
     }) {
-      // kilocode_change - cast to bridge schema-readonly→PromptInput-mutable; matches legacy Hono session.ts
+      // kilocode_change start - cast to bridge schema-readonly→PromptInput-mutable; matches legacy Hono session.ts
       yield* promptSvc
         .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput)
         .pipe(
@@ -289,6 +289,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           ),
           Effect.forkIn(scope, { startImmediately: true }),
         )
+      // kilocode_change end
       return HttpApiSchema.NoContent.make()
     })
 

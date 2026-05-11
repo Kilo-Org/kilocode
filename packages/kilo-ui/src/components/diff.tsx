@@ -8,6 +8,94 @@ import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 
 type SelectionSide = "additions" | "deletions"
 
+const OBSERVER_MARGIN = "2000px 0px"
+// Placeholder sizing only: keeps scroll position stable until Pierre renders.
+// This does not affect which files are expanded or collapsed.
+const ESTIMATED_LINE_HEIGHT = 20
+const MIN_PLACEHOLDER_HEIGHT = 160
+const MAX_PLACEHOLDER_HEIGHT = 1200
+type Job = { run: () => void; cancelled: boolean }
+
+// A review can contain many expanded diff components. Creating one
+// IntersectionObserver per diff showed up in profiles, so all deferred diffs
+// share a single observer and only register their element + render callback.
+const watchers = new Map<Element, Job>()
+const queue: Job[] = []
+let shared: IntersectionObserver | undefined
+let frame: number | undefined
+
+function lines(text: string): number {
+  if (!text) return 0
+  let count = 1
+  const cap = MAX_PLACEHOLDER_HEIGHT / ESTIMATED_LINE_HEIGHT
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) !== 10) continue
+    count++
+    if (count >= cap) return cap
+  }
+  return count
+}
+
+function release(node: Element) {
+  if (!shared) return
+  shared.unobserve(node)
+  if (watchers.size > 0) return
+  shared.disconnect()
+  shared = undefined
+}
+
+function enqueue(job: Job) {
+  queue.push(job)
+  schedule()
+}
+
+// When a large batch of diffs becomes near-visible at once, render one diff per
+// animation frame. This keeps the UI responsive while preserving expanded state.
+function schedule() {
+  if (frame !== undefined) return
+  frame = requestAnimationFrame(() => {
+    frame = undefined
+    const job = queue.shift()
+    if (job && !job.cancelled) job.run()
+    if (queue.length > 0) schedule()
+  })
+}
+
+// Defer Pierre's expensive DOM render until the diff is close to the viewport.
+// The caller still mounts an expanded diff container immediately, but the body
+// render is queued here so offscreen expanded diffs do not block worktree
+// switches or message handling.
+function observe(node: Element, cb: () => void): () => void {
+  if (typeof IntersectionObserver === "undefined") {
+    cb()
+    return () => {}
+  }
+
+  const job: Job = { run: cb, cancelled: false }
+
+  shared ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const item = watchers.get(entry.target)
+        if (!item) continue
+        watchers.delete(entry.target)
+        release(entry.target)
+        enqueue(item)
+      }
+    },
+    { rootMargin: OBSERVER_MARGIN },
+  )
+
+  watchers.set(node, job)
+  shared.observe(node)
+  return () => {
+    job.cancelled = true
+    if (!watchers.delete(node)) return
+    release(node)
+  }
+}
+
 function findElement(node: Node | null): HTMLElement | undefined {
   if (!node) return
   if (node instanceof HTMLElement) return node
@@ -78,16 +166,25 @@ export function Diff<T>(props: DiffProps<T>) {
   ])
 
   const mobile = createMediaQuery("(max-width: 640px)")
+  const [visible, setVisible] = createSignal(false)
+
+  const before = createMemo(() => {
+    if (local.fileDiff) return local.fileDiff.deletionLines.join("")
+    return typeof local.before?.contents === "string" ? local.before.contents : ""
+  })
+  const after = createMemo(() => {
+    if (local.fileDiff) return local.fileDiff.additionLines.join("")
+    return typeof local.after?.contents === "string" ? local.after.contents : ""
+  })
+
+  const estimate = createMemo(() => {
+    const value = Math.max(lines(before()), lines(after())) * ESTIMATED_LINE_HEIGHT
+    if (value === 0) return MIN_PLACEHOLDER_HEIGHT
+    return Math.max(MIN_PLACEHOLDER_HEIGHT, Math.min(value, MAX_PLACEHOLDER_HEIGHT))
+  })
 
   const large = createMemo(() => {
-    if (local.fileDiff) {
-      const before = local.fileDiff.deletionLines.join("")
-      const after = local.fileDiff.additionLines.join("")
-      return Math.max(before.length, after.length) > 500_000
-    }
-    const before = typeof local.before?.contents === "string" ? local.before.contents : ""
-    const after = typeof local.after?.contents === "string" ? local.after.contents : ""
-    return Math.max(before.length, after.length) > 500_000
+    return Math.max(before().length, after().length) > 500_000
   })
 
   const largeOptions = {
@@ -124,6 +221,17 @@ export function Diff<T>(props: DiffProps<T>) {
     sharedVirtualizer = result
     return result.virtualizer
   }
+
+  createEffect(() => {
+    if (visible()) return
+    container.style.minHeight = `${estimate()}px`
+  })
+
+  createEffect(() => {
+    if (visible()) return
+    const cleanup = observe(container, () => setVisible(true))
+    onCleanup(cleanup)
+  })
 
   const getRoot = () => {
     const host = container.querySelector("diffs-container")
@@ -361,7 +469,10 @@ export function Diff<T>(props: DiffProps<T>) {
 
   const setSelectedLines = (range: SelectedLineRange | null) => {
     const active = current()
-    if (!active) return
+    if (!active) {
+      lastSelection = range
+      return
+    }
 
     const fixed = fixSelection(range)
     if (fixed === undefined) {
@@ -569,6 +680,8 @@ export function Diff<T>(props: DiffProps<T>) {
   }
 
   createEffect(() => {
+    if (!visible()) return
+
     const opts = options()
     const workerPool = large() ? getWorkerPool("unified") : getWorkerPool(props.diffStyle)
     const virtualizer = getVirtualizer()
@@ -596,8 +709,8 @@ export function Diff<T>(props: DiffProps<T>) {
         containerWrapper: container,
       })
     } else {
-      const beforeContents = typeof local.before?.contents === "string" ? local.before.contents : ""
-      const afterContents = typeof local.after?.contents === "string" ? local.after.contents : ""
+      const beforeContents = before()
+      const afterContents = after()
 
       const cacheKey = (contents: string) => {
         if (!large()) return sampledChecksum(contents, contents.length)

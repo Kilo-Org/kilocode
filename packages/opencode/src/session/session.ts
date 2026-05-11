@@ -385,6 +385,7 @@ export const getUsage = (input: {
   // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
   const reported = KiloSession.providerCost({
     metadata: input.metadata,
+    usage: input.usage,
     provider: input.provider,
     providerID: input.model.providerID,
   })

@@ -2329,6 +2329,9 @@ describe("SessionNs.getUsage", () => {
     // When upstream cost is missing for Kilo, fall back to regular cost field
     expect(result.cost).toBe(0.01)
   })
+
+  // Tests for Anthropic Messages / OpenAI Responses / Vercel AI Gateway cost extraction
+  // live in test/kilocode/provider-cost.test.ts (kilocode_change).
   // kilocode_change end
 
   test.each(["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"])(

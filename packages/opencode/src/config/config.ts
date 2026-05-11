@@ -544,7 +544,7 @@ export const layer = Layer.effect(
           )
           .pipe(
             Effect.catchIf(
-              (e) => e.reason._tag === "PermissionDenied",
+              (e) => e.reason._tag === "PermissionDenied" || e.reason._tag === "NotFound", // kilocode_change - also ignore NotFound (broken symlink/junction on Windows)
               () => Effect.void,
             ),
           )

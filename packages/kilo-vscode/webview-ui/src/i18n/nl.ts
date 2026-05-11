@@ -1591,9 +1591,15 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
-  "diffViewer.source.workspace.label": "Lokale wijzigingen",
+  "diffViewer.source.workspace.label": "Branch",
   "diffViewer.source.workspace.tooltip":
     "Alle wijzigingen in deze branch vergeleken met de base branch. Inclusief niet-gecommitte bestanden (staged, unstaged, ungetrackt) en lokale commits die nog niet in de base zitten.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Bestanden met wijzigingen die je hebt toegevoegd aan het staging-gebied van git (`git add`), zoals ze in de volgende commit zullen verschijnen.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Bestanden gewijzigd in je werkboom maar nog niet gestaged, plus niet-gevolgde (nieuwe) bestanden.",
   "diffViewer.source.session.label": "Sessie",
   "diffViewer.source.session.tooltip":
     "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
@@ -1601,4 +1607,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

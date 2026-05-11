@@ -16,10 +16,11 @@ import { mergeWorktreeDiffs } from "../agent-manager/diff-state"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
-import type { ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
+import type { BranchInfo, ReviewComment, WebviewMessage, WorktreeFileDiff } from "../src/types/messages"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../src/diff/sources/types"
 import type { DiffViewerNotice } from "../src/types/messages/extension-messages"
 import { DiffPickerHeader } from "./DiffPickerHeader"
+import { BaseBranchPicker } from "./BaseBranchPicker"
 
 const NOTICE_KEYS: Record<DiffViewerNotice, string> = {
   "snapshots-disabled": "diffViewer.notice.snapshotsDisabled",
@@ -43,6 +44,20 @@ const DiffViewerContent: Component = () => {
   const [currentSourceId, setCurrentSourceId] = createSignal<string | undefined>(undefined)
   const [capabilities, setCapabilities] = createSignal<DiffSourceCapabilities | undefined>(undefined)
   const [notice, setNotice] = createSignal<DiffViewerNotice | undefined>(undefined)
+  const [branches, setBranches] = createSignal<BranchInfo[]>([])
+  const [defaultBranch, setDefaultBranch] = createSignal<string>("")
+  const [autoBase, setAutoBase] = createSignal<string | undefined>(undefined)
+  const [currentBase, setCurrentBase] = createSignal<string | undefined>(undefined)
+  const [isAuto, setIsAuto] = createSignal(true)
+  const [currentBranch, setCurrentBranch] = createSignal<string | undefined>(undefined)
+  const [branchesLoading, setBranchesLoading] = createSignal(false)
+
+  const isWorkspaceSource = () => {
+    const id = currentSourceId()
+    if (!id) return false
+    const desc = availableSources().find((d) => d.id === id)
+    return desc?.type === "workspace"
+  }
 
   const noticeText = () => {
     const n = notice()
@@ -132,6 +147,17 @@ const DiffViewerContent: Component = () => {
       setNotice(msg.notice)
       return
     }
+
+    if (msg.type === "diffViewer.branches") {
+      setBranches(msg.branches)
+      setDefaultBranch(msg.defaultBranch)
+      setAutoBase(msg.autoBase)
+      setCurrentBase(msg.currentBase)
+      setIsAuto(msg.isAuto)
+      setCurrentBranch(msg.currentBranch)
+      setBranchesLoading(false)
+      return
+    }
   })
 
   const selectSource = (id: string) => {
@@ -154,6 +180,23 @@ const DiffViewerContent: Component = () => {
     }),
   )
 
+  // Fetch branches whenever the active source becomes the workspace one. The
+  // extension owns the override state so we ask on every transition rather
+  // than caching here.
+  createEffect(() => {
+    if (!isWorkspaceSource()) return
+    setBranchesLoading(true)
+    post({ type: "diffViewer.requestBranches" })
+  })
+
+  const onBaseBranchSelect = (branch: string | undefined) => {
+    // Optimistically reflect the new selection so the trigger label updates
+    // immediately; the extension echoes back authoritative state next.
+    setCurrentBase(branch ?? autoBase())
+    setIsAuto(branch === undefined)
+    post({ type: "diffViewer.setBaseBranch", branch })
+  }
+
   const handler = (event: MessageEvent) => {
     const msg = event.data
     if (msg?.type !== "appendReviewComments" || !Array.isArray(msg.comments)) return
@@ -169,7 +212,25 @@ const DiffViewerContent: Component = () => {
   return (
     <>
       <Show when={availableSources().length > 0}>
-        <DiffPickerHeader descriptors={availableSources()} currentId={currentSourceId()} onSelect={selectSource} />
+        <DiffPickerHeader
+          descriptors={availableSources()}
+          currentId={currentSourceId()}
+          onSelect={selectSource}
+          accessory={
+            <Show when={isWorkspaceSource()}>
+              <BaseBranchPicker
+                branches={branches()}
+                loading={branchesLoading()}
+                defaultBranch={defaultBranch()}
+                autoBase={autoBase()}
+                currentBase={currentBase()}
+                isAuto={isAuto()}
+                currentBranch={currentBranch()}
+                onSelect={onBaseBranchSelect}
+              />
+            </Show>
+          }
+        />
       </Show>
       <Show when={noticeText()}>
         <div class="diff-viewer-notice" role="status">

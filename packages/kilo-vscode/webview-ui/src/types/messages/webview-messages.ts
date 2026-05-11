@@ -789,6 +789,19 @@ export interface DiffViewerCloseRequest {
   type: "diffViewer.close"
 }
 
+export interface DiffViewerRequestBranchesRequest {
+  type: "diffViewer.requestBranches"
+}
+
+/**
+ * Override the workspace source's base branch. Pass `branch: undefined` to
+ * clear the override and fall back to the auto-resolved base.
+ */
+export interface DiffViewerSetBaseBranchRequest {
+  type: "diffViewer.setBaseBranch"
+  branch: string | undefined
+}
+
 export interface DiffVirtualSetMarkdownRenderRequest {
   type: "diffVirtual.setMarkdownRender"
   render: boolean
@@ -1138,6 +1151,8 @@ export type WebviewMessage =
   | DiffViewerRevertFileRequest
   | DiffViewerRequestFileRequest
   | DiffViewerCloseRequest
+  | DiffViewerRequestBranchesRequest
+  | DiffViewerSetBaseBranchRequest
   | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest

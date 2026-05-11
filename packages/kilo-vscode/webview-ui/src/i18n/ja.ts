@@ -1553,9 +1553,15 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
-  "diffViewer.source.workspace.label": "ローカルの変更",
+  "diffViewer.source.workspace.label": "ブランチ",
   "diffViewer.source.workspace.tooltip":
     "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
+  "diffViewer.source.staged.label": "ステージ済み",
+  "diffViewer.source.staged.tooltip":
+    "git のステージングエリアに追加（`git add`）した変更のあるファイル。次のコミットに含まれる内容です。",
+  "diffViewer.source.unstaged.label": "未ステージ",
+  "diffViewer.source.unstaged.tooltip":
+    "作業ツリーで変更されたがまだステージングされていないファイルと、追跡されていない（新しい）ファイル。",
   "diffViewer.source.session.label": "セッション",
   "diffViewer.source.session.tooltip":
     "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
@@ -1563,4 +1569,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
+
+  "diffViewer.baseBranch.auto": "デフォルト",
+  "diffViewer.baseBranch.default": "デフォルト",
+  "diffViewer.baseBranch.remote": "リモート",
+  "diffViewer.baseBranch.search": "ブランチを検索",
+  "diffViewer.baseBranch.empty": "一致するブランチがありません",
+  "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
+  "diffViewer.baseBranch.none": "—",
 }

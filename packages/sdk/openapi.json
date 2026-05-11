@@ -5549,9 +5549,15 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "failed": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
-                  "required": ["all", "default", "connected"]
+                  "required": ["all", "default", "connected", "failed"]
                 }
               }
             }
@@ -8328,6 +8334,47 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.reject({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/indexing/status": {
+      "get": {
+        "operationId": "indexing.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get indexing status",
+        "description": "Retrieve the current code indexing status for the active project.",
+        "responses": {
+          "200": {
+            "description": "Indexing status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexingStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.status({\n  ...\n})"
           }
         ]
       }
@@ -14434,13 +14481,19 @@
             "type": "string"
           },
           "processedFiles": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "totalFiles": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "percent": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
           }
         },
         "required": ["state", "message", "processedFiles", "totalFiles", "percent"]

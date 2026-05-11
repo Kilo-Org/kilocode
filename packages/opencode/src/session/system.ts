@@ -1,6 +1,5 @@
 import { Context, Effect, Layer } from "effect"
 
-import { Global } from "@opencode-ai/core/global" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
@@ -21,7 +20,8 @@ import { Skill } from "@/skill"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
-import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
+import type { EditorContext } from "../kilocode/editor-context"
+import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
 import { isLing } from "../kilocode/model-match"
 // kilocode_change end
 
@@ -97,25 +97,10 @@ export const layer = Layer.effect(
         model: Provider.Model,
         editorContext?: EditorContext,
       ) {
-        // kilocode_change end
         const ctx = yield* InstanceState.context
-        return [
-          [
-            `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
-            `Here is some useful information about the environment you are running in:`,
-            `<env>`,
-            `  Working directory: ${ctx.directory}`,
-            `  Workspace root folder: ${ctx.worktree}`,
-            `  Is directory a git repo: ${ctx.project.vcs === "git" ? "yes" : "no"}`,
-            `  Platform: ${process.platform}`,
-            `  Today's date: ${new Date().toDateString()}`,
-            `  Project config: .kilo/command/*.md, .kilo/agent/*.md, kilo.json, AGENTS.md. Put new commands and agents in .kilo/. Do not use .kilocode/ or .opencode/.`, // kilocode_change
-            `  Global config: ${Global.Path.config}/ (same structure)`, // kilocode_change
-            ...staticEnvLines(editorContext), // kilocode_change
-            `</env>`,
-          ].join("\n"),
-        ]
+        return KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext })
       }),
+      // kilocode_change end
 
       skills: Effect.fn("SystemPrompt.skills")(function* (agent: Agent.Info) {
         if (Permission.disabled(["skill"], agent.permission).has("skill")) return
