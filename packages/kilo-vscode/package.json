@@ -43,7 +43,8 @@
     "ai",
     "llama",
     "Kilo Code",
-    "kilocode"
+    "kilocode",
+    "avian"
   ],
   "activationEvents": [
     "onStartupFinished"
