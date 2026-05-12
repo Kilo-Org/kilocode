@@ -122,14 +122,14 @@ Kilo Code has a list of keybinds that you can customize through `tui.json`.
 }
 ```
 
-{% callout type="warning" title="Keybind Conflict: <leader>h" %}
-Both `messages_toggle_conceal` and `tips_toggle` default to `<leader>h`. This means pressing `<leader>h` will trigger whichever binding is matched first. To resolve the conflict, override one of them in your `tui.json`:
+{% callout type="warning" title="Conflicting default: <leader>h" %}
+Both `messages_toggle_conceal` and `tips_toggle` share `<leader>h` as their default binding. Only one will fire depending on the active context. If you use both, override one of them in `tui.json` to assign a unique key, for example:
 
 ```json {% filename="tui.json" %}
 {
   "$schema": "https://opencode.ai/tui.json",
   "keybinds": {
-    "tips_toggle": "none"
+    "tips_toggle": "<leader>?"
   }
 }
 ```
