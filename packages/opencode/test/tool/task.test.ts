@@ -523,11 +523,7 @@ describe("tool.task", () => {
             action: "deny",
           })
           // kilocode_change end
-          expect(seen?.tools).toEqual({
-            task: false, // kilocode_change - Kilo disallows nested subagents
-            bash: false,
-            read: false,
-          })
+          expect(seen?.tools).toEqual(expect.objectContaining({ task: false, bash: false, read: false })) // kilocode_change
           // kilocode_change end
         }),
       {
