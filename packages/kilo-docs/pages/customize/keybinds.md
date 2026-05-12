@@ -122,6 +122,18 @@ Kilo Code has a list of keybinds that you can customize through `tui.json`.
 }
 ```
 
+{% callout type="warning" title="Keybind Conflict: <leader>h" %}
+Both `messages_toggle_conceal` and `tips_toggle` default to `<leader>h`. This means pressing `<leader>h` will trigger whichever binding is matched first. To resolve the conflict, override one of them in your `tui.json`:
+
+```json {% filename="tui.json" %}
+{
+  "keybinds": {
+    "tips_toggle": "none"
+  }
+}
+```
+{% /callout %}
+
 {% callout type="note" title="Windows Defaults" %}
 On Windows, the defaults for `input_undo` and `terminal_suspend` are different:
 
