@@ -54,6 +54,7 @@ export const AiProvidersNav: NavSection[] = [
     title: "Local & Self-Hosted",
     links: [
       { href: "/ai-providers/ollama", children: "Ollama" },
+      { href: "/ai-providers/ollama-cloud", children: "Ollama Cloud" },
       { href: "/ai-providers/lmstudio", children: "LM Studio" },
       { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
       {

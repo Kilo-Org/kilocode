@@ -82,14 +82,20 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 |---|---|
 | Anthropic | `anthropic` |
 | AWS Bedrock | `bedrock` |
+| DeepSeek | `deepseek` |
+| Fireworks | `fireworks` |
 | Google AI Studio | `google` |
 | Inception | `inception` |
-| OpenAI | `openai` |
 | MiniMax | `minimax` |
 | Mistral | `mistral` |
+| Moonshot AI (Kimi) | `moonshot` |
+| Novita | `novita` |
+| OpenAI | `openai` |
+| Xiaomi | `xiaomi` |
 | xAI | `xai` |
 | Z.AI | `zai` |
 | BytePlus Coding Plan | `byteplus-coding` |
+| Chutes BYOK | `chutes` |
 | Codestral (FIM) | `codestral` |
 | Kimi Code | `kimi-coding` |
 | Neuralwatt | `neuralwatt` |

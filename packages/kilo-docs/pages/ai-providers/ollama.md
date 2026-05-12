@@ -144,6 +144,12 @@ If your Ollama model doesn't appear in the Kilo model picker, register it as a c
 
 See [Custom Models](/docs/code-with-ai/agents/custom-models) for the full list of configuration fields and more examples.
 
+## Ollama Cloud
+
+If you don't have suitable hardware to run models locally, [Ollama Cloud](https://docs.ollama.com/cloud) is the managed cloud service from the same team. It provides access to the same open-weight models over an API without requiring local setup.
+
+Ollama Cloud uses a different provider ID (`ollama-cloud`) and requires an API key (`OLLAMA_API_KEY`). See the [Ollama Cloud provider page](/docs/ai-providers/ollama-cloud) for configuration instructions.
+
 ## Further Reading
 
 Refer to the [Ollama documentation](https://ollama.com/docs) for more information on installing, configuring and using Ollama.
