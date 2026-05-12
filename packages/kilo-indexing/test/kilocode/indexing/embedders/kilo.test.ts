@@ -42,27 +42,6 @@ describe("KiloEmbedder", () => {
     })
   })
 
-  test("does not forward dimensions to the gateway", async () => {
-    mockEmbeddingsCreate.mockResolvedValue({
-      data: [{ embedding: [0.1, 0.2] }],
-      usage: { prompt_tokens: 1, total_tokens: 1 },
-    })
-
-    const embedder = new KiloEmbedder({
-      apiKey: "kilo-token",
-      organizationId: "org_123",
-      modelId: "mistralai/mistral-embed-2312",
-    })
-
-    await embedder.createEmbeddings(["hello"])
-
-    expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
-      input: ["hello"],
-      model: "mistralai/mistral-embed-2312",
-      encoding_format: "base64",
-    })
-  })
-
   test("normalizes custom gateway base URLs", () => {
     const seen: unknown[] = []
     setOpenAIConstructorHook((cfg) => seen.push(cfg))

@@ -34,7 +34,7 @@ export class KiloEmbedder implements IEmbedder {
       input.apiKey,
       this.model,
       MAX_ITEM_TOKENS,
-      { headers },
+      { headers, dimensions: input.dimensions },
     )
   }
 
