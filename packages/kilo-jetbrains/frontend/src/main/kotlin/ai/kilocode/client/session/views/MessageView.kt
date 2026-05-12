@@ -2,9 +2,13 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Message
-import com.intellij.ui.JBColor
+import ai.kilocode.client.session.model.StepFinish
+import ai.kilocode.client.session.ui.SessionView
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.ui.RoundedLineBorder
 import com.intellij.util.ui.JBUI
-import javax.swing.border.MatteBorder
 
 /**
  * A single message container inside a [TurnView].
@@ -14,31 +18,38 @@ import javax.swing.border.MatteBorder
  * part view gets the full available width and height is computed correctly
  * for HTML-backed views.
  *
- * Styling:
- * - User messages: 1 px top separator + extra top padding to create a
- *   visual turn boundary.
- * - Assistant messages: light padding only.
+ * Styling: user messages render as rounded prompt bubbles. Spacing around
+ * messages is owned by [ai.kilocode.client.session.ui.SessionLayout].
  */
-class MessageView(val msg: Message) : ai.kilocode.client.session.ui.SessionLayoutPanel() {
+class MessageView(
+    val msg: Message,
+    private var style: SessionEditorStyle = SessionEditorStyle.current(),
+) : ai.kilocode.client.session.ui.SessionLayoutPanel(
+    JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+), SessionEditorStyleTarget, SessionView {
+
+    constructor(msg: Message) : this(msg, SessionEditorStyle.current())
 
     val role: String get() = msg.info.role
+
+    override val sessionViewKind: SessionView.Kind
+        get() = if (role == SessionUiStyle.View.Message.USER_ROLE) SessionView.Kind.UserPrompt else SessionView.Kind.Default
 
     private val parts = LinkedHashMap<String, PartView>()
 
     init {
         isOpaque = false
-        border = if (msg.info.role == "user") {
-            JBUI.Borders.compound(
-                MatteBorder(JBUI.scale(1), 0, 0, 0, JBColor.border()),
-                JBUI.Borders.empty(JBUI.scale(8), 0, JBUI.scale(4), 0),
-            )
+        border = if (msg.info.role == SessionUiStyle.View.Message.USER_ROLE) {
+            userBorder()
         } else {
-            JBUI.Borders.empty(JBUI.scale(4), 0)
+            assistantBorder()
         }
 
         // Populate content that already exists (e.g. after loadHistory)
         for ((_, content) in msg.parts) {
+            if (content is StepFinish) continue
             val view = ViewFactory.create(content)
+            view.applyStyle(style)
             parts[content.id] = view
             add(view)
         }
@@ -46,33 +57,39 @@ class MessageView(val msg: Message) : ai.kilocode.client.session.ui.SessionLayou
 
     /** Add or update the renderer for [content]. */
     fun upsertPart(content: Content) {
+        if (content is StepFinish) return
         val existing = parts[content.id]
         if (existing != null) {
             existing.update(content)
-            revalidate()
-            repaint()
+            refresh()
             return
         }
         val view = ViewFactory.create(content)
+        view.applyStyle(style)
         parts[content.id] = view
         add(view)
-        revalidate()
-        repaint()
+        syncBorder()
+        refresh()
     }
 
     /** Remove the renderer for [contentId] if present. */
     fun removePart(contentId: String) {
         val view = parts.remove(contentId) ?: return
         remove(view)
-        revalidate()
-        repaint()
+        syncBorder()
+        refresh()
+    }
+
+    private fun syncBorder() {
+        if (msg.info.role != SessionUiStyle.View.Message.ASSISTANT_ROLE) return
+        border = assistantBorder()
     }
 
     /** Append a streaming delta to the renderer for [contentId]. */
     fun appendDelta(contentId: String, delta: String) {
-        parts[contentId]?.appendDelta(delta)
-        revalidate()
-        repaint()
+        val part = parts[contentId] ?: return
+        part.appendDelta(delta)
+        refresh()
     }
 
     /** Look up a renderer by part id. */
@@ -83,4 +100,25 @@ class MessageView(val msg: Message) : ai.kilocode.client.session.ui.SessionLayou
 
     /** Compact dump for test assertions. */
     fun dump(): String = parts.values.joinToString(", ") { it.dumpLabel() }
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
+        for (view in parts.values) view.applyStyle(style)
+        refresh()
+    }
+
+    private fun refresh() {
+        revalidate()
+        repaint()
+    }
+
+    private fun userBorder() = JBUI.Borders.compound(
+        RoundedLineBorder(SessionUiStyle.View.line(), JBUI.scale(SessionUiStyle.View.Message.USER_BORDER_ARC)),
+        JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Message.USER_BORDER_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Message.USER_BORDER_HORIZONTAL_PADDING),
+        ),
+    )!!
+
+    private fun assistantBorder() = JBUI.Borders.empty()
 }

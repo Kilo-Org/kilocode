@@ -2,12 +2,12 @@
 import { Effect } from "effect"
 import path from "path"
 import { Permission } from "@/permission"
-import { Flag } from "@/flag/flag"
-import { Global } from "@/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import { ModelID, ProviderID } from "@/provider/schema"
-import type { Session } from "../../session"
+import type { Session } from "../../session/session"
 import type { Agent } from "../../agent/agent"
-import type { Config } from "../../config"
+import type { Config } from "../../config/config"
 import z from "zod"
 
 // RATIONALE: Mirror narrow state slice Task tool consumes and ignore unrelated TUI fields.
@@ -22,6 +22,11 @@ export namespace KiloTask {
   /** Reject primary agents used as subagents */
   export function validate(info: Agent.Info, name: string) {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
+  }
+
+  /** Kilo keeps delegation one level deep to avoid recursive subagent chains. */
+  export function nestedTask(): false {
+    return false
   }
 
   /**

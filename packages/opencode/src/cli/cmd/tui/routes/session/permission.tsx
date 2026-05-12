@@ -12,13 +12,14 @@ import { useTextareaKeybindings } from "../../component/textarea-keybindings"
 import { useProject } from "../../context/project"
 import path from "path"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
-import { Keybind } from "@/util"
-import { Locale } from "@/util"
-import { Global } from "@/global"
+import { Keybind } from "@/util/keybind"
+import { Locale } from "@/util/locale"
+import { Global } from "@opencode-ai/core/global"
 import { useDialog } from "../../ui/dialog"
 import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../context/tui-config"
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
+import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 
 type PermissionStage = "permission" | "always" | "reject"
 
@@ -294,7 +295,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             if (permission === "bash") {
               const title =
                 typeof data.description === "string" && data.description ? data.description : "Shell command"
-              const command = typeof data.command === "string" ? data.command : ""
+              const command = normalizeUrls(typeof data.command === "string" ? data.command : "") // kilocode_change
               return {
                 icon: "#",
                 title,
@@ -325,7 +326,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             }
 
             if (permission === "webfetch") {
-              const url = typeof data.url === "string" ? data.url : ""
+              const url = normalizeUrls(typeof data.url === "string" ? data.url : "") // kilocode_change
               return {
                 icon: "%",
                 title: `WebFetch ${url}`,
@@ -344,21 +345,6 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               return {
                 icon: "◈",
                 title: `Exa Web Search "${query}"`,
-                body: (
-                  <Show when={query}>
-                    <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Query: " + query}</text>
-                    </box>
-                  </Show>
-                ),
-              }
-            }
-
-            if (permission === "codesearch") {
-              const query = typeof data.query === "string" ? data.query : ""
-              return {
-                icon: "◇",
-                title: `Exa Code Search "${query}"`,
                 body: (
                   <Show when={query}>
                     <box paddingLeft={1}>

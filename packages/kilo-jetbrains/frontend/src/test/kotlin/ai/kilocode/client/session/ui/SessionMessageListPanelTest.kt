@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.model.SessionModel
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -223,6 +224,37 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         model.upsertMessage(msg("u3", "user"))
 
         assertEquals(listOf("u1", "u2", "u3"), panel.turnIds())
+    }
+
+    fun `test applyStyle updates existing transcript without rebuilding`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+        val turn = panel.findTurn("a1")!!
+        val message = panel.findMessage("a1")!!
+        val text = message.part("p1") as TextView
+        val comp = text.md.component
+        val style = SessionEditorStyle.create(family = "Courier New", size = 24)
+
+        panel.applyStyle(style)
+
+        assertSame(turn, panel.findTurn("a1"))
+        assertSame(message, panel.findMessage("a1"))
+        assertSame(text, panel.findMessage("a1")!!.part("p1"))
+        assertSame(comp, text.md.component)
+        assertTrue(text.md.overrideSheet().contains("Courier New"))
+        assertTrue(text.md.overrideSheet().contains("24pt"))
+    }
+
+    fun `test new content after applyStyle uses queued style`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        val style = SessionEditorStyle.create(family = "Courier New", size = 25)
+        panel.applyStyle(style)
+
+        model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+
+        val text = panel.findMessage("a1")!!.part("p1") as TextView
+        assertTrue(text.md.overrideSheet().contains("Courier New"))
+        assertTrue(text.md.overrideSheet().contains("25pt"))
     }
 
     // ------ helpers ------

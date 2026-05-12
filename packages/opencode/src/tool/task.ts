@@ -1,11 +1,11 @@
 import * as Tool from "./tool"
 import DESCRIPTION from "./task.txt"
-import { Session } from "../session"
+import { Session } from "@/session/session"
 import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import type { SessionPrompt } from "../session/prompt"
-import { Config } from "../config"
+import { Config } from "@/config/config"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { Effect, Schema } from "effect"
@@ -62,12 +62,12 @@ export const TaskTool = Tool.define(
       KiloTask.validate(next, params.subagent_type)
       // kilocode_change end
 
-      const canTask = next.permission.some((rule) => rule.permission === id)
+      const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
       const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
 
+      const parent = yield* sessions.get(ctx.sessionID)
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
       const caller = yield* agent.get(ctx.agent)
-      const parent = yield* Effect.promise(() => Session.get(SessionID.make(ctx.sessionID)))
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
       // kilocode_change end
 
@@ -81,6 +81,9 @@ export const TaskTool = Tool.define(
           parentID: ctx.sessionID,
           title: params.description + ` (@${next.name} subagent)`,
           permission: [
+            ...(parent.permission ?? []).filter(
+              (rule) => rule.permission === "external_directory" || rule.action === "deny",
+            ),
             ...(canTodo
               ? []
               : [

@@ -5,21 +5,21 @@
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Bus } from "../../src/bus"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { KiloCostPropagation } from "../../src/kilocode/session/cost-propagation"
 import { Instance } from "../../src/project/instance"
 import { ProviderID, ModelID } from "../../src/provider/schema"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID } from "../../src/session/schema"
-import { Log } from "../../src/util"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import * as Log from "@opencode-ai/core/util/log"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const ref = {

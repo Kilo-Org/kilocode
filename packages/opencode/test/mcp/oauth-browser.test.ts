@@ -14,10 +14,18 @@ void mock.module("open", () => ({
     // Return a mock subprocess that emits an error if openShouldFail is true
     const subprocess = new EventEmitter()
     if (openShouldFail) {
-      // Emit error asynchronously like a real subprocess would
-      setTimeout(() => {
-        subprocess.emit("error", new Error("spawn xdg-open ENOENT"))
-      }, 10)
+      // kilocode_change start - buffer the error until the consumer attaches
+      // its listener. The previous setTimeout(10) raced listener attachment
+      // on slow Windows CI; emit() before `.on("error", ...)` was silently
+      // lost and BrowserOpenFailed was never published.
+      const err = new Error("spawn xdg-open ENOENT")
+      const originalOn = subprocess.on.bind(subprocess)
+      subprocess.on = function (event, listener) {
+        const ret = originalOn(event, listener)
+        if (event === "error") queueMicrotask(() => (listener as (e: Error) => void).call(subprocess, err))
+        return ret
+      }
+      // kilocode_change end
     }
     return subprocess
   },
@@ -89,6 +97,7 @@ void mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
   },
 }))
 
+// kilocode_change start - reset mock state and wait for OAuth redirect signal in CI
 // Mock UnauthorizedError in the auth module
 void mock.module("@modelcontextprotocol/sdk/client/auth.js", () => ({
   UnauthorizedError: MockUnauthorizedError,
@@ -99,6 +108,14 @@ beforeEach(() => {
   openCalledWith = undefined
   transportCalls.length = 0
 })
+
+async function waitFor(fn: () => boolean, timeout = 5_000) {
+  const deadline = Date.now() + timeout
+  while (!fn() && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+}
+// kilocode_change end
 
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
@@ -135,8 +152,9 @@ test("BrowserOpenFailed event is published when open() throws", async () => {
       const events: Array<{ mcpName: string; url: string }> = []
       const unsubscribe = Bus.subscribe(MCP.BrowserOpenFailed, (evt) => {
         events.push(evt.properties)
-      })
+      }) // kilocode_change
 
+      // kilocode_change start - attach rejection handler before stopping callback server
       // Run authenticate with a timeout to avoid waiting forever for the callback
       // Attach a handler immediately so callback shutdown rejections
       // don't show up as unhandled between tests.
@@ -146,9 +164,9 @@ test("BrowserOpenFailed event is published when open() throws", async () => {
           return yield* mcp.authenticate("test-oauth-server")
         }),
       ).catch(() => undefined)
+      // kilocode_change end
 
-      // Config.get() can be slow in tests, so give it plenty of time.
-      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      await waitFor(() => events.length > 0) // kilocode_change
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()
@@ -186,13 +204,15 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      openShouldFail = false
+      // kilocode_change
+      openShouldFail = false // kilocode_change
 
       const events: Array<{ mcpName: string; url: string }> = []
       const unsubscribe = Bus.subscribe(MCP.BrowserOpenFailed, (evt) => {
         events.push(evt.properties)
-      })
+      }) // kilocode_change
 
+      // kilocode_change start - attach rejection handler before stopping callback server
       // Run authenticate with a timeout to avoid waiting forever for the callback
       const authPromise = AppRuntime.runPromise(
         Effect.gen(function* () {
@@ -200,9 +220,10 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
           return yield* mcp.authenticate("test-oauth-server-2")
         }),
       ).catch(() => undefined)
+      // kilocode_change end
 
-      // Config.get() can be slow in tests; also covers the ~500ms open() error-detection window.
-      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      await waitFor(() => openCalledWith !== undefined) // kilocode_change
+      await new Promise((resolve) => setTimeout(resolve, 600)) // kilocode_change - let authenticate await callbackPromise before stop rejects it
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()
@@ -240,9 +261,11 @@ test("open() is called with the authorization URL", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      openShouldFail = false
+      // kilocode_change
+      openShouldFail = false // kilocode_change
       openCalledWith = undefined
 
+      // kilocode_change start - attach rejection handler before stopping callback server
       // Run authenticate with a timeout to avoid waiting forever for the callback
       const authPromise = AppRuntime.runPromise(
         Effect.gen(function* () {
@@ -250,9 +273,10 @@ test("open() is called with the authorization URL", async () => {
           return yield* mcp.authenticate("test-oauth-server-3")
         }),
       ).catch(() => undefined)
+      // kilocode_change end
 
-      // Config.get() can be slow in tests; also covers the ~500ms open() error-detection window.
-      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      await waitFor(() => openCalledWith !== undefined) // kilocode_change
+      await new Promise((resolve) => setTimeout(resolve, 600)) // kilocode_change - let authenticate await callbackPromise before stop rejects it
 
       // Stop the callback server and cancel any pending auth
       await McpOAuthCallback.stop()

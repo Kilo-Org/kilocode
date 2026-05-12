@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { APICallError } from "ai"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ProviderTransform } from "../../src/provider"
-import type { Provider } from "../../src/provider"
+import { ProviderTransform } from "@/provider/transform"
+import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { Question } from "../../src/question"
@@ -469,6 +469,13 @@ describe("session.message-v2.toModelMessage", () => {
           },
           {
             ...basePart(assistantID, "a2"),
+            type: "reasoning",
+            text: "thinking",
+            metadata: { openai: { reasoning: "meta" } },
+            time: { start: 0 },
+          },
+          {
+            ...basePart(assistantID, "a3"),
             type: "tool",
             callID: "call-1",
             tool: "bash",
@@ -495,6 +502,7 @@ describe("session.message-v2.toModelMessage", () => {
         role: "assistant",
         content: [
           { type: "text", text: "done" },
+          { type: "text", text: "thinking" },
           {
             type: "tool-call",
             toolCallId: "call-1",
@@ -873,7 +881,6 @@ describe("session.message-v2.toModelMessage", () => {
     ])
   })
 
-  // kilocode_change start - cherry-picked from anomalyco/opencode#24435
   test("preserves OpenRouter reasoning details through provider transform", async () => {
     const assistantID = "m-assistant"
     const openrouterModel: Provider.Model = {
@@ -946,7 +953,6 @@ describe("session.message-v2.toModelMessage", () => {
       },
     ])
   })
-  // kilocode_change end
 
   test("splits assistant messages on step-start boundaries", async () => {
     const assistantID = "m-assistant"

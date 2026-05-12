@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} APIキー",
   "provider.connect.apiKey.placeholder": "APIキー",
   "provider.connect.apiKey.required": "APIキーが必要です",
+  "provider.connect.prompt.required": "{{field}}は必須です",
+  "provider.connect.azure.endpointType.label": "Azure エンドポイント構成の選択",
+  "provider.connect.azure.endpointType.resourceName.label": "リソース名",
+  "provider.connect.azure.endpointType.resourceName.hint": "Azure リソース名からエンドポイントを構築します",
+  "provider.connect.azure.endpointType.baseURL.label": "完全なエンドポイント URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "カスタム Azure OpenAI エンドポイントを使用します",
+  "provider.connect.azure.resourceName.label": "Azure リソース名",
+  "provider.connect.azure.resourceName.placeholder": "例：my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI エンドポイント URL",
+  "provider.connect.azure.baseURL.placeholder": "例：https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zenは、コーディングエージェント向けに最適化された信頼性の高いモデルへのアクセスを提供します。",
   "provider.connect.opencodeZen.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
@@ -453,6 +463,11 @@ export const dict = {
   "error.promotionLimit.description":
     "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でお戻りください。",
   "error.promotionLimit.action": "サインアップ",
+  "error.providerAuth.title": "{{provider}} からログアウトしました",
+  "error.providerAuth.description": "{{provider}} に再接続してから、メッセージを再送信してください。",
+  "error.providerAuth.chatgpt.title": "OpenAI からログアウトしました",
+  "error.providerAuth.chatgpt.description":
+    "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
   "error.chain.unknown": "不明なエラー",
   "error.chain.causedBy": "原因:",
@@ -750,12 +765,23 @@ export const dict = {
   "settings.indexing.dimension.title": "ベクトル次元",
   "settings.indexing.enable.description": "セマンティックコードベースインデックスをオンまたはオフにします。",
   "settings.indexing.enable.title": "インデックスを有効にする",
+  "settings.indexing.globalEnable.title": "グローバルで有効にする",
+  "settings.indexing.globalEnable.description": "すべてのワークスペースでインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.title": "このプロジェクトで有効にする",
+  "settings.indexing.projectEnable.description":
+    "グローバルなインデックス作成がオフの場合に、このワークスペースでのインデックス作成を有効にします。",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "グローバルインデックスが有効なため、このプロジェクトはすでにカバーされています。",
   "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
   "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
   "settings.indexing.lancedbDirectory.title": "LanceDBディレクトリ",
   "settings.indexing.model.description": "選択したプロバイダーのデフォルト埋め込みモデルを上書きします。",
   "settings.indexing.model.title": "埋め込みモデル",
   "settings.indexing.provider.description": "セマンティック検索用の埋め込みを生成するプロバイダーを選択します。",
+  "settings.indexing.kiloModel.title": "Kiloモデルプリセット",
+  "settings.indexing.kiloModel.description": "サポートされているKiloホスト型埋め込みモデルを選択します。",
+  "settings.indexing.kiloSignIn.title": "Kiloへのサインインが必要です",
+  "settings.indexing.kiloSignIn.description": "ホスト型埋め込みを使用するにはKiloにサインインしてください。",
   "settings.indexing.provider.title": "埋め込みプロバイダー",
   "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
   "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
@@ -1166,6 +1192,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "インラインタスクをトリガーするスマートキーバインドを使用",
   "settings.autocomplete.chatAutocomplete.title": "チャットの自動補完を有効にする",
   "settings.autocomplete.chatAutocomplete.description": "チャットテキストエリアに自動補完の提案を表示",
+  "settings.autocomplete.modelsHint": "オートコンプリートに使用するモデルを選択するには、モデル設定をご覧ください。",
   "settings.notifications.agent.title": "エージェント完了",
   "settings.notifications.agent.description": "エージェントがタスクを完了したら通知を表示",
   "settings.notifications.permissions.title": "権限リクエスト",
@@ -1396,6 +1423,8 @@ export const dict = {
   "settings.display.layout.description": "チャットインターフェースのレイアウトモード",
   "settings.display.layout.auto": "自動",
   "settings.display.layout.stretch": "ストレッチ",
+  "settings.display.fontSize.title": "フォントサイズ",
+  "settings.display.fontSize.description": "VS Code とは独立して Kilo webview UI のフォントサイズを調整します。",
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
@@ -1410,6 +1439,7 @@ export const dict = {
     "タイトル生成、コミットメッセージ生成、プロンプト改善、およびその他の高速タスク用の軽量モデル",
   "settings.providers.disabled": "無効化されたプロバイダー",
   "settings.providers.disabled.description": "プロバイダーリストから非表示にするプロバイダー",
+  "settings.providers.disabled.enable": "有効化",
   "settings.providers.enabled": "有効化されたプロバイダー（ホワイトリスト）",
   "settings.providers.enabled.description": "設定された場合、これらのプロバイダーのみが利用可能",
   "settings.providers.notSet": "未設定（サーバーのデフォルトを使用）",
@@ -1528,4 +1558,28 @@ export const dict = {
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
   "notifications.action.tryModelGeneric": "モデルを試す",
+  "diffViewer.source.workspace.label": "ブランチ",
+  "diffViewer.source.workspace.tooltip":
+    "ベースブランチと比較したこのブランチのすべての変更。未コミットのファイル（staged、unstaged、未追跡）とベースにまだ反映されていないローカルコミットを含みます。",
+  "diffViewer.source.staged.label": "ステージ済み",
+  "diffViewer.source.staged.tooltip":
+    "git のステージングエリアに追加（`git add`）した変更のあるファイル。次のコミットに含まれる内容です。",
+  "diffViewer.source.unstaged.label": "未ステージ",
+  "diffViewer.source.unstaged.tooltip":
+    "作業ツリーで変更されたがまだステージングされていないファイルと、追跡されていない（新しい）ファイル。",
+  "diffViewer.source.session.label": "セッション",
+  "diffViewer.source.session.tooltip":
+    "現在のセッション中に Kilo が変更したファイル。ターンごとのスナップショットに基づきます。新しいセッションを開始するとリセットされます。",
+  "diffViewer.group.session": "セッション",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "このリポジトリではスナップショットが無効になっています。セッションの変更を表示するには、構成ファイルを編集してください。",
+
+  "diffViewer.baseBranch.auto": "デフォルト",
+  "diffViewer.baseBranch.default": "デフォルト",
+  "diffViewer.baseBranch.remote": "リモート",
+  "diffViewer.baseBranch.search": "ブランチを検索",
+  "diffViewer.baseBranch.empty": "一致するブランチがありません",
+  "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
+  "diffViewer.baseBranch.none": "—",
 }

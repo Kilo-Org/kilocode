@@ -185,6 +185,104 @@ class KiloBackendSessionManagerTest {
         }
     }
 
+    @Test
+    fun `cloudSessions returns cloud sessions from server`() = runBlocking {
+        mock.cloudSessions = """{
+            "cliSessions": [
+                {"session_id":"cloud_1","title":"Cloud One","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-02T00:00:00Z","version":2}
+            ],
+            "nextCursor": "next_1"
+        }"""
+        val app = setup()
+        ready(app)
+
+        val result = app.sessions.cloudSessions("/repo", null, 50, null)
+
+        assertEquals(1, result.sessions.size)
+        assertEquals("cloud_1", result.sessions[0].id)
+        assertEquals("Cloud One", result.sessions[0].title)
+        assertEquals("next_1", result.nextCursor)
+    }
+
+    @Test
+    fun `cloudSessions passes filters and cursor`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.cloudSessions("/repo path", "cur 1", 25, "git@github.com:Kilo-Org/kilo.git")
+
+        val path = mock.lastCloudSessionsPath ?: error("missing cloud sessions request")
+        assertTrue(path.startsWith("/kilo/cloud-sessions?"))
+        val decoded = URLDecoder.decode(path, "UTF-8")
+        assertTrue(decoded.contains("directory=/repo path"), path)
+        assertTrue(decoded.contains("cursor=cur 1"), path)
+        assertTrue(decoded.contains("limit=25"), path)
+        assertTrue(decoded.contains("gitUrl=git@github.com:Kilo-Org/kilo.git"), path)
+    }
+
+    @Test
+    fun `cloudSessions throws when not started`() = runBlocking {
+        val app = setup()
+
+        assertFailsWith<IllegalStateException> {
+            app.sessions.cloudSessions("/test", null, 50, null)
+        }
+    }
+
+    @Test
+    fun `cloudSessions surfaces server failure`() = runBlocking {
+        mock.cloudSessionsStatus = 500
+        mock.cloudSessions = """{"error":"boom"}"""
+        val app = setup()
+        ready(app)
+
+        val err = assertFailsWith<RuntimeException> {
+            app.sessions.cloudSessions("/test", null, 50, null)
+        }
+
+        assertTrue(err.message.orEmpty().contains("HTTP 500"))
+        assertTrue(err.message.orEmpty().contains("boom"))
+    }
+
+    @Test
+    fun `importCloudSession posts cloud id and returns local session`() = runBlocking {
+        mock.cloudSessionImport = """{
+            "id":"ses_imported",
+            "slug":"imported",
+            "projectID":"prj_test",
+            "directory":"/repo",
+            "title":"Imported Cloud",
+            "version":"1.0.0",
+            "time":{"created":1000,"updated":2000}
+        }"""
+        val app = setup()
+        ready(app)
+
+        val session = app.sessions.importCloudSession("cloud_1", "/repo path")
+
+        assertEquals("ses_imported", session.id)
+        assertEquals("Imported Cloud", session.title)
+        val path = mock.lastCloudSessionImportPath ?: error("missing cloud import request")
+        assertTrue(path.startsWith("/kilo/cloud/session/import?"))
+        assertTrue(URLDecoder.decode(path, "UTF-8").contains("directory=/repo path"), path)
+        assertEquals("""{"sessionId":"cloud_1"}""", mock.lastCloudSessionImportBody)
+    }
+
+    @Test
+    fun `importCloudSession surfaces server failure`() = runBlocking {
+        mock.cloudSessionImportStatus = 500
+        mock.cloudSessionImport = """{"error":"boom"}"""
+        val app = setup()
+        ready(app)
+
+        val err = assertFailsWith<RuntimeException> {
+            app.sessions.importCloudSession("cloud_1", "/test")
+        }
+
+        assertTrue(err.message.orEmpty().contains("HTTP 500"))
+        assertTrue(err.message.orEmpty().contains("boom"))
+    }
+
     // ------ Session create ------
 
     @Test

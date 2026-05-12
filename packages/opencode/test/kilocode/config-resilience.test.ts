@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
-import { Config } from "../../src/config"
+import { Config } from "../../src/config/config"
 import { Instance } from "../../src/project/instance"
-import { Filesystem } from "../../src/util"
-import { tmpdir } from "../fixture/fixture"
+import { Filesystem } from "../../src/util/filesystem"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await Config.invalidate()
 })
 

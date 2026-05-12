@@ -52,7 +52,7 @@
   align-items: center;
   justify-content: center;
   color: var(--vscode-descriptionForeground);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-style: italic;
 }
 
@@ -69,19 +69,19 @@
 }
 
 .model-preview-name {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-weight: 600;
   color: var(--vscode-editor-foreground);
   line-height: 1.3;
 }
 
 .model-preview-provider {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
 }
 
 .model-preview-description {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   line-height: 1.5;
   color: var(--vscode-editor-foreground);
   opacity: 0.85;
@@ -120,13 +120,13 @@
 }
 
 .model-preview-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
 }
 
 .model-preview-value {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--vscode-editor-foreground);
   font-variant-numeric: tabular-nums;
 }
@@ -143,7 +143,7 @@
   align-items: center;
   padding: 1px 6px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   background: var(--vscode-badge-background);
   color: var(--vscode-badge-foreground);
@@ -223,7 +223,7 @@
   color: var(--vscode-input-foreground);
   border: 1px solid var(--vscode-input-border);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-family: var(--vscode-font-family);
   outline: none;
   box-sizing: border-box;
@@ -234,7 +234,7 @@
 }
 
 .model-selector-search::placeholder {
-  color: var(--vscode-input-placeholderForeground);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .model-selector-list {
@@ -248,7 +248,7 @@
 .model-selector-empty {
   padding: 12px 16px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   text-align: center;
 }
 
@@ -273,7 +273,7 @@
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   user-select: none;
 }
@@ -333,14 +333,14 @@
   background: var(--vscode-testing-iconPassed, #4caf50) !important;
   color: #fff !important;
   text-transform: uppercase;
-  font-size: 8px !important;
+  font-size: var(--kilo-font-size-10) !important;
   padding: 1px 3px !important;
   opacity: 0.8;
 }
 
 .model-selector-item-provider-tag {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--vscode-descriptionForeground);
   opacity: 0.8;
 }
@@ -388,7 +388,7 @@
 .model-selector-item-select-btn {
   flex-shrink: 0;
   padding: 2px 10px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   font-family: inherit;
   border-radius: 2px;
@@ -428,7 +428,7 @@
 .thinking-selector-item {
   padding: 8px 12px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
 }
 
 .thinking-selector-item:hover {
@@ -468,7 +468,7 @@
   gap: 2px;
   padding: 8px 12px;
   cursor: pointer;
-  font-size: var(--vscode-font-size);
+  font-size: var(--font-size-base);
 }
 
 .mode-switcher-item:hover {
@@ -495,7 +495,7 @@
 
 .mode-switcher-item-desc {
   display: block;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weak, var(--vscode-descriptionForeground));
   max-width: 100%;
   overflow: hidden;

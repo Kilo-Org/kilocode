@@ -12,6 +12,24 @@ export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
 /** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
 export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
 
+/** Environment variable for custom Kilo Chat URL */
+export const KILO_CHAT_URL_ENV = "KILO_CHAT_URL"
+
+/** Default Kilo Chat URL (REST endpoint for messages, conversations, etc.) */
+export const KILO_DEFAULT_CHAT_URL = "https://chat.kiloapps.io"
+
+/** Base URL for Kilo Chat - can be overridden by KILO_CHAT_URL env var */
+export const KILO_CHAT_URL = process.env[KILO_CHAT_URL_ENV] || KILO_DEFAULT_CHAT_URL
+
+/** Environment variable for custom Event Service URL */
+export const KILO_EVENT_SERVICE_URL_ENV = "EVENT_SERVICE_URL"
+
+/** Default Event Service URL (WebSocket endpoint for kilo-chat events) */
+export const KILO_DEFAULT_EVENT_SERVICE_URL = "wss://events.kiloapps.io"
+
+/** Base URL for Event Service - can be overridden by EVENT_SERVICE_URL env var */
+export const KILO_EVENT_SERVICE_URL = process.env[KILO_EVENT_SERVICE_URL_ENV] || KILO_DEFAULT_EVENT_SERVICE_URL
+
 /** Default base URL for OpenRouter-compatible endpoint */
 export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 
@@ -19,7 +37,7 @@ export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 export const POLL_INTERVAL_MS = 3000
 
 /** Default model for authenticated users */
-export const DEFAULT_MODEL = "kilo-auto/balanced"
+export const DEFAULT_MODEL = "kilo-auto/free"
 
 /** Default model for anonymous/free usage */
 export const DEFAULT_FREE_MODEL = "kilo-auto/free"

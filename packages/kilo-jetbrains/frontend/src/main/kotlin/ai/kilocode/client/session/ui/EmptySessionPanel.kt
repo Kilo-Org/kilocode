@@ -1,9 +1,19 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.update.SessionController
-import ai.kilocode.client.ui.md.MdView
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.history.HistoryTime
+import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.history.clicked
+import ai.kilocode.client.session.history.title
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.ui.CenterShrinkPanel
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.SessionDto
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.IconLoader
@@ -12,53 +22,57 @@ import com.intellij.ui.components.JBList
 import com.intellij.util.ui.Centerizer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.components.BorderLayoutPanel
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionAdapter
-import javax.swing.Box
-import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
+import javax.swing.JButton
 import javax.swing.JList
-import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
-import kotlin.math.abs
 
 /**
- * Centered empty-session panel.
+ * Empty-session panel.
+ *
+ * The content is a BorderLayout panel, wrapped in a
+ * [CenterShrinkPanel] (exposed as [view]) so callers need not know about centering.
  */
 class EmptySessionPanel(
     parent: Disposable,
     private val controller: SessionController,
     recents: List<SessionDto>,
-) : JPanel(BorderLayout()), Disposable {
+    private val history: () -> Unit = {},
+) : BorderLayoutPanel(), Disposable, SessionEditorStyleTarget {
+    val view: CenterShrinkPanel = CenterShrinkPanel(this)
 
-    companion object {
-        internal const val LIMIT = 5
-        internal const val MAX_WIDTH = 350
-        private const val MINUTE = 60_000L
-        private const val HOUR = 60 * MINUTE
-        private const val DAY = 24 * HOUR
-    }
-
-    private val model = DefaultListModel<SessionDto>()
+    private val model = DefaultListModel<LocalHistoryItem>()
     private var hover = -1
+    private var style = SessionEditorStyle.current()
+
+    private val recentTitle = JBLabel(KiloBundle.message("session.empty.recent")).apply {
+        foreground = UIUtil.getContextHelpForeground()
+    }
 
     private val list = JBList(model).apply {
         isOpaque = false
         selectionMode = ListSelectionModel.SINGLE_SELECTION
-        visibleRowCount = LIMIT
+        visibleRowCount = SessionUiStyle.RecentSessions.LIMIT
         cellRenderer = SessionRenderer()
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         emptyText.clear()
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                val index = row(e)
-                if (index < 0) return
-                selectedIndex = index
-                controller.openSession(model.getElementAt(index))
+                val item = clicked(this@apply, e) ?: return
+                controller.openSession(SessionRef.Local(item.session))
             }
 
             override fun mouseExited(e: MouseEvent) {
@@ -68,75 +82,81 @@ class EmptySessionPanel(
         })
         addMouseMotionListener(object : MouseMotionAdapter() {
             override fun mouseMoved(e: MouseEvent) {
-                val index = row(e)
+                val index = index(e)
                 if (hover == index) return
                 hover = index
                 repaint()
             }
         })
     }
-    private val md = MdView.html().apply {
-        opaque = false
-        foreground = UIUtil.getContextHelpForeground()
-        set(KiloBundle.message("session.empty.welcome"))
+
+    private val historyButton = ShowHistoryButton().apply {
+        addActionListener { history() }
     }
-    private val content = createContent()
+
+    private val welcomeLabel = JBLabel(welcomeHtml()).apply {
+        foreground = UIUtil.getContextHelpForeground()
+        horizontalAlignment = JBLabel.CENTER
+        setAllowAutoWrapping(true)
+    }
+
+    private val description = object : BorderLayoutPanel() {
+        override fun getPreferredSize(): Dimension {
+            val size = super.getPreferredSize()
+            return Dimension(JBUI.scale(SessionUiStyle.RecentSessions.DESCRIPTION_WIDTH), size.height)
+        }
+
+        override fun getMaximumSize(): Dimension {
+            val size = super.getMaximumSize()
+            return Dimension(JBUI.scale(SessionUiStyle.RecentSessions.DESCRIPTION_WIDTH), size.height)
+        }
+    }.apply {
+        isOpaque = false
+        border = JBUI.Borders.empty(UiStyle.Gap.lg(), 0, UiStyle.Gap.lg(), 0)
+        add(welcomeLabel, BorderLayout.CENTER)
+    }
 
     init {
         Disposer.register(parent, this)
         isOpaque = false
-        border = JBUI.Borders.empty(12)
+        applyStyle(SessionEditorStyle.current())
         setSessions(recents)
-        add(Centerizer(content, Centerizer.TYPE.BOTH), BorderLayout.CENTER)
+
+        val gap = UiStyle.Gap.pad()
+        layout = BorderLayout(0, gap)
+
+        val logo = JBLabel(
+            IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java),
+        ).apply {
+            horizontalAlignment = JBLabel.CENTER
+        }
+        val header = BorderLayoutPanel(0, gap).apply {
+            isOpaque = false
+            add(logo, BorderLayout.NORTH)
+            add(CenterShrinkPanel(description), BorderLayout.CENTER)
+        }
+
+        val recent = BorderLayoutPanel().apply {
+            isOpaque = false
+            add(recentTitle, BorderLayout.NORTH)
+            add(list, BorderLayout.CENTER)
+        }
+
+        val south = BorderLayoutPanel().apply {
+            isOpaque = false
+            add(Centerizer(historyButton, Centerizer.TYPE.HORIZONTAL), BorderLayout.CENTER)
+        }
+
+        add(header, BorderLayout.NORTH)
+        add(recent, BorderLayout.CENTER)
+        add(south, BorderLayout.SOUTH)
     }
 
     private fun setSessions(sessions: List<SessionDto>) {
         model.clear()
-        sessions.take(LIMIT).forEach(model::addElement)
+        sessions.take(SessionUiStyle.RecentSessions.LIMIT).map(::LocalHistoryItem).forEach(model::addElement)
         revalidate()
         repaint()
-    }
-
-    private fun createContent(): JPanel {
-        val logo = JBLabel(
-            IconLoader.getIcon("/icons/kilo-content.svg", EmptySessionPanel::class.java),
-        ).apply {
-            alignmentX = CENTER_ALIGNMENT
-        }
-        val intro = JPanel(BorderLayout()).apply {
-            isOpaque = false
-            alignmentX = CENTER_ALIGNMENT
-            add(md.component, BorderLayout.CENTER)
-            border = JBUI.Borders.empty(0, 12, 0, 12)
-        }
-        val recent = JPanel(BorderLayout()).apply {
-            isOpaque = false
-            alignmentX = CENTER_ALIGNMENT
-            add(JBLabel(KiloBundle.message("session.empty.recent")).apply {
-                foreground = UIUtil.getContextHelpForeground()
-                font = font.deriveFont(font.size2D - 1f)
-                border = JBUI.Borders.emptyLeft(8)
-            }, BorderLayout.NORTH)
-            add(list, BorderLayout.CENTER)
-        }
-        val stack = JPanel().apply {
-            isOpaque = false
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            add(logo)
-            add(Box.createVerticalStrut(JBUI.scale(14)))
-            add(intro)
-            add(Box.createVerticalStrut(JBUI.scale(28)))
-            add(recent)
-        }
-        return object : JPanel(BorderLayout()) {
-            override fun getPreferredSize(): Dimension {
-                val size = super.getPreferredSize()
-                return Dimension(JBUI.scale(MAX_WIDTH), size.height)
-            }
-        }.apply {
-            isOpaque = false
-            add(stack, BorderLayout.NORTH)
-        }
     }
 
     internal fun recentCount() = model.size()
@@ -149,14 +169,32 @@ class EmptySessionPanel(
 
     internal fun clickRecent(index: Int) {
         list.selectedIndex = index
-        controller.openSession(model.getElementAt(index))
+        controller.openSession(SessionRef.Local(model.getElementAt(index).session))
     }
+
+    internal fun clickShowHistory() {
+        historyButton.doClick()
+    }
+
+    internal fun showHistoryText() = historyButton.text
+
+    internal fun showHistoryBorderPainted() = historyButton.isBorderPainted
+
+    internal fun showHistoryCursor() = historyButton.cursor.type
+
+    internal fun recentCursor() = list.cursor.type
 
     internal fun recentVisible() = true
 
-    internal fun explanationMarkdown() = md.markdown()
+    internal fun explanationText() = KiloBundle.message("session.empty.welcome")
 
-    internal fun contentPreferredSize() = content.preferredSize
+    internal fun welcomeLabelAlignment() = welcomeLabel.horizontalAlignment
+
+    internal fun descriptionPreferredSize() = description.preferredSize
+
+    internal fun descriptionMaximumSize() = description.maximumSize
+
+    internal fun historyButtonPreferredWidth() = historyButton.preferredSize.width
 
     internal fun initialized() = true
 
@@ -164,13 +202,8 @@ class EmptySessionPanel(
 
     internal fun activeView() = getComponent(0)
 
-    internal fun text(session: SessionDto, now: Long = System.currentTimeMillis()) = time(session, now)
-
-    internal fun normalize(value: Double): Long {
-        val raw = value.toLong()
-        if (abs(raw) < 10_000_000_000L) return raw * 1000
-        return raw
-    }
+    internal fun text(session: SessionDto, now: Long = System.currentTimeMillis()) =
+        HistoryTime.relative(LocalHistoryItem(session), now)
 
     internal fun rendererComponent(
         session: SessionDto,
@@ -179,32 +212,33 @@ class EmptySessionPanel(
     ): Component {
         val old = this.hover
         this.hover = if (hover) 0 else -1
-        return list.cellRenderer.getListCellRendererComponent(list, session, 0, selected, false).also {
+        return list.cellRenderer.getListCellRendererComponent(list, LocalHistoryItem(session), 0, selected, false).also {
             this.hover = old
         }
     }
 
-    private fun row(e: MouseEvent): Int {
-        val index = list.locationToIndex(e.point)
-        if (index < 0) return -1
-        val box = list.getCellBounds(index, index) ?: return -1
+    private fun index(e: MouseEvent): Int {
+        val idx = list.locationToIndex(e.point)
+        if (idx < 0) return -1
+        val box = list.getCellBounds(idx, idx) ?: return -1
         if (!box.contains(e.point)) return -1
-        return index
+        return idx
     }
 
-    private inner class SessionRenderer : JPanel(BorderLayout()), ListCellRenderer<SessionDto> {
+    private inner class SessionRenderer : BorderLayoutPanel(), ListCellRenderer<LocalHistoryItem> {
         private val title = JBLabel()
         private val time = JBLabel()
 
         init {
-            border = JBUI.Borders.empty(8, 8, 8, 8)
+            layout = BorderLayout(UiStyle.Gap.pad(), 0)
+            border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg())
             add(title, BorderLayout.CENTER)
             add(time, BorderLayout.EAST)
         }
 
         override fun getListCellRendererComponent(
-            list: JList<out SessionDto>,
-            value: SessionDto?,
+            list: JList<out LocalHistoryItem>,
+            value: LocalHistoryItem?,
             index: Int,
             selected: Boolean,
             focus: Boolean,
@@ -215,24 +249,67 @@ class EmptySessionPanel(
             title.foreground = if (active) list.selectionForeground else UIUtil.getLabelForeground()
             time.foreground = if (active) list.selectionForeground else UIUtil.getContextHelpForeground()
             title.text = value?.let(::title) ?: ""
-            time.text = value?.let { time(it) } ?: ""
+            time.text = value?.let(HistoryTime::relative) ?: ""
             return this
         }
     }
 
-    private fun title(session: SessionDto) =
-        session.title.takeIf { it.isNotBlank() } ?: KiloBundle.message("session.tab.untitled")
+    private inner class ShowHistoryButton : JButton(KiloBundle.message("session.showHistory"), AllIcons.Vcs.History) {
+        private var over = false
 
-    private fun time(session: SessionDto, now: Long = System.currentTimeMillis()): String {
-        val ms = normalize(session.time.updated)
-        val diff = (now - ms).coerceAtLeast(0)
-        if (diff < MINUTE) return KiloBundle.message("session.empty.time.moments")
-        if (diff < HOUR) return KiloBundle.message("session.empty.time.minutes", (diff / MINUTE).coerceAtLeast(1))
-        if (diff < DAY) return KiloBundle.message("session.empty.time.hours", (diff / HOUR).coerceAtLeast(1))
-        return KiloBundle.message("session.empty.time.days", (diff / DAY).coerceAtLeast(1))
+        init {
+            isFocusable = false
+            setRequestFocusEnabled(false)
+            isContentAreaFilled = false
+            isBorderPainted = false
+            isOpaque = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseEntered(e: MouseEvent) {
+                    sync(true)
+                }
+
+                override fun mouseExited(e: MouseEvent) {
+                    sync(false)
+                }
+            })
+        }
+
+        override fun paintComponent(g: Graphics) {
+            if (isEnabled && over) {
+                val g2 = g.create() as Graphics2D
+                try {
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    g2.color = JBUI.CurrentTheme.ActionButton.hoverBackground()
+                    val arc = JBUI.scale(JBUI.getInt("Button.arc", 6))
+                    g2.fillRoundRect(0, 0, width, height, arc, arc)
+                } finally {
+                    g2.dispose()
+                }
+            }
+            super.paintComponent(g)
+        }
+
+        private fun sync(value: Boolean) {
+            if (over == value) return
+            over = value
+            repaint()
+        }
     }
 
     override fun dispose() {
         // no-op
     }
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
+        welcomeLabel.font = style.uiFont
+        recentTitle.font = style.smallUiFont
+        revalidate()
+        repaint()
+    }
+
+    private fun welcomeHtml() = XmlStringUtil.wrapInHtml(
+        "<div style='text-align:center'>${XmlStringUtil.escapeString(KiloBundle.message("session.empty.welcome"))}</div>"
+    )
 }

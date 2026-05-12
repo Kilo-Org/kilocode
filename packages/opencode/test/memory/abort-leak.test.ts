@@ -13,9 +13,7 @@ const getHeapMB = () => {
 }
 
 describe("memory: abort controller leak", () => {
-  // kilocode_change start - TODO(#8990): skip flaky test on Linux CI
-  test.skip("webfetch does not leak memory over many invocations", async () => {
-    // kilocode_change end
+  test("webfetch does not leak memory over many invocations", async () => {
     // Measure the abort-timed fetch path in a fresh process so shared tool
     // runtime state does not dominate the heap signal.
     const proc = Bun.spawn({

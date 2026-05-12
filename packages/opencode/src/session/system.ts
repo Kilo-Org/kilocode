@@ -1,7 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 
-import { Global } from "../global" // kilocode_change
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
 import PROMPT_DEFAULT from "./prompt/default.txt"
@@ -14,14 +13,15 @@ import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 
 import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
-import type { Provider } from "@/provider"
+import type { Provider } from "@/provider/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
 
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
-import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
+import type { EditorContext } from "../kilocode/editor-context"
+import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
 import { isLing } from "../kilocode/model-match"
 // kilocode_change end
 
@@ -37,24 +37,30 @@ export function soul() {
 
 export function provider(model: Provider.Model) {
   // kilocode_change start
-  switch (model.prompt) {
-    case "anthropic":
-      return [PROMPT_ANTHROPIC]
-    case "anthropic_without_todo":
-      return [PROMPT_DEFAULT]
-    case "beast":
-      return [PROMPT_BEAST]
-    case "codex":
-      return [PROMPT_CODEX]
-    case "gemini":
-      return [PROMPT_GEMINI]
-    case "gpt55":
-      return [PROMPT_GPT55]
-    case "ling":
-      return [PROMPT_LING]
-    case "trinity":
-      return [PROMPT_TRINITY]
+  function prompt() {
+    switch (model.prompt) {
+      case "anthropic":
+        return [PROMPT_ANTHROPIC]
+      case "anthropic_without_todo":
+        return [PROMPT_DEFAULT]
+      case "beast":
+        return [PROMPT_BEAST]
+      case "codex":
+        return [PROMPT_CODEX]
+      case "gemini":
+        return [PROMPT_GEMINI]
+      case "gpt55":
+        return [PROMPT_GPT55]
+      case "ling":
+        return [PROMPT_LING]
+      case "trinity":
+        return [PROMPT_TRINITY]
+    }
+    return undefined
   }
+
+  const kilo = prompt()
+  if (kilo) return kilo
   // kilocode_change end
 
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
@@ -74,7 +80,7 @@ export function provider(model: Provider.Model) {
 }
 
 export interface Interface {
-  readonly environment: (model: Provider.Model, editorContext?: EditorContext) => string[] // kilocode_change
+  readonly environment: (model: Provider.Model, editorContext?: EditorContext) => Effect.Effect<string[]> // kilocode_change
   readonly skills: (agent: Agent.Info) => Effect.Effect<string | undefined>
 }
 
@@ -86,26 +92,15 @@ export const layer = Layer.effect(
     const skill = yield* Skill.Service
 
     return Service.of({
-      environment(model, editorContext) {
-        // kilocode_change
-        const project = Instance.project
-        return [
-          [
-            `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
-            `Here is some useful information about the environment you are running in:`,
-            `<env>`,
-            `  Working directory: ${Instance.directory}`,
-            `  Workspace root folder: ${Instance.worktree}`,
-            `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
-            `  Platform: ${process.platform}`,
-            `  Today's date: ${new Date().toDateString()}`,
-            `  Project config: .kilo/command/*.md, .kilo/agent/*.md, kilo.json, AGENTS.md. Put new commands and agents in .kilo/. Do not use .kilocode/ or .opencode/.`, // kilocode_change
-            `  Global config: ${Global.Path.config}/ (same structure)`, // kilocode_change
-            ...staticEnvLines(editorContext), // kilocode_change
-            `</env>`,
-          ].join("\n"),
-        ]
-      },
+      // kilocode_change start
+      environment: Effect.fn("SystemPrompt.environment")(function* (
+        model: Provider.Model,
+        editorContext?: EditorContext,
+      ) {
+        const ctx = yield* InstanceState.context
+        return KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext })
+      }),
+      // kilocode_change end
 
       skills: Effect.fn("SystemPrompt.skills")(function* (agent: Agent.Info) {
         if (Permission.disabled(["skill"], agent.permission).has("skill")) return

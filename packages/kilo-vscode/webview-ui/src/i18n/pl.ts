@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "Klucz API {{provider}}",
   "provider.connect.apiKey.placeholder": "Klucz API",
   "provider.connect.apiKey.required": "Klucz API jest wymagany",
+  "provider.connect.prompt.required": "{{field}} jest wymagane",
+  "provider.connect.azure.endpointType.label": "Wybierz konfigurację punktu końcowego Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Nazwa zasobu",
+  "provider.connect.azure.endpointType.resourceName.hint": "Zbuduj punkt końcowy z nazwy zasobu Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "Pełny adres URL punktu końcowego",
+  "provider.connect.azure.endpointType.baseURL.hint": "Użyj niestandardowego punktu końcowego Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Nazwa zasobu Azure",
+  "provider.connect.azure.resourceName.placeholder": "np. my-models",
+  "provider.connect.azure.baseURL.label": "Adres URL punktu końcowego Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "np. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen daje dostęp do wybranego zestawu niezawodnych, zoptymalizowanych modeli dla agentów kodujących.",
   "provider.connect.opencodeZen.line2":
@@ -457,6 +467,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Zarejestruj się za darmo, aby kontynuować i odkryć ponad 500 modeli. Zajmie to 2 minuty, bez karty kredytowej. Lub wróć później.",
   "error.promotionLimit.action": "Zarejestruj się",
+  "error.providerAuth.title": "{{provider}} wylogował Cię",
+  "error.providerAuth.description": "Połącz się ponownie z {{provider}}, a następnie wyślij wiadomość jeszcze raz.",
+  "error.providerAuth.chatgpt.title": "OpenAI wylogowało Cię",
+  "error.providerAuth.chatgpt.description":
+    "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
 
   "error.chain.unknown": "Nieznany błąd",
   "error.chain.causedBy": "Spowodowany przez:",
@@ -1147,6 +1162,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Użyj inteligentnego skrótu do wyzwalania zadań inline",
   "settings.autocomplete.chatAutocomplete.title": "Włącz autouzupełnianie czatu",
   "settings.autocomplete.chatAutocomplete.description": "Pokaż sugestie autouzupełniania w polu czatu",
+  "settings.autocomplete.modelsHint": "Aby wybrać model używany do autouzupełniania, zobacz Ustawienia modeli.",
   "settings.notifications.agent.title": "Zakończenie agenta",
   "settings.notifications.agent.description": "Pokaż powiadomienie po zakończeniu zadania przez agenta",
   "settings.notifications.permissions.title": "Żądania uprawnień",
@@ -1202,6 +1218,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Wymiar wektora",
   "settings.indexing.enable.description": "Włącz lub wyłącz semantyczne indeksowanie bazy kodu.",
   "settings.indexing.enable.title": "Włącz indeksowanie",
+  "settings.indexing.globalEnable.title": "Włącz globalnie",
+  "settings.indexing.globalEnable.description": "Włącz indeksowanie dla każdego obszaru roboczego.",
+  "settings.indexing.projectEnable.title": "Włącz dla tego projektu",
+  "settings.indexing.projectEnable.description":
+    "Włącz indeksowanie dla tego obszaru roboczego, gdy globalne indeksowanie jest wyłączone.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globalne indeksowanie jest włączone, więc ten projekt jest już uwzględniony.",
   "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
   "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",
   "settings.indexing.lancedbDirectory.title": "Katalog LanceDB",
@@ -1209,6 +1232,10 @@ export const dict = {
   "settings.indexing.model.title": "Model osadzania",
   "settings.indexing.provider.description":
     "Wybierz dostawcę używanego do generowania osadzeń dla wyszukiwania semantycznego.",
+  "settings.indexing.kiloModel.title": "Preset modelu Kilo",
+  "settings.indexing.kiloModel.description": "Wybierz obsługiwany model osadzania hostowany przez Kilo.",
+  "settings.indexing.kiloSignIn.title": "Wymagane logowanie do Kilo",
+  "settings.indexing.kiloSignIn.description": "Zaloguj się do Kilo, aby używać hostowanych osadzeń.",
   "settings.indexing.provider.title": "Dostawca osadzania",
   "settings.indexing.providerField.description": "Ustawienie połączenia specyficzne dla dostawcy.",
   "settings.indexing.qdrantApiKey.description": "Opcjonalny klucz API dla instancji Qdrant.",
@@ -1406,6 +1433,8 @@ export const dict = {
   "settings.display.layout.description": "Tryb układu interfejsu czatu",
   "settings.display.layout.auto": "Automatyczny",
   "settings.display.layout.stretch": "Rozciągnij",
+  "settings.display.fontSize.title": "Rozmiar czcionki",
+  "settings.display.fontSize.description": "Dostosuj rozmiar czcionki webview UI Kilo niezależnie od VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
@@ -1420,6 +1449,7 @@ export const dict = {
     "Lekki model do generowania tytułów, wiadomości commitów, ulepszania zapytań i innych szybkich zadań",
   "settings.providers.disabled": "Wyłączeni dostawcy",
   "settings.providers.disabled.description": "Dostawcy do ukrycia z listy",
+  "settings.providers.disabled.enable": "Włącz",
   "settings.providers.enabled": "Włączeni dostawcy (biała lista)",
   "settings.providers.enabled.description": "Jeśli ustawiono, tylko ci dostawcy będą dostępni",
   "settings.providers.notSet": "Nie ustawiono (użyj domyślnego serwera)",
@@ -1538,4 +1568,28 @@ export const dict = {
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
   "notifications.action.tryModelGeneric": "Wypróbuj model",
+  "diffViewer.source.workspace.label": "Gałąź",
+  "diffViewer.source.workspace.tooltip":
+    "Wszystkie zmiany na tej gałęzi w porównaniu z gałęzią bazową. Obejmuje niezacommitowane pliki (staged, unstaged, nieśledzone) oraz lokalne commity, których jeszcze nie ma w bazie.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Pliki ze zmianami dodanymi do obszaru przygotowania git (`git add`), tak jak pojawią się w następnym commicie.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Pliki zmodyfikowane w drzewie roboczym, ale jeszcze nieprzygotowane, plus nieśledzone (nowe) pliki.",
+  "diffViewer.source.session.label": "Sesja",
+  "diffViewer.source.session.tooltip":
+    "Pliki zmienione przez Kilo w trakcie bieżącej sesji, na podstawie snapshotów na turę. Resetowane przy rozpoczęciu nowej sesji.",
+  "diffViewer.group.session": "Sesja",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Migawki są wyłączone dla tego repozytorium. Edytuj pliki konfiguracyjne, aby wyświetlać zmiany sesji.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

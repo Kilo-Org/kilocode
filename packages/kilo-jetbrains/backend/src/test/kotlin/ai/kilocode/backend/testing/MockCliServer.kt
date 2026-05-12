@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.createTempDirectory
 
 /**
  * Lightweight mock HTTP server simulating the Kilo CLI server.
@@ -33,6 +34,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var warnings = "[]"
     @Volatile var notifications = "[]"
     @Volatile var profile = """{"profile":{"email":"test@test.com","name":"Test"},"balance":null,"currentOrgId":null}"""
+    @Volatile var path = """{"home":"/tmp","state":"${createTempDirectory("kilo-model-state").toAbsolutePath()}","config":"/tmp","worktree":"/tmp","directory":"/tmp"}"""
     @Volatile var profileStatus = 200
     @Volatile var configStatus = 200
     @Volatile var warningsStatus = 200
@@ -53,12 +55,23 @@ class MockCliServer : AutoCloseable {
     @Volatile var recentSessions = "[]"
     @Volatile var sessionCreate = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"New Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
     @Volatile var sessionStatuses = "{}"
+    @Volatile var summarizeResponse = "true"
     @Volatile var sessionsStatus = 200
     @Volatile var recentSessionsStatus = 200
     @Volatile var sessionCreateStatus = 200
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
     @Volatile var sessionStatusesStatus = 200
+    @Volatile var cloudSessions = """{"cliSessions":[],"nextCursor":null}"""
+    @Volatile var cloudSessionImport = """{"id":"ses_imported","slug":"imported","projectID":"prj_test","directory":"/test","title":"Imported Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var cloudSessionsStatus = 200
+    @Volatile var cloudSessionImportStatus = 200
+    @Volatile var lastCloudSessionsPath: String? = null
+    @Volatile var lastCloudSessionImportPath: String? = null
+    @Volatile var lastCloudSessionImportBody: String? = null
+    @Volatile var summarizeStatus = 200
+    @Volatile var lastSummarizePath: String? = null
+    @Volatile var lastSummarizeBody: String? = null
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -171,11 +184,16 @@ class MockCliServer : AutoCloseable {
             val method = parts[0]
             val path = parts[1]
 
-            // Read all headers
+            var len = 0
             while (true) {
                 val header = input.readLine()
                 if (header.isNullOrBlank()) break
+                val parts = header.split(":", limit = 2)
+                if (parts.size == 2 && parts[0].equals("Content-Length", ignoreCase = true)) {
+                    len = parts[1].trim().toIntOrNull() ?: 0
+                }
             }
+            val body = if (len > 0) CharArray(len).also { input.read(it, 0, len) }.concatToString() else ""
 
             val output = BufferedWriter(OutputStreamWriter(socket.getOutputStream()))
             val bare = path.substringBefore("?")
@@ -200,6 +218,7 @@ class MockCliServer : AutoCloseable {
                     }
                 }
                 path == "/global/event" -> handleSse(output)
+                path == "/path" -> respond(output, 200, this.path)
                 bare == "/provider" -> respond(output, providersStatus, providers)
                 bare == "/agent" -> respond(output, agentsStatus, agents)
                 bare == "/command" -> respond(output, commandsStatus, commands)
@@ -208,6 +227,15 @@ class MockCliServer : AutoCloseable {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
                 }
+                bare == "/kilo/cloud-sessions" -> {
+                    lastCloudSessionsPath = path
+                    respond(output, cloudSessionsStatus, cloudSessions)
+                }
+                bare == "/kilo/cloud/session/import" && method == "POST" -> {
+                    lastCloudSessionImportPath = path
+                    lastCloudSessionImportBody = body
+                    respond(output, cloudSessionImportStatus, cloudSessionImport)
+                }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
@@ -215,6 +243,11 @@ class MockCliServer : AutoCloseable {
                     respond(output, sessionGetStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "DELETE" ->
                     respond(output, sessionDeleteStatus, "true")
+                bare.matches(Regex("/session/ses_[^/]+/summarize")) && method == "POST" -> {
+                    lastSummarizePath = path
+                    lastSummarizeBody = body
+                    respond(output, summarizeStatus, summarizeResponse)
+                }
                 else -> respond(output, 404, """{"error":"Not found"}""")
             }
         } catch (_: SocketException) {

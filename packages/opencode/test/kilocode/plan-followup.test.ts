@@ -7,16 +7,16 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider"
+import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
-import { Global } from "../../src/global"
-import { Log } from "../../src/util"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
 import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
@@ -181,7 +181,7 @@ async function latestUser(sessionID: SessionID) {
 }
 
 async function sessions() {
-  return Array.fromAsync(Session.list())
+  return AppRuntime.runPromise(Session.Service.use((svc) => svc.list()))
 }
 
 async function waitQuestion(sessionID: string) {
@@ -604,7 +604,7 @@ describe("plan follow-up", () => {
       if (!newSessionID || !next) throw new Error("expected follow-up session")
       expect(next.id).toBe(newSessionID)
       expect(next.parentID).toBeUndefined()
-      const planPath = Session.plan(await Session.get(seeded.sessionID))
+      const planPath = Session.plan(await Session.get(seeded.sessionID), Instance.current)
       const messages = await Session.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       expect(user?.info.role).toBe("user")
@@ -714,7 +714,7 @@ describe("plan follow-up", () => {
       if (next) {
         const planPath = await Instance.provide({
           directory: dir,
-          fn: async () => Session.plan(await Session.get(seeded.sessionID)),
+          fn: async () => Session.plan(await Session.get(seeded.sessionID), Instance.current),
         })
         const messages = await Session.messages({ sessionID: next.id })
         const user = messages.find((item) => item.info.role === "user")

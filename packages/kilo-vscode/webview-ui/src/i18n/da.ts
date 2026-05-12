@@ -137,6 +137,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-nøgle",
   "provider.connect.apiKey.placeholder": "API-nøgle",
   "provider.connect.apiKey.required": "API-nøgle er påkrævet",
+  "provider.connect.prompt.required": "{{field}} er påkrævet",
+  "provider.connect.azure.endpointType.label": "Vælg Azure-slutpunktskonfiguration",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressourcenavn",
+  "provider.connect.azure.endpointType.resourceName.hint": "Byg slutpunktet fra dit Azure-ressourcenavn",
+  "provider.connect.azure.endpointType.baseURL.label": "Fuld slutpunkts-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Brug et brugerdefineret Azure OpenAI-slutpunkt",
+  "provider.connect.azure.resourceName.label": "Azure-ressourcenavn",
+  "provider.connect.azure.resourceName.placeholder": "f.eks. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-slutpunkts-URL",
+  "provider.connect.azure.baseURL.placeholder": "f.eks. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen giver dig adgang til et udvalg af pålidelige optimerede modeller til kodningsagenter.",
   "provider.connect.opencodeZen.line2":
@@ -456,6 +466,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Tilmeld dig gratis for at fortsætte og udforske over 500 modeller. Tager 2 minutter, intet kreditkort nødvendigt. Eller kom tilbage senere.",
   "error.promotionLimit.action": "Tilmeld dig",
+  "error.providerAuth.title": "{{provider}} har logget dig af",
+  "error.providerAuth.description": "Forbind til {{provider}} igen, og send din besked på ny.",
+  "error.providerAuth.chatgpt.title": "OpenAI har logget dig af",
+  "error.providerAuth.chatgpt.description":
+    "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
 
   "error.chain.unknown": "Ukendt fejl",
   "error.chain.causedBy": "Forårsaget af:",
@@ -768,9 +783,20 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.globalEnable.title": "Aktivér globalt",
+  "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
+  "settings.indexing.projectEnable.title": "Aktivér for dette projekt",
+  "settings.indexing.projectEnable.description":
+    "Aktivér indeksering for dette arbejdsområde, når global indeksering er slået fra.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktiveret, så dette projekt er allerede dækket.",
   "settings.indexing.provider.title": "Embedding-udbyder",
   "settings.indexing.provider.description":
     "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
+  "settings.indexing.kiloModel.title": "Kilo-modelpreset",
+  "settings.indexing.kiloModel.description": "Vælg en understøttet Kilo-hostet embedding-model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-login kræves",
+  "settings.indexing.kiloSignIn.description": "Log ind på Kilo for at bruge hostede embeddings.",
   "settings.indexing.model.title": "Embedding-model",
   "settings.indexing.model.description": "Overskriv standard embedding-modellen for den valgte udbyder.",
   "settings.indexing.providerField.description": "Udbyderspecifik forbindelsesindstilling.",
@@ -1170,6 +1196,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Brug en smart tastaturgenvej til at udløse inline-opgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofuldførelse",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofuldførelsesforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For at vælge hvilken model der bruges til autofuldførelse, se Modelindstillinger.",
   "settings.notifications.agent.title": "Agentafslutning",
   "settings.notifications.agent.description": "Vis notifikation, når agenten fuldfører en opgave",
   "settings.notifications.permissions.title": "Tilladelsesanmodninger",
@@ -1399,6 +1427,8 @@ export const dict = {
   "settings.display.layout.description": "Layouttilstand for chatgrænsefladen",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Stræk",
+  "settings.display.fontSize.title": "Skriftstørrelse",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uafhængigt af VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
@@ -1413,6 +1443,7 @@ export const dict = {
     "Letvægtsmodel til titelgenerering, generering af commit-beskeder, prompt-forbedring og andre hurtige opgaver",
   "settings.providers.disabled": "Deaktiverede udbydere",
   "settings.providers.disabled.description": "Udbydere at skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverede udbydere (hvidliste)",
   "settings.providers.enabled.description": "Hvis angivet, er kun disse udbydere tilgængelige",
   "settings.providers.notSet": "Ikke angivet (brug serverstandard)",
@@ -1533,4 +1564,28 @@ export const dict = {
   "notifications.action.close": "Luk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv model",
+  "diffViewer.source.workspace.label": "Gren",
+  "diffViewer.source.workspace.tooltip":
+    "Alle ændringer på denne gren sammenlignet med basegrenen. Omfatter ikke-commitede filer (stagede, ikke-stagede, usporede) og lokale commits, som endnu ikke er i basen.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Filer med ændringer, du har tilføjet til gits staging-område (`git add`), som de vil fremgå i den næste commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Filer ændret i dit arbejdsbibliotek, men ikke stagede endnu, samt ikke-sporede (nye) filer.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Filer ændret af Kilo i den aktuelle session, baseret på snapshots pr. tur. Nulstilles, når du starter en ny session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktiveret for dette repository. Rediger dine konfigurationsfiler for at vise sessionens ændringer.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 }

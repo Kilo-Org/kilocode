@@ -140,6 +140,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-nøkkel",
   "provider.connect.apiKey.placeholder": "API-nøkkel",
   "provider.connect.apiKey.required": "API-nøkkel er påkrevd",
+  "provider.connect.prompt.required": "{{field}} er påkrevd",
+  "provider.connect.azure.endpointType.label": "Velg Azure-endepunktskonfigurasjon",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressursnavn",
+  "provider.connect.azure.endpointType.resourceName.hint": "Bygg endepunktet fra ditt Azure-ressursnavn",
+  "provider.connect.azure.endpointType.baseURL.label": "Full endepunkts-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Bruk et egendefinert Azure OpenAI-endepunkt",
+  "provider.connect.azure.resourceName.label": "Azure-ressursnavn",
+  "provider.connect.azure.resourceName.placeholder": "f.eks. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-endepunkts-URL",
+  "provider.connect.azure.baseURL.placeholder": "f.eks. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen gir deg tilgang til et utvalg av pålitelige optimaliserte modeller for kodeagenter.",
   "provider.connect.opencodeZen.line2":
@@ -460,6 +470,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrer deg gratis for å fortsette og utforske over 500 modeller. Tar 2 minutter, ingen kredittkort nødvendig. Eller kom tilbake senere.",
   "error.promotionLimit.action": "Registrer deg",
+  "error.providerAuth.title": "{{provider}} logget deg ut",
+  "error.providerAuth.description": "Koble til {{provider}} på nytt, og send meldingen din igjen.",
+  "error.providerAuth.chatgpt.title": "OpenAI logget deg ut",
+  "error.providerAuth.chatgpt.description":
+    "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
   "error.chain.unknown": "Ukjent feil",
   "error.chain.causedBy": "Forårsaket av:",
@@ -1147,6 +1162,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Bruk en smart tastbinding for å utløse innebygde oppgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofullføring",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofullføringsforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For å velge hvilken modell som brukes til autofullføring, se Modellinnstillinger.",
   "settings.notifications.agent.title": "Agentfullføring",
   "settings.notifications.agent.description": "Vis varsling når agenten fullfører en oppgave",
   "settings.notifications.permissions.title": "Tillatelsesforespørsler",
@@ -1199,8 +1216,19 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
+  "settings.indexing.globalEnable.title": "Aktiver globalt",
+  "settings.indexing.globalEnable.description": "Aktiver indeksering for hvert arbeidsområde.",
+  "settings.indexing.projectEnable.title": "Aktiver for dette prosjektet",
+  "settings.indexing.projectEnable.description":
+    "Aktiver indeksering for dette arbeidsområdet når global indeksering er slått av.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktivert, så dette prosjektet er allerede dekket.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
+  "settings.indexing.kiloModel.title": "Kilo-modellforhåndsvalg",
+  "settings.indexing.kiloModel.description": "Velg en støttet Kilo-hostet embedding-modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-pålogging kreves",
+  "settings.indexing.kiloSignIn.description": "Logg inn på Kilo for å bruke hostede embeddings.",
   "settings.indexing.model.title": "Embedding-modell",
   "settings.indexing.model.description": "Overstyr standard embedding-modell for den valgte leverandøren.",
   "settings.indexing.vectorStore.title": "Vektordatabase",
@@ -1398,6 +1426,8 @@ export const dict = {
   "settings.display.layout.description": "Layoutmodus for chatgrensesnittet",
   "settings.display.layout.auto": "Automatisk",
   "settings.display.layout.stretch": "Strekk",
+  "settings.display.fontSize.title": "Skriftstørrelse",
+  "settings.display.fontSize.description": "Juster skriftstørrelsen for Kilo webview UI uavhengig av VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Skjul resonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler resonnementblokker etter at agenten er ferdig med å skrive dem. La være av for å holde resonnement utvidet med mindre du skjuler det manuelt.",
@@ -1412,6 +1442,7 @@ export const dict = {
     "Lettvektsmodell for titelgenerering, generering av commit-meldinger, prompt-forbedring og andre raske oppgaver",
   "settings.providers.disabled": "Deaktiverte leverandører",
   "settings.providers.disabled.description": "Leverandører å skjule fra listen",
+  "settings.providers.disabled.enable": "Aktiver",
   "settings.providers.enabled": "Aktiverte leverandører (hvitliste)",
   "settings.providers.enabled.description": "Hvis angitt, er bare disse leverandørene tilgjengelige",
   "settings.providers.notSet": "Ikke angitt (bruk serverstandard)",
@@ -1528,4 +1559,27 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
+  "diffViewer.source.workspace.label": "Gren",
+  "diffViewer.source.workspace.tooltip":
+    "Alle endringer på denne grenen sammenlignet med basegrenen. Inkluderer ikke-committede filer (staged, unstaged, usporede) og lokale commits som ennå ikke er i basen.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Filer med endringer du har lagt til i gits staging-område (`git add`), slik de vil vises i neste commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip": "Filer endret i arbeidstreet, men ikke staget ennå, pluss usporet (nye) filer.",
+  "diffViewer.source.session.label": "Økt",
+  "diffViewer.source.session.tooltip":
+    "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
+  "diffViewer.group.session": "Økt",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>

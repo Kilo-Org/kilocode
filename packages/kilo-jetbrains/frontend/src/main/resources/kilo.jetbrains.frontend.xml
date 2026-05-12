@@ -39,5 +39,24 @@
         <action id="Kilo.Settings"
                 class="ai.kilocode.client.actions.KiloSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
+
+        <action id="Kilo.History"
+                class="ai.kilocode.client.actions.HistoryAction"/>
+
+        <action id="Kilo.SendPrompt"
+                class="ai.kilocode.client.actions.SendPromptAction"
+                text="Send Prompt"
+                description="Send the current Kilo prompt">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="ENTER"/>
+        </action>
+
+        <action id="Kilo.StopSession"
+                class="ai.kilocode.client.actions.StopSessionAction"
+                text="Stop Session"
+                description="Stop the current Kilo session">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="alt S"/>
+        </action>
     </actions>
 </idea-plugin>

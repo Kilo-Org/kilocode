@@ -1,7 +1,7 @@
 package ai.kilocode.client.actions
 
 import ai.kilocode.client.session.SessionManager
-import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.client.session.SessionRef
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
@@ -49,7 +49,10 @@ class NewSessionActionTest : BasePlatformTestCase() {
             created++
         }
 
-        override fun openSession(session: SessionDto) {
+        override fun showHistory() {
+        }
+
+        override fun openSession(ref: SessionRef) {
         }
     }
 }

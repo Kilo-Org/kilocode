@@ -1,9 +1,9 @@
 import * as fs from "fs/promises"
 import * as path from "path"
-import { Config } from "../config"
+import { Config } from "../config/config"
 import { ConfigMCP } from "../config/mcp"
-import { Log } from "../util"
-import { Filesystem } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
+import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"
 
 export namespace McpMigrator {

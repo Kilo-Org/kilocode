@@ -2,7 +2,7 @@ import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
-import { Log } from "./util"
+import * as Log from "@opencode-ai/core/util/log"
 // kilocode_change start
 // import { LoginCommand, LogoutCommand, SwitchCommand, OrgsCommand } from "./cli/cmd/account"
 // import { ConsoleCommand } from "./cli/cmd/account"
@@ -15,11 +15,11 @@ import { UninstallCommand } from "./cli/cmd/uninstall"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
 import { Installation } from "./installation"
-import { InstallationBuildKind, InstallationVersion } from "./installation/version" // kilocode_change - add InstallationBuildKind
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { InstallationBuildKind, InstallationVersion } from "@opencode-ai/core/installation/version" // kilocode_change - add InstallationBuildKind
+import { NamedError } from "@opencode-ai/core/util/error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
-import { Filesystem } from "./util"
+import { Filesystem } from "@/util/filesystem"
 import { ConfigCommand as ConfigCLICommand } from "./cli/cmd/config" // kilocode_change
 import { DebugCommand } from "./cli/cmd/debug"
 import { StatsCommand } from "./cli/cmd/stats"
@@ -38,7 +38,7 @@ import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
 import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { Instance } from "./project/instance" // kilocode_change
+import { InstanceStore } from "./project/instance-store" // kilocode_change
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
@@ -54,20 +54,20 @@ if (!process.env[ENV_FEATURE]) {
 if (!process.env[ENV_VERSION]) {
   process.env[ENV_VERSION] = InstallationVersion
 }
-import { Config } from "./config"
+import { Config } from "./config/config"
 import { Auth } from "./auth"
 // kilocode_change end
 import { DbCommand } from "./cli/cmd/db"
 import path from "path"
-import { Global } from "./global"
+import { Global } from "@opencode-ai/core/global"
 import { createHelpCommand } from "./kilocode/help-command" // kilocode_change
-import { JsonMigration } from "./storage"
-import { Database } from "./storage"
+import { JsonMigration } from "@/storage/json-migration"
+import { Database } from "@/storage/db"
 import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
-import { ensureProcessMetadata } from "./util/opencode-process"
+import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
 
 const processMetadata = ensureProcessMetadata("main")
 
@@ -135,7 +135,7 @@ let cli = yargs(args) // kilocode_change
     Heap.start()
 
     process.env.AGENT = "1"
-    process.env.OPENCODE = "1"
+    process.env.KILO = "1" // kilocode_change
     process.env.KILO_PID = String(process.pid)
 
     Log.Default.info("opencode", {
@@ -319,7 +319,7 @@ try {
   await Telemetry.shutdown()
   // kilocode_change end
 
-  await Instance.disposeAll() // kilocode_change - safety net disposal (no-op if already disposed)
+  await InstanceStore.disposeAllInstances() // kilocode_change - safety net disposal (no-op if already disposed)
 
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless

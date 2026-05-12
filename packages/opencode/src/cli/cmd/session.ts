@@ -1,13 +1,13 @@
 import type { Argv } from "yargs"
 import { cmd } from "./cmd"
-import { Session } from "../../session"
+import { Session } from "@/session/session"
 import { SessionID } from "../../session/schema"
 import { bootstrap } from "../bootstrap"
 import { UI } from "../ui"
-import { Locale } from "../../util"
-import { Flag } from "../../flag/flag"
-import { Filesystem } from "../../util"
-import { Process } from "../../util"
+import { Locale } from "@/util/locale"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Filesystem } from "@/util/filesystem"
+import { Process } from "@/util/process"
 import { EOL } from "os"
 import path from "path"
 import { which } from "../../util/which"
@@ -113,7 +113,9 @@ export const SessionListCommand = cmd({
       // kilocode_change start
       const sessions = args.all
         ? [...Session.listGlobal({ roots: true, limit: args.maxCount, search: args.search })]
-        : [...Session.list({ roots: true, limit: args.maxCount, search: args.search })]
+        : await AppRuntime.runPromise(
+            Session.Service.use((svc) => svc.list({ roots: true, limit: args.maxCount, search: args.search })),
+          )
       // kilocode_change end
 
       // kilocode_change start

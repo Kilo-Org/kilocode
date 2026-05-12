@@ -52,6 +52,7 @@ export interface CommitMessageConfig {
 }
 
 export type IndexingProvider =
+  | "kilo"
   | "openai"
   | "ollama"
   | "openai-compatible"
@@ -68,6 +69,7 @@ export interface IndexingConfig {
   model?: string
   dimension?: number
   vectorStore?: "lancedb" | "qdrant"
+  kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
   ollama?: { baseUrl?: string }
   "openai-compatible"?: { baseUrl?: string; apiKey?: string }
@@ -85,6 +87,20 @@ export interface IndexingConfig {
   scannerMaxBatchRetries?: number
 }
 
+export type KiloEmbeddingModel = {
+  id: string
+  name: string
+  dimension: number
+  scoreThreshold: number
+  note?: string
+}
+
+export type KiloEmbeddingModelCatalog = {
+  defaultModel: string
+  models: KiloEmbeddingModel[]
+  aliases: Record<string, string>
+}
+
 export type IndexingStatus = SdkIndexingStatus
 
 export interface BrowserSettings {
@@ -99,7 +115,7 @@ export interface Config {
   permission?: PermissionConfig
   model?: string | null
   small_model?: string | null
-  default_agent?: string
+  default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
   disabled_providers?: string[]

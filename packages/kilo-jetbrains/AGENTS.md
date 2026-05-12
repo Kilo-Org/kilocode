@@ -1,5 +1,9 @@
 # AGENTS.md — Kilo JetBrains Plugin
 
+## Skills
+
+- Use `packages/kilo-jetbrains/.kilo/skills/jetbrains-ui-style/SKILL.md` when creating, modifying, or reviewing Kotlin/Swing UI code for this plugin. It covers IntelliJ UI conventions, platform components, theme-aware colors/fonts, spacing, manual Swing vs Kotlin UI DSL, session transcript styling, and retained Swing component-state patterns for hover/expand/update flows.
+
 ## Architecture (Split Mode)
 
 - **Split-mode plugin** with three Gradle modules: `shared/`, `frontend/`, `backend/`. The module descriptors are `kilo.jetbrains.shared.xml`, `kilo.jetbrains.frontend.xml`, `kilo.jetbrains.backend.xml` — these must stay in sync with `plugin.xml`'s `<content>` block.
@@ -113,6 +117,20 @@ The chat session feature uses a three-layer Model / Controller / View architectu
 2. Add the corresponding state field and mutation method to `SessionModel`. Reset the field in both `loadHistory()` and `clear()`.
 3. Handle the new `ChatEventDto` in `SessionController.handle()` by calling the model mutation method.
 4. Add `-> Unit` stubs for the new event in any existing exhaustive `when` blocks in view code.
+
+### Editor-Dependent Session Styling
+
+Session UI components that render text using editor fonts or colors must not read global editor settings directly on every paint. Instead they must:
+
+1. Implement `SessionEditorStyleTarget` (`session/ui/style/SessionEditorStyle.kt`).
+2. Hold a snapshot field initialised with `SessionEditorStyle.current()`.
+3. Override `applyStyle(style: SessionEditorStyle)` and update all fonts/colors in one place without rebuilding Swing nodes.
+
+`SessionUi` propagates a refreshed `SessionEditorStyle` to every registered `SessionEditorStyleTarget` child when the global editor scheme changes. New session elements that depend on editor settings must be registered through this flow, not through ad hoc `EditorColorsManager` listeners.
+
+**Anti-patterns to avoid:**
+- Do not pass `SessionEditorStyle` fields through constructors or method parameters when the component can implement the interface and receive updates via `applyStyle`.
+- Do not store individual style properties (e.g. a separate `font` field copied from the style) when holding the full `SessionEditorStyle` snapshot is cleaner.
 
 ### Testing
 
@@ -709,6 +727,28 @@ Inspection `Plugin DevKit | Code | Undesirable class usage` highlights when you 
 
 - Always create via `JBUI.Borders.empty(top, left, bottom, right)` and `JBUI.insets()` — DPI-aware and auto-update on zoom.
 - Use `JBUI.scale(int)` for any pixel dimension to ensure proper HiDPI scaling.
+
+### UI Style Constants
+
+Style tokens and layout constants are split across three files. Put new constants in the right place — do not scatter them into ad hoc fields or pass them through constructors.
+
+**`UiStyle`** (`frontend/src/main/kotlin/ai/kilocode/client/ui/UiStyle.kt`) — generic Swing style tokens that are not tied to any single session component:
+- `UiStyle.Gap` — DPI-aware spacing primitives (`xs`, `sm`, `md`, `lg`, `pad`). Use these for borders, gaps, and insets anywhere in the plugin.
+- `UiStyle.Colors` — theme-aware generic colors (`bg`, `fg`, `weak`, `editorBackground`, `errorLabelForeground`, `warningLabelForeground`).
+- `UiStyle.Components` — small reusable Swing helpers (e.g. `transparent()`).
+
+**`SessionUiStyle`** (`frontend/src/main/kotlin/ai/kilocode/client/session/ui/style/SessionUiStyle.kt`) — static tokens that are specific to the chat/session UI:
+- `SessionUiStyle.SessionLayout` — transcript list geometry and scroll increments.
+- `SessionUiStyle.View` — card sizing, card borders, surfaces, hover colors, and nested objects for `Prompt`, `Reasoning`, `Message`, and `Tool`.
+- `SessionUiStyle.RecentSessions` — recent sessions list limits.
+- `SessionUiStyle.Timeline` — activity-indicator colors for the session header timeline.
+- `Dock` — border presets for question, permission, and connection dock panels.
+
+**Rules for adding new constants:**
+- Generic layout constants (gaps, generic colors, reusable helpers) → `UiStyle`.
+- Session-specific constants (transcript layout, prompt chrome, card geometry, session colors) → `SessionUiStyle`.
+- Do not create extra fields whose only purpose is to hold a constant value. Reference the constant object directly, e.g. `UiStyle.Gap.lg()` or `SessionUiStyle.View.Prompt.EDITOR_LINES`.
+- Do not pass style constants through constructors or method parameters. Using the constant directly at the call site is correct and preferred. Only introduce parameters for values that are genuinely variable or test-controlled.
 
 ### Icons
 

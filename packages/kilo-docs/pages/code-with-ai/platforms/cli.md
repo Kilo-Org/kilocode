@@ -1,5 +1,5 @@
 ---
-title: "Kilo CLI"
+title: "Kilo Code CLI: Run the AI Coding Agent from Your Terminal"
 description: "Using Kilo Code from the command line"
 platform: new
 ---
@@ -8,7 +8,7 @@ platform: new
 This documentation applies only to Kilo version 1.0 and later. Users running versions below 1.0 should upgrade before proceeding.
 {% /callout %}
 
-# Kilo CLI
+# Kilo Code CLI: AI Coding Agent in Your Terminal
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 
@@ -270,6 +270,8 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 }
 ```
 
+In Ask and Plan modes, `external_directory` allow rules can still permit reads outside the workspace. They do not enable writes or mutating commands that those modes deny, and explicit `external_directory` deny rules still win.
+
 **Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
 ## Configuration
@@ -344,6 +346,43 @@ Both keys also accept object configuration for specific tools or language server
 
 The TUI gives `Ctrl+Z` to input undo on Windows because native Windows terminals do not support POSIX terminal suspend. On Windows, `input_undo` defaults to `ctrl+z,ctrl+-,super+z` and `terminal_suspend` is disabled. On macOS and Linux, `terminal_suspend` defaults to `ctrl+z`.
 
+#### Enabling Shift+Enter in Windows Terminal
+
+Some terminals don't send modifier keys with Enter by default. Windows Terminal requires a one-time configuration to forward `Shift+Enter` as an escape sequence that Kilo can read.
+
+Open your `settings.json` at:
+
+```
+%LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json
+```
+
+Add this entry to the root-level `actions` array:
+
+```json
+"actions": [
+  {
+    "command": {
+      "action": "sendInput",
+      "input": "\u001b[13;2u"
+    },
+    "id": "User.sendInput.ShiftEnterCustom"
+  }
+]
+```
+
+Add this entry to the root-level `keybindings` array:
+
+```json
+"keybindings": [
+  {
+    "keys": "shift+enter",
+    "id": "User.sendInput.ShiftEnterCustom"
+  }
+]
+```
+
+Save the file and restart Windows Terminal or open a new tab. `Shift+Enter` will now insert a newline in the Kilo prompt instead of submitting the message.
+
 ### OpenTelemetry Export
 
 Kilo telemetry is enabled by default and can be disabled with `experimental.openTelemetry = false`:
@@ -398,10 +437,10 @@ When running in interactive mode, command approval requests show hierarchical op
 Selecting an "Always run" option will:
 
 1. Approve and execute the current command
-2. Add the pattern to your `execute.allowed` list in the config
-3. Auto-approve matching commands in the future
+2. Save the selected pattern as an `allow` rule under `permission.bash` in your global config
+3. Auto-approve future matching commands, including matching approvals already waiting in other open sessions
 
-This allows you to progressively build your auto-approval rules without manually editing the config file.
+Kilo only saves the pattern you select. Approving a specific command does not approve redirected variants or broader command patterns unless that broader option is shown and selected.
 
 ## Autonomous Mode (Non-Interactive)
 

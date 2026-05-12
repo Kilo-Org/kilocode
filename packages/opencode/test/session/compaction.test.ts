@@ -4,28 +4,28 @@ import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect"
 import * as Stream from "effect/Stream"
 import z from "zod"
 import { Bus } from "../../src/bus"
-import { Config } from "../../src/config"
+import { Config } from "@/config/config"
 import { Agent } from "../../src/agent/agent"
 import { LLM } from "../../src/session/llm"
 import { SessionCompaction } from "../../src/session/compaction"
-import { Token } from "../../src/util"
+import { Token } from "@/util/token"
 import { Instance } from "../../src/project/instance"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { provideTmpdirInstance, tmpdir } from "../fixture/fixture"
-import { Session as SessionNs } from "../../src/session"
+import { Session as SessionNs } from "@/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import type { Provider } from "../../src/provider"
+import type { Provider } from "@/provider/provider"
 import * as SessionProcessorModule from "../../src/session/processor"
 import { Snapshot } from "../../src/snapshot"
 import { ProviderTest } from "../fake/provider"
 import { testEffect } from "../lib/effect"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 
 void Log.init({ print: false })
 
@@ -2329,6 +2329,9 @@ describe("SessionNs.getUsage", () => {
     // When upstream cost is missing for Kilo, fall back to regular cost field
     expect(result.cost).toBe(0.01)
   })
+
+  // Tests for Anthropic Messages / OpenAI Responses / Vercel AI Gateway cost extraction
+  // live in test/kilocode/provider-cost.test.ts (kilocode_change).
   // kilocode_change end
 
   test.each(["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"])(

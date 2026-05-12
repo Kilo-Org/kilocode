@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { SystemPrompt } from "../../src/session/system"
+import { environmentDetails } from "../../src/kilocode/editor-context"
 import { ProviderTest } from "../fake/provider"
 
 import PROMPT_ANTHROPIC from "../../src/session/prompt/anthropic.txt"
@@ -9,6 +10,7 @@ import PROMPT_CODEX from "../../src/session/prompt/codex.txt"
 import PROMPT_GEMINI from "../../src/session/prompt/gemini.txt"
 import PROMPT_GPT from "../../src/session/prompt/gpt.txt"
 import PROMPT_GPT55 from "../../src/session/prompt/kilocode-gpt-5.5.txt"
+import PROMPT_LING from "../../src/session/prompt/ling.txt"
 import PROMPT_TRINITY from "../../src/session/prompt/trinity.txt"
 
 describe("SystemPrompt.provider", () => {
@@ -78,6 +80,24 @@ describe("SystemPrompt.provider", () => {
       expect(result).toEqual([PROMPT_ANTHROPIC])
     })
 
+    test("Ling fallback runs after upstream model id heuristics", () => {
+      const model = ProviderTest.model({
+        prompt: undefined,
+        api: { id: "gpt-5-ling", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      const result = SystemPrompt.provider(model)
+      expect(result).toEqual([PROMPT_GPT])
+    })
+
+    test("Ling fallback is selected after upstream heuristics miss", () => {
+      const model = ProviderTest.model({
+        prompt: undefined,
+        api: { id: "ling-2", url: "https://example.com", npm: "@ai-sdk/openai" },
+      })
+      const result = SystemPrompt.provider(model)
+      expect(result).toEqual([PROMPT_LING])
+    })
+
     test("GPT-5.5 model ids are not prompt-special without metadata", () => {
       const model = ProviderTest.model({
         prompt: undefined,
@@ -104,5 +124,19 @@ describe("SystemPrompt.provider", () => {
       const result = SystemPrompt.provider(model)
       expect(result).toEqual([PROMPT_CODEX])
     })
+  })
+})
+
+describe("environmentDetails", () => {
+  test("includes cwd and worktree in dynamic context", () => {
+    const result = environmentDetails({
+      directory: "/repo/.kilo/worktrees/feature",
+      worktree: "/repo/.kilo/worktrees/feature",
+      activeFile: "src/app.ts",
+    })
+
+    expect(result).toContain("Working directory: /repo/.kilo/worktrees/feature")
+    expect(result).toContain("Workspace root folder: /repo/.kilo/worktrees/feature")
+    expect(result).toContain("Active file: src/app.ts")
   })
 })

@@ -4,14 +4,15 @@
 
 import { describe, test, expect, spyOn, afterEach } from "bun:test"
 import path from "path"
-import { LSPServer } from "../../src/lsp"
+import * as LSPServer from "../../src/lsp/server"
 import { TsClient } from "../../src/kilocode/ts-client"
 import { TsCheck } from "../../src/kilocode/ts-check"
-import { Flag } from "../../src/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance, type InstanceContext } from "../../src/project/instance"
+import { disposeAllInstances } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 // Typescript.spawn doesn't use ctx, so a cast-through is fine for these tests.

@@ -103,6 +103,7 @@ describe("pty", () => {
   })
 
   test("treats in-place socket data mutation as the same connection", async () => {
+    if (process.platform === "win32") return // kilocode_change - ConPTY does not echo writes the way Unix PTYs do, so the positive assertion below is unreachable on Windows
     await using dir = await tmpdir({ git: true })
 
     await Instance.provide({

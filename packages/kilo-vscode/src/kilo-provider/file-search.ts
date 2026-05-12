@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { mergeFileSearchResults } from "../kilo-provider-utils"
+import { mergeFileSearchResults } from "./file-search-results"
 import { mergeFileSearchItems } from "./file-search-items"
 
 type Message = {
@@ -42,7 +42,12 @@ export async function handleFileSearch(input: Input): Promise<void> {
     const rel = uri?.scheme === "file" && dir ? path.relative(dir, uri.fsPath) : undefined
     const active = rel && !rel.startsWith("..") && !path.isAbsolute(rel) ? rel.replaceAll("\\", "/") : undefined
     const result = mergeFileSearchResults({ query, backend: files, open, active })
-    const items = mergeFileSearchItems({ query, files: result, folders })
+    const items = mergeFileSearchItems({
+      query,
+      files: result,
+      folders,
+      open: new Set(active ? [active, ...open] : open),
+    })
     input.post({ type: "fileSearchResult", paths: result, items, dir, requestId: input.message.requestId })
   })
 }

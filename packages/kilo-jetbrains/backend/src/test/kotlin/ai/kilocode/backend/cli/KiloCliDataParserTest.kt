@@ -5,6 +5,8 @@ import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
@@ -147,6 +149,86 @@ class KiloCliDataParserTest {
         assertEquals("part_1", result.part.id)
         assertEquals("text", result.part.type)
         assertEquals("Hello", result.part.text)
+    }
+
+    @Test
+    fun `parseChatEvent - read tool part preserves input metadata and time`() {
+        val data = globalEvent("""
+            "type": "message.part.updated",
+            "properties": {
+                "sessionID": "ses_1",
+                "part": {
+                    "id": "part_read",
+                    "sessionID": "ses_1",
+                    "messageID": "msg_1",
+                    "type": "tool",
+                    "tool": "read",
+                    "callID": "call_read",
+                    "metadata": { "loaded": ["README.MD"] },
+                    "state": {
+                        "status": "completed",
+                        "input": { "filePath": "README.MD", "limit": 200 },
+                        "metadata": { "source": "workspace" },
+                        "title": "Read README.MD",
+                        "time": { "start": 10, "end": 12 }
+                    }
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.PartUpdated)
+        assertEquals("read", result.part.tool)
+        assertEquals("completed", result.part.state)
+        assertEquals("Read README.MD", result.part.title)
+        assertEquals("README.MD", result.part.input["filePath"])
+        assertEquals("200", result.part.input["limit"])
+        assertEquals("workspace", result.part.metadata["source"])
+        assertEquals("[\"README.MD\"]", result.part.metadata["loaded"])
+        assertEquals(10.0, result.part.time?.start)
+        assertEquals(12.0, result.part.time?.end)
+    }
+
+    @Test
+    fun `parseChatEvent - bash tool part preserves command output and error`() {
+        val data = globalEvent("""
+            "type": "message.part.updated",
+            "properties": {
+                "sessionID": "ses_1",
+                "part": {
+                    "id": "part_bash",
+                    "sessionID": "ses_1",
+                    "messageID": "msg_1",
+                    "type": "tool",
+                    "tool": "bash",
+                    "callID": "call_bash",
+                    "state": {
+                        "status": "error",
+                        "input": {
+                            "command": "git remote -v",
+                            "description": "View git remote URLs"
+                        },
+                        "metadata": { "command": "git remote -v" },
+                        "output": "origin git@example.com:repo.git",
+                        "error": "exit code 1",
+                        "time": { "start": 20, "end": 25 }
+                    }
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("message.part.updated", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.PartUpdated)
+        assertEquals("bash", result.part.tool)
+        assertEquals("error", result.part.state)
+        assertEquals("git remote -v", result.part.input["command"])
+        assertEquals("View git remote URLs", result.part.input["description"])
+        assertEquals("origin git@example.com:repo.git", result.part.output)
+        assertEquals("exit code 1", result.part.error)
+        assertEquals(20.0, result.part.time?.start)
+        assertEquals(25.0, result.part.time?.end)
     }
 
     @Test
@@ -316,6 +398,33 @@ class KiloCliDataParserTest {
         assertNull(result.summary)
     }
 
+    @Test
+    fun `parseCloudSessions maps cloud session list`() {
+        val raw = """{
+            "cliSessions": [
+                {"session_id":"cloud_1","title":"Cloud One","created_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-02T00:00:00Z","version":2},
+                {"session_id":"cloud_2","title":null,"created_at":"2026-01-03T00:00:00Z","updated_at":"2026-01-04T00:00:00Z","version":3.5,"extra":true}
+            ],
+            "nextCursor": "cursor_2"
+        }"""
+
+        val result = KiloCliDataParser.parseCloudSessions(raw)
+
+        assertEquals(2, result.sessions.size)
+        assertEquals("cloud_1", result.sessions[0].id)
+        assertEquals("Cloud One", result.sessions[0].title)
+        assertEquals("2026-01-02T00:00:00Z", result.sessions[0].updatedAt)
+        assertEquals(2.0, result.sessions[0].version)
+        assertNull(result.sessions[1].title)
+        assertEquals("cursor_2", result.nextCursor)
+    }
+
+    @Test
+    fun `parseCloudSessions tolerates malformed response`() {
+        assertEquals(emptyList(), KiloCliDataParser.parseCloudSessions("not json").sessions)
+        assertNull(KiloCliDataParser.parseCloudSessions("{}").nextCursor)
+    }
+
     // ================================================================
     // parseMessages
     // ================================================================
@@ -370,6 +479,32 @@ class KiloCliDataParserTest {
     }
 
     @Test
+    fun `parseMessages - step finish part with tokens`() {
+        val raw = """[{
+            "info": { "id": "m1", "sessionID": "s1", "role": "assistant", "time": { "created": 1.0 } },
+            "parts": [{
+                "id": "p1",
+                "sessionID": "s1",
+                "messageID": "m1",
+                "type": "step-finish",
+                "reason": "stop",
+                "cost": 0.005,
+                "tokens": { "input": 100, "output": 50, "reasoning": 10, "cache": { "read": 20, "write": 5 } }
+            }]
+        }]"""
+
+        val part = KiloCliDataParser.parseMessages(raw)[0].parts[0]
+        assertEquals("step-finish", part.type)
+        assertEquals("stop", part.reason)
+        assertEquals(0.005, part.cost)
+        assertEquals(100L, part.tokens?.input)
+        assertEquals(50L, part.tokens?.output)
+        assertEquals(10L, part.tokens?.reasoning)
+        assertEquals(20L, part.tokens?.cacheRead)
+        assertEquals(5L, part.tokens?.cacheWrite)
+    }
+
+    @Test
     fun `parseMessages - malformed JSON returns empty`() {
         assertEquals(emptyList(), KiloCliDataParser.parseMessages("not json"))
     }
@@ -396,6 +531,96 @@ class KiloCliDataParserTest {
         assertEquals(5L, info.tokens?.cacheWrite)
         assertEquals(0.005, info.cost)
         assertEquals(2.0, info.time.completed)
+    }
+
+    // ================================================================
+    // parseModelState / buildModelStateJson
+    // ================================================================
+
+    @Test
+    fun `parseModelState - parses favorites`() {
+        val result = KiloCliDataParser.parseModelState(
+            """{"favorite":[{"providerID":"kilo","modelID":"auto"},{"providerID":"openai","modelID":"gpt"}]}""",
+        )
+
+        assertEquals(listOf("kilo/auto", "openai/gpt"), result.favorite.map { "${it.providerID}/${it.modelID}" })
+    }
+
+    @Test
+    fun `parseModelState - parses recent selections`() {
+        val result = KiloCliDataParser.parseModelState(
+            """{"recent":[{"providerID":"anthropic","modelID":"claude"},{"providerID":"openai","modelID":"gpt"}]}""",
+        )
+
+        assertEquals(listOf("anthropic/claude", "openai/gpt"), result.recent.map { "${it.providerID}/${it.modelID}" })
+    }
+
+    @Test
+    fun `parseModelState - parses model selections and variants`() {
+        val result = KiloCliDataParser.parseModelState(
+            """{"model":{"code":{"providerID":"kilo","modelID":"auto"}},"variant":{"kilo/auto":"medium"}}""",
+        )
+
+        assertEquals("kilo", result.model["code"]?.providerID)
+        assertEquals("auto", result.model["code"]?.modelID)
+        assertEquals("medium", result.variant["kilo/auto"])
+    }
+
+    @Test
+    fun `parseModelState - drops malformed favorites`() {
+        val result = KiloCliDataParser.parseModelState(
+            """{"favorite":[{"providerID":"kilo"},false,{"providerID":"openai","modelID":"gpt"}]}""",
+        )
+
+        assertEquals(listOf("openai/gpt"), result.favorite.map { "${it.providerID}/${it.modelID}" })
+    }
+
+    @Test
+    fun `parseModelState - malformed inputs return empty favorites`() {
+        for (raw in listOf("", "not-json", "[]", "42", "null")) {
+            assertTrue(KiloCliDataParser.parseModelState(raw).favorite.isEmpty(), raw)
+        }
+    }
+
+    @Test
+    fun `parseModelState - drops malformed model selections and variants`() {
+        val result = KiloCliDataParser.parseModelState(
+            """{"model":{"bad":false,"ok":{"providerID":"kilo","modelID":"auto"}},"variant":{"":"low","kilo/auto":false,"openai/gpt":"high"}}""",
+        )
+
+        assertEquals(listOf("ok"), result.model.keys.toList())
+        assertEquals(mapOf("openai/gpt" to "high"), result.variant)
+    }
+
+    @Test
+    fun `buildModelStateJson - preserves unrelated keys and replaces favorites`() {
+        val raw = """{"model":{"code":{"providerID":"kilo","modelID":"auto"}},"recent":[{"providerID":"old","modelID":"recent"}],"variant":{"kilo/auto":"fast"},"extra":true,"favorite":[]}"""
+        val result = KiloCliDataParser.buildModelStateJson(raw, listOf(ModelSelectionDto("anthropic", "claude")))
+
+        assertTrue(result.contains("\"model\""), result)
+        assertTrue(result.contains("\"recent\""), result)
+        assertTrue(result.contains("\"variant\""), result)
+        assertTrue(result.contains("\"extra\""), result)
+        assertEquals(listOf("anthropic/claude"), KiloCliDataParser.parseModelState(result).favorite.map { "${it.providerID}/${it.modelID}" })
+    }
+
+    @Test
+    fun `buildModelStateJson - writes model selections and variants`() {
+        val raw = """{"recent":[],"extra":true}"""
+        val result = KiloCliDataParser.buildModelStateJson(
+            raw,
+            ModelStateDto(
+                model = mapOf("code" to ModelSelectionDto("kilo", "auto")),
+                variant = mapOf("kilo/auto" to "medium"),
+                recent = listOf(ModelSelectionDto("anthropic", "claude")),
+            ),
+        )
+
+        val state = KiloCliDataParser.parseModelState(result)
+        assertEquals("auto", state.model["code"]?.modelID)
+        assertEquals("medium", state.variant["kilo/auto"])
+        assertEquals(listOf("anthropic/claude"), state.recent.map { "${it.providerID}/${it.modelID}" })
+        assertTrue(result.contains("\"extra\""), result)
     }
 
     // ================================================================
@@ -431,10 +656,27 @@ class KiloCliDataParserTest {
     }
 
     @Test
+    fun `buildPromptJson - with variant`() {
+        val prompt = PromptDto(
+            parts = listOf(PromptPartDto("text", "Hi")),
+            variant = "medium",
+        )
+        val result = KiloCliDataParser.buildPromptJson(prompt)
+        assertTrue(result.contains(""""variant":"medium""""))
+    }
+
+    @Test
     fun `buildPromptJson - escapes special characters`() {
         val prompt = PromptDto(parts = listOf(PromptPartDto("text", "line1\nline2\t\"quoted\"")))
         val result = KiloCliDataParser.buildPromptJson(prompt)
         assertTrue(result.contains("""line1\nline2\t\"quoted\""""))
+    }
+
+    @Test
+    fun `buildSummarizeJson - writes provider and model`() {
+        val result = KiloCliDataParser.buildSummarizeJson(ModelSelectionDto("anthropic", "claude-4"))
+
+        assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", result)
     }
 
     // ================================================================
@@ -682,6 +924,32 @@ class KiloCliDataParserTest {
         val result = KiloCliDataParser.parseChatEvent("session.compacted", data)
         assertNotNull(result)
         assertTrue(result is ChatEventDto.SessionCompacted)
+    }
+
+    @Test
+    fun `parseChatEvent - session updated`() {
+        val data = globalEvent("""
+            "type": "session.updated",
+            "properties": {
+                "sessionID": "ses_1",
+                "info": {
+                    "id": "ses_1",
+                    "projectID": "proj_1",
+                    "directory": "/tmp/project",
+                    "title": "Updated title",
+                    "version": "1",
+                    "time": { "created": 1.0, "updated": 2.0 },
+                    "summary": { "additions": 3, "deletions": 1, "files": 2 }
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.updated", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.SessionUpdated)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals("Updated title", result.session.title)
+        assertEquals(2, result.session.summary?.files)
     }
 
     @Test

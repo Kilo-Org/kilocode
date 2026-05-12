@@ -5,16 +5,16 @@ import fs from "fs/promises"
 import path from "path"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { EffectFlock } from "@opencode-ai/shared/util/effect-flock"
-import { Config } from "../../src/config"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
+import { Config } from "../../src/config/config"
 import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { Env } from "../../src/env"
-import { Npm } from "../../src/npm"
+import { Npm } from "@opencode-ai/core/npm"
 import { Instance } from "../../src/project/instance"
-import { Filesystem } from "../../src/util"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { Filesystem } from "../../src/util/filesystem"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { tmpdir } from "../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
@@ -33,7 +33,6 @@ const emptyAuth = Layer.mock(Auth.Service)({
 const noopNpm = Layer.mock(Npm.Service)({
   install: () => Effect.void,
   add: () => Effect.die("not implemented"),
-  outdated: () => Effect.succeed(false),
   which: () => Effect.succeed(Option.none()),
 })
 
@@ -67,6 +66,18 @@ test("project config update creates .kilo/kilo.json and reloads it", async () =>
 
       const loaded = await load()
       expect(loaded.model).toBe("updated/model")
+    },
+  })
+})
+
+test("project config update skips empty delete-only writes when no config exists", async () => {
+  await using tmp = await tmpdir()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ provider: { missing: null } } as any)
+
+      await expect(fs.access(path.join(tmp.path, ".kilo", "kilo.json"))).rejects.toThrow()
     },
   })
 })

@@ -13,22 +13,22 @@
       gap: 6px;
 
       [data-slot="list-search-input"] {
-        font-size: 13px;
+        font-size: var(--kilo-font-size-13);
       }
     }
   }
 
   /* Group headers */
   [data-slot="list-header"] {
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     padding: 6px 8px;
   }
 
   /* List items – VS Code style */
   [data-slot="list-item"] {
     padding: 4px 8px;
-    font-size: 13px;
-    line-height: 20px;
+    font-size: var(--kilo-font-size-13);
+    line-height: var(--kilo-font-size-20);
     cursor: pointer;
 
     &[data-active="true"] {
@@ -52,7 +52,7 @@
     padding: 16px 12px;
 
     [data-slot="list-message"] {
-      font-size: 13px;
+      font-size: var(--kilo-font-size-13);
     }
   }
 }

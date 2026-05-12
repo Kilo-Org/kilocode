@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation } from "./agent-manager"
+import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -143,6 +143,11 @@ export interface WebviewReadyRequest {
   type: "webviewReady"
 }
 
+export interface SelectSourceRequest {
+  type: "selectSource"
+  id: string
+}
+
 export interface RequestProvidersMessage {
   type: "requestProviders"
 }
@@ -259,6 +264,11 @@ export interface DisconnectMcpMessage {
   name: string
 }
 
+export interface AuthenticateMcpMessage {
+  type: "authenticateMcp"
+  name: string
+}
+
 export interface SetLanguageRequest {
   type: "setLanguage"
   locale: string
@@ -303,12 +313,6 @@ export interface RenameSessionRequest {
 
 export interface RequestAutocompleteSettingsMessage {
   type: "requestAutocompleteSettings"
-}
-
-export interface UpdateAutocompleteSettingMessage {
-  type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
-  value: boolean | string
 }
 
 export interface RequestChatCompletionMessage {
@@ -369,6 +373,10 @@ export interface RequestGlobalConfigMessage {
 
 export interface RequestIndexingStatusMessage {
   type: "requestIndexingStatus"
+}
+
+export interface RequestKiloEmbeddingModelsMessage {
+  type: "requestKiloEmbeddingModels"
 }
 
 export interface OpenSettingsTabRequest {
@@ -633,6 +641,12 @@ export interface SetReviewDiffStyleRequest {
   style: "unified" | "split"
 }
 
+// Persist Markdown render preference in diff viewers
+export interface SetReviewMarkdownRenderRequest {
+  type: "agentManager.setReviewMarkdownRender"
+  render: boolean
+}
+
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
@@ -730,6 +744,12 @@ export interface EnhancePromptRequest {
 // Open the standalone changes viewer tab from the sidebar
 export interface OpenChangesRequest {
   type: "openChanges"
+  /**
+   * When set, opens the viewer scoped to a single turn (identified by the
+   * user message ID). The source picker is hidden and polling is disabled
+   * for this mode.
+   */
+  turnId?: string
 }
 
 // Open diff virtual (permission diff) in the lightweight diff virtual panel
@@ -737,6 +757,54 @@ export interface OpenDiffVirtualRequest {
   type: "openDiffVirtual"
   diff: PermissionFileDiff
   initialDiffStyle: "unified" | "split"
+}
+
+export interface DiffViewerSendCommentsRequest {
+  type: "diffViewer.sendComments"
+  comments: ReviewComment[]
+  autoSend: boolean
+}
+
+export interface DiffViewerSetDiffStyleRequest {
+  type: "diffViewer.setDiffStyle"
+  style: "unified" | "split"
+}
+
+export interface DiffViewerSetMarkdownRenderRequest {
+  type: "diffViewer.setMarkdownRender"
+  render: boolean
+}
+
+export interface DiffViewerRevertFileRequest {
+  type: "diffViewer.revertFile"
+  file: string
+}
+
+export interface DiffViewerRequestFileRequest {
+  type: "diffViewer.requestFile"
+  file: string
+}
+
+export interface DiffViewerCloseRequest {
+  type: "diffViewer.close"
+}
+
+export interface DiffViewerRequestBranchesRequest {
+  type: "diffViewer.requestBranches"
+}
+
+/**
+ * Override the workspace source's base branch. Pass `branch: undefined` to
+ * clear the override and fall back to the auto-resolved base.
+ */
+export interface DiffViewerSetBaseBranchRequest {
+  type: "diffViewer.setBaseBranch"
+  branch: string | undefined
+}
+
+export interface DiffVirtualSetMarkdownRenderRequest {
+  type: "diffVirtual.setMarkdownRender"
+  render: boolean
 }
 
 export interface RetryConnectionRequest {
@@ -753,6 +821,12 @@ export interface OpenSubAgentViewerRequest {
 // Preview an image attachment in VS Code's built-in image viewer
 export interface PreviewImageRequest {
   type: "previewImage"
+  dataUrl: string
+  filename: string
+}
+
+export interface SaveImageRequest {
+  type: "saveImage"
   dataUrl: string
   filename: string
 }
@@ -795,6 +869,7 @@ export interface ConnectProviderMessage {
   requestId: string
   providerID: string
   apiKey: string
+  metadata?: Record<string, string>
 }
 
 export interface AuthorizeProviderOAuthMessage {
@@ -967,6 +1042,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
@@ -979,6 +1055,7 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
+  | AuthenticateMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -987,7 +1064,6 @@ export type WebviewMessage =
   | DeleteSessionRequest
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage
-  | UpdateAutocompleteSettingMessage
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage
@@ -1000,6 +1076,7 @@ export type WebviewMessage =
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
+  | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
@@ -1039,6 +1116,7 @@ export type WebviewMessage =
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
   | SetReviewDiffStyleRequest
+  | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestCloudSessionDataMessage
@@ -1067,9 +1145,19 @@ export type WebviewMessage =
   | EnhancePromptRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
+  | DiffViewerSendCommentsRequest
+  | DiffViewerSetDiffStyleRequest
+  | DiffViewerSetMarkdownRenderRequest
+  | DiffViewerRevertFileRequest
+  | DiffViewerRequestFileRequest
+  | DiffViewerCloseRequest
+  | DiffViewerRequestBranchesRequest
+  | DiffViewerSetBaseBranchRequest
+  | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
+  | SaveImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage

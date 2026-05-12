@@ -3,19 +3,19 @@ import { Effect, Layer } from "effect"
 import fs from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
-import { Config } from "../../src/config"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { Global } from "../../src/global"
+import { Config } from "../../src/config/config"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/project/instance"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
-import { Truncate } from "../../src/tool"
-import { ToolRegistry } from "../../src/tool"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { Truncate } from "../../src/tool/truncate"
+import { ToolRegistry } from "../../src/tool/registry"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const state = path.join(Global.Path.state, "model.json")
@@ -23,7 +23,7 @@ const state = path.join(Global.Path.state, "model.json")
 afterEach(async () => {
   process.env.KILO_CLIENT = "cli"
   await fs.rm(state, { force: true }).catch(() => undefined)
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 beforeAll(async () => {

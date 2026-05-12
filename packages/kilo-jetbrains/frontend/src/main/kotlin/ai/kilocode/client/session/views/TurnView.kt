@@ -1,6 +1,11 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.ui.SessionLayoutPanel
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.util.ui.JBUI
 
 /**
  * Top-level transcript item representing one conversational turn.
@@ -11,7 +16,12 @@ import ai.kilocode.client.session.model.Message
  *
  * Children are stacked by [ai.kilocode.client.session.ui.SessionLayout].
  */
-class TurnView(val id: String) : ai.kilocode.client.session.ui.SessionLayoutPanel() {
+class TurnView(
+    val id: String,
+    private var style: SessionEditorStyle = SessionEditorStyle.current(),
+) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), SessionEditorStyleTarget {
+
+    constructor(id: String) : this(id, SessionEditorStyle.current())
 
     private val messages = LinkedHashMap<String, MessageView>()
 
@@ -21,7 +31,7 @@ class TurnView(val id: String) : ai.kilocode.client.session.ui.SessionLayoutPane
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg)
+        val view = MessageView(msg, style)
         messages[msg.info.id] = view
         add(view)
         revalidate()
@@ -43,4 +53,11 @@ class TurnView(val id: String) : ai.kilocode.client.session.ui.SessionLayoutPane
 
     /** Compact dump for test assertions. */
     fun dump(): String = messages.entries.joinToString(", ") { (id, mv) -> "${mv.role}#$id" }
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        this.style = style
+        for (view in messages.values) view.applyStyle(style)
+        revalidate()
+        repaint()
+    }
 }

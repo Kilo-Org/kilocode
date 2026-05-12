@@ -4,6 +4,10 @@
  */
 
 import { $ } from "bun"
+import { rm } from "node:fs/promises"
+import { randomUUID } from "node:crypto"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 
 export interface BranchInfo {
   current: string
@@ -13,6 +17,18 @@ export interface BranchInfo {
 export interface RemoteInfo {
   name: string
   url: string
+}
+
+export interface CompatBase {
+  commit: string
+  upstream: string
+  message: string
+}
+
+type Semver = readonly [number, number, number]
+
+interface Candidate extends CompatBase {
+  version: Semver
 }
 
 export async function getCurrentBranch(): Promise<string> {
@@ -122,11 +138,11 @@ export async function commit(message: string): Promise<void> {
 }
 
 export async function merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
-  // Use zdiff3 markers so conflicts carry the base version (|||||||) alongside
-  // ours/theirs. This gives mergiraf the base it needs for structural heuristics
-  // and makes any remaining manual resolution dramatically easier (you can see
-  // what both sides changed relative to the common ancestor instead of
-  // reverse-engineering it from a 2-way marker).
+  // Force zdiff3 markers even if the contributor's local config has drifted:
+  // conflicts carry the base version (|||||||) alongside ours/theirs so mergiraf
+  // has the common ancestor for structural heuristics and any remaining manual
+  // resolution is dramatically easier. `postinstall` (script/setup-git.ts) sets
+  // this repo-wide as well; the `-c` override here is belt-and-suspenders.
   const result = await $`git -c merge.conflictStyle=zdiff3 merge ${branch}`.nothrow()
 
   if (result.exitCode === 0) {
@@ -175,6 +191,136 @@ export async function getCommitMessage(ref: string): Promise<string> {
 export async function getCommitHash(ref: string): Promise<string> {
   const result = await $`git rev-parse ${ref}`.text()
   return result.trim()
+}
+
+export async function getCommitParents(ref: string): Promise<string[]> {
+  const result = await $`git show --no-patch --format=%P ${ref}`.text()
+  return result
+    .trim()
+    .split(/\s+/)
+    .filter((parent) => parent.length > 0)
+}
+
+export async function writeTree(): Promise<string> {
+  const result = await $`git write-tree`.text()
+  return result.trim()
+}
+
+export async function createCommit(tree: string, message: string, parent: string): Promise<string> {
+  const result = await $`git commit-tree ${tree} -p ${parent} -m ${message}`.text()
+  return result.trim()
+}
+
+export async function updateBranch(name: string, commit: string): Promise<void> {
+  await $`git update-ref refs/heads/${name} ${commit}`
+}
+
+export async function recordAncestor(ref: string, message: string): Promise<boolean> {
+  if (await isAncestor(ref, "HEAD")) return false
+
+  const result = await $`git merge -s ours --no-ff ${ref} -m ${message}`.nothrow()
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to record ancestor ${ref}: ${result.stderr.toString()}`)
+  }
+  return true
+}
+
+async function compatUpstream(message: string): Promise<string | null> {
+  const tag = compatTag(message)
+  if (!tag) return null
+
+  const ref = `${tag}^{commit}`
+  const result = await $`git rev-parse ${ref}`.quiet().nothrow()
+  if (result.exitCode !== 0) return null
+  return result.stdout.toString().trim()
+}
+
+function compatTag(message: string): string | null {
+  const prefix = "refactor: kilo compat for "
+  if (!message.startsWith(prefix)) return null
+  return message.slice(prefix.length).trim().split(/\s+/)[0] ?? null
+}
+
+function parseSemver(value: string | undefined): Semver | null {
+  const match = value?.match(/^v?(\d+)\.(\d+)\.(\d+)$/)
+  if (!match) return null
+  const major = Number.parseInt(match[1] ?? "0", 10)
+  const minor = Number.parseInt(match[2] ?? "0", 10)
+  const patch = Number.parseInt(match[3] ?? "0", 10)
+  return [major, minor, patch]
+}
+
+function compareSemver(a: Semver, b: Semver): number {
+  for (const idx of [0, 1, 2] as const) {
+    if (a[idx] < b[idx]) return -1
+    if (a[idx] > b[idx]) return 1
+  }
+  return 0
+}
+
+function exists<T>(value: T | null): value is T {
+  return value !== null
+}
+
+async function targetSemver(ref: string): Promise<Semver | null> {
+  const tags = await getTagsForCommit(ref)
+  const tag = tags.find((item) => parseSemver(item) !== null)
+  const parsed = parseSemver(tag)
+  if (parsed) return parsed
+
+  const message = await getCommitMessage(ref)
+  const match = message.match(/\bv?\d+\.\d+\.\d+\b/)
+  return parseSemver(match?.[0])
+}
+
+async function candidate(line: string): Promise<Candidate | null> {
+  const [commit, message = ""] = line.split("\0")
+  if (!commit) return null
+
+  const version = parseSemver(compatTag(message) ?? undefined)
+  if (!version) return null
+
+  const upstream = (await compatUpstream(message)) ?? (await getCommitParents(commit))[0] ?? commit
+  return { commit, upstream, message, version }
+}
+
+export async function findLatestCompatCommit(base: string, target: string): Promise<CompatBase | null> {
+  const grep = "^refactor: kilo compat for "
+  const result = await $`git log --format=%H%x00%s --grep=${grep} ${base}`.quiet().nothrow()
+  if (result.exitCode !== 0) {
+    throw new Error(`Failed to search compatibility commits: ${result.stderr.toString()}`)
+  }
+
+  const lines = result.stdout
+    .toString()
+    .trim()
+    .split("\n")
+    .filter((line) => line.length > 0)
+
+  const targetVersion = await targetSemver(target)
+  if (targetVersion) {
+    const candidates = (await Promise.all(lines.map(candidate)))
+      .filter(exists)
+      .filter((item) => compareSemver(item.version, targetVersion) < 0)
+      .sort((a, b) => compareSemver(b.version, a.version))
+    const latest = candidates[0]
+    if (latest) return { commit: latest.commit, upstream: latest.upstream, message: latest.message }
+  }
+
+  for (const line of lines) {
+    const [commit, message = ""] = line.split("\0")
+    if (!commit) continue
+
+    const upstream = await compatUpstream(message)
+    if (upstream && (await isAncestor(upstream, target))) return { commit, upstream, message }
+
+    const parents = await getCommitParents(commit)
+    for (const parent of parents) {
+      if (await isAncestor(parent, target)) return { commit, upstream: parent, message }
+    }
+  }
+
+  return null
 }
 
 /**
@@ -267,6 +413,11 @@ export async function ensureRerere(): Promise<void> {
   await $`git config rerere.autoupdate true`.quiet()
 }
 
+async function reset(dir: string): Promise<void> {
+  await $`git -C ${dir} reset -q --hard`.quiet().nothrow()
+  await $`git -C ${dir} clean -fdx`.quiet().nothrow()
+}
+
 /**
  * Train the rerere cache from past merge commits in the repo history.
  * Implements the same logic as git's contrib/rerere-train.sh:
@@ -277,14 +428,14 @@ export async function ensureRerere(): Promise<void> {
  * Returns the number of resolutions learned.
  */
 export async function trainRerere(grep: string): Promise<number> {
-  // Save the current HEAD so we can restore it afterwards
-  const headResult = await $`git symbolic-ref -q HEAD`.quiet().nothrow()
-  const branch = headResult.exitCode === 0 ? headResult.stdout.toString().trim() : null
-  const originalHead = branch ?? (await $`git rev-parse --verify HEAD`.text()).trim()
+  const head = (await $`git rev-parse --verify HEAD`.text()).trim()
+  const dir = join(tmpdir(), `kilo-rerere-train-${randomUUID()}`)
 
   let learned = 0
 
   try {
+    await $`git worktree add --detach ${dir} ${head}`.quiet()
+
     // Find all merge commits matching the grep pattern (merges have multiple parents)
     const revList = await $`git rev-list --parents --all --grep=${grep}`.quiet().nothrow()
     if (revList.exitCode !== 0 || !revList.stdout.toString().trim()) return 0
@@ -301,45 +452,45 @@ export async function trainRerere(grep: string): Promise<number> {
 
       const [commit, parent1, ...otherParents] = parts
 
+      await reset(dir)
+
       // Checkout the first parent
-      const coResult = await $`git checkout -q ${parent1}`.quiet().nothrow()
+      const coResult = await $`git -C ${dir} checkout -q ${parent1}`.quiet().nothrow()
       if (coResult.exitCode !== 0) continue
 
       // Attempt the merge - we expect it to fail with conflicts
-      const mergeResult = await $`git merge --no-gpg-sign ${otherParents}`.quiet().nothrow()
+      const mergeResult = await $`git -C ${dir} merge --no-gpg-sign ${otherParents}`.quiet().nothrow()
       if (mergeResult.exitCode === 0) {
         // Cleanly merged — no conflicts to learn from, reset and skip
-        await $`git reset -q --hard`.quiet().nothrow()
+        await reset(dir)
         continue
       }
 
       // Check if rerere recorded a pre-image (MERGE_RR exists and is non-empty)
-      const mergeRR = Bun.file(`${process.env.GIT_DIR || ".git"}/MERGE_RR`)
-      const hasMergeRR = await mergeRR.exists().catch(() => false)
+      const rr = await $`git -C ${dir} rev-parse --git-path MERGE_RR`.text()
+      const hasMergeRR = await Bun.file(rr.trim())
+        .exists()
+        .catch(() => false)
       if (!hasMergeRR) {
-        await $`git reset -q --hard`.quiet().nothrow()
+        await reset(dir)
         continue
       }
 
       // Record the conflict pre-image
-      await $`git rerere`.quiet().nothrow()
+      await $`git -C ${dir} rerere`.quiet().nothrow()
 
       // Apply the actual resolution by checking out the merge commit's tree
-      await $`git checkout -q ${commit} -- .`.quiet().nothrow()
+      await $`git -C ${dir} checkout -q ${commit} -- .`.quiet().nothrow()
 
       // Record the resolution post-image
-      await $`git rerere`.quiet().nothrow()
+      await $`git -C ${dir} rerere`.quiet().nothrow()
 
       learned++
-      await $`git reset -q --hard`.quiet().nothrow()
+      await reset(dir)
     }
   } finally {
-    // Always restore original branch
-    if (branch) {
-      await $`git checkout ${branch.replace("refs/heads/", "")}`.quiet().nothrow()
-    } else {
-      await $`git checkout ${originalHead}`.quiet().nothrow()
-    }
+    await $`git worktree remove --force ${dir}`.quiet().nothrow()
+    await rm(dir, { recursive: true, force: true })
   }
 
   return learned

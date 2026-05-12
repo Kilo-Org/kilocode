@@ -1,23 +1,17 @@
-import { createMemo, createSignal } from "solid-js"
+import { useTerminalDimensions } from "@opentui/solid" // kilocode_change
+import { createEffect, createMemo, createSignal, Show } from "solid-js" // kilocode_change
 import { useLocal } from "@tui/context/local"
 import { useSync } from "@tui/context/sync"
-import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
+import { map, pipe, flatMap, entries, filter, sortBy, take, groupBy } from "remeda" // kilocode_change
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useDialog } from "@tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { DialogVariant } from "./dialog-variant"
 import { useKeybind } from "../context/keybind"
+import type { Model } from "@kilocode/sdk/v2" // kilocode_change
 import * as fuzzysort from "fuzzysort"
-
-export function useConnected() {
-  const sync = useSync()
-  // kilocode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
-  return createMemo(() =>
-    sync.data.provider.some(
-      (x) => (x.id !== "opencode" && x.id !== "kilo") || Object.values(x.models).some((y) => y.cost?.input !== 0),
-    ),
-  )
-}
+import { useConnected } from "./use-connected"
+import { ModelInfoPanel } from "@/kilocode/components/model-info-panel" // kilocode_change
 
 export function DialogModel(props: { providerID?: string }) {
   const local = useLocal()
@@ -25,6 +19,7 @@ export function DialogModel(props: { providerID?: string }) {
   const dialog = useDialog()
   const keybind = useKeybind()
   const [query, setQuery] = createSignal("")
+  const dimensions = useTerminalDimensions() // kilocode_change
 
   const connected = useConnected()
   const providers = createDialogProviderOptions()
@@ -40,14 +35,44 @@ export function DialogModel(props: { providerID?: string }) {
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
+  // kilocode_change start
+  const wide = createMemo(() => dimensions().width >= 108)
+  const [preview, setPreview] = createSignal<{
+    model: Model
+    provider: string
+  }>()
+
+  const lookup = (providerID: string, modelID: string) => {
+    const provider = sync.data.provider.find((x) => x.id === providerID)
+    const model = provider?.models[modelID]
+    if (!provider || !model) return
+    return {
+      model,
+      provider: provider.name,
+    }
+  }
+
+  createEffect(() => {
+    dialog.setSize(wide() ? "xlarge" : "large")
+  })
+
+  createEffect(() => {
+    const current = local.model.current()
+    if (!current) return
+    const next = lookup(current.providerID, current.modelID)
+    if (!next) return
+    setPreview(next)
+  })
+  // kilocode_change end
+
   const options = createMemo(() => {
     const needle = query().trim()
-    const showSections = showExtra() && needle.length === 0
+    // kilocode_change: removed showSections guard — sections are always built; empty ones are hidden naturally
     const favorites = connected() ? local.model.favorite() : []
     const recents = local.model.recent()
 
     function toOptions(items: typeof favorites, category: string) {
-      if (!showSections) return []
+      if (!showExtra()) return [] // kilocode_change
       return items.flatMap((item) => {
         const provider = sync.data.provider.find((x) => x.id === item.providerID)
         if (!provider) return []
@@ -110,7 +135,7 @@ export function DialogModel(props: { providerID?: string }) {
             },
           })),
           filter((x) => {
-            if (!showSections) return true
+            // kilocode_change: always dedupe favorites/recents (upstream only did this when showSections was true)
             if (favorites.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
               return false
             if (recents.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
@@ -139,15 +164,20 @@ export function DialogModel(props: { providerID?: string }) {
         )
       : []
 
+    // kilocode_change start - Filter per-section to preserve group headers while typing
     if (needle) {
-      const filteredProviders = fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj)
-      const filteredPopular = fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj)
-      // kilocode_change start - Partition Kilo Gateway results first (preserves fuzzysort order)
-      const kilo = filteredProviders.filter((x) => x.value.providerID === "kilo")
-      const rest = filteredProviders.filter((x) => x.value.providerID !== "kilo")
-      return [...kilo, ...rest, ...filteredPopular]
-      // kilocode_change end
+      const rank = <U extends { title: string; category?: string }>(items: U[]) =>
+        fuzzysort.go(needle, items, { keys: ["title", "category"] }).map((x) => x.obj)
+      // rank within each provider category to preserve category order
+      const rankedProviders = pipe(
+        providerOptions,
+        groupBy((x) => x.category ?? ""),
+        entries(),
+        flatMap(([_, items]) => rank(items)),
+      )
+      return [...rank(favoriteOptions), ...rank(recentOptions), ...rankedProviders, ...rank(popularProviders)]
     }
+    // kilocode_change end
 
     return [...favoriteOptions, ...recentOptions, ...providerOptions, ...popularProviders]
   })
@@ -177,31 +207,49 @@ export function DialogModel(props: { providerID?: string }) {
     dialog.clear()
   }
 
+  // kilocode_change start
   return (
-    <DialogSelect<ReturnType<typeof options>[number]["value"]>
-      options={options()}
-      keybind={[
-        {
-          keybind: keybind.all.model_provider_list?.[0],
-          title: connected() ? "Connect provider" : "View all providers",
-          onTrigger() {
-            dialog.replace(() => <DialogProvider />)
-          },
-        },
-        {
-          keybind: keybind.all.model_favorite_toggle?.[0],
-          title: "Favorite",
-          disabled: !connected(),
-          onTrigger: (option) => {
-            local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
-          },
-        },
-      ]}
-      onFilter={setQuery}
-      flat={true}
-      skipFilter={true}
-      title={title()}
-      current={local.model.current()}
-    />
+    <box flexDirection="row">
+      <box flexGrow={1} flexShrink={1}>
+        <DialogSelect<ReturnType<typeof options>[number]["value"]>
+          options={options()}
+          keybind={[
+            {
+              keybind: keybind.all.model_provider_list?.[0],
+              title: connected() ? "Connect provider" : "View all providers",
+              onTrigger() {
+                dialog.replace(() => <DialogProvider />)
+              },
+            },
+            {
+              keybind: keybind.all.model_favorite_toggle?.[0],
+              title: "Favorite",
+              disabled: !connected(),
+              onTrigger: (option) => {
+                local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+              },
+            },
+          ]}
+          onFilter={setQuery}
+          onMove={(option) => {
+            if (typeof option.value === "string") {
+              setPreview(undefined)
+              return
+            }
+            const next = lookup(option.value.providerID, option.value.modelID)
+            if (!next) return
+            setPreview(next)
+          }}
+          // kilocode_change: removed flat={true} to keep section headers visible while filtering
+          skipFilter={true}
+          title={title()}
+          current={local.model.current()}
+        />
+      </box>
+      <Show when={wide() && preview()}>
+        {(item) => <ModelInfoPanel model={item().model} provider={item().provider} />}
+      </Show>
+    </box>
   )
+  // kilocode_change end
 }

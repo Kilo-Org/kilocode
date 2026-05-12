@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { afterEach, mock, spyOn } from "bun:test"
+import { Effect } from "effect"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
@@ -318,7 +319,7 @@ describe("RemoteSender", () => {
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: () => Promise<unknown>; fn: () => R }) => input.fn(),
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
     })
 
     sender.handle({
@@ -350,7 +351,7 @@ describe("RemoteSender", () => {
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: () => Promise<unknown>; fn: () => R }) => input.fn(),
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
     })
 
     sender.handle({
@@ -380,7 +381,7 @@ describe("RemoteSender", () => {
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: () => Promise<unknown>; fn: () => R }) => input.fn(),
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
     })
 
     sender.handle({
@@ -408,7 +409,7 @@ describe("RemoteSender", () => {
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: () => Promise<unknown>; fn: () => R }) => input.fn(),
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
     })
 
     sender.handle({
@@ -499,7 +500,7 @@ describe("RemoteSender", () => {
       directory: "/tmp/test",
       log: nolog,
       subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: () => Promise<unknown>; fn: () => R }) => input.fn(),
+      provide: async <R>(input: { directory: string; init?: Effect.Effect<void>; fn: () => R }) => input.fn(),
     })
 
     sender.handle({

@@ -2,21 +2,21 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
-import { Flag } from "@/flag/flag"
-import { Global } from "@/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
-import { Provider } from "@/provider"
+import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Question } from "@/question"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import path from "path"
 import z from "zod"
@@ -236,7 +236,7 @@ export namespace PlanFollowup {
 
     // Fall back to plan file on disk
     const session = await Session.get(SessionID.make(input.sessionID))
-    const file = Bun.file(Session.plan(session))
+    const file = Bun.file(Session.plan(session, Instance.current))
     const plan = await file.text().catch(() => "")
     return plan.trim()
   }
@@ -351,7 +351,7 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session)
+          const file = Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
           const todoList = formatTodos(todos)
 

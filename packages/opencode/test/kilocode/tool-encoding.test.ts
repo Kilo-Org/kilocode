@@ -9,21 +9,21 @@ import path from "path"
 import fs from "fs/promises"
 import iconv from "iconv-lite"
 import { Agent } from "../../src/agent/agent"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { Bus } from "../../src/bus"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { EditTool } from "../../src/tool/edit"
 import { Format } from "../../src/format"
 import { Instance } from "../../src/project/instance"
 import { Instruction } from "../../src/session/instruction"
-import { LSP } from "../../src/lsp"
+import { LSP } from "../../src/lsp/lsp"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ReadTool } from "../../src/tool/read"
 import * as Tool from "../../src/tool/tool"
-import { Truncate } from "../../src/tool"
+import { Truncate } from "../../src/tool/truncate"
 import { WriteTool } from "../../src/tool/write"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ctx = {
@@ -38,7 +38,7 @@ const ctx = {
 }
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const it = testEffect(
@@ -94,6 +94,8 @@ const encodeBytes = (text: string, encoding: string): Buffer => {
   const lower = encoding.toLowerCase()
   if (lower === "utf-16le") return Buffer.concat([Buffer.from([0xff, 0xfe]), iconv.encode(text, encoding)])
   if (lower === "utf-16be") return Buffer.concat([Buffer.from([0xfe, 0xff]), iconv.encode(text, encoding)])
+  if (lower === "utf-32le") return Buffer.concat([Buffer.from([0xff, 0xfe, 0x00, 0x00]), iconv.encode(text, encoding)])
+  if (lower === "utf-32be") return Buffer.concat([Buffer.from([0x00, 0x00, 0xfe, 0xff]), iconv.encode(text, encoding)])
   return iconv.encode(text, encoding)
 }
 
@@ -135,6 +137,8 @@ describe("tool encoding preservation", () => {
       ["UTF-8 with BOM", UTF8_BOM, samples.utf8],
       ["UTF-16 LE with BOM", "utf-16le", samples.utf8],
       ["UTF-16 BE with BOM", "utf-16be", samples.utf8],
+      ["UTF-32 LE with BOM", "utf-32le", samples.utf8],
+      ["UTF-32 BE with BOM", "utf-32be", samples.utf8],
       ["Shift_JIS", "Shift_JIS", samples.shiftJis],
       ["EUC-JP", "euc-jp", samples.eucJp],
       ["GB2312", "gb2312", samples.gb2312],
@@ -174,6 +178,15 @@ describe("tool encoding preservation", () => {
         }),
       ),
     )
+
+    it.live("accepts UTF-32 LE with BOM (3 of every 4 bytes are NUL)", () =>
+      provideEncoded("utf-32le", samples.utf8, (filepath) =>
+        Effect.gen(function* () {
+          const result = yield* runRead({ filePath: filepath })
+          expect(result.output).toContain(samples.utf8)
+        }),
+      ),
+    )
   })
 
   describe("WriteTool preserves existing file encoding when overwriting", () => {
@@ -183,6 +196,8 @@ describe("tool encoding preservation", () => {
       ["GB2312", "gb2312", samples.gb2312],
       ["Windows-1251", "windows-1251", samples.windows1251],
       ["UTF-16 LE", "utf-16le", samples.utf8],
+      ["UTF-32 LE", "utf-32le", samples.utf8],
+      ["UTF-32 BE", "utf-32be", samples.utf8],
     ]
 
     for (const [label, encoding, original] of cases) {
@@ -226,6 +241,8 @@ describe("tool encoding preservation", () => {
       ["UTF-8 with BOM", UTF8_BOM, Buffer.from([0xef, 0xbb, 0xbf])],
       ["UTF-16 LE", "utf-16le", Buffer.from([0xff, 0xfe])],
       ["UTF-16 BE", "utf-16be", Buffer.from([0xfe, 0xff])],
+      ["UTF-32 LE", "utf-32le", Buffer.from([0xff, 0xfe, 0x00, 0x00])],
+      ["UTF-32 BE", "utf-32be", Buffer.from([0x00, 0x00, 0xfe, 0xff])],
     ]
     for (const [label, encoding, bom] of bomCases) {
       it.live(`does not emit a double BOM for ${label} when content starts with U+FEFF`, () =>
@@ -256,6 +273,7 @@ describe("tool encoding preservation", () => {
       ["GB2312", "gb2312", samples.gb2312, "简体中文", "中文简体"],
       ["Windows-1251", "windows-1251", samples.windows1251, "мир", "планета"],
       ["UTF-16 LE", "utf-16le", samples.utf8 + "\n second line", "world", "earth"],
+      ["UTF-32 LE", "utf-32le", samples.utf8 + "\n second line", "world", "earth"],
     ]
 
     for (const [label, encoding, original, oldString, newString] of cases) {
@@ -313,6 +331,53 @@ describe("tool encoding preservation", () => {
       ),
     )
 
+    // Regression guard: the diff and additions/deletions counts surfaced to the
+    // user (and to the permission prompt) are derived from the pre-patch read
+    // of the file. A previous version reused a hard-coded UTF-8 decoder for
+    // that read, producing mojibake for any non-UTF-8 file. The bytes ended up
+    // correct because the patch helper does its own encoding-aware read, so
+    // tests that only checked final file bytes (above) missed the bug.
+    it.live("returns a non-mojibake diff for a Shift_JIS update", () =>
+      provideTmpdirInstance((dir) =>
+        Effect.gen(function* () {
+          const filepath = path.join(dir, "doc.txt")
+          const replacement = "日本語"
+          const original = "line1\n" + samples.shiftJis + "\nline3\n"
+          yield* putEncoded(filepath, original, "Shift_JIS")
+
+          const patch = [
+            "*** Begin Patch",
+            "*** Update File: doc.txt",
+            "@@",
+            " line1",
+            "-" + samples.shiftJis,
+            "+" + replacement,
+            " line3",
+            "*** End Patch",
+          ].join("\n")
+
+          const result = (yield* runPatch({ patchText: patch })) as {
+            metadata: {
+              diff: string
+              files: Array<{ additions: number; deletions: number }>
+            }
+          }
+
+          // The diff must contain the real decoded old/new lines, not a UTF-8
+          // misread of the Shift_JIS bytes (which would surface as U+FFFD).
+          expect(result.metadata.diff).toContain(samples.shiftJis)
+          expect(result.metadata.diff).toContain(replacement)
+          expect(result.metadata.diff).not.toContain("\uFFFD")
+
+          // Per-file stats are derived from the same diff, so a mojibake read
+          // would inflate both additions and deletions.
+          expect(result.metadata.files).toHaveLength(1)
+          expect(result.metadata.files[0].additions).toBe(1)
+          expect(result.metadata.files[0].deletions).toBe(1)
+        }),
+      ),
+    )
+
     it.live("new files added via apply_patch are UTF-8", () =>
       provideTmpdirInstance((dir) =>
         Effect.gen(function* () {
@@ -354,7 +419,7 @@ describe("tool encoding preservation", () => {
       provideTmpdirInstance((dir) =>
         Effect.gen(function* () {
           const filepath = path.join(dir, "doc.txt")
-          // Pad with additional Shift_JIS text so jschardet has enough bytes
+          // Pad with additional Shift_JIS text so chardet has enough bytes
           // to confidently identify the encoding.
           const pad = samples.shiftJis + "\n"
           const original = pad + "日本語\n日本語\n日本語\n" + pad
