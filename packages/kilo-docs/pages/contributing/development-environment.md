@@ -180,7 +180,7 @@ Before changes are pushed to the remote repository, the `.husky/pre-push` hook r
 1.  **Bun Version Check**: Verifies your Bun version matches the root `package.json` requirement.
 2.  **Type Checking**: Runs `bun typecheck` to ensure the project typechecks successfully.
 
-The PR `typecheck` workflow also warns when release-note-worthy product changes do not include a `.changeset/*.md` file. This warning is non-blocking because internal changes do not always need release notes.
+Changeset reminders happen through the Changesets GitHub app, which comments on pull requests when a release-note-worthy change may need a `.changeset/*.md` file. This is non-blocking because internal changes do not always need release notes.
 
 These hooks help maintain code quality and consistency. If you encounter issues with commits or pushes, check the output from these hooks for error messages.
 
