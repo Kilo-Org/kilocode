@@ -72,7 +72,6 @@ export class CodeIndexServiceFactory {
         baseUrl: config.kiloOptions.baseUrl,
         organizationId: config.kiloOptions.organizationId,
         modelId: config.modelId,
-        dimensions: config.modelDimension,
       })
     }
     if (provider === "openai") {

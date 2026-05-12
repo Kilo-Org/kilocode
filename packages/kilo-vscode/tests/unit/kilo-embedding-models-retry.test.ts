@@ -20,7 +20,7 @@ import {
   isEmptyKiloEmbeddingCatalog,
   KILO_EMBEDDING_MAX_RETRIES,
   subscribeKiloEmbeddingModels,
-} from "../../webview-ui/src/context/kilo-embedding-models"
+} from "../../webview-ui/src/context/kilo-embedding-models-subscribe"
 import type { ExtensionMessage, WebviewMessage } from "../../webview-ui/src/types/messages"
 
 const realCatalog: KiloEmbeddingModelCatalog = {
@@ -163,8 +163,8 @@ describe("subscribeKiloEmbeddingModels (webview retry)", () => {
 
     for (let i = 0; i < KILO_EMBEDDING_MAX_RETRIES + 5; i++) timers.tick()
 
-    // Initial request + at most MAX_RETRIES re-posts.
-    expect(h.posted.length).toBeLessThanOrEqual(1 + KILO_EMBEDDING_MAX_RETRIES)
+    // Initial request + exactly MAX_RETRIES re-posts.
+    expect(h.posted.length).toBe(1 + KILO_EMBEDDING_MAX_RETRIES)
     cleanup()
   })
 
