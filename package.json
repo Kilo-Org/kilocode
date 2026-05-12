@@ -114,9 +114,6 @@
     "semi": false,
     "printWidth": 120
   },
-  "trustedDependencies": [
-    "electron"
-  ],
   "overrides": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
