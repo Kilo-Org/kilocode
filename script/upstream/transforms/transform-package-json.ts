@@ -108,8 +108,14 @@ function compareVersions(a: string, b: string): number | null {
 /**
  * Merge two dependency objects using "newest wins" strategy
  * For non-comparable versions (URLs, catalog:, workspace:*), upstream (theirs) wins
+ *
+ * Key order preserves ours' order first (so kilo-only deps stay in their
+ * original position), then appends theirs-only keys at the end. This avoids
+ * relocating existing keys, which would otherwise let git's textual merge
+ * produce duplicate JSON keys (ours keeps the line in place, theirs appears
+ * to "add" the same key elsewhere → both survive the merge).
  */
-function mergeWithNewestVersions(
+export function mergeWithNewestVersions(
   ours: Record<string, string> | undefined,
   theirs: Record<string, string> | undefined,
   changes: string[],
@@ -117,38 +123,38 @@ function mergeWithNewestVersions(
 ): Record<string, string> {
   const result: Record<string, string> = {}
 
-  // Start with all of theirs
-  if (theirs) {
-    for (const [name, version] of Object.entries(theirs)) {
-      result[name] = version
+  // Seed with ours' keys in ours' order, applying newest-wins per key.
+  if (ours) {
+    for (const [name, ourVersion] of Object.entries(ours)) {
+      const theirVersion = theirs?.[name]
+      if (theirVersion === undefined) {
+        result[name] = ourVersion
+        changes.push(`${section}: preserved ${name}@${ourVersion} (kilo-only)`)
+        continue
+      }
+      if (ourVersion === theirVersion) {
+        result[name] = theirVersion
+        continue
+      }
+      const cmp = compareVersions(ourVersion, theirVersion)
+      if (cmp === null) {
+        result[name] = theirVersion
+        changes.push(`${section}: ${name} kept upstream ${theirVersion} (special format)`)
+      } else if (cmp > 0) {
+        result[name] = ourVersion
+        changes.push(`${section}: ${name} ${theirVersion} -> ${ourVersion} (kilo newer)`)
+      } else {
+        result[name] = theirVersion
+        if (cmp < 0) changes.push(`${section}: ${name} kept upstream ${theirVersion} (upstream newer)`)
+      }
     }
   }
 
-  // Merge in ours, keeping newer versions
-  if (ours) {
-    for (const [name, ourVersion] of Object.entries(ours)) {
-      const theirVersion = result[name]
-
-      if (!theirVersion) {
-        // Dependency only exists in ours - keep it
-        result[name] = ourVersion
-        changes.push(`${section}: preserved ${name}@${ourVersion} (kilo-only)`)
-      } else if (ourVersion !== theirVersion) {
-        // Both have it with different versions - compare
-        const comparison = compareVersions(ourVersion, theirVersion)
-
-        if (comparison === null) {
-          // Can't compare (special format) - upstream wins per user preference
-          changes.push(`${section}: ${name} kept upstream ${theirVersion} (special format)`)
-        } else if (comparison > 0) {
-          // Ours is newer
-          result[name] = ourVersion
-          changes.push(`${section}: ${name} ${theirVersion} -> ${ourVersion} (kilo newer)`)
-        } else if (comparison < 0) {
-          // Theirs is newer - already in result
-          changes.push(`${section}: ${name} kept upstream ${theirVersion} (upstream newer)`)
-        }
-        // If equal, keep theirs (already in result)
+  // Append any theirs-only keys at the end, preserving theirs' relative order.
+  if (theirs) {
+    for (const [name, version] of Object.entries(theirs)) {
+      if (result[name] === undefined) {
+        result[name] = version
       }
     }
   }
@@ -167,6 +173,17 @@ export interface PackageJsonOptions {
   dryRun?: boolean
   verbose?: boolean
   preserveVersion?: boolean
+}
+
+export interface ReconcileOptions extends PackageJsonOptions {
+  oursRef: string
+  theirsRef: string
+  /**
+   * Files to skip (e.g. still-conflicted files where the user is going to
+   * resolve manually). The reconciler would otherwise overwrite the conflict
+   * markers and silently auto-resolve.
+   */
+  skip?: Set<string>
 }
 
 // Package name mappings
@@ -202,6 +219,69 @@ const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
   "packages/opencode/package.json": "@kilocode/cli",
   "packages/plugin/package.json": "@kilocode/plugin",
   "packages/sdk/js/package.json": "@kilocode/sdk",
+}
+
+// Kilo-specific scripts to preserve from the base branch per package.json.
+// Upstream's version wholesale-replaces the scripts block, so anything listed
+// here gets re-applied from ours after taking theirs.
+const PRESERVE_SCRIPTS: Record<string, string[]> = {
+  "package.json": ["extension", "changeset", "changeset:version", "dev-setup", "postinstall"],
+  "packages/opencode/package.json": ["test", "test:ci"],
+}
+
+// Upstream-only scripts to delete per package.json. These reference packages
+// Kilo doesn't ship (desktop-electron, console/app, app) and would otherwise
+// reappear on every merge.
+const DELETE_UPSTREAM_SCRIPTS: Record<string, string[]> = {
+  "package.json": ["dev:desktop", "dev:web", "dev:console"],
+}
+
+// Upstream-only catalog entries to delete per package.json. These are pulled
+// in by upstream features (e.g. desktop Sentry integration) that Kilo doesn't
+// ship, so they add install weight with zero consumers in our tree.
+const DELETE_UPSTREAM_CATALOG: Record<string, string[]> = {
+  "package.json": ["@sentry/solid", "@sentry/vite-plugin"],
+}
+
+/**
+ * Re-apply Kilo-specific scripts on top of the upstream-shaped scripts block,
+ * and prune upstream-only scripts that target packages Kilo doesn't ship.
+ */
+export function fixScripts(pkg: Record<string, unknown>, path: string, ours: Record<string, unknown> | null, changes: string[]): void {
+  const theirs = (pkg.scripts as Record<string, string> | undefined) || {}
+  const oursScripts = (ours?.scripts as Record<string, string> | undefined) || {}
+
+  for (const name of PRESERVE_SCRIPTS[path] || []) {
+    const val = oursScripts[name]
+    if (val && theirs[name] !== val) {
+      theirs[name] = val
+      changes.push(`scripts.${name}: preserved from base`)
+    }
+  }
+
+  for (const name of DELETE_UPSTREAM_SCRIPTS[path] || []) {
+    if (theirs[name]) {
+      delete theirs[name]
+      changes.push(`scripts.${name}: removed (upstream-only, no Kilo target)`)
+    }
+  }
+
+  if (Object.keys(theirs).length > 0) pkg.scripts = theirs
+}
+
+/**
+ * Prune upstream-only catalog entries that have no consumers in Kilo.
+ */
+export function fixCatalog(pkg: Record<string, unknown>, path: string, changes: string[]): void {
+  const ws = pkg.workspaces as { catalog?: Record<string, string> } | undefined
+  const cat = ws?.catalog
+  if (!cat) return
+  for (const name of DELETE_UPSTREAM_CATALOG[path] || []) {
+    if (cat[name]) {
+      delete cat[name]
+      changes.push(`workspaces.catalog.${name}: removed (upstream-only, no Kilo consumer)`)
+    }
+  }
 }
 
 /**
@@ -358,46 +438,7 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
       }
 
-      const ourScripts = ourPkg.scripts as Record<string, string> | undefined
-      if (relativePath === "package.json" && ourScripts?.extension && pkg.scripts?.extension !== ourScripts.extension) {
-        pkg.scripts = pkg.scripts || {}
-        pkg.scripts.extension = ourScripts.extension
-        changes.push(`scripts.extension: preserved Kilo's extension script`)
-      }
-      if (relativePath === "package.json" && ourScripts?.changeset && pkg.scripts?.changeset !== ourScripts.changeset) {
-        pkg.scripts = pkg.scripts || {}
-        pkg.scripts.changeset = ourScripts.changeset
-        changes.push(`scripts.changeset: preserved Kilo's changeset script`)
-      }
-      if (
-        relativePath === "package.json" &&
-        ourScripts?.["changeset:version"] &&
-        pkg.scripts?.["changeset:version"] !== ourScripts["changeset:version"]
-      ) {
-        pkg.scripts = pkg.scripts || {}
-        pkg.scripts["changeset:version"] = ourScripts["changeset:version"]
-        changes.push(`scripts.changeset:version: preserved Kilo's changeset:version script`)
-      }
-
-      // Preserve Kilo's test runner scripts for packages/opencode
-      if (
-        relativePath === "packages/opencode/package.json" &&
-        ourScripts?.test &&
-        pkg.scripts?.test !== ourScripts.test
-      ) {
-        pkg.scripts = pkg.scripts || {}
-        pkg.scripts.test = ourScripts.test
-        changes.push(`scripts.test: preserved Kilo's test runner script`)
-      }
-      if (
-        relativePath === "packages/opencode/package.json" &&
-        ourScripts?.["test:ci"] &&
-        pkg.scripts?.["test:ci"] !== ourScripts["test:ci"]
-      ) {
-        pkg.scripts = pkg.scripts || {}
-        pkg.scripts["test:ci"] = ourScripts["test:ci"]
-        changes.push(`scripts.test:ci: preserved Kilo's CI test runner script`)
-      }
+      fixScripts(pkg, relativePath, ourPkg, changes)
 
       // Merge catalog with "newest wins" strategy
       if (ourWorkspaces?.catalog || theirWorkspaces?.catalog) {
@@ -409,6 +450,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
           "workspaces.catalog",
         )
       }
+
+      fixCatalog(pkg, relativePath, changes)
     }
 
     // 7. Transform dependency names (opencode -> kilo)
@@ -617,28 +660,7 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
         }
 
-        const kiloScripts = kiloPkg.scripts as Record<string, string> | undefined
-        if (path === "package.json" && kiloScripts?.extension && pkg.scripts?.extension !== kiloScripts.extension) {
-          pkg.scripts = pkg.scripts || {}
-          pkg.scripts.extension = kiloScripts.extension
-          changes.push(`scripts.extension: preserved Kilo's extension script`)
-        }
-
-        // Preserve Kilo's test runner scripts for packages/opencode
-        if (path === "packages/opencode/package.json" && kiloScripts?.test && pkg.scripts?.test !== kiloScripts.test) {
-          pkg.scripts = pkg.scripts || {}
-          pkg.scripts.test = kiloScripts.test
-          changes.push(`scripts.test: preserved Kilo's test runner script`)
-        }
-        if (
-          path === "packages/opencode/package.json" &&
-          kiloScripts?.["test:ci"] &&
-          pkg.scripts?.["test:ci"] !== kiloScripts["test:ci"]
-        ) {
-          pkg.scripts = pkg.scripts || {}
-          pkg.scripts["test:ci"] = kiloScripts["test:ci"]
-          changes.push(`scripts.test:ci: preserved Kilo's CI test runner script`)
-        }
+        fixScripts(pkg, path, kiloPkg, changes)
 
         // Merge catalog with "newest wins" strategy
         if (kiloWorkspaces?.catalog || upstreamWorkspaces?.catalog) {
@@ -650,6 +672,8 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
             "workspaces.catalog",
           )
         }
+
+        fixCatalog(pkg, path, changes)
       }
 
       // 7. Transform dependency names (opencode -> kilo)
@@ -713,6 +737,235 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
     }
   }
 
+  return results
+}
+
+/**
+ * Reconcile a single package.json after a merge has finished, regardless of
+ * whether it was conflicted or auto-resolved (by rerere or git's textual
+ * merge). Reads ours from `oursRef` and theirs from `theirsRef`, then applies
+ * the same merge logic used for conflict resolution and writes the result to
+ * the working tree. Stages the file.
+ *
+ * This is needed because rerere can replay stale resolutions for files like
+ * `package.json` that include cosmetic reordering — those resolutions bypass
+ * `transformConflictedPackageJson` entirely. Running this reconciler after
+ * the merge guarantees our merge logic always wins.
+ *
+ * Returns "skipped" if neither side touched the file (or both sides match) so
+ * callers can avoid unnecessary churn. Returns "flagged" if ours has
+ * kilocode_change markers (manual review needed).
+ */
+export async function reconcilePackageJsonFromRefs(
+  file: string,
+  options: ReconcileOptions,
+): Promise<PackageJsonResult> {
+  const changes: string[] = []
+  const dryRun = options.dryRun ?? false
+
+  if (await oursHasKilocodeChanges(file)) {
+    warn(`${file} has kilocode_change markers — skipping reconcile, needs manual resolution`)
+    return { file, action: "flagged", changes: [], dryRun }
+  }
+
+  let ourPkg: Record<string, unknown> | null = null
+  try {
+    const ourContent = await $`git show ${options.oursRef}:${file}`.text()
+    ourPkg = JSON.parse(ourContent)
+  } catch {
+    // file didn't exist in ours - that's fine
+  }
+
+  let pkg: Record<string, unknown> | null = null
+  try {
+    const theirContent = await $`git show ${options.theirsRef}:${file}`.text()
+    pkg = JSON.parse(theirContent)
+  } catch {
+    // file didn't exist in theirs either - nothing to reconcile
+  }
+
+  if (!pkg) {
+    if (!ourPkg) return { file, action: "skipped", changes: [], dryRun }
+    pkg = JSON.parse(JSON.stringify(ourPkg))
+  }
+
+  const relativePath = file.replace(process.cwd() + "/", "")
+  const newName = TRANSFORM_PACKAGE_NAMES[relativePath]
+  if (newName && pkg.name !== newName) {
+    changes.push(`name: ${pkg.name} -> ${newName}`)
+    pkg.name = newName
+  }
+
+  if (options.preserveVersion !== false) {
+    const kiloVersion = await getCurrentVersion()
+    if (pkg.version !== kiloVersion) {
+      changes.push(`version: ${pkg.version} -> ${kiloVersion}`)
+      pkg.version = kiloVersion
+    }
+  }
+
+  if (ourPkg) {
+    pkg.dependencies = mergeWithNewestVersions(
+      ourPkg.dependencies as Record<string, string> | undefined,
+      pkg.dependencies as Record<string, string> | undefined,
+      changes,
+      "dependencies",
+    )
+    pkg.devDependencies = mergeWithNewestVersions(
+      ourPkg.devDependencies as Record<string, string> | undefined,
+      pkg.devDependencies as Record<string, string> | undefined,
+      changes,
+      "devDependencies",
+    )
+    pkg.peerDependencies = mergeWithNewestVersions(
+      ourPkg.peerDependencies as Record<string, string> | undefined,
+      pkg.peerDependencies as Record<string, string> | undefined,
+      changes,
+      "peerDependencies",
+    )
+
+    const ourOverrides = ourPkg.overrides as Record<string, string> | undefined
+    if (ourOverrides || pkg.overrides) {
+      pkg.overrides = mergeWithNewestVersions(
+        ourOverrides,
+        pkg.overrides as Record<string, string> | undefined,
+        changes,
+        "overrides",
+      )
+    }
+
+    const ourPatched = ourPkg.patchedDependencies as Record<string, string> | undefined
+    if (ourPatched) {
+      pkg.patchedDependencies = (pkg.patchedDependencies as Record<string, string>) || {}
+      const patched = pkg.patchedDependencies as Record<string, string>
+      for (const [name, patch] of Object.entries(ourPatched)) {
+        if (!patched[name]) {
+          patched[name] = patch
+          changes.push(`patchedDependencies: preserved ${name}`)
+        }
+      }
+    }
+
+    const ourRepo = ourPkg.repository
+    if (ourRepo && JSON.stringify(pkg.repository) !== JSON.stringify(ourRepo)) {
+      pkg.repository = ourRepo
+      changes.push(`repository: preserved Kilo's repository configuration`)
+    }
+
+    const ourWs = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
+    const theirWs = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
+
+    if (relativePath === "package.json" && ourWs?.packages) {
+      pkg.workspaces = (pkg.workspaces as Record<string, unknown>) || {}
+      ;(pkg.workspaces as { packages: string[] }).packages = ourWs.packages
+      changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
+    }
+
+    fixScripts(pkg, relativePath, ourPkg, changes)
+
+    if (ourWs?.catalog || theirWs?.catalog) {
+      pkg.workspaces = (pkg.workspaces as Record<string, unknown>) || {}
+      ;(pkg.workspaces as { catalog: Record<string, string> }).catalog = mergeWithNewestVersions(
+        ourWs?.catalog,
+        theirWs?.catalog,
+        changes,
+        "workspaces.catalog",
+      )
+    }
+
+    fixCatalog(pkg, relativePath, changes)
+  }
+
+  if (pkg.dependencies) {
+    const { result, changes: depChanges } = transformDependencies(pkg.dependencies as Record<string, string>)
+    pkg.dependencies = result
+    changes.push(...depChanges.map((c) => `dependencies: ${c}`))
+  }
+  if (pkg.devDependencies) {
+    const { result, changes: devChanges } = transformDependencies(pkg.devDependencies as Record<string, string>)
+    if (devChanges.length > 0) {
+      pkg.devDependencies = result
+      changes.push(...devChanges.map((c) => `devDependencies: ${c}`))
+    }
+  }
+  if (pkg.peerDependencies) {
+    const { result, changes: peerChanges } = transformDependencies(pkg.peerDependencies as Record<string, string>)
+    if (peerChanges.length > 0) {
+      pkg.peerDependencies = result
+      changes.push(...peerChanges.map((c) => `peerDependencies: ${c}`))
+    }
+  }
+
+  const kiloDeps = KILO_DEPENDENCIES[relativePath]
+  if (kiloDeps) {
+    pkg.dependencies = (pkg.dependencies as Record<string, string>) || {}
+    const deps = pkg.dependencies as Record<string, string>
+    for (const [name, version] of Object.entries(kiloDeps)) {
+      if (!deps[name]) {
+        deps[name] = version
+        changes.push(`injected: ${name}`)
+      }
+    }
+  }
+
+  const kiloBin = KILO_BIN[relativePath]
+  if (kiloBin) {
+    pkg.bin = kiloBin
+    changes.push(`bin: set Kilo bin entries`)
+  }
+
+  if (dryRun) {
+    info(`[DRY-RUN] Would reconcile ${file}: ${changes.length} changes`)
+    return { file, action: "transformed", changes, dryRun: true }
+  }
+
+  const newContent = JSON.stringify(pkg, null, 2) + "\n"
+  await Bun.write(file, newContent)
+  await $`git add ${file}`.quiet().nothrow()
+
+  if (changes.length > 0) {
+    success(`Reconciled ${file}: ${changes.length} changes`)
+    if (options.verbose) {
+      for (const change of changes) debug(`  - ${change}`)
+    }
+  }
+
+  return { file, action: "transformed", changes, dryRun: false }
+}
+
+/**
+ * Reconcile every package.json that differs between `oursRef` and `theirsRef`
+ * after a merge. This is meant to run after `git merge` (whether the merge
+ * was clean, conflict-resolved, or rerere-replayed) to ensure our merge logic
+ * is the source of truth for package.json content.
+ */
+export async function reconcileAllPackageJson(options: ReconcileOptions): Promise<PackageJsonResult[]> {
+  // Collect every package.json that differs in either direction so we cover
+  // upstream-only and kilo-only files alike.
+  const diffOurs = await $`git diff --name-only ${options.oursRef} -- '*package.json'`.text()
+  const diffTheirs = await $`git diff --name-only ${options.theirsRef} -- '*package.json'`.text()
+  const candidates = new Set<string>()
+  for (const line of [...diffOurs.split("\n"), ...diffTheirs.split("\n")]) {
+    const path = line.trim()
+    if (!path) continue
+    if (path.includes("node_modules")) continue
+    if (!path.endsWith("package.json")) continue
+    candidates.add(path)
+  }
+
+  const results: PackageJsonResult[] = []
+  for (const file of candidates) {
+    if (options.skip?.has(file)) {
+      results.push({ file, action: "skipped", changes: [], dryRun: options.dryRun ?? false })
+      continue
+    }
+    const f = Bun.file(file)
+    if (!(await f.exists())) {
+      // file was removed by the merge - nothing to reconcile
+      continue
+    }
+    results.push(await reconcilePackageJsonFromRefs(file, options))
+  }
   return results
 }
 

@@ -2,6 +2,8 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -50,6 +52,14 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var recentFailures = 0
     var recentGate: CompletableDeferred<Unit>? = null
 
+    /** Local sessions returned by [list]. */
+    val listed = mutableListOf<SessionDto>()
+
+    /** Cloud sessions returned by [cloudSessions]. */
+    val cloud = mutableListOf<CloudSessionDto>()
+    var cloudCursor: String? = null
+    var importedCloudSession = session
+
     /** Push chat events here; tests collect from [events]. */
     val events = MutableSharedFlow<ChatEventDto>(extraBufferCapacity = 64, replay = 64)
 
@@ -75,9 +85,15 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
     val questionRejects = mutableListOf<Pair<String, String>>()
+    val deletes = mutableListOf<Pair<String, String>>()
+    val lists = mutableListOf<String>()
     val recentCalls = mutableListOf<Pair<String, Int>>()
+    val cloudCalls = mutableListOf<CloudCall>()
+    val imports = mutableListOf<Pair<String, String>>()
     var creates = 0
         private set
+
+    data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
 
     // --- Implementation ---
 
@@ -89,7 +105,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun list(directory: String): SessionListDto {
         assertNotEdt("list")
-        return SessionListDto(emptyList(), emptyMap())
+        lists.add(directory)
+        return SessionListDto(listed.toList(), emptyMap())
     }
 
     override suspend fun recent(directory: String, limit: Int): SessionListDto {
@@ -110,6 +127,20 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun delete(id: String, directory: String) {
         assertNotEdt("delete")
+        deletes.add(id to directory)
+        listed.removeAll { it.id == id }
+    }
+
+    override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
+        assertNotEdt("cloudSessions")
+        cloudCalls.add(CloudCall(directory, cursor, limit, gitUrl))
+        return CloudSessionListDto(cloud.take(limit), cloudCursor)
+    }
+
+    override suspend fun importCloudSession(id: String, directory: String): SessionDto {
+        assertNotEdt("importCloudSession")
+        imports.add(id to directory)
+        return importedCloudSession
     }
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> {

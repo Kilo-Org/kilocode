@@ -180,6 +180,7 @@ export function mockSessionValue(overrides?: {
     hasOlderMessages: () => false,
     messageMutation: () => undefined,
     messages: () => [],
+    visibleMessages: () => [],
     userMessages: () => [],
     allMessages: () => ({}),
     allParts: () => ({}),

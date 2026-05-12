@@ -62,6 +62,13 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
     @Volatile var sessionStatusesStatus = 200
+    @Volatile var cloudSessions = """{"cliSessions":[],"nextCursor":null}"""
+    @Volatile var cloudSessionImport = """{"id":"ses_imported","slug":"imported","projectID":"prj_test","directory":"/test","title":"Imported Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var cloudSessionsStatus = 200
+    @Volatile var cloudSessionImportStatus = 200
+    @Volatile var lastCloudSessionsPath: String? = null
+    @Volatile var lastCloudSessionImportPath: String? = null
+    @Volatile var lastCloudSessionImportBody: String? = null
     @Volatile var summarizeStatus = 200
     @Volatile var lastSummarizePath: String? = null
     @Volatile var lastSummarizeBody: String? = null
@@ -219,6 +226,15 @@ class MockCliServer : AutoCloseable {
                 bare == "/experimental/session" -> {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
+                }
+                bare == "/kilo/cloud-sessions" -> {
+                    lastCloudSessionsPath = path
+                    respond(output, cloudSessionsStatus, cloudSessions)
+                }
+                bare == "/kilo/cloud/session/import" && method == "POST" -> {
+                    lastCloudSessionImportPath = path
+                    lastCloudSessionImportBody = body
+                    respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)

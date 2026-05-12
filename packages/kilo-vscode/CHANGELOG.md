@@ -1,5 +1,32 @@
 # kilo-code
 
+## 7.2.51
+
+### Patch Changes
+
+- [#10143](https://github.com/Kilo-Org/kilocode/pull/10143) [`ea023b0`](https://github.com/Kilo-Org/kilocode/commit/ea023b06dd269445eaf0c433fb42f4c9de2605b9) - Reduce delays in long sessions by compacting older tool outputs when the model request becomes too large.
+
+## 7.2.50
+
+### Patch Changes
+
+- [#10082](https://github.com/Kilo-Org/kilocode/pull/10082) [`0aa908c`](https://github.com/Kilo-Org/kilocode/commit/0aa908c7afe9f5e43c77ba157936511a7b959c9f) - Keep the Agent Manager new-tab button visible at the end of the tab row, separated by a divider, and show all tab tooltips above the tabs.
+
+- [#10082](https://github.com/Kilo-Org/kilocode/pull/10082) [`a5f2fbc`](https://github.com/Kilo-Org/kilocode/commit/a5f2fbc9fdba4c51adcdbf6298088a323631f769) - Move Agent Manager tab creation and search controls to the left side of the tab bar with clearer toolbar separators.
+
+- [#10134](https://github.com/Kilo-Org/kilocode/pull/10134) [`0e8d2fe`](https://github.com/Kilo-Org/kilocode/commit/0e8d2fe0911719a2e364a43fdc70b1a18ce4d935) - Fix session cost breakdowns after reloading conversations with subagents.
+
+- [#10125](https://github.com/Kilo-Org/kilocode/pull/10125) [`fc6ce73`](https://github.com/Kilo-Org/kilocode/commit/fc6ce735c9dde64a544e0952d789397fa9fb7815) - Hide the task header graph area until timeline data is available.
+
+- [#10129](https://github.com/Kilo-Org/kilocode/pull/10129) [`d858252`](https://github.com/Kilo-Org/kilocode/commit/d8582521c3d0b1daef7ca6da64cc2a8340786ca9) - Keep older revert checkpoints available after reverting a message in the VS Code extension.
+
+- [#10130](https://github.com/Kilo-Org/kilocode/pull/10130) [`5482cc0`](https://github.com/Kilo-Org/kilocode/commit/5482cc0d09f7c22e15063c75dac223f13b1fa4f9) - Improve review comment plus icon contrast in diff viewers.
+
+- [#10127](https://github.com/Kilo-Org/kilocode/pull/10127) [`3259008`](https://github.com/Kilo-Org/kilocode/commit/3259008074cafe232a30d380e9ecc73c63ca0a35) - Keep shell command blocks stable while output streams so pending animations and expanded state do not reset.
+
+- Updated dependencies [[`5482cc0`](https://github.com/Kilo-Org/kilocode/commit/5482cc0d09f7c22e15063c75dac223f13b1fa4f9)]:
+  - @kilocode/kilo-ui@7.2.50
+
 ## 7.2.49
 
 ## 7.2.48

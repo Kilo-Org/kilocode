@@ -53,6 +53,11 @@ export interface ParsedError {
   message?: string
 }
 
+export interface ParsedProviderAuthError {
+  providerID: string
+  message: string
+}
+
 export function parseAssistantError(error: AssistantMessage["error"] | null | undefined): ParsedError | null {
   if (!error) return null
   if (error.name !== "APIError") return null
@@ -79,6 +84,20 @@ export function parseAssistantError(error: AssistantMessage["error"] | null | un
   }
 
   return { statusCode, code, message }
+}
+
+export function parseProviderAuthError(
+  error: AssistantMessage["error"] | null | undefined,
+): ParsedProviderAuthError | null {
+  if (!error) return null
+  if (error.name !== "ProviderAuthError") return null
+
+  const data = error.data
+  if (!data) return null
+  const providerID = typeof data.providerID === "string" ? data.providerID : undefined
+  const message = typeof data.message === "string" ? data.message : undefined
+  if (!providerID || !message) return null
+  return { providerID, message }
 }
 
 export function isUnauthorizedPaidModelError(parsed: ParsedError | null): boolean {

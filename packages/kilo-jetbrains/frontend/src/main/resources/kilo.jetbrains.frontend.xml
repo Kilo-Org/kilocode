@@ -40,6 +40,9 @@
                 class="ai.kilocode.client.actions.KiloSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
 
+        <action id="Kilo.History"
+                class="ai.kilocode.client.actions.HistoryAction"/>
+
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
                 text="Send Prompt"

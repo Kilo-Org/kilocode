@@ -473,6 +473,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Inscrivez-vous gratuitement pour continuer et explorer plus de 500 modèles. 2 minutes, sans carte bancaire. Ou revenez plus tard.",
   "error.promotionLimit.action": "S'inscrire",
+  "error.providerAuth.title": "{{provider}} vous a déconnecté",
+  "error.providerAuth.description": "Reconnectez {{provider}}, puis renvoyez votre message.",
+  "error.providerAuth.chatgpt.title": "OpenAI vous a déconnecté",
+  "error.providerAuth.chatgpt.description":
+    "Reconnectez-vous à ChatGPT, puis renvoyez votre message pour continuer à utiliser les modèles Codex.",
 
   "error.chain.unknown": "Erreur inconnue",
   "error.chain.causedBy": "Causé par :",

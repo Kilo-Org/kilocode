@@ -48,7 +48,7 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
     }
 
     fun `test factory creates blank session ui`() {
-        val ui = direct().create(project, workspace, FakeManager(), null, true)
+        val ui = direct().create(project, workspace, FakeManager(), null)
 
         assertNotNull(ui)
     }
@@ -56,7 +56,7 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
     fun `test factory wires open callback`() {
         val manager = FakeManager()
         val rpc = session("ses_1")
-        val ui = SessionUi(project, workspace, sessions, app, scope, open = manager::openSession)
+        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager)
         val controller = controller(ui)
 
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
@@ -66,22 +66,38 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
         assertEquals(listOf("ses_1"), manager.opened)
     }
 
-    fun `test empty panel opens through controller`() {
+    fun `test empty panel opens through SessionRef via controller`() {
         val manager = FakeManager()
         val rpc = session("ses_1")
-        val ui = SessionUi(project, workspace, sessions, app, scope, open = manager::openSession)
+        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager)
         val controller = controller(ui)
         val panel = ai.kilocode.client.session.ui.EmptySessionPanel(testRootDisposable, controller, listOf(rpc))
 
         panel.clickRecent(0)
 
+        // Recent click routes through SessionRef.Local path
         assertEquals(listOf("ses_1"), manager.opened)
     }
 
-    private fun controller(ui: SessionUi): ai.kilocode.client.session.update.SessionController {
+    fun `test empty panel show history routes through manager`() {
+        val manager = FakeManager()
+        val ui = SessionUi(project, workspace, sessions, app, scope, manager = manager)
+        val controller = controller(ui)
+        val panel = ai.kilocode.client.session.ui.EmptySessionPanel(
+            testRootDisposable,
+            controller,
+            emptyList(),
+        ) { manager.showHistory() }
+
+        panel.clickShowHistory()
+
+        assertEquals(1, manager.history)
+    }
+
+    private fun controller(ui: SessionUi): ai.kilocode.client.session.controller.SessionController {
         val field = SessionUi::class.java.getDeclaredField("controller")
         field.isAccessible = true
-        return field.get(ui) as ai.kilocode.client.session.update.SessionController
+        return field.get(ui) as ai.kilocode.client.session.controller.SessionController
     }
 
     fun `test application service is available`() {
@@ -101,11 +117,20 @@ class SessionUiFactoryTest : BasePlatformTestCase() {
 
     private class FakeManager : SessionManager {
         val opened = mutableListOf<String>()
+        var history = 0
         override fun newSession() {
         }
 
-        override fun openSession(session: SessionDto) {
-            opened.add(session.id)
+        override fun showHistory() {
+            history++
+        }
+
+        override fun openSession(ref: SessionRef) {
+            val id = when (ref) {
+                is SessionRef.Local -> ref.id
+                is SessionRef.Cloud -> ref.key
+            }
+            opened.add(id)
         }
     }
 }

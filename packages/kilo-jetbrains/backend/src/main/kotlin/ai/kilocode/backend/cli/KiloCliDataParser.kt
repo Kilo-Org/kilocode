@@ -1,6 +1,8 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -263,6 +265,25 @@ object KiloCliDataParser {
                 parts = parts.map { parsePart(it.jsonObject) },
             )
         }
+    }
+
+    fun parseCloudSessions(raw: String): CloudSessionListDto {
+        val obj = tryParseObject(raw) ?: return CloudSessionListDto(emptyList())
+        val items = obj["cliSessions"]?.jsonArray ?: JsonArray(emptyList())
+        val sessions = items.mapNotNull { elem ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            CloudSessionDto(
+                id = item.str("session_id") ?: return@mapNotNull null,
+                title = item.str("title"),
+                createdAt = item.str("created_at") ?: return@mapNotNull null,
+                updatedAt = item.str("updated_at") ?: return@mapNotNull null,
+                version = item.num("version") ?: return@mapNotNull null,
+            )
+        }
+        return CloudSessionListDto(
+            sessions = sessions,
+            nextCursor = obj.str("nextCursor"),
+        )
     }
 
     fun parseModelState(raw: String): ModelStateDto {

@@ -4,7 +4,11 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.history.HistoryTime
+import ai.kilocode.client.session.history.LocalHistoryItem
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -15,11 +19,14 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
+import java.awt.Cursor
 
 @Suppress("UnstableApiUsage")
 class EmptySessionPanelTest : BasePlatformTestCase() {
@@ -41,7 +48,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         workspace = workspaces.workspace("/test")
         controller = SessionController(
             parent = testRootDisposable,
-            id = null,
+            ref = null,
             sessions = KiloSessionService(project, scope, FakeSessionRpcApi()),
             workspace = workspace,
             app = app,
@@ -78,11 +85,30 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertTrue(panel.preferredSize.height > 0)
     }
 
-    fun `test content has fixed preferred width`() {
+    fun `test description width is capped at DESCRIPTION_WIDTH`() {
         val panel = panel()
 
-        assertEquals(com.intellij.util.ui.JBUI.scale(EmptySessionPanel.MAX_WIDTH), panel.contentPreferredSize().width)
-        assertTrue(panel.contentPreferredSize().height > 0)
+        assertEquals(
+            com.intellij.util.ui.JBUI.scale(SessionUiStyle.RecentSessions.DESCRIPTION_WIDTH),
+            panel.descriptionPreferredSize().width,
+        )
+        assertEquals(
+            com.intellij.util.ui.JBUI.scale(SessionUiStyle.RecentSessions.DESCRIPTION_WIDTH),
+            panel.descriptionMaximumSize().width,
+        )
+    }
+
+    fun `test description label is centered`() {
+        val panel = panel()
+
+        assertEquals(javax.swing.SwingConstants.CENTER, panel.welcomeLabelAlignment())
+    }
+
+    fun `test show history button has its own preferred width`() {
+        val panel = panel()
+        val btn = panel.historyButtonPreferredWidth()
+
+        assertTrue(btn > 0)
     }
 
     fun `test recent sessions are capped at five`() {
@@ -92,12 +118,12 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(5, panel.recentCount())
     }
 
-    fun `test explanation uses markdown view`() {
+    fun `test explanation uses welcome message`() {
         val panel = panel()
 
         assertEquals(
             "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
-            panel.explanationMarkdown(),
+            panel.explanationText(),
         )
     }
 
@@ -116,6 +142,29 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         panel.clickRecent(1)
 
         assertEquals(listOf("ses_2"), opened)
+    }
+
+    fun `test show history button uses localized text`() {
+        val panel = panel()
+
+        assertEquals(ai.kilocode.client.plugin.KiloBundle.message("session.showHistory"), panel.showHistoryText())
+    }
+
+    fun `test action controls use hand cursor and no show history outline`() {
+        val panel = panel()
+
+        assertFalse(panel.showHistoryBorderPainted())
+        assertEquals(Cursor.HAND_CURSOR, panel.showHistoryCursor())
+        assertEquals(Cursor.HAND_CURSOR, panel.recentCursor())
+    }
+
+    fun `test clicking show history delegates callback`() {
+        var calls = 0
+        val panel = panel(history = { calls++ })
+
+        panel.clickShowHistory()
+
+        assertEquals(1, calls)
     }
 
     fun `test renderer aligns title center and time east`() {
@@ -137,11 +186,16 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals(selected.background, hovered.background)
     }
 
-    fun `test timestamp normalization handles seconds and milliseconds`() {
-        val panel = panel()
+    fun `test renderer reuses history title fallback`() {
+        val cell = panel().rendererComponent(session("ses_1", title = "")) as BorderLayoutPanel
+        val label = UIUtil.uiTraverser(cell).filter(JBLabel::class.java).firstOrNull()
 
-        assertEquals(1_700_000_000_000L, panel.normalize(1_700_000_000.0))
-        assertEquals(1_700_000_000_000L, panel.normalize(1_700_000_000_000.0))
+        assertEquals("Untitled", label?.text)
+    }
+
+    fun `test timestamp normalization handles seconds and milliseconds`() {
+        assertEquals(1_700_000_000_000L, HistoryTime.millis(LocalHistoryItem(session("ses_1", 1_700_000_000))))
+        assertEquals(1_700_000_000_000L, HistoryTime.millis(LocalHistoryItem(session("ses_1", 1_700_000_000_000))))
     }
 
     fun `test timestamp renders coarse relative text`() {
@@ -154,14 +208,14 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
         assertEquals("4d ago", panel.text(session("ses_1", now - 345_600_000), now))
     }
 
-    private fun panel(recents: List<SessionDto> = emptyList()) =
-        EmptySessionPanel(testRootDisposable, controller, recents)
+    private fun panel(recents: List<SessionDto> = emptyList(), history: () -> Unit = {}) =
+        EmptySessionPanel(testRootDisposable, controller, recents, history)
 
-    private fun session(id: String, updated: Long = 2_000L) = SessionDto(
+    private fun session(id: String, updated: Long = 2_000L, title: String = "Title $id") = SessionDto(
         id = id,
         projectID = "prj",
         directory = "/repo/$id",
-        title = "Title $id",
+        title = title,
         version = "1",
         time = SessionTimeDto(created = 1.0, updated = updated.toDouble()),
     )

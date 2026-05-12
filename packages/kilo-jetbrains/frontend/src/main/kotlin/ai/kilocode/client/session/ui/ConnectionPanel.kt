@@ -1,9 +1,10 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.update.SessionController
-import ai.kilocode.client.session.update.SessionControllerEvent
-import ai.kilocode.client.session.update.SessionControllerListener
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.controller.SessionControllerListener
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
@@ -39,11 +40,11 @@ class ConnectionPanel(
     }
 
     private val header = BorderLayoutPanel().apply {
-        border = JBUI.Borders.empty(UiStyle.Space.SM, UiStyle.Space.LG, 0, UiStyle.Space.LG)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.lg(), 0, UiStyle.Gap.lg())
     }
 
     private val left = BorderLayoutPanel().apply {
-        layout = UiStyle.Gap.layout(UiStyle.Space.SM)
+        layout = BorderLayout(UiStyle.Gap.sm(), 0)
         addMouseListener(click)
     }
 
@@ -76,7 +77,7 @@ class ConnectionPanel(
     }
 
     private val scroll = JBScrollPane(details).apply {
-        border = JBUI.Borders.empty(0, UiStyle.Space.LG, UiStyle.Space.SM, 0)
+        border = JBUI.Borders.empty(0, UiStyle.Gap.lg(), UiStyle.Gap.sm(), 0)
         // Match the banner background while retaining platform scroll behavior.
         isOpaque = false
         viewport.isOpaque = false
@@ -93,7 +94,7 @@ class ConnectionPanel(
         // Keep the banner solid so expanded details cover transcript content beneath it.
         isOpaque = true
         background = UiStyle.Colors.bg()
-        border = JBUI.Borders.customLine(UiStyle.Colors.line(), 1, 0, 0, 0)
+        border = JBUI.Borders.customLine(SessionUiStyle.View.line(), 1, 0, 0, 0)
         left.add(toggle, BorderLayout.WEST)
         left.add(label, BorderLayout.CENTER)
         header.add(left, BorderLayout.CENTER)
@@ -135,7 +136,7 @@ class ConnectionPanel(
     }
 
     private fun showError(text: String, detail: String?) {
-        label.foreground = UiStyle.Colors.error()
+        label.foreground = UiStyle.Colors.errorLabelForeground()
         label.text = text
         retry.isVisible = true
         this.detail = detail?.takeIf { it.isNotBlank() }
@@ -145,7 +146,7 @@ class ConnectionPanel(
     }
 
     private fun showWarning(text: String, detail: String?) {
-        label.foreground = UiStyle.Colors.warning()
+        label.foreground = UiStyle.Colors.warningLabelForeground()
         label.text = text
         retry.isVisible = true
         this.detail = detail?.takeIf { it.isNotBlank() }

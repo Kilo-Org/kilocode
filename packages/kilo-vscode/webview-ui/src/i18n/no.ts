@@ -470,6 +470,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrer deg gratis for å fortsette og utforske over 500 modeller. Tar 2 minutter, ingen kredittkort nødvendig. Eller kom tilbake senere.",
   "error.promotionLimit.action": "Registrer deg",
+  "error.providerAuth.title": "{{provider}} logget deg ut",
+  "error.providerAuth.description": "Koble til {{provider}} på nytt, og send meldingen din igjen.",
+  "error.providerAuth.chatgpt.title": "OpenAI logget deg ut",
+  "error.providerAuth.chatgpt.description":
+    "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
   "error.chain.unknown": "Ukjent feil",
   "error.chain.causedBy": "Forårsaket av:",

@@ -934,6 +934,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Show when={ghost.text()}>
               <span class="prompt-input-ghost-text">{ghost.text()}</span>
             </Show>
+            {/* A <div> with white-space: pre-wrap collapses a trailing newline,
+                but a <textarea> renders it as a real empty line. This <br> is
+                added in that case so the overlay and textarea heights match. */}
+            <Show when={text().endsWith("\n")}>
+              <br />
+            </Show>
           </div>
           <textarea
             ref={textareaRef}

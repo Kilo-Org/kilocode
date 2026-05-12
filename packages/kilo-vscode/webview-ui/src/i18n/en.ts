@@ -467,6 +467,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
   "error.promotionLimit.action": "Sign Up",
+  "error.providerAuth.title": "{{provider}} signed you out",
+  "error.providerAuth.description": "Reconnect {{provider}}, then send your message again.",
+  "error.providerAuth.chatgpt.title": "OpenAI signed you out",
+  "error.providerAuth.chatgpt.description":
+    "Sign in with ChatGPT again, then send your message again to keep using Codex models.",
 
   "error.chain.unknown": "Unknown error",
   "error.chain.causedBy": "Caused by:",

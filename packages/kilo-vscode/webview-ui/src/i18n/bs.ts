@@ -469,6 +469,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrujte se besplatno da nastavite i istražite preko 500 modela. Traje 2 minute, bez kreditne kartice. Ili se vratite kasnije.",
   "error.promotionLimit.action": "Registracija",
+  "error.providerAuth.title": "{{provider}} vas je odjavio",
+  "error.providerAuth.description": "Ponovo se povežite sa {{provider}}, a zatim ponovo pošaljite poruku.",
+  "error.providerAuth.chatgpt.title": "OpenAI vas je odjavio",
+  "error.providerAuth.chatgpt.description":
+    "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
 
   "error.chain.unknown": "Nepoznata greška",
   "error.chain.causedBy": "Uzrok:",
