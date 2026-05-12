@@ -1526,12 +1526,8 @@ unix(
           })
 
           yield* llm.tool("bash", {
-            // kilocode_change start - emit a sentinel after the truncating output
-            // so the test can deterministically wait until the bash tool has
-            // already crossed the truncation threshold before cancelling.
             command:
-              'i=0; while [ "$i" -lt 4000 ]; do printf "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %05d\\n" "$i"; i=$((i + 1)); done; echo READY_TO_CANCEL; sleep 30',
-            // kilocode_change end
+              'i=0; while [ "$i" -lt 4000 ]; do printf "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %05d\\n" "$i"; i=$((i + 1)); done; sleep 30',
             description: "Print many lines",
             timeout: 30_000,
             workdir: path.resolve(dir),
@@ -1539,29 +1535,7 @@ unix(
 
           const run = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
           yield* llm.wait(1)
-          // kilocode_change start - wait until the bash tool has actually emitted
-          // its full output (including the sentinel) before cancelling. The
-          // running metadata `output` is the tail of stdout, so the sentinel
-          // confirms truncation already triggered server-side. A bare
-          // Effect.sleep was racy on slow Linux CI runners (TODO #8990).
-          yield* waitFor(
-            "bash output past truncation threshold",
-            sessions.messages({ sessionID: chat.id }).pipe(
-              Effect.map((msgs) => {
-                for (const msg of msgs) {
-                  for (const part of msg.parts) {
-                    if (part.type !== "tool") continue
-                    if (part.tool !== "bash") continue
-                    if (part.state.status !== "running") continue
-                    const out = part.state.metadata?.output
-                    if (typeof out === "string" && out.includes("READY_TO_CANCEL")) return part
-                  }
-                }
-                return undefined
-              }),
-            ),
-          )
-          // kilocode_change end
+          yield* Effect.sleep(150)
           yield* prompt.cancel(chat.id)
 
           const exit = yield* Fiber.await(run)
