@@ -28,7 +28,7 @@ type SubscribeOptions = {
  * function cleans up the subscription and timer.
  *
  * Lives in a JSX-free module so unit tests can import it without pulling in
- * the SolidJS render pipeline (the `.tsx` provider also re-exports it).
+ * the SolidJS render pipeline.
  */
 export function subscribeKiloEmbeddingModels(opts: SubscribeOptions): () => void {
   const setIntervalFn = opts.setInterval ?? globalThis.setInterval
