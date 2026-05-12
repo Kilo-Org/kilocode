@@ -22,6 +22,8 @@
   <!-- packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts -->
 - <https://app.kilo.ai/profile>
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
+- <https://app.kilo.ai/tui.json>
+  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://app.kilo.ai/usage>
   <!-- packages/opencode/src/kilocode/components/dialog-kilo-profile.tsx -->
 - <https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live>
@@ -125,8 +127,6 @@
 - <https://opencode.ai/go>
   <!-- packages/opencode/src/cli/cmd/tui/component/dialog-go-upsell.tsx -->
   <!-- packages/opencode/src/session/retry.ts -->
-- <https://opencode.ai/tui.json>
-  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/docs/use-cases/usage-accounting>
