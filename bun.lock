@@ -574,13 +574,6 @@
       },
     },
   },
-  "trustedDependencies": [
-    "esbuild",
-    "tree-sitter-powershell",
-    "protobufjs",
-    "web-tree-sitter",
-    "tree-sitter-bash",
-  ],
   "patchedDependencies": {
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
     "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
