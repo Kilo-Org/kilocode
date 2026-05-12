@@ -1,6 +1,6 @@
 ---
 title: "Keybinds"
-description: "Customize keyboard shortcuts for the Kilo Code TUI"
+description: "Learn how to customize keyboard shortcuts for the Kilo Code TUI using tui.json. Remap, disable, or add leader-key bindings to fit your workflow."
 platform: new
 ---
 
