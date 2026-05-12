@@ -127,11 +127,14 @@ Both `messages_toggle_conceal` and `tips_toggle` default to `<leader>h`. This me
 
 ```json {% filename="tui.json" %}
 {
+  "$schema": "https://opencode.ai/tui.json",
   "keybinds": {
     "tips_toggle": "none"
   }
 }
 ```
+
+Replace `"none"` with any key combination you prefer, or set the value to `false` to disable the binding entirely.
 {% /callout %}
 
 {% callout type="note" title="Windows Defaults" %}
