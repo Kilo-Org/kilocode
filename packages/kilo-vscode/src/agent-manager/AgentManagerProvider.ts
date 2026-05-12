@@ -29,6 +29,7 @@ import { forkSession } from "./fork-session"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
 import { WorktreeImporter } from "./worktree-importer"
+import { recordPromotionHandoff } from "./promotion-handoff"
 import { restoreWorktrees } from "./state-recovery"
 import { diffSummary as localDiffSummary, diffFile as localDiffFile } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
@@ -417,7 +418,7 @@ export class AgentManagerProvider implements Disposable {
     }
 
     if (m.type === "requestTerminalContext") {
-      if (m.sessionID) this.terminalManager.showExisting(m.sessionID)
+      if (m.sessionID && !this.terminalManager.hasActiveTerminal()) this.terminalManager.showExisting(m.sessionID)
       return msg
     }
 
@@ -481,6 +482,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "previewImage") return msg
+    if (m.type === "saveImage") return msg
     if (m.type === "agentManager.showExistingLocalTerminal") {
       this.terminalManager.syncLocalOnSessionSwitch()
       return null
@@ -1016,9 +1018,23 @@ export class AgentManagerProvider implements Disposable {
     }
 
     this.registerWorktreeSession(sessionId, created.result.path)
+    await this.recordPromotionHandoff(sessionId, created.result.path, created.result.branch)
     this.notifyWorktreeReady(sessionId, created.result, created.worktree.id)
     this.log(`Promoted session ${sessionId} to worktree ${created.worktree.id}`)
     return null
+  }
+
+  private async recordPromotionHandoff(sessionId: string, dir: string, branch: string): Promise<void> {
+    try {
+      await recordPromotionHandoff({
+        client: this.connectionService.getClient(),
+        sessionId,
+        directory: dir,
+        branch,
+      })
+    } catch (err) {
+      this.log("Failed to record worktree promotion handoff:", getErrorMessage(err))
+    }
   }
 
   /** Add a new session to an existing worktree. */

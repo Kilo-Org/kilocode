@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import { AutocompleteModel } from "../AutocompleteModel"
 import type { AutocompleteContext, VisibleCodeContext } from "../types"
 import { removePrefixOverlap } from "../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
@@ -7,6 +6,7 @@ import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/usel
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import type { KiloConnectionService } from "../../cli-backend"
+import { generateFim, hasValidCredentials } from "../fim"
 import { getAutocompleteModel } from "../../../shared/autocomplete-models"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
 
@@ -29,14 +29,14 @@ interface ChatCompletionResponseSender {
  * acceptance events correlate.
  */
 export class ChatTextAreaAutocomplete {
-  private model: AutocompleteModel
+  private connection: KiloConnectionService
   readonly telemetry: AutocompleteTelemetry
   private ignore: FileIgnoreController | null = null
   private dir = ""
   private watcher: vscode.FileSystemWatcher | undefined
 
   constructor(connectionService: KiloConnectionService, telemetry?: AutocompleteTelemetry) {
-    this.model = new AutocompleteModel(connectionService)
+    this.connection = connectionService
     this.telemetry = telemetry ?? new AutocompleteTelemetry("chat-textarea")
     this.watcher = vscode.workspace.createFileSystemWatcher("**/{.kilocodeignore,.gitignore}")
     const invalidate = () => {
@@ -77,18 +77,18 @@ export class ChatTextAreaAutocomplete {
 
   async getCompletion(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<{ suggestion: string }> {
     const cfg = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
-    this.model.setModel(getAutocompleteModel(cfg.get<string>("model") ?? "").id)
+    const entry = getAutocompleteModel(cfg.get<string>("model") ?? "")
     const startTime = Date.now()
 
     // Build context for telemetry
     const context: AutocompleteContext = {
       languageId: "chat", // Chat textarea doesn't have a language ID
-      modelId: this.model.getModelName(),
-      provider: this.model.getProviderDisplayName(),
+      modelId: entry.id,
+      provider: entry.provider,
     }
 
-    // Check if model has valid credentials (but don't require FIM)
-    if (!this.model.hasValidCredentials()) {
+    // Check for valid credentials (but don't require FIM)
+    if (!hasValidCredentials(this.connection)) {
       return { suggestion: "" }
     }
 
@@ -101,7 +101,7 @@ export class ChatTextAreaAutocomplete {
     let response = ""
 
     try {
-      await this.model.generateFimResponse(prefix, suffix, (chunk) => {
+      await generateFim(this.connection, entry.id, prefix, suffix, (chunk) => {
         response += chunk
       })
 
@@ -116,7 +116,7 @@ export class ChatTextAreaAutocomplete {
         context,
       )
 
-      const cleanedSuggestion = this.cleanSuggestion(response, userText)
+      const cleanedSuggestion = this.cleanSuggestion(response, userText, entry.id)
 
       // Track if suggestion was filtered or returned
       if (!cleanedSuggestion) {
@@ -147,12 +147,12 @@ export class ChatTextAreaAutocomplete {
     return buildChatPrefix(userText, visibleCodeContext?.editors)
   }
 
-  public cleanSuggestion(suggestion: string, userText: string): string {
+  public cleanSuggestion(suggestion: string, userText: string, modelId: string): string {
     const cleaned = postprocessAutocompleteSuggestion({
       suggestion: removePrefixOverlap(suggestion, userText),
       prefix: userText,
       suffix: "",
-      model: this.model.getModelName() ?? "unknown",
+      model: modelId || "unknown",
     })
     if (cleaned === undefined) return ""
     return finalizeChatSuggestion(cleaned)

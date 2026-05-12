@@ -1,0 +1,56 @@
+import { describe, expect, test } from "bun:test"
+import { normalize, text } from "./session-diff"
+
+describe("session diff", () => {
+  test("keeps unified patch content", () => {
+    const diff = {
+      file: "a.ts",
+      patch:
+        "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -1,2 +1,2 @@\n one\n-two\n+three\n",
+      additions: 1,
+      deletions: 1,
+      status: "modified" as const,
+    }
+    const view = normalize(diff)
+
+    expect(view.patch).toBe(diff.patch)
+    expect(view.fileDiff.name).toBe("a.ts")
+    expect(text(view, "deletions")).toBe("one\ntwo\n")
+    expect(text(view, "additions")).toBe("one\nthree\n")
+  })
+
+  test("converts legacy content into a patch", () => {
+    const diff = {
+      file: "a.ts",
+      before: "one\n",
+      after: "two\n",
+      additions: 1,
+      deletions: 1,
+      status: "modified" as const,
+    }
+    const view = normalize(diff)
+
+    expect(view.patch).toContain("@@ -1,1 +1,1 @@")
+    expect(text(view, "deletions")).toBe("one\n")
+    expect(text(view, "additions")).toBe("two\n")
+  })
+
+  test("preserves real line numbers from hunk headers without padding", () => {
+    const diff = {
+      file: "a.ts",
+      patch:
+        "Index: a.ts\n===================================================================\n--- a.ts\t\n+++ a.ts\t\n@@ -340,2 +340,2 @@\n one\n-two\n+three\n",
+      additions: 1,
+      deletions: 1,
+      status: "modified" as const,
+    }
+    const view = normalize(diff)
+
+    expect(view.fileDiff.hunks[0]?.deletionStart).toBe(340)
+    expect(view.fileDiff.hunks[0]?.additionStart).toBe(340)
+    expect(view.fileDiff.isPartial).toBe(true)
+    // No blank-line padding: only the hunk lines are materialized.
+    expect(view.fileDiff.deletionLines.length).toBe(2)
+    expect(view.fileDiff.additionLines.length).toBe(2)
+  })
+})

@@ -6,10 +6,11 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.session.SessionRef
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -76,10 +77,16 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected fun newUi(
         id: String? = null,
         displayMs: Long = 0,
-        loading: Boolean = id == null,
-        open: (SessionDto) -> Unit = {},
+        open: ((SessionRef) -> Unit)? = null,
     ): SessionUi {
-        return SessionUi(project, workspace, sessions, app, scope, id = id, displayMs = displayMs, loading = loading, open = open).apply {
+        val manager = open?.let { fn ->
+            object : SessionManager {
+                override fun newSession() {}
+                override fun showHistory() {}
+                override fun openSession(ref: SessionRef) = fn(ref)
+            }
+        }
+        return SessionUi(project, workspace, sessions, app, scope, ref = SessionRef.from(id), displayMs = displayMs, manager = manager).apply {
             setSize(800, 600)
         }
     }

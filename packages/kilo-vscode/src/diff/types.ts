@@ -3,6 +3,13 @@ export interface PanelContext {
   sessionId?: string
   /** Overrides the computed default source on open. */
   initialSourceId?: string
+  /**
+   * Hides the source picker header in the diff viewer. Used for panels that
+   * open in a fixed view (e.g. a specific turn's diff)
+   */
+  hidePicker?: boolean
+  /** User-picked base branch for the workspace source. Undefined = auto. */
+  baseBranchOverride?: string
 }
 
 /** Mirrors `WorktreeFileDiff` in webview-ui/src/types/messages/agent-manager.ts. */

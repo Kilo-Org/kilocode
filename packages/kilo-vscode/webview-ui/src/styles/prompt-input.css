@@ -327,7 +327,7 @@
 }
 
 .prompt-input::placeholder {
-  color: var(--vscode-input-placeholderForeground);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Input overlay (highlight + ghost text) */

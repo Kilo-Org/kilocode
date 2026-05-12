@@ -140,6 +140,8 @@ export function tui(input: {
     process.on("exit", resetTerminalState) // kilocode_change
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
+    // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
+    void renderer.getPalette({ size: 16 }).catch(() => undefined)
     const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
 
     await render(() => {
@@ -818,12 +820,14 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     })
   })
 
+  // kilocode_change start
   event.on(TuiEvent.SessionSelect.type, (evt) => {
     route.navigate({
       type: "session",
       sessionID: evt.properties.sessionID,
     })
   })
+  // kilocode_change end
 
   // kilocode_change start - show completion toast for background subagents
   event.subscribe((event) => {

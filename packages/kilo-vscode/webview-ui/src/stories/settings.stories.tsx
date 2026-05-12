@@ -9,6 +9,7 @@ import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
+import ModelsTab from "../components/settings/ModelsTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
@@ -56,6 +57,31 @@ export const ProvidersConfigure: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+export const ModelsAutocompleteOpen: Story = {
+  name: "ModelsTab — autocomplete model picker open",
+  render: () => (
+    <StoryProviders config={{} as any}>
+      <OpenModelPicker>
+        <ModelsTab />
+      </OpenModelPicker>
+    </StoryProviders>
+  ),
+}
+
+function OpenModelPicker(props: { children: any }) {
+  let ref: HTMLDivElement | undefined
+  onMount(() => {
+    requestAnimationFrame(() => {
+      ref?.querySelector<HTMLButtonElement>('button[title="mistralai/codestral-2508"]')?.click()
+    })
+  })
+  return (
+    <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
+      {props.children}
+    </div>
+  )
 }
 
 export const AgentBehaviourAgents: Story = {

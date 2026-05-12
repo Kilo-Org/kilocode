@@ -2,9 +2,10 @@ package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.ui.SessionLayoutPanel
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.ui.SessionStyleTarget
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import com.intellij.util.ui.JBUI
 
 /**
  * Top-level transcript item representing one conversational turn.
@@ -17,10 +18,10 @@ import ai.kilocode.client.ui.UiStyle
  */
 class TurnView(
     val id: String,
-    private var style: SessionStyle = SessionStyle.current(),
-) : SessionLayoutPanel(UiStyle.Card.groupGap()), SessionStyleTarget {
+    private var style: SessionEditorStyle = SessionEditorStyle.current(),
+) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), SessionEditorStyleTarget {
 
-    constructor(id: String) : this(id, SessionStyle.current())
+    constructor(id: String) : this(id, SessionEditorStyle.current())
 
     private val messages = LinkedHashMap<String, MessageView>()
 
@@ -53,7 +54,7 @@ class TurnView(
     /** Compact dump for test assertions. */
     fun dump(): String = messages.entries.joinToString(", ") { (id, mv) -> "${mv.role}#$id" }
 
-    override fun applyStyle(style: SessionStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         for (view in messages.values) view.applyStyle(style)
         revalidate()

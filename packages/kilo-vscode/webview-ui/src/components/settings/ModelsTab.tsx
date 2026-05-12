@@ -1,31 +1,20 @@
-import { Component, For, createMemo, createSignal, onCleanup } from "solid-js"
+import { Component, For, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
-import { Select } from "@kilocode/kilo-ui/select"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
-import { useVSCode } from "../../context/vscode"
 import { parseModelString } from "../../../../src/shared/provider-model"
-import { AUTOCOMPLETE_MODELS, DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
+import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
-import type { ExtensionMessage } from "../../types/messages"
+import { AUTOCOMPLETE_PROVIDER_ID, AUTOCOMPLETE_SELECTOR_MODELS } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
   const session = useSession()
-  const vscode = useVSCode()
 
-  const [autocompleteModel, setAutocompleteModel] = createSignal<string>(DEFAULT_AUTOCOMPLETE_MODEL.id)
-
-  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "autocompleteSettingsLoaded") {
-      setAutocompleteModel(message.settings.model)
-    }
-  })
-  onCleanup(unsubscribe)
-  vscode.postMessage({ type: "requestAutocompleteSettings" })
+  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.id)
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -47,6 +36,11 @@ const ModelsTab: Component = () => {
       }
       updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
     }
+  }
+
+  function handleAutocompleteModelSelect(providerID: string, modelID: string) {
+    if (providerID !== AUTOCOMPLETE_PROVIDER_ID || !modelID) return
+    updateSetting("autocomplete.model", modelID)
   }
 
   return (
@@ -82,18 +76,12 @@ const ModelsTab: Component = () => {
           description={language.t("settings.autocomplete.model.description")}
           last
         >
-          <Select
-            options={AUTOCOMPLETE_MODELS.map((m) => m.id)}
-            current={autocompleteModel()}
-            label={(opt: string) => AUTOCOMPLETE_MODELS.find((m) => m.id === opt)?.label ?? opt}
-            value={(opt: string) => opt}
-            onSelect={(opt) => {
-              if (opt !== undefined) {
-                setAutocompleteModel(opt)
-                vscode.postMessage({ type: "updateAutocompleteSetting", key: "model", value: opt })
-              }
-            }}
-            triggerVariant="settings"
+          <ModelSelectorBase
+            value={{ providerID: AUTOCOMPLETE_PROVIDER_ID, modelID: autocompleteModel() }}
+            onSelect={handleAutocompleteModelSelect}
+            placement="bottom-start"
+            models={AUTOCOMPLETE_SELECTOR_MODELS}
+            favorites={false}
           />
         </SettingsRow>
       </Card>

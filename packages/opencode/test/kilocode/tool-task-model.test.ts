@@ -15,7 +15,7 @@ import { ModelID, ProviderID } from "../../src/provider/schema"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const state = path.join(Global.Path.state, "model.json")
@@ -23,7 +23,7 @@ const state = path.join(Global.Path.state, "model.json")
 afterEach(async () => {
   process.env.KILO_CLIENT = "cli"
   await fs.rm(state, { force: true }).catch(() => undefined)
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 beforeAll(async () => {

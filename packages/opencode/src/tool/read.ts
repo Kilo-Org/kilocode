@@ -1,20 +1,20 @@
 import { lstat } from "fs/promises" // kilocode_change
 import { Effect, Option, Schema, Scope } from "effect"
 import { NonNegativeInt } from "@/util/schema"
-import { createReadStream } from "fs"
 import * as path from "path"
-import { Readable } from "stream" // kilocode_change
+import type { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
-import { isImageAttachment, isPdfAttachment, sniffAttachmentMime } from "@/util/media"
+import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
+import * as TextStream from "../kilocode/text-stream"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -24,6 +24,7 @@ const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const DIRECTORY_CONCURRENCY = 8 // kilocode_change
+const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
 
 // `offset` and `limit` were originally `z.coerce.number()` — the runtime
 // coercion was useful when the tool was called from a shell but serves no
@@ -165,7 +166,11 @@ export const ReadTool = Tool.define(
       filepath: string
       content: string
     }
-    const readDirectoryFiles = Effect.fn("ReadTool.readDirectoryFiles")(function* (filepath: string, items: string[]) {
+    const readDirectoryFiles = Effect.fn("ReadTool.readDirectoryFiles")(function* (
+      filepath: string,
+      items: string[],
+      directory: string,
+    ) {
       const entries = yield* fs.readDirectoryEntries(filepath).pipe(Effect.catch(() => Effect.succeed([])))
       const types = new Map(entries.map((entry) => [entry.name, entry.type]))
       const files = yield* Effect.forEach(
@@ -182,7 +187,7 @@ export const ReadTool = Tool.define(
             Effect.catch(() => Effect.void),
           )
           if (!file) return
-          const rel = path.relative(Instance.directory, child).replaceAll("\\", "/")
+          const rel = path.relative(directory, child).replaceAll("\\", "/")
           const note = file.cut || file.more ? "\n\n(File truncated)" : ""
           return {
             filepath: child,
@@ -199,18 +204,15 @@ export const ReadTool = Tool.define(
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context,
     ) {
-      if (params.offset !== undefined && params.offset < 1) {
-        return yield* Effect.fail(new Error("offset must be greater than or equal to 1"))
-      }
-
+      const instance = yield* InstanceState.context
       let filepath = params.filePath
       if (!path.isAbsolute(filepath)) {
-        filepath = path.resolve(Instance.directory, filepath)
+        filepath = path.resolve(instance.directory, filepath)
       }
       if (process.platform === "win32") {
         filepath = AppFileSystem.normalizePath(filepath)
       }
-      const title = path.relative(Instance.worktree, filepath)
+      const title = path.relative(instance.worktree, filepath)
 
       const stat = yield* fs.stat(filepath).pipe(
         Effect.catchIf(
@@ -236,13 +238,13 @@ export const ReadTool = Tool.define(
       if (stat.type === "Directory") {
         const items = yield* list(filepath)
         const limit = params.limit ?? DEFAULT_READ_LIMIT
-        const offset = params.offset ?? 1
+        const offset = params.offset || 1
         const start = offset - 1
         const sliced = items.slice(start, start + limit)
         const truncated = start + sliced.length < items.length
         // kilocode_change start
         const expand = Boolean(ctx.extra?.["includeDirectoryFiles"])
-        const loaded = expand ? yield* readDirectoryFiles(filepath, sliced) : []
+        const loaded = expand ? yield* readDirectoryFiles(filepath, sliced, instance.directory) : []
         const content = loaded.map((item) => item.content).join("\n\n")
         // kilocode_change end
 
@@ -275,7 +277,9 @@ export const ReadTool = Tool.define(
       const sample = yield* readSample(filepath, Number(stat.size), SAMPLE_BYTES)
 
       const mime = sniffAttachmentMime(sample, AppFileSystem.mimeType(filepath))
-      if (isImageAttachment(mime) || isPdfAttachment(mime)) {
+      const isImage = SUPPORTED_IMAGE_MIMES.has(mime)
+
+      if (isImage || isPdfAttachment(mime)) {
         const bytes = yield* fs.readFile(filepath)
         const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
         return {
@@ -301,7 +305,7 @@ export const ReadTool = Tool.define(
       }
 
       const file = yield* Effect.promise(() =>
-        lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset ?? 1 }),
+        lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 }),
       )
       if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
         return yield* Effect.fail(
@@ -350,12 +354,14 @@ export const ReadTool = Tool.define(
   }),
 )
 
-// kilocode_change start
+// kilocode_change start - exported (so readDirectoryFiles can reuse it) and
+// routed through TextStream.withFallback so non-UTF-8 files are decoded via
+// iconv. The body otherwise matches upstream.
 export async function lines(filepath: string, opts: { limit: number; offset: number }) {
-  // kilocode_change end
-  // kilocode_change start - decode with detected encoding; replaces createReadStream(filepath, { encoding: "utf8" })
-  const encoded = await Encoding.read(filepath)
-  const stream = Readable.from([encoded.text])
+  return TextStream.withFallback(filepath, (stream) => readLines(stream, opts))
+}
+
+async function readLines(stream: Readable, opts: { limit: number; offset: number }) {
   // kilocode_change end
   const rl = createInterface({
     input: stream,

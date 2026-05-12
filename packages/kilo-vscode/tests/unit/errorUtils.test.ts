@@ -3,6 +3,7 @@ import type { AssistantMessage } from "@kilocode/sdk/v2"
 import {
   unwrapError,
   parseAssistantError,
+  parseProviderAuthError,
   isUnauthorizedPaidModelError,
   isUnauthorizedPromotionLimitError,
 } from "../../webview-ui/src/utils/errorUtils"
@@ -94,6 +95,26 @@ describe("parseAssistantError", () => {
     }
     const result = parseAssistantError(error)
     expect(result).toEqual({ statusCode: 403, code: undefined, message: "Forbidden" })
+  })
+})
+
+describe("parseProviderAuthError", () => {
+  it("extracts provider auth errors", () => {
+    const error: AssistantError = {
+      name: "ProviderAuthError",
+      data: { providerID: "openai", message: "Sign in again" },
+    }
+
+    expect(parseProviderAuthError(error)).toEqual({ providerID: "openai", message: "Sign in again" })
+  })
+
+  it("returns null for non-provider-auth errors", () => {
+    const error: AssistantError = {
+      name: "APIError",
+      data: { statusCode: 401, message: "Unauthorized", isRetryable: false },
+    }
+
+    expect(parseProviderAuthError(error)).toBeNull()
   })
 })
 

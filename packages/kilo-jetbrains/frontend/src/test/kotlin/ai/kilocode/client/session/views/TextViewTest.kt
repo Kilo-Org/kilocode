@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Text
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /**
@@ -78,7 +78,7 @@ class TextViewTest : BasePlatformTestCase() {
     }
 
     fun `test markdown uses editor font settings`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = TextView(Text("p1"))
         val sheet = view.md.overrideSheet()
 
@@ -89,7 +89,7 @@ class TextViewTest : BasePlatformTestCase() {
     fun `test applyStyle updates markdown in place`() {
         val view = TextView(Text("p1"))
         val component = view.md.component
-        val style = SessionStyle.create(family = "Courier New", size = 23)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 23)
 
         view.applyStyle(style)
         val sheet = view.md.overrideSheet()

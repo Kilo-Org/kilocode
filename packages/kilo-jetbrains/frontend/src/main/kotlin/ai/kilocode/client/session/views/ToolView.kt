@@ -6,12 +6,14 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.Color
@@ -34,17 +36,20 @@ class ToolView(tool: Tool) : PartView() {
     override val contentId: String = tool.id
 
     private var item = tool
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
 
     private val root = JPanel(BorderLayout()).apply {
         isOpaque = true
-        background = UiStyle.Colors.surface()
-        border = UiStyle.Card.border()
+        background = SessionUiStyle.View.surface()
+        border = SessionUiStyle.View.card()
     }
-    private val header = JPanel(UiStyle.Card.layout()).apply {
+    private val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
         isOpaque = true
-        background = UiStyle.Colors.header()
-        border = UiStyle.Card.headerInsets()
+        background = SessionUiStyle.View.header()
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+        )
     }
     private val glyph = JBLabel()
     private val title = JBLabel()
@@ -55,7 +60,7 @@ class ToolView(tool: Tool) : PartView() {
         foreground = UiStyle.Colors.weak()
     }
     private val arrow = JBLabel()
-    private val center = JPanel(UiStyle.Card.layout()).apply {
+    private val center = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
         isOpaque = false
     }
     private val controls: JComponent = Box.createHorizontalBox().apply {
@@ -69,14 +74,17 @@ class ToolView(tool: Tool) : PartView() {
         lineWrap = true
         wrapStyleWord = true
         foreground = bodyColor()
-        background = UiStyle.Colors.surface()
-        border = UiStyle.Card.bodyInsets()
+        background = SessionUiStyle.View.surface()
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+        )
     }
     private val scroll = JBScrollPane(text).apply {
-        border = UiStyle.Card.divider()
+        border = SessionUiStyle.View.cardTop()
         isOpaque = true
-        background = UiStyle.Colors.surface()
-        viewport.background = UiStyle.Colors.surface()
+        background = SessionUiStyle.View.surface()
+        viewport.background = SessionUiStyle.View.surface()
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
@@ -114,7 +122,7 @@ class ToolView(tool: Tool) : PartView() {
             it.addMouseListener(click)
         }
         text.text = preview(item)
-        applyStyle(SessionStyle.current())
+        applyStyle(SessionEditorStyle.current())
         add(root, BorderLayout.CENTER)
         sync()
     }
@@ -171,11 +179,11 @@ class ToolView(tool: Tool) : PartView() {
 
     internal fun bodyWrap() = text.lineWrap
 
-    internal fun bodyMaxRows() = UiStyle.Card.LINES
+    internal fun bodyMaxRows() = SessionUiStyle.View.Tool.BODY_LINES
 
     internal fun bodyCreated() = true
 
-    override fun applyStyle(style: SessionStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         var changed = false
         changed = setFont(title, style.boldEditorFont) || changed
@@ -193,7 +201,7 @@ class ToolView(tool: Tool) : PartView() {
     }
 
     private fun setHover(value: Boolean) {
-        val color = if (value) UiStyle.Colors.headerHover() else UiStyle.Colors.header()
+        val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
         if (same(header.background, color)) return
         header.background = color
         header.repaint()
@@ -279,10 +287,11 @@ class ToolView(tool: Tool) : PartView() {
         repaint()
     }
 
-    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.error() else UiStyle.Colors.fg()
+    private fun bodyColor() = if (item.state == ToolExecState.ERROR) UiStyle.Colors.errorLabelForeground() else UiStyle.Colors.fg()
 
     private fun bodyMaxHeight(): Int {
-        return text.getFontMetrics(text.font).height * bodyMaxRows() + UiStyle.Card.scrollChrome()
+        return text.getFontMetrics(text.font).height * bodyMaxRows() +
+            JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
     }
 
     override fun dumpLabel() = "ToolView#$contentId(${labelText()})"
@@ -345,14 +354,14 @@ private fun setFont(component: JComponent, font: Font): Boolean {
 private fun same(a: Color?, b: Color): Boolean = a?.rgb == b.rgb
 
 private fun color(tool: Tool) = when (tool.state) {
-    ToolExecState.PENDING -> UiStyle.Colors.weak()
-    ToolExecState.RUNNING -> UiStyle.Colors.running()
-    ToolExecState.COMPLETED -> UiStyle.Colors.weak()
-    ToolExecState.ERROR -> UiStyle.Colors.error()
+    ToolExecState.PENDING -> SessionUiStyle.View.Tool.pending()
+    ToolExecState.RUNNING -> SessionUiStyle.View.Tool.running()
+    ToolExecState.COMPLETED -> SessionUiStyle.View.Tool.completed()
+    ToolExecState.ERROR -> SessionUiStyle.View.Tool.error()
 }
 
 private fun titleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {
-    UiStyle.Colors.error()
+    UiStyle.Colors.errorLabelForeground()
 } else {
     UiStyle.Colors.fg()
 }
@@ -475,7 +484,7 @@ private class Preview {
 
     fun append(value: String): Preview {
         if (cut) return this
-        val rem = UiStyle.Size.toolBodyLimit() - text.length
+        val rem = SessionUiStyle.View.Tool.PREVIEW_LIMIT - text.length
         if (value.length <= rem) {
             text.append(value)
             return this

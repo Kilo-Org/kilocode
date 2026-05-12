@@ -78,18 +78,22 @@ export const SessionRoutes = lazy(() =>
       ),
       async (c) => {
         const query = c.req.valid("query")
-        const sessions: Session.Info[] = []
-        for await (const session of Session.list({
-          directory: query.scope === "project" ? undefined : query.directory,
-          path: query.path,
-          roots: queryBoolean(query.roots),
-          start: query.start,
-          search: query.search,
-          limit: query.limit,
-        })) {
-          sessions.push(session)
-        }
-        return c.json(sessions)
+        return c.json(
+          await runRequest(
+            "SessionRoutes.list",
+            c,
+            Session.Service.use((svc) =>
+              svc.list({
+                directory: query.scope === "project" ? undefined : query.directory,
+                path: query.path,
+                roots: queryBoolean(query.roots),
+                start: query.start,
+                search: query.search,
+                limit: query.limit,
+              }),
+            ),
+          ),
+        )
       },
     )
     .get(
@@ -883,10 +887,10 @@ export const SessionRoutes = lazy(() =>
           sessionID: SessionID.zod,
         }),
       ),
-      validator("json", zodObject(SessionPrompt.PromptInput).omit({ sessionID: true })),
+      validator("json", zodObject(SessionPrompt.PromptInput).omit({ sessionID: true })), // kilocode_change
       async (c) => {
         c.status(200)
-        c.header("Content-Type", "application/json")
+        c.header("Content-Type", "application/json") // kilocode_change
         return stream(c, async (stream) => {
           const sessionID = c.req.valid("param").sessionID
           const body = c.req.valid("json")
@@ -927,7 +931,7 @@ export const SessionRoutes = lazy(() =>
           sessionID: SessionID.zod,
         }),
       ),
-      validator("json", zodObject(SessionPrompt.PromptInput).omit({ sessionID: true })),
+      validator("json", zodObject(SessionPrompt.PromptInput).omit({ sessionID: true })), // kilocode_change
       async (c) => {
         const sessionID = c.req.valid("param").sessionID
         const body = c.req.valid("json")

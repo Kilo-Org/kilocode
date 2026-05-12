@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.ui.model
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -45,7 +45,7 @@ private const val MODEL_PICKER_MAX_WIDTH = 760
 private const val MODEL_PICKER_MAX_VISIBLE_ROWS = 10
 private const val MODEL_PICKER_EMPTY_LIST_HEIGHT = 120
 
-class ModelPicker : UiStyle.Pickers.Label() {
+class ModelPicker : PickerButton() {
 
     data class Item(
         val id: String,

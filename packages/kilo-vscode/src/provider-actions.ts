@@ -146,6 +146,7 @@ export function computeDefaultSelection(
 type PostMessage = (message: unknown) => void
 type GetErrorMessage = (error: unknown) => string
 type SetCachedConfig = (msg: unknown) => void
+type AuthMetadata = Record<string, string>
 
 interface ActionContext {
   client: KiloClient
@@ -178,6 +179,14 @@ function validateID(
   return null
 }
 
+function cleanMetadata(input?: Record<string, unknown>): AuthMetadata | undefined {
+  const entries = Object.entries(input ?? {})
+    .map(([key, value]) => [key, typeof value === "string" ? value.trim() : ""] as const)
+    .filter(([key, value]) => key !== "" && value !== "")
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(entries)
+}
+
 async function configs(ctx: ActionContext) {
   const [{ data: global }, { data: merged }] = await Promise.all([
     ctx.client.global.config.get({ throwOnError: true }),
@@ -187,11 +196,14 @@ async function configs(ctx: ActionContext) {
 }
 
 async function refreshConfig(ctx: ActionContext, setCachedConfig: SetCachedConfig) {
-  const { data: config } = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
+  const [{ data: config }, { data: global }] = await Promise.all([
+    ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+    ctx.client.global.config.get({ throwOnError: true }),
+  ])
   if (!config) return
   const features = configFeatures(config)
-  setCachedConfig({ type: "configLoaded", config, features })
-  ctx.postMessage({ type: "configUpdated", config, features })
+  setCachedConfig({ type: "configLoaded", config, globalConfig: global, features })
+  ctx.postMessage({ type: "configUpdated", config, globalConfig: global, features })
 }
 
 async function saveGlobal(ctx: ActionContext, config: Config) {
@@ -241,11 +253,19 @@ async function enableConfigured(ctx: ActionContext, id: string, config: Config) 
   await saveGlobal(ctx, { disabled_providers: disabled })
 }
 
-export async function connectProvider(ctx: ActionContext, requestId: string, providerID: string, apiKey: string) {
+export async function connectProvider(
+  ctx: ActionContext,
+  requestId: string,
+  providerID: string,
+  apiKey: string,
+  metadata?: Record<string, unknown>,
+) {
   const id = validateID(ctx, requestId, providerID, "connect")
   if (!id) return
   try {
-    await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
+    const meta = cleanMetadata(metadata)
+    const auth = meta ? { type: "api" as const, key: apiKey, metadata: meta } : { type: "api" as const, key: apiKey }
+    await ctx.client.auth.set({ providerID: id, auth }, { throwOnError: true })
     await ctx.disposeGlobal(`provider connect (${id})`)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
@@ -403,9 +423,11 @@ export async function saveCustomProvider(
       { throwOnError: true },
     )
 
-    const msg = { type: "configLoaded", config: updated, features: configFeatures(updated) }
+    const merged = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
+    const config = merged.data ?? updated
+    const msg = { type: "configLoaded", config, globalConfig: updated, features: configFeatures(config) }
     setCachedConfig(msg)
-    ctx.postMessage({ type: "configUpdated", config: updated, features: configFeatures(updated) })
+    ctx.postMessage({ type: "configUpdated", config, globalConfig: updated, features: configFeatures(config) })
 
     const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
 

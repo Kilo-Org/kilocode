@@ -5,12 +5,14 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
 import com.intellij.icons.AllIcons
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.Dimension
@@ -33,21 +35,27 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
     private val arrow = JBLabel()
     private val body = TrackPanel().apply {
         isOpaque = true
-        background = UiStyle.Colors.surface()
-        border = UiStyle.Card.bodyInsets()
+        background = SessionUiStyle.View.surface()
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+        )
     }
     private val scroll = JBScrollPane(body).apply {
-        border = UiStyle.Card.divider()
+        border = SessionUiStyle.View.cardTop()
         isOpaque = true
-        background = UiStyle.Colors.surface()
-        viewport.background = UiStyle.Colors.surface()
+        background = SessionUiStyle.View.surface()
+        viewport.background = SessionUiStyle.View.surface()
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
-    private val header = JPanel(UiStyle.Card.layout()).apply {
+    private val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
         isOpaque = true
-        background = UiStyle.Colors.header()
-        border = UiStyle.Card.headerInsets()
+        background = SessionUiStyle.View.header()
+        border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.CARD_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.CARD_HORIZONTAL_PADDING),
+        )
     }
     private val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply {
         foreground = UiStyle.Colors.weak()
@@ -56,7 +64,7 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
         foreground = UiStyle.Colors.weak()
     }
 
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
     private var source = reasoning.content.toString()
 
     private val click = object : MouseAdapter() {
@@ -80,9 +88,9 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
     init {
         layout = BorderLayout()
         isOpaque = false
-        border = UiStyle.Card.border()
+        border = SessionUiStyle.View.card()
 
-        val left = JPanel(UiStyle.Card.layout()).apply {
+        val left = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.CARD_LAYOUT_GAP), 0)).apply {
             isOpaque = false
             add(icon, BorderLayout.WEST)
             add(title, BorderLayout.CENTER)
@@ -95,7 +103,7 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
             it.addMouseListener(mouse)
         }
 
-        applyStyle(SessionStyle.current())
+        applyStyle(SessionEditorStyle.current())
         md.opaque = false
         md.set(source)
         body.add(md.component, BorderLayout.CENTER)
@@ -142,11 +150,11 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
 
     internal fun horizontalPolicy() = scroll.horizontalScrollBarPolicy
 
-    internal fun bodyMaxRows() = UiStyle.Card.REASONING_LINES
+    internal fun bodyMaxRows() = SessionUiStyle.View.Reasoning.BODY_LINES
 
     internal fun bodyCreated() = true
 
-    override fun applyStyle(style: SessionStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         var changed = false
         if (title.font != style.smallEditorFont) {
@@ -172,7 +180,7 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
     }
 
     private fun setHover(value: Boolean) {
-        val color = if (value) UiStyle.Colors.headerHover() else UiStyle.Colors.header()
+        val color = if (value) SessionUiStyle.View.headerHover() else SessionUiStyle.View.header()
         if (header.background?.rgb == color.rgb) return
         header.background = color
         header.repaint()
@@ -254,7 +262,7 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
     }
 
     private fun bodyMaxHeight(): Int = md.component.getFontMetrics(md.font).height * bodyMaxRows() +
-        UiStyle.Card.scrollChrome()
+        JBUI.scale(SessionUiStyle.View.CARD_BODY_EXTRA_HEIGHT)
 
     override fun dumpLabel(): String {
         val state = if (bodyVisible()) "open" else "closed"
@@ -270,7 +278,7 @@ private class TrackPanel : JPanel(BorderLayout()), Scrollable {
         visibleRect: Rectangle,
         orientation: Int,
         direction: Int,
-    ) = UiStyle.Gap.scroll()
+    ) = JBUI.scale(SessionUiStyle.SessionLayout.SCROLL_INCREMENT)
     override fun getScrollableBlockIncrement(
         visibleRect: Rectangle,
         orientation: Int,

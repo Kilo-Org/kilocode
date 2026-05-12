@@ -57,7 +57,7 @@ export const TaskTimeline: Component = () => {
   let startX = 0
   let startScroll = 0
 
-  const messages = () => session.messages()
+  const messages = () => session.visibleMessages()
   const allParts = () => {
     const msgs = messages()
     const result: Record<string, Part[]> = {}

@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.2.42",
+  "version": "7.2.52",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -53,7 +53,7 @@
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "catalog:",
     "diff": "catalog:",
-    "dompurify": "3.3.3",
+    "dompurify": "3.4.2",
     "fuzzysort": "catalog:",
     "katex": "0.16.27",
     "luxon": "catalog:",

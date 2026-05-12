@@ -10,6 +10,10 @@ Kilo Code supports accessing models directly through the official OpenAI API.
 
 **Website:** [https://openai.com/](https://openai.com/)
 
+{% callout type="tip" %}
+**Already have a ChatGPT Plus or Pro subscription?** You can use it to access OpenAI's Codex models inside Kilo Code — no separate API key or pay-as-you-go charges needed. See the [ChatGPT Plus/Pro provider page](/docs/ai-providers/openai-chatgpt-plus-pro) for setup instructions.
+{% /callout %}
+
 ## Getting an API Key
 
 1.  **Sign Up/Sign In:** Go to the [OpenAI Platform](https://platform.openai.com/). Create an account or sign in.
@@ -71,4 +75,4 @@ Then set your default model:
 ## Tips and Notes
 
 - **Pricing:** Refer to the [OpenAI Pricing](https://openai.com/pricing) page for details on model costs.
-- **Azure OpenAI Service:** If you'd like to use the Azure OpenAI service, please see our section on [OpenAI-compatible](/docs/ai-providers/openai-compatible) providers.
+- **Azure OpenAI Service:** Use Kilo Code's native `azure` provider for Azure OpenAI, especially GPT-5 deployments. Do not configure Azure GPT-5 through a generic [OpenAI-compatible](/docs/ai-providers/openai-compatible) custom provider.

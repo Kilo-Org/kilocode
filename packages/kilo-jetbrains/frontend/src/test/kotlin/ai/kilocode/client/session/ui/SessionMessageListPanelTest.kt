@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.model.SessionModel
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.views.TextView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -232,7 +233,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val message = panel.findMessage("a1")!!
         val text = message.part("p1") as TextView
         val comp = text.md.component
-        val style = SessionStyle.create(family = "Courier New", size = 24)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 24)
 
         panel.applyStyle(style)
 
@@ -246,7 +247,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test new content after applyStyle uses queued style`() {
         model.upsertMessage(msg("a1", "assistant"))
-        val style = SessionStyle.create(family = "Courier New", size = 25)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 25)
         panel.applyStyle(style)
 
         model.updateContent("a1", part("p1", "a1", "text", text = "hello"))

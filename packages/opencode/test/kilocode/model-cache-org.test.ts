@@ -3,6 +3,7 @@
 // should use the organization-specific endpoint, not the personal endpoint.
 
 import { test, expect, mock } from "bun:test"
+import { Effect } from "effect"
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
 
@@ -15,11 +16,13 @@ mock.module("@kilocode/kilo-gateway", () => ({
   fetchKiloModels: async (options: any) => {
     captured = options
     return {
-      "test-model": {
-        id: "test-model",
-        name: "Test Model",
-        cost: { input: 0.001, output: 0.002 },
-        limit: { context: 128000, output: 4096 },
+      models: {
+        "test-model": {
+          id: "test-model",
+          name: "Test Model",
+          cost: { input: 0.001, output: 0.002 },
+          limit: { context: 128000, output: 4096 },
+        },
       },
     }
   },
@@ -50,7 +53,7 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
+    init: Effect.promise(async () => {
       // Simulate an OAuth login where user selected an enterprise organization
       await Auth.set("kilo", {
         type: "oauth",
@@ -59,7 +62,7 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
         expires: Date.now() + 3600000,
         accountId: "org-enterprise-123",
       })
-    },
+    }).pipe(Effect.asVoid),
     fn: async () => {
       // Reset captured and cache
       captured = undefined
@@ -89,7 +92,7 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
+    init: Effect.promise(async () => {
       // Simulate an OAuth login for a personal account (no accountId)
       await Auth.set("kilo", {
         type: "oauth",
@@ -97,7 +100,7 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
         refresh: "test-refresh-token",
         expires: Date.now() + 3600000,
       })
-    },
+    }).pipe(Effect.asVoid),
     fn: async () => {
       captured = undefined
       ModelCache.clear("kilo")
@@ -124,7 +127,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
+    init: Effect.promise(async () => {
       await Auth.set("kilo", {
         type: "oauth",
         access: "token-clear-test",
@@ -132,7 +135,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
         expires: Date.now() + 3600000,
         accountId: "org-clear",
       })
-    },
+    }).pipe(Effect.asVoid),
     fn: async () => {
       // Populate cache
       captured = undefined

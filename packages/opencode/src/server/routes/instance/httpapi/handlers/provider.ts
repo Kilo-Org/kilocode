@@ -3,7 +3,8 @@ import { Config } from "@/config/config"
 import { ModelsDev } from "@/provider/models"
 import { Provider } from "@/provider/provider"
 import { ProviderID } from "@/provider/schema"
-import { mapValues } from "remeda"
+import { mapValues, pickBy } from "remeda" // kilocode_change
+import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Effect, Schema } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
@@ -17,7 +18,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
-      const all = yield* Effect.promise(() => ModelsDev.get())
+      const all = yield* ModelsDev.Service.use((s) => s.get())
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const filtered: Record<string, (typeof all)[string]> = {}
@@ -29,11 +30,22 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
         connected,
       )
+      // kilocode_change start
+      const failed = ModelCache.failedProviders()
+      // Note: connected only contains providers with non-empty models after Provider.Service.list(),
+      // so failed must be checked explicitly for providers whose fetch returned an error.
+      const failedSet = new Set(failed)
+      const validProviders = pickBy(
+        providers,
+        (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
+      )
       return {
-        all: Object.values(providers),
-        default: Provider.defaultModelIDs(providers),
+        all: Object.values(validProviders),
+        default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
         connected: Object.keys(connected),
+        failed,
       }
+      // kilocode_change end
     })
 
     const auth = Effect.fn("ProviderHttpApi.auth")(function* () {

@@ -66,6 +66,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       }
       // kilocode_change end
       config: Config
+      globalConfig: Config // kilocode_change
       session: Session[]
       session_status: {
         [sessionID: string]: SessionStatus
@@ -97,10 +98,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         all: [],
         default: {},
         connected: [],
+        failed: [], // kilocode_change
       },
       console_state: emptyConsoleState,
       provider_auth: {},
       config: {},
+      globalConfig: {}, // kilocode_change
       status: "loading",
       agent: [],
       permission: {},
@@ -487,6 +490,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         // kilocode_change start
         case "global.config.updated": {
+          sdk.client.global.config.get().then((x) => {
+            if (x.data) setStore("globalConfig", reconcile(x.data))
+          })
           sdk.client.config.get().then((x) => {
             if (x.data) setStore("config", reconcile(x.data))
           })
@@ -522,11 +528,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         .catch(() => emptyConsoleState)
       const agentsPromise = sdk.client.app.agents({ workspace }, { throwOnError: true })
       const configPromise = sdk.client.config.get({ workspace }, { throwOnError: true })
+      const globalConfigPromise = sdk.client.global.config.get({ throwOnError: true }) // kilocode_change
       const blockingRequests: Promise<unknown>[] = [
         providersPromise,
         providerListPromise,
         agentsPromise,
         configPromise,
+        globalConfigPromise, // kilocode_change
         projectPromise,
         ...(args.continue ? [sessionListPromise] : []),
       ]
@@ -538,6 +546,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const consoleStateResponse = consoleStatePromise
           const agentsResponse = agentsPromise.then((x) => x.data ?? [])
           const configResponse = configPromise.then((x) => x.data!)
+          const globalConfigResponse = globalConfigPromise.then((x) => x.data!) // kilocode_change
           const sessionListResponse = args.continue ? sessionListPromise : undefined
 
           return Promise.all([
@@ -546,6 +555,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             consoleStateResponse,
             agentsResponse,
             configResponse,
+            globalConfigResponse, // kilocode_change
             ...(sessionListResponse ? [sessionListResponse] : []),
           ]).then((responses) => {
             const providers = responses[0]
@@ -553,7 +563,8 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             const consoleState = responses[2]
             const agents = responses[3]
             const config = responses[4]
-            const sessions = responses[5]
+            const globalConfig = responses[5] // kilocode_change
+            const sessions = responses[6] // kilocode_change
 
             batch(() => {
               setStore("provider", reconcile(providers.providers))
@@ -562,6 +573,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
               setStore("config", reconcile(config))
+              setStore("globalConfig", reconcile(globalConfig)) // kilocode_change
               if (sessions !== undefined) setStore("session", reconcile(sessions))
             })
           })

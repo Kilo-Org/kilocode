@@ -12,11 +12,11 @@ import { ModelID, ProviderID } from "../../src/provider/schema"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "@/tool/truncate"
 import { ToolRegistry } from "@/tool/registry"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 const ref = {
@@ -523,7 +523,12 @@ describe("tool.task", () => {
             action: "deny",
           })
           // kilocode_change end
-          expect(seen?.tools).toEqual(expect.objectContaining({ bash: false, read: false })) // kilocode_change
+          expect(seen?.tools).toEqual({
+            task: false, // kilocode_change - Kilo disallows nested subagents
+            bash: false,
+            read: false,
+          })
+          // kilocode_change end
         }),
       {
         config: {
