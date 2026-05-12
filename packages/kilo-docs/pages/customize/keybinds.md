@@ -1,6 +1,7 @@
 ---
 title: "Keybinds"
 description: "Customize keyboard shortcuts for the Kilo Code TUI"
+platform: new
 ---
 
 # Keybinds
