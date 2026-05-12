@@ -18,7 +18,7 @@ Example:
 
 ```json
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "theme": "smoke-theme",
   "plugin": ["@acme/opencode-plugin@1.2.3", ["./plugins/demo.tsx", { "label": "demo" }]],
   "plugin_enabled": {
