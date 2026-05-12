@@ -91,6 +91,7 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 | Moonshot AI (Kimi) | `moonshot` |
 | Novita | `novita` |
 | OpenAI | `openai` |
+| Perplexity | `perplexity` |
 | Xiaomi | `xiaomi` |
 | xAI | `xai` |
 | Z.AI | `zai` |

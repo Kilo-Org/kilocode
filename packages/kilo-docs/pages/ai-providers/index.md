@@ -33,7 +33,8 @@ Major AI companies offering powerful models via API:
 
 Run models on your own hardware for privacy and offline use:
 
-- **[Ollama](/docs/ai-providers/ollama)** - Easy local model management
+- **[Ollama (Local)](/docs/ai-providers/ollama)** - Run models on your own machine; no API key required
+- **[Ollama Cloud](/docs/ai-providers/ollama-cloud)** - Hosted Ollama service; requires an Ollama API key
 - **[LM Studio](/docs/ai-providers/lmstudio)** - Desktop app for local models
 - **[OpenAI Compatible](/docs/ai-providers/openai-compatible)** - Any OpenAI-compatible endpoint
 
@@ -52,7 +53,7 @@ Route requests through unified APIs with additional features:
 |---|---|
 | Ease of use | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
 | Best value | Zhipu AI or Mistral |
-| Privacy/Offline | Ollama or LM Studio |
+| Privacy/Offline | [Ollama (Local)](/docs/ai-providers/ollama) or LM Studio |
 | Enterprise | AWS Bedrock or Google Vertex |
 
 ## Why Use Multiple Providers?

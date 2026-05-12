@@ -1,12 +1,16 @@
 ---
-title: "Using Ollama with Kilo Code | Run Local Models"
+title: "Using Ollama (Local) with Kilo Code | Run Local Models"
 description: "Run local AI models with Ollama in Kilo Code for offline, private coding. Setup guide for VS Code and the CLI."
-sidebar_label: Ollama
+sidebar_label: Ollama (Local)
 ---
 
-# Using Ollama With Kilo Code
+# Using Ollama (Local) With Kilo Code
 
-Kilo Code supports running models locally using Ollama. This provides privacy, offline access, and potentially lower costs, but requires more setup and a powerful computer.
+Kilo Code supports running models **locally** using Ollama. This provides privacy, offline access, and potentially lower costs, but requires more setup and a powerful computer.
+
+{% callout type="info" title="Looking for Ollama Cloud?" %}
+This page covers running Ollama **on your own machine**. If you want hosted access to Ollama models without local hardware, see the [Ollama Cloud provider page](/docs/ai-providers/ollama-cloud).
+{% /callout %}
 
 **Website:** [https://ollama.com/](https://ollama.com/)
 

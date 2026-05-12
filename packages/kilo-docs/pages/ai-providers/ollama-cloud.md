@@ -6,9 +6,11 @@ sidebar_label: Ollama Cloud
 
 # Using Ollama Cloud With Kilo Code
 
-Ollama Cloud is the managed cloud service from [Ollama](https://ollama.com/), offering hosted access to popular open-weight models without requiring local hardware. It uses an OpenAI-compatible API at `https://ollama.com/v1` and authenticates with an Ollama API key.
+Ollama Cloud is the managed **cloud** service from [Ollama](https://ollama.com/), offering hosted access to popular open-weight models without requiring local hardware. It uses an OpenAI-compatible API at `https://ollama.com/v1` and authenticates with an Ollama API key.
 
-This is distinct from running Ollama locally. If you want to run models on your own machine, see the [Ollama (local)](/docs/ai-providers/ollama) guide instead.
+{% callout type="info" title="Different from Ollama (Local)" %}
+**Ollama Cloud** and **Ollama (Local)** are two separate providers in Kilo Code. Ollama Cloud is a hosted service that requires an API key (`OLLAMA_API_KEY`). Ollama (Local) runs on your own machine and needs no API key. If you want to run models locally, see the [Ollama (Local)](/docs/ai-providers/ollama) guide instead.
+{% /callout %}
 
 **Website:** [https://ollama.com/](https://ollama.com/)
 **API Docs:** [https://docs.ollama.com/cloud](https://docs.ollama.com/cloud)
@@ -89,7 +91,7 @@ The full list of available models is shown in the Kilo model picker once your AP
 
 ## Tips and Notes
 
-- **Same company, different product:** Ollama Cloud is a hosted service from the same team that makes the local Ollama tool. The `ollama-cloud` provider ID connects to `https://ollama.com/v1` and requires authentication, unlike the local `ollama` provider.
+- **Same company, different product:** Ollama Cloud is a hosted service from the same team that makes the local Ollama tool. The `ollama-cloud` provider ID connects to `https://ollama.com/v1` and requires authentication (`OLLAMA_API_KEY`), unlike the local `ollama` provider which needs no API key and runs on `http://localhost:11434`.
 - **Model IDs:** Models use the same naming convention as the local Ollama library (e.g., `qwen3-coder:480b`). Use the `ollama-cloud/<model-id>` format when specifying models in config or CLI.
-- **Pricing:** Refer to the [Ollama Cloud documentation](https://docs.ollama.com/cloud) for current pricing.
+- **Pricing and documentation:** Refer to the [Ollama Cloud documentation](https://docs.ollama.com/cloud) for current pricing and the full model catalog.
 - **Local alternative:** If you have sufficient hardware and prefer offline access, consider [running Ollama locally](/docs/ai-providers/ollama) instead.

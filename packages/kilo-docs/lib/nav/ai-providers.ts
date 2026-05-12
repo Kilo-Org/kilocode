@@ -53,7 +53,7 @@ export const AiProvidersNav: NavSection[] = [
   {
     title: "Local & Self-Hosted",
     links: [
-      { href: "/ai-providers/ollama", children: "Ollama" },
+      { href: "/ai-providers/ollama", children: "Ollama (Local)" },
       { href: "/ai-providers/ollama-cloud", children: "Ollama Cloud" },
       { href: "/ai-providers/lmstudio", children: "LM Studio" },
       { href: "/ai-providers/vscode-lm", children: "VS Code LM API" },
@@ -71,6 +71,7 @@ export const AiProvidersNav: NavSection[] = [
       { href: "/ai-providers/minimax", children: "MiniMax" },
       { href: "/ai-providers/moonshot", children: "Moonshot" },
       { href: "/ai-providers/ovhcloud", children: "OVHcloud" },
+      { href: "/ai-providers/perplexity", children: "Perplexity" },
       { href: "/ai-providers/sap-ai-core", children: "SAP AI Core" },
       { href: "/ai-providers/venice", children: "Venice AI" },
     ],
