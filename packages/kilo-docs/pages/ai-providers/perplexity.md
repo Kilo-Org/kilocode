@@ -96,4 +96,4 @@ See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for full instruction
 ## Tips and Notes
 
 - **Search augmentation:** Sonar models query the web at inference time. This makes them well-suited for questions about current events or recent documentation, but adds latency compared to purely parametric models.
-- **Pricing:** Refer to the [Perplexity pricing page](https://www.perplexity.ai/settings/api) for current rates.
+- **Pricing:** Refer to the [Perplexity pricing page](https://docs.perplexity.ai/guides/pricing) for current rates.
