@@ -264,47 +264,52 @@ const IndexingTab: Component = () => {
             placeholder={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
-        <Show when={selectedProvider() === "kilo"}>
-          <Show when={kiloModels().length > 0}>
-            <SettingsRow
-              title={language.t("settings.indexing.kiloModel.title")}
-              description={language.t("settings.indexing.kiloModel.description")}
-            >
-              <Select
-                options={kiloModels()}
-                current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
-                value={(item) => item.value}
-                label={(item) => item.label}
-                onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: undefined })}
-                variant="secondary"
-                size="small"
-                triggerVariant="settings"
-                placeholder="Custom model"
-              />
-            </SettingsRow>
-          </Show>
+        <Show
+          when={selectedProvider() === "kilo"}
+          fallback={
+            <>
+              <SettingsRow
+                title={language.t("settings.indexing.model.title")}
+                description={language.t("settings.indexing.model.description")}
+              >
+                <TextField value={cfg().model ?? ""} placeholder="text-embedding-3-small" onChange={saveModel} />
+              </SettingsRow>
+              <SettingsRow
+                title={language.t("settings.indexing.dimension.title")}
+                description={language.t("settings.indexing.dimension.description")}
+                last={!selectedProvider() || fields().length === 0}
+              >
+                <TextField
+                  value={cfg().dimension === undefined ? "" : String(cfg().dimension)}
+                  placeholder={language.t("settings.indexing.dimension.placeholder")}
+                  onChange={(value) => saveNumber("dimension", value, { integer: true, min: 1 })}
+                />
+              </SettingsRow>
+            </>
+          }
+        >
+          {/* Kilo provider: model is chosen from the Cloud-managed catalog only.
+              No free-text override or dimension field — the catalog entry
+              determines the dimension server-side. */}
+          <SettingsRow
+            title={language.t("settings.indexing.kiloModel.title")}
+            description={language.t("settings.indexing.kiloModel.description")}
+            last={!kiloAvailable()}
+          >
+            <Select
+              options={kiloModels()}
+              current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
+              value={(item) => item.value}
+              label={(item) => item.label}
+              onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: undefined })}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              disabled={kiloModels().length === 0}
+              placeholder={kiloModels().length === 0 ? "Loading models…" : "Custom model"}
+            />
+          </SettingsRow>
         </Show>
-        <SettingsRow
-          title={language.t("settings.indexing.model.title")}
-          description={language.t("settings.indexing.model.description")}
-        >
-          <TextField
-            value={cfg().model ?? ""}
-            placeholder={selectedProvider() === "kilo" ? kiloDefault() || "provider/model" : "text-embedding-3-small"}
-            onChange={saveModel}
-          />
-        </SettingsRow>
-        <SettingsRow
-          title={language.t("settings.indexing.dimension.title")}
-          description={language.t("settings.indexing.dimension.description")}
-          last={!selectedProvider() || (fields().length === 0 && !(selectedProvider() === "kilo" && !kiloAvailable()))}
-        >
-          <TextField
-            value={cfg().dimension === undefined ? "" : String(cfg().dimension)}
-            placeholder={language.t("settings.indexing.dimension.placeholder")}
-            onChange={(value) => saveNumber("dimension", value, { integer: true, min: 1 })}
-          />
-        </SettingsRow>
         <Show when={selectedProvider() === "kilo" && !kiloAvailable()}>
           <SettingsRow
             title={language.t("settings.indexing.kiloSignIn.title")}

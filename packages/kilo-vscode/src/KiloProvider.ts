@@ -2152,10 +2152,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private async fetchAndSendKiloEmbeddingModels(): Promise<void> {
+    // Serve a previously-cached non-empty catalog immediately so the webview
+    // never regresses to the empty fallback if a fresh fetch fails.
+    if (this.cachedKiloEmbeddingModelsMessage) {
+      this.postMessage(this.cachedKiloEmbeddingModelsMessage)
+    }
     const catalog = await fetchKiloEmbeddingModelCatalog()
     const message = { type: "kiloEmbeddingModelsLoaded", catalog }
-    this.cachedKiloEmbeddingModelsMessage = message
-    this.postMessage(message)
+    // Only cache when we got a real catalog. Caching an empty result poisons
+    // the cache and causes the webview to render the "provider/model"
+    // placeholder until a full reload, even though the next fetch would
+    // succeed. Webview-side retries will re-trigger this method until a real
+    // catalog arrives.
+    if (catalog.defaultModel && catalog.models.length > 0) {
+      this.cachedKiloEmbeddingModelsMessage = message
+      this.postMessage(message)
+      return
+    }
+    // No cache yet: still post the empty result so the webview can decide to
+    // retry. If we already had a non-empty cache, we already posted it above
+    // and don't want to clobber it with an empty payload.
+    if (!this.cachedKiloEmbeddingModelsMessage) {
+      this.postMessage(message)
+    }
   }
 
   /**
