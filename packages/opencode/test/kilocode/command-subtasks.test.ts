@@ -144,4 +144,44 @@ describe("KiloCommandSubtasks", () => {
     expect(batch?.tasks).toHaveLength(1)
     expect(batch?.tasks[0].description).toBe("opus")
   })
+
+  test("distinguishes same-agent subtasks by description", () => {
+    const parts = KiloCommandSubtasks.build({
+      command: "multi-review",
+      prompt,
+      subtasks: [
+        { agent: "general", model: "kilo/openai/gpt-test", description: "gpt" },
+        { agent: "general", model: "kilo/anthropic/opus-test", description: "opus" },
+      ],
+    }).map(part)
+    const batch = KiloCommandSubtasks.pending({
+      user: user(parts).info as MessageV2.User,
+      messages: [
+        user(parts),
+        {
+          info: {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID,
+            parentID: messageID,
+            mode: "general",
+            agent: "general",
+            path: { cwd: "/tmp", root: "/tmp" },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ModelID.make("openai/gpt-test"),
+            providerID: ProviderID.make("kilo"),
+            time: { created: Date.now(), completed: Date.now() },
+            finish: "tool-calls",
+          },
+          parts: [tool(parts[0])],
+        },
+      ],
+    })
+
+    expect(parts.map((task) => task.agent)).toEqual(["general", "general"])
+    expect(parts.map((task) => task.description)).toEqual(["gpt", "opus"])
+    expect(batch?.tasks).toHaveLength(1)
+    expect(batch?.tasks[0].description).toBe("opus")
+  })
 })

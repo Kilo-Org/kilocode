@@ -86,7 +86,7 @@ Do something useful`,
   })
 
   test("validates branch multi-model local review command", async () => {
-    const source = path.resolve("..", "..", ".kilo", "command", "multi-model-local-review.md")
+    const source = path.resolve(import.meta.dir, "..", "..", "..", "..", ".kilo", "command", "multi-model-local-review.md")
     await using tmp = await tmpdir({
       git: true,
       init: async (dir) => {
@@ -101,6 +101,28 @@ Do something useful`,
     })
     expect(result).toContain("config_validation")
     expect(result).toContain("validated successfully")
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const cfg = await Config.get()
+        const cmd = cfg.command?.["multi-model-local-review"]
+        expect(cmd?.agent).toBe("code")
+        expect(cmd?.synthesize).toBe(true)
+        expect(cmd?.subtasks).toEqual([
+          {
+            agent: "general",
+            description: "GPT-5.5 local review",
+            model: "kilo/openai/gpt-5.5",
+          },
+          {
+            agent: "general",
+            description: "Claude Opus 4.7 local review",
+            model: "kilo/anthropic/claude-opus-4.7",
+          },
+        ])
+      },
+    })
   })
 
   test("reports schema error for command with invalid field types", async () => {
