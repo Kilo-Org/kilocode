@@ -466,6 +466,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Tilmeld dig gratis for at fortsætte og udforske over 500 modeller. Tager 2 minutter, intet kreditkort nødvendigt. Eller kom tilbage senere.",
   "error.promotionLimit.action": "Tilmeld dig",
+  "error.providerAuth.title": "{{provider}} har logget dig af",
+  "error.providerAuth.description": "Forbind til {{provider}} igen, og send din besked på ny.",
+  "error.providerAuth.chatgpt.title": "OpenAI har logget dig af",
+  "error.providerAuth.chatgpt.description":
+    "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
 
   "error.chain.unknown": "Ukendt fejl",
   "error.chain.causedBy": "Forårsaget af:",

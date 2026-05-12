@@ -170,7 +170,7 @@
 }
 
 .kiloclaw-input::placeholder {
-  color: var(--vscode-input-placeholderForeground);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Status sidebar */

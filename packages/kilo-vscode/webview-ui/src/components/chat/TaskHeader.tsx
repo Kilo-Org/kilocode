@@ -32,7 +32,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const hasMessages = createMemo(() => session.messages().length > 0)
   const busy = createMemo(() => session.status() === "busy")
-  const canCompact = createMemo(() => !busy() && hasMessages() && !!session.selected())
+  const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -67,7 +67,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   // Token breakdown from the last assistant message — only return if at least one value is > 0
   const tokens = createMemo(() => {
-    const msgs = session.messages()
+    const msgs = session.visibleMessages()
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
       if (m.role !== "assistant" || !m.tokens) continue
@@ -79,7 +79,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const hasTimeline = createMemo(() => {
-    for (const m of session.messages()) {
+    for (const m of session.visibleMessages()) {
       if (m.role !== "assistant") continue
       if (session.getParts(m.id).some((p) => p.type !== "step-start")) return true
     }

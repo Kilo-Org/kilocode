@@ -5,8 +5,8 @@ import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.ToolKind
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.update.SessionControllerTestBase
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.controller.SessionControllerTestBase
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -51,7 +51,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     fun `test shows populated session header`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
 
         assertTrue(panel.isVisible)
         assertTrue(panel.isExpanded())
@@ -109,7 +109,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     fun `test apply style updates header colors`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
-        val style = SessionStyle.current().copy(
+        val style = SessionEditorStyle.current().copy(
             editorForeground = Color(1, 2, 3),
             editorBackground = Color(4, 5, 6),
         )
@@ -130,7 +130,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     fun `test expanded body shows timeline context and token metrics`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val body = panel.bodyPanel()
         val timeline = panel.timelinePanel()
         val bar = panel.contextBar()
@@ -465,7 +465,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         assertEquals(0, panel.timelineViewport().viewPosition.y)
     }
 
-    private fun promptedHeader(): ai.kilocode.client.session.update.SessionController {
+    private fun promptedHeader(): ai.kilocode.client.session.controller.SessionController {
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(
             ai.kilocode.rpc.dto.KiloAppStatusDto.READY,
             config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"),

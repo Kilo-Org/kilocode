@@ -234,7 +234,7 @@
 }
 
 .model-selector-search::placeholder {
-  color: var(--vscode-input-placeholderForeground);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .model-selector-list {

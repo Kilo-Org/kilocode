@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.2.51
+
+### Patch Changes
+
+- [#10143](https://github.com/Kilo-Org/kilocode/pull/10143) [`ea023b0`](https://github.com/Kilo-Org/kilocode/commit/ea023b06dd269445eaf0c433fb42f4c9de2605b9) - Reduce delays in long sessions by compacting older tool outputs when the model request becomes too large.
+
 ## 7.2.50
 
 ### Patch Changes

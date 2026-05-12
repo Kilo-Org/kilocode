@@ -414,4 +414,5 @@ class MdViewTest : BasePlatformTestCase() {
         view.resetStyles()
         assertTrue(view.html().contains("<strong>"))
     }
+
 }

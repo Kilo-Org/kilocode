@@ -465,6 +465,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Cadastre-se gratuitamente para continuar e explorar mais de 500 modelos. Leva 2 minutos, sem cartão de crédito. Ou volte mais tarde.",
   "error.promotionLimit.action": "Cadastrar-se",
+  "error.providerAuth.title": "{{provider}} desconectou você",
+  "error.providerAuth.description": "Reconecte o {{provider}} e envie sua mensagem novamente.",
+  "error.providerAuth.chatgpt.title": "OpenAI desconectou você",
+  "error.providerAuth.chatgpt.description":
+    "Faça login no ChatGPT novamente e envie sua mensagem de novo para continuar usando os modelos Codex.",
 
   "error.chain.unknown": "Erro desconhecido",
   "error.chain.causedBy": "Causado por:",

@@ -1403,7 +1403,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-tabs-menu-search-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .am-tabs-menu-list {
@@ -2482,7 +2482,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-name-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Dialog overrides for prompt-input-container — resizable from bottom edge */
@@ -2665,7 +2665,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-mm-search-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .am-mm-list {
@@ -2808,7 +2808,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-advanced-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Branch selector */

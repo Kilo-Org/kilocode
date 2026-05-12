@@ -470,6 +470,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Зареєструйтеся безкоштовно для продовження та доступу до 500+ моделей. Займе 2 хвилини, кредитна картка не потрібна. Або поверніться пізніше.",
   "error.promotionLimit.action": "Зареєструватися",
+  "error.providerAuth.title": "Сеанс {{provider}} завершено",
+  "error.providerAuth.description": "Підключіться до {{provider}} знову, а потім надішліть повідомлення ще раз.",
+  "error.providerAuth.chatgpt.title": "Сеанс OpenAI завершено",
+  "error.providerAuth.chatgpt.description":
+    "Увійдіть у ChatGPT знову, а потім надішліть повідомлення ще раз, щоб продовжити використання моделей Codex.",
 
   "error.chain.unknown": "Невідома помилка",
   "error.chain.causedBy": "Спричинено:",

@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import com.intellij.icons.AllIcons
@@ -14,7 +15,7 @@ import javax.swing.SwingUtilities
 class PromptPanelTest : BasePlatformTestCase() {
 
     fun `test prompt input uses editor font settings`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val panel = PromptPanel(project, {}, {})
         val font = panel.inputFont()
 
@@ -23,7 +24,7 @@ class PromptPanelTest : BasePlatformTestCase() {
     }
 
     fun `test prompt input uses editor background`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val panel = PromptPanel(project, {}, {})
 
         assertEquals(style.editorScheme.defaultBackground, panel.defaultFocusedComponent.background)
@@ -31,7 +32,7 @@ class PromptPanelTest : BasePlatformTestCase() {
 
     fun `test applyStyle updates prompt input and height`() {
         val panel = PromptPanel(project, {}, {})
-        val style = SessionStyle.create(family = "Courier New", size = 26)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 26)
 
         panel.applyStyle(style)
 

@@ -23,6 +23,7 @@ import type { SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { SessionNetwork } from "./network" // kilocode_change
+import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { Effect, Schema, Types } from "effect"
 import { zod, ZodOverride } from "@/util/effect-zod"
 import { NonNegativeInt, withStatics } from "@/util/schema"
@@ -1240,6 +1241,14 @@ export function fromError(
         },
         { cause: e },
       ).toObject()
+    case e instanceof CodexAuthExpiredError: // kilocode_change start
+      return new AuthError(
+        {
+          providerID: "openai",
+          message: e.message,
+        },
+        { cause: e },
+      ).toObject() // kilocode_change end
     case SessionNetwork.disconnected(e): // kilocode_change start
       return new APIError(
         {

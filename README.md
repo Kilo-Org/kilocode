@@ -113,6 +113,11 @@ Our community is built on respect, inclusivity, and collaboration. Please review
 This project is licensed under the MIT License.
 You’re free to use, modify, and distribute this code, including for commercial purposes as long as you include proper attribution and license notices. See [License](/LICENSE).
 
-### Where did Kilo CLI come from?
+## FAQ
+
+<details>
+<summary>Where did Kilo CLI come from?</summary>
 
 Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
+
+</details>

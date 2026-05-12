@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Reasoning
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
 
@@ -127,7 +127,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     }
 
     fun `test reasoning markdown uses editor font settings`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
 
         assertSmallItalicSheet(view.md.overrideSheet(), style)
@@ -135,7 +135,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     }
 
     fun `test reasoning header uses smaller editor-derived font`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = ReasoningView(reasoning("p1", done = true, text = "one"))
         val font = view.headerFont()
 
@@ -146,7 +146,7 @@ class ReasoningViewTest : BasePlatformTestCase() {
     fun `test applyStyle updates reasoning in place`() {
         val view = ReasoningView(reasoning("p1", done = true, text = "one\ntwo\nthree\nfour"))
         val component = view.md.component
-        val style = SessionStyle.create(family = "Courier New", size = 24)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 24)
 
         view.applyStyle(style)
 
@@ -163,12 +163,12 @@ class ReasoningViewTest : BasePlatformTestCase() {
         assertTrue(view.preferredSize.height > 0)
     }
 
-    private fun assertEditorSheet(sheet: String, style: SessionStyle) {
+    private fun assertEditorSheet(sheet: String, style: SessionEditorStyle) {
         assertTrue(sheet.contains(style.editorFamily))
         assertTrue(sheet.contains("${style.editorSize}pt"))
     }
 
-    private fun assertSmallItalicSheet(sheet: String, style: SessionStyle) {
+    private fun assertSmallItalicSheet(sheet: String, style: SessionEditorStyle) {
         assertTrue(sheet.contains(style.editorFamily))
         assertFalse(sheet.contains("${style.editorSize}pt"))
         assertTrue(sheet.contains("font-style: italic"))

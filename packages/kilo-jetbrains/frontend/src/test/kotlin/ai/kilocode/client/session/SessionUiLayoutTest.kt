@@ -1,5 +1,6 @@
 package ai.kilocode.client.session
 
+import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.Question
@@ -8,13 +9,14 @@ import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
+import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.PermissionPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.QuestionPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
-import ai.kilocode.client.session.update.SessionControllerEvent
+import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
 import javax.swing.JLayeredPane
@@ -119,7 +121,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
     fun `test empty and message bodies share the same scroll pane`() {
         settle()
         val pane = scrollComponent()
-        val empty = find<EmptySessionPanel>(ui)
+        val empty = find<EmptySessionPanel>(ui).view
 
         assertSame(empty, scrollView())
 
@@ -132,23 +134,35 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
-    fun `test new session starts with loading body`() {
+    fun `test new session starts neutral before controller view state`() {
         ui = newUi(displayMs = 1_000)
 
         assertFalse(scrollView() is EmptySessionPanel)
+        assertFalse(scrollView() is LoadingPanel)
     }
 
     fun `test action-created new session starts blank`() {
-        ui = newUi(displayMs = 1_000, loading = false)
+        ui = newUi(displayMs = 1_000)
 
         assertFalse(scrollView() is EmptySessionPanel)
         assertFalse(scrollView() is SessionMessageListPanel)
+        assertFalse(scrollView() is LoadingPanel)
     }
 
-    fun `test clicking recent session calls opener`() {
+    fun `test existing session id shows loading body immediately`() {
+        rpc.historyGate = kotlinx.coroutines.CompletableDeferred()
+
+        ui = newUi(id = "ses_test", displayMs = 1_000)
+
+        assertSame(find<LoadingPanel>(ui), scrollView())
+        assertEquals(SessionState.Loading, controller().model.state)
+        rpc.historyGate?.complete(Unit)
+    }
+
+    fun `test clicking recent session calls opener via SessionRef`() {
         val opened = mutableListOf<String>()
         rpc.recent.add(session("ses_1"))
-        ui = newUi(open = { opened.add(it.id) })
+        ui = newUi(open = { ref -> if (ref is SessionRef.Local) opened.add(ref.id) })
 
         settle()
         layout()
@@ -166,10 +180,64 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
+    fun `test empty explicit session id shows message body`() {
+        rpc.recent.add(session("ses_recent"))
+        settle()
+        rpc.recentCalls.clear()
+
+        ui = newUi(id = "ses_test")
+        settle()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertNull(find(ui, EmptySessionPanel::class.java))
+        assertTrue(rpc.recentCalls.isEmpty())
+    }
+
+    fun `test explicit session id loading does not show recents`() {
+        rpc.historyGate = kotlinx.coroutines.CompletableDeferred()
+        rpc.recent.add(session("ses_recent"))
+        settle()
+        rpc.recentCalls.clear()
+
+        ui = newUi(id = "ses_test", displayMs = 50)
+        settleShort(100)
+
+        assertSame(find<LoadingPanel>(ui), scrollView())
+        assertNull(find(ui, EmptySessionPanel::class.java))
+        assertTrue(rpc.recentCalls.isEmpty())
+
+        rpc.historyGate!!.complete(Unit)
+        settle()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertTrue(rpc.recentCalls.isEmpty())
+    }
+
+    fun `test explicit cloud session loading does not show recents`() {
+        rpc.importedCloudSession = session("ses_imported")
+        rpc.historyGate = kotlinx.coroutines.CompletableDeferred()
+        rpc.recent.add(session("ses_recent"))
+        settle()
+        rpc.recentCalls.clear()
+
+        ui = newUi(id = "cloud:cloud_1", displayMs = 50)
+        settleShort(100)
+
+        assertSame(find<LoadingPanel>(ui), scrollView())
+        assertNull(find(ui, EmptySessionPanel::class.java))
+        assertTrue(rpc.recentCalls.isEmpty())
+
+        rpc.historyGate!!.complete(Unit)
+        settle()
+
+        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertTrue(rpc.recentCalls.isEmpty())
+    }
+
     fun `test existing session history shows header above scroll pane`() {
         rpc.history.add(MessageWithPartsDto(message("msg1"), emptyList()))
 
-        ui = SessionUi(project, workspace, sessions, app, scope, id = "ses_test", displayMs = 0).apply {
+        ui = SessionUi(project, workspace, sessions, app, scope, ref = SessionRef.Local("ses_test"), displayMs = 0).apply {
             setSize(800, 600)
         }
         settle()
@@ -181,31 +249,38 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertTrue(header.y + header.height <= scroll.y)
     }
 
-    fun `test new session keeps loading body before recents delay`() {
+    fun `test new session shows blank body while recents are loading`() {
         rpc.recentGate = kotlinx.coroutines.CompletableDeferred()
         ui = newUi(displayMs = 1_000)
 
         settleShort(100)
 
+        // A new session (no id) shows blank body while recents are pending, not loading body
         assertFalse(scrollView() is EmptySessionPanel)
+        assertFalse(scrollView() is LoadingPanel)
+        rpc.recentGate!!.complete(Unit)
     }
 
-    fun `test slow recents switch to loading body only after progress event`() {
+    fun `test slow recents never show loading body and show recents when complete`() {
         rpc.recentGate = kotlinx.coroutines.CompletableDeferred()
         rpc.recent.add(session("ses_1"))
         ui = newUi(displayMs = 50)
 
         settleShort(20)
+        // No loading body — recents do not trigger progress indicator
         assertFalse(scrollView() is EmptySessionPanel)
+        assertFalse(scrollView() is LoadingPanel)
 
         settleShort(80)
+        // Still no loading body even after the delay interval passes
         assertFalse(scrollView() is EmptySessionPanel)
+        assertFalse(scrollView() is LoadingPanel)
 
         rpc.recentGate!!.complete(Unit)
         settle()
 
         val panel = find<EmptySessionPanel>(ui)
-        assertSame(panel, scrollView())
+        assertSame(panel.view, scrollView())
         assertEquals(1, panel.recentCount())
     }
 

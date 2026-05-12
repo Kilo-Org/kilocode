@@ -9,6 +9,7 @@ import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -69,6 +70,12 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
         val dir = sessions.getDirectory(id, directory)
         workspaces.get(dir).deleteSession(id)
     }
+
+    override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
+        sessions.cloudSessions(directory, cursor, limit, gitUrl)
+
+    override suspend fun importCloudSession(id: String, directory: String): SessionDto =
+        sessions.importCloudSession(id, directory)
 
     override suspend fun statuses(): Flow<Map<String, SessionStatusDto>> =
         sessions.statuses

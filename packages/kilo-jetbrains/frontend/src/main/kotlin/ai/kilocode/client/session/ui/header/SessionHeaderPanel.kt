@@ -3,9 +3,10 @@ package ai.kilocode.client.session.ui.header
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.SessionHeaderSnapshot
 import ai.kilocode.client.session.model.SessionModelEvent
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.ui.SessionStyleTarget
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.ide.util.PropertiesComponent
@@ -33,7 +34,7 @@ import javax.swing.SwingUtilities
 class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
-) : BorderLayoutPanel(), SessionStyleTarget {
+) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
         private val COMPRESS_ICON: Icon = IconLoader.getIcon("/icons/compress.svg", SessionHeaderPanel::class.java)
@@ -51,13 +52,13 @@ class SessionHeaderPanel(
     private val cost = JBLabel()
     private val context = JBLabel()
     private val todos = JBLabel()
-    private val compact = UiStyle.Buttons.HoverIcon().apply {
+    private val compact = HoverIcon().apply {
         icon = COMPRESS_ICON
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
     }
-    private val expand = UiStyle.Buttons.HoverIcon().apply {
+    private val expand = HoverIcon().apply {
         icon = CHEVRON_ICON
         toolTipText = KiloBundle.message("session.header.expand")
         accessibleContext.accessibleName = KiloBundle.message("session.header.expand")
@@ -90,7 +91,7 @@ class SessionHeaderPanel(
         iconTextGap = UiStyle.Gap.xs()
     }
     private val top = BorderLayoutPanel()
-    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, UiStyle.Gap.inline(), 0)).apply {
+    private val right = JPanel(FlowLayout(FlowLayout.RIGHT, UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         add(cost)
         add(context)
@@ -99,32 +100,32 @@ class SessionHeaderPanel(
     }
     private val tokens = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
         add(tokenTitle)
-        add(Box.createHorizontalStrut(UiStyle.Gap.inline()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.md()))
         add(input)
-        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(output)
-        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(cacheRead)
         add(Box.createHorizontalStrut(UiStyle.Gap.small()))
         add(cacheWrite)
     }
-    private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.inline(), 0)).apply {
+    private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
         add(todos)
     }
     private val body = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
         add(viewport)
         add(tokens)
         add(bar)
         add(todoRow)
     }
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
 
     init {
         isOpaque = true
@@ -184,7 +185,7 @@ class SessionHeaderPanel(
         super.updateUI()
         border = JBUI.Borders.compound(
             JBUI.Borders.customLine(JBUI.CurrentTheme.ToolWindow.borderColor(), 1, 0, 1, 0),
-            JBUI.Borders.empty(UiStyle.Space.LG, UiStyle.Space.PAD, UiStyle.Space.SM, UiStyle.Space.PAD),
+            JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad(), UiStyle.Gap.sm(), UiStyle.Gap.pad()),
         )
     }
 
@@ -218,7 +219,7 @@ class SessionHeaderPanel(
         refresh()
     }
 
-    override fun applyStyle(style: SessionStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         background = style.editorBackground
         foreground = style.editorForeground

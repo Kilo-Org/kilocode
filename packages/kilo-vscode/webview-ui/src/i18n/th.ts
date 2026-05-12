@@ -464,6 +464,11 @@ export const dict = {
   "error.promotionLimit.description":
     "สมัครฟรีเพื่อดำเนินการต่อและสำรวจโมเดลกว่า 500 รายการ ใช้เวลา 2 นาที ไม่ต้องใช้บัตรเครดิต หรือกลับมาทีหลัง",
   "error.promotionLimit.action": "สมัครสมาชิก",
+  "error.providerAuth.title": "{{provider}} ออกจากระบบของคุณแล้ว",
+  "error.providerAuth.description": "เชื่อมต่อ {{provider}} อีกครั้ง จากนั้นส่งข้อความของคุณใหม่",
+  "error.providerAuth.chatgpt.title": "OpenAI ออกจากระบบของคุณแล้ว",
+  "error.providerAuth.chatgpt.description":
+    "เข้าสู่ระบบ ChatGPT อีกครั้ง จากนั้นส่งข้อความของคุณใหม่เพื่อใช้งานโมเดล Codex ต่อไป",
 
   "error.chain.unknown": "ข้อผิดพลาดที่ไม่รู้จัก",
   "error.chain.causedBy": "สาเหตุ:",

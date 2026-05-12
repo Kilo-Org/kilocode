@@ -469,6 +469,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registreer je gratis om door te gaan en 500 andere modellen te ontdekken. Duurt 2 minuten, geen creditcard vereist. Of kom later terug.",
   "error.promotionLimit.action": "Registreren",
+  "error.providerAuth.title": "{{provider}} heeft je afgemeld",
+  "error.providerAuth.description": "Verbind opnieuw met {{provider}} en stuur je bericht nog een keer.",
+  "error.providerAuth.chatgpt.title": "OpenAI heeft je afgemeld",
+  "error.providerAuth.chatgpt.description":
+    "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
   "error.chain.unknown": "Onbekende fout",
   "error.chain.causedBy": "Veroorzaakt door:",

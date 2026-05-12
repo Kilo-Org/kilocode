@@ -463,6 +463,11 @@ export const dict = {
   "error.promotionLimit.description":
     "無料でサインアップして、500以上のモデルを探索しましょう。2分で完了、クレジットカード不要。または後でお戻りください。",
   "error.promotionLimit.action": "サインアップ",
+  "error.providerAuth.title": "{{provider}} からログアウトしました",
+  "error.providerAuth.description": "{{provider}} に再接続してから、メッセージを再送信してください。",
+  "error.providerAuth.chatgpt.title": "OpenAI からログアウトしました",
+  "error.providerAuth.chatgpt.description":
+    "Codex モデルを引き続き使用するには、ChatGPT に再度ログインしてから、メッセージを再送信してください。",
 
   "error.chain.unknown": "不明なエラー",
   "error.chain.causedBy": "原因:",
