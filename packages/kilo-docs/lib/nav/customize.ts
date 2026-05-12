@@ -23,6 +23,7 @@ export const CustomizeNav: NavSection[] = [
         platform: "new",
       },
       { href: "/customize/agents-md", children: "agents.md" },
+      { href: "/customize/keybinds", children: "Keybinds", platform: "new" },
       { href: "/customize/workflows", children: "Workflows", platform: "new" },
       { href: "/customize/skills", children: "Skills" },
       {
