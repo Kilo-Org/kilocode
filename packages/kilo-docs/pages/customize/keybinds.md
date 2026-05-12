@@ -12,7 +12,7 @@ Kilo Code has a list of keybinds that you can customize through `tui.json`.
 
 ```json {% filename="tui.json" %}
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "leader_timeout": 2000,
   "keybinds": {
     "leader": "ctrl+x",
@@ -127,7 +127,7 @@ Both `messages_toggle_conceal` and `tips_toggle` share `<leader>h` as their defa
 
 ```json {% filename="tui.json" %}
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "keybinds": {
     "tips_toggle": "<leader>?"
   }
@@ -164,7 +164,7 @@ For advanced cases, use an object with `key`, `event`, `preventDefault`, or `fal
 
 ```json {% filename="tui.json" %}
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "keybinds": {
     "messages_copy": ["<leader>y", "ctrl+shift+c"],
     "input_paste": {
@@ -181,7 +181,7 @@ You can disable a keybind by adding the key to `tui.json` with a value of `"none
 
 ```json {% filename="tui.json" %}
 {
-  "$schema": "https://opencode.ai/tui.json",
+  "$schema": "https://app.kilo.ai/tui.json",
   "keybinds": {
     "session_compact": "none"
   }
