@@ -491,6 +491,24 @@ describe("session prompt queue", () => {
     }
   })
 
+  test("cancel on a session with no active tail is a no-op and does not leak state", async () => {
+    const sessionID = SessionID.make("session_cancel_noop")
+    // Call cancel before any enqueue — must not throw and must not leave entries
+    await Effect.runPromise(KiloSessionPromptQueue.cancel(sessionID))
+    expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(false)
+    // Enqueue should still work normally after a no-op cancel
+    const result = await Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        MessageID.make("message_cancel_noop_probe"),
+        Effect.succeed("ok" as const),
+        Effect.succeed("cancelled" as const),
+      ),
+    )
+    expect(result).toBe("ok")
+    expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(false)
+  })
+
   test("cancel drops queued prompts and resets internal state", async () => {
     const ready = Promise.withResolvers<void>()
     const calls: number[] = []
