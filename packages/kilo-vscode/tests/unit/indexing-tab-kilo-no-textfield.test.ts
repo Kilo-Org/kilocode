@@ -61,4 +61,9 @@ describe("IndexingTab kilo branch", () => {
   it("disables the kilo Select while the catalog is empty so users cannot select stale state", () => {
     expect(SOURCE).toContain("disabled={kiloModels().length === 0}")
   })
+
+  it("clears stale manual dimensions with null delete sentinels when using Kilo", () => {
+    expect(SOURCE).toContain("dimension: null")
+    expect(SOURCE).not.toContain("dimension: undefined })}")
+  })
 })

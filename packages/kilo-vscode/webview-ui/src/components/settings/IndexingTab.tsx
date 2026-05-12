@@ -117,11 +117,11 @@ const IndexingTab: Component = () => {
       updateIndexing({
         provider: next,
         model,
-        dimension: undefined,
+        dimension: null,
       })
       return
     }
-    updateIndexing({ provider: next, model: undefined, dimension: undefined })
+    updateIndexing({ provider: next, model: undefined, dimension: null })
   }
 
   const saveEnabled = (enabled: boolean) => {
@@ -130,6 +130,7 @@ const IndexingTab: Component = () => {
         enabled,
         provider: "kilo",
         model: knownKiloModel(cfg().model) ?? kiloDefault(),
+        dimension: null,
       })
       return
     }
@@ -143,6 +144,7 @@ const IndexingTab: Component = () => {
           enabled,
           provider: "kilo",
           model: knownKiloModel(cfg().model) ?? kiloDefault(),
+          dimension: null,
         },
       })
       return
@@ -301,7 +303,7 @@ const IndexingTab: Component = () => {
               current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
               value={(item) => item.value}
               label={(item) => item.label}
-              onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: undefined })}
+              onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: null })}
               variant="secondary"
               size="small"
               triggerVariant="settings"

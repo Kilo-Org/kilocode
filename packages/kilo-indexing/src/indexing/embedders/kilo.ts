@@ -18,6 +18,7 @@ export class KiloEmbedder implements IEmbedder {
     baseUrl?: string
     organizationId?: string
     modelId?: string
+    dimensions?: number
   }) {
     if (!input.apiKey) throw new Error("Kilo API key is required for embedding.")
 

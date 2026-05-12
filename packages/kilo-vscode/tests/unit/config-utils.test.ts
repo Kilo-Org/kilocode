@@ -330,6 +330,21 @@ describe("ConfigState", () => {
     })
   })
 
+  describe("clearing indexing dimension for Kilo provider", () => {
+    it("keeps null in the draft so stale manual dimensions are deleted", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({ indexing: { provider: "openrouter", model: "openai/text-embedding-3-small", dimension: 256 } })
+
+      s.updateConfig({ indexing: { provider: "kilo", model: "mistralai/codestral-embed-2505", dimension: null } })
+
+      expect(s.config.indexing?.dimension).toBeUndefined()
+      expect(s.draft.indexing?.dimension).toBeNull()
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        indexing: { provider: "kilo", model: "mistralai/codestral-embed-2505", dimension: null },
+      })
+    })
+  })
+
   describe("agent permission patches", () => {
     it("merges nested per-agent permission patches into existing rules", () => {
       const s = new ConfigState()
