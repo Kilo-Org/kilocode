@@ -1,3 +1,5 @@
+import * as os from "os"
+import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloClient, McpStatus } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend"
@@ -91,6 +93,10 @@ export class BrowserAutomationService implements vscode.Disposable {
     if (useSystemChrome) {
       command.push("--browser", "chrome")
     }
+    // Redirect all MCP artifacts (screenshots, traces, etc.) to a temp directory
+    // outside the workspace so they don't get accidentally staged in git commits.
+    const outputDir = path.join(os.tmpdir(), "kilo-playwright-mcp")
+    command.push("--output-dir", outputDir)
 
     try {
       const directory = this.getWorkspaceDirectory()
