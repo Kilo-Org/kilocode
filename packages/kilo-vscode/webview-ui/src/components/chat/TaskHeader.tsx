@@ -179,7 +179,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 </Show>
                 <Show when={tk().cached > 0}>
                   <span class="task-header-tokens-value">
-                    <Icon name="arrow-down-to-line" size="small" />
+                    <Icon name="layers" size="small" />
                     cache {fmtNum(tk().cached)}
                   </span>
                 </Show>
