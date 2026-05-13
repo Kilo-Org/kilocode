@@ -9,7 +9,7 @@ import {
   REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
 } from "../constants"
 import { getDefaultModelId, getModelQueryPrefix } from "../model-registry"
-import { withValidationErrorHandling, type HttpError, formatEmbeddingError } from "../shared/validation-helpers"
+import { withValidationErrorHandling, type HttpError } from "../shared/validation-helpers"
 import { Mutex } from "async-mutex"
 import { Log } from "../../util/log"
 
@@ -25,6 +25,36 @@ interface OpenAIEmbeddingResponse {
   usage?: {
     prompt_tokens?: number
     total_tokens?: number
+  }
+}
+
+type EmbeddingErrorDetail = {
+  status?: number
+  message: string
+  response?: unknown
+}
+
+function json(value: unknown): string | undefined {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return undefined
+  }
+}
+
+export function getEmbeddingErrorDetail(error: unknown): EmbeddingErrorDetail {
+  const err = error as {
+    status?: number
+    response?: { status?: number; data?: unknown; body?: unknown }
+    error?: unknown
+    message?: string
+  }
+  const response = err?.response?.data ?? err?.response?.body ?? err?.error
+  const msg = response ? json(response) : undefined
+  return {
+    status: err?.status ?? err?.response?.status,
+    message: msg ?? (error instanceof Error ? error.message : String(error)),
+    ...(response === undefined ? {} : { response }),
   }
 }
 
@@ -319,8 +349,14 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
           },
         }
       } catch (error) {
+        const detail = getEmbeddingErrorDetail(error)
         log.error("OpenAI Compatible embedder batch error", {
-          err: error instanceof Error ? error.message : String(error),
+          err: detail.message,
+          response: detail.response,
+          status: detail.status,
+          baseUrl: this.baseUrl,
+          model,
+          dimensions: this.dimensions,
           location: "OpenAICompatibleEmbedder:_embedBatchWithRetries",
           attempt: attempts + 1,
         })
@@ -345,8 +381,11 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
           }
         }
 
-        // Format and throw the error
-        throw formatEmbeddingError(error, MAX_RETRIES)
+        throw new Error(
+          detail.status
+            ? `Embedding request failed after ${MAX_RETRIES} attempts with status ${detail.status}: ${detail.message}`
+            : `Embedding request failed after ${MAX_RETRIES} attempts: ${detail.message}`,
+        )
       }
     }
 

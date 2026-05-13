@@ -62,8 +62,9 @@ describe("IndexingTab kilo branch", () => {
     expect(SOURCE).toContain("disabled={kiloModels().length === 0}")
   })
 
-  it("clears stale manual dimensions with null delete sentinels when using Kilo", () => {
-    expect(SOURCE).toContain("dimension: null")
-    expect(SOURCE).not.toContain("dimension: undefined })}")
+  it("does not send invalid null dimensions in the typed config payload", () => {
+    expect(SOURCE).toContain('if (next.provider === "kilo") delete next.dimension')
+    expect(SOURCE).not.toContain("dimension: null")
+    expect(SOURCE).not.toContain("dimension: undefined")
   })
 })

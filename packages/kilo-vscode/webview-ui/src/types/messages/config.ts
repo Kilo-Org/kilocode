@@ -67,7 +67,7 @@ export interface IndexingConfig {
   enabled?: boolean
   provider?: IndexingProvider
   model?: string
-  dimension?: number | null
+  dimension?: number
   vectorStore?: "lancedb" | "qdrant"
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }

@@ -92,7 +92,9 @@ const IndexingTab: Component = () => {
   const globalOn = createMemo(() => globalCfg().enabled === true)
 
   const updateIndexing = (partial: IndexingConfig) => {
-    updateConfig({ indexing: { ...cfg(), ...partial } })
+    const next = { ...cfg(), ...partial }
+    if (next.provider === "kilo") delete next.dimension
+    updateConfig({ indexing: next })
   }
 
   const vectorStore = () => cfg().vectorStore ?? "qdrant"
@@ -117,11 +119,10 @@ const IndexingTab: Component = () => {
       updateIndexing({
         provider: next,
         model,
-        dimension: null,
       })
       return
     }
-    updateIndexing({ provider: next, model: undefined, dimension: null })
+    updateIndexing({ provider: next, model: undefined })
   }
 
   const saveEnabled = (enabled: boolean) => {
@@ -130,7 +131,6 @@ const IndexingTab: Component = () => {
         enabled,
         provider: "kilo",
         model: knownKiloModel(cfg().model) ?? kiloDefault(),
-        dimension: null,
       })
       return
     }
@@ -144,7 +144,6 @@ const IndexingTab: Component = () => {
           enabled,
           provider: "kilo",
           model: knownKiloModel(cfg().model) ?? kiloDefault(),
-          dimension: null,
         },
       })
       return
@@ -303,7 +302,7 @@ const IndexingTab: Component = () => {
               current={kiloModels().find((item) => item.value === knownKiloModel(cfg().model))}
               value={(item) => item.value}
               label={(item) => item.label}
-              onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault(), dimension: null })}
+              onSelect={(item) => updateIndexing({ model: item?.value ?? kiloDefault() })}
               variant="secondary"
               size="small"
               triggerVariant="settings"

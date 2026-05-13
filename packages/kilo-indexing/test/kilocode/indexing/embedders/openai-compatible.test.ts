@@ -467,6 +467,26 @@ describe("OpenAICompatibleEmbedder", () => {
         )
       })
 
+      test("should surface exact OpenAI SDK response payloads for HTTP errors", async () => {
+        const testTexts = ["Hello world"]
+        const httpError = new Error("Bad Request")
+        ;(httpError as any).status = 400
+        ;(httpError as any).response = {
+          status: 400,
+          data: {
+            object: "error",
+            message: "Provider returned error",
+            metadata: {
+              raw: '{"error":{"message":"encoding_format is not supported"}}',
+            },
+          },
+        }
+
+        mockEmbeddingsCreate.mockRejectedValue(httpError)
+
+        await expect(embedder.createEmbeddings(testTexts)).rejects.toThrow("encoding_format is not supported")
+      })
+
       test("should handle errors without status codes", async () => {
         const testTexts = ["Hello world"]
         const networkError = new Error("Network timeout")
