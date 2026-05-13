@@ -29,7 +29,25 @@ type Top = {
 
 type Models = { data?: Top[] }
 
-export async function fetchFastRouterModels(): Promise<Record<string, any>> {
+type FastRouterModel = {
+  id: string
+  name: string
+  family: string
+  release_date: string
+  attachment: boolean
+  reasoning: boolean
+  temperature: boolean
+  tool_call: boolean
+  cost: { input: number; output: number }
+  limit: { context: number; output: number }
+  options: Record<string, unknown>
+  modalities: {
+    input: Array<"text" | "audio" | "image" | "video" | "pdf">
+    output: Array<"text" | "audio" | "image" | "video" | "pdf">
+  }
+}
+
+export async function fetchFastRouterModels(): Promise<Record<string, FastRouterModel>> {
   // The /models endpoint is public — no Authorization header needed. We use
   // `globalThis.fetch` explicitly to avoid accidentally hitting any local
   // namespaced fetch helpers from the calling module.
@@ -39,7 +57,7 @@ export async function fetchFastRouterModels(): Promise<Record<string, any>> {
   if (!res.ok) return {}
 
   const json = (await res.json()) as Models
-  const out: Record<string, any> = {}
+  const out: Record<string, FastRouterModel> = {}
 
   for (const m of json.data ?? []) {
     if (!m.id) continue

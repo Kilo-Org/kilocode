@@ -16,7 +16,7 @@ sidebar_label: FastRouter
 2.  **Create a key:** Generate an API key from the keys page.
 3.  **Copy the key:** You will paste it into Kilo Code below.
 
-The model catalog at [`https://go.fastrouter.ai/api/v1/models`](https://go.fastrouter.ai/api/v1/models) is public — Kilo Code fetches it without an API key, so the FastRouter provider and its models always show up in the picker. The key is only used for chat completions.
+Kilo Code fetches the FastRouter model catalog only after you have added an API key (via env var, `kilo auth login`, or `kilo.json`). Once a key is set, the provider plus the full ~170-model catalog appears in the picker.
 
 ## Configuration in Kilo Code
 

@@ -208,17 +208,25 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
       }
 
       if (fastrouterAllowed) {
-        const fr = yield* Effect.promise(() => ModelCache.fetch("fastrouter").catch(() => ({})))
-        providers["fastrouter"] = {
-          id: "fastrouter",
-          name: "FastRouter",
-          env: ["FASTROUTER_API_KEY"],
-          api: "https://go.fastrouter.ai/api/v1",
-          npm: "@openrouter/ai-sdk-provider",
-          models: fr,
-        }
-        if (Object.keys(fr).length === 0) {
-          yield* Effect.sync(() => void ModelCache.refresh("fastrouter").catch(() => {}))
+        const cfgKey = config.provider?.["fastrouter"]?.options?.apiKey
+        const authEntry = yield* Effect.promise(() => Auth.get("fastrouter").catch(() => undefined))
+        const authKey = authEntry?.type === "api" ? authEntry.key : undefined
+        const envKey = process.env["FASTROUTER_API_KEY"]
+        const hasKey = Boolean(cfgKey || authKey || envKey)
+
+        if (hasKey) {
+          const fr = yield* Effect.promise(() => ModelCache.fetch("fastrouter").catch(() => ({})))
+          providers["fastrouter"] = {
+            id: "fastrouter",
+            name: "FastRouter",
+            env: ["FASTROUTER_API_KEY"],
+            api: "https://go.fastrouter.ai/api/v1",
+            npm: "@openrouter/ai-sdk-provider",
+            models: fr,
+          }
+          if (Object.keys(fr).length === 0) {
+            yield* Effect.sync(() => void ModelCache.refresh("fastrouter").catch(() => {}))
+          }
         }
       }
 
