@@ -8,6 +8,7 @@ import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+import { sanitizeResponsesBody } from "./responses.js"
 
 /**
  * Create a KiloCode provider instance
@@ -45,6 +46,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const originalFetch = options.fetch ?? fetch
   const wrappedFetch = async (input: string | URL | Request, init?: RequestInit) => {
     const headers = new Headers(init?.headers)
+    const body = sanitizeResponsesBody(input, init?.body)
 
     // Add custom headers
     Object.entries(customHeaders).forEach(([key, value]) => {
@@ -59,6 +61,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     return originalFetch(input, {
       ...init,
       headers,
+      body,
     })
   }
 
