@@ -2,7 +2,7 @@ import { DIFFS_TAG_NAME, FileDiff, type SelectedLineRange, VirtualizedFileDiff }
 import { PreloadMultiFileDiffResult } from "@pierre/diffs/ssr"
 import { createEffect, onCleanup, onMount, Show, splitProps } from "solid-js"
 import { Dynamic, isServer } from "solid-js/web"
-import { createDefaultOptions, styleVariables, type DiffProps } from "@opencode-ai/ui/pierre"
+import { createDefaultOptions, styleVariables, type DiffProps } from "../pierre"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { useWorkerPool } from "@opencode-ai/ui/context/worker-pool"
 

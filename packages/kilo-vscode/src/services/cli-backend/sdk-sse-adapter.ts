@@ -1,6 +1,6 @@
 import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: Event) => void
+export type SSEEventHandler = (event: Event, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -8,14 +8,14 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  * SSE adapter that consumes the SDK's `client.global.event()` AsyncGenerator
  * and distributes events to subscribers via a pub/sub interface.
  *
- * Follows the same reconnection pattern as the app (`packages/app/src/context/global-sdk.tsx`):
+ * Follows the original web client reconnection pattern:
  *   - Outer `while (!aborted)` loop for reconnection
  *   - Per-attempt AbortController so heartbeat timeout can cancel a stale connection
  *   - Heartbeat timeout to detect zombie connections
  *
  * In this VS Code extension context the connection is localhost (extension ↔
  * child-process server), so zombie-connection scenarios are less likely than in
- * the web app (which goes through proxies/CDNs). We keep the heartbeat for
+ * a browser client (which goes through proxies/CDNs). We keep the heartbeat for
  * consistency with the original strategy but use a generous 90 s timeout to
  * avoid false-positive reconnections during idle periods.
  *
@@ -33,8 +33,7 @@ export class SdkSSEAdapter {
   private attemptController: AbortController | null = null
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
-  // 15s matches packages/app/src/context/global-sdk.tsx — server sends heartbeats
-  // every 10s, so this gives a 5s grace window before forcing a reconnect.
+  // Server sends heartbeats every 10s, so this gives a 5s grace window before forcing a reconnect.
   // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
   private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
   private static readonly RECONNECT_DELAY_MS = 250
@@ -177,7 +176,7 @@ export class SdkSSEAdapter {
           if (type !== "server.heartbeat") {
             console.log("[Kilo New] SSE: 📨 Event:", type)
           }
-          this.notifyEvent(globalEvent.payload as Event)
+          this.notifyEvent(globalEvent.payload as Event, globalEvent.directory)
         }
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
@@ -229,10 +228,10 @@ export class SdkSSEAdapter {
 
   // ── Notify helpers ─────────────────────────────────────────────────
 
-  private notifyEvent(event: Event): void {
+  private notifyEvent(event: Event, directory?: string): void {
     for (const handler of this.handlers) {
       try {
-        handler(event)
+        handler(event, directory)
       } catch (error) {
         console.error("[Kilo New] SSE: Error in event handler:", error)
       }

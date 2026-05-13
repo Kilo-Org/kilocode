@@ -292,6 +292,83 @@ const todoWriteCompleted: ToolPart = {
   },
 }
 
+const docsTodos = [
+  {
+    id: "1",
+    content: "Project setup and core architecture (package.json, tsconfig, documentation, type definitions)",
+    status: "completed",
+  },
+  {
+    id: "2",
+    content: "Configuration system (scraper config, targets.json, validation utilities)",
+    status: "completed",
+  },
+  {
+    id: "3",
+    content: "Core scraping engine (browser manager, orchestrator, selector engine, content extractor)",
+    status: "completed",
+  },
+  {
+    id: "4",
+    content: "Utility modules (DOM utils, retry logic, URL handling, validation)",
+    status: "completed",
+  },
+  { id: "5", content: "CLI interface implementation", status: "in_progress" },
+  { id: "6", content: "Storage layer implementation (database and file storage)", status: "pending" },
+  { id: "7", content: "Chart extractors for specific chart types", status: "pending" },
+  { id: "8", content: "Logging and error handling systems", status: "pending" },
+  { id: "9", content: "Test suites (unit and integration tests)", status: "pending" },
+  { id: "10", content: "Main entry point and final integration", status: "pending" },
+]
+
+const todoWriteDocsOverview: ToolPart = {
+  id: "part-todo-docs-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-docs-001",
+  tool: "todowrite",
+  state: {
+    status: "completed",
+    input: { todos: docsTodos },
+    output: "Updated 10 todos",
+    title: "Todo List Updated",
+    metadata: { todos: docsTodos },
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
+const compactTodos = docsTodos.map((todo, index) =>
+  index < 5 ? { ...todo, status: "completed" } : { ...todo, status: index === 5 ? "pending" : todo.status },
+)
+const compactViewTodos = compactTodos.slice(3, 6).map((todo, index) => ({ ...todo, changed: index === 1 }))
+
+const todoWriteCompactUpdate: ToolPart = {
+  id: "part-todo-compact-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-compact-001",
+  tool: "todowrite",
+  state: {
+    status: "completed",
+    input: { todos: compactTodos },
+    output: "Updated 10 todos",
+    title: "Todo List Updated",
+    metadata: {
+      todos: compactTodos,
+      view: {
+        mode: "compact",
+        todos: compactViewTodos,
+        hiddenBefore: 3,
+        hiddenAfter: 4,
+        changed: 1,
+      },
+    },
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
 const todoWritePermission: PermissionRequest = {
   id: "perm-todo-001",
   sessionID: SESSION_ID,
@@ -609,6 +686,30 @@ export const TodoWriteCompleted: Story = {
   },
 }
 
+export const TodoWriteDocsOverview: Story = {
+  name: "TodoWrite — docs overview",
+  render: () => {
+    const data = dataWith([todoWriteDocsOverview])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const TodoWriteCompactUpdate: Story = {
+  name: "TodoWrite - Compact update",
+  render: () => {
+    const data = dataWith([todoWriteCompactUpdate])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
 // ---------------------------------------------------------------------------
 // 12. Permission dock — edit tool with file patterns
 // ---------------------------------------------------------------------------
@@ -619,8 +720,46 @@ const editPermission: PermissionRequest = {
   toolName: "edit",
   patterns: ["src/components/App.tsx", "src/utils/helpers.ts"],
   always: ["*"],
-  args: {},
+  args: {
+    filediff: {
+      file: "src/components/App.tsx",
+      patch:
+        '===================================================================\n--- src/components/App.tsx\n+++ src/components/App.tsx\n@@ -1,3 +1,4 @@\n import { Button } from "@kilocode/kilo-ui/button"\n+import { Card } from "@kilocode/kilo-ui/card"\n \n export function App() {\n',
+      additions: 1,
+      deletions: 0,
+    },
+  },
   tool: { messageID: ASST_MSG_ID, callID: "call-edit-001" },
+}
+
+const applyPatchPermission: PermissionRequest = {
+  id: "perm-patch-001",
+  sessionID: SESSION_ID,
+  toolName: "edit",
+  patterns: ["src/components/App.tsx", "src/utils/helpers.ts"],
+  always: ["*"],
+  args: {
+    filepath: "src/components/App.tsx, src/utils/helpers.ts",
+    files: [
+      {
+        relativePath: "src/components/App.tsx",
+        type: "update",
+        patch:
+          '===================================================================\n--- src/components/App.tsx\n+++ src/components/App.tsx\n@@ -1,3 +1,4 @@\n import { Button } from "@kilocode/kilo-ui/button"\n+import { Card } from "@kilocode/kilo-ui/card"\n \n export function App() {\n',
+        additions: 1,
+        deletions: 0,
+      },
+      {
+        relativePath: "src/utils/helpers.ts",
+        type: "update",
+        patch:
+          "===================================================================\n--- src/utils/helpers.ts\n+++ src/utils/helpers.ts\n@@ -1,3 +1,3 @@\n export function label(value: string) {\n-  return value\n+  return value.trim()\n }\n",
+        additions: 1,
+        deletions: 1,
+      },
+    ],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-patch-001" },
 }
 
 export const PermissionDockEdit: Story = {
@@ -635,6 +774,26 @@ export const PermissionDockEdit: Story = {
       <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const PermissionDockApplyPatch: Story = {
+  name: "Permission Dock - apply patch",
+  render: () => {
+    const perms = [applyPatchPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "420px", display: "flex", "flex-direction": "column" }}>
             <ChatView />
           </div>
         </SessionContext.Provider>
@@ -981,7 +1140,7 @@ export const McpToolExpanded: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 19. Diff summary — "Modified N files" collapsed header
+// 19. Diff summary — "Modified N files" banner (opens changes view on click)
 // ---------------------------------------------------------------------------
 
 const USER_MSG_ID = "user-msg-diff-001"
@@ -993,7 +1152,7 @@ const mockDiffs = [
 ]
 
 export const DiffSummaryCollapsed: Story = {
-  name: "Diff Summary — Modified N files (collapsed)",
+  name: "Diff Summary — Modified N files",
   render: () => {
     const data = {
       ...defaultMockData,
@@ -1030,6 +1189,7 @@ export const DiffSummaryCollapsed: Story = {
       profileData: () => null,
       deviceAuth: () => ({ status: "idle" as const }),
       startLogin: () => {},
+      goToLogin: () => {},
       vscodeLanguage: () => "en",
       languageOverride: () => undefined,
       workspaceDirectory: () => "/project",

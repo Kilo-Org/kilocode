@@ -10,9 +10,13 @@ export function registerCodeActions(
   agentManager?: AgentManagerProvider,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : provider)
+  const reveal = async () => {
+    await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+    await provider.waitForReady()
+  }
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("kilo-code.new.explainCode", () => {
+    vscode.commands.registerCommand("kilo-code.new.explainCode", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("EXPLAIN", {
@@ -22,10 +26,11 @@ export function registerCodeActions(
         selectedText: ctx.selectedText,
         userInput: "",
       })
+      await reveal()
       provider.postMessage({ type: "triggerTask", text: prompt })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.fixCode", () => {
+    vscode.commands.registerCommand("kilo-code.new.fixCode", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("FIX", {
@@ -36,10 +41,11 @@ export function registerCodeActions(
         diagnostics: ctx.diagnostics,
         userInput: "",
       })
+      await reveal()
       provider.postMessage({ type: "triggerTask", text: prompt })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.improveCode", () => {
+    vscode.commands.registerCommand("kilo-code.new.improveCode", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("IMPROVE", {
@@ -49,10 +55,11 @@ export function registerCodeActions(
         selectedText: ctx.selectedText,
         userInput: "",
       })
+      await reveal()
       provider.postMessage({ type: "triggerTask", text: prompt })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.addToContext", () => {
+    vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("ADD_TO_CONTEXT", {
@@ -61,11 +68,19 @@ export function registerCodeActions(
         endLine: String(ctx.endLine),
         selectedText: ctx.selectedText,
       })
-      target().postMessage({ type: "appendChatBoxMessage", text: prompt })
+      const view = target()
+      if (view === provider) {
+        await reveal()
+      }
+      view.postMessage({ type: "appendChatBoxMessage", text: prompt })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.focusChatInput", () => {
-      target().postMessage({ type: "action", action: "focusInput" })
+    vscode.commands.registerCommand("kilo-code.new.focusChatInput", async () => {
+      const view = target()
+      if (view === provider) {
+        await reveal()
+      }
+      view.postMessage({ type: "action", action: "focusInput" })
     }),
   )
 }

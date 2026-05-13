@@ -2,9 +2,9 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import path from "path"
-import { Config } from "../../src/config/config"
+import * as Config from "../../src/config/config"
 import { Instance } from "../../src/project/instance"
-import { Log } from "../../src/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
@@ -29,12 +29,13 @@ describe("experimental.session.list", () => {
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
 
-      const share = Config.get
-      Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
+      spyOn(Config, "get").mockImplementation(
+        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
+      )
 
       try {
         const { Server } = await import("../../src/server/server")
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
 
         // Create worktree session first so it computes its own project ID via rev-list
         const branch = await Instance.provide({
@@ -83,7 +84,7 @@ describe("experimental.session.list", () => {
         expect(dirs).toContain(worktree)
         expect(body.some((item: { title: string }) => item.title === "other-project-session")).toBe(false)
       } finally {
-        Config.get = share
+        mock.restore()
       }
     } finally {
       await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()
@@ -98,12 +99,13 @@ describe("experimental.session.list", () => {
     try {
       await $`git worktree add ${worktree} -b test-branch-sdk-${Date.now()}`.cwd(first.path).quiet()
 
-      const share = Config.get
-      Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
+      spyOn(Config, "get").mockImplementation(
+        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
+      )
 
       try {
         const { Server } = await import("../../src/server/server")
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
 
         const branch = await Instance.provide({
           directory: worktree,
@@ -147,7 +149,7 @@ describe("experimental.session.list", () => {
         expect(ids).toContain(branch.id)
         expect(body.some((item: { title: string }) => item.title === "other-project-session")).toBe(false)
       } finally {
-        Config.get = share
+        mock.restore()
       }
     } finally {
       await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()

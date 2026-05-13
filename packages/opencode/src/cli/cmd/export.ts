@@ -1,5 +1,5 @@
 import type { Argv } from "yargs"
-import { Session } from "../../session"
+import { Session } from "@/session/session"
 import { MessageV2 } from "../../session/message-v2"
 import { SessionID } from "../../session/schema"
 import { cmd } from "./cmd"
@@ -244,10 +244,7 @@ export const ExportCommand = cmd({
           output: process.stderr,
         })
 
-        const sessions = []
-        for await (const session of Session.list()) {
-          sessions.push(session)
-        }
+        const sessions = await AppRuntime.runPromise(Session.Service.use((svc) => svc.list()))
 
         if (sessions.length === 0) {
           prompts.log.error("No sessions found", {
@@ -296,7 +293,7 @@ export const ExportCommand = cmd({
 
         process.stdout.write(JSON.stringify(args.sanitize ? sanitize(exportData) : exportData, null, 2))
         process.stdout.write(EOL)
-      } catch (error) {
+      } catch {
         UI.error(`Session not found: ${sessionID!}`)
         process.exit(1)
       }

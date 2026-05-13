@@ -8,11 +8,22 @@ export interface ForkContext {
   register: (session: Session) => void
   forked: (session: Session) => void
   status: (sessionID: string) => SessionStatus["type"] | undefined
+  directory: (sessionID: string) => string
 }
 
 export async function handleForkSession(ctx: ForkContext, sessionId: string, messageId?: string): Promise<void> {
-  const status = ctx.status(sessionId)
-  if (status && status !== "idle") {
+  const status =
+    ctx.status(sessionId) ??
+    (await Promise.resolve()
+      .then(() =>
+        ctx.connection.getClient().session.status({ directory: ctx.directory(sessionId) }, { throwOnError: true }),
+      )
+      .then((result) => result.data?.[sessionId]?.type ?? "idle")
+      .catch((e) => {
+        console.error("[Kilo New] refreshForkStatus failed:", e)
+        return "busy" as SessionStatus["type"]
+      }))
+  if (status !== "idle") {
     ctx.post({ type: "error", message: "Wait for the session to finish before forking it." })
     return
   }

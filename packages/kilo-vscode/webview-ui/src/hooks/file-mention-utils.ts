@@ -1,11 +1,14 @@
 import type { FileAttachment, FileSearchItem } from "../types/messages"
+import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
 
 export const AT_PATTERN = /(?:^|\s)@(\S*)$/
 
 export type MentionResult =
   | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
+  | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
   | { type: "file"; value: string }
+  | { type: "opened-file"; value: string }
   | { type: "folder"; value: string }
 
 export const TERMINAL_RESULT: MentionResult = {
@@ -13,6 +16,13 @@ export const TERMINAL_RESULT: MentionResult = {
   value: TERMINAL_MENTION,
   label: "Terminal",
   description: "Active terminal output",
+}
+
+export const GIT_CHANGES_RESULT: MentionResult = {
+  type: "git-changes",
+  value: GIT_CHANGES_MENTION,
+  label: "Git changes",
+  description: "Current session/worktree changes",
 }
 
 /**
@@ -28,13 +38,30 @@ export function getTerminalMentionResult(query: string): MentionResult[] {
   return [TERMINAL_RESULT]
 }
 
-export function buildMentionResults(query: string, items: Array<FileSearchItem | string>): MentionResult[] {
+export function getGitChangesMentionResult(query: string): MentionResult[] {
+  const normalized = query.toLowerCase()
+  if (normalized && !GIT_CHANGES_MENTION.startsWith(normalized) && !"git".startsWith(normalized)) return []
+  return [GIT_CHANGES_RESULT]
+}
+
+export function buildMentionResults(query: string, items: Array<FileSearchItem | string>, git = true): MentionResult[] {
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
     if (item.type === "folder") return { type: "folder", value: item.path }
+    if (item.type === "opened-file") return { type: "opened-file", value: item.path }
     return { type: "file", value: item.path }
   })
-  return [...getTerminalMentionResult(query), ...results]
+  return [...getTerminalMentionResult(query), ...(git ? getGitChangesMentionResult(query) : []), ...results]
+}
+
+export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {
+  const value = query.toLowerCase()
+  if (!value) return items
+  return items.filter((item) => {
+    if (item.type === "terminal") return TERMINAL_MENTION.startsWith(value)
+    if (item.type === "git-changes") return GIT_CHANGES_MENTION.startsWith(value) || "git".startsWith(value)
+    return item.value.toLowerCase().includes(value)
+  })
 }
 
 /**
@@ -57,6 +84,9 @@ export function syncMentionedPaths(prev: Set<string>, text: string): Set<string>
 
 /**
  * Replace the @mention pattern before the cursor with the selected path.
+ * Appends a trailing space after the inserted @mention unless the text
+ * immediately after the cursor already starts with whitespace, so the user
+ * can keep typing without breaking the attachment parsing.
  * Returns the new text string.
  */
 export function buildTextAfterMentionSelect(before: string, after: string, path: string): string {
@@ -64,7 +94,8 @@ export function buildTextAfterMentionSelect(before: string, after: string, path:
     const prefix = match.startsWith(" ") ? " " : ""
     return `${prefix}@${path}`
   })
-  return replaced + after
+  const suffix = /^\s/.test(after) ? "" : " "
+  return replaced + suffix + after
 }
 
 /**

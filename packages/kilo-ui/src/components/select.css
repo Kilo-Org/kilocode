@@ -2,11 +2,11 @@
 
 /* Select trigger (renders as a Button, override the button sizing) */
 [data-component="select"] [data-slot="select-select-trigger"] {
-  height: 32px;
+  height: auto;
   min-height: 32px;
   border-radius: 2px;
-  font-size: 13px;
-  line-height: 16px;
+  font-size: var(--kilo-font-size-13);
+  line-height: var(--kilo-font-size-16);
   padding: 6px 12px !important;
   cursor: pointer;
   background: var(--background-weak);
@@ -43,8 +43,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 13px;
-    line-height: 16px;
+    font-size: var(--kilo-font-size-13);
+    line-height: var(--kilo-font-size-16);
     color: var(--text-base);
   }
 
@@ -55,6 +55,11 @@
     color: var(--icon-weak-base);
     background-color: transparent;
   }
+}
+
+[data-component="select"][data-trigger-style="settings"] [data-slot="select-select-trigger"] {
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* Select dropdown content */
@@ -76,7 +81,8 @@
 
   /* Section headers */
   [data-slot="select-section"] {
-    font-size: 11px;
+    padding: 4px 12px;
+    font-size: var(--kilo-font-size-11);
     font-weight: 500;
     color: var(--text-weak);
     text-transform: uppercase;
@@ -90,8 +96,8 @@
     box-sizing: border-box;
     border-radius: 0;
     padding: 6px 12px;
-    font-size: 13px;
-    line-height: 16px;
+    font-size: var(--kilo-font-size-13);
+    line-height: var(--kilo-font-size-16);
     cursor: pointer;
     gap: 8px;
 

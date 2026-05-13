@@ -8,7 +8,8 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { ClawProvider, useClaw } from "./context/claw"
 import { KiloClawLanguageProvider, useKiloClawLanguage } from "./context/language"
-import { ChatPanel } from "./components/ChatPanel"
+import { ConversationList } from "./components/ConversationList"
+import { MessageArea } from "./components/MessageArea"
 import { StatusSidebar } from "./components/StatusSidebar"
 import { SetupView } from "./components/SetupView"
 import { UpgradeView } from "./components/UpgradeView"
@@ -46,7 +47,8 @@ function Content() {
         </Match>
         <Match when={claw.phase() === "ready"}>
           <div class="kiloclaw-layout">
-            <ChatPanel />
+            <ConversationList />
+            <MessageArea />
             <StatusSidebar />
           </div>
         </Match>

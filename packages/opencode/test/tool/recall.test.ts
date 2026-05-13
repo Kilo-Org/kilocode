@@ -4,7 +4,7 @@ import { $ } from "bun"
 import { Effect } from "effect"
 import path from "path"
 import { Instance } from "../../src/project/instance"
-import { Config } from "../../src/config/config"
+import * as Config from "../../src/config/config"
 import { RecallTool } from "../../src/tool/recall"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { resetDatabase } from "../fixture/db"
@@ -43,11 +43,12 @@ describe("tool.recall", () => {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
-      const share = Config.get
-      Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
+      spyOn(Config, "get").mockImplementation(
+        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
+      )
 
       try {
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
         await Instance.provide({
           directory: first.path,
           fn: async () => Session.create({ title: "search-target root" }),
@@ -74,7 +75,7 @@ describe("tool.recall", () => {
         expect(result.output).toContain("search-target worktree")
         expect(result.output).not.toContain("search-target other")
       } finally {
-        Config.get = share
+        mock.restore()
       }
     } finally {
       await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()
@@ -85,11 +86,10 @@ describe("tool.recall", () => {
     await using first = await tmpdir({ git: true })
     await using second = await tmpdir({ git: true })
 
-    const share = Config.get
-    Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
+    spyOn(Config, "get").mockImplementation(async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>)
 
     try {
-      const { Session } = await import("../../src/session/index")
+      const { Session } = await import("../../src/session/session")
       const session = await Instance.provide({
         directory: second.path,
         fn: async () => Session.create({ title: "other-project-session" }),
@@ -109,7 +109,7 @@ describe("tool.recall", () => {
       expect(err).toBeInstanceOf(Error)
       expect((err as Error).message).toContain("belongs to a different workspace")
     } finally {
-      Config.get = share
+      mock.restore()
     }
   })
 
@@ -121,11 +121,12 @@ describe("tool.recall", () => {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
-      const share = Config.get
-      Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
+      spyOn(Config, "get").mockImplementation(
+        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
+      )
 
       try {
-        const { Session } = await import("../../src/session/index")
+        const { Session } = await import("../../src/session/session")
         const session = await Instance.provide({
           directory: worktree,
           fn: async () => Session.create({ title: "worktree readable" }),
@@ -142,7 +143,7 @@ describe("tool.recall", () => {
 
         expect(result.output).toContain("# Session: worktree readable")
       } finally {
-        Config.get = share
+        mock.restore()
       }
     } finally {
       await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()

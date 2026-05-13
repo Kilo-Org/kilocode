@@ -8,7 +8,13 @@
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
 import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
-import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
+import {
+  KILO_API_BASE,
+  KILO_CHAT_URL,
+  KILO_EVENT_SERVICE_URL,
+  HEADER_FEATURE,
+  HEADER_ORGANIZATIONID,
+} from "../api/constants.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
@@ -32,8 +38,10 @@ interface KiloRoutesDeps extends ImportDeps {
   Auth: Auth
   ModelCache: ModelCache
   z: Z
-  Instance: ImportDeps["Instance"] & { disposeAll(): Promise<void> }
+  InstanceStore: { disposeAllInstances(): Promise<void> }
 }
+
+const FIM_TIMEOUT_MS = 30_000
 
 /**
  * Create Kilo Gateway routes with OpenCode dependencies injected
@@ -77,6 +85,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     SessionCreatedEvent,
     Identifier,
     ModelCache,
+    InstanceStore,
   } = deps
 
   const Organization = z.object({
@@ -110,6 +119,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
               content: z.string().optional(),
             })
             .optional(),
+          text: z.string().optional(), // Text-completion style streaming (Mercury)
         }),
       )
       .optional(),
@@ -207,7 +217,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
         ModelCache.clear("kilo")
         clearModesCache()
-        await Instance.disposeAll()
+        await InstanceStore.disposeAllInstances()
 
         return c.json(true)
       },
@@ -342,25 +352,35 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           [HEADER_FEATURE]: "autocomplete",
         }
 
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            model: fimModel,
-            prompt: prefix,
-            suffix,
-            max_tokens: fimMaxTokens,
-            temperature: fimTemperature,
-            stream: true,
-          }),
-        })
+        const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          return c.json({ error: `FIM request failed: ${response.status} ${errorText}` }, response.status as any)
+        let response: Response
+        try {
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers,
+            signal,
+            body: JSON.stringify({
+              model: fimModel,
+              prompt: prefix,
+              suffix,
+              max_tokens: fimMaxTokens,
+              temperature: fimTemperature,
+              stream: true,
+            }),
+          })
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "TimeoutError")
+            return c.json({ error: "FIM request timed out" }, 504 as any)
+          if (signal.aborted) return c.json({ error: "FIM request canceled" }, 499 as any)
+          throw err
         }
 
-        // Stream the response through
+        if (!response.ok) {
+          const text = await response.text()
+          return c.json({ error: `FIM request failed: ${response.status} ${text}` }, response.status as any)
+        }
+
         return new Response(response.body, {
           headers: {
             "Content-Type": "text/event-stream",
@@ -511,8 +531,24 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
               "application/json": {
                 schema: resolver(
                   z.object({
+                    // `recovering` and `restoring` are transitional states the
+                    // worker reports while it brings an instance back online
+                    // after an unexpected stop or a snapshot restore — see
+                    // cloud `services/kiloclaw/src/index.ts` and the
+                    // `PlatformStatusResponse` type in
+                    // cloud/apps/web/src/lib/kiloclaw/types.ts. Keeping them in
+                    // the enum so the SDK types stay accurate.
                     status: z
-                      .enum(["provisioned", "starting", "restarting", "running", "stopped", "destroying"])
+                      .enum([
+                        "provisioned",
+                        "starting",
+                        "restarting",
+                        "recovering",
+                        "running",
+                        "stopped",
+                        "destroying",
+                        "restoring",
+                      ])
                       .nullable(),
                     sandboxId: z.string().optional(),
                     flyRegion: z.string().optional(),
@@ -523,6 +559,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
                     channelCount: z.number().optional(),
                     secretCount: z.number().optional(),
                     userId: z.string().optional(),
+                    botName: z.string().nullable().optional(),
                   }),
                 ),
               },
@@ -565,57 +602,52 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       "/claw/chat-credentials",
       describeRoute({
         summary: "Get KiloClaw chat credentials",
-        description: "Fetch Stream Chat credentials for the user's KiloClaw instance",
+        description:
+          "Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker " +
+          "and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and " +
+          "event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.",
         operationId: "kilo.claw.chatCredentials",
         responses: {
           200: {
-            description: "Stream Chat credentials or null",
+            description: "Kilo Chat credentials or null",
             content: {
               "application/json": {
                 schema: resolver(
                   z
                     .object({
-                      apiKey: z.string(),
-                      userId: z.string(),
-                      userToken: z.string(),
-                      channelId: z.string(),
+                      token: z.string(),
+                      expiresAt: z.string(),
+                      kiloChatUrl: z.string(),
+                      eventServiceUrl: z.string(),
                     })
                     .nullable(),
                 ),
               },
             },
           },
-          ...errors(401, 502),
+          ...errors(401),
         },
       }),
       async (c: any) => {
-        try {
-          const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
-          if (!token) return c.json({ error: "No valid token found" }, 401)
+        const auth = await Auth.get("kilo")
+        if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+        const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+        if (!token) return c.json({ error: "No valid token found" }, 401)
 
-          const organizationId = auth.type === "oauth" ? auth.accountId : undefined
-          const headers: Record<string, string> = {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          }
-          if (organizationId) {
-            headers[HEADER_ORGANIZATIONID] = organizationId
-          }
+        // For OAuth, expires is a millisecond epoch we already track. For
+        // API tokens we don't have a verified expiry locally — the JWT is
+        // signed by the cloud and validated by kilo-chat/event-service on
+        // every request. Use a far-future placeholder so the client cache
+        // doesn't refetch unnecessarily; on 401 the client clears the
+        // cache and prompts re-auth.
+        const expiresAtMs = auth.type === "oauth" ? auth.expires : Date.now() + 365 * 24 * 60 * 60 * 1000
 
-          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/chat-credentials`, { headers })
-
-          if (!response.ok) {
-            const text = await response.text()
-            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
-          }
-
-          return c.json(await response.json())
-        } catch (err: any) {
-          console.error("[Kilo Gateway] claw/chat-credentials: error", err?.message ?? err)
-          return c.json({ error: "Failed to reach KiloClaw" }, 502)
-        }
+        return c.json({
+          token,
+          expiresAt: new Date(expiresAtMs).toISOString(),
+          kiloChatUrl: KILO_CHAT_URL,
+          eventServiceUrl: KILO_EVENT_SERVICE_URL,
+        })
       },
     )
     .get(

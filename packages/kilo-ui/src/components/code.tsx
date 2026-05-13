@@ -22,6 +22,17 @@ const codeMetrics = {
   fileGap: 0,
 } satisfies Partial<VirtualFileMetrics>
 
+const codeStyle = {
+  ...styleVariables,
+  "--diffs-line-height": "var(--kilo-font-size-24)",
+}
+
+function lineHeight() {
+  if (typeof window === "undefined") return codeMetrics.lineHeight
+  const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--kilo-font-size-24"))
+  return Number.isFinite(value) ? value : codeMetrics.lineHeight
+}
+
 type SelectionSide = "additions" | "deletions"
 
 export type CodeProps<T = {}> = FileOptions<T> & {
@@ -172,6 +183,7 @@ export function Code<T>(props: CodeProps<T>) {
   const [findQuery, setFindQuery] = createSignal("")
   const [findIndex, setFindIndex] = createSignal(0)
   const [findCount, setFindCount] = createSignal(0)
+  const [height, setHeight] = createSignal(lineHeight())
   let findMode: "highlights" | "overlay" = "overlay"
   let findHits: Range[] = []
 
@@ -914,7 +926,8 @@ export function Code<T>(props: CodeProps<T>) {
       return virtualizer
     })()
 
-    instance = isVirtual && v ? new VirtualizedFile<T>(opts, v, codeMetrics, workerPool) : new File<T>(opts, workerPool)
+    const metrics = { ...codeMetrics, lineHeight: height() }
+    instance = isVirtual && v ? new VirtualizedFile<T>(opts, v, metrics, workerPool) : new File<T>(opts, workerPool)
 
     container.innerHTML = ""
     const value = text()
@@ -938,6 +951,19 @@ export function Code<T>(props: CodeProps<T>) {
     const monitor = new MutationObserver(() => applyScheme())
     monitor.observe(root, { attributes: true, attributeFilter: ["data-color-scheme"] })
     applyScheme()
+
+    onCleanup(() => monitor.disconnect())
+  })
+
+  createEffect(() => {
+    if (typeof document === "undefined") return
+    if (typeof MutationObserver === "undefined") return
+
+    const root = document.documentElement
+    const update = () => setHeight(lineHeight())
+    const monitor = new MutationObserver(update)
+    monitor.observe(root, { attributes: true, attributeFilter: ["style"] })
+    update()
 
     onCleanup(() => monitor.disconnect())
   })
@@ -1063,7 +1089,7 @@ export function Code<T>(props: CodeProps<T>) {
   return (
     <div
       data-component="code"
-      style={styleVariables}
+      style={codeStyle}
       class="relative outline-none"
       classList={{
         ...(local.classList || {}),

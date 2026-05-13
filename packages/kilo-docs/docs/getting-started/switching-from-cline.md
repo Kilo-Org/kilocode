@@ -259,15 +259,15 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ## Feature Mapping
 
-| Cline Feature      | Kilo Equivalent                    | Notes                                                                           |
-| ------------------ | ---------------------------------- | ------------------------------------------------------------------------------- |
-| Plan mode          | Orchestrator, Architect, Ask modes | Architect plans, Ask explains, Orchestrate distributes tasks across other modes |
-| Act mode           | Code mode                          | Implementation                                                                  |
-| Plan/Act toggle    | Mode dropdown                      | More granular control                                                           |
-| Checkpoints        | Sessions + Checkpoints             | Sessions preserve mode + context                                                |
-| Background editing | Fast Apply                         | Sequential but instant                                                          |
-| Single agent       | Five specialized modes             | Purpose-built for each task                                                     |
-| Local only         | Multi-platform                     | IDE, CLI, web, mobile                                                           |
+| Cline Feature | Kilo Equivalent | Notes |
+|---|---|---|
+| Plan mode | Orchestrator, Architect, Ask modes | Architect plans, Ask explains, Orchestrate distributes tasks across other modes |
+| Act mode | Code mode | Implementation |
+| Plan/Act toggle | Mode dropdown | More granular control |
+| Checkpoints | Sessions + Checkpoints | Sessions preserve mode + context |
+| Background editing | Fast Apply | Sequential but instant |
+| Single agent | Five specialized modes | Purpose-built for each task |
+| Local only | Multi-platform | IDE, CLI, web, mobile |
 
 ---
 

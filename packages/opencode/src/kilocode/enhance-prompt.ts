@@ -2,7 +2,7 @@ import { generateText } from "ai"
 import { mergeDeep } from "remeda"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 
 const log = Log.create({ service: "enhance-prompt" })
 

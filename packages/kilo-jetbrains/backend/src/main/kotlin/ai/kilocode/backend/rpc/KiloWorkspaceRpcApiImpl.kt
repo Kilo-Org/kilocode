@@ -4,6 +4,7 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.workspace.AgentData
 import ai.kilocode.backend.workspace.AgentInfo
 import ai.kilocode.backend.workspace.CommandInfo
@@ -21,7 +22,9 @@ import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.KiloWorkspaceLoadProgressDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import ai.kilocode.rpc.dto.SkillDto
@@ -99,8 +102,15 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
             is KiloWorkspaceState.Error -> KiloWorkspaceStateDto(
                 status = KiloWorkspaceStatusDto.ERROR,
                 error = state.message,
+                errors = state.errors.map(::error),
             )
         }
+
+    private fun error(e: LoadError) = LoadErrorDto(
+        resource = e.resource,
+        status = e.status,
+        detail = e.detail,
+    )
 
     private fun progress(p: KiloWorkspaceLoadProgress) = KiloWorkspaceLoadProgressDto(
         providers = p.providers,
@@ -131,6 +141,9 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         toolCall = m.toolCall,
         free = m.free,
         status = m.status,
+        recommendedIndex = m.recommendedIndex,
+        variants = m.variants,
+        limit = m.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
     )
 
     private fun agents(d: AgentData) = AgentsDto(

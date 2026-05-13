@@ -3,16 +3,18 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import z from "zod"
+import { Effect, Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { mergeDeep } from "remeda"
-import { Log } from "../../util/log"
-import { Global } from "../../global"
-import { NamedError } from "@opencode-ai/util/error"
+import * as Log from "@opencode-ai/core/util/log"
+import { Global } from "@opencode-ai/core/global"
+import { NamedError } from "@opencode-ai/core/util/error"
+import type { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "@/bus"
 import { isRecord } from "@/util/record"
-import { ConfigPaths } from "../../config/paths"
-import { Filesystem } from "@/util/filesystem"
+import { ConfigError } from "../../config/error"
 import type { Config } from "../../config/config"
+import type { ConfigAgent } from "../../config/agent"
 import { ModesMigrator } from "../modes-migrator"
 import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
@@ -26,17 +28,14 @@ export namespace KilocodeConfig {
   // ── Config schema extensions ─────────────────────────────────────────
 
   /** Schema for AI-generated commit message configuration. */
-  export const CommitMessageSchema = z
-    .object({
-      prompt: z
-        .string()
-        .optional()
-        .describe(
+  export const CommitMessageSchema = Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.String).annotate({
+        description:
           "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
-        ),
-    })
-    .optional()
-    .describe("Configuration for AI-generated commit messages")
+      }),
+    }),
+  ).annotate({ description: "Configuration for AI-generated commit messages" })
 
   // ── Config file constants ────────────────────────────────────────────
 
@@ -49,6 +48,9 @@ export namespace KilocodeConfig {
   /** Directory suffixes that Kilo recognizes in addition to .opencode. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 
+  /** All config directory suffixes Kilo can update, including upstream .opencode. */
+  export const ALL_CONFIG_DIR_SUFFIXES = [".kilo", ".kilocode", ".opencode"] as const
+
   /** Path patterns for resolving kilo agent names from file paths. */
   export const AGENT_PATTERNS = ["/.kilo/agent/", "/.kilo/agents/", "/.kilocode/agent/", "/.kilocode/agents/"] as const
 
@@ -60,17 +62,81 @@ export namespace KilocodeConfig {
     "/.kilocode/commands/",
   ] as const
 
+  /**
+   * Choose the project config file that Config.update should patch.
+   *
+   * This mirrors the Kilo project-config load chain: prefer existing config files
+   * in ancestor config directories, then existing root config files, and create
+   * `.kilo/kilo.json` when no project config exists yet.
+   */
+  export const projectConfigUpdateTarget = Effect.fn("KilocodeConfig.projectConfigUpdateTarget")(function* (input: {
+    fs: AppFileSystem.Interface
+    directory: string
+    worktree?: string
+  }) {
+    const dirs = yield* input.fs
+      .up({ targets: [...ALL_CONFIG_DIR_SUFFIXES], start: input.directory, stop: input.worktree })
+      .pipe(Effect.orDie)
+    const roots = yield* input.fs
+      .up({ targets: [...ALL_CONFIG_FILES], start: input.directory, stop: input.worktree })
+      .pipe(Effect.orDie)
+    const files = [...dirs.flatMap((dir) => ALL_CONFIG_FILES.map((file) => path.join(dir, file))), ...roots]
+    return files.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.json")
+  })
+
+  export const updateProjectConfig = Effect.fn("KilocodeConfig.updateProjectConfig")(function* (input: {
+    fs: AppFileSystem.Interface
+    directory: string
+    worktree?: string
+    config: Config.Info
+    read: (file: string) => Effect.Effect<string | undefined>
+    parse: (input: string, file: string) => Config.Info
+    patch: (input: string, config: Config.Info) => string
+    writable: (config: Config.Info) => Config.Info
+  }) {
+    const file = yield* projectConfigUpdateTarget(input)
+    const source = yield* input.read(file)
+    const before = source ?? "{}"
+    const patch = input.writable(input.config)
+
+    if (file.endsWith(".jsonc")) {
+      const updated = input.patch(before, patch)
+      yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
+      return
+    }
+
+    const existing = input.parse(before, file)
+    const merged = mergeConfig(input.writable(existing), patch)
+    if (source === undefined && Object.keys(merged).length === 0) return
+    yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+  })
+
+  export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {
+    if (scope !== "global") return info
+    return stripGlobalIndexing(info)
+  }
+
+  function stripGlobalIndexing(info: Config.Info): Config.Info {
+    // Indexing provider/storage settings can be global, but enablement is exposed separately from project enablement.
+    if (info.indexing?.enabled === undefined) return info
+    const indexing = Object.fromEntries(Object.entries(info.indexing).filter(([key]) => key !== "enabled"))
+    if (Object.keys(indexing).length > 0) return { ...info, indexing }
+    const copy = { ...info }
+    delete copy.indexing
+    return copy
+  }
+
   // ── Warning helpers ──────────────────────────────────────────────────
 
   /** Convert known config-loading error types into a Warning.  Returns undefined for unknown errors. */
   export function toWarning(err: unknown): Config.Warning | undefined {
-    if (ConfigPaths.JsonError.isInstance(err))
+    if (ConfigError.JsonError.isInstance(err))
       return {
         path: err.data.path,
         message: `Config file at ${err.data.path} is not valid JSON(C)`,
         detail: err.data.message || undefined,
       }
-    if (ConfigPaths.InvalidError.isInstance(err)) {
+    if (ConfigError.InvalidError.isInstance(err)) {
       const text = err.data.issues ? formatIssues(err.data.issues) : err.data.message
       return {
         path: err.data.path,
@@ -103,10 +169,10 @@ export namespace KilocodeConfig {
   ) {
     const text = formatIssues(issues)
     const message = text ? `Config file at ${item} is invalid: ${text}` : `Config file at ${item} is invalid`
-    const err = new ConfigPaths.InvalidError({ path: item, issues }, { cause })
+    const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
     if (warnings) warnings.push({ path: item, message, detail: text || undefined })
     try {
-      const { Session } = await import("@/session")
+      const { Session } = await import("@/session/session")
       Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
     } catch (e) {
       log.warn("could not publish session error", { message, err: e })
@@ -227,7 +293,7 @@ export namespace KilocodeConfig {
    */
   export async function loadOrganizationModes(
     auth: Record<string, any>,
-  ): Promise<{ agents: Record<string, Config.Agent>; warnings: Config.Warning[] }> {
+  ): Promise<{ agents: Record<string, ConfigAgent.Info>; warnings: Config.Warning[] }> {
     const warnings: Config.Warning[] = []
     try {
       const kilo = auth["kilo"]

@@ -1,9 +1,16 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -32,6 +39,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** List root sessions for a directory. */
     suspend fun list(directory: String): SessionListDto
 
+    /** List recent root sessions for the current worktree family. */
+    suspend fun recent(directory: String, limit: Int): SessionListDto
+
     /** Create a new session in the given directory. */
     suspend fun create(directory: String): SessionDto
 
@@ -40,6 +50,12 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Delete a session. */
     suspend fun delete(id: String, directory: String)
+
+    /** List cloud-backed sessions. */
+    suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
+
+    /** Import a cloud-backed session into local storage. */
+    suspend fun importCloudSession(id: String, directory: String): SessionDto
 
     /** Observe live session status changes. */
     suspend fun statuses(): Flow<Map<String, SessionStatusDto>>
@@ -58,6 +74,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, directory: String)
 
+    /** Summarize/compact a session using the selected model. */
+    suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
+
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
 
@@ -66,4 +85,24 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Update config (model, agent/mode, temperature). */
     suspend fun updateConfig(directory: String, config: ConfigUpdateDto)
+
+    // ------ permission / question resolution ------
+
+    /** Reply to a pending permission request (once, always, or reject). */
+    suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto)
+
+    /** Save always-rules for a pending permission request before replying. */
+    suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto)
+
+    /** Reply to a pending question with user answers. */
+    suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto)
+
+    /** Reject a pending question. */
+    suspend fun rejectQuestion(requestId: String, directory: String)
+
+    /** List all pending permission requests (caller filters by session). */
+    suspend fun pendingPermissions(directory: String): List<PermissionRequestDto>
+
+    /** List all pending question requests (caller filters by session). */
+    suspend fun pendingQuestions(directory: String): List<QuestionRequestDto>
 }

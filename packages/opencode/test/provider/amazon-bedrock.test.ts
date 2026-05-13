@@ -5,12 +5,16 @@ import { unlink } from "fs/promises"
 import { ProviderID } from "../../src/provider/schema"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
+import { Provider } from "@/provider/provider"
 import { Env } from "../../src/env"
-import { Global } from "../../src/global"
-import { Filesystem } from "../../src/util/filesystem"
+import { Global } from "@opencode-ai/core/global"
+import { Filesystem } from "@/util/filesystem"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { makeRuntime } from "../../src/effect/run-service"
+
+const env = makeRuntime(Env.Service, Env.defaultLayer)
+const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
 
 async function list() {
   return AppRuntime.runPromise(
@@ -41,10 +45,10 @@ test("Bedrock: config region takes precedence over AWS_REGION env var", async ()
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_REGION", "us-east-1")
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_REGION", "us-east-1")
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -66,10 +70,10 @@ test("Bedrock: falls back to AWS_REGION env var when no config region", async ()
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_REGION", "eu-west-1")
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_REGION", "eu-west-1")
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -121,11 +125,11 @@ test("Bedrock: loads when bearer token from auth.json is present", async () => {
 
     await Instance.provide({
       directory: tmp.path,
-      init: async () => {
-        Env.set("AWS_PROFILE", "")
-        Env.set("AWS_ACCESS_KEY_ID", "")
-        Env.set("AWS_BEARER_TOKEN_BEDROCK", "")
-      },
+      init: Effect.promise(async () => {
+        set("AWS_PROFILE", "")
+        set("AWS_ACCESS_KEY_ID", "")
+        set("AWS_BEARER_TOKEN_BEDROCK", "")
+      }).pipe(Effect.asVoid),
       fn: async () => {
         const providers = await list()
         expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -167,10 +171,10 @@ test("Bedrock: config profile takes precedence over AWS_PROFILE env var", async 
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_PROFILE", "default")
-      Env.set("AWS_ACCESS_KEY_ID", "test-key-id")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_PROFILE", "default")
+      set("AWS_ACCESS_KEY_ID", "test-key-id")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -199,9 +203,9 @@ test("Bedrock: includes custom endpoint in options when specified", async () => 
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -232,12 +236,12 @@ test("Bedrock: autoloads when AWS_WEB_IDENTITY_TOKEN_FILE is present", async () 
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_WEB_IDENTITY_TOKEN_FILE", "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
-      Env.set("AWS_ROLE_ARN", "arn:aws:iam::123456789012:role/my-eks-role")
-      Env.set("AWS_PROFILE", "")
-      Env.set("AWS_ACCESS_KEY_ID", "")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_WEB_IDENTITY_TOKEN_FILE", "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+      set("AWS_ROLE_ARN", "arn:aws:iam::123456789012:role/my-eks-role")
+      set("AWS_PROFILE", "")
+      set("AWS_ACCESS_KEY_ID", "")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -275,9 +279,9 @@ test("Bedrock: model with us. prefix should not be double-prefixed", async () =>
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -312,9 +316,9 @@ test("Bedrock: model with global. prefix should not be prefixed", async () => {
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -348,9 +352,9 @@ test("Bedrock: model with eu. prefix should not be double-prefixed", async () =>
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()
@@ -384,9 +388,9 @@ test("Bedrock: model without prefix in US region should get us. prefix added", a
   })
   await Instance.provide({
     directory: tmp.path,
-    init: async () => {
-      Env.set("AWS_PROFILE", "default")
-    },
+    init: Effect.promise(async () => {
+      set("AWS_PROFILE", "default")
+    }).pipe(Effect.asVoid),
     fn: async () => {
       const providers = await list()
       expect(providers[ProviderID.amazonBedrock]).toBeDefined()

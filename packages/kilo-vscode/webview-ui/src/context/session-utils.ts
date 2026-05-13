@@ -1,5 +1,19 @@
 import type { Part } from "../types/messages"
 
+export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
+
+type SnapshotPart = {
+  type?: string
+  text?: string
+  synthetic?: boolean
+}
+
+export function snapshotProgress(part: SnapshotPart | undefined): boolean {
+  if (part?.type !== "text") return false
+  if (!part.synthetic) return false
+  return (part.text ?? "").includes("Initializing snapshot")
+}
+
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
@@ -55,7 +69,7 @@ export function computeStatus(
     }
   }
   if (part.type === "reasoning") return t("ui.sessionTurn.status.thinking")
-  if (part.type === "text") return t("session.status.writingResponse")
+  if (part.type === "text") return snapshotProgress(part) ? SNAPSHOT_PROGRESS_TEXT : t("session.status.writingResponse")
   return undefined
 }
 
@@ -85,19 +99,71 @@ export function calcContextUsage(
 }
 
 /**
- * Build a map of session ID → total cost for each session in the family
- * that has non-zero cost. Pure function — no store dependency.
+ * Build a map of session ID → **own cost** for each session in the family
+ * that has non-zero own cost.
+ *
+ * The CLI backend already propagates each subagent's total up into its
+ * parent assistant message when the subagent finishes (see
+ * `packages/opencode/src/kilocode/session/cost-propagation.ts`), so a
+ * session's `message.info.cost` sum is actually the whole sub-tree rooted
+ * at that session, not its own LLM usage. Summing every session in the
+ * family would double-count the propagated amounts.
+ *
+ * To present a breakdown whose entries sum to the root's propagated total
+ * (== the family's true cost), we subtract each session's propagated
+ * total from its parent's figure. The root's entry then holds its own
+ * LLM cost, each subagent's entry holds its own LLM cost, and the sum
+ * equals the root's `message.info.cost` — matching the backend's number.
+ *
+ * Pure function — no store dependency.
  */
 export function buildFamilyCosts(
   family: Set<string>,
   messages: Record<string, Array<{ role: string; cost?: number }>>,
+  sessions: Record<string, { parentID?: string | null } | undefined>,
+  parents: Map<string, string> = new Map(),
 ): Map<string, number> {
-  const costs = new Map<string, number>()
+  const totals = new Map<string, number>()
+  for (const sid of family) totals.set(sid, calcTotalCost(messages[sid] ?? []))
+
+  const own = new Map<string, number>(totals)
   for (const sid of family) {
-    const cost = calcTotalCost(messages[sid] ?? [])
+    const parent = sessions[sid]?.parentID ?? parents.get(sid)
+    if (!parent || !own.has(parent)) continue
+    own.set(parent, (own.get(parent) ?? 0) - (totals.get(sid) ?? 0))
+  }
+
+  const costs = new Map<string, number>()
+  for (const [sid, cost] of own) {
     if (cost > 0) costs.set(sid, cost)
   }
   return costs
+}
+
+/**
+ * Build child session ID -> parent session ID links from task tool metadata.
+ * This fills the gap when child messages are synced before their SessionInfo.
+ */
+export function buildFamilyParents(
+  family: Set<string>,
+  messages: Record<string, CostMessage[]>,
+  parts: Record<string, TaskPart[]>,
+): Map<string, string> {
+  const parents = new Map<string, string>()
+  for (const sid of family) {
+    const msgs = messages[sid]
+    if (!msgs) continue
+    for (const msg of msgs) {
+      const list = parts[msg.id]
+      if (!list) continue
+      for (const p of list) {
+        const child = childID(p)
+        if (!child || !family.has(child) || parents.has(child)) continue
+        parents.set(child, sid)
+      }
+    }
+  }
+  return parents
 }
 
 const LABEL_CAP = 24

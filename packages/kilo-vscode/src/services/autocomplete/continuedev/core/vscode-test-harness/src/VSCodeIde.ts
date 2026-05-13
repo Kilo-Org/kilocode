@@ -237,8 +237,8 @@ export class VsCodeIde implements IDE {
     return result
   }
 
-  onDidChangeActiveTextEditor(callback: (fileUri: string) => void): void {
-    vscode.window.onDidChangeActiveTextEditor((editor) => {
+  onDidChangeActiveTextEditor(callback: (fileUri: string) => void): vscode.Disposable {
+    return vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
         callback(editor.document.uri.toString())
       }

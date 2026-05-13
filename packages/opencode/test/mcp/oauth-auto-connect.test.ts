@@ -1,6 +1,6 @@
 import { test, expect, mock, beforeEach } from "bun:test"
 import { Effect } from "effect"
-import type { MCP as MCPNS } from "../../src/mcp/index"
+import { createServer } from "http" // kilocode_change
 
 // Mock UnauthorizedError to match the SDK's class
 class MockUnauthorizedError extends Error {
@@ -23,7 +23,7 @@ let simulateAuthFlow = true
 let connectSucceedsImmediately = false
 
 // Mock the transport constructors to simulate OAuth auto-auth on 401
-mock.module("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
   StreamableHTTPClientTransport: class MockStreamableHTTP {
     authProvider:
       | {
@@ -67,7 +67,7 @@ mock.module("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
   },
 }))
 
-mock.module("@modelcontextprotocol/sdk/client/sse.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/sse.js", () => ({
   SSEClientTransport: class MockSSE {
     constructor(url: URL, options?: { authProvider?: unknown }) {
       transportCalls.push({
@@ -83,7 +83,7 @@ mock.module("@modelcontextprotocol/sdk/client/sse.js", () => ({
 }))
 
 // Mock the MCP SDK Client
-mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
   Client: class MockClient {
     async connect(transport: { start: () => Promise<void> }) {
       await transport.start()
@@ -100,7 +100,7 @@ mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
 }))
 
 // Mock UnauthorizedError in the auth module so instanceof checks work
-mock.module("@modelcontextprotocol/sdk/client/auth.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/auth.js", () => ({
   UnauthorizedError: MockUnauthorizedError,
 }))
 
@@ -110,10 +110,40 @@ beforeEach(() => {
   connectSucceedsImmediately = false
 })
 
+// kilocode_change start
+async function occupy(port: number) {
+  const srv = createServer()
+  const bound = await new Promise<boolean>((resolve, reject) => {
+    const fail = (err: Error & { code?: string }) => {
+      srv.off("error", fail)
+      if (err.code === "EADDRINUSE") {
+        resolve(false)
+        return
+      }
+      reject(err)
+    }
+
+    srv.once("error", fail)
+    srv.listen(port, "127.0.0.1", () => {
+      srv.off("error", fail)
+      resolve(true)
+    })
+  })
+
+  return {
+    async [Symbol.asyncDispose]() {
+      if (!bound) return
+      await new Promise<void>((resolve) => srv.close(() => resolve()))
+    },
+  }
+}
+// kilocode_change end
+
 // Import modules after mocking
 const { MCP } = await import("../../src/mcp/index")
 const { Instance } = await import("../../src/project/instance")
 const { tmpdir } = await import("../fixture/fixture")
+const { OAUTH_CALLBACK_PORT } = await import("../../src/mcp/oauth-provider") // kilocode_change
 
 test("first connect to OAuth server shows needs_auth instead of failed", async () => {
   await using tmp = await tmpdir({
@@ -252,6 +282,10 @@ test("authenticate() stores a connected client when auth completes without redir
       )
     },
   })
+  // kilocode_change start
+  await using port = await occupy(OAUTH_CALLBACK_PORT)
+  void port
+  // kilocode_change end
 
   await Instance.provide({
     directory: tmp.path,

@@ -40,20 +40,6 @@ export type EventServerInstanceDisposed = {
   }
 }
 
-export type EventInstallationUpdated = {
-  type: "installation.updated"
-  properties: {
-    version: string
-  }
-}
-
-export type EventInstallationUpdateAvailable = {
-  type: "installation.update-available"
-  properties: {
-    version: string
-  }
-}
-
 export type EventServerConnected = {
   type: "server.connected"
   properties: {
@@ -88,6 +74,107 @@ export type EventFileWatcherUpdated = {
     file: string
     event: "add" | "change" | "unlink"
   }
+}
+
+export type QuestionOption = {
+  /**
+   * Display text (1-5 words, concise)
+   */
+  label: string
+  /**
+   * Explanation of choice
+   */
+  description: string
+  /**
+   * Optional i18n key for the label; clients translate and still reply with `label`
+   */
+  labelKey?: string
+  /**
+   * Optional i18n key for the description
+   */
+  descriptionKey?: string
+  /**
+   * Optional agent/mode name to pre-select in the UI when this option is picked
+   */
+  mode?: string
+}
+
+export type QuestionInfo = {
+  /**
+   * Complete question
+   */
+  question: string
+  /**
+   * Very short label (max 30 chars)
+   */
+  header: string
+  /**
+   * Available choices
+   */
+  options: Array<QuestionOption>
+  /**
+   * Allow selecting multiple choices
+   */
+  multiple?: boolean
+  /**
+   * Optional i18n key for the question text; clients fall back to `question` when missing
+   */
+  questionKey?: string
+  /**
+   * Optional i18n key for the header; clients fall back to `header` when missing
+   */
+  headerKey?: string
+  /**
+   * Allow typing a custom answer (default: true)
+   */
+  custom?: boolean
+}
+
+export type QuestionTool = {
+  messageID: string
+  callID: string
+}
+
+export type QuestionRequest = {
+  id: string
+  sessionID: string
+  /**
+   * Questions to ask
+   */
+  questions: Array<QuestionInfo>
+  /**
+   * Whether this question blocks prompt input (default: true)
+   */
+  blocking?: boolean
+  tool?: QuestionTool
+}
+
+export type EventQuestionAsked = {
+  type: "question.asked"
+  properties: QuestionRequest
+}
+
+export type QuestionAnswer = Array<string>
+
+export type QuestionReplied = {
+  sessionID: string
+  requestID: string
+  answers: Array<QuestionAnswer>
+}
+
+export type EventQuestionReplied = {
+  type: "question.replied"
+  properties: QuestionReplied
+}
+
+export type QuestionRejected = {
+  sessionID: string
+  requestID: string
+}
+
+export type EventQuestionRejected = {
+  type: "question.rejected"
+  properties: QuestionRejected
 }
 
 export type EventLspClientDiagnostics = {
@@ -224,21 +311,6 @@ export type EventMessagePartDelta = {
   }
 }
 
-export type EventSessionTurnOpen = {
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    reason: "completed" | "error" | "interrupted"
-  }
-}
-
 export type PermissionRequest = {
   id: string
   sessionID: string
@@ -265,6 +337,21 @@ export type EventPermissionReplied = {
     sessionID: string
     requestID: string
     reply: "once" | "always" | "reject"
+  }
+}
+
+export type EventSessionTurnOpen = {
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -360,85 +447,18 @@ export type EventSessionError = {
   }
 }
 
-export type QuestionOption = {
-  /**
-   * Display text (1-5 words, concise)
-   */
-  label: string
-  /**
-   * Explanation of choice
-   */
-  description: string
+export type EventInstallationUpdated = {
+  type: "installation.updated"
+  properties: {
+    version: string
+  }
 }
 
-export type QuestionInfo = {
-  /**
-   * Complete question
-   */
-  question: string
-  /**
-   * Very short label (max 30 chars)
-   */
-  header: string
-  /**
-   * Available choices
-   */
-  options: Array<QuestionOption>
-  /**
-   * Allow selecting multiple choices
-   */
-  multiple?: boolean
-  /**
-   * Allow typing a custom answer (default: true)
-   */
-  custom?: boolean
-}
-
-export type QuestionTool = {
-  messageID: string
-  callID: string
-}
-
-export type QuestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Questions to ask
-   */
-  questions: Array<QuestionInfo>
-  /**
-   * Whether this question blocks prompt input (default: true)
-   */
-  blocking?: boolean
-  tool?: QuestionTool
-}
-
-export type EventQuestionAsked = {
-  type: "question.asked"
-  properties: QuestionRequest
-}
-
-export type QuestionAnswer = Array<string>
-
-export type QuestionReplied = {
-  sessionID: string
-  requestID: string
-  answers: Array<QuestionAnswer>
-}
-
-export type EventQuestionReplied = {
-  type: "question.replied"
-  properties: QuestionReplied
-}
-
-export type QuestionRejected = {
-  sessionID: string
-  requestID: string
-}
-
-export type EventQuestionRejected = {
-  type: "question.rejected"
-  properties: QuestionRejected
+export type EventInstallationUpdateAvailable = {
+  type: "installation.update-available"
+  properties: {
+    version: string
+  }
 }
 
 export type Todo = {
@@ -498,45 +518,32 @@ export type EventSessionIdle = {
   }
 }
 
-export type SuggestionAction = {
-  /**
-   * Button or option label (1-5 words)
-   */
-  label: string
-  /**
-   * Brief explanation of what this action does
-   */
-  description?: string
-  /**
-   * Synthetic user prompt to inject when this action is accepted
-   */
-  prompt: string
-}
-
-export type SuggestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Suggestion text shown to the user
-   */
-  text: string
-  /**
-   * Available actions the user can take
-   */
-  actions: Array<SuggestionAction>
-  /**
-   * Whether this suggestion blocks prompt input (default: true)
-   */
-  blocking?: boolean
-  tool?: {
-    messageID: string
-    callID: string
-  }
-}
-
 export type EventSuggestionShown = {
   type: "suggestion.shown"
-  properties: SuggestionRequest
+  properties: {
+    id: string
+    sessionID: string
+    text: string
+    actions: Array<{
+      /**
+       * Button or option label (1-5 words)
+       */
+      label: string
+      /**
+       * Brief explanation of what this action does
+       */
+      description?: string
+      /**
+       * Synthetic user prompt to inject when this action is accepted
+       */
+      prompt: string
+    }>
+    blocking?: boolean
+    tool?: {
+      messageID: string
+      callID: string
+    }
+  }
 }
 
 export type EventSuggestionAccepted = {
@@ -545,7 +552,20 @@ export type EventSuggestionAccepted = {
     sessionID: string
     requestID: string
     index: number
-    action: SuggestionAction
+    action: {
+      /**
+       * Button or option label (1-5 words)
+       */
+      label: string
+      /**
+       * Brief explanation of what this action does
+       */
+      description?: string
+      /**
+       * Synthetic user prompt to inject when this action is accepted
+       */
+      prompt: string
+    }
   }
 }
 
@@ -574,6 +594,30 @@ export type EventCommandExecuted = {
   }
 }
 
+export type EventKilocodeAgentManagerStart = {
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      /**
+       * Initial prompt to send to the new session
+       */
+      prompt?: string
+      /**
+       * Short display name for the Agent Manager card
+       */
+      name?: string
+      /**
+       * Git branch name seed for worktree mode
+       */
+      branchName?: string
+    }>
+  }
+}
+
 export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
@@ -586,6 +630,38 @@ export type EventKiloSessionsRemoteStatusChanged = {
   properties: {
     enabled: boolean
     connected: boolean
+  }
+}
+
+export type EventWorkspaceReady = {
+  type: "workspace.ready"
+  properties: {
+    name: string
+  }
+}
+
+export type EventWorkspaceFailed = {
+  type: "workspace.failed"
+  properties: {
+    message: string
+  }
+}
+
+export type EventWorkspaceRestore = {
+  type: "workspace.restore"
+  properties: {
+    workspaceID: string
+    sessionID: string
+    total: number
+    step: number
+  }
+}
+
+export type EventWorkspaceStatus = {
+  type: "workspace.status"
+  properties: {
+    workspaceID: string
+    status: "connected" | "connecting" | "disconnected" | "error"
   }
 }
 
@@ -640,29 +716,6 @@ export type EventPtyDeleted = {
   type: "pty.deleted"
   properties: {
     id: string
-  }
-}
-
-export type EventWorkspaceReady = {
-  type: "workspace.ready"
-  properties: {
-    name: string
-  }
-}
-
-export type EventWorkspaceFailed = {
-  type: "workspace.failed"
-  properties: {
-    message: string
-  }
-}
-
-export type EventWorkspaceStatus = {
-  type: "workspace.status"
-  properties: {
-    workspaceID: string
-    status: "connected" | "connecting" | "disconnected" | "error"
-    error?: string
   }
 }
 
@@ -1019,6 +1072,7 @@ export type CompactionPart = {
   type: "compaction"
   auto: boolean
   overflow?: boolean
+  tail_start_id?: string
 }
 
 export type Part =
@@ -1053,6 +1107,13 @@ export type EventMessagePartRemoved = {
   }
 }
 
+export type SnapshotSummaryFileDiff = {
+  file: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 export type PermissionAction = "allow" | "deny" | "ask"
 
 export type PermissionRule = {
@@ -1069,17 +1130,13 @@ export type Session = {
   projectID: string
   workspaceID?: string
   directory: string
+  path?: string
   parentID?: string
   summary?: {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<{
-      file: string
-      additions: number
-      deletions: number
-      status?: "added" | "deleted" | "modified"
-    }>
+    diffs?: Array<SnapshotSummaryFileDiff>
   }
   share?: {
     url: string
@@ -1122,6 +1179,23 @@ export type EventSessionDeleted = {
   properties: {
     sessionID: string
     info: Session
+  }
+}
+
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
+export type EventIndexingStatus = {
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
   }
 }
 
@@ -1196,36 +1270,32 @@ export type SyncEventSessionUpdated = {
   data: {
     sessionID: string
     info: {
-      id: string | null
-      slug: string | null
-      projectID: string | null
-      workspaceID: string | null
-      directory: string | null
-      parentID: string | null
-      summary: {
+      id?: string | null
+      slug?: string | null
+      projectID?: string | null
+      workspaceID?: string | null
+      directory?: string | null
+      path?: string | null
+      parentID?: string | null
+      summary?: {
         additions: number
         deletions: number
         files: number
-        diffs?: Array<{
-          file: string
-          additions: number
-          deletions: number
-          status?: "added" | "deleted" | "modified"
-        }>
+        diffs?: Array<SnapshotSummaryFileDiff>
       } | null
       share?: {
-        url: string | null
+        url?: string | null
       }
-      title: string | null
-      version: string | null
+      title?: string | null
+      version?: string | null
       time?: {
-        created: number | null
-        updated: number | null
-        compacting: number | null
-        archived: number | null
+        created?: number | null
+        updated?: number | null
+        compacting?: number | null
+        archived?: number | null
       }
-      permission: PermissionRuleset | null
-      revert: {
+      permission?: PermissionRuleset | null
+      revert?: {
         messageID: string
         partID?: string
         snapshot?: string
@@ -1254,13 +1324,14 @@ export type GlobalEvent = {
   payload:
     | EventProjectUpdated
     | EventServerInstanceDisposed
-    | EventInstallationUpdated
-    | EventInstallationUpdateAvailable
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
     | EventFileEdited
     | EventFileWatcherUpdated
+    | EventQuestionAsked
+    | EventQuestionReplied
+    | EventQuestionRejected
     | EventLspClientDiagnostics
     | EventLspUpdated
     | EventTuiPromptAppend
@@ -1274,15 +1345,14 @@ export type GlobalEvent = {
     | EventSessionNetworkRejected
     | EventSessionNetworkRestored
     | EventMessagePartDelta
-    | EventSessionTurnOpen
-    | EventSessionTurnClose
     | EventPermissionAsked
     | EventPermissionReplied
+    | EventSessionTurnOpen
+    | EventSessionTurnClose
     | EventSessionDiff
     | EventSessionError
-    | EventQuestionAsked
-    | EventQuestionReplied
-    | EventQuestionRejected
+    | EventInstallationUpdated
+    | EventInstallationUpdateAvailable
     | EventTodoUpdated
     | EventSessionStatus
     | EventSessionIdle
@@ -1291,17 +1361,19 @@ export type GlobalEvent = {
     | EventSuggestionDismissed
     | EventSessionCompacted
     | EventCommandExecuted
+    | EventKilocodeAgentManagerStart
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
+    | EventWorkspaceReady
+    | EventWorkspaceFailed
+    | EventWorkspaceRestore
+    | EventWorkspaceStatus
     | EventWorktreeReady
     | EventWorktreeFailed
     | EventPtyCreated
     | EventPtyUpdated
     | EventPtyExited
     | EventPtyDeleted
-    | EventWorkspaceReady
-    | EventWorkspaceFailed
-    | EventWorkspaceStatus
     | EventMessageUpdated
     | EventMessageRemoved
     | EventMessagePartUpdated
@@ -1309,6 +1381,7 @@ export type GlobalEvent = {
     | EventSessionCreated
     | EventSessionUpdated
     | EventSessionDeleted
+    | EventIndexingStatus
     | SyncEventMessageUpdated
     | SyncEventMessageRemoved
     | SyncEventMessagePartUpdated
@@ -1349,6 +1422,136 @@ export type ServerConfig = {
   cors?: Array<string>
 }
 
+/**
+ * Codebase indexing configuration
+ */
+export type IndexingConfig = {
+  /**
+   * Enable codebase indexing
+   */
+  enabled?: boolean
+  /**
+   * Embedding provider to use for codebase indexing
+   */
+  provider?:
+    | "kilo"
+    | "openai"
+    | "ollama"
+    | "openai-compatible"
+    | "gemini"
+    | "mistral"
+    | "vercel-ai-gateway"
+    | "bedrock"
+    | "openrouter"
+    | "voyage"
+  /**
+   * Embedding model ID (uses provider default if omitted)
+   */
+  model?: string
+  /**
+   * Override embedding vector dimension (auto-detected from model if omitted)
+   */
+  dimension?: number
+  /**
+   * Vector store backend (default: qdrant)
+   */
+  vectorStore?: "lancedb" | "qdrant"
+  /**
+   * Kilo-hosted embedding provider options
+   */
+  kilo?: {
+    apiKey?: string
+    baseUrl?: string
+    organizationId?: string
+  }
+  /**
+   * OpenAI embedding provider options
+   */
+  openai?: {
+    apiKey?: string
+  }
+  /**
+   * Ollama embedding provider options
+   */
+  ollama?: {
+    baseUrl?: string
+  }
+  /**
+   * OpenAI-compatible embedding provider options
+   */
+  "openai-compatible"?: {
+    baseUrl?: string
+    apiKey?: string
+  }
+  /**
+   * Gemini embedding provider options
+   */
+  gemini?: {
+    apiKey?: string
+  }
+  /**
+   * Mistral embedding provider options
+   */
+  mistral?: {
+    apiKey?: string
+  }
+  /**
+   * Vercel AI Gateway embedding provider options
+   */
+  "vercel-ai-gateway"?: {
+    apiKey?: string
+  }
+  /**
+   * AWS Bedrock embedding provider options
+   */
+  bedrock?: {
+    region?: string
+    profile?: string
+  }
+  /**
+   * OpenRouter embedding provider options
+   */
+  openrouter?: {
+    apiKey?: string
+    specificProvider?: string
+  }
+  /**
+   * Voyage embedding provider options
+   */
+  voyage?: {
+    apiKey?: string
+  }
+  /**
+   * Qdrant vector store connection options
+   */
+  qdrant?: {
+    url?: string
+    apiKey?: string
+  }
+  /**
+   * LanceDB vector store options
+   */
+  lancedb?: {
+    directory?: string
+  }
+  /**
+   * Minimum similarity score for search results (default: 0.4)
+   */
+  searchMinScore?: number
+  /**
+   * Maximum number of search results (default: 50)
+   */
+  searchMaxResults?: number
+  /**
+   * Number of code segments per embedding batch (default: 60)
+   */
+  embeddingBatchSize?: number
+  /**
+   * Maximum retry attempts for failed embedding batches (default: 3)
+   */
+  scannerMaxBatchRetries?: number
+}
+
 export type PermissionActionConfig = "ask" | "allow" | "deny" | null
 
 export type PermissionObjectConfig = {
@@ -1358,8 +1561,8 @@ export type PermissionObjectConfig = {
 export type PermissionRuleConfig = PermissionActionConfig | PermissionObjectConfig
 
 export type PermissionConfig =
+  | PermissionActionConfig
   | {
-      __originalKeys?: Array<string>
       read?: PermissionRuleConfig
       edit?: PermissionRuleConfig
       glob?: PermissionRuleConfig
@@ -1372,13 +1575,12 @@ export type PermissionConfig =
       question?: PermissionActionConfig
       webfetch?: PermissionActionConfig
       websearch?: PermissionActionConfig
-      codesearch?: PermissionActionConfig
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
-      [key: string]: PermissionRuleConfig | Array<string> | PermissionActionConfig | undefined
+      agent_manager?: PermissionRuleConfig
+      [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
-  | PermissionActionConfig
 
 export type AgentConfig = {
   model?: string | null
@@ -1386,9 +1588,9 @@ export type AgentConfig = {
    * Default model variant for this agent (applies only when using the agent's configured model).
    */
   variant?: string
-  temperature?: number
-  top_p?: number
-  prompt?: string
+  temperature?: number | null
+  top_p?: number | null
+  prompt?: string | null
   /**
    * @deprecated Use 'permission' field instead
    */
@@ -1399,7 +1601,7 @@ export type AgentConfig = {
   /**
    * Description of when to use the agent
    */
-  description?: string
+  description?: string | null
   mode?: "subagent" | "primary" | "all"
   /**
    * Hide this subagent from the @ autocomplete menu (default: false, only applies to mode: subagent)
@@ -1415,7 +1617,7 @@ export type AgentConfig = {
   /**
    * Maximum number of agentic iterations before forcing text-only response
    */
-  steps?: number
+  steps?: number | null
   /**
    * @deprecated Use 'steps' field instead.
    */
@@ -1427,10 +1629,17 @@ export type AgentConfig = {
     | null
     | string
     | number
+    | null
+    | number
+    | null
+    | string
+    | null
     | {
         [key: string]: boolean
       }
     | boolean
+    | string
+    | null
     | "subagent"
     | "primary"
     | "all"
@@ -1445,6 +1654,8 @@ export type AgentConfig = {
     | "warning"
     | "error"
     | "info"
+    | number
+    | null
     | number
     | PermissionConfig
     | undefined
@@ -1470,7 +1681,7 @@ export type ProviderConfig = {
      */
     setCacheKey?: boolean
     /**
-     * Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.
+     * Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.
      */
     timeout?: number | false
     /**
@@ -1484,6 +1695,7 @@ export type ProviderConfig = {
       id?: string
       name?: string
       family?: string
+      prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
       release_date?: string
       attachment?: boolean
       reasoning?: boolean
@@ -1537,9 +1749,9 @@ export type ProviderConfig = {
            */
           disabled?: boolean
           [key: string]: unknown | boolean | undefined
-        }
+        } | null
       }
-    }
+    } | null
   }
 }
 
@@ -1626,6 +1838,10 @@ export type Config = {
    * JSON schema reference for configuration validation
    */
   $schema?: string
+  /**
+   * Default shell to use for terminal and bash tool
+   */
+  shell?: string
   logLevel?: LogLevel
   server?: ServerConfig
   /**
@@ -1678,10 +1894,6 @@ export type Config = {
    */
   autoshare?: boolean
   /**
-   * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
-   */
-  remote_control?: boolean
-  /**
    * Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications
    */
   autoupdate?: boolean | "notify"
@@ -1694,6 +1906,19 @@ export type Config = {
    */
   enabled_providers?: Array<string>
   /**
+   * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
+   */
+  remote_control?: boolean
+  /**
+   * Automatically collapse reasoning blocks after the agent finishes writing them
+   */
+  auto_collapse_reasoning?: boolean
+  indexing?: IndexingConfig
+  /**
+   * Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI
+   */
+  terminal_command_display?: "expanded" | "collapsed"
+  /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
   model?: string | null
@@ -1704,7 +1929,7 @@ export type Config = {
   /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
-  default_agent?: string
+  default_agent?: string | null
   /**
    * Custom username to display in conversations instead of system username
    */
@@ -1737,7 +1962,7 @@ export type Config = {
    * Custom provider configurations and model overrides
    */
   provider?: {
-    [key: string]: ProviderConfig
+    [key: string]: ProviderConfig | null
   }
   /**
    * MCP (Model Context Protocol) server configurations
@@ -1751,7 +1976,7 @@ export type Config = {
         }
   }
   formatter?:
-    | false
+    | boolean
     | {
         [key: string]: {
           disabled?: boolean
@@ -1763,7 +1988,7 @@ export type Config = {
         }
       }
   lsp?:
-    | false
+    | boolean
     | {
         [key: string]:
           | {
@@ -1805,6 +2030,19 @@ export type Config = {
      */
     prompt?: string
   }
+  /**
+   * Thresholds for truncating tool output. When output exceeds either limit, the full text is written to the truncation directory and a preview is returned.
+   */
+  tool_output?: {
+    /**
+     * Maximum lines of tool output before it is truncated and saved to disk (default: 2000)
+     */
+    max_lines?: number
+    /**
+     * Maximum bytes of tool output before it is truncated and saved to disk (default: 51200)
+     */
+    max_bytes?: number
+  }
   compaction?: {
     /**
      * Enable automatic compaction when context is full (default: true)
@@ -1814,6 +2052,14 @@ export type Config = {
      * Enable pruning of old tool outputs (default: true)
      */
     prune?: boolean
+    /**
+     * Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)
+     */
+    tail_turns?: number
+    /**
+     * Maximum number of tokens from recent turns to preserve verbatim after compaction
+     */
+    preserve_recent_tokens?: number
     /**
      * Token buffer for compaction. Leaves enough window to avoid overflow during compaction.
      */
@@ -1829,6 +2075,14 @@ export type Config = {
      * Enable AI-powered codebase search
      */
     codebase_search?: boolean
+    /**
+     * Enable semantic codebase indexing and the semantic_search tool
+     */
+    semantic_indexing?: boolean
+    /**
+     * Enable the VS Code Agent Manager orchestration tool
+     */
+    agent_manager_tool?: boolean
     /**
      * Enable telemetry. Set to false to opt-out.
      */
@@ -1880,6 +2134,16 @@ export type WellKnownAuth = {
 }
 
 export type Auth = OAuth | ApiAuth | WellKnownAuth
+
+export type Workspace = {
+  id: string
+  type: string
+  name: string
+  branch: string | null
+  directory: string | null
+  extra: unknown | null
+  projectID: string
+}
 
 export type NotFoundError = {
   name: "NotFoundError"
@@ -1958,9 +2222,9 @@ export type Model = {
     }
   }
   recommendedIndex?: number
-  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo" | "ling" | "gpt55"
   isFree?: boolean
-  ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
+  ai_sdk_provider?: "alibaba" | "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
 
 export type Provider = {
@@ -1977,6 +2241,12 @@ export type Provider = {
   }
 }
 
+export type ConsoleState = {
+  consoleManagedProviders: Array<string>
+  activeOrgName?: string
+  switchableOrgCount: number
+}
+
 export type ToolIds = Array<string>
 
 export type ToolListItem = {
@@ -1986,16 +2256,6 @@ export type ToolListItem = {
 }
 
 export type ToolList = Array<ToolListItem>
-
-export type Workspace = {
-  id: string
-  type: string
-  name: string
-  branch: string | null
-  directory: string | null
-  extra: unknown | null
-  projectID: string
-}
 
 export type Worktree = {
   name: string
@@ -2045,17 +2305,13 @@ export type GlobalSession = {
   projectID: string
   workspaceID?: string
   directory: string
+  path?: string
   parentID?: string
   summary?: {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<{
-      file: string
-      additions: number
-      deletions: number
-      status?: "added" | "deleted" | "modified"
-    }>
+    diffs?: Array<SnapshotSummaryFileDiff>
   }
   share?: {
     url: string
@@ -2223,13 +2479,14 @@ export type File = {
 export type Event =
   | EventProjectUpdated
   | EventServerInstanceDisposed
-  | EventInstallationUpdated
-  | EventInstallationUpdateAvailable
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
   | EventFileEdited
   | EventFileWatcherUpdated
+  | EventQuestionAsked
+  | EventQuestionReplied
+  | EventQuestionRejected
   | EventLspClientDiagnostics
   | EventLspUpdated
   | EventTuiPromptAppend
@@ -2243,15 +2500,14 @@ export type Event =
   | EventSessionNetworkRejected
   | EventSessionNetworkRestored
   | EventMessagePartDelta
-  | EventSessionTurnOpen
-  | EventSessionTurnClose
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
   | EventSessionDiff
   | EventSessionError
-  | EventQuestionAsked
-  | EventQuestionReplied
-  | EventQuestionRejected
+  | EventInstallationUpdated
+  | EventInstallationUpdateAvailable
   | EventTodoUpdated
   | EventSessionStatus
   | EventSessionIdle
@@ -2260,17 +2516,19 @@ export type Event =
   | EventSuggestionDismissed
   | EventSessionCompacted
   | EventCommandExecuted
+  | EventKilocodeAgentManagerStart
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
+  | EventWorkspaceReady
+  | EventWorkspaceFailed
+  | EventWorkspaceRestore
+  | EventWorkspaceStatus
   | EventWorktreeReady
   | EventWorktreeFailed
   | EventPtyCreated
   | EventPtyUpdated
   | EventPtyExited
   | EventPtyDeleted
-  | EventWorkspaceReady
-  | EventWorkspaceFailed
-  | EventWorkspaceStatus
   | EventMessageUpdated
   | EventMessageRemoved
   | EventMessagePartUpdated
@@ -2278,6 +2536,7 @@ export type Event =
   | EventSessionCreated
   | EventSessionUpdated
   | EventSessionDeleted
+  | EventIndexingStatus
 
 export type McpStatusConnected = {
   status: "connected"
@@ -2307,6 +2566,10 @@ export type McpStatus =
   | McpStatusFailed
   | McpStatusNeedsAuth
   | McpStatusNeedsClientRegistration
+
+export type McpUnsupportedOAuthError = {
+  error: string
+}
 
 export type Path = {
   home: string
@@ -2375,6 +2638,42 @@ export type FormatterStatus = {
   name: string
   extensions: Array<string>
   enabled: boolean
+}
+
+export type SuggestionAction = {
+  /**
+   * Button or option label (1-5 words)
+   */
+  label: string
+  /**
+   * Brief explanation of what this action does
+   */
+  description?: string
+  /**
+   * Synthetic user prompt to inject when this action is accepted
+   */
+  prompt: string
+}
+
+export type SuggestionRequest = {
+  id: string
+  sessionID: string
+  /**
+   * Suggestion text shown to the user
+   */
+  text: string
+  /**
+   * Available actions the user can take
+   */
+  actions: Array<SuggestionAction>
+  /**
+   * Whether this suggestion blocks prompt input. When unset, the TUI treats the suggestion as blocking for backwards compatibility; the built-in suggest tool always sets this to false.
+   */
+  blocking?: boolean
+  tool?: {
+    messageID: string
+    callID: string
+  }
 }
 
 export type GlobalHealthData = {
@@ -2605,6 +2904,176 @@ export type AppLogResponses = {
 
 export type AppLogResponse = AppLogResponses[keyof AppLogResponses]
 
+export type ExperimentalWorkspaceAdapterListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/adapter"
+}
+
+export type ExperimentalWorkspaceAdapterListResponses = {
+  /**
+   * Workspace adapters
+   */
+  200: Array<{
+    type: string
+    name: string
+    description: string
+  }>
+}
+
+export type ExperimentalWorkspaceAdapterListResponse =
+  ExperimentalWorkspaceAdapterListResponses[keyof ExperimentalWorkspaceAdapterListResponses]
+
+export type ExperimentalWorkspaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace"
+}
+
+export type ExperimentalWorkspaceListResponses = {
+  /**
+   * Workspaces
+   */
+  200: Array<Workspace>
+}
+
+export type ExperimentalWorkspaceListResponse =
+  ExperimentalWorkspaceListResponses[keyof ExperimentalWorkspaceListResponses]
+
+export type ExperimentalWorkspaceCreateData = {
+  body?: {
+    id?: string
+    type: string
+    branch: string | null
+    extra: unknown | null
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace"
+}
+
+export type ExperimentalWorkspaceCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalWorkspaceCreateError =
+  ExperimentalWorkspaceCreateErrors[keyof ExperimentalWorkspaceCreateErrors]
+
+export type ExperimentalWorkspaceCreateResponses = {
+  /**
+   * Workspace created
+   */
+  200: Workspace
+}
+
+export type ExperimentalWorkspaceCreateResponse =
+  ExperimentalWorkspaceCreateResponses[keyof ExperimentalWorkspaceCreateResponses]
+
+export type ExperimentalWorkspaceStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/status"
+}
+
+export type ExperimentalWorkspaceStatusResponses = {
+  /**
+   * Workspace status
+   */
+  200: Array<{
+    workspaceID: string
+    status: "connected" | "connecting" | "disconnected" | "error"
+  }>
+}
+
+export type ExperimentalWorkspaceStatusResponse =
+  ExperimentalWorkspaceStatusResponses[keyof ExperimentalWorkspaceStatusResponses]
+
+export type ExperimentalWorkspaceRemoveData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/{id}"
+}
+
+export type ExperimentalWorkspaceRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalWorkspaceRemoveError =
+  ExperimentalWorkspaceRemoveErrors[keyof ExperimentalWorkspaceRemoveErrors]
+
+export type ExperimentalWorkspaceRemoveResponses = {
+  /**
+   * Workspace removed
+   */
+  200: Workspace
+}
+
+export type ExperimentalWorkspaceRemoveResponse =
+  ExperimentalWorkspaceRemoveResponses[keyof ExperimentalWorkspaceRemoveResponses]
+
+export type ExperimentalWorkspaceSessionRestoreData = {
+  body?: {
+    sessionID: string
+  }
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/{id}/session-restore"
+}
+
+export type ExperimentalWorkspaceSessionRestoreErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalWorkspaceSessionRestoreError =
+  ExperimentalWorkspaceSessionRestoreErrors[keyof ExperimentalWorkspaceSessionRestoreErrors]
+
+export type ExperimentalWorkspaceSessionRestoreResponses = {
+  /**
+   * Session replay started
+   */
+  200: {
+    total: number
+  }
+}
+
+export type ExperimentalWorkspaceSessionRestoreResponse =
+  ExperimentalWorkspaceSessionRestoreResponses[keyof ExperimentalWorkspaceSessionRestoreResponses]
+
 export type ProjectListData = {
   body?: never
   path?: never
@@ -2708,6 +3177,29 @@ export type ProjectUpdateResponses = {
 }
 
 export type ProjectUpdateResponse = ProjectUpdateResponses[keyof ProjectUpdateResponses]
+
+export type PtyShellsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/pty/shells"
+}
+
+export type PtyShellsResponses = {
+  /**
+   * List of shells
+   */
+  200: Array<{
+    path: string
+    name: string
+    acceptable: boolean
+  }>
+}
+
+export type PtyShellsResponse = PtyShellsResponses[keyof PtyShellsResponses]
 
 export type PtyListData = {
   body?: never
@@ -2998,11 +3490,7 @@ export type ExperimentalConsoleGetResponses = {
   /**
    * Active Console provider metadata
    */
-  200: {
-    consoleManagedProviders: Array<string>
-    activeOrgName?: string
-    switchableOrgCount: number
-  }
+  200: ConsoleState
 }
 
 export type ExperimentalConsoleGetResponse = ExperimentalConsoleGetResponses[keyof ExperimentalConsoleGetResponses]
@@ -3116,141 +3604,6 @@ export type ToolListResponses = {
 }
 
 export type ToolListResponse = ToolListResponses[keyof ToolListResponses]
-
-export type ExperimentalWorkspaceAdaptorListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace/adaptor"
-}
-
-export type ExperimentalWorkspaceAdaptorListResponses = {
-  /**
-   * Workspace adaptors
-   */
-  200: Array<{
-    type: string
-    name: string
-    description: string
-  }>
-}
-
-export type ExperimentalWorkspaceAdaptorListResponse =
-  ExperimentalWorkspaceAdaptorListResponses[keyof ExperimentalWorkspaceAdaptorListResponses]
-
-export type ExperimentalWorkspaceListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace"
-}
-
-export type ExperimentalWorkspaceListResponses = {
-  /**
-   * Workspaces
-   */
-  200: Array<Workspace>
-}
-
-export type ExperimentalWorkspaceListResponse =
-  ExperimentalWorkspaceListResponses[keyof ExperimentalWorkspaceListResponses]
-
-export type ExperimentalWorkspaceCreateData = {
-  body?: {
-    id?: string
-    type: string
-    branch: string | null
-    extra: unknown | null
-  }
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace"
-}
-
-export type ExperimentalWorkspaceCreateErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type ExperimentalWorkspaceCreateError =
-  ExperimentalWorkspaceCreateErrors[keyof ExperimentalWorkspaceCreateErrors]
-
-export type ExperimentalWorkspaceCreateResponses = {
-  /**
-   * Workspace created
-   */
-  200: Workspace
-}
-
-export type ExperimentalWorkspaceCreateResponse =
-  ExperimentalWorkspaceCreateResponses[keyof ExperimentalWorkspaceCreateResponses]
-
-export type ExperimentalWorkspaceStatusData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace/status"
-}
-
-export type ExperimentalWorkspaceStatusResponses = {
-  /**
-   * Workspace status
-   */
-  200: Array<{
-    workspaceID: string
-    status: "connected" | "connecting" | "disconnected" | "error"
-    error?: string
-  }>
-}
-
-export type ExperimentalWorkspaceStatusResponse =
-  ExperimentalWorkspaceStatusResponses[keyof ExperimentalWorkspaceStatusResponses]
-
-export type ExperimentalWorkspaceRemoveData = {
-  body?: never
-  path: {
-    id: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace/{id}"
-}
-
-export type ExperimentalWorkspaceRemoveErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type ExperimentalWorkspaceRemoveError =
-  ExperimentalWorkspaceRemoveErrors[keyof ExperimentalWorkspaceRemoveErrors]
-
-export type ExperimentalWorkspaceRemoveResponses = {
-  /**
-   * Workspace removed
-   */
-  200: Workspace
-}
-
-export type ExperimentalWorkspaceRemoveResponse =
-  ExperimentalWorkspaceRemoveResponses[keyof ExperimentalWorkspaceRemoveResponses]
 
 export type WorktreeRemoveData = {
   body?: WorktreeRemoveInput
@@ -3475,7 +3828,7 @@ export type ExperimentalSessionListData = {
     /**
      * Only return root sessions (no parentID)
      */
-    roots?: boolean
+    roots?: boolean | "true" | "false"
     /**
      * Filter sessions updated on or after this timestamp (milliseconds since epoch)
      */
@@ -3495,7 +3848,7 @@ export type ExperimentalSessionListData = {
     /**
      * Include archived sessions (default false)
      */
-    archived?: boolean
+    archived?: boolean | "true" | "false"
   }
   url: "/experimental/session"
 }
@@ -3536,14 +3889,22 @@ export type SessionListData = {
   path?: never
   query?: {
     /**
-     * Filter sessions by project directory
+     * Filter sessions by directory
      */
     directory?: string
     workspace?: string
     /**
+     * List all sessions for the current project
+     */
+    scope?: "project"
+    /**
+     * Filter sessions by project-relative path
+     */
+    path?: string
+    /**
      * Only return root sessions (no parentID)
      */
-    roots?: boolean
+    roots?: boolean | "true" | "false"
     /**
      * Filter sessions updated on or after this timestamp (milliseconds since epoch)
      */
@@ -4771,6 +5132,7 @@ export type ProviderListResponses = {
       [key: string]: string
     }
     connected: Array<string>
+    failed: Array<string>
   }
 }
 
@@ -4882,6 +5244,104 @@ export type ProviderOauthCallbackResponses = {
 }
 
 export type ProviderOauthCallbackResponse = ProviderOauthCallbackResponses[keyof ProviderOauthCallbackResponses]
+
+export type SyncStartData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sync/start"
+}
+
+export type SyncStartResponses = {
+  /**
+   * Workspace sync started
+   */
+  200: boolean
+}
+
+export type SyncStartResponse = SyncStartResponses[keyof SyncStartResponses]
+
+export type SyncReplayData = {
+  body?: {
+    directory: string
+    events: Array<{
+      id: string
+      aggregateID: string
+      seq: number
+      type: string
+      data: {
+        [key: string]: unknown
+      }
+    }>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sync/replay"
+}
+
+export type SyncReplayErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SyncReplayError = SyncReplayErrors[keyof SyncReplayErrors]
+
+export type SyncReplayResponses = {
+  /**
+   * Replayed sync events
+   */
+  200: {
+    sessionID: string
+  }
+}
+
+export type SyncReplayResponse = SyncReplayResponses[keyof SyncReplayResponses]
+
+export type SyncHistoryListData = {
+  body?: {
+    [key: string]: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sync/history"
+}
+
+export type SyncHistoryListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SyncHistoryListError = SyncHistoryListErrors[keyof SyncHistoryListErrors]
+
+export type SyncHistoryListResponses = {
+  /**
+   * Sync events
+   */
+  200: Array<{
+    id: string
+    aggregate_id: string
+    seq: number
+    type: string
+    data: {
+      [key: string]: unknown
+    }
+  }>
+}
+
+export type SyncHistoryListResponse = SyncHistoryListResponses[keyof SyncHistoryListResponses]
 
 export type FindTextData = {
   body?: never
@@ -5140,9 +5600,9 @@ export type McpAuthStartData = {
 
 export type McpAuthStartErrors = {
   /**
-   * Bad request
+   * MCP server does not support OAuth
    */
-  400: BadRequestError
+  400: McpUnsupportedOAuthError
   /**
    * Not found
    */
@@ -5218,9 +5678,9 @@ export type McpAuthAuthenticateData = {
 
 export type McpAuthAuthenticateErrors = {
   /**
-   * Bad request
+   * MCP server does not support OAuth
    */
-  400: BadRequestError
+  400: McpUnsupportedOAuthError
   /**
    * Not found
    */
@@ -5888,6 +6348,25 @@ export type NetworkRejectResponses = {
 
 export type NetworkRejectResponse = NetworkRejectResponses[keyof NetworkRejectResponses]
 
+export type IndexingStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/indexing/status"
+}
+
+export type IndexingStatusResponses = {
+  /**
+   * Indexing status
+   */
+  200: IndexingStatus
+}
+
+export type IndexingStatusResponse = IndexingStatusResponses[keyof IndexingStatusResponses]
+
 export type SuggestionListData = {
   body?: never
   path?: never
@@ -6018,6 +6497,36 @@ export type TelemetryCaptureResponses = {
 }
 
 export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
+
+export type TelemetrySetEnabledData = {
+  body?: {
+    enabled: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/telemetry/setEnabled"
+}
+
+export type TelemetrySetEnabledErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type TelemetrySetEnabledError = TelemetrySetEnabledErrors[keyof TelemetrySetEnabledErrors]
+
+export type TelemetrySetEnabledResponses = {
+  /**
+   * State updated
+   */
+  200: boolean
+}
+
+export type TelemetrySetEnabledResponse = TelemetrySetEnabledResponses[keyof TelemetrySetEnabledResponses]
 
 export type RemoteEnableData = {
   body?: never
@@ -6722,6 +7231,7 @@ export type KiloFimResponses = {
       delta?: {
         content?: string
       }
+      text?: string
     }>
     usage?: {
       prompt_tokens?: number
@@ -6846,7 +7356,16 @@ export type KiloClawStatusResponses = {
    * Instance status
    */
   200: {
-    status: "provisioned" | "starting" | "restarting" | "running" | "stopped" | "destroying" | null
+    status:
+      | "provisioned"
+      | "starting"
+      | "restarting"
+      | "recovering"
+      | "running"
+      | "stopped"
+      | "destroying"
+      | "restoring"
+      | null
     sandboxId?: string
     flyRegion?: string
     machineSize?: {
@@ -6859,6 +7378,7 @@ export type KiloClawStatusResponses = {
     channelCount?: number
     secretCount?: number
     userId?: string
+    botName?: string | null
   }
 }
 
@@ -6876,13 +7396,13 @@ export type KiloClawChatCredentialsData = {
 
 export type KiloClawChatCredentialsResponses = {
   /**
-   * Stream Chat credentials or null
+   * Kilo Chat credentials or null
    */
   200: {
-    apiKey: string
-    userId: string
-    userToken: string
-    channelId: string
+    token: string
+    expiresAt: string
+    kiloChatUrl: string
+    eventServiceUrl: string
   } | null
 }
 

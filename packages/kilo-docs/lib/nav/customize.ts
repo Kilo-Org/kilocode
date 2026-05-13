@@ -37,7 +37,6 @@ export const CustomizeNav: NavSection[] = [
       {
         href: "/customize/context/codebase-indexing",
         children: "Codebase Indexing",
-        platform: "legacy",
       },
       {
         href: "/customize/context/context-condensing",

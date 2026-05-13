@@ -13,12 +13,12 @@ This page covers everything you can do from the KiloClaw dashboard. For getting 
 
 Your instance is always in one of these states as indicated by the status label at the top of your dashboard:
 
-| Status          | Label           | Meaning                                                       |
-| --------------- | --------------- | ------------------------------------------------------------- |
-| **Running**     | Machine Online  | Your agent is online and reachable                            |
-| **Stopped**     | Machine Stopped | The machine is off, but all your files and data are preserved |
-| **Provisioned** | Provisioned     | Your instance has been created but never started              |
-| **Destroying**  | Destroying      | The instance is being permanently deleted                     |
+| Status | Label | Meaning |
+|---|---|---|
+| **Running** | Machine Online | Your agent is online and reachable |
+| **Stopped** | Machine Stopped | The machine is off, but all your files and data are preserved |
+| **Provisioned** | Provisioned | Your instance has been created but never started |
+| **Destroying** | Destroying | The instance is being permanently deleted |
 
 ## Instance Controls
 
@@ -168,23 +168,23 @@ The dashboard shows recent KiloClaw platform updates. Each entry is tagged as a 
 
 ## Instance Lifecycle
 
-| Action                 | What Happens                                                                | Data Preserved? |
-| ---------------------- | --------------------------------------------------------------------------- | --------------- |
-| **Create & Provision** | Allocates storage in the best region available and saves your config.       | N/A             |
-| **Start Machine**      | Boots the machine and starts OpenClaw.                                      | Yes             |
-| **Stop Instance**      | Shuts down the machine.                                                     | Yes             |
-| **Restart OpenClaw**   | Restarts the OpenClaw process. Machine stays up.                            | Yes             |
-| **Redeploy**           | Stops, applies config, and restarts the machine (same version or upgraded). | Yes             |
-| **Destroy Instance**   | Permanently deletes everything.                                             | No              |
+| Action | What Happens | Data Preserved? |
+|---|---|---|
+| **Create & Provision** | Allocates storage in the best region available and saves your config. | N/A |
+| **Start Machine** | Boots the machine and starts OpenClaw. | Yes |
+| **Stop Instance** | Shuts down the machine. | Yes |
+| **Restart OpenClaw** | Restarts the OpenClaw process. Machine stays up. | Yes |
+| **Redeploy** | Stops, applies config, and restarts the machine (same version or upgraded). | Yes |
+| **Destroy Instance** | Permanently deletes everything. | No |
 
 ## Machine Specs
 
 Each instance runs on a dedicated machine — there is no shared infrastructure between users.
 
-| Spec    | Value                |
-| ------- | -------------------- |
-| CPU     | 2 shared vCPUs       |
-| Memory  | 3 GB RAM             |
+| Spec | Value |
+|---|---|
+| CPU | 2 shared vCPUs |
+| Memory | 3 GB RAM |
 | Storage | 10 GB persistent SSD |
 
 Your storage is region-pinned — once your instance is created in a region (e.g., DFW), it always runs there. OpenClaw config lives at `/root/.openclaw` and the workspace at `/root/clawd`.

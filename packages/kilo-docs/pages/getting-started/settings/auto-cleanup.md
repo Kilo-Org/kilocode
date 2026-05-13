@@ -36,12 +36,12 @@ Auto-Cleanup uses an intelligent classification system to determine how long eac
 
 Every task is automatically classified into one of these categories:
 
-| Task Type      | Description                               | Default Retention                        |
-| -------------- | ----------------------------------------- | ---------------------------------------- |
-| **Favorited**  | Tasks you've marked as favorites          | Never deleted (or 90 days if configured) |
-| **Completed**  | Tasks that successfully finished          | 30 days                                  |
-| **Incomplete** | Tasks that were started but not completed | 7 days                                   |
-| **Regular**    | Default classification for other tasks    | 30 days                                  |
+| Task Type | Description | Default Retention |
+|---|---|---|
+| **Favorited** | Tasks you've marked as favorites | Never deleted (or 90 days if configured) |
+| **Completed** | Tasks that successfully finished | 30 days |
+| **Incomplete** | Tasks that were started but not completed | 7 days |
+| **Regular** | Default classification for other tasks | 30 days |
 
 #### Understanding Task Completion
 

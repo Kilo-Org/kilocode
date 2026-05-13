@@ -12,7 +12,7 @@ jobs:
       matched: ${{ steps.filter.outputs.matched }}
       is_fork: ${{ steps.fork-check.outputs.is_fork }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6 # kilocode_change
       - uses: Kilo-Org/paths-filter@master
         id: filter
         with:
@@ -26,7 +26,7 @@ jobs:
               - "packages/kilo-vscode/.storybook/**"
               - "packages/kilo-vscode/tests/visual-regression*"
               - "packages/kilo-vscode/tests/permission-dock-dropdown*"
-              - "packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/**"
+              - "packages/kilo-docs/public/img/screenshot-tests/**"
               - ".github/workflows/visual-regression.yml"
       - name: Check if PR is from a fork
         id: fork-check
@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Checkout (internal)
         if: needs.check-paths.outputs.is_fork != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
           token: ${{ secrets.BOT_PAT }}
@@ -55,7 +55,7 @@ jobs:
 
       - name: Checkout (fork)
         if: needs.check-paths.outputs.is_fork == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
 
@@ -77,7 +77,7 @@ jobs:
           bun-version: latest
 
       - name: Cache Bun modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.bun/install/cache
           key: bun-${{ hashFiles('bun.lock') }}
@@ -87,7 +87,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('packages/kilo-ui/package.json') }}
@@ -103,7 +103,7 @@ jobs:
 
       - name: Cache Storybook build
         id: storybook-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: packages/kilo-ui/storybook-static
           key: storybook-${{ hashFiles('packages/kilo-ui/src/**', 'packages/kilo-ui/.storybook/**', 'packages/ui/src/**', 'packages/kilo-ui/package.json') }}
@@ -127,7 +127,7 @@ jobs:
             const idx = JSON.parse(fs.readFileSync('storybook-static/index.json', 'utf8'));
             const stories = Object.values(idx.entries || idx.stories || {}).filter(s => s.id && !s.id.endsWith('--docs'));
             const expected = new Set(stories.map(s => { const [c,v] = s.id.split('--'); return c + '/' + v + '-chromium-linux.png'; }));
-            const dir = 'tests/visual-regression.spec.ts-snapshots';
+            const dir = '../kilo-docs/public/img/screenshot-tests/kilo-ui/visual-regression';
             if (!fs.existsSync(dir)) process.exit(0);
             for (const component of fs.readdirSync(dir)) {
               const cdir = path.join(dir, component);
@@ -143,7 +143,7 @@ jobs:
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
-          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
           if git diff --cached --quiet; then
             echo "No visual regression detected."
           else
@@ -157,7 +157,7 @@ jobs:
       - name: Fail if baselines still changing after auto-update
         if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit.outputs.is_baseline_update == 'true'
         run: |
-          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
           if git diff --cached --quiet; then
             echo "Baselines are stable after auto-update."
           else
@@ -176,7 +176,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          git add packages/kilo-docs/public/img/screenshot-tests/kilo-ui/
           if git diff --cached --quiet; then
             echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -195,7 +195,7 @@ jobs:
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: visual-regression-results
           path: packages/kilo-ui/test-results/
@@ -211,7 +211,7 @@ jobs:
     steps:
       - name: Checkout (internal)
         if: needs.check-paths.outputs.is_fork != 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
           token: ${{ secrets.BOT_PAT }}
@@ -219,7 +219,7 @@ jobs:
 
       - name: Checkout (fork)
         if: needs.check-paths.outputs.is_fork == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           lfs: true
 
@@ -241,7 +241,7 @@ jobs:
           bun-version: latest
 
       - name: Cache Bun modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.bun/install/cache
           key: bun-${{ hashFiles('bun.lock') }}
@@ -251,7 +251,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache-vscode
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: ~/.cache/ms-playwright
           key: playwright-vscode-${{ hashFiles('packages/kilo-vscode/package.json') }}
@@ -267,7 +267,7 @@ jobs:
 
       - name: Cache Storybook build
         id: storybook-cache-vscode
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: packages/kilo-vscode/storybook-static
           key: storybook-vscode-${{ hashFiles('packages/kilo-vscode/webview-ui/src/**', 'packages/kilo-vscode/.storybook/**', 'packages/kilo-ui/src/**', 'packages/ui/src/**', 'packages/kilo-vscode/package.json') }}
@@ -291,7 +291,7 @@ jobs:
             const idx = JSON.parse(fs.readFileSync('storybook-static/index.json', 'utf8'));
             const stories = Object.values(idx.entries || idx.stories || {}).filter(s => s.id && !s.id.endsWith('--docs'));
             const expected = new Set(stories.map(s => { const [c,v] = s.id.split('--'); return c + '/' + v + '-chromium-linux.png'; }));
-            const dir = 'tests/visual-regression.spec.ts-snapshots';
+            const dir = '../kilo-docs/public/img/screenshot-tests/kilo-vscode/visual-regression';
             if (!fs.existsSync(dir)) process.exit(0);
             for (const component of fs.readdirSync(dir)) {
               const cdir = path.join(dir, component);
@@ -307,7 +307,7 @@ jobs:
       - name: Remove stale baselines for permission-dock-dropdown tests
         run: |
           node -e "
-            const fs = require('fs'), path = require('path');
+            const fs = require('fs');
             const specPath = 'tests/permission-dock-dropdown.spec.ts';
             const expected = new Set();
             if (fs.existsSync(specPath)) {
@@ -316,20 +316,16 @@ jobs:
               let m;
               while ((m = re.exec(spec)) !== null) {
                 const parts = m[1].split(',').map(s => s.trim().replace(/[\"']/g, ''));
-                expected.add(parts.join('/').replace(/\.png$/, '-chromium-linux.png'));
+                const file = parts[parts.length - 1];
+                if (file) expected.add(file.replace(/\.png$/, '-chromium-linux.png'));
               }
             }
-            const dir = 'tests/permission-dock-dropdown.spec.ts-snapshots';
+            const dir = '../kilo-docs/public/img/screenshot-tests/kilo-vscode/permission-dock-dropdown';
             if (!fs.existsSync(dir)) process.exit(0);
-            for (const sub of fs.readdirSync(dir)) {
-              const sdir = path.join(dir, sub);
-              if (!fs.statSync(sdir).isDirectory()) continue;
-              for (const file of fs.readdirSync(sdir)) {
-                const rel = sub + '/' + file;
-                if (file.endsWith('.png') && !expected.has(rel)) {
-                  console.log('Removing stale baseline:', rel);
-                  fs.unlinkSync(path.join(sdir, file));
-                }
+            for (const file of fs.readdirSync(dir)) {
+              if (file.endsWith('.png') && !expected.has(file)) {
+                console.log('Removing stale baseline:', file);
+                fs.unlinkSync(dir + '/' + file);
               }
             }
           "
@@ -338,8 +334,7 @@ jobs:
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
-          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
-          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
           if git diff --cached --quiet; then
             echo "No visual regression detected."
           else
@@ -353,8 +348,7 @@ jobs:
       - name: Fail if baselines still changing after auto-update
         if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
         run: |
-          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
-          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
           if git diff --cached --quiet; then
             echo "Baselines are stable after auto-update."
           else
@@ -373,8 +367,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
-          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          git add packages/kilo-docs/public/img/screenshot-tests/kilo-vscode/
           if git diff --cached --quiet; then
             echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -393,7 +386,7 @@ jobs:
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: visual-regression-vscode-results
           path: packages/kilo-vscode/test-results/

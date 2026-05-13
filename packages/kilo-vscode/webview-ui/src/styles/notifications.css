@@ -5,6 +5,9 @@
 .kilo-notifications {
   display: flex;
   flex-direction: column;
+  align-self: center;
+  width: 100%;
+  max-width: 720px;
   border-radius: 6px;
   animation: kilo-notifications-slide-in 0.3s ease-out;
   overflow: hidden;
@@ -42,14 +45,14 @@
 .kilo-notifications-title {
   font-weight: 600;
   color: var(--vscode-foreground);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   flex: 1;
 }
 
 .kilo-notifications-message {
   margin: 0;
   color: var(--vscode-descriptionForeground);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1.5;
 }
 
@@ -100,7 +103,7 @@
   border: 1px solid var(--vscode-focusBorder);
   border-radius: 3px;
   color: var(--vscode-focusBorder);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-family: var(--vscode-font-family);
   cursor: pointer;
   white-space: nowrap;
@@ -120,7 +123,7 @@
   border: 1px solid transparent;
   border-radius: 3px;
   color: var(--vscode-button-foreground);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-family: var(--vscode-font-family);
   cursor: pointer;
   white-space: nowrap;
@@ -136,7 +139,7 @@
   padding: 0;
   cursor: pointer;
   color: var(--vscode-descriptionForeground);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
 }
 
 .kilo-notifications-back-link:hover {
@@ -158,7 +161,7 @@
 }
 
 .kilo-notifications-nav-count {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
   padding: 0 4px;

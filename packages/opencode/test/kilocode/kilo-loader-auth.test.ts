@@ -1,6 +1,6 @@
 // kilocode_change - new file
 //
-// Tests that the kilo custom loader gates paid models behind authentication.
+// Tests that the kilo custom loader keeps paid models visible without authentication.
 // Mocks fetchKiloModels from @kilocode/kilo-gateway to avoid real network
 // calls (which fail on Windows CI).
 
@@ -17,29 +17,30 @@ const real = await import("@kilocode/kilo-gateway")
 mock.module("@kilocode/kilo-gateway", () => ({
   ...real,
   fetchKiloModels: async () => ({
-    "free-model": {
-      id: "free-model",
-      name: "Free Model",
-      cost: { input: 0, output: 0 },
-      limit: { context: 128000, output: 4096 },
-    },
-    "paid-model": {
-      id: "paid-model",
-      name: "Paid Model",
-      cost: { input: 1.0, output: 2.0 },
-      limit: { context: 128000, output: 4096 },
+    models: {
+      "free-model": {
+        id: "free-model",
+        name: "Free Model",
+        cost: { input: 0, output: 0 },
+        limit: { context: 128000, output: 4096 },
+      },
+      "paid-model": {
+        id: "paid-model",
+        name: "Paid Model",
+        cost: { input: 1.0, output: 2.0 },
+        limit: { context: 128000, output: 4096 },
+      },
     },
   }),
 }))
 
 import { tmpdir } from "../fixture/fixture"
-import { Global } from "../../src/global"
+import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/project/instance"
 import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider/models"
 import { Auth } from "../../src/auth"
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
@@ -48,14 +49,13 @@ function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
 }
 
-test("kilo loader keeps paid models when config apiKey is present", async () => {
+test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
   // Reset state that may be stale from other test files sharing this process.
-  // Auth.set from other tests persists in the shared auth.json, ModelsDev.Data
-  // holds a lazy singleton whose resolved object gets mutated in-place by get(),
+  // Auth.set from other tests persists in the shared auth.json,
   // and ModelCache keeps fetched models in a TTL map.
+  // ModelsDev.Data was removed in v1.14.33 — instance-store disposal handles cache invalidation.
   await Auth.remove("kilo")
   ModelCache.clear("kilo")
-  ModelsDev.Data.reset()
 
   await using base = await tmpdir({
     init: async (dir) => {
@@ -96,14 +96,13 @@ test("kilo loader keeps paid models when config apiKey is present", async () => 
     fn: async () => paid(await Provider.list()),
   })
 
-  expect(none).toBe(0)
+  expect(none).toBeGreaterThan(0)
   expect(count).toBeGreaterThan(0)
 })
 
-test("kilo loader keeps paid models when auth exists", async () => {
+test("kilo loader keeps paid models without auth and when auth exists", async () => {
   await Auth.remove("kilo")
   ModelCache.clear("kilo")
-  ModelsDev.Data.reset()
 
   await using base = await tmpdir({
     init: async (dir) => {
@@ -155,7 +154,7 @@ test("kilo loader keeps paid models when auth exists", async () => {
       fn: async () => paid(await Provider.list()),
     })
 
-    expect(none).toBe(0)
+    expect(none).toBeGreaterThan(0)
     expect(count).toBeGreaterThan(0)
   } finally {
     if (prev !== undefined) {

@@ -189,6 +189,31 @@ describe("tool.suggest", () => {
     expect(result.metadata.dismissed).toBe(false)
   })
 
+  // The suggest tool must emit non-blocking suggestions so the main CLI input
+  // stays focused and submittable while the picker is visible (matches the
+  // VS Code extension). Blocking suggestions hide the main prompt entirely.
+  test("emits non-blocking suggestions so the main input stays active", async () => {
+    const tool = await initTool()
+    show.mockRejectedValueOnce(new Suggestion.DismissedError())
+
+    await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Run review?",
+          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        },
+        ctx as any,
+      ),
+    )
+
+    expect(show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionID: ctx.sessionID,
+        blocking: false,
+      }),
+    )
+  })
+
   // Regression for https://github.com/Kilo-Org/kilocode/pull/9199: while the
   // suggest tool is blocked on user input the session status must be flipped
   // to idle so a session left with an open suggestion (e.g. VS Code closed

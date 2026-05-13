@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { parseServerPort } from "../../src/services/cli-backend/server-utils"
-import { toErrorMessage } from "../../src/services/cli-backend/server-manager"
+import { resolveServerCwd, resolveIndexingEnv, toErrorMessage } from "../../src/services/cli-backend/server-manager"
 
 describe("parseServerPort", () => {
   it("parses port from standard CLI startup message", () => {
@@ -101,5 +101,24 @@ describe("toErrorMessage", () => {
   it("returns original error string as error field", () => {
     const result = toErrorMessage("startup failed", ["some output"])
     expect(result.error).toBe("startup failed")
+  })
+})
+
+describe("server workspace helpers", () => {
+  it("uses first workspace folder as server cwd when present", () => {
+    const folders = [{ uri: { fsPath: "/repo" } }]
+
+    expect(resolveServerCwd(folders, "/global-storage")).toBe("/repo")
+  })
+
+  it("uses extension storage as server cwd when no workspace folder is open", () => {
+    expect(resolveServerCwd(undefined, "/global-storage")).toBe("/global-storage")
+    expect(resolveServerCwd([], "/global-storage")).toBe("/global-storage")
+  })
+
+  it("disables codebase indexing only when no workspace folder is open", () => {
+    expect(resolveIndexingEnv(undefined)).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+    expect(resolveIndexingEnv([])).toEqual({ KILO_DISABLE_CODEBASE_INDEXING: "vscode-no-workspace" })
+    expect(resolveIndexingEnv([{ uri: { fsPath: "/repo" } }])).toEqual({})
   })
 })

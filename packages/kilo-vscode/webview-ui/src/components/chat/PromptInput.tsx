@@ -14,15 +14,19 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useIndexing } from "../../context/indexing"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useConfig } from "../../context/config"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
+import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
+import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
@@ -61,16 +65,26 @@ interface PromptInputProps {
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const indexing = useIndexing()
+  const { features } = useConfig()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(
-    vscode,
-    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
-  )
+  const sid = () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID() ?? undefined
+  const ctx = () => {
+    const id = props.boxId
+    if (!id || !id.startsWith("agent-manager:")) return undefined
+    const rest = id.slice("agent-manager:".length)
+    return rest === "unassigned" ? undefined : rest
+  }
+  const hasGit = () => server.gitInstalled()
+  const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
-  const slash = useSlashCommand(vscode)
+  const git = useGitChangesContext(vscode, ctx, hasGit)
+  const slash = useSlashCommand(vscode, () =>
+    session.variantList(sid()).length > 0 ? new Set() : new Set(["variant"]),
+  )
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -107,10 +121,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (imgs.length > 0) imageDrafts.set(key, imgs)
     else imageDrafts.delete(key)
   }
+  const readDraft = () => ({
+    text: text().trim(),
+    comments: reviewComments(),
+    images: imageAttach.images(),
+  })
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
+  const [autoApprove, setAutoApprove] = createSignal(false)
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
@@ -264,11 +284,40 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
 
+  const captured = new Map<string, ReturnType<typeof readDraft>>()
+  const onAgentManagerCaptureDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.set(event.detail.id, readDraft())
+  }
+  window.addEventListener("agentManagerCaptureDraft", onAgentManagerCaptureDraft)
+  onCleanup(() => window.removeEventListener("agentManagerCaptureDraft", onAgentManagerCaptureDraft))
+
+  const onAgentManagerApplyDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent)) return
+    const id = event.detail?.id
+    const sid = event.detail?.sessionId
+    const box = event.detail?.boxId
+    if (typeof id !== "string" || typeof sid !== "string" || typeof box !== "string") return
+    const draft = captured.get(id)
+    captured.delete(id)
+    if (!draft) return
+    saveDraft(scopeDraftKey(box, sessionDraftKey(sid)), draft.text, draft.comments, draft.images)
+  }
+  window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
+  onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
+
+  const onAgentManagerDiscardDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.delete(event.detail.id)
+  }
+  window.addEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft)
+  onCleanup(() => window.removeEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft))
+
   // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
   const onCompact = () => {
     if (session.status() === "busy") return
     if (session.messages().length === 0) return
-    if (!session.selected()) return
+    if (!session.selected(sid())) return
     session.compact()
   }
   window.addEventListener("compactSession", onCompact)
@@ -277,13 +326,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
-  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
+  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
     if (hasTerminalMention(text())) paths.add("terminal")
+    if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
   }
   const placeholder = () => {
@@ -296,6 +346,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         return language.t("prompt.placeholder.default")
     }
   }
+
+  const unsubAutoApprove = vscode.onMessage((message) => {
+    if (message.type === "autoApproveState") {
+      setAutoApprove(message.active)
+    }
+  })
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type === "setChatBoxMessage") {
@@ -333,8 +389,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "triggerTask") {
       if (isDisabled()) return
-      const sel = session.selected()
-      session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+      const sel = session.selected(sid())
+      session.sendMessage(message.text, sel?.providerID, sel?.modelID, undefined, undefined, ctx())
     }
 
     if (message.type === "sendMessageFailed") {
@@ -410,10 +466,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
   })
+  vscode.postMessage({ type: "requestAutoApproveState" })
 
   onCleanup(() => {
     // Persist current draft before unmounting
     saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
+    unsubAutoApprove()
     unsubscribe()
   })
 
@@ -564,6 +622,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
 
+  const handleOpenIndexingSettings = () => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
+  }
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = text().trim()
@@ -614,21 +676,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
+    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || git.pending() || props.blocked?.())
+      return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
-    const sel = session.selected()
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
-    const sid = session.currentSessionID()
+    const id = sid()
+    const sel = session.selected(id)
 
-    const terminalFile = await terminal.resolveAttachment(message, sid).catch((err: Error) => {
+    const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
       showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
       return undefined
     })
     if (hasTerminalMention(message) && !terminalFile) return
 
-    const allFiles = [...mentionFiles, ...imgFiles, ...(terminalFile ? [terminalFile] : [])]
+    const gitFile = await git.resolveAttachment(message, id).catch((err: Error) => {
+      showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
+      return undefined
+    })
+    if (hasGit() && hasGitChangesMention(message) && !gitFile) return
+
+    const allFiles = [
+      ...mentionFiles,
+      ...imgFiles,
+      ...(terminalFile ? [terminalFile] : []),
+      ...(gitFile ? [gitFile] : []),
+    ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     const key = draftKey()
@@ -636,9 +710,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
     }
 
     history.append(draft)
@@ -733,6 +807,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   {item.type === "terminal" ? (
                     <>
                       <Icon name="console" class="file-mention-icon" />
+                      <span class="file-mention-name">{item.label}</span>
+                      <span class="file-mention-dir">{item.description}</span>
+                    </>
+                  ) : item.type === "git-changes" ? (
+                    <>
+                      <Icon name="branch" class="file-mention-icon" />
                       <span class="file-mention-name">{item.label}</span>
                       <span class="file-mention-dir">{item.description}</span>
                     </>
@@ -854,6 +934,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Show when={ghost.text()}>
               <span class="prompt-input-ghost-text">{ghost.text()}</span>
             </Show>
+            {/* A <div> with white-space: pre-wrap collapses a trailing newline,
+                but a <textarea> renders it as a real empty line. This <br> is
+                added in that case so the overlay and textarea heights match. */}
+            <Show when={text().endsWith("\n")}>
+              <br />
+            </Show>
           </div>
           <textarea
             ref={textareaRef}
@@ -877,15 +963,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       </div>
       <div class="prompt-input-hint">
         <div class="prompt-input-hint-selectors">
-          <ModeSwitcher />
-          <ModelSelector />
-          <ThinkingSelector />
-          <Show when={session.hasModelOverride()}>
+          <ModeSwitcher sessionID={sid} />
+          <ModelSelector sessionID={sid} />
+          <ThinkingSelector sessionID={sid} />
+          <Show when={session.hasModelOverride(sid())}>
             <Tooltip value={language.t("prompt.action.resetModel")} placement="top">
               <Button
                 variant="ghost"
                 size="small"
-                onClick={() => session.clearModelOverride()}
+                onClick={() => session.clearModelOverride(sid())}
                 aria-label={language.t("prompt.action.resetModel")}
               >
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
@@ -896,6 +982,55 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <Show when={features().indexing}>
+            <Tooltip value={indexing.status().message || indexing.label()} placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleOpenIndexingSettings}
+                aria-label={language.t("prompt.action.indexing")}
+                class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <ellipse cx="8" cy="3.5" rx="4.5" ry="2" stroke="currentColor" stroke-width="1.2" />
+                  <path
+                    d="M3.5 3.5V12.5C3.5 13.6046 5.51472 14.5 8 14.5C10.4853 14.5 12.5 13.6046 12.5 12.5V3.5"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  />
+                  <path
+                    d="M3.5 8C3.5 9.10457 5.51472 10 8 10C10.4853 10 12.5 9.10457 12.5 8"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  />
+                  <circle cx="13" cy="3" r="2.5" fill="currentColor" />
+                </svg>
+              </Button>
+            </Tooltip>
+          </Show>
+          <Tooltip
+            value={
+              autoApprove()
+                ? language.t("prompt.action.autoApprove.enabled")
+                : language.t("prompt.action.autoApprove.disabled")
+            }
+            placement="top"
+          >
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => vscode.postMessage({ type: "toggleAutoApprove" })}
+              aria-label={
+                autoApprove()
+                  ? language.t("prompt.action.autoApprove.disable")
+                  : language.t("prompt.action.autoApprove.enable")
+              }
+              aria-pressed={autoApprove()}
+              class={`prompt-auto-approve-button ${autoApprove() ? "prompt-auto-approve-button--active" : ""}`}
+            >
+              <Icon name="shield" size="small" />
+            </Button>
+          </Tooltip>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"
@@ -918,7 +1053,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   variant="ghost"
                   size="small"
                   onClick={() => void handleSend()}
-                  disabled={!canSend()}
+                  aria-disabled={!canSend()}
                   aria-label={language.t("prompt.action.send")}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

@@ -44,7 +44,7 @@ export interface Section {
   name: string
   /** Color label (e.g. "Red", "Blue") mapped to VS Code theme CSS vars at render time, or null for default. */
   color: string | null
-  /** Position among top-level sidebar children (sections and ungrouped worktrees). */
+  /** Position among sections. Ungrouped worktrees are always rendered above sections. */
   order: number
   collapsed: boolean
 }
@@ -75,6 +75,12 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
+export type StateLoadStatus = "loaded" | "missing" | "failed"
+
+export interface StateLoadResult extends MigrationResult {
+  status: StateLoadStatus
+}
+
 import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
@@ -97,10 +103,12 @@ export class WorktreeStateManager {
   private defaultBase: string | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
-  private pendingSave = false
+  private dirty = false
+  private failed = false
 
   private readonly root: string
   private migrated = false
+  private loadFailed = false
 
   constructor(root: string, log: (msg: string) => void) {
     this.root = root
@@ -183,6 +191,31 @@ export class WorktreeStateManager {
     this.log(
       `Added worktree ${id}: ${params.branch}${params.label ? ` (label=${params.label})` : ""}${params.groupId ? ` (group=${params.groupId})` : ""}`,
     )
+    void this.save()
+    return wt
+  }
+
+  restoreWorktree(params: {
+    branch: string
+    path: string
+    parentBranch: string
+    remote?: string
+    createdAt: string
+  }): Worktree {
+    const existing = this.findWorktreeByPath(params.path)
+    if (existing) return existing
+    const id = generateId("wt")
+    const wt: Worktree = {
+      id,
+      branch: params.branch,
+      path: params.path,
+      parentBranch: params.parentBranch,
+      createdAt: params.createdAt,
+    }
+    if (params.remote) wt.remote = params.remote
+    this.worktrees.set(id, wt)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    this.log(`Restored worktree ${id}: ${params.branch} (${params.path})`)
     void this.save()
     return wt
   }
@@ -301,6 +334,14 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  private ordered(order: string[]): string[] {
+    const idx = new Map(order.map((id, i) => [id, i] as const))
+    return [...this.worktrees.values()]
+      .filter((wt) => !wt.sectionId)
+      .sort((a, b) => (idx.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (idx.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+      .map((wt) => wt.id)
+  }
+
   private setNormalizedWorktreeOrder(order: string[]): boolean {
     const valid = new Set<string>()
     for (const sec of this.sections.values()) valid.add(sec.id)
@@ -318,17 +359,22 @@ export class WorktreeStateManager {
     for (const sec of [...this.sections.values()].sort((a, b) => a.order - b.order)) add(sec.id)
     for (const wt of this.worktrees.values()) add(wt.id)
 
+    const normalized = [
+      ...this.ordered(result),
+      ...result.filter((id) => this.sections.has(id)),
+      ...result.filter((id) => this.worktrees.get(id)?.sectionId),
+    ]
+
     const changed =
-      result.length !== this.worktreeOrder.length || result.some((id, idx) => id !== this.worktreeOrder[idx])
-    this.worktreeOrder = result
+      normalized.length !== this.worktreeOrder.length || normalized.some((id, idx) => id !== this.worktreeOrder[idx])
+    this.worktreeOrder = normalized
     return this.syncSectionOrder() || changed
   }
 
   private syncSectionOrder(): boolean {
     const top = this.worktreeOrder.filter((id) => {
       if (this.sections.has(id)) return true
-      const wt = this.worktrees.get(id)
-      return !!wt && !wt.sectionId
+      return false
     })
     const index = new Map(top.map((id, idx) => [id, idx] as const))
     const changes = [...this.sections.values()].map((sec) => {
@@ -506,7 +552,7 @@ export class WorktreeStateManager {
   // Persistence
   // ---------------------------------------------------------------------------
 
-  async load(): Promise<MigrationResult> {
+  async load(): Promise<StateLoadResult> {
     // Migrate Agent Manager data from .kilocode → .kilo before first read
     let migration: MigrationResult = { refsFixed: 0 }
     if (!this.migrated) {
@@ -515,63 +561,90 @@ export class WorktreeStateManager {
     }
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
-      const data = JSON.parse(content) as StateFile
-      this.worktrees.clear()
-      this.sessions.clear()
-      this.sections.clear()
-      this.tabOrder = {}
-      this.worktreeOrder = []
-      this.reviewDiffStyle = "unified"
-
-      for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        // Rewrite stale .kilocode paths while preserving the separator style already stored.
-        const fixed =
-          wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
-            return `${leadingSep}.kilo${trailingSep}`
-          }) ?? wt.path
-        this.worktrees.set(id, { id, ...wt, path: fixed })
-      }
-      let pruned = 0
-      for (const [id, s] of Object.entries(data.sessions ?? {})) {
-        const ref = s.worktreeId
-        if (ref === null) {
-          this.sessions.set(id, { id, ...s })
-          continue
-        }
-        // Skip orphaned sessions referencing a deleted worktree.
-        if (!ref || !this.worktrees.has(ref)) {
-          pruned++
-          continue
-        }
-        this.sessions.set(id, { id, ...s })
-      }
-      for (const [id, sec] of Object.entries(data.sections ?? {})) {
-        this.sections.set(id, { id, ...sec })
-      }
-      if (data.tabOrder) {
-        this.tabOrder = data.tabOrder
-      }
-      if (data.worktreeOrder) {
-        this.worktreeOrder = data.worktreeOrder
-      }
-      const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
-      this.collapsed = data.sessionsCollapsed ?? false
-      if (data.reviewDiffStyle === "split") {
-        this.reviewDiffStyle = "split"
-      }
-      this.defaultBase = data.defaultBaseBranch
-      this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
-      if (pruned > 0 || repaired) {
-        if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
-        void this.save()
-      }
+      this.apply(content)
+      this.loadFailed = false
+      return { ...migration, status: "loaded" }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
+      if (code === "ENOENT") {
+        this.loadFailed = false
+        return { ...migration, status: "missing" }
+      }
       if (code !== "ENOENT") {
         this.log(`Failed to load state: ${error}`)
+        this.loadFailed = true
       }
     }
-    return migration
+    return { ...migration, status: "failed" }
+  }
+
+  async prepareRecovery(): Promise<boolean> {
+    if (!this.loadFailed) return true
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+    const backup = `${this.file}.corrupt-${stamp}`
+    try {
+      await fs.promises.rename(this.file, backup)
+      this.loadFailed = false
+      this.log(`Backed up unreadable state to ${backup}`)
+      return true
+    } catch (error) {
+      this.log(`Failed to back up unreadable state: ${error}`)
+      return false
+    }
+  }
+
+  private apply(content: string): void {
+    const data = JSON.parse(content) as StateFile
+    this.worktrees.clear()
+    this.sessions.clear()
+    this.sections.clear()
+    this.tabOrder = {}
+    this.worktreeOrder = []
+    this.reviewDiffStyle = "unified"
+
+    for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
+      // Rewrite stale .kilocode paths while preserving the separator style already stored.
+      const fixed =
+        wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
+          return `${leadingSep}.kilo${trailingSep}`
+        }) ?? wt.path
+      this.worktrees.set(id, { id, ...wt, path: fixed })
+    }
+    let pruned = 0
+    for (const [id, s] of Object.entries(data.sessions ?? {})) {
+      const ref = s.worktreeId
+      const session: ManagedSession = { id, worktreeId: s.worktreeId, createdAt: s.createdAt }
+      if (ref === null) {
+        this.sessions.set(id, session)
+        continue
+      }
+      // Skip orphaned sessions referencing a deleted worktree.
+      if (!ref || !this.worktrees.has(ref)) {
+        pruned++
+        continue
+      }
+      this.sessions.set(id, session)
+    }
+    for (const [id, sec] of Object.entries(data.sections ?? {})) {
+      this.sections.set(id, { id, ...sec })
+    }
+    if (data.tabOrder) {
+      this.tabOrder = data.tabOrder
+    }
+    if (data.worktreeOrder) {
+      this.worktreeOrder = data.worktreeOrder
+    }
+    const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    this.collapsed = data.sessionsCollapsed ?? false
+    if (data.reviewDiffStyle === "split") {
+      this.reviewDiffStyle = "split"
+    }
+    this.defaultBase = data.defaultBaseBranch
+    this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
+    if (pruned > 0 || repaired) {
+      if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
+      void this.save()
+    }
   }
 
   /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
@@ -602,31 +675,43 @@ export class WorktreeStateManager {
 
   /** Wait for any in-flight save to complete without triggering a new one. */
   async flush(): Promise<void> {
-    if (this.saving) await this.saving
+    const active = this.saving
+    if (active) await active
+    if (this.dirty) await this.save()
   }
 
   async save(): Promise<void> {
-    // Serialize concurrent saves — if a save is in-flight, queue one follow-up
-    if (this.saving) {
-      this.pendingSave = true
-      await this.saving
-      // The in-flight save finished but our data may not have been written yet.
-      // If there's a new save already running (the pendingSave follow-up), wait for it.
-      if (this.saving) await this.saving
+    if (this.loadFailed) {
+      this.log("Skipping save because state failed to load")
       return
     }
 
-    this.saving = this.writeToDisk()
-    try {
-      await this.saving
-    } finally {
-      this.saving = undefined
+    this.dirty = true
+    this.failed = false
+    while (this.dirty && !this.failed) {
+      await (this.saving ?? this.startSave())
     }
+  }
 
-    // If another save was requested while we were writing, flush it now
-    if (this.pendingSave) {
-      this.pendingSave = false
-      await this.save()
+  private startSave(): Promise<void> {
+    const run = this.drain().finally(() => {
+      if (this.saving === run) this.saving = undefined
+    })
+    this.saving = run
+    return run
+  }
+
+  private async drain(): Promise<void> {
+    while (this.dirty) {
+      this.dirty = false
+      try {
+        await this.writeToDisk()
+      } catch (error) {
+        this.dirty = true
+        this.failed = true
+        this.log(`Failed to save state: ${error}`)
+        return
+      }
     }
   }
 
@@ -663,11 +748,15 @@ export class WorktreeStateManager {
       data.defaultBaseBranch = this.defaultBase
     }
 
+    const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`
     try {
       const dir = path.dirname(this.file)
       if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
-      await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
+      const content = JSON.stringify(data, null, 2)
+      await fs.promises.writeFile(tmp, content, "utf-8")
+      await fs.promises.rename(tmp, this.file)
     } catch (error) {
+      await fs.promises.rm(tmp, { force: true }).catch((err) => this.log(`Failed to remove temp state file: ${err}`))
       const code = (error as NodeJS.ErrnoException).code
       if (code === "ENOENT") {
         this.log("State directory was removed, skipping save")

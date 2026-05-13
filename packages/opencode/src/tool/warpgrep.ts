@@ -1,6 +1,5 @@
-import z from "zod"
-import { Effect } from "effect"
-import { Tool } from "./tool"
+import { Effect, Schema } from "effect"
+import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
 import { Instance } from "../project/instance"
 import { Bus } from "../bus"
@@ -12,10 +11,10 @@ import DESCRIPTION from "./warpgrep.txt"
 // return an error when it is missing.
 const KILO_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
 
-const Parameters = z.object({
-  query: z
-    .string()
-    .describe("Search query describing what code you are looking for. Be specific and descriptive for best results."), // kilocode_change
+const Parameters = Schema.Struct({
+  query: Schema.String.annotate({
+    description: "Search query describing what code you are looking for. Be specific and descriptive for best results.", // kilocode_change
+  }),
 })
 
 export const CodebaseSearchTool = Tool.define(
@@ -24,7 +23,7 @@ export const CodebaseSearchTool = Tool.define(
     return {
       description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
           yield* ctx.ask({
             permission: "codebase_search",

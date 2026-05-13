@@ -1,9 +1,13 @@
 # AGENTS.md — Kilo JetBrains Plugin
 
+## Skills
+
+- Use `packages/kilo-jetbrains/.kilo/skills/jetbrains-ui-style/SKILL.md` when creating, modifying, or reviewing Kotlin/Swing UI code for this plugin. It covers IntelliJ UI conventions, platform components, theme-aware colors/fonts, spacing, manual Swing vs Kotlin UI DSL, session transcript styling, and retained Swing component-state patterns for hover/expand/update flows.
+
 ## Architecture (Split Mode)
 
 - **Split-mode plugin** with three Gradle modules: `shared/`, `frontend/`, `backend/`. The module descriptors are `kilo.jetbrains.shared.xml`, `kilo.jetbrains.frontend.xml`, `kilo.jetbrains.backend.xml` — these must stay in sync with `plugin.xml`'s `<content>` block.
-- Reference template for the split-mode structure: https://github.com/nicewith/intellij-platform-modular-plugin-template
+- Reference template for the split-mode structure: https://github.com/JetBrains/intellij-platform-modular-plugin-template
 - Official docs: https://plugins.jetbrains.com/docs/intellij/split-mode-for-remote-development.html
 - The JetBrains reference template mirrors our overall structure well: root project assembles the final plugin, `shared` holds contracts, `frontend` holds UI, and `backend` holds project-local logic. Copy its split-mode wiring and RPC layout, but **do not** copy its Compose UI approach.
 - Kotlin source goes under `{module}/src/main/kotlin/ai/kilocode/jetbrains/`. Package name is `ai.kilocode.jetbrains` (matches `group` in root `build.gradle.kts`).
@@ -74,6 +78,149 @@
 - Service classes ↔ `<applicationService>`/`<projectService>` entries in the corresponding module XML
 - `script/build.ts` platform list ↔ `backend/build.gradle.kts` `requiredPlatforms` list
 
+## Session Component
+
+The chat session feature uses a three-layer Model / Controller / View architecture. All files live under
+`frontend/src/main/kotlin/ai/kilocode/client/session/`.
+
+### Layers
+
+**`SessionModel`** (`model/SessionModel.kt`)
+
+- Single source of truth for session content and runtime state.
+- **EDT-only access** — no synchronisation. `SessionController` guarantees all reads and writes happen on the EDT.
+- State is mutated only through dedicated methods (`setState`, `upsertMessage`, `setDiff`, etc.), never via direct field assignment from outside the model.
+- Every mutation fires a sealed `SessionModelEvent` that carries the data needed for rendering — UI never needs to read back from the model after receiving an event.
+- Each event overrides `toString()` with a compact, stable label (e.g. `"MessageAdded msg1"`, `"DiffUpdated files=2"`). Tests assert events by comparing joined `toString()` output.
+- `loadHistory()` and `clear()` reset all state fields — diff, todos, compactionCount, messages, and `SessionState.Idle`. Call them when opening or clearing a session.
+
+**`SessionController`** (`SessionController.kt`)
+
+- Owns one `SessionModel`. UIs read from `model` and subscribe to `SessionModelEvent` via `model.addListener()`.
+- Accepts an optional `id` at construction.
+  - `id = null` → lazily creates a new session on the first `prompt()` call. This guarantees events are subscribed before the prompt is sent, eliminating race conditions.
+  - `id != null` → immediately loads history and subscribes to SSE events on construction.
+- After history load, `recoverPending()` seeds state in this priority order: (1) pending permission, (2) pending question, (3) current session status (`busy`/`retry`/`offline` from `KiloSessionService.statuses`), (4) `Idle`.
+- All SSE events are filtered by `sessionID` before being handled. `session.error` events with `null` sessionID are treated as global and pass through.
+- Publishes coarser lifecycle updates (app/workspace changes, view switching) via `SessionControllerEvent` to registered listeners — keep these separate from the fine-grained `SessionModelEvent` stream.
+
+**View** (UI classes under `ui/`)
+
+- Listens to `SessionModelEvent` via `model.addListener(parent) { event -> when(event) { ... } }`.
+- The `when` block must be exhaustive — add `-> Unit` branches for events the view intentionally ignores so new events surface as compile errors.
+- Views call `SessionController` actions (`prompt()`, `replyPermission()`, etc.) on the EDT; the controller dispatches RPC calls to a coroutine scope.
+- Views must never access RPC or services directly — everything goes through the controller.
+
+### Adding a New Event
+
+1. Add a subclass to `SessionModelEvent` with a stable `toString()`.
+2. Add the corresponding state field and mutation method to `SessionModel`. Reset the field in both `loadHistory()` and `clear()`.
+3. Handle the new `ChatEventDto` in `SessionController.handle()` by calling the model mutation method.
+4. Add `-> Unit` stubs for the new event in any existing exhaustive `when` blocks in view code.
+
+### Editor-Dependent Session Styling
+
+Session UI components that render text using editor fonts or colors must not read global editor settings directly on every paint. Instead they must:
+
+1. Implement `SessionEditorStyleTarget` (`session/ui/style/SessionEditorStyle.kt`).
+2. Hold a snapshot field initialised with `SessionEditorStyle.current()`.
+3. Override `applyStyle(style: SessionEditorStyle)` and update all fonts/colors in one place without rebuilding Swing nodes.
+
+`SessionUi` propagates a refreshed `SessionEditorStyle` to every registered `SessionEditorStyleTarget` child when the global editor scheme changes. New session elements that depend on editor settings must be registered through this flow, not through ad hoc `EditorColorsManager` listeners.
+
+**Anti-patterns to avoid:**
+- Do not pass `SessionEditorStyle` fields through constructors or method parameters when the component can implement the interface and receive updates via `applyStyle`.
+- Do not store individual style properties (e.g. a separate `font` field copied from the style) when holding the full `SessionEditorStyle` snapshot is cleaner.
+
+### Testing
+
+Controller tests extend `SessionControllerTestBase` (`test/…/session/SessionControllerTestBase.kt`),
+which provides a real IntelliJ Application and EDT via `BasePlatformTestCase`, real frontend services
+wired to `FakeSessionRpcApi`, and a set of shared helpers.
+
+**Two setups:**
+
+| Setup | When to use |
+|---|---|
+| `val (m, events, modelEvents) = prompted()` | New-session flow — sets app/workspace to ready, creates a controller with no ID, sends an initial prompt. `model.showMessages` is `true`. Start all event-driven tests from here. |
+| `controller("ses_test")` + manual `appRpc`/`projectRpc` setup + `flush()` | Existing-session flow — opens a specific session, triggers history load and `recoverPending()`. `model.showMessages` is `false`. Use for recovery and history tests. Pass `show = false` to `assertSession`. |
+
+**Core assertion helpers:**
+
+```kotlin
+// Full controller state — includes model transcript + status line.
+// show=true is the default; pass show=false for existing-session tests.
+assertSession("""
+    assistant#msg1
+    text#prt1:
+      hello
+
+    [code] [kilo/gpt-5] [idle]
+""", m)
+
+// Just the model transcript (no status line)
+assertModel("diff: src/A.kt src/B.kt", m)
+
+// Model event stream — one event per line via event.toString()
+assertModelEvents("""
+    MessageAdded msg1
+    ContentAdded msg1/prt1
+""", modelEvents)
+
+// Controller lifecycle events
+assertControllerEvents("WorkspaceReady", events)
+```
+
+**Emitting events and flushing:**
+
+```kotlin
+emit(ChatEventDto.TurnOpen("ses_test"))         // emits + flushes by default
+emit(ChatEventDto.PartDelta(…), flush = false)  // batch without intermediate flush
+flush()                                          // settle coroutines + drain EDT
+```
+
+**`FakeSessionRpcApi` configurable state:**
+
+| Field | Purpose |
+|---|---|
+| `rpc.events` (`MutableSharedFlow`) | Emit `ChatEventDto` events the controller will receive |
+| `rpc.statuses` (`MutableStateFlow<Map<String, SessionStatusDto>>`) | Seed the status map read during `recoverPending()` |
+| `rpc.history` | Messages returned by `messages()` (history load) |
+| `rpc.pendingPermissionList` | Permissions returned during recovery |
+| `rpc.pendingQuestionList` | Questions returned during recovery |
+| `rpc.prompts`, `rpc.permissionReplies`, etc. | Call tracking for RPC side-effects |
+
+**String format of `model.toString()`** (used by `assertModel` / `assertSession`):
+
+```
+role#msgId
+text#partId:
+  line one
+  line two
+---
+tool#partId toolName [STATE] optional title
+---
+question#id
+tool: msgId/callId
+header: …
+prompt: …
+option: label - description
+multiple: false
+custom: true
+---
+diff: file1 file2
+---
+todo: [status] content
+---
+compacted: N
+```
+
+Sections are separated by `---`. Only non-empty sections appear. The status line appended by `SessionController.toString()` is:
+
+```
+[agentName] [provider/modelId] [idle|busy|retry|offline|error|awaiting-question|awaiting-permission] [optional detail]
+```
+
 ## UI Design Guidelines
 
 Official references:
@@ -92,11 +239,11 @@ Official references:
 
 ### When to Use What
 
-| Need                                                       | API                                                                                                                                         |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Need | API |
+|---|---|
 | Dialogs, settings pages, forms, any layout with components | **Preferred**: [Kotlin UI DSL v2](https://plugins.jetbrains.com/docs/intellij/kotlin-ui-dsl-version-2.html) (`com.intellij.ui.dsl.builder`) |
-| Tool window panels, action-driven UI, custom components    | Standard Swing with IntelliJ Platform component replacements (see below)                                                                    |
-| Menus and toolbars                                         | [Action System](https://plugins.jetbrains.com/docs/intellij/action-system.html)                                                             |
+| Tool window panels, action-driven UI, custom components | Standard Swing with IntelliJ Platform component replacements (see below) |
+| Menus and toolbars | [Action System](https://plugins.jetbrains.com/docs/intellij/action-system.html) |
 
 ### Kotlin UI DSL v2 (Preferred)
 
@@ -128,11 +275,11 @@ panel {
 
 Every row uses one of three layouts. Default is `LABEL_ALIGNED` when a label is provided for the row, `INDEPENDENT` otherwise.
 
-| Layout          | Behavior                                             |
-| --------------- | ---------------------------------------------------- |
-| `LABEL_ALIGNED` | Label column + content columns, aligned across rows  |
-| `INDEPENDENT`   | All cells are independent, no cross-row alignment    |
-| `PARENT_GRID`   | Cells align with the parent grid columns across rows |
+| Layout | Behavior |
+|---|---|
+| `LABEL_ALIGNED` | Label column + content columns, aligned across rows |
+| `INDEPENDENT` | All cells are independent, no cross-row alignment |
+| `PARENT_GRID` | Cells align with the parent grid columns across rows |
 
 ```kotlin
 panel {
@@ -161,37 +308,37 @@ panel {
 
 All cell factory methods available inside `row { }`:
 
-| Method                                             | Description                                                |
-| -------------------------------------------------- | ---------------------------------------------------------- |
-| `checkBox("text")`                                 | Checkbox                                                   |
-| `threeStateCheckBox("text")`                       | Three-state checkbox                                       |
-| `radioButton("text", value)`                       | Radio button (must be inside `buttonsGroup {}`)            |
-| `button("text") {}`                                | Push button                                                |
-| `actionButton(action)`                             | Icon button bound to an `AnAction`                         |
-| `actionsButton(action1, action2, ...)`             | Dropdown actions button                                    |
-| `segmentedButton(items) { text = it }`             | Segmented control                                          |
-| `tabbedPaneHeader(items)`                          | Tab header strip                                           |
-| `label("text")`                                    | Static label                                               |
-| `text("html")`                                     | Rich text with links, icons, line-width control            |
-| `link("text") {}`                                  | Focusable clickable link                                   |
-| `browserLink("text", "url")`                       | Opens URL in browser                                       |
-| `dropDownLink("default", listOf(...))`             | Dropdown link selector                                     |
-| `icon(AllIcons.*)`                                 | Icon display                                               |
-| `contextHelp("description", "title")`              | Help icon with popup                                       |
-| `textField()`                                      | Text input                                                 |
-| `passwordField()`                                  | Password input                                             |
-| `textFieldWithBrowseButton()`                      | Text field + browse dialog                                 |
-| `expandableTextField()`                            | Expandable multi-line text field                           |
-| `extendableTextField()`                            | Text field with extension icons                            |
-| `intTextField(range)`                              | Integer input with validation                              |
-| `spinner(intRange)` / `spinner(doubleRange, step)` | Numeric spinner                                            |
-| `slider(min, max, minorTick, majorTick)`           | Slider (use `.labelTable()` for tick labels)               |
-| `textArea()`                                       | Multi-line text (use `.rows(n)` and `.align(AlignX.FILL)`) |
-| `comboBox(items)`                                  | Combo box / dropdown                                       |
-| `comment("text")`                                  | Gray comment text (standalone)                             |
-| `cell(component)`                                  | Wrap any arbitrary Swing component                         |
-| `scrollCell(component)`                            | Wrap component in a scroll pane                            |
-| `cell()`                                           | Empty placeholder cell for grid alignment                  |
+| Method | Description |
+|---|---|
+| `checkBox("text")` | Checkbox |
+| `threeStateCheckBox("text")` | Three-state checkbox |
+| `radioButton("text", value)` | Radio button (must be inside `buttonsGroup {}`) |
+| `button("text") {}` | Push button |
+| `actionButton(action)` | Icon button bound to an `AnAction` |
+| `actionsButton(action1, action2, ...)` | Dropdown actions button |
+| `segmentedButton(items) { text = it }` | Segmented control |
+| `tabbedPaneHeader(items)` | Tab header strip |
+| `label("text")` | Static label |
+| `text("html")` | Rich text with links, icons, line-width control |
+| `link("text") {}` | Focusable clickable link |
+| `browserLink("text", "url")` | Opens URL in browser |
+| `dropDownLink("default", listOf(...))` | Dropdown link selector |
+| `icon(AllIcons.*)` | Icon display |
+| `contextHelp("description", "title")` | Help icon with popup |
+| `textField()` | Text input |
+| `passwordField()` | Password input |
+| `textFieldWithBrowseButton()` | Text field + browse dialog |
+| `expandableTextField()` | Expandable multi-line text field |
+| `extendableTextField()` | Text field with extension icons |
+| `intTextField(range)` | Integer input with validation |
+| `spinner(intRange)` / `spinner(doubleRange, step)` | Numeric spinner |
+| `slider(min, max, minorTick, majorTick)` | Slider (use `.labelTable()` for tick labels) |
+| `textArea()` | Multi-line text (use `.rows(n)` and `.align(AlignX.FILL)`) |
+| `comboBox(items)` | Combo box / dropdown |
+| `comment("text")` | Gray comment text (standalone) |
+| `cell(component)` | Wrap any arbitrary Swing component |
+| `scrollCell(component)` | Wrap component in a scroll pane |
+| `cell()` | Empty placeholder cell for grid alignment |
 
 Key component examples:
 
@@ -255,13 +402,13 @@ Note: when a row contains a `checkBox` or `radioButton`, the DSL automatically i
 
 Three types of comments, each with different placement and semantics:
 
-| Type                  | Method                              | Placement            |
-| --------------------- | ----------------------------------- | -------------------- |
-| Cell comment (bottom) | `cell.comment("text")`              | Below the cell       |
-| Cell comment (right)  | `cell.commentRight("text")`         | Right of the cell    |
-| Cell context help     | `cell.contextHelp("text", "title")` | Help icon with popup |
-| Row comment           | `row.rowComment("text")`            | Below the entire row |
-| Arbitrary comment     | `comment("text")`                   | Standalone gray text |
+| Type | Method | Placement |
+|---|---|---|
+| Cell comment (bottom) | `cell.comment("text")` | Below the cell |
+| Cell comment (right) | `cell.commentRight("text")` | Right of the cell |
+| Cell context help | `cell.contextHelp("text", "title")` | Help icon with popup |
+| Row comment | `row.rowComment("text")` | Below the entire row |
+| Arbitrary comment | `comment("text")` | Standalone gray text |
 
 ```kotlin
 panel {
@@ -288,16 +435,16 @@ Comments support HTML with clickable links (pass a lambda for the click handler)
 
 #### Groups and Structure
 
-| Method                         | Grid        | Description                                                |
-| ------------------------------ | ----------- | ---------------------------------------------------------- |
-| `panel {}`                     | Own grid    | Sub-panel occupying full width                             |
-| `rowsRange {}`                 | Parent grid | Grouped rows sharing parent grid — useful with `enabledIf` |
-| `group("Title") {}`            | Own grid    | Titled section with vertical spacing before/after          |
-| `groupRowsRange("Title") {}`   | Parent grid | Titled section sharing parent grid alignment               |
-| `collapsibleGroup("Title") {}` | Own grid    | Expandable section (Tab-focusable, supports mnemonics)     |
-| `buttonsGroup("Title") {}`     | —           | Groups `radioButton` or `checkBox` under a title           |
-| `separator()`                  | —           | Horizontal separator line                                  |
-| Row `panel {}`                 | Own grid    | Sub-panel inside a cell                                    |
+| Method | Grid | Description |
+|---|---|---|
+| `panel {}` | Own grid | Sub-panel occupying full width |
+| `rowsRange {}` | Parent grid | Grouped rows sharing parent grid — useful with `enabledIf` |
+| `group("Title") {}` | Own grid | Titled section with vertical spacing before/after |
+| `groupRowsRange("Title") {}` | Parent grid | Titled section sharing parent grid alignment |
+| `collapsibleGroup("Title") {}` | Own grid | Expandable section (Tab-focusable, supports mnemonics) |
+| `buttonsGroup("Title") {}` | — | Groups `radioButton` or `checkBox` under a title |
+| `separator()` | — | Horizontal separator line |
+| Row `panel {}` | Own grid | Sub-panel inside a cell |
 
 ```kotlin
 panel {
@@ -405,15 +552,15 @@ panel {
 
 Bind component values to model properties. Values are applied on `DialogPanel.apply()`, checked with `.isModified()`, and reverted with `.reset()`.
 
-| Method                                       | Component    |
-| -------------------------------------------- | ------------ |
-| `bindSelected(model::prop)`                  | checkBox     |
-| `bindText(model::prop)`                      | textField    |
-| `bindIntText(model::prop)`                   | intTextField |
-| `bindItem(model::prop.toNullableProperty())` | comboBox     |
-| `bindValue(model::prop)`                     | slider       |
-| `bindIntValue(model::prop)`                  | spinner      |
-| `buttonsGroup {}.bind(model::prop)`          | radio group  |
+| Method | Component |
+|---|---|
+| `bindSelected(model::prop)` | checkBox |
+| `bindText(model::prop)` | textField |
+| `bindIntText(model::prop)` | intTextField |
+| `bindItem(model::prop.toNullableProperty())` | comboBox |
+| `bindValue(model::prop)` | slider |
+| `bindIntValue(model::prop)` | spinner |
+| `buttonsGroup {}.bind(model::prop)` | radio group |
 
 ```kotlin
 enum class Theme { LIGHT, DARK }
@@ -480,19 +627,19 @@ Activate validators by calling `dialogPanel.registerValidators(disposable)` afte
 
 #### Tips and Common Patterns
 
-| Pattern                    | Usage                                                           |
-| -------------------------- | --------------------------------------------------------------- |
-| `.bold()`                  | Bold text on any cell                                           |
-| `.columns(COLUMNS_MEDIUM)` | Set preferred width of textField / comboBox / textArea          |
-| `.text("initial")`         | Set initial text on text components                             |
-| `.resizableColumn()`       | Column fills remaining horizontal space                         |
-| `cell()`                   | Empty placeholder cell for grid alignment                       |
-| `.widthGroup("name")`      | Equalize widths across rows (cannot combine with `AlignX.FILL`) |
-| `.align(AlignX.FILL)`      | Stretch component to fill available width                       |
-| `.align(AlignY.TOP)`       | Top-align component in its cell                                 |
-| `.applyToComponent { }`    | Direct access to the underlying Swing component                 |
-| `.selected(true)`          | Default-select a radioButton when no bound value matches        |
-| `.gap(RightGap.COLUMNS)`   | Column-level gap for multi-column layouts                       |
+| Pattern | Usage |
+|---|---|
+| `.bold()` | Bold text on any cell |
+| `.columns(COLUMNS_MEDIUM)` | Set preferred width of textField / comboBox / textArea |
+| `.text("initial")` | Set initial text on text components |
+| `.resizableColumn()` | Column fills remaining horizontal space |
+| `cell()` | Empty placeholder cell for grid alignment |
+| `.widthGroup("name")` | Equalize widths across rows (cannot combine with `AlignX.FILL`) |
+| `.align(AlignX.FILL)` | Stretch component to fill available width |
+| `.align(AlignY.TOP)` | Top-align component in its cell |
+| `.applyToComponent { }` | Direct access to the underlying Swing component |
+| `.selected(true)` | Default-select a radioButton when no bound value matches |
+| `.gap(RightGap.COLUMNS)` | Column-level gap for multi-column layouts |
 
 ```kotlin
 panel {
@@ -534,33 +681,33 @@ panel {
 
 ### Platform Components — Always Use Instead of Raw Swing
 
-| Instead of            | Use                    | Package                         |
-| --------------------- | ---------------------- | ------------------------------- |
-| `JLabel`              | `JBLabel`              | `com.intellij.ui.components`    |
-| `JTextField`          | `JBTextField`          | `com.intellij.ui.components`    |
-| `JTextArea`           | `JBTextArea`           | `com.intellij.ui.components`    |
-| `JList`               | `JBList`               | `com.intellij.ui.components`    |
-| `JScrollPane`         | `JBScrollPane`         | `com.intellij.ui.components`    |
-| `JTable`              | `JBTable`              | `com.intellij.ui.table`         |
-| `JTree`               | `Tree`                 | `com.intellij.ui.treeStructure` |
-| `JSplitPane`          | `JBSplitter`           | `com.intellij.ui`               |
-| `JTabbedPane`         | `JBTabs`               | `com.intellij.ui.tabs`          |
-| `JCheckBox`           | `JBCheckBox`           | `com.intellij.ui.components`    |
-| `Color`               | `JBColor`              | `com.intellij.ui`               |
-| `EmptyBorder`         | `JBUI.Borders.empty()` | `com.intellij.util.ui`          |
-| Hardcoded pixel sizes | `JBUI.scale(px)`       | `com.intellij.util.ui`          |
+| Instead of | Use | Package |
+|---|---|---|
+| `JLabel` | `JBLabel` | `com.intellij.ui.components` |
+| `JTextField` | `JBTextField` | `com.intellij.ui.components` |
+| `JTextArea` | `JBTextArea` | `com.intellij.ui.components` |
+| `JList` | `JBList` | `com.intellij.ui.components` |
+| `JScrollPane` | `JBScrollPane` | `com.intellij.ui.components` |
+| `JTable` | `JBTable` | `com.intellij.ui.table` |
+| `JTree` | `Tree` | `com.intellij.ui.treeStructure` |
+| `JSplitPane` | `JBSplitter` | `com.intellij.ui` |
+| `JTabbedPane` | `JBTabs` | `com.intellij.ui.tabs` |
+| `JCheckBox` | `JBCheckBox` | `com.intellij.ui.components` |
+| `Color` | `JBColor` | `com.intellij.ui` |
+| `EmptyBorder` | `JBUI.Borders.empty()` | `com.intellij.util.ui` |
+| Hardcoded pixel sizes | `JBUI.scale(px)` | `com.intellij.util.ui` |
 
 Inspection `Plugin DevKit | Code | Undesirable class usage` highlights when you use raw Swing where a platform replacement exists.
 
 ### Multi-line and Rich Text
 
-| Need                                                  | Component                                              |
-| ----------------------------------------------------- | ------------------------------------------------------ |
-| Rich HTML with modern CSS, icons, shortcuts           | `JBHtmlPane` (`com.intellij.ui.components.JBHtmlPane`) |
-| Simple multi-line label with HTML                     | `JBLabel` + `XmlStringUtil.wrapInHtml()`               |
-| Scrollable / wrapping HTML panel                      | `SwingHelper.createHtmlViewer()`                       |
-| High-perf colored text fragments (trees/lists/tables) | `SimpleColoredComponent`                               |
-| Plain-text newline splitting                          | `MultiLineLabel` — legacy, do not use in new code      |
+| Need | Component |
+|---|---|
+| Rich HTML with modern CSS, icons, shortcuts | `JBHtmlPane` (`com.intellij.ui.components.JBHtmlPane`) |
+| Simple multi-line label with HTML | `JBLabel` + `XmlStringUtil.wrapInHtml()` |
+| Scrollable / wrapping HTML panel | `SwingHelper.createHtmlViewer()` |
+| High-perf colored text fragments (trees/lists/tables) | `SimpleColoredComponent` |
+| Plain-text newline splitting | `MultiLineLabel` — legacy, do not use in new code |
 
 - Build HTML programmatically with `HtmlChunk`/`HtmlBuilder` (`com.intellij.openapi.util.text.HtmlChunk`). Avoid raw HTML string concatenation — it risks injection and breaks localization.
 - For simple wrapping/escaping: `XmlStringUtil.wrapInHtml(content)`, `XmlStringUtil.wrapInHtmlLines(lines...)`, `XmlStringUtil.escapeString(text)`.
@@ -580,6 +727,28 @@ Inspection `Plugin DevKit | Code | Undesirable class usage` highlights when you 
 
 - Always create via `JBUI.Borders.empty(top, left, bottom, right)` and `JBUI.insets()` — DPI-aware and auto-update on zoom.
 - Use `JBUI.scale(int)` for any pixel dimension to ensure proper HiDPI scaling.
+
+### UI Style Constants
+
+Style tokens and layout constants are split across three files. Put new constants in the right place — do not scatter them into ad hoc fields or pass them through constructors.
+
+**`UiStyle`** (`frontend/src/main/kotlin/ai/kilocode/client/ui/UiStyle.kt`) — generic Swing style tokens that are not tied to any single session component:
+- `UiStyle.Gap` — DPI-aware spacing primitives (`xs`, `sm`, `md`, `lg`, `pad`). Use these for borders, gaps, and insets anywhere in the plugin.
+- `UiStyle.Colors` — theme-aware generic colors (`bg`, `fg`, `weak`, `editorBackground`, `errorLabelForeground`, `warningLabelForeground`).
+- `UiStyle.Components` — small reusable Swing helpers (e.g. `transparent()`).
+
+**`SessionUiStyle`** (`frontend/src/main/kotlin/ai/kilocode/client/session/ui/style/SessionUiStyle.kt`) — static tokens that are specific to the chat/session UI:
+- `SessionUiStyle.SessionLayout` — transcript list geometry and scroll increments.
+- `SessionUiStyle.View` — card sizing, card borders, surfaces, hover colors, and nested objects for `Prompt`, `Reasoning`, `Message`, and `Tool`.
+- `SessionUiStyle.RecentSessions` — recent sessions list limits.
+- `SessionUiStyle.Timeline` — activity-indicator colors for the session header timeline.
+- `Dock` — border presets for question, permission, and connection dock panels.
+
+**Rules for adding new constants:**
+- Generic layout constants (gaps, generic colors, reusable helpers) → `UiStyle`.
+- Session-specific constants (transcript layout, prompt chrome, card geometry, session colors) → `SessionUiStyle`.
+- Do not create extra fields whose only purpose is to hold a constant value. Reference the constant object directly, e.g. `UiStyle.Gap.lg()` or `SessionUiStyle.View.Prompt.EDITOR_LINES`.
+- Do not pass style constants through constructors or method parameters. Using the constant directly at the call site is correct and preferred. Only introduce parameters for values that are genuinely variable or test-controlled.
 
 ### Icons
 

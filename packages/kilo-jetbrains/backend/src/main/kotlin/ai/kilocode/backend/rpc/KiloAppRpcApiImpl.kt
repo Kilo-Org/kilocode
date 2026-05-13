@@ -4,15 +4,26 @@ package ai.kilocode.backend.rpc
 
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendAppService
+import ai.kilocode.backend.app.ConfigWarning
 import ai.kilocode.backend.app.LoadError
 import ai.kilocode.backend.app.LoadProgress
 import ai.kilocode.backend.app.ProfileResult
+import ai.kilocode.jetbrains.api.model.AgentConfig
+import ai.kilocode.jetbrains.api.model.Config
+import ai.kilocode.jetbrains.api.model.ConfigAgent
+import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.LoadErrorDto
 import ai.kilocode.rpc.dto.LoadProgressDto
+import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
+import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
+import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.flow.Flow
@@ -36,47 +47,98 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun health(): HealthDto = app.health()
 
+    override suspend fun retry() = app.retry()
+
     override suspend fun restart() = app.restart()
 
     override suspend fun reinstall() = app.reinstall()
 
+    override suspend fun modelState(): ModelStateDto = app.models.state()
+
+    override suspend fun updateModelFavorite(update: ModelFavoriteUpdateDto): ModelStateDto = app.models.favorite(update)
+
+    override suspend fun updateModelSelection(update: ModelSelectionUpdateDto): ModelStateDto = app.models.selection(update)
+
+    override suspend fun clearModelSelection(agent: String): ModelStateDto = app.models.clear(agent)
+
+    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto = app.models.variant(update)
+
     private fun dto(state: KiloAppState): KiloAppStateDto =
-        when (state) {
-            KiloAppState.Disconnected -> KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
-            KiloAppState.Connecting -> KiloAppStateDto(KiloAppStatusDto.CONNECTING)
-            is KiloAppState.Loading -> KiloAppStateDto(
-                status = KiloAppStatusDto.LOADING,
-                progress = progress(state.progress),
-            )
-            is KiloAppState.Ready -> KiloAppStateDto(
-                status = KiloAppStatusDto.READY,
-                progress = LoadProgressDto(
-                    config = true,
-                    notifications = true,
-                    profile = if (state.data.profile != null) ProfileStatusDto.LOADED
-                        else ProfileStatusDto.NOT_LOGGED_IN,
-                ),
-            )
-            is KiloAppState.Error -> KiloAppStateDto(
-                status = KiloAppStatusDto.ERROR,
-                error = state.message,
-                errors = state.errors.map(::error),
-            )
-        }
-
-    private fun progress(p: LoadProgress) = LoadProgressDto(
-        config = p.config,
-        notifications = p.notifications,
-        profile = when (p.profile) {
-            ProfileResult.PENDING -> ProfileStatusDto.PENDING
-            ProfileResult.LOADED -> ProfileStatusDto.LOADED
-            ProfileResult.NOT_LOGGED_IN -> ProfileStatusDto.NOT_LOGGED_IN
-        },
-    )
-
-    private fun error(e: LoadError) = LoadErrorDto(
-        resource = e.resource,
-        status = e.status,
-        detail = e.detail,
-    )
+        appStateDto(state)
 }
+
+internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
+    when (state) {
+        KiloAppState.Disconnected -> KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
+        KiloAppState.Connecting -> KiloAppStateDto(KiloAppStatusDto.CONNECTING)
+        is KiloAppState.Loading -> KiloAppStateDto(
+            status = KiloAppStatusDto.LOADING,
+            progress = progress(state.progress),
+        )
+        is KiloAppState.Ready -> KiloAppStateDto(
+            status = KiloAppStatusDto.READY,
+            progress = LoadProgressDto(
+                config = true,
+                notifications = true,
+                profile = if (state.data.profile != null) ProfileStatusDto.LOADED
+                    else ProfileStatusDto.NOT_LOGGED_IN,
+            ),
+            warnings = state.data.warnings.map(::warning),
+            config = config(state.data.config),
+        )
+        is KiloAppState.Error -> KiloAppStateDto(
+            status = KiloAppStatusDto.ERROR,
+            error = state.message,
+            errors = state.errors.map(::error),
+        )
+    }
+
+private fun progress(p: LoadProgress) = LoadProgressDto(
+    config = p.config,
+    notifications = p.notifications,
+    profile = when (p.profile) {
+        ProfileResult.PENDING -> ProfileStatusDto.PENDING
+        ProfileResult.LOADED -> ProfileStatusDto.LOADED
+        ProfileResult.NOT_LOGGED_IN -> ProfileStatusDto.NOT_LOGGED_IN
+    },
+)
+
+private fun error(e: LoadError) = LoadErrorDto(
+    resource = e.resource,
+    status = e.status,
+    detail = e.detail,
+)
+
+private fun warning(w: ConfigWarning) = ConfigWarningDto(
+    path = w.path,
+    message = w.message,
+    detail = w.detail,
+)
+
+private fun config(c: Config) = ConfigDto(
+    model = c.model,
+    agent = agents(c.agent),
+)
+
+private fun agents(cfg: ConfigAgent?): Map<String, AgentConfigDto> {
+    if (cfg == null) return emptyMap()
+    val known = listOf(
+        "plan" to cfg.plan,
+        "build" to cfg.build,
+        "debug" to cfg.debug,
+        "orchestrator" to cfg.orchestrator,
+        "ask" to cfg.ask,
+        "general" to cfg.general,
+        "explore" to cfg.explore,
+        "title" to cfg.title,
+        "summary" to cfg.summary,
+        "compaction" to cfg.compaction,
+    ).mapNotNull { (name, item) -> item?.let { name to agent(it) } }.toMap()
+    val extra = cfg.entries.associate { (name, item) -> name to agent(item) }
+    return known + extra
+}
+
+private fun agent(cfg: AgentConfig) = AgentConfigDto(
+    model = cfg.model,
+    variant = cfg.variant,
+)
