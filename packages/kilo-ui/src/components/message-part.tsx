@@ -54,6 +54,8 @@ import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResu
 import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
 import { normalize } from "./session-diff"
+import { deferredHighlight } from "../context/marked"
+import { escapeHtml } from "../util/escape-html"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -2028,6 +2030,97 @@ ToolRegistry.register({
   },
 })
 
+function BashCopyButton(props: { value: () => string; label: string }) {
+  const i18n = useI18n()
+  const [copied, setCopied] = createSignal(false)
+  const handler = async () => {
+    const text = props.value()
+    if (!text) return
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <Tooltip value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")} placement="bottom" gutter={4}>
+      <IconButton
+        icon={copied() ? "check" : "copy"}
+        size="small"
+        variant="ghost"
+        onClick={handler}
+        aria-label={props.label}
+      />
+    </Tooltip>
+  )
+}
+
+function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string }) {
+  const data = useData()
+  const i18n = useI18n()
+  let cmdRef: HTMLDivElement | undefined
+  let outRef: HTMLDivElement | undefined
+
+  createEffect(() => {
+    const cmd = props.cmd
+    if (!cmdRef || !cmd) return
+    cmdRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="shellscript">${escapeHtml(cmd)}</code></pre>`
+    void deferredHighlight(cmdRef)
+  })
+
+  createEffect(() => {
+    const out = props.output
+    if (!outRef || !out) return
+    outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
+    void deferredHighlight(outRef)
+  })
+
+  const openInEditor = () => {
+    // When output was truncated, open the full output file on disk
+    if (props.outputPath && data.openFile) {
+      data.openFile(props.outputPath)
+      return
+    }
+    if (!data.openContent) return
+    data.openContent(props.output, "log")
+  }
+
+  return (
+    <div data-component="bash-output">
+      <Show when={props.cmd}>
+        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.command")}</div>
+        <div data-slot="bash-section">
+          <div data-slot="bash-section-code" ref={cmdRef} />
+          <div data-slot="bash-section-actions">
+            <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+          </div>
+        </div>
+      </Show>
+      <Show when={props.cmd && props.output}>
+        <div data-slot="bash-divider" />
+      </Show>
+      <Show when={props.output}>
+        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.output")}</div>
+        <div data-slot="bash-section">
+          <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+          <div data-slot="bash-section-actions">
+            <Show when={data.openContent || (props.outputPath && data.openFile)}>
+              <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
+                <IconButton
+                  icon="square-arrow-top-right"
+                  size="small"
+                  variant="ghost"
+                  onClick={openInEditor}
+                  aria-label={i18n.t("ui.messagePart.openInEditor")}
+                />
+              </Tooltip>
+            </Show>
+            <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+          </div>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
 ToolRegistry.register({
   name: "bash",
   render(props) {
@@ -2048,19 +2141,6 @@ ToolRegistry.register({
       return ""
     })
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
-    const text = createMemo(() => `$ ${cmd()}${out() ? "\n\n" + out() : ""}`)
-
-    const hasOutput = createMemo(() => out().length > 0)
-    const [copied, setCopied] = createSignal(false)
-
-    const handleCopy = async () => {
-      const command = cmd()
-      if (!command) return
-      const content = out() ? `${command}\n\n${out()}` : command
-      await navigator.clipboard.writeText(content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
 
     return (
       <BasicTool
@@ -2080,29 +2160,7 @@ ToolRegistry.register({
           </div>
         }
       >
-        <div data-component="bash-output">
-          <div data-slot="bash-copy">
-            <Tooltip
-              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
-              placement="top"
-              gutter={4}
-            >
-              <IconButton
-                icon={copied() ? "check" : "copy"}
-                size="small"
-                variant="secondary"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleCopy}
-                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
-              />
-            </Tooltip>
-          </div>
-          <div data-slot="bash-scroll" data-scrollable>
-            <pre data-slot="bash-pre">
-              <code>{text()}</code>
-            </pre>
-          </div>
-        </div>
+        <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} />
       </BasicTool>
     )
   },

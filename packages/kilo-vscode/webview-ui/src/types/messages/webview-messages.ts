@@ -131,6 +131,12 @@ export interface OpenFileRequest {
   column?: number
 }
 
+export interface OpenContentRequest {
+  type: "openContent"
+  content: string
+  language?: string
+}
+
 export interface CancelLoginRequest {
   type: "cancelLogin"
 }
@@ -1198,6 +1204,7 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | OpenContentRequest
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest

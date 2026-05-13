@@ -776,6 +776,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.handleOpenFile(message.filePath, message.line, message.column)
           }
           break
+        case "openContent":
+          if (message.content) {
+            this.handleOpenContent(message.content, message.language)
+          }
+          break
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
@@ -2895,6 +2900,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .then(() => vscode.workspace.fs.writeFile(uri, img.data))
       .then(() => clean())
       .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
+  }
+
+  /**
+   * Handle openContent request — open arbitrary text in an untitled VS Code editor tab.
+   */
+  private handleOpenContent(content: string, language?: string): void {
+    vscode.workspace.openTextDocument({ content, language: language || "log" }).then(
+      (doc) => vscode.window.showTextDocument(doc, { preview: true }),
+      (err) => console.error("[Kilo New] KiloProvider: Failed to open content:", err),
+    )
   }
 
   /**
