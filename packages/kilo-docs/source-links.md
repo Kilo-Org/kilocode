@@ -93,7 +93,7 @@
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
 - <https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new>
   <!-- packages/kilo-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
-- <https://kilo.ai/docs/providers/#custom-provider>
+- <https://kilo.ai/docs/providers#custom-provider>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
 - <https://kilo.ai/gateway>
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/component/dialog-provider.tsx -->
