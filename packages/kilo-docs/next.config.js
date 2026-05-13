@@ -4,6 +4,7 @@ const previousDocsRedirects = require("./previous-docs-redirects")
 module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options */)({
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdoc"],
   basePath: "/docs",
+  trailingSlash: false, // prevent client-side router from normalizing /docs → /docs/ causing flicker on hard refresh
   turbopack: {},
   skipTrailingSlashRedirect: true, // PostHog sends trailing-slash requests that Next.js would otherwise 308-redirect
   async redirects() {
