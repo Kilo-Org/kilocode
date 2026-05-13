@@ -88,6 +88,7 @@ import { LanguageBridge, DataBridge, MermaidDownloadBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
+import { interactiveSessionIds, isReadOnlySession } from "./session-access"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
@@ -715,6 +716,21 @@ const AgentManagerContent: Component = () => {
 
   const localSet = createMemo(() => new Set(localSessionIDs()))
 
+  const parents = createMemo(() => {
+    const map = new Map<string, string>()
+    for (const item of session.sessions()) {
+      if (item.parentID) map.set(item.id, item.parentID)
+    }
+    return map
+  })
+
+  const interactive = createMemo(() =>
+    interactiveSessionIds({
+      local: localSessionIDs(),
+      worktree: worktreeSessionIds(),
+    }),
+  )
+
   // Sessions NOT in any worktree and not local
   const unassignedSessions = createMemo(() =>
     [...session.sessions()]
@@ -797,7 +813,14 @@ const AgentManagerContent: Component = () => {
     })
   })
 
-  const readOnly = createMemo(() => selection() === null && !!session.currentSessionID())
+  const readOnly = createMemo(() =>
+    isReadOnlySession({
+      selection: selection(),
+      sessionId: session.currentSessionID(),
+      parents: parents(),
+      interactive: interactive(),
+    }),
+  )
 
   const visibleTabId = createMemo(() => {
     const term = terms.activeId()
