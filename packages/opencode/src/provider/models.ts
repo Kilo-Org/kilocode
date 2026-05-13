@@ -193,15 +193,33 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
     const get = Effect.fn("ModelsDev.get")(function* () {
       const providers = { ...(yield* cachedGet) }
       delete providers["kilo"]
+      // FastRouter ships its own /models endpoint; never trust models.dev for it.
+      delete providers["fastrouter"]
 
       const config = yield* Effect.promise(() => Config.get())
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
+      const fastrouterAllowed = (!enabled || enabled.has("fastrouter")) && !disabled.has("fastrouter")
       const apt = config.provider?.apertis?.options
       const aptBase = apt?.baseURL ?? "https://api.apertis.ai/v1"
       const aptFetch = {
         ...(apt?.baseURL ? { baseURL: apt.baseURL } : {}),
+      }
+
+      if (fastrouterAllowed) {
+        const fr = yield* Effect.promise(() => ModelCache.fetch("fastrouter").catch(() => ({})))
+        providers["fastrouter"] = {
+          id: "fastrouter",
+          name: "FastRouter",
+          env: ["FASTROUTER_API_KEY"],
+          api: "https://go.fastrouter.ai/api/v1",
+          npm: "@openrouter/ai-sdk-provider",
+          models: fr,
+        }
+        if (Object.keys(fr).length === 0) {
+          yield* Effect.sync(() => void ModelCache.refresh("fastrouter").catch(() => {}))
+        }
       }
 
       if (kiloAllowed) {

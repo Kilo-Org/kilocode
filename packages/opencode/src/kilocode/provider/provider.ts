@@ -12,6 +12,7 @@ import { ProviderID, ModelID } from "@/provider/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+import { FASTROUTER_API, FASTROUTER_ENV } from "./fastrouter"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
@@ -152,6 +153,25 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         autoload: false,
         options: { headers: DEFAULT_HEADERS },
       }),
+
+    fastrouter: Effect.fnUntraced(function* (input: any) {
+      const env = yield* dep.env()
+      const cfg = yield* dep.config()
+      const auth = yield* dep.auth(input.id)
+      const cfgKey = cfg?.provider?.["fastrouter"]?.options?.apiKey
+      const authKey = auth?.type === "api" ? auth.key : undefined
+      const envKey = env[FASTROUTER_ENV]
+      const hasKey = Boolean(cfgKey || authKey || envKey)
+      const hasModels = Object.keys(input.models ?? {}).length > 0
+
+      return {
+        autoload: hasKey && hasModels,
+        options: {
+          baseURL: FASTROUTER_API,
+          headers: { ...DEFAULT_HEADERS },
+        },
+      }
+    }),
   }
 }
 

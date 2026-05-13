@@ -64,3 +64,6 @@ tsconfig.tsbuildinfo
 # Test Artifacts
 packages/app/.artifacts/
 packages/opencode/.artifacts/
+
+# Editor / agent artifacts
+.cursor/
