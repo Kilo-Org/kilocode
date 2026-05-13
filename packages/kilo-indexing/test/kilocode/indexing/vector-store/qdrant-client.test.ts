@@ -1322,6 +1322,10 @@ describe("QdrantVectorStore", () => {
   })
 
   describe("search", () => {
+    beforeEach(() => {
+      vectorStore = new QdrantVectorStore(mockWorkspacePath, mockQdrantUrl, 3, mockApiKey)
+    })
+
     test("should correctly call qdrantClient.query and transform results", async () => {
       const queryVector = [0.1, 0.2, 0.3]
       const mockQdrantResults = {
@@ -1611,9 +1615,37 @@ describe("QdrantVectorStore", () => {
       const queryError = new Error("Query failed")
       mockQuery.mockRejectedValue(queryError)
 
-      await expect(vectorStore.search(queryVector)).rejects.toThrow(queryError)
+      await expect(vectorStore.search(queryVector)).rejects.toThrow("Qdrant search failed: Query failed")
 
       expect(mockQuery).toHaveBeenCalledTimes(1)
+    })
+
+    test("should fail before search when query vector does not match the configured dimension", async () => {
+      const queryVector = [0.1, 0.2, 0.3, 0.4]
+
+      await expect(vectorStore.search(queryVector)).rejects.toThrow(
+        "Qdrant query vector dimension mismatch before search: expected 3, got 4",
+      )
+
+      expect(mockQuery).not.toHaveBeenCalled()
+    })
+
+    test("should include Qdrant response details when query fails", async () => {
+      const queryVector = [0.1, 0.2, 0.3]
+      const queryError = new Error("Bad Request") as Error & {
+        status?: number
+        response?: { status: number; data: unknown }
+      }
+      queryError.status = 400
+      queryError.response = {
+        status: 400,
+        data: { status: { error: "Wrong input: Vector dimension error: expected dim: 256, got 1536" } },
+      }
+      mockQuery.mockRejectedValue(queryError)
+
+      await expect(vectorStore.search(queryVector)).rejects.toThrow(
+        "Wrong input: Vector dimension error: expected dim: 256, got 1536",
+      )
     })
 
     test("should use constants DEFAULT_MAX_SEARCH_RESULTS and DEFAULT_SEARCH_MIN_SCORE correctly", async () => {

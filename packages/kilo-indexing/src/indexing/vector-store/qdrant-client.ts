@@ -514,6 +514,12 @@ export class QdrantVectorStore implements IVectorStore {
     maxResults?: number,
   ): Promise<VectorStoreSearchResult[]> {
     try {
+      if (queryVector.length !== this.vectorSize) {
+        throw new Error(
+          `Qdrant query vector dimension mismatch before search: expected ${this.vectorSize}, got ${queryVector.length}`,
+        )
+      }
+
       let filter:
         | {
             must: Array<{ key: string; match: { value: string } }>
@@ -573,8 +579,17 @@ export class QdrantVectorStore implements IVectorStore {
 
       return filteredPoints as VectorStoreSearchResult[]
     } catch (error) {
-      log.error("Failed to search points", { error })
-      throw error
+      const detail = qdrantErrorDetail(error)
+      log.error("Failed to search points", {
+        error: detail.message,
+        response: detail.response,
+        status: detail.status,
+        collection: this.collectionName,
+        expectedVectorSize: this.vectorSize,
+        queryVectorSize: queryVector.length,
+        directoryPrefix,
+      })
+      throw new Error(`Qdrant search failed: ${detail.message}`)
     }
   }
 
