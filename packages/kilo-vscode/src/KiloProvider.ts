@@ -670,7 +670,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleAbort(message.sessionID)
           break
         case "revertSession":
-          this.handleRevertSession(message.sessionID, message.messageID).catch((e) =>
+          this.handleRevertSession(message.sessionID, message.messageID, message.partID).catch((e) =>
             console.error("[Kilo New] handleRevertSession failed:", e),
           )
           break
@@ -2704,10 +2704,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleRevertSession(sessionID: string, messageID: string): Promise<void> {
+  private async handleRevertSession(sessionID: string, messageID: string, partID?: string): Promise<void> {
     if (!this.client) return
     const dir = this.getWorkspaceDirectory(sessionID)
-    const { data, error } = await this.client.session.revert({ sessionID, messageID, directory: dir })
+    const { data, error } = await this.client.session.revert({ sessionID, messageID, partID, directory: dir })
     if (error) {
       console.error("[Kilo New] KiloProvider: Failed to revert session:", error)
       this.postMessage({ type: "error", message: "Failed to revert session", sessionID })
