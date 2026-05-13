@@ -1473,7 +1473,6 @@ export const SessionProvider: ParentComponent = (props) => {
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
     if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
-    if (!prev && !next) return
     resetTodos(session.id, next)
   }
 
