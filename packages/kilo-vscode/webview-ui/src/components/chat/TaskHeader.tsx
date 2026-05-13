@@ -19,7 +19,8 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
-import type { TodoItem, ExtensionMessage } from "../../types/messages"
+import { target as todoTarget } from "../../context/todo-revert"
+import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -124,6 +125,16 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const [todosOpen, setTodosOpen] = createSignal(false)
+
+  const donePart = (idx: number): Part | undefined =>
+    todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
+
+  const revertTodo = (part: Part | undefined) => {
+    if (session.status() !== "idle") return
+    if (part?.type !== "tool") return
+    if (!part.messageID) return
+    session.revertSession(part.messageID, part.id)
+  }
 
   return (
     <Show when={hasMessages()}>
@@ -234,16 +245,21 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={todosOpen()}>
             <div data-slot="task-header-todos-list">
               <For each={todos()}>
-                {(todo: TodoItem) => (
-                  <Checkbox readOnly checked={todo.status === "completed"}>
-                    <span
-                      data-slot="task-header-todo-content"
-                      data-completed={todo.status === "completed" ? "" : undefined}
-                    >
-                      {todo.content}
-                    </span>
-                  </Checkbox>
-                )}
+                {(todo: TodoItem, idx) => {
+                  const part = createMemo(() => (todo.status === "completed" ? donePart(idx()) : undefined))
+                  return (
+                    <Tooltip value={part() ? language.t("settings.checkpoints.title") : undefined} placement="bottom">
+                      <Checkbox readOnly checked={todo.status === "completed"} onClick={() => revertTodo(part())}>
+                        <span
+                          data-slot="task-header-todo-content"
+                          data-completed={todo.status === "completed" ? "" : undefined}
+                        >
+                          {todo.content}
+                        </span>
+                      </Checkbox>
+                    </Tooltip>
+                  )
+                }}
               </For>
             </div>
           </Show>
