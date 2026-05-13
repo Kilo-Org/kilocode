@@ -251,6 +251,7 @@ export class AgentManagerProvider implements Disposable {
       return
     }
 
+    await this.ensureGitExclude(manager)
     const loaded = await state.load()
     manager.cleanupOrphanedTempDirs()
 
@@ -289,6 +290,12 @@ export class AgentManagerProvider implements Disposable {
     // are registered with their directory overrides so the recovery queries the
     // correct CLI backend Instances.
     this.panel?.sessions.recoverPendingPrompts()
+  }
+
+  private async ensureGitExclude(manager: WorktreeManager): Promise<void> {
+    await manager.ensureGitExclude().catch((err) => {
+      this.log("Failed to update git exclude:", err)
+    })
   }
 
   private async recoverWorktrees(manager: WorktreeManager, state: WorktreeStateManager): Promise<void> {
