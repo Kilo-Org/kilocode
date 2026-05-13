@@ -21,6 +21,7 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 - **Source links**: After adding or changing URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/kilo-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
 - **kilocode_change check**: `bun run check-kilocode-change` from `packages/kilo-vscode/`. CI runs this — `kilocode_change` is a marker for upstream merge conflicts and must not appear in `packages/kilo-vscode/` or `packages/kilo-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
 - **opencode annotation check**: `bun run script/check-opencode-annotations.ts` from repo root. CI runs this on PRs touching `packages/opencode/` — every Kilo-specific change in shared opencode files must be annotated with `kilocode_change` markers. Exempt paths (no markers needed): `packages/opencode/src/kilocode/`, `packages/opencode/test/kilocode/`, and any path containing `kilocode` in the name.
+- **workflow allowlist**: `bun run script/check-workflows.ts` from repo root. CI runs this as part of the annotations workflow — any `.yml` / `.yaml` file added to or removed from `.github/workflows/` must be reflected in the hardcoded list in `script/check-workflows.ts`. Prevents upstream-merged workflows from silently starting to run in our CI.
 - **Backend/SDK programmatic testing**: see [TESTING.md](./TESTING.md) for spawning the local main-branch backend (`bun dev serve`) and driving it via `curl` — use this instead of `kilo serve` (prod binary) when testing backend fixes.
 
 ## Quality Checks
@@ -222,12 +223,7 @@ PR descriptions should be 2-3 lines covering **what** changed and **why**. Focus
 
 ## GitHub Issues
 
-- When creating a GitHub issue for the VS Code extension or JetBrains plugin, use the repo's existing issue templates in `.github/ISSUE_TEMPLATE/`. Pick the matching template (`Bug report`, `Feature Request`, or `Question`) instead of opening a blank issue.
-- Do not add platform-specific title prefixes such as `[JetBrains]`, `[Jetbrains]`, `[JB]`, `[VS Code]`, `[VSCode]`, or similar. Use a plain, descriptive title.
-- Always add VS Code extension issues to the GitHub project `VS Code Extension`: https://github.com/orgs/Kilo-Org/projects/25
-- Always add JetBrains plugin issues to the GitHub project `Jetbrains Plugin`: https://github.com/orgs/Kilo-Org/projects/39
-- When using `gh`, prefer `gh issue create --template "..." --project "..."` with the matching project title.
-- If project assignment fails because `gh` is missing the required scope, run `gh auth refresh -s project` and retry.
+When creating or managing GitHub issues for the VS Code extension or JetBrains plugin via `gh`, load `.kilo/skills/gh-issues/SKILL.md`. It covers templates, project boards (`VS Code Extension`, `Jetbrains Plugin`), title conventions, and the `gh auth refresh -s project` recovery path.
 
 ## Fork Merge Process
 
@@ -261,50 +257,13 @@ The goal is to keep our diff from upstream as small as possible, making regular 
 
 ### Kilocode Change Markers
 
-To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
+When editing shared upstream files, mark Kilo-specific lines with `kilocode_change` comments so future merges can find them. The basic forms are:
 
-**Single line:**
+- Single line: `const value = 42 // kilocode_change`
+- Multi-line block: wrap with `// kilocode_change start` / `// kilocode_change end`
+- New file in a shared path: `// kilocode_change - new file` at the top
+- JSX/TSX: use `{/* kilocode_change */}` (and `{/* kilocode_change start */}` / `end`)
 
-```typescript
-const value = 42 // kilocode_change
-```
+Markers are NOT needed in paths that contain `kilocode` in the name (e.g. `packages/opencode/src/kilocode/`, `packages/opencode/test/kilocode/`) — these are entirely Kilo Code additions and won't conflict with upstream.
 
-**Multi-line:**
-
-```typescript
-// kilocode_change start
-const foo = 1
-const bar = 2
-// kilocode_change end
-```
-
-**New files:**
-
-```typescript
-// kilocode_change - new file
-```
-
-<!-- prettier-ignore -->
-**JSX/TSX (inside JSX templates):**
-
-<!-- prettier-ignore -->
-```tsx
-{/* kilocode_change */}
-```
-
-<!-- prettier-ignore -->
-```tsx
-{/* kilocode_change start */}
-<MyComponent />
-{/* kilocode_change end */}
-```
-
-#### When markers are NOT needed
-
-Code in these paths is Kilo Code-specific and does NOT need `kilocode_change` markers:
-
-- `packages/opencode/src/kilocode/` - All files in this directory
-- `packages/opencode/test/kilocode/` - All test files for kilocode
-- Any other path containing `kilocode` in filename or directory name
-
-These paths are entirely Kilo Code additions and won't conflict with upstream.
+For decision rules on when to keep changes inline vs. extract Kilo logic, marker placement guidance, and verification commands, load `.kilo/skills/kilocode-merge-minimizer/SKILL.md`.

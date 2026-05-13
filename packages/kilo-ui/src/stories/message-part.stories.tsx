@@ -196,6 +196,35 @@ const editCompletedPart: ToolPart = {
   },
 }
 
+// Completed write tool that creates a new file — exercises canOpenDiff() via
+// `props.input.content` so the "Open in Diff Viewer" icon button renders even
+// when metadata.filediff has no diff payload.
+const writeCompletedPart: ToolPart = {
+  id: "part-tool-write-done",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-write-done",
+  tool: "write",
+  state: {
+    status: "completed",
+    input: {
+      filePath: "src/greet.ts",
+      content: "export function greet(name: string) {\n  return `Hello, ${name}!`\n}\n",
+    },
+    output: "File written successfully",
+    title: "Write file",
+    metadata: {
+      filediff: {
+        file: "src/greet.ts",
+        additions: 3,
+        deletions: 0,
+      },
+    },
+    time: { start: now - 4000, end: now - 3500 },
+  },
+}
+
 // --- Reasoning part ---
 
 const reasoningPart: ReasoningPart = {
@@ -243,6 +272,7 @@ const mockDataBash = createMockData([bashCompleted])
 const mockDataContextGroup = createMockData([completedToolPart, grepCompleted, globCompleted, textPart])
 // Completed edit tool with filediff — exercises the "Open in Diff Viewer" button path
 const mockDataEdit = createMockData([editCompletedPart])
+const mockDataWrite = createMockData([writeCompletedPart])
 
 function AllProviders(props: { children: any; data?: MockData; onOpenDiff?: () => void }) {
   return (
@@ -402,7 +432,18 @@ export const WithEditToolOpenDiffAction: Story = {
   name: "WithEditTool (open-diff action visible)",
   render: () => (
     <AllProviders data={mockDataEdit} onOpenDiff={() => {}}>
-      <style>{`[data-slot="edit-trigger-actions"] { opacity: 1 !important; }`}</style>
+      <style>{`[data-slot="tool-trigger-actions"] { opacity: 1 !important; }`}</style>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Completed write tool with content → "Open in Diff Viewer" icon visible ---
+export const WithWriteToolOpenDiffAction: Story = {
+  name: "WithWriteTool (open-diff action visible)",
+  render: () => (
+    <AllProviders data={mockDataWrite} onOpenDiff={() => {}}>
+      <style>{`[data-slot="tool-trigger-actions"] { opacity: 1 !important; }`}</style>
       <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),

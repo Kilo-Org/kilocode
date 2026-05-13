@@ -99,6 +99,18 @@ export const dict: Record<Keys, string> = {
   "ui.textField.copied": "Kopiert",
 
   "ui.imagePreview.alt": "Bildeforhåndsvisning",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Gjengir Mermaid-diagram...",
+  "ui.mermaid.renderError": "Mermaid-gjengivelse mislyktes: {{message}}",
+  "ui.mermaid.errorDefault": "Kan ikke gjengi Mermaid-diagram.",
+  "ui.mermaid.errorEmpty": "Mermaid gjenga et tomt diagram.",
+  "ui.mermaid.download": "Last ned",
+  "ui.mermaid.copySource": "Kopier Mermaid-kilde",
+  "ui.mermaid.copySvg": "Kopier SVG",
+  "ui.mermaid.copyPng": "Kopier PNG",
+  "ui.mermaid.downloadSvg": "Last ned SVG",
+  "ui.mermaid.downloadPng": "Last ned PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "rullbart innhold",
 
   "ui.tool.read": "Les",
@@ -108,7 +120,6 @@ export const dict: Record<Keys, string> = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webhenting",
   "ui.tool.websearch": "Nettsøk",
-  "ui.tool.codesearch": "Kodesøk",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "Gjøremål",

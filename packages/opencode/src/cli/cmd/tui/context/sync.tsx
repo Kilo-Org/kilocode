@@ -36,6 +36,8 @@ import * as Log from "@opencode-ai/core/util/log"
 import { emptyConsoleState, type ConsoleState } from "@/config/console-state"
 import type { IndexingStatus } from "@kilocode/kilo-indexing/status" // kilocode_change
 import { KiloIndexing } from "@/kilocode/indexing" // kilocode_change
+import path from "path"
+import { useKV } from "./kv"
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -64,6 +66,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       }
       // kilocode_change end
       config: Config
+      globalConfig: Config // kilocode_change
       session: Session[]
       session_status: {
         [sessionID: string]: SessionStatus
@@ -95,10 +98,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         all: [],
         default: {},
         connected: [],
+        failed: [], // kilocode_change
       },
       console_state: emptyConsoleState,
       provider_auth: {},
       config: {},
+      globalConfig: {}, // kilocode_change
       status: "loading",
       agent: [],
       permission: {},
@@ -128,6 +133,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     const project = useProject()
     const sdk = useSDK()
     const toast = useToast() // kilocode_change
+    const kv = useKV()
 
     // kilocode_change start
     function evict(sessionID: string) {
@@ -163,6 +169,22 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
     const fullSyncedSessions = new Set<string>()
     let syncedWorkspace = project.workspace.current()
+
+    function sessionListQuery(): { scope?: "project"; path?: string } {
+      if (!kv.get("session_directory_filter_enabled", true)) return { scope: "project" }
+      if (!project.data.instance.path.worktree || !project.data.instance.path.directory) return { scope: "project" }
+      return {
+        path: path
+          .relative(path.resolve(project.data.instance.path.worktree), project.data.instance.path.directory)
+          .replaceAll("\\", "/"),
+      }
+    }
+
+    function listSessions() {
+      return sdk.client.session
+        .list({ start: Date.now() - 30 * 24 * 60 * 60 * 1000, ...sessionListQuery() })
+        .then((x) => (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id)))
+    }
 
     event.subscribe((event) => {
       switch (event.type) {
@@ -468,6 +490,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         // kilocode_change start
         case "global.config.updated": {
+          sdk.client.global.config.get().then((x) => {
+            if (x.data) setStore("globalConfig", reconcile(x.data))
+          })
           sdk.client.config.get().then((x) => {
             if (x.data) setStore("config", reconcile(x.data))
           })
@@ -491,10 +516,8 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         fullSyncedSessions.clear()
         syncedWorkspace = workspace
       }
-      const start = Date.now() - 30 * 24 * 60 * 60 * 1000
-      const sessionListPromise = sdk.client.session
-        .list({ start: start })
-        .then((x) => (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id)))
+      const projectPromise = project.sync()
+      const sessionListPromise = projectPromise.then(() => listSessions())
 
       // blocking - include session.list when continuing a session
       const providersPromise = sdk.client.config.providers({ workspace }, { throwOnError: true })
@@ -505,12 +528,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         .catch(() => emptyConsoleState)
       const agentsPromise = sdk.client.app.agents({ workspace }, { throwOnError: true })
       const configPromise = sdk.client.config.get({ workspace }, { throwOnError: true })
-      const projectPromise = project.sync()
+      const globalConfigPromise = sdk.client.global.config.get({ throwOnError: true }) // kilocode_change
       const blockingRequests: Promise<unknown>[] = [
         providersPromise,
         providerListPromise,
         agentsPromise,
         configPromise,
+        globalConfigPromise, // kilocode_change
         projectPromise,
         ...(args.continue ? [sessionListPromise] : []),
       ]
@@ -522,6 +546,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const consoleStateResponse = consoleStatePromise
           const agentsResponse = agentsPromise.then((x) => x.data ?? [])
           const configResponse = configPromise.then((x) => x.data!)
+          const globalConfigResponse = globalConfigPromise.then((x) => x.data!) // kilocode_change
           const sessionListResponse = args.continue ? sessionListPromise : undefined
 
           return Promise.all([
@@ -530,6 +555,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             consoleStateResponse,
             agentsResponse,
             configResponse,
+            globalConfigResponse, // kilocode_change
             ...(sessionListResponse ? [sessionListResponse] : []),
           ]).then((responses) => {
             const providers = responses[0]
@@ -537,7 +563,8 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             const consoleState = responses[2]
             const agents = responses[3]
             const config = responses[4]
-            const sessions = responses[5]
+            const globalConfig = responses[5] // kilocode_change
+            const sessions = responses[6] // kilocode_change
 
             batch(() => {
               setStore("provider", reconcile(providers.providers))
@@ -546,6 +573,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
               setStore("config", reconcile(config))
+              setStore("globalConfig", reconcile(globalConfig)) // kilocode_change
               if (sessions !== undefined) setStore("session", reconcile(sessions))
             })
           })
@@ -652,11 +680,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           if (match.found) return store.session[match.index]
           return undefined
         },
+        query() {
+          return sessionListQuery()
+        },
         async refresh() {
-          const start = Date.now() - 30 * 24 * 60 * 60 * 1000
-          const list = await sdk.client.session
-            .list({ start })
-            .then((x) => (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id)))
+          const list = await listSessions()
           setStore("session", reconcile(list))
         },
         status(sessionID: string) {

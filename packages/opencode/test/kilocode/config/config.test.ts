@@ -8,14 +8,15 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Npm } from "@opencode-ai/core/npm"
-import { toIndexingConfigInput } from "@kilocode/kilo-indexing/config"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
+import { ConfigMarkdown } from "../../../src/config/markdown"
 import { Env } from "../../../src/env"
+import { KiloIndexing } from "../../../src/kilocode/indexing"
 import { Instance } from "../../../src/project/instance"
 import { Filesystem } from "../../../src/util/filesystem"
-import { tmpdir } from "../../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
 const infra = CrossSpawnSpawner.defaultLayer.pipe(
   Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)),
@@ -50,13 +51,48 @@ async function writeConfig(dir: string, config: object, name = "kilo.json") {
   await Filesystem.write(path.join(dir, name), JSON.stringify(config))
 }
 
-describe("kilocode indexing config", () => {
-  afterEach(async () => {
-    await Instance.disposeAll()
-    await clear(true)
-  })
+const cfg: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    provider: "ollama",
+    vectorStore: "qdrant",
+    ollama: {
+      baseUrl: "http://127.0.0.1:1",
+    },
+  },
+}
 
-  test("does not inherit global indexing enabled into project config", async () => {
+afterEach(async () => {
+  delete process.env.KILO_MD_TEST
+  await disposeAllInstances()
+  await clear(true)
+})
+
+describe("markdown substitutions", () => {
+  test("applies file and env substitutions to parsed markdown body", async () => {
+    process.env.KILO_MD_TEST = "env content"
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(path.join(dir, "body.md"), "file content")
+        await Filesystem.write(
+          path.join(dir, "SKILL.md"),
+          ["---", "name: test", "description: Test", "---", "{file:body.md}", "{env:KILO_MD_TEST}"].join("\n"),
+        )
+      },
+    })
+
+    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"))
+
+    expect(md.content).toContain("file content")
+    expect(md.content).toContain("env content")
+  })
+})
+
+describe("kilocode indexing config", () => {
+  test("keeps global indexing enabled in global config", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()
 
@@ -77,14 +113,55 @@ describe("kilocode indexing config", () => {
         directory: tmp.path,
         fn: async () => {
           const config = await load()
+          const global = await Effect.runPromise(
+            Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
           expect(config.indexing?.provider).toBe("ollama")
           expect(config.indexing?.enabled).toBeUndefined()
-          expect(toIndexingConfigInput(config.indexing).enabled).toBe(false)
+          expect(global.indexing?.enabled).toBe(true)
         },
       })
     } finally {
       ;(Global.Path as { config: string }).config = prev
       await clear(true)
     }
+  })
+
+  test("uses global indexing enabled when project enablement is unset", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir({ git: true, config: cfg })
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear(true)
+
+    try {
+      await writeConfig(globalTmp.path, {
+        $schema: "https://app.kilo.ai/config.json",
+        indexing: {
+          enabled: true,
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const global = await Effect.runPromise(
+            Config.Service.use((svc) => svc.getGlobal()).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+          const config = await load()
+          const input = KiloIndexing.input(config.indexing, global.indexing)
+          expect(input.enabled).toBe(true)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear(true)
+    }
+  })
+
+  test("global indexing enabled applies when project indexing is disabled", async () => {
+    const input = KiloIndexing.input({ enabled: false }, { enabled: true })
+    expect(input.enabled).toBe(true)
   })
 })

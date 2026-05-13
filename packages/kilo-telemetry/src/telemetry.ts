@@ -156,7 +156,7 @@ export namespace Telemetry {
     taskId?: string
     mode?: "review"
     feature?: "code_reviews"
-    command?: "local-review" | "local-review-uncommitted"
+    command?: "review" | "local-review" | "local-review-uncommitted"
     apiProvider: string
     modelId: string
     inputTokens?: number
@@ -242,6 +242,22 @@ export namespace Telemetry {
   // Errors
   export function trackError(error: string, context?: string) {
     track(TelemetryEvent.ERROR, { error, context })
+  }
+
+  // Feedback
+  export interface FeedbackProperties extends Record<string, unknown> {
+    providerID: string
+    modelID: string
+    variant?: string
+    rating: "up" | "down" | "cleared"
+    previousRating?: "up" | "down"
+    sessionID?: string
+    messageID?: string
+    parentMessageID?: string
+  }
+
+  export function trackFeedback(props: FeedbackProperties) {
+    track(TelemetryEvent.FEEDBACK_SUBMITTED, props)
   }
 
   export async function shutdown(): Promise<void> {

@@ -33,6 +33,7 @@ export interface TabRenderDeps {
    *  getter so Solid tracks its reactivity inside rendered JSX. */
   visibleTabId: () => string | undefined
   isPending: (id: string) => boolean
+  isBusy: (id: string) => boolean
   tabLookup: () => Map<string, SessionInfo>
   adjacentHint: (id: string, activeId: string, ids: string[], prev: string, next: string) => string
   // Handlers
@@ -131,6 +132,7 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
     <SortableTab
       tab={s}
       active={active() && !deps.reviewActive()}
+      busy={deps.isBusy(s.id)}
       keybind={keybind()}
       closeKeybind={deps.kb().closeTab ?? ""}
       onSelect={() => {
@@ -172,7 +174,13 @@ export function renderNewTabButton(deps: NewTabButtonDeps): JSX.Element {
   return (
     <Show when={deps.contextSelected()}>
       <div class="am-split-button am-tab-add-split">
-        <TooltipKeybind title={deps.newSessionLabel} keybind={deps.kb().newTab ?? ""} placement="bottom">
+        <TooltipKeybind
+          title={deps.newSessionLabel}
+          keybind={deps.kb().newTab ?? ""}
+          placement="top"
+          gutter={8}
+          openDelay={0}
+        >
           <IconButton
             icon="plus"
             size="small"

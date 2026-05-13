@@ -7,7 +7,7 @@
  * ThinkingSelector     — thin wrapper wired to session context for chat usage.
  */
 
-import { Component, createSignal, For, onCleanup, Show } from "solid-js"
+import { type Accessor, Component, createSignal, For, onCleanup, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
@@ -23,6 +23,8 @@ export interface ThinkingSelectorBaseProps {
   value: string | undefined
   /** Called when the user picks a variant */
   onSelect: (value: string) => void
+  /** Delay outside dismissal while the popover opens inside a dialog. */
+  deferDismiss?: boolean
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -111,6 +113,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
         placement="top-start"
         preferredWidth={180}
         minHeight={100}
+        deferDismiss={props.deferDismiss}
         open={open()}
         onOpenChange={onOpen}
         triggerAs={Button}
@@ -157,14 +160,19 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 // Chat-specific wrapper (backwards-compatible)
 // ---------------------------------------------------------------------------
 
-export const ThinkingSelector: Component = () => {
+interface ThinkingSelectorProps {
+  sessionID?: Accessor<string | undefined>
+}
+
+export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
   const session = useSession()
+  const id = () => props.sessionID?.()
 
   return (
     <ThinkingSelectorBase
-      variants={session.variantList()}
-      value={session.currentVariant()}
-      onSelect={(value) => session.selectVariant(value)}
+      variants={session.variantList(id())}
+      value={session.currentVariant(id())}
+      onSelect={(value) => session.selectVariant(value, id())}
     />
   )
 }

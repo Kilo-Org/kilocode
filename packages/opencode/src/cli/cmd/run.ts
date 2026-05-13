@@ -20,7 +20,6 @@ import { ReadTool } from "../../tool/read"
 import { WebFetchTool } from "../../tool/webfetch"
 import { EditTool } from "../../tool/edit"
 import { WriteTool } from "../../tool/write"
-import { CodeSearchTool } from "../../tool/codesearch"
 import { WebSearchTool } from "../../tool/websearch"
 import { TaskTool } from "../../tool/task"
 import { SkillTool } from "../../tool/skill"
@@ -29,6 +28,7 @@ import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "@/util/locale"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { AppRuntime } from "@/effect/app-runtime"
+import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
@@ -145,13 +145,6 @@ function edit(info: ToolProps<typeof EditTool>) {
     },
     diff,
   )
-}
-
-function codesearch(info: ToolProps<typeof CodeSearchTool>) {
-  inline({
-    icon: "◇",
-    title: `Exa Code Search "${info.input.query}"`,
-  })
 }
 
 function websearch(info: ToolProps<typeof WebSearchTool>) {
@@ -303,12 +296,7 @@ export const RunCommand = cmd({
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
-        // kilocode_change end
-        .option("dangerously-skip-permissions", {
-          type: "boolean",
-          describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
-          default: false,
-        })
+      // kilocode_change end
     )
   },
   handler: async (args) => {
@@ -444,7 +432,6 @@ export const RunCommand = cmd({
           if (part.tool === "write") return write(props<typeof WriteTool>(part))
           if (part.tool === "webfetch") return webfetch(props<typeof WebFetchTool>(part))
           if (part.tool === "edit") return edit(props<typeof EditTool>(part))
-          if (part.tool === "codesearch") return codesearch(props<typeof CodeSearchTool>(part))
           if (part.tool === "websearch") return websearch(props<typeof WebSearchTool>(part))
           if (part.tool === "task") return task(props<typeof TaskTool>(part))
           if (part.tool === "todowrite") return todo(props<typeof TodoWriteTool>(part))
@@ -486,6 +473,9 @@ export const RunCommand = cmd({
 
           if (event.type === "message.part.updated") {
             const part = event.properties.part
+            // kilocode_change start - track Task child sessions for --auto permission replies
+            if (args.auto) KiloRunAuto.track(auto, part)
+            // kilocode_change end
             if (part.sessionID !== sessionID) continue
 
             if (part.type === "tool" && (part.state.status === "completed" || part.state.status === "error")) {
@@ -580,25 +570,27 @@ export const RunCommand = cmd({
 
           if (event.type === "permission.asked") {
             const permission = event.properties
-            if (permission.sessionID !== sessionID) continue
-
+            // kilocode_change start - In auto mode, approve root and tracked Task child permissions only
             if (args.auto) {
-              // kilocode_change - In auto mode, automatically approve all permissions without prompting
+              if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
               await sdk.permission.reply({
                 requestID: permission.id,
                 reply: "once",
               })
-            } else {
-              UI.println(
-                UI.Style.TEXT_WARNING_BOLD + "!",
-                UI.Style.TEXT_NORMAL +
-                  `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
-              )
-              await sdk.permission.reply({
-                requestID: permission.id,
-                reply: "reject",
-              })
+              continue
             }
+
+            if (permission.sessionID !== sessionID) continue
+            UI.println(
+              UI.Style.TEXT_WARNING_BOLD + "!",
+              UI.Style.TEXT_NORMAL +
+                `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
+            )
+            await sdk.permission.reply({
+              requestID: permission.id,
+              reply: "reject",
+            })
+            // kilocode_change end
           }
           // kilocode_change start - network retry handling
           if (event.type === "session.network.asked") {
@@ -691,6 +683,7 @@ export const RunCommand = cmd({
         UI.error("Session not found")
         process.exit(1)
       }
+      const auto = KiloRunAuto.create(sessionID) // kilocode_change
       await share(sdk, sessionID)
 
       loop().catch((e) => {

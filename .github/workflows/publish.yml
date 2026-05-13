@@ -42,7 +42,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6 # kilocode_change
         with:
           fetch-depth: 0
 
@@ -78,7 +78,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6 # kilocode_change
         with:
           fetch-tags: true
 
@@ -123,11 +123,11 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.repository == 'Kilo-Org/kilocode'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6 # kilocode_change
 
       - uses: ./.github/actions/setup-bun
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -156,7 +156,7 @@ jobs:
           KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: kilo-vscode
           path: packages/kilo-vscode/out
@@ -183,7 +183,11 @@ jobs:
       - smoke-test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6 # kilocode_change
+        # kilocode_change start
+        with:
+          persist-credentials: false
+        # kilocode_change end
 
       - uses: ./.github/actions/setup-bun
 
@@ -200,7 +204,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6 # kilocode_change
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
@@ -235,7 +239,7 @@ jobs:
           path: packages/kilo-vscode/out
 
       - name: Cache apt packages (AUR)
-        uses: actions/cache@v4
+        uses: actions/cache@v5 # kilocode_change
         with:
           path: /var/cache/apt/archives
           key: ${{ runner.os }}-apt-aur-${{ hashFiles('.github/workflows/publish.yml') }}

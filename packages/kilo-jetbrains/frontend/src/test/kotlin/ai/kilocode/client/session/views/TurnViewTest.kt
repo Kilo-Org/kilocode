@@ -5,10 +5,12 @@ import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 
 /**
  * Tests for [TurnView] and [MessageView].
@@ -161,7 +163,7 @@ class TurnViewTest : BasePlatformTestCase() {
     fun `test assistant card parts use shared compact gap`() {
         val message = msg("a1", "assistant")
         val reasoning = Reasoning("r1")
-        val tool = Tool("t1", "read").also { it.state = ToolExecState.COMPLETED }
+        val tool = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         message.parts["r1"] = reasoning
         message.parts["t1"] = tool
         val mv = MessageView(message)
@@ -169,16 +171,19 @@ class TurnViewTest : BasePlatformTestCase() {
         mv.setSize(400, 200)
         mv.doLayout()
 
-        assertEquals(UiStyle.Card.groupGap(), mv.part("t1")!!.y - mv.part("r1")!!.bounds.maxY.toInt())
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+            mv.part("t1")!!.y - mv.part("r1")!!.bounds.maxY.toInt(),
+        )
     }
 
     fun `test consecutive messages use shared compact gap`() {
         val tv = TurnView("u1")
         tv.addMessage(msg("u1", "user").also { msg ->
-            msg.parts["t1"] = Tool("t1", "read").also { it.state = ToolExecState.COMPLETED }
+            msg.parts["t1"] = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         })
         tv.addMessage(msg("a2", "assistant").also { msg ->
-            msg.parts["t2"] = Tool("t2", "read").also { it.state = ToolExecState.COMPLETED }
+            msg.parts["t2"] = Tool("t2", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
         })
 
         tv.setSize(400, 300)
@@ -186,7 +191,7 @@ class TurnViewTest : BasePlatformTestCase() {
         val first = tv.messageView("u1")!!
         val second = tv.messageView("a2")!!
 
-        assertEquals(UiStyle.Card.groupGap(), second.y - first.bounds.maxY.toInt())
+        assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.GAP), second.y - first.bounds.maxY.toInt())
     }
 
     // ------ helpers ------

@@ -31,8 +31,8 @@
       "@types/cross-spawn": "6.0.6",
       "@octokit/rest": "22.0.0",
       "@hono/zod-validator": "0.4.2",
-      "@opentui/core": "0.1.105",
-      "@opentui/solid": "0.1.105",
+      "@opentui/core": "0.2.2",
+      "@opentui/solid": "0.2.2",
       "ulid": "3.0.1",
       "@kobalte/core": "0.13.11",
       "@types/luxon": "3.7.1",
@@ -47,7 +47,7 @@
       "@solid-primitives/storage": "4.3.3",
       "@tailwindcss/vite": "4.1.11",
       "diff": "8.0.4",
-      "dompurify": "3.3.3",
+      "dompurify": "3.4.2",
       "drizzle-kit": "1.0.0-beta.19-d95b7a4",
       "drizzle-orm": "1.0.0-beta.19-d95b7a4",
       "effect": "4.0.0-beta.57",
@@ -82,7 +82,6 @@
   "devDependencies": {
     "@actions/artifact": "5.0.1",
     "@tsconfig/bun": "catalog:",
-    "@types/bun": "catalog:",
     "@types/mime-types": "3.0.1",
     "@typescript/native-preview": "catalog:",
     "glob": "13.0.5",
@@ -93,6 +92,7 @@
     "semver": "^7.6.0",
     "sst": "3.18.10",
     "turbo": "2.8.13",
+    "@types/bun": "catalog:",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.27.10"
   },
@@ -114,16 +114,6 @@
     "semi": false,
     "printWidth": 120
   },
-  "trustedDependencies": [
-    "esbuild",
-    "node-pty",
-    "protobufjs",
-    "tree-sitter",
-    "tree-sitter-bash",
-    "tree-sitter-powershell",
-    "web-tree-sitter",
-    "electron"
-  ],
   "overrides": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
@@ -137,15 +127,14 @@
     "smol-toml": ">=1.6.1",
     "fastify": ">=5.8.3",
     "diff": "8.0.4",
-    "dompurify": "3.3.3",
+    "dompurify": "3.4.2",
     "happy-dom": ">=20.8.9"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
-    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
-    "stream-chat@9.38.0": "patches/stream-chat@9.38.0.patch"
+    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.2.40",
+  "version": "7.2.52",
   "peerDependencies": {}
 }

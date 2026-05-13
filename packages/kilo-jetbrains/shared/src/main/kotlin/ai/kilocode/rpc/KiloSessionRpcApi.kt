@@ -1,8 +1,10 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
@@ -49,6 +51,12 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Delete a session. */
     suspend fun delete(id: String, directory: String)
 
+    /** List cloud-backed sessions. */
+    suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
+
+    /** Import a cloud-backed session into local storage. */
+    suspend fun importCloudSession(id: String, directory: String): SessionDto
+
     /** Observe live session status changes. */
     suspend fun statuses(): Flow<Map<String, SessionStatusDto>>
 
@@ -65,6 +73,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, directory: String)
+
+    /** Summarize/compact a session using the selected model. */
+    suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
 
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>

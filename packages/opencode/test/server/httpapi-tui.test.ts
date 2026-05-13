@@ -1,23 +1,36 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import type { Context } from "hono"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { GlobalBus } from "../../src/bus/global"
+import { TuiEvent } from "../../src/cli/cmd/tui/event"
 import { SessionID } from "../../src/session/schema"
 import { Instance } from "../../src/project/instance"
-import { TuiApi, TuiPaths } from "../../src/server/routes/instance/httpapi/tui"
+import { TuiApi, TuiPaths } from "../../src/server/routes/instance/httpapi/groups/tui"
 import { callTui } from "../../src/server/routes/instance/tui"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { OpenApi } from "effect/unstable/httpapi"
 import { resetDatabase } from "../fixture/db"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
 const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 
-function app() {
-  Flag.KILO_EXPERIMENTAL_HTTPAPI = true
-  return Server.Default().app
+function app(experimental = true) {
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = experimental
+  return experimental ? Server.Default().app : Server.Legacy().app
+}
+
+function nextCommandExecute() {
+  return new Promise<unknown>((resolve) => {
+    const listener = (event: { payload: { type?: string; properties?: { command?: unknown } } }) => {
+      if (event.payload.type !== TuiEvent.CommandExecute.type) return
+      GlobalBus.off("event", listener)
+      resolve(event.payload.properties?.command)
+    }
+    GlobalBus.on("event", listener)
+  })
 }
 
 async function expectTrue(path: string, headers: Record<string, string>, body?: unknown) {
@@ -32,7 +45,7 @@ async function expectTrue(path: string, headers: Record<string, string>, body?: 
 
 afterEach(async () => {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = original
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await resetDatabase()
 })
 
@@ -70,6 +83,27 @@ describe("tui HttpApi bridge", () => {
       body: JSON.stringify({ sessionID: SessionID.descending() }),
     })
     expect(missing.status).toBe(404)
+  })
+
+  test("matches legacy unknown execute command behavior", async () => {
+    await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
+    const headers = { "x-kilo-directory": tmp.path, "content-type": "application/json" }
+    const body = JSON.stringify({ command: "unknown_command" })
+
+    const legacyCommand = nextCommandExecute()
+    const legacy = await app(false).request(TuiPaths.executeCommand, { method: "POST", headers, body })
+    expect(legacy.status).toBe(200)
+    expect(await legacy.json()).toBe(true)
+
+    const effectCommand = nextCommandExecute()
+    const effect = await app().request(TuiPaths.executeCommand, { method: "POST", headers, body })
+    expect(effect.status).toBe(200)
+    expect(await effect.json()).toBe(true)
+
+    const legacyPublished = await legacyCommand
+    const effectPublished = await effectCommand
+    expect(effectPublished).toBe(legacyPublished)
+    expect(legacyPublished).toBeUndefined()
   })
 
   test("serves TUI control queue through experimental Effect routes", async () => {

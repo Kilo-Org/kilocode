@@ -204,7 +204,7 @@ The only remaining conflicts are files with **actual code differences** - files 
 Options:
   --version <version>    Target upstream version (e.g., v1.1.49)
   --commit <hash>        Target upstream commit hash
-  --base-branch <name>   Base branch to merge into (default: main)
+  --base-branch <name>   Base branch to merge into; use HEAD for current branch (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
   --no-worktrees         Don't create reference worktrees
@@ -243,7 +243,9 @@ Options:
   --dry-run              Show what would change without writing the file
 ```
 
-The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+The command finds the newest upstream tag already merged into `HEAD` (read from `.opencode-version` at the repo root, falling back to an `ls-remote` + `merge-base --is-ancestor` walk), reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+
+The `.opencode-version` file is a single-line tag (e.g. `v1.14.33`) recorded by `merge.ts` after every successful upstream merge. Editing it by hand pins the "last merged" tag for the per-file commands above; delete it to fall back to the slower automatic discovery.
 
 ### reset-to-upstream.ts
 
@@ -304,6 +306,8 @@ Tighten the blast radius with `--review-limit 0` (only `markers-only` and `cosme
 ## Using Custom Base Branches
 
 By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
+
+Passing `--base-branch HEAD` targets the currently checked-out branch without typing its full name.
 
 ### Incremental Merges
 

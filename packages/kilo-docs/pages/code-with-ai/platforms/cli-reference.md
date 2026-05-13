@@ -184,7 +184,6 @@ Options:
       --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
       --thinking                      show thinking blocks  [boolean] [default: false]
       --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
-      --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -598,7 +597,7 @@ Options:
       --path                  directory path to generate the agent file  [string]
       --description           what the agent should do  [string]
       --mode                  agent mode  [string] [choices: "all", "primary", "subagent"]
-      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, codesearch, lsp, skill"  [string]
+      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, lsp, skill"  [string]
   -m, --model                 model to use in the format of provider/model  [string]
 ```
 

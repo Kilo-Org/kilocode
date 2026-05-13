@@ -43,4 +43,8 @@ exclude = [
   # Consistently times out in CI
   '^https?://opncd\.ai',
   '^https?://zod\.dev/v4/changelog',
+  # Example punycode domain used in homograph attack documentation — does not exist
+  '^https?://xn--pitest',
+  # OpenAI docs return 404 to plain GET link checks but resolve in browsers
+  '^https?://platform\.openai\.com/docs/api-reference/responses/create',
 ]

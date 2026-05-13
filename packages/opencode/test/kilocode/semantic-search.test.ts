@@ -34,6 +34,14 @@ const baseCtx = {
 } satisfies Tool.Context
 
 describe("tool.semantic_search", () => {
+  test("describes code snippet results", async () => {
+    const tool = await initTool()
+
+    expect(tool.description).toContain("Find code snippets most relevant")
+    expect(tool.description).toContain("Returns matching content with file paths, line ranges, and relevance scores")
+    expect(tool.description).not.toContain("Find files most relevant")
+  })
+
   test("throws when query is empty", async () => {
     const tool = await initTool()
     expect(rt.runPromise(tool.execute({ query: "" }, baseCtx))).rejects.toThrow("query is required")

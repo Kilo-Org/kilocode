@@ -92,4 +92,9 @@ export const dict = {
     "Wyłącz snapshoty Kilo dla tego projektu. Stracisz cofanie/przywracanie zmian Kilo, ale git nadal śledzi wszystko.",
 
   "ui.messagePart.openInDiffViewer": "Otwórz w podglądzie różnic",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "To było pomocne",
+  "ui.message.feedback.notHelpful": "To nie było pomocne",
+  "ui.message.feedback.clearRating": "Wyczyść ocenę",
 }

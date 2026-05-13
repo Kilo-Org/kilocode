@@ -15,7 +15,7 @@ Kilo automatically detects the text encoding of each file it reads and preserves
 - Shift_JIS, EUC-JP, GB2312, Big5, EUC-KR
 - Windows-1251, KOI8-R
 - The ISO-8859 family
-- Other common legacy Latin and CJK encodings detected by [jschardet](https://github.com/aadsm/jschardet) and decoded by [iconv-lite](https://github.com/ashtuchkin/iconv-lite)
+- Other common legacy Latin and CJK encodings detected by [chardet](https://github.com/runk/node-chardet) and decoded by [iconv-lite](https://github.com/ashtuchkin/iconv-lite)
 
 New files Kilo creates are always UTF-8 without a BOM. Encoding detection only runs when Kilo reads or overwrites an existing file.
 

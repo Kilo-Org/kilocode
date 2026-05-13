@@ -57,6 +57,11 @@
   }
 }
 
+[data-component="select"][data-trigger-style="settings"] [data-slot="select-select-trigger"] {
+  box-sizing: border-box;
+  width: 100%;
+}
+
 /* Select dropdown content */
 [data-component="select-content"] {
   min-width: 200px !important;
@@ -76,6 +81,7 @@
 
   /* Section headers */
   [data-slot="select-section"] {
+    padding: 4px 12px;
     font-size: var(--kilo-font-size-11);
     font-weight: 500;
     color: var(--text-weak);

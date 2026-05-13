@@ -3,12 +3,13 @@ import { Context, Effect, FileSystem, Layer, Path } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
-import { McpPaths } from "../../src/server/routes/instance/httpapi/mcp"
+import { McpPaths } from "../../src/server/routes/instance/httpapi/groups/mcp"
 import { Instance } from "../../src/project/instance"
+import { InstanceStore } from "../../src/project/instance-store"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
-import { provideInstance, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 void Log.init({ print: false })
@@ -19,7 +20,7 @@ const it = testEffect(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer))
 
 function app(experimental: boolean) {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = experimental
-  return Server.Default().app
+  return experimental ? Server.Default().app : Server.Legacy().app
 }
 type TestApp = ReturnType<typeof app>
 
@@ -57,7 +58,9 @@ function withMcpProject<A, E, R>(self: (dir: string) => Effect.Effect<A, E, R>) 
       }),
     )
     yield* Effect.addFinalizer(() =>
-      Effect.promise(() => Instance.provide({ directory: dir, fn: () => Instance.dispose() })).pipe(Effect.ignore),
+      Effect.promise(() =>
+        Instance.provide({ directory: dir, fn: () => InstanceStore.disposeInstance(Instance.current) }),
+      ).pipe(Effect.ignore),
     )
 
     return yield* self(dir).pipe(provideInstance(dir))
@@ -76,7 +79,7 @@ const readResponse = Effect.fnUntraced(function* (input: { app: TestApp; path: s
 
 afterEach(async () => {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = original
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await resetDatabase()
 })
 

@@ -2,10 +2,13 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.TurnView
-import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.Disposable
+import com.intellij.util.ui.JBUI
 
 /**
  * Scrollable transcript panel that maps the model's turn grouping to
@@ -31,12 +34,20 @@ import com.intellij.openapi.Disposable
 class SessionMessageListPanel(
     private val model: SessionModel,
     parent: Disposable,
-) : SessionLayoutPanel(UiStyle.Card.groupGap(), UiStyle.Insets.transcript()), SessionStyleTarget {
+) : SessionLayoutPanel(
+    JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+    JBUI.insets(
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+        SessionUiStyle.SessionLayout.TRANSCRIPT_PADDING,
+    ),
+), SessionEditorStyleTarget {
 
     private val turnViews = LinkedHashMap<String, TurnView>()
     private val msgToTurn = HashMap<String, TurnView>()
     private val msgToView = HashMap<String, MessageView>()
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
@@ -50,14 +61,20 @@ class SessionMessageListPanel(
                 is SessionModelEvent.TurnUpdated -> onTurnUpdated(event.turn)
                 is SessionModelEvent.TurnRemoved -> onTurnRemoved(event.id)
 
-                is SessionModelEvent.ContentAdded ->
+                is SessionModelEvent.ContentAdded -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    refresh()
+                }
 
-                is SessionModelEvent.ContentUpdated ->
+                is SessionModelEvent.ContentUpdated -> {
                     msgToView[event.messageId]?.upsertPart(event.content)
+                    refresh()
+                }
 
-                is SessionModelEvent.ContentRemoved ->
+                is SessionModelEvent.ContentRemoved -> {
                     msgToView[event.messageId]?.removePart(event.contentId)
+                    refresh()
+                }
 
                 is SessionModelEvent.ContentDelta -> {
                     // Use the full current content from the model rather than
@@ -67,6 +84,7 @@ class SessionMessageListPanel(
                     // on first appendDelta and fires both events in sequence).
                     val content = model.content(event.messageId, event.contentId)
                     if (content != null) msgToView[event.messageId]?.upsertPart(content)
+                    refresh()
                 }
 
                 is SessionModelEvent.HistoryLoaded -> rebuild()
@@ -80,6 +98,8 @@ class SessionMessageListPanel(
                 is SessionModelEvent.StateChanged,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
+                is SessionModelEvent.SessionUpdated,
+                is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
             }
         }
@@ -231,7 +251,7 @@ class SessionMessageListPanel(
         repaint()
     }
 
-    override fun applyStyle(style: SessionStyle) {
+    override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         for (view in turnViews.values) view.applyStyle(style)
         progress.applyStyle(style)

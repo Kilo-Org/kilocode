@@ -81,6 +81,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
     getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
+    setSessionVariant: noop,
     variantList: () => [],
     currentVariant: () => undefined,
     selectVariant: noop,
@@ -117,7 +118,7 @@ const WithSessions: ParentComponent<{ sessions?: typeof mockSessions }> = (props
                         session_diff: {},
                         message: {},
                         part: {},
-                        provider: { all: [], connected: [] as string[], default: {} as any },
+                        provider: { all: [], connected: [] as string[], default: {} as any, failed: [] as string[] },
                       }}
                       directory="/project/"
                     >

@@ -188,9 +188,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           favorite: modelStore.favorite,
           variant: modelStore.variant,
         }
-        state.writer = state.writer
-          .then(() => Filesystem.writeJson(filePath, data))
-          .catch(() => {})
+        state.writer = state.writer.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
         // kilocode_change end
       }
 
@@ -270,6 +268,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         // kilocode_change start - expose persisted per-agent pick separately from overrides
         saved(name: string) {
           return modelStore.model[name]
+        },
+        // kilocode_change end
+        // kilocode_change start - resolve once all queued writes (atomic write+rename) have settled.
+        // Used by tests to deterministically await the writer chain instead of sleeping for a fixed
+        // duration, which is too slow on Windows CI where temp-file rename can exceed 50ms under AV.
+        async flush() {
+          const deadline = Date.now() + 5000
+          while (state.pending && Date.now() < deadline) await new Promise((r) => setTimeout(r, 0))
+          await state.writer
         },
         // kilocode_change end
         recent() {

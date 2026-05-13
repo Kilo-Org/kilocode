@@ -547,6 +547,189 @@ describe("checkLine (main loop simulation)", () => {
   })
 })
 
+// ─── Diff parser (revert detection) ──────────────────────────────────────────
+// Mirrors the pure parsing logic in script/check-opencode-annotations.ts:addedLines.
+// Given a `git diff --unified=0` output, returns the set of added line numbers
+// and a flag indicating whether the diff removes any kilocode_change marker
+// (i.e. the change is reverting Kilo modifications back to upstream).
+
+function parseDiff(diff: string): { added: Set<number>; revert: boolean } {
+  const added = new Set<number>()
+  let revert = false
+  const all = diff.split("\n")
+
+  let i = 0
+  while (i < all.length) {
+    const header = all[i] ?? ""
+    const m = header.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/)
+    if (!m) {
+      i++
+      continue
+    }
+
+    const start = Number(m[1])
+    let pos = 0
+    let j = i + 1
+    while (j < all.length) {
+      const hl = all[j] ?? ""
+      if (hl.startsWith("@@") || hl.startsWith("diff ")) break
+      if (hl.startsWith("+") && !hl.startsWith("+++")) {
+        added.add(start + pos)
+        pos++
+      } else if (hl.startsWith("-") && !hl.startsWith("---") && hasMarker(hl.slice(1))) {
+        revert = true
+      }
+      j++
+    }
+
+    i = j
+  }
+
+  return { added, revert }
+}
+
+describe("parseDiff (revert detection)", () => {
+  test("normal addition — no marker removed, not a revert", () => {
+    const diff = [
+      "diff --git a/foo.ts b/foo.ts",
+      "--- a/foo.ts",
+      "+++ b/foo.ts",
+      "@@ -10,0 +11,2 @@",
+      "+const a = 1",
+      "+const b = 2",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([11, 12]))
+    expect(out.revert).toBe(false)
+  })
+
+  test("revert: hunk removes kilocode_change marker block and adds upstream original", () => {
+    // Mirrors the abort-leak.test.ts case from PR #9908
+    const diff = [
+      "diff --git a/test.ts b/test.ts",
+      "--- a/test.ts",
+      "+++ b/test.ts",
+      "@@ -16,3 +16 @@ describe(...)",
+      "-  // kilocode_change start - TODO: skip flaky test",
+      "-  test.skip('foo', async () => {",
+      "-    // kilocode_change end",
+      "+  test('foo', async () => {",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([16]))
+    expect(out.revert).toBe(true)
+  })
+
+  test("revert: inline marker removed, upstream original added", () => {
+    const diff = [
+      "diff --git a/test.ts b/test.ts",
+      "@@ -5 +5 @@",
+      "-const url = Flag.X || 'fallback' // kilocode_change",
+      "+const url = Flag.X",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([5]))
+    expect(out.revert).toBe(true)
+  })
+
+  test("file-level revert: marker removed in one hunk covers other hunks", () => {
+    // Mirrors the prompt.test.ts case from PR #9908: kilocode_change marker
+    // is removed in hunk A, while a separate hunk B replaces references that
+    // depended on the removed Kilo construct.
+    const diff = [
+      "diff --git a/test.ts b/test.ts",
+      "@@ -218 +217,0 @@",
+      "-const unixSkip = it.live.skip // kilocode_change - skip flaky tests",
+      "@@ -1589 +1583 @@ unixSkip(",
+      "-unixSkip(",
+      "+unix(",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([1583]))
+    expect(out.revert).toBe(true)
+  })
+
+  test("multiple kilocode_change start/end markers removed across hunks", () => {
+    const diff = [
+      "diff --git a/test.ts b/test.ts",
+      "@@ -1432,2 +1431 @@",
+      "-// kilocode_change start - flaky on Linux CI",
+      "-unixSkip(",
+      "+unix(",
+      "@@ -1469 +1466,0 @@",
+      "-// kilocode_change end",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([1431]))
+    expect(out.revert).toBe(true)
+  })
+
+  test("YAML/shell marker removal also triggers revert", () => {
+    const diff = [
+      "diff --git a/foo.yml b/foo.yml",
+      "@@ -10 +10 @@",
+      "-      - uses: actions/checkout@v6 # kilocode_change",
+      "+      - uses: actions/checkout@v4",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([10]))
+    expect(out.revert).toBe(true)
+  })
+
+  test("JSX marker removal triggers revert", () => {
+    const diff = [
+      "diff --git a/foo.tsx b/foo.tsx",
+      "@@ -5,3 +5 @@",
+      "-{/* kilocode_change start */}",
+      "-<KiloThing />",
+      "-{/* kilocode_change end */}",
+      "+<UpstreamThing />",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([5]))
+    expect(out.revert).toBe(true)
+  })
+
+  test("multi-line addition with no marker removed is not a revert", () => {
+    const diff = [
+      "diff --git a/foo.ts b/foo.ts",
+      "@@ -10,0 +11,3 @@",
+      "+const a = 1",
+      "+const b = 2",
+      "+const c = 3",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added).toEqual(new Set([11, 12, 13]))
+    expect(out.revert).toBe(false)
+  })
+
+  test("removal-only hunk (no additions) still flips revert flag", () => {
+    const diff = [
+      "diff --git a/foo.ts b/foo.ts",
+      "@@ -1,1 +0,0 @@",
+      "-// kilocode_change start",
+      "@@ -5,1 +0,0 @@",
+      "-// kilocode_change end",
+    ].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added.size).toBe(0)
+    expect(out.revert).toBe(true)
+  })
+
+  test("empty diff", () => {
+    const out = parseDiff("")
+    expect(out.added.size).toBe(0)
+    expect(out.revert).toBe(false)
+  })
+
+  test("diff header lines are ignored", () => {
+    const diff = ["diff --git a/foo.ts b/foo.ts", "--- a/foo.ts", "+++ b/foo.ts"].join("\n")
+    const out = parseDiff(diff)
+    expect(out.added.size).toBe(0)
+    expect(out.revert).toBe(false)
+  })
+})
+
 // ─── Regex edge cases ─────────────────────────────────────────────────────────
 
 describe("MARKER_PREFIX regex edge cases", () => {

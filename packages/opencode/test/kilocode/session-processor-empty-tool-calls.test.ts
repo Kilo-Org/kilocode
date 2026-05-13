@@ -265,6 +265,80 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
+  it.effect("treats provider finish errors without details as retryable API errors", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "error",
+              usage: usage(),
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(result).toBe("stop")
+          expect(handle.message.finish).toBe("error")
+          expect(handle.message.error?.name).toBe("APIError")
+          if (handle.message.error?.name !== "APIError") return
+          expect(handle.message.error.data.isRetryable).toBe(true)
+          expect(handle.message.error.data.message).toContain("provider ended the response with an error")
+        }),
+      { git: true },
+    ),
+  )
+
   it.effect("adds generic warning when model stops after text length finish", () =>
     provideTmpdirInstance(
       (dir) =>

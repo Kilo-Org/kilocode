@@ -92,4 +92,9 @@ export const dict = {
     "Kilo-Snapshots für dieses Projekt ausschalten. Rückgängig/Wiederherstellen für Kilo-Änderungen ist nicht mehr möglich, aber git verfolgt weiterhin alles.",
 
   "ui.messagePart.openInDiffViewer": "Im Diff-Viewer öffnen",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Das war hilfreich",
+  "ui.message.feedback.notHelpful": "Das war nicht hilfreich",
+  "ui.message.feedback.clearRating": "Bewertung löschen",
 }

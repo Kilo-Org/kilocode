@@ -1,6 +1,8 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -174,6 +176,13 @@ object KiloCliDataParser {
                 ChatEventDto.SessionStatusChanged(sid, dto)
             }
 
+            "session.updated" -> {
+                val info = props["info"]?.jsonObject ?: return null
+                val dto = parseSessionObject(info)
+                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
+                ChatEventDto.SessionUpdated(sid, dto)
+            }
+
             "session.idle" -> {
                 val sid = props.str("sessionID") ?: return null
                 ChatEventDto.SessionIdle(sid)
@@ -258,6 +267,25 @@ object KiloCliDataParser {
         }
     }
 
+    fun parseCloudSessions(raw: String): CloudSessionListDto {
+        val obj = tryParseObject(raw) ?: return CloudSessionListDto(emptyList())
+        val items = obj["cliSessions"]?.jsonArray ?: JsonArray(emptyList())
+        val sessions = items.mapNotNull { elem ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            CloudSessionDto(
+                id = item.str("session_id") ?: return@mapNotNull null,
+                title = item.str("title"),
+                createdAt = item.str("created_at") ?: return@mapNotNull null,
+                updatedAt = item.str("updated_at") ?: return@mapNotNull null,
+                version = item.num("version") ?: return@mapNotNull null,
+            )
+        }
+        return CloudSessionListDto(
+            sessions = sessions,
+            nextCursor = obj.str("nextCursor"),
+        )
+    }
+
     fun parseModelState(raw: String): ModelStateDto {
         val obj = tryParseObject(raw) ?: return ModelStateDto()
         return ModelStateDto(
@@ -317,6 +345,12 @@ object KiloCliDataParser {
     }
 
     /**
+     * Build the JSON body for `POST /session/{id}/summarize`.
+     */
+    fun buildSummarizeJson(model: ModelSelectionDto): String =
+        """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
+
+    /**
      * Build the partial JSON body for `PATCH /global/config`.
      */
     fun buildConfigPartial(update: ConfigUpdateDto): String {
@@ -363,22 +397,14 @@ object KiloCliDataParser {
             modelID = obj.str("modelID"),
             parentID = obj.str("parentID"),
             cost = obj.num("cost"),
-            tokens = tokens?.let {
-                val cache = it["cache"]?.jsonObject
-                TokensDto(
-                    input = it.long("input") ?: 0,
-                    output = it.long("output") ?: 0,
-                    reasoning = it.long("reasoning") ?: 0,
-                    cacheRead = cache?.long("read") ?: 0,
-                    cacheWrite = cache?.long("write") ?: 0,
-                )
-            },
+            tokens = tokens?.let(::parseTokens),
             error = error?.let { parseError(it) },
         )
     }
 
     internal fun parsePart(obj: JsonObject): PartDto {
         val state = obj["state"]?.jsonObject
+        val tokens = obj["tokens"]?.jsonObject
         val top = obj.map("metadata")
         val meta = state.map("metadata") + top
         return PartDto(
@@ -396,6 +422,20 @@ object KiloCliDataParser {
             output = state?.str("output"),
             error = state?.str("error"),
             time = obj.time("time") ?: state.time("time"),
+            reason = obj.str("reason"),
+            cost = obj.num("cost"),
+            tokens = tokens?.let(::parseTokens),
+        )
+    }
+
+    private fun parseTokens(obj: JsonObject): TokensDto {
+        val cache = obj["cache"]?.jsonObject
+        return TokensDto(
+            input = obj.long("input") ?: 0,
+            output = obj.long("output") ?: 0,
+            reasoning = obj.long("reasoning") ?: 0,
+            cacheRead = cache?.long("read") ?: 0,
+            cacheWrite = cache?.long("write") ?: 0,
         )
     }
 

@@ -1,13 +1,13 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
-import { SyncPaths } from "../../src/server/routes/instance/httpapi/sync"
+import { SyncPaths } from "../../src/server/routes/instance/httpapi/groups/sync"
 import { Session } from "@/session/session"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 void Log.init({ print: false })
 
@@ -16,7 +16,7 @@ const originalWorkspaces = Flag.KILO_EXPERIMENTAL_WORKSPACES
 
 function app(httpapi = true) {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = httpapi
-  return Server.Default().app
+  return httpapi ? Server.Default().app : Server.Legacy().app
 }
 
 function runSession<A, E>(fx: Effect.Effect<A, E, Session.Service>) {
@@ -24,9 +24,10 @@ function runSession<A, E>(fx: Effect.Effect<A, E, Session.Service>) {
 }
 
 afterEach(async () => {
+  mock.restore()
   Flag.KILO_EXPERIMENTAL_HTTPAPI = originalHttpApi
   Flag.KILO_EXPERIMENTAL_WORKSPACES = originalWorkspaces
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await resetDatabase()
 })
 
@@ -35,6 +36,7 @@ describe("sync HttpApi", () => {
     Flag.KILO_EXPERIMENTAL_WORKSPACES = true
     await using tmp = await tmpdir({ git: true, config: { formatter: false, lsp: false } })
     const headers = { "x-kilo-directory": tmp.path, "content-type": "application/json" }
+    const info = spyOn(Log.create({ service: "server.sync" }), "info")
 
     const session = await Instance.provide({
       directory: tmp.path,
@@ -78,6 +80,8 @@ describe("sync HttpApi", () => {
     })
     expect(replayed.status).toBe(200)
     expect(await replayed.json()).toEqual({ sessionID: session.id })
+    expect(info.mock.calls.some(([message]) => message === "sync replay requested")).toBe(true)
+    expect(info.mock.calls.some(([message]) => message === "sync replay complete")).toBe(true)
   })
 
   test("matches legacy seq validation", async () => {

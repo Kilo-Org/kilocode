@@ -607,30 +607,3 @@ export function isEventFromForeignProject(event: Event, expectedProjectID: strin
   }
   return false
 }
-
-/**
- * Merge open-tab paths with backend file search results for the @ mention dropdown.
- *
- * Ordering: active file → other open tabs → backend results (all deduplicated).
- * When a query is present, open tabs are filtered to only include matches.
- * The `active` path (if provided) is placed first when it exists in `open`.
- */
-export function mergeFileSearchResults(input: {
-  query: string
-  backend: string[]
-  open: Set<string>
-  active?: string
-}): string[] {
-  const norm = (p: string) => p.replaceAll("\\", "/")
-  const query = norm(input.query).trim().toLowerCase()
-  const open = new Set([...input.open].map(norm))
-  const active = input.active ? norm(input.active) : undefined
-  const backend = input.backend.map(norm)
-  const ok = (p: string) => !query || p.toLowerCase().includes(query)
-  const tabs =
-    active && open.has(active) && ok(active)
-      ? [active, ...[...open].filter((p) => p !== active && ok(p))]
-      : [...open].filter(ok)
-  const seen = new Set(tabs)
-  return [...tabs, ...backend.filter((p) => !seen.has(p))]
-}

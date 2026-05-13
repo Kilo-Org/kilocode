@@ -104,6 +104,12 @@ export class ServerManager {
           ...(extraCaCerts && { NODE_EXTRA_CA_CERTS: extraCaCerts }),
           ...(!proxyStrictSSL && { NODE_TLS_REJECT_UNAUTHORIZED: "0" }),
           ...process.env,
+          // VS Code's http.proxy / http.noProxy settings are not reflected in
+          // process.env, so spawned children bypass the user's configured proxy
+          // and fail behind corporate firewalls. Forward them as the standard
+          // HTTP_PROXY / HTTPS_PROXY / NO_PROXY env vars that Bun's fetch and
+          // most HTTP clients already respect.
+          ...buildProxyEnv(),
           // Force mimalloc (the allocator Bun ships with) to return freed pages
           // to the OS immediately instead of retaining them in its arenas.
           // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
@@ -255,6 +261,72 @@ export class ServerStartupError extends Error {
 
 function stripAnsi(str: string): string {
   return str.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
+/**
+ * Translate VS Code's `http.proxy` / `http.noProxy` / `http.proxySupport`
+ * settings into the standard proxy env vars, so the spawned CLI honors the
+ * user's proxy configuration. Returns an empty object when no override is
+ * needed, so callers can spread unconditionally.
+ *
+ * `http.proxySupport: "off"` is VS Code's opt-in way to disable proxy support
+ * entirely; when set, we explicitly clear the env vars so ambient shell
+ * HTTP_PROXY/http_proxy doesn't leak into the spawned child.
+ */
+export function buildProxyEnv(): Record<string, string> {
+  const httpConfig = vscode.workspace.getConfiguration("http")
+  const proxyInfo = httpConfig.inspect<string>("proxy")
+  const noProxyInfo = httpConfig.inspect<string[]>("noProxy")
+  const proxySupport = httpConfig.get<string>("proxySupport")
+
+  if (proxySupport === "off") {
+    return { HTTP_PROXY: "", HTTPS_PROXY: "", NO_PROXY: "", http_proxy: "", https_proxy: "", no_proxy: "" }
+  }
+
+  const proxy = httpConfig.get<string>("proxy")
+  const noProxy = httpConfig.get<string[]>("noProxy")
+  const proxySet =
+    proxyInfo !== undefined &&
+    [
+      proxyInfo.globalValue,
+      proxyInfo.workspaceValue,
+      proxyInfo.workspaceFolderValue,
+      proxyInfo.globalLanguageValue,
+      proxyInfo.workspaceLanguageValue,
+      proxyInfo.workspaceFolderLanguageValue,
+    ].some((value) => value !== undefined)
+  const noProxySet =
+    noProxyInfo !== undefined &&
+    [
+      noProxyInfo.globalValue,
+      noProxyInfo.workspaceValue,
+      noProxyInfo.workspaceFolderValue,
+      noProxyInfo.globalLanguageValue,
+      noProxyInfo.workspaceLanguageValue,
+      noProxyInfo.workspaceFolderLanguageValue,
+    ].some((value) => value !== undefined)
+  const env: Record<string, string> = {}
+  if (proxy && proxy.trim() !== "") {
+    env.HTTP_PROXY = proxy
+    env.HTTPS_PROXY = proxy
+    env.http_proxy = proxy
+    env.https_proxy = proxy
+  }
+  if (proxySet && proxy !== undefined && proxy.trim() === "") {
+    env.HTTP_PROXY = ""
+    env.HTTPS_PROXY = ""
+    env.http_proxy = ""
+    env.https_proxy = ""
+  }
+  if (Array.isArray(noProxy) && noProxy.length > 0) {
+    env.NO_PROXY = noProxy.join(",")
+    env.no_proxy = noProxy.join(",")
+  }
+  if (noProxySet && Array.isArray(noProxy) && noProxy.length === 0) {
+    env.NO_PROXY = ""
+    env.no_proxy = ""
+  }
+  return env
 }
 
 export function toErrorMessage(

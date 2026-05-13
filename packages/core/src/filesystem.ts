@@ -7,6 +7,28 @@ import { Effect, FileSystem, Layer, Schema, Context } from "effect"
 import type { PlatformError } from "effect/PlatformError"
 import { Glob } from "./util/glob"
 
+// kilocode_change start - Windows-resilient mkdir -p.
+// fs.mkdir(dir, { recursive: true }) should be idempotent, but on Windows
+// with NTFS reparse points (OneDrive), directory junctions, or WSL-served
+// paths, libuv can still throw EEXIST. This wrapper catches that specific
+// error so callers get the promised directory-exists semantics.
+//
+//   https://github.com/Kilo-Org/kilocode/issues/9618
+//   https://github.com/Kilo-Org/kilocode/issues/9755
+function isEexist(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as NodeJS.ErrnoException).code === "EEXIST"
+}
+
+async function mkdirSafe(dir: string): Promise<void> {
+  try {
+    await NFS.mkdir(dir, { recursive: true })
+  } catch (err: unknown) {
+    if (isEexist(err)) return
+    throw err
+  }
+}
+// kilocode_change end
+
 export namespace AppFileSystem {
   export class FileSystemError extends Schema.TaggedErrorClass<FileSystemError>()("FileSystemError", {
     method: Schema.String,
@@ -84,7 +106,12 @@ export namespace AppFileSystem {
       })
 
       const ensureDir = Effect.fn("FileSystem.ensureDir")(function* (path: string) {
-        yield* fs.makeDirectory(path, { recursive: true })
+        // kilocode_change start - use mkdirSafe to tolerate Windows EEXIST
+        yield* Effect.tryPromise({
+          try: () => mkdirSafe(path),
+          catch: (cause) => new FileSystemError({ method: "ensureDir", cause }),
+        })
+        // kilocode_change end
       })
 
       const writeWithDirs = Effect.fn("FileSystem.writeWithDirs")(function* (
@@ -99,7 +126,12 @@ export namespace AppFileSystem {
             (e) => e.reason._tag === "NotFound",
             () =>
               Effect.gen(function* () {
-                yield* fs.makeDirectory(dirname(path), { recursive: true })
+                // kilocode_change start - use mkdirSafe to tolerate Windows EEXIST
+                yield* Effect.tryPromise({
+                  try: () => mkdirSafe(dirname(path)),
+                  catch: (cause) => new FileSystemError({ method: "writeWithDirs:mkdir", cause }),
+                })
+                // kilocode_change end
                 yield* write
               }),
           ),

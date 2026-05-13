@@ -4,6 +4,7 @@ import {
   messageTurns,
   queuedUserMessageIDs,
   stableMessageTurns,
+  visibleMessages,
 } from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
@@ -106,6 +107,36 @@ describe("messageTurns", () => {
       { id: "message_3", partial: true, assistant: ["message_4", "message_5"] },
       { id: "message_6", partial: undefined, assistant: [] },
     ])
+  })
+
+  it("stops at the revert boundary user turn", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      user("message_3"),
+      assistant("message_4", "message_3"),
+    ]
+
+    expect(messageTurns(messages, "message_3").map((turn) => turn.user.id)).toEqual(["message_1"])
+  })
+})
+
+describe("visibleMessages", () => {
+  it("flattens only turns before the revert boundary", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1"),
+      user("message_3"),
+      assistant("message_4", "message_3"),
+    ]
+
+    expect(visibleMessages(messages, "message_3").map((msg) => msg.id)).toEqual(["message_1", "message_2"])
+  })
+
+  it("keeps leading partial assistant output", () => {
+    const messages = [assistant("message_2", "message_1"), user("message_3")]
+
+    expect(visibleMessages(messages).map((msg) => msg.id)).toEqual(["message_2", "message_3"])
   })
 })
 
