@@ -21,7 +21,7 @@ The mobile app lets you:
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
 
-{% imageGallery columns="3" %}
+{% imageGallery columns="3" width="220px" %}
 {% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing KiloClaw and active agent sessions" caption="Start coding tasks, open KiloClaw, and resume active sessions from the mobile home screen." /%}
 
 {% image src="/docs/img/mobile-apps/new-session.webp" alt="Kilo Code mobile new session screen with coding mode selector" caption="Create a new Cloud Agent session and choose the right mode for the task." /%}
@@ -29,7 +29,7 @@ The mobile app lets you:
 {% image src="/docs/img/mobile-apps/session-chat.webp" alt="Kilo Code mobile session chat with an active coding task" caption="Review progress and continue coding conversations from the mobile app." /%}
 {% /imageGallery %}
 
-{% imageGallery columns="2" %}
+{% imageGallery columns="2" width="220px" %}
 {% image src="/docs/img/mobile-apps/kiloclaw-chat.webp" alt="KiloClaw chat in the Kilo Code mobile app" caption="Chat with KiloClaw on mobile." /%}
 
 {% image src="/docs/img/mobile-apps/session-filters.webp" alt="Kilo Code mobile session filter panel for Cloud Extension CLI Slack and other platforms" caption="Filter sessions by platform and project, including Cloud, Extension, CLI, Slack, and other sessions." /%}

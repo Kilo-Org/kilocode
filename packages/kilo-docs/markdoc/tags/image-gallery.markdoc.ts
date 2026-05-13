@@ -8,5 +8,9 @@ export const imageGallery = {
       type: String,
       description: "Preferred number of image columns on wide screens",
     },
+    width: {
+      type: String,
+      description: "Preferred width of each gallery image",
+    },
   },
 }
