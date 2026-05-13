@@ -18,6 +18,31 @@ const KEY = {
 
 const METADATA_ID = "f946a536-9af4-4f1f-9f95-7d6efb4647d5"
 
+function json(value: unknown): string | undefined {
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return undefined
+  }
+}
+
+function qdrantErrorDetail(error: unknown) {
+  const err = error as {
+    status?: number
+    statusCode?: number
+    response?: { status?: number; data?: unknown; body?: unknown }
+    data?: unknown
+    body?: unknown
+    message?: string
+  }
+  const response = err?.response?.data ?? err?.response?.body ?? err?.data ?? err?.body
+  return {
+    status: err?.status ?? err?.statusCode ?? err?.response?.status,
+    message: json(response) ?? (error instanceof Error ? error.message : String(error)),
+    response,
+  }
+}
+
 /**
  * Qdrant implementation of the vector store interface
  */
@@ -416,6 +441,13 @@ export class QdrantVectorStore implements IVectorStore {
     }>,
   ): Promise<void> {
     try {
+      const mismatch = points.find((point) => point.vector.length !== this.vectorSize)
+      if (mismatch) {
+        throw new Error(
+          `Qdrant vector dimension mismatch before upsert: expected ${this.vectorSize}, got ${mismatch.vector.length}`,
+        )
+      }
+
       const processedPoints = points.map((point) => {
         if (point.payload?.filePath) {
           const segments = point.payload.filePath.split(path.sep).filter(Boolean)
@@ -439,8 +471,17 @@ export class QdrantVectorStore implements IVectorStore {
         wait: true,
       })
     } catch (error) {
-      log.error("Failed to upsert points", { error })
-      throw error
+      const detail = qdrantErrorDetail(error)
+      log.error("Failed to upsert points", {
+        error: detail.message,
+        response: detail.response,
+        status: detail.status,
+        collection: this.collectionName,
+        expectedVectorSize: this.vectorSize,
+        firstVectorSize: points[0]?.vector.length,
+        pointCount: points.length,
+      })
+      throw new Error(`Qdrant upsert failed: ${detail.message}`)
     }
   }
 

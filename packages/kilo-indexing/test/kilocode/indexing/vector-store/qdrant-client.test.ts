@@ -1092,6 +1092,10 @@ describe("QdrantVectorStore", () => {
   })
 
   describe("upsertPoints", () => {
+    beforeEach(() => {
+      vectorStore = new QdrantVectorStore(mockWorkspacePath, mockQdrantUrl, 3, mockApiKey)
+    })
+
     test("should correctly call qdrantClient.upsert with processed points", async () => {
       const mockPoints = [
         {
@@ -1261,9 +1265,59 @@ describe("QdrantVectorStore", () => {
       const upsertError = new Error("Upsert failed")
       mockUpsert.mockRejectedValue(upsertError)
 
-      await expect(vectorStore.upsertPoints(mockPoints)).rejects.toThrow(upsertError)
+      await expect(vectorStore.upsertPoints(mockPoints)).rejects.toThrow("Qdrant upsert failed: Upsert failed")
 
       expect(mockUpsert).toHaveBeenCalledTimes(1)
+    })
+
+    test("should fail before upsert when vectors do not match the configured dimension", async () => {
+      const mockPoints = [
+        {
+          id: "test-id-1",
+          vector: [0.1, 0.2, 0.3, 0.4],
+          payload: {
+            filePath: "src/test.ts",
+            content: "test content",
+            startLine: 1,
+            endLine: 1,
+          },
+        },
+      ]
+
+      await expect(vectorStore.upsertPoints(mockPoints)).rejects.toThrow(
+        "Qdrant vector dimension mismatch before upsert: expected 3, got 4",
+      )
+
+      expect(mockUpsert).not.toHaveBeenCalled()
+    })
+
+    test("should include Qdrant response details when upsert fails", async () => {
+      const mockPoints = [
+        {
+          id: "test-id-1",
+          vector: [0.1, 0.2, 0.3],
+          payload: {
+            filePath: "src/test.ts",
+            content: "test content",
+            startLine: 1,
+            endLine: 1,
+          },
+        },
+      ]
+      const upsertError = new Error("Bad Request") as Error & {
+        status?: number
+        response?: { status: number; data: unknown }
+      }
+      upsertError.status = 400
+      upsertError.response = {
+        status: 400,
+        data: { status: { error: "Wrong input: Vector dimension error: expected dim: 256, got 1536" } },
+      }
+      mockUpsert.mockRejectedValue(upsertError)
+
+      await expect(vectorStore.upsertPoints(mockPoints)).rejects.toThrow(
+        "Wrong input: Vector dimension error: expected dim: 256, got 1536",
+      )
     })
   })
 
