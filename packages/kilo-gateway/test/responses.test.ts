@@ -68,4 +68,10 @@ describe("Responses request sanitization", () => {
 
     expect(sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/chat/completions", body)).toBe(body)
   })
+
+  test("leaves invalid responses JSON unchanged", () => {
+    const body = "not json"
+
+    expect(sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/responses", body)).toBe(body)
+  })
 })

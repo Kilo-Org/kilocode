@@ -25,7 +25,13 @@ export function sanitizeResponsesBody(input: string | URL | Request, body: BodyI
   if (!endpoint(input)) return body
   if (typeof body !== "string") return body
 
-  const data = JSON.parse(body) as unknown
+  const data = (() => {
+    try {
+      return JSON.parse(body) as unknown
+    } catch {
+      return undefined
+    }
+  })()
   if (!record(data)) return body
   if (data.store === true) return body
   if (!Array.isArray(data.input)) return body
