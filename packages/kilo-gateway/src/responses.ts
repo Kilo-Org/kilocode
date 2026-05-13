@@ -4,7 +4,14 @@ function record(input: unknown): input is Record<string, unknown> {
 
 function endpoint(input: string | URL | Request) {
   const raw = input instanceof Request ? input.url : input.toString()
-  return new URL(raw, "https://kilo.local").pathname.endsWith("/responses")
+  const path = (() => {
+    try {
+      return new URL(raw).pathname
+    } catch {
+      return raw.split(/[?#]/, 1)[0]
+    }
+  })()
+  return path.endsWith("/responses")
 }
 
 function strip(input: unknown[]) {

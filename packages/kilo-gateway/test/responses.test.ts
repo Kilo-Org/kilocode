@@ -74,4 +74,21 @@ describe("Responses request sanitization", () => {
 
     expect(sanitizeResponsesBody("https://api.kilo.ai/api/openrouter/responses", body)).toBe(body)
   })
+
+  test("matches relative responses paths without a placeholder host", () => {
+    const body = JSON.stringify({
+      input: [
+        {
+          type: "message",
+          role: "assistant",
+          id: "msg_tmp_123",
+          content: [{ type: "output_text", text: "Hello" }],
+        },
+      ],
+    })
+    const result = sanitizeResponsesBody("/api/openrouter/responses?stream=true", body)
+    const data = JSON.parse(result as string)
+
+    expect(data.input[0].id).toBeUndefined()
+  })
 })
