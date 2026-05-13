@@ -21,15 +21,15 @@ The mobile app lets you:
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
 
-{% image src="/docs/img/mobile-apps/home.png" alt="Kilo Code mobile home screen showing KiloClaw and active agent sessions" width="360px" caption="Start coding tasks, open KiloClaw, and resume active sessions from the mobile home screen." /%}
+{% image src="/docs/img/mobile-apps/home.webp" alt="Kilo Code mobile home screen showing KiloClaw and active agent sessions" width="360px" caption="Start coding tasks, open KiloClaw, and resume active sessions from the mobile home screen." /%}
 
-{% image src="/docs/img/mobile-apps/new-session.png" alt="Kilo Code mobile new session screen with coding mode selector" width="360px" caption="Create a new Cloud Agent session and choose the right mode for the task." /%}
+{% image src="/docs/img/mobile-apps/new-session.webp" alt="Kilo Code mobile new session screen with coding mode selector" width="360px" caption="Create a new Cloud Agent session and choose the right mode for the task." /%}
 
-{% image src="/docs/img/mobile-apps/session-chat.png" alt="Kilo Code mobile session chat with an active coding task" width="360px" caption="Review progress and continue coding conversations from the mobile app." /%}
+{% image src="/docs/img/mobile-apps/session-chat.webp" alt="Kilo Code mobile session chat with an active coding task" width="360px" caption="Review progress and continue coding conversations from the mobile app." /%}
 
-{% image src="/docs/img/mobile-apps/kiloclaw-chat.png" alt="KiloClaw chat in the Kilo Code mobile app" width="360px" caption="Chat with KiloClaw on mobile." /%}
+{% image src="/docs/img/mobile-apps/kiloclaw-chat.webp" alt="KiloClaw chat in the Kilo Code mobile app" width="360px" caption="Chat with KiloClaw on mobile." /%}
 
-{% image src="/docs/img/mobile-apps/session-filters.png" alt="Kilo Code mobile session filter panel for Cloud Extension CLI Slack and other platforms" width="360px" caption="Filter sessions by platform and project, including Cloud, Extension, CLI, Slack, and other sessions." /%}
+{% image src="/docs/img/mobile-apps/session-filters.webp" alt="Kilo Code mobile session filter panel for Cloud Extension CLI Slack and other platforms" width="360px" caption="Filter sessions by platform and project, including Cloud, Extension, CLI, Slack, and other sessions." /%}
 
 ## Android App
 
