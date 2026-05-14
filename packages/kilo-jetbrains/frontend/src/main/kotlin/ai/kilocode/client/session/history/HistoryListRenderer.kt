@@ -3,7 +3,6 @@ package ai.kilocode.client.session.history
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
-import com.intellij.ui.ExperimentalUI
 import com.intellij.ui.GroupHeaderSeparator
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
@@ -20,7 +19,7 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 
-private const val DELETE_CLICK_AREA_WIDTH = 32
+private const val DELETE_AREA_WIDTH = 32
 
 internal open class HistoryRenderer<T : HistoryItem>(
     private val model: HistoryModel<T>,
@@ -31,14 +30,14 @@ internal open class HistoryRenderer<T : HistoryItem>(
         private val empty: Icon = EmptyIcon.create(icon)
 
         fun isDeleteClick(list: JList<*>, bounds: Rectangle, point: Point): Boolean {
-            val width = JBUI.scale(DELETE_CLICK_AREA_WIDTH)
-            val inset = deleteInset(list)
-            if (list.componentOrientation.isLeftToRight) {
-                val right = bounds.x + bounds.width - inset
-                return point.x in (right - width)..right
+            val width = JBUI.scale(DELETE_AREA_WIDTH)
+            return if (list.componentOrientation.isLeftToRight) {
+                val right = bounds.x + bounds.width
+                point.x in (right - width)..right
+            } else {
+                val left = bounds.x
+                point.x in left..(left + width)
             }
-            val left = bounds.x + inset
-            return point.x in left..(left + width)
         }
 
         fun section(items: List<HistoryItem>, index: Int): String? {
@@ -47,13 +46,6 @@ internal open class HistoryRenderer<T : HistoryItem>(
             val previous = items.getOrNull(index - 1)?.let(HistoryTime::section)
             if (current == previous) return null
             return HistoryTime.title(current)
-        }
-
-        private fun deleteInset(list: JList<*>): Int {
-            if (!ExperimentalUI.isNewUI()) return 0
-            val inner = JBUI.CurrentTheme.Popup.Selection.innerInsets()
-            val edge = JBUI.CurrentTheme.Popup.Selection.LEFT_RIGHT_INSET.get()
-            return edge + if (list.componentOrientation.isLeftToRight) inner.right else inner.left
         }
     }
 
@@ -75,7 +67,7 @@ internal open class HistoryRenderer<T : HistoryItem>(
     }
     private val row = JPanel(BorderLayout()).apply {
         add(main, BorderLayout.CENTER)
-        add(del, BorderLayout.EAST)
+        if (deletable) add(del, BorderLayout.EAST)
     }
     private val wrap = PickerRow()
 
@@ -114,13 +106,11 @@ internal open class HistoryRenderer<T : HistoryItem>(
         )
         time.text = value?.let(HistoryTime::relative).orEmpty()
         time.foreground = weak
-        del.icon = if (deletable && selected) icon else empty
+        if (deletable) del.icon = if (selected) icon else empty
 
         top.invalidate()
         return this
     }
-
-    fun deleteVisible(): Boolean = del.icon === icon
 }
 
 internal class LocalHistoryRenderer(model: HistoryModel<LocalHistoryItem>) : HistoryRenderer<LocalHistoryItem>(model, deletable = true)

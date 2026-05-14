@@ -607,6 +607,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await routeSuggestionWebviewMessage(this.questionCtx, message)
       if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
       if (await routeAutocompleteMessage(message, (msg) => this.postMessage(msg))) return
+      if (this.handleEditorOpenMessage(message)) return
       if (
         await handleSidebarWorktreeMessage(message, {
           post: (msg) => this.postMessage(msg),
@@ -771,11 +772,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "saveImage":
           return saveImage(this.getWorkspaceDirectory(this.currentSession?.id), message)
-        case "openFile":
-          if (message.filePath) {
-            this.handleOpenFile(message.filePath, message.line, message.column)
-          }
-          break
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
@@ -2895,6 +2891,35 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .then(() => vscode.workspace.fs.writeFile(uri, img.data))
       .then(() => clean())
       .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
+  }
+
+  private handleEditorOpenMessage(message: {
+    type?: string
+    filePath?: string
+    line?: number
+    column?: number
+    content?: string
+    language?: string
+  }): boolean {
+    if (message.type === "openFile") {
+      if (message.filePath) this.handleOpenFile(message.filePath, message.line, message.column)
+      return true
+    }
+    if (message.type === "openContent") {
+      if (message.content) this.handleOpenContent(message.content, message.language)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Handle openContent request - open arbitrary text in an untitled VS Code editor tab.
+   */
+  private handleOpenContent(content: string, language?: string): void {
+    vscode.workspace.openTextDocument({ content, language: language || "log" }).then(
+      (doc) => vscode.window.showTextDocument(doc, { preview: true }),
+      (err) => console.error("[Kilo New] KiloProvider: Failed to open content:", err),
+    )
   }
 
   /**

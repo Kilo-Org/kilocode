@@ -1373,7 +1373,10 @@ export const dict = {
     "Створювати контрольні точки перед редагуванням файлів, щоб мати можливість відновити попередні стани",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
-  "settings.context.autoCompaction.description": "Автоматично стискати при заповненні контексту",
+  "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
+  "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
+  "settings.context.compactionLimit.description":
+    "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
   "settings.context.prune.title": "Очищати старі виводи",
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",

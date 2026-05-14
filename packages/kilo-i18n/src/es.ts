@@ -91,7 +91,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Apaga las instantáneas de Kilo para este proyecto. Perderás deshacer/rehacer de los cambios de Kilo, pero git seguirá rastreando todo.",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Abrir en el visor de diferencias",
+  "ui.messagePart.shell.command": "Comando",
+  "ui.messagePart.shell.output": "Salida",
+  "ui.messagePart.openInEditor": "Abrir en el editor",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "Esto fue útil",

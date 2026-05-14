@@ -1385,7 +1385,10 @@ export const dict = {
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
-  "settings.context.autoCompaction.description": "Context automatisch compacteren wanneer deze vol is",
+  "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
+  "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
+  "settings.context.compactionLimit.description":
+    "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",

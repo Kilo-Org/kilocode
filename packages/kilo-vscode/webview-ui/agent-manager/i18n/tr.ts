@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "yerel",
+  "agentManager.sidebar.collapse": "Kenar çubuğunu daralt",
+  "agentManager.sidebar.expand": "Kenar çubuğunu göster",
   "agentManager.section.worktrees": "WORKTREE'LER",
   "agentManager.section.sessions": "OTURUMLAR",
   "agentManager.notGitRepo": "Bir git deposu değil",

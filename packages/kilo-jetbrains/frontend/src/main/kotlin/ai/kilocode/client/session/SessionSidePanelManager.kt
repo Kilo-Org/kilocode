@@ -113,7 +113,7 @@ class SessionSidePanelManager(
             deleted = this::removeSession,
         )
         Disposer.register(this) { cs.cancel() }
-        return HistoryPanel(this, controller, nav = this::back).component
+        return HistoryPanel(this, controller, nav = this::back, manager = this).component
     }
 
     private fun back() {

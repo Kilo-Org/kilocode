@@ -87,7 +87,23 @@ export function BrowserFrame({
           )}
         </div>
         {/* Content */}
-        <div style={{ lineHeight: 0 }}>{children}</div>
+        {/*
+         * The `browser-frame-content` class strips the default vertical margin
+         * applied by descendant `Image` figures (1.5rem top/bottom). The
+         * BrowserFrame already provides its own outer spacing via the `figure`
+         * wrapper, and the inner image should sit flush against the chrome.
+         */}
+        <div className="browser-frame-content" style={{ lineHeight: 0 }}>
+          {children}
+        </div>
+        <style jsx>{`
+          .browser-frame-content :global(figure) {
+            margin: 0 !important;
+          }
+          .browser-frame-content :global(p) {
+            margin: 0;
+          }
+        `}</style>
       </div>
       {caption && (
         <figcaption

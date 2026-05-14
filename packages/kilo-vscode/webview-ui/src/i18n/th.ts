@@ -1384,7 +1384,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "เปิดใช้งานสแนปชอต",
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
-  "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติเมื่อเต็ม",
+  "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
+  "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
+  "settings.context.compactionLimit.description":
+    "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
   "settings.context.prune.title": "ตัดผลลัพธ์เก่า",
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",

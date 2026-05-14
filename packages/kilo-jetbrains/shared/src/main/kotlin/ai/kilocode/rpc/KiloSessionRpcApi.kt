@@ -51,6 +51,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Delete a session. */
     suspend fun delete(id: String, directory: String)
 
+    /** Rename a session. */
+    suspend fun rename(id: String, directory: String, title: String): SessionDto
+
     /** List cloud-backed sessions. */
     suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto
 

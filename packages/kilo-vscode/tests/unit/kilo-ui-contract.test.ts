@@ -128,6 +128,13 @@ describe("DataProvider contract (runtime)", () => {
     expect(src).toContain("OpenDiffFn")
     expect(src).toMatch(/openDiff:\s*props\.onOpenDiff/)
   })
+
+  it("DataProvider accepts onOpenContent prop and exports OpenContentFn (source)", () => {
+    const src = fs.readFileSync(DATA_CONTEXT_FILE, "utf-8")
+    expect(src).toContain("onOpenContent")
+    expect(src).toContain("OpenContentFn")
+    expect(src).toMatch(/openContent:\s*props\.onOpenContent/)
+  })
 })
 
 describe("Edit tool diff-first click contract (source)", () => {
@@ -161,6 +168,53 @@ describe("Write and apply_patch patch rendering contracts (source)", () => {
     expect(patchBlock).toContain("normalize({")
     expect(patchBlock).toContain("file: file.relativePath")
     expect(patchBlock).toContain('mode="diff"')
+  })
+})
+
+describe("Bash tool syntax highlighting and section labels (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const block =
+    src.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
+
+  it("bash tool renders BashHighlightedOutput", () => {
+    expect(block).toContain("BashHighlightedOutput")
+  })
+
+  it("BashHighlightedOutput uses shellscript grammar for commands without $ prefix", () => {
+    // The command should be highlighted as shellscript, but the $ prompt must
+    // NOT be inside the highlighted code (it breaks Shiki's parse context)
+    expect(src).toMatch(/data-lang="shellscript">\$\{escapeHtml\(cmd\)\}/)
+    expect(src).not.toMatch(/data-lang="shellscript">\$\s/)
+  })
+
+  it("BashHighlightedOutput uses log grammar for output", () => {
+    expect(src).toMatch(/data-lang="log"/)
+  })
+
+  it("BashHighlightedOutput renders section labels matching MCP tool pattern", () => {
+    // Must use the same data-slot as MCP tools for consistent styling
+    expect(src).toMatch(/data-slot="mcp-section-label".*shell\.command/)
+    expect(src).toMatch(/data-slot="mcp-section-label".*shell\.output/)
+  })
+
+  it("BashHighlightedOutput has edge-to-edge divider between sections", () => {
+    expect(src).toContain('data-slot="bash-divider"')
+  })
+
+  it("BashHighlightedOutput supports openContent for opening output in editor", () => {
+    expect(src).toContain("data.openContent")
+    expect(src).toContain("openInEditor")
+  })
+
+  it("BashHighlightedOutput opens full output file when truncated", () => {
+    // When the CLI truncates output, metadata.outputPath holds the full file.
+    // openInEditor should prefer openFile(outputPath) over openContent.
+    expect(src).toContain("props.outputPath")
+    expect(src).toMatch(/props\.outputPath.*data\.openFile/)
+  })
+
+  it("bash tool passes outputPath from metadata to BashHighlightedOutput", () => {
+    expect(block).toContain("props.metadata.outputPath")
   })
 })
 
