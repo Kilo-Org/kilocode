@@ -59,10 +59,11 @@ function ShellRollingCommand(props: { text: string; animate?: boolean }) {
   )
 }
 
-function ShellOutputHighlight(props: { code: string }) {
+function ShellOutputHighlight(props: { code: string; active?: boolean }) {
   let ref: HTMLDivElement | undefined
 
   createEffect(() => {
+    if (!props.active) return
     const code = props.code
     if (!ref || !code) return
     ref.innerHTML = `<pre data-slot="shell-expanded-pre"><code data-lang="log">${escapeHtml(code)}</code></pre>`
@@ -171,7 +172,7 @@ function ShellExpanded(props: { cmd: string; out: string; open: boolean }) {
                 onScroll={updateMask}
                 style={{ "max-height": `${cap()}px` }}
               >
-                <ShellOutputHighlight code={props.out} />
+                <ShellOutputHighlight code={props.out} active={props.open} />
               </div>
             </>
           </Show>

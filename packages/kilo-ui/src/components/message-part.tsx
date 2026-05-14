@@ -2053,13 +2053,14 @@ function BashCopyButton(props: { value: () => string; label: string }) {
   )
 }
 
-function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string }) {
+function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
   const data = useData()
   const i18n = useI18n()
   let cmdRef: HTMLDivElement | undefined
   let outRef: HTMLDivElement | undefined
 
   createEffect(() => {
+    if (!props.active) return
     const cmd = props.cmd
     if (!cmdRef || !cmd) return
     cmdRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="shellscript">${escapeHtml(cmd)}</code></pre>`
@@ -2067,6 +2068,7 @@ function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?
   })
 
   createEffect(() => {
+    if (!props.active) return
     const out = props.output
     if (!outRef || !out) return
     outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
@@ -2128,6 +2130,7 @@ ToolRegistry.register({
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
+    const [open, setOpen] = createSignal(props.defaultOpen ?? true)
 
     // also apply processCarriageReturns for Windows CLI tools
     const cmd = createMemo(() => {
@@ -2148,6 +2151,7 @@ ToolRegistry.register({
         icon="console"
         animated
         defaultOpen={props.defaultOpen ?? true}
+        onOpenChange={setOpen}
         allowPendingToggle
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
@@ -2160,7 +2164,7 @@ ToolRegistry.register({
           </div>
         }
       >
-        <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} />
+        <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
       </BasicTool>
     )
   },
