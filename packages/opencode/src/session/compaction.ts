@@ -20,6 +20,7 @@ import { makeRuntime } from "@/effect/run-service"
 import { fn } from "@/util/fn"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
+import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks" // kilocode_change
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -416,6 +417,7 @@ export const layer: Layer.Layer<
         stripMedia: true,
         toolOutputMaxChars: TOOL_OUTPUT_MAX_CHARS,
       })
+      const tokens = Token.estimate(JSON.stringify(modelMessages)) // kilocode_change
       const ctx = yield* InstanceState.context
       const msg: MessageV2.Assistant = {
         id: MessageID.ascending(),
@@ -450,21 +452,41 @@ export const layer: Layer.Layer<
         model,
       })
       // kilocode_change start
-      const result = yield* KiloCompactionPayloadRecovery.process({
-        processor,
-        user: userMessage,
-        agent,
-        sessionID: input.sessionID,
-        model,
-        messages: modelMessages,
-        prompt: nextPrompt,
-        recovery: selected.head,
-        updateMessage: session.updateMessage,
-        updatePart: session.updatePart,
-      })
+      const result = KiloCompactionChunks.needed({ cfg, model, tokens })
+        ? "compact"
+        : yield* KiloCompactionPayloadRecovery.process({
+            processor,
+            user: userMessage,
+            agent,
+            sessionID: input.sessionID,
+            model,
+            messages: modelMessages,
+            prompt: nextPrompt,
+            recovery: selected.head,
+            updateMessage: session.updateMessage,
+            updatePart: session.updatePart,
+          })
       // kilocode_change end
 
-      if (result === "compact") {
+      // kilocode_change start - fallback to chunked compaction when the first summary overflows
+      const fallback = KiloCompactionChunks.eligible({ result, error: processor.message.error ?? processor.compactError?.() })
+        ? yield* KiloCompactionChunks.process({
+            processors,
+            session,
+            user: userMessage,
+            agent,
+            sessionID: input.sessionID,
+            model,
+            cfg,
+            messages: selected.head,
+            prompt: nextPrompt,
+            target: processor.message,
+            updateMessage: session.updateMessage,
+            updatePart: session.updatePart,
+          })
+        : result
+      if (fallback === "compact") {
+        // kilocode_change end
         processor.message.error = new MessageV2.ContextOverflowError({
           message: replay
             ? "Conversation history too large to compact - exceeds model context limit"
@@ -482,8 +504,25 @@ export const layer: Layer.Layer<
         })
       }
 
-      if (result === "continue" && input.auto) {
+      if (fallback === "continue" && input.auto) { // kilocode_change
         if (replay) {
+          // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
+          replay = yield* KiloCompactionChunks.replay({
+            processors,
+            session,
+            user: userMessage,
+            agent,
+            sessionID: input.sessionID,
+            model,
+            cfg,
+            messages: selected.head,
+            prompt: nextPrompt,
+            target: processor.message,
+            updateMessage: session.updateMessage,
+            updatePart: session.updatePart,
+            replay,
+          })
+          // kilocode_change end
           const original = replay.info
           const replayMsg = yield* session.updateMessage({
             id: MessageID.ascending(),
@@ -496,6 +535,7 @@ export const layer: Layer.Layer<
             tools: original.tools,
             system: original.system,
           })
+          KiloSessionPromptQueue.retarget(input.sessionID, replayMsg.id) // kilocode_change - expose replay to scope()
           for (const part of replay.parts) {
             if (part.type === "compaction") continue
             const replayPart =
@@ -539,6 +579,7 @@ export const layer: Layer.Layer<
               agent: userMessage.agent,
               model: userMessage.model,
             })
+            KiloSessionPromptQueue.retarget(input.sessionID, continueMsg.id) // kilocode_change - expose auto-continue to scope()
             const text =
               (input.overflow
                 ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
@@ -566,12 +607,12 @@ export const layer: Layer.Layer<
 
       // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
       if (processor.message.error) return "stop"
-      if (result === "continue") {
+      if (fallback === "continue") { // kilocode_change
         yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })
         yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
       }
       // kilocode_change end
-      return result
+      return fallback // kilocode_change
     })
 
     const create = Effect.fn("SessionCompaction.create")(function* (input: {

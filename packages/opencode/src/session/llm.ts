@@ -25,6 +25,7 @@ import { getKiloProjectId } from "@/kilocode/project-id"
 import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { makeRuntime } from "@/effect/run-service"
+import { KiloLLM } from "@/kilocode/session/llm"
 // kilocode_change end
 import { Installation } from "@/installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -223,6 +224,14 @@ const live: Layer.Layer<
       // kilocode_change end
 
       const tools = resolveTools(input)
+      // kilocode_change start - cap maxOutputTokens to fit within context after estimating real input size
+      params.maxOutputTokens = KiloLLM.capOutputTokens({
+        model: input.model,
+        messages,
+        tools,
+        configured: params.maxOutputTokens,
+      })
+      // kilocode_change end
 
       // LiteLLM and some Anthropic proxies require the tools parameter to be present
       // when message history contains tool calls, even if no tools are being used.
