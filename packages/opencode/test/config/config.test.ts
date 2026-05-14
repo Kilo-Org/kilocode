@@ -145,6 +145,7 @@ test("loads JSON config file", async () => {
   })
 })
 
+// kilocode_change start - Kilo-specific config field (code_edit_display) not in upstream
 test("loads code_edit_display config field", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -162,6 +163,7 @@ test("loads code_edit_display config field", async () => {
     },
   })
 })
+// kilocode_change end
 
 test("loads shell config field", async () => {
   await using tmp = await tmpdir({

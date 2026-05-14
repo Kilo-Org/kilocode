@@ -129,7 +129,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   function toolDefaultOpen(tool: string, shell: boolean, edit: boolean) {
     if (tool === "bash") return shell
     if (tool === "edit" || tool === "write") return edit
-    if (tool === "apply_patch") return false
+    if (tool === "apply_patch") return edit
   }
 
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
@@ -150,6 +150,8 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           const isUpstreamSuppressed =
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
 
+          const tp = () => part as unknown as ToolPart
+
           // Active question tool parts render the interactive QuestionDock inline
           const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
 
@@ -157,9 +159,8 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
           const bash = createMemo(() => {
             if (part.type !== "tool") return
-            const tool = part as unknown as ToolPart
-            if (tool.tool !== "bash") return
-            if (tool.state?.status === "error") return
+            if (tp().tool !== "bash") return
+            if (tp().state?.status === "error") return
             return part
           })
 
@@ -185,12 +186,12 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                   message={props.message as SDKMessage}
                                   showAssistantCopyPartID={props.showAssistantCopyPartID}
                                   reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                  defaultOpen={part.type === "tool" ? toolDefaultOpen((part as unknown as ToolPart).tool, open(), editOpen()) : undefined}
+                                  defaultOpen={part.type === "tool" ? toolDefaultOpen(tp().tool, open(), editOpen()) : undefined}
                                   feedback={props.feedback}
                                   animate={
                                     part.type === "tool" &&
-                                    ((part as unknown as ToolPart).state?.status === "pending" ||
-                                      (part as unknown as ToolPart).state?.status === "running")
+                                    (tp().state?.status === "pending" ||
+                                      tp().state?.status === "running")
                                   }
                                 />
                               }
