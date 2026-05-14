@@ -1,7 +1,7 @@
 // regression test for bash permission metadata.command
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
-import { BashTool } from "../../src/tool/bash"
+import { ShellTool } from "../../src/tool/shell"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import { Shell } from "../../src/shell/shell"
@@ -52,7 +52,7 @@ describe("bash permission metadata.command", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const bash = await runtime.runPromise(BashTool.pipe(Effect.flatMap((info) => info.init())))
+        const bash = await runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
         const requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
         const command = "echo hello"
         await Effect.runPromise(bash.execute({ command, description: "Echo hello" }, capture(requests)))

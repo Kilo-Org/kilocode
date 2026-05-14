@@ -12,7 +12,7 @@ import { Instance } from "../../../src/project/instance"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Shell } from "../../../src/shell/shell"
 import { Truncate } from "../../../src/tool/truncate"
-import { BashTool } from "../../../src/tool/bash"
+import { ShellTool } from "../../../src/tool/shell"
 import { Plugin } from "../../../src/plugin"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
@@ -51,7 +51,7 @@ const ps =
 
 Shell.acceptable.reset()
 
-const init = () => runtime.runPromise(BashTool.pipe(Effect.flatMap((info) => info.init())))
+const init = () => runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
 const quote = (text: string) => `"${text.replaceAll('"', '\\"')}"`
 const glob = (file: string) =>
   process.platform === "win32" ? AppFileSystem.normalizePathPattern(file) : file.replaceAll("\\", "/")
