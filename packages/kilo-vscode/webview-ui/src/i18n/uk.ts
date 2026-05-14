@@ -282,6 +282,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
 
+  "speechToText.tooltip.start": "Почати голосове введення",
+  "speechToText.tooltip.stop": "Зупинити захоплення звуку",
+  "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
+  "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
+  "speechToText.error.title": "Помилка голосового введення",
+  "speechToText.error.loginRequired": "Увійдіть до Kilo, щоб використовувати голосове введення.",
+  "speechToText.error.permission": "Доступ до мікрофона заборонено.",
+  "speechToText.error.microphone": "Не вдалося запустити мікрофон.",
+  "speechToText.error.recording": "Помилка запису.",
+  "speechToText.error.emptyRecording": "Аудіо не записано.",
+  "speechToText.error.emptyTranscript": "Мовлення не виявлено.",
+  "speechToText.error.encoding": "Не вдалося закодувати запис.",
+  "speechToText.toast.transcribed": "Транскрипцію вставлено",
+
   "prompt.toast.pasteUnsupported.title": "Вставка не підтримується",
   "prompt.toast.pasteUnsupported.description": "Сюди можна вставляти лише зображення або PDF.",
   "prompt.toast.modelAgentRequired.title": "Виберіть агента і модель",
@@ -1233,6 +1247,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
   "settings.experimental.agentManagerTool.description":
     "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
+  "settings.experimental.speechToText.title": "Мовлення в текст",
+  "settings.experimental.speechToText.description":
+    "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Увімкніть Kilo provider і увійдіть, щоб використовувати голосове введення в полях запитів.",
+  "settings.experimental.speechToTextModel.title": "Модель мовлення в текст",
+  "settings.experimental.speechToTextModel.description":
+    "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",

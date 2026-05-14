@@ -333,9 +333,40 @@ export interface AutocompleteSettingsLoadedMessage {
   }
 }
 
+export interface SpeechToTextSettingsLoadedMessage {
+  type: "speechToTextSettingsLoaded"
+  settings: {
+    enabled: boolean
+    model: string
+  }
+}
+
 export interface ChatCompletionResultMessage {
   type: "chatCompletionResult"
   text: string
+  requestId: string
+}
+
+export interface SpeechToTextResultMessage {
+  type: "speechToTextResult"
+  text: string
+  requestId: string
+}
+
+export interface SpeechToTextStartedMessage {
+  type: "speechToTextStarted"
+  requestId: string
+}
+
+export interface SpeechToTextCancelledMessage {
+  type: "speechToTextCancelled"
+  requestId: string
+}
+
+export interface SpeechToTextErrorMessage {
+  type: "speechToTextError"
+  error: string
+  code?: string
   requestId: string
 }
 
@@ -929,7 +960,12 @@ export type ExtensionMessage =
   | SkillsLoadedMessage
   | CommandsLoadedMessage
   | AutocompleteSettingsLoadedMessage
+  | SpeechToTextSettingsLoadedMessage
   | ChatCompletionResultMessage
+  | SpeechToTextStartedMessage
+  | SpeechToTextCancelledMessage
+  | SpeechToTextResultMessage
+  | SpeechToTextErrorMessage
   | FileSearchResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage

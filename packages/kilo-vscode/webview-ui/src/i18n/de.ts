@@ -285,6 +285,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Die Schaltfläche 'Prompt verbessern' hilft, deine Anfrage durch zusätzlichen Kontext, Klarstellungen oder Umformulierungen zu verbessern. Versuche, hier eine Anfrage einzugeben und klicke erneut auf die Schaltfläche, um zu sehen, wie es funktioniert.",
 
+  "speechToText.tooltip.start": "Spracheingabe starten",
+  "speechToText.tooltip.stop": "Audioerfassung beenden",
+  "speechToText.tooltip.transcribing": "Transkribieren... Zum Abbrechen klicken.",
+  "speechToText.tooltip.error": "Spracheingabe fehlgeschlagen. Zum Löschen klicken.",
+  "speechToText.error.title": "Spracheingabe fehlgeschlagen",
+  "speechToText.error.loginRequired": "Melden Sie sich bei Kilo an, um die Spracheingabe zu verwenden.",
+  "speechToText.error.permission": "Mikrofonberechtigung wurde verweigert.",
+  "speechToText.error.microphone": "Mikrofon konnte nicht gestartet werden.",
+  "speechToText.error.recording": "Aufnahme fehlgeschlagen.",
+  "speechToText.error.emptyRecording": "Es wurde kein Audio aufgenommen.",
+  "speechToText.error.emptyTranscript": "Es wurde keine Sprache erkannt.",
+  "speechToText.error.encoding": "Aufnahme konnte nicht codiert werden.",
+  "speechToText.toast.transcribed": "Transkription eingefügt",
+
   "prompt.toast.pasteUnsupported.title": "Nicht unterstütztes Einfügen",
   "prompt.toast.pasteUnsupported.description": "Hier können nur Bilder oder PDFs eingefügt werden.",
   "prompt.toast.modelAgentRequired.title": "Wählen Sie einen Agenten und ein Modell",
@@ -1256,6 +1270,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager-Werkzeug",
   "settings.experimental.agentManagerTool.description":
     "Agenten erlauben, lokale Agent Manager-Sitzungen und Worktree-Sitzungen per Werkzeugaufruf zu starten",
+  "settings.experimental.speechToText.title": "Sprache zu Text",
+  "settings.experimental.speechToText.description":
+    "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Aktivieren Sie Kilo provider und melden Sie sich an, um die Spracheingabe in Prompt-Feldern zu verwenden.",
+  "settings.experimental.speechToTextModel.title": "Sprache-zu-Text-Modell",
+  "settings.experimental.speechToTextModel.description":
+    "Wählen Sie das Kilo Gateway-Transkriptionsmodell für die Spracheingabe.",
   "settings.experimental.continueOnDeny.title": "Bei Ablehnung fortfahren",
   "settings.experimental.continueOnDeny.description":
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",

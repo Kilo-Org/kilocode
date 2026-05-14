@@ -278,6 +278,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي",
+  "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
+  "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
+  "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
+  "speechToText.error.title": "فشل الإدخال الصوتي",
+  "speechToText.error.loginRequired": "قم بتسجيل الدخول إلى Kilo لاستخدام الإدخال الصوتي.",
+  "speechToText.error.permission": "تم رفض إذن الوصول إلى الميكروفون.",
+  "speechToText.error.microphone": "تعذر بدء تشغيل الميكروفون.",
+  "speechToText.error.recording": "فشل التسجيل.",
+  "speechToText.error.emptyRecording": "لم يتم تسجيل أي صوت.",
+  "speechToText.error.emptyTranscript": "لم يتم اكتشاف أي كلام.",
+  "speechToText.error.encoding": "تعذر تشفير التسجيل.",
+  "speechToText.toast.transcribed": "تم إدراج النص المنسوخ",
+
   "prompt.toast.pasteUnsupported.title": "لصق غير مدعوم",
   "prompt.toast.pasteUnsupported.description": "يمكن لصق الصور أو ملفات PDF فقط هنا.",
   "prompt.toast.modelAgentRequired.title": "حدد وكيلاً ونموذجاً",
@@ -1212,6 +1226,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
   "settings.experimental.agentManagerTool.description":
     "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
+  "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
+  "settings.experimental.speechToText.description":
+    "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "قم بتمكين وتسجيل الدخول إلى Kilo provider لاستخدام الإدخال الصوتي في حقول المطالبة.",
+  "settings.experimental.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
+  "settings.experimental.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",

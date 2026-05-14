@@ -285,6 +285,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
+  "speechToText.tooltip.start": "Start taleinndata",
+  "speechToText.tooltip.stop": "Stopp lydfangst",
+  "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
+  "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
+  "speechToText.error.title": "Taleinndata mislyktes",
+  "speechToText.error.loginRequired": "Logg på Kilo for å bruke taleinndata.",
+  "speechToText.error.permission": "Mikrofontillatelse ble nektet.",
+  "speechToText.error.microphone": "Kunne ikke starte mikrofonen.",
+  "speechToText.error.recording": "Opptak mislyktes.",
+  "speechToText.error.emptyRecording": "Ingen lyd ble tatt opp.",
+  "speechToText.error.emptyTranscript": "Ingen tale ble oppdaget.",
+  "speechToText.error.encoding": "Kunne ikke kode opptaket.",
+  "speechToText.toast.transcribed": "Transkripsjon satt inn",
+
   "prompt.toast.pasteUnsupported.title": "Liming ikke støttet",
   "prompt.toast.pasteUnsupported.description": "Kun bilder eller PDF-er kan limes inn her.",
   "prompt.toast.modelAgentRequired.title": "Velg en agent og modell",
@@ -1200,6 +1214,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
   "settings.experimental.agentManagerTool.description":
     "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
+  "settings.experimental.speechToText.title": "Tale til tekst",
+  "settings.experimental.speechToText.description":
+    "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Aktiver Kilo provider og logg på for å bruke taleinndata i prompt-felt.",
+  "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
+  "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",

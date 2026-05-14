@@ -281,6 +281,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
 
+  "speechToText.tooltip.start": "음성 입력 시작",
+  "speechToText.tooltip.stop": "음성 캡처 중지",
+  "speechToText.tooltip.transcribing": "변환 중... 취소하려면 클릭하세요.",
+  "speechToText.tooltip.error": "음성 입력에 실패했습니다. 지우려면 클릭하세요.",
+  "speechToText.error.title": "음성 입력 실패",
+  "speechToText.error.loginRequired": "음성 입력을 사용하려면 Kilo에 로그인하세요.",
+  "speechToText.error.permission": "마이크 권한이 거부되었습니다.",
+  "speechToText.error.microphone": "마이크를 시작할 수 없습니다.",
+  "speechToText.error.recording": "녹음에 실패했습니다.",
+  "speechToText.error.emptyRecording": "녹음된 오디오가 없습니다.",
+  "speechToText.error.emptyTranscript": "음성이 감지되지 않았습니다.",
+  "speechToText.error.encoding": "녹음을 인코딩할 수 없습니다.",
+  "speechToText.toast.transcribed": "변환 텍스트 삽입됨",
+
   "prompt.toast.pasteUnsupported.title": "지원되지 않는 붙여넣기",
   "prompt.toast.pasteUnsupported.description": "이미지나 PDF만 붙여넣을 수 있습니다.",
   "prompt.toast.modelAgentRequired.title": "에이전트 및 모델 선택",
@@ -1223,6 +1237,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
   "settings.experimental.agentManagerTool.description":
     "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
+  "settings.experimental.speechToText.title": "음성 텍스트 변환",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
+  "settings.experimental.speechToText.disabledDescription":
+    "프롬프트 필드에서 음성 입력을 사용하려면 Kilo provider를 활성화하고 로그인하세요.",
+  "settings.experimental.speechToTextModel.title": "음성 텍스트 변환 모델",
+  "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",

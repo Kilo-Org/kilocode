@@ -7247,6 +7247,45 @@ export type KiloFimResponses = {
 
 export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
 
+export type KiloAudioTranscriptionsData = {
+  body?: {
+    model: string
+    input_audio: {
+      data: string
+      format: string
+    }
+    language?: string
+    temperature?: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/audio/transcriptions"
+}
+
+export type KiloAudioTranscriptionsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloAudioTranscriptionsError = KiloAudioTranscriptionsErrors[keyof KiloAudioTranscriptionsErrors]
+
+export type KiloAudioTranscriptionsResponses = {
+  /**
+   * Transcription response
+   */
+  200: {
+    text: string
+    usage?: unknown
+  }
+}
+
+export type KiloAudioTranscriptionsResponse = KiloAudioTranscriptionsResponses[keyof KiloAudioTranscriptionsResponses]
+
 export type KiloNotificationsData = {
   body?: never
   path?: never
