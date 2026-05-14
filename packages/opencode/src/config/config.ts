@@ -48,6 +48,8 @@ import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { IndexingConfig as KiloIndexingConfig } from "@kilocode/kilo-indexing/config"
 import { makeRuntime } from "@/effect/run-service"
 import { unique } from "remeda"
+import { GlobalBus } from "@/bus/global"
+import { Event } from "../server/event"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
@@ -118,8 +120,6 @@ async function substituteWellKnownRemoteConfig(input: { value: unknown; dir: str
 
   return { url, headers }
 }
-void substituteWellKnownRemoteConfig // kilocode_change - unused; kept for upstream-merge parity (Kilo's well-known fetch below uses its own warn-instead-of-fail wrapper)
-
 async function resolveLoadedPlugins<T extends { plugin?: ConfigPlugin.Spec[] }>(config: T, filepath: string) {
   if (!config.plugin) return config
   for (let i = 0; i < config.plugin.length; i++) {
@@ -386,12 +386,12 @@ export interface Interface {
   readonly get: () => Effect.Effect<Info>
   readonly getGlobal: () => Effect.Effect<Info>
   readonly getConsoleState: () => Effect.Effect<ConsoleState>
-  readonly update: (config: Info) => Effect.Effect<void>
+  readonly update: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<void> // kilocode_change
   readonly updateGlobal: (
     config: Info,
     options?: { dispose?: boolean },
   ) => Effect.Effect<{ info: Info; changed: boolean }> // kilocode_change
-  readonly invalidate: () => Effect.Effect<void>
+  readonly invalidate: (wait?: boolean) => Effect.Effect<void> // kilocode_change
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
@@ -687,8 +687,27 @@ export const layer = Layer.effect(
                 if (!response.ok) {
                   throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
                 }
-                const wellknown = (await response.json()) as { config?: Record<string, unknown> }
-                const remoteConfig = wellknown.config ?? {}
+                const wellknown = (await response.json()) as {
+                  config?: Record<string, unknown>
+                  remote_config?: unknown
+                }
+                const remote = await substituteWellKnownRemoteConfig({
+                  value: wellknown.remote_config,
+                  dir: url,
+                  source,
+                })
+                const fetchedConfig = remote
+                  ? await (async () => {
+                      log.debug("fetching remote config", { url: remote.url })
+                      const response = await fetch(remote.url, { headers: remote.headers })
+                      if (!response.ok) {
+                        throw new Error(`failed to fetch remote config from ${remote.url}: ${response.status}`)
+                      }
+                      const data = await response.json()
+                      return isRecord(data) && isRecord(data.config) ? data.config : data
+                    })()
+                  : {}
+                const remoteConfig = mergeConfig(wellknown.config ?? {}, fetchedConfig as Info)
                 if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json"
                 return remoteConfig
               },
@@ -1025,11 +1044,13 @@ export const layer = Layer.effect(
         // mask "config update without an active instance" bugs. The throw
         // comes from `Instance.current` inside `InstanceState.context`.
         const ctx = yield* InstanceState.context
-        yield* Effect.promise(() => InstanceStore.disposeInstance(ctx))
+        yield* Effect.promise(() =>
+          import("../project/instance-runtime").then((mod) => mod.InstanceRuntime.disposeInstance(ctx)),
+        )
       }
     })
 
-    const invalidate = Effect.fn("Config.invalidate")(function* () {
+    const invalidate = Effect.fn("Config.invalidate")(function* (_wait?: boolean) {
       yield* invalidateGlobal
     })
 
@@ -1071,7 +1092,7 @@ export const layer = Layer.effect(
             },
           }),
         )
-        return next
+        return { info: next, changed }
       }
       // kilocode_change end
 
