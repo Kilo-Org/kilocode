@@ -279,7 +279,7 @@ export const dict = {
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 
   "speechToText.tooltip.start": "開始語音輸入",
-  "speechToText.tooltip.stop": "停止錄音",
+  "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
   "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
   "speechToText.error.title": "語音輸入失敗",

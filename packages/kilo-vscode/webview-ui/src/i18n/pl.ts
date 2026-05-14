@@ -283,7 +283,7 @@ export const dict = {
   "prompt.action.indexing": "Ustawienia indeksowania",
 
   "speechToText.tooltip.start": "Rozpocznij wprowadzanie głosowe",
-  "speechToText.tooltip.stop": "Zatrzymaj nagrywanie",
+  "speechToText.tooltip.stop": "Zatrzymaj przechwytywanie dźwięku",
   "speechToText.tooltip.transcribing": "Transkrybowanie... Kliknij, aby anulować.",
   "speechToText.tooltip.error": "Wprowadzanie głosowe nie powiodło się. Kliknij, aby wyczyścić.",
   "speechToText.error.title": "Wprowadzanie głosowe nie powiodło się",

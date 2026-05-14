@@ -281,7 +281,7 @@ export const dict = {
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
 
   "speechToText.tooltip.start": "Sesli girişi başlat",
-  "speechToText.tooltip.stop": "Kaydı durdur",
+  "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
   "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
   "speechToText.error.title": "Sesli giriş başarısız oldu",

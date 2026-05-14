@@ -284,7 +284,7 @@ export const dict = {
   "prompt.action.indexing": "Configuración de indexación",
 
   "speechToText.tooltip.start": "Iniciar entrada de voz",
-  "speechToText.tooltip.stop": "Detener grabación",
+  "speechToText.tooltip.stop": "Detener captura",
   "speechToText.tooltip.transcribing": "Transcribiendo... Haz clic para cancelar.",
   "speechToText.tooltip.error": "Falló la entrada de voz. Haz clic para borrar.",
   "speechToText.error.title": "Falló la entrada de voz",

@@ -282,7 +282,7 @@ export const dict = {
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
 
   "speechToText.tooltip.start": "Start stemmeinput",
-  "speechToText.tooltip.stop": "Stop optagelse",
+  "speechToText.tooltip.stop": "Stop lydoptagelse",
   "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
   "speechToText.tooltip.error": "Stemmeinput mislykkedes. Klik for at rydde.",
   "speechToText.error.title": "Stemmeinput mislykkedes",

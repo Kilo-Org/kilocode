@@ -284,7 +284,7 @@ export const dict = {
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten",
-  "speechToText.tooltip.stop": "Opname stoppen",
+  "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
   "speechToText.error.title": "Spraakinvoer mislukt",

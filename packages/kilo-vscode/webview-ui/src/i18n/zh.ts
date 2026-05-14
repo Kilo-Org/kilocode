@@ -280,7 +280,7 @@ export const dict = {
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
 
   "speechToText.tooltip.start": "开始语音输入",
-  "speechToText.tooltip.stop": "停止录音",
+  "speechToText.tooltip.stop": "停止捕获音频",
   "speechToText.tooltip.transcribing": "正在转录... 点击取消。",
   "speechToText.tooltip.error": "语音输入失败。点击清除。",
   "speechToText.error.title": "语音输入失败",

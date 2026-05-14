@@ -279,7 +279,7 @@ export const dict = {
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي",
-  "speechToText.tooltip.stop": "إيقاف التسجيل",
+  "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
   "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
   "speechToText.error.title": "فشل الإدخال الصوتي",

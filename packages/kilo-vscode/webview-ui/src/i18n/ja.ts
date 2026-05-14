@@ -280,7 +280,7 @@ export const dict = {
   "prompt.action.indexing": "インデックス設定",
 
   "speechToText.tooltip.start": "音声入力を開始",
-  "speechToText.tooltip.stop": "録音を停止",
+  "speechToText.tooltip.stop": "音声キャプチャを停止",
   "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
   "speechToText.tooltip.error": "音声入力に失敗しました。クリックしてクリア。",
   "speechToText.error.title": "音声入力に失敗しました",

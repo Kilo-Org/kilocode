@@ -281,7 +281,7 @@ export const dict = {
   "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียง",
-  "speechToText.tooltip.stop": "หยุดบันทึก",
+  "speechToText.tooltip.stop": "หยุดจับเสียง",
   "speechToText.tooltip.transcribing": "กำลังถอดเสียง... คลิกเพื่อยกเลิก",
   "speechToText.tooltip.error": "การป้อนข้อมูลด้วยเสียงล้มเหลว คลิกเพื่อล้าง",
   "speechToText.error.title": "การป้อนข้อมูลด้วยเสียงล้มเหลว",

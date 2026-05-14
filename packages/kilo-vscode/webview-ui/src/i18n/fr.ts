@@ -285,7 +285,7 @@ export const dict = {
   "prompt.action.indexing": "Paramètres d'indexation",
 
   "speechToText.tooltip.start": "Démarrer la saisie vocale",
-  "speechToText.tooltip.stop": "Arrêter l'enregistrement",
+  "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
   "speechToText.tooltip.error": "La saisie vocale a échoué. Cliquez pour effacer.",
   "speechToText.error.title": "La saisie vocale a échoué",
