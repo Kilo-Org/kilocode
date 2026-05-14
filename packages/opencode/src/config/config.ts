@@ -48,6 +48,7 @@ import { Npm } from "@opencode-ai/core/npm"
 import { ZodOverride } from "@/util/effect-zod"
 import { KilocodeConfig } from "../kilocode/config/config"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
+import { KiloGatekeeperConfig } from "@/kilocode/gatekeeper/config" // kilocode_change
 import { IndexingConfig as KiloIndexingConfig } from "@kilocode/kilo-indexing/config"
 import { makeRuntime } from "@/effect/run-service"
 import { unique } from "remeda"
@@ -192,6 +193,9 @@ export const Info = Schema.Struct({
   }),
   small_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
+  }),
+  gatekeeper: Schema.optional(Schema.NullOr(KiloGatekeeperConfig.Info)).annotate({
+    description: "Gatekeeper model-assisted permission guardrail configuration",
   }),
   // kilocode_change end
   // kilocode_change start - renamed from "build" to "code" + nullable for delete sentinel
@@ -347,6 +351,13 @@ export type Info = DeepMutable<Schema.Schema.Type<typeof Info>> & {
   plugin_origins?: ConfigPlugin.Origin[]
 }
 
+// kilocode_change start
+type GlobalState = {
+  config: Info
+  warnings: Warning[]
+}
+// kilocode_change end
+
 type State = {
   config: Info
   directories: string[]
@@ -459,6 +470,7 @@ export const layer = Layer.effect(
     const loadConfig = Effect.fnUntraced(function* (
       text: string,
       options: { path: string } | { dir: string; source: string },
+      warnings?: Warning[], // kilocode_change
     ) {
       const source = "path" in options ? options.path : options.source
       const expanded = yield* Effect.promise(() =>
@@ -467,7 +479,13 @@ export const layer = Layer.effect(
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
-      const data = ConfigParse.effectSchema(Info, normalizeLoadedConfig(parsed, source), source)
+      // kilocode_change start
+      const data = ConfigParse.effectSchema(
+        Info,
+        KiloGatekeeperConfig.validate(normalizeLoadedConfig(parsed, source), source, warnings),
+        source,
+      )
+      // kilocode_change end
       if (!("path" in options)) return data
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
@@ -479,23 +497,26 @@ export const layer = Layer.effect(
       return data
     })
 
-    const loadFile = Effect.fnUntraced(function* (filepath: string) {
+    // kilocode_change start
+    const loadFile = Effect.fnUntraced(function* (filepath: string, warnings?: Warning[]) {
+      // kilocode_change end
       log.info("loading", { path: filepath })
       const text = yield* readConfigFile(filepath)
       if (!text) return {} as Info
-      return yield* loadConfig(text, { path: filepath })
+      return yield* loadConfig(text, { path: filepath }, warnings) // kilocode_change
     })
 
     const loadGlobal = Effect.fnUntraced(function* () {
+      const warnings: Warning[] = [] // kilocode_change
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
       let result: Info = {}
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json"), warnings)) // kilocode_change
       // kilocode_change start
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.jsonc")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.json"), warnings))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.jsonc"), warnings))
       // kilocode_change end
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json")))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc")))
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json"), warnings)) // kilocode_change
+      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"), warnings)) // kilocode_change
 
       const legacy = path.join(Global.Path.config, "config")
       if (existsSync(legacy)) {
@@ -513,7 +534,7 @@ export const layer = Layer.effect(
         )
       }
 
-      return result
+      return { config: result, warnings } satisfies GlobalState // kilocode_change
     })
 
     const [cachedGlobal, invalidateGlobal] = yield* Effect.cachedInvalidateWithTTL(
@@ -521,13 +542,15 @@ export const layer = Layer.effect(
         Effect.tapError((error) =>
           Effect.sync(() => log.error("failed to load global config, using defaults", { error: String(error) })),
         ),
-        Effect.orElseSucceed((): Info => ({})),
+        // kilocode_change start
+        Effect.orElseSucceed((): GlobalState => ({ config: {}, warnings: [] })),
+        // kilocode_change end
       ),
       Duration.infinity,
     )
 
     const getGlobal = Effect.fn("Config.getGlobal")(function* () {
-      return yield* cachedGlobal
+      return (yield* cachedGlobal).config // kilocode_change
     })
 
     const ensureGitignore = Effect.fn("Config.ensureGitignore")(function* (dir: string) {
@@ -642,10 +665,14 @@ export const layer = Layer.effect(
               catch: (err) => err,
             }).pipe(
               Effect.flatMap((remoteConfig) =>
-                loadConfig(JSON.stringify(remoteConfig), {
-                  dir: path.dirname(source),
-                  source,
-                }),
+                loadConfig(
+                  JSON.stringify(remoteConfig),
+                  {
+                    dir: path.dirname(source),
+                    source,
+                  },
+                  warnings,
+                ),
               ),
               Effect.tap(() => Effect.sync(() => log.debug("loaded remote config from well-known", { url }))),
               Effect.catch((err: unknown) => {
@@ -664,22 +691,23 @@ export const layer = Layer.effect(
           }
         }
 
-        // kilocode_change start - capture global config failures as warnings
-        const global = yield* getGlobal().pipe(
+        // kilocode_change start - capture global config failures and warnings
+        const global = yield* cachedGlobal.pipe(
           Effect.catchDefect((err: unknown) => {
             caughtWarning(warnings, "global config", err)
-            return Effect.succeed({} as Info)
+            return Effect.succeed({ config: {}, warnings: [] } satisfies GlobalState)
           }),
         )
-        // kilocode_change end
+        warnings.push(...global.warnings)
 
-        yield* merge(Global.Path.config, global, "global")
+        yield* merge(Global.Path.config, global.config, "global")
+        // kilocode_change end
 
         if (Flag.KILO_CONFIG) {
           // kilocode_change start - capture KILO_CONFIG failures as warnings
           yield* merge(
             Flag.KILO_CONFIG,
-            yield* loadFile(Flag.KILO_CONFIG).pipe(
+            yield* loadFile(Flag.KILO_CONFIG, warnings).pipe(
               Effect.catchDefect((err: unknown) => {
                 caughtWarning(warnings, Flag.KILO_CONFIG!, err)
                 return Effect.succeed({} as Info)
@@ -696,7 +724,7 @@ export const layer = Layer.effect(
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               yield* merge(
                 file,
-                yield* loadFile(file).pipe(
+                yield* loadFile(file, warnings).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, file, err)
                     return Effect.succeed({} as Info)
@@ -729,7 +757,7 @@ export const layer = Layer.effect(
               log.debug(`loading config from ${source}`)
               yield* merge(
                 source,
-                yield* loadFile(source).pipe(
+                yield* loadFile(source, warnings).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, source, err)
                     return Effect.succeed({} as Info)
@@ -787,10 +815,14 @@ export const layer = Layer.effect(
           const source = "KILO_CONFIG_CONTENT"
           yield* merge(
             source,
-            yield* loadConfig(process.env.KILO_CONFIG_CONTENT, {
-              dir: ctx.directory,
-              source,
-            }).pipe(
+            yield* loadConfig(
+              process.env.KILO_CONFIG_CONTENT,
+              {
+                dir: ctx.directory,
+                source,
+              },
+              warnings,
+            ).pipe(
               Effect.tap(() => Effect.sync(() => log.debug("loaded custom config from KILO_CONFIG_CONTENT"))),
               Effect.catchDefect((err: unknown) => {
                 caughtWarning(warnings, source, err)
@@ -821,10 +853,16 @@ export const layer = Layer.effect(
 
             if (Option.isSome(configOpt)) {
               const source = `${url}/api/config`
-              const next = yield* loadConfig(JSON.stringify(configOpt.value), {
-                dir: path.dirname(source),
-                source,
-              })
+              // kilocode_change start
+              const next = yield* loadConfig(
+                JSON.stringify(configOpt.value),
+                {
+                  dir: path.dirname(source),
+                  source,
+                },
+                warnings,
+              )
+              // kilocode_change end
               for (const providerID of Object.keys(next.provider ?? {})) {
                 consoleManagedProviders.add(providerID)
               }
@@ -846,7 +884,7 @@ export const layer = Layer.effect(
         if (existsSync(managedDir)) {
           for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
             const source = path.join(managedDir, file)
-            yield* merge(source, yield* loadFile(source), "global")
+            yield* merge(source, yield* loadFile(source, warnings), "global")
           }
         }
         // kilocode_change end
@@ -857,10 +895,14 @@ export const layer = Layer.effect(
         if (managed) {
           yield* merge(
             managed.source,
-            yield* loadConfig(managed.text, {
-              dir: path.dirname(managed.source),
-              source: managed.source,
-            }),
+            yield* loadConfig(
+              managed.text,
+              {
+                dir: path.dirname(managed.source),
+                source: managed.source,
+              },
+              warnings,
+            ),
             "global",
           )
         }
@@ -907,6 +949,7 @@ export const layer = Layer.effect(
         // kilocode_change start — inject Kilo default plugins into both plugin list and origins
         KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
         // kilocode_change end
+        result = KiloGatekeeperConfig.normalize(result) // kilocode_change
 
         return {
           config: result,

@@ -1927,6 +1927,17 @@ export type Config = {
    */
   small_model?: string | null
   /**
+   * Gatekeeper model-assisted permission guardrail configuration
+   */
+  gatekeeper?: {
+    enabled?: boolean | null
+    model?: string | null
+    context_aware?: boolean | null
+    environment?: Array<string> | null
+    allow?: Array<string> | null
+    soft_deny?: Array<string> | null
+  } | null
+  /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
   default_agent?: string | null

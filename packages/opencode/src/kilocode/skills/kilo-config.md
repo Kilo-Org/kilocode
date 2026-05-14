@@ -257,12 +257,32 @@ Additional skill directories and remote URLs:
 
 Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md`) with `name` and `description` in frontmatter. Discovered inside `.kilo/`, `.kilocode/`, and `.opencode/` directories.
 
+## Gatekeeper
+
+`gatekeeper` enables model-assisted permission guardrails. It is separate from `small_model` and defaults `gatekeeper.model` to `kilo-auto/balanced` whenever a `gatekeeper` block exists.
+
+```jsonc
+{
+  "gatekeeper": {
+    "enabled": true,
+    "model": "kilo-auto/balanced",
+    "context_aware": true,
+    "environment": ["Current working directory and configured git remotes are trusted project context."],
+    "allow": [],
+    "soft_deny": []
+  }
+}
+```
+
+`context_aware` defaults to `true` only when Gatekeeper is enabled and you omit field. Set `context_aware: false` to preserve bare tool-call checks for later Gatekeeper runtime features.
+
 ## Other Top-Level Fields
 
 | Field | Type | Description |
 |---|---|---|
 | `model` | `"provider/model"` | Default model |
 | `small_model` | `"provider/model"` | Model for titles/summaries |
+| `gatekeeper` | `object` | Gatekeeper permission guardrail configuration |
 | `default_agent` | `string` | Default primary agent (fallback: `code`) |
 | `instructions` | `string[]` | Glob patterns for additional instruction files |
 | `plugin` | `string[]` | Plugin specifiers (npm packages or `file://` paths) |
