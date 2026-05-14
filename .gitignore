@@ -60,6 +60,7 @@ tsconfig.tsbuildinfo
 .kilocode/bun.lock
 .kilocode/yarn.lock
 .kilocode/node_modules
+.kilo/agent-manager.json
 
 # Test Artifacts
 packages/app/.artifacts/
