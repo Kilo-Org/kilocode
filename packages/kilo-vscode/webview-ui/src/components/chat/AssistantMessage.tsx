@@ -9,7 +9,7 @@
 
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import { Part, PART_MAPPING, ToolRegistry, toolDefaultOpen } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
@@ -125,12 +125,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const session = useSession()
   const display = useDisplay()
   const { config } = useConfig()
-
-  function toolDefaultOpen(tool: string, shell: boolean, edit: boolean) {
-    if (tool === "bash") return shell
-    if (tool === "edit" || tool === "write") return edit
-    if (tool === "apply_patch") return edit
-  }
 
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
   const editOpen = createMemo(() => config().code_edit_display !== "collapsed")
