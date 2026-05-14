@@ -12,7 +12,7 @@ sidebar_label: FastRouter
 
 ## Getting an API Key
 
-1.  **Sign up:** Go to the [FastRouter dashboard](https://go.fastrouter.ai) and create an account.
+1.  **Sign up:** Go to [fastrouter.ai](https://fastrouter.ai) and create an account.
 2.  **Create a key:** Generate an API key from the keys page.
 3.  **Copy the key:** You will paste it into Kilo Code below.
 
