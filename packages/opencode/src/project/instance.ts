@@ -1,8 +1,17 @@
 import { context, type InstanceContext } from "./instance-context"
+import type { Effect } from "effect"
 
 export type { InstanceContext } from "./instance-context"
+export type { LoadInput } from "./instance-store" // kilocode_change
 
 export const Instance = {
+  // kilocode_change start - keep promise-based Kilo callsites working during Effect migration
+  async provide<R>(input: { directory: string; init?: Effect.Effect<void, unknown, unknown>; fn: () => R }) {
+    const mod = await import("./instance-runtime")
+    const ctx = await mod.InstanceRuntime.load({ directory: input.directory, init: input.init })
+    return context.provide(ctx, () => input.fn())
+  },
+  // kilocode_change end
   get current() {
     return context.use()
   },

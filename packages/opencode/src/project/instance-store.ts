@@ -10,6 +10,8 @@ import * as Project from "./project"
 
 export interface LoadInput {
   directory: string
+  /** Additional setup to run after the default InstanceBootstrap. */ // kilocode_change
+  init?: Effect.Effect<void, unknown, unknown> // kilocode_change
   worktree?: string
   project?: Project.Info
 }
@@ -56,6 +58,12 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
         // (and anything it forks via Effect.forkDetach) sees Instance.directory.
         const ready = bootstrap.run.pipe(Effect.provideService(InstanceRef, ctx)) as Effect.Effect<void>
         yield* Effect.promise(() => instanceContext.provide(ctx, () => Effect.runPromise(ready)))
+        // kilocode_change start - keep legacy Instance.provide init hook during Effect migration
+        if (input.init) {
+          const init = input.init.pipe(Effect.provideService(InstanceRef, ctx), Effect.orDie) as Effect.Effect<void>
+          yield* Effect.promise(() => instanceContext.provide(ctx, () => Effect.runPromise(init)))
+        }
+        // kilocode_change end
         return ctx
       }).pipe(Effect.withSpan("InstanceStore.boot"))
 
@@ -190,5 +198,14 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Project.defaultLayer))
+
+// kilocode_change start - promise helpers for legacy Kilo callsites without an Effect boundary
+export const disposeInstance = (ctx: InstanceContext) =>
+  import("@/effect/app-runtime").then((mod) => mod.AppRuntime.runPromise(Service.use((store) => store.dispose(ctx))))
+export const disposeAllInstances = () =>
+  import("@/effect/app-runtime").then((mod) => mod.AppRuntime.runPromise(Service.use((store) => store.disposeAll())))
+export const reloadInstance = (input: LoadInput) =>
+  import("@/effect/app-runtime").then((mod) => mod.AppRuntime.runPromise(Service.use((store) => store.reload(input))))
+// kilocode_change end
 
 export * as InstanceStore from "./instance-store"
