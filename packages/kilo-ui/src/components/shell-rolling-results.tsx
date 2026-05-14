@@ -13,6 +13,7 @@ import { Tooltip } from "./tooltip"
 import { GROW_SPRING } from "./motion"
 import { useSpring } from "./motion-spring"
 import { busy, createThrottledValue, updateScrollMask, useCollapsible, useRowWipe, useToolFade } from "./tool-utils"
+import { readToolOpen, toolOpenKey, writeToolOpen } from "./tool-open-state"
 
 function ShellRollingSubtitle(props: { text: string; animate?: boolean }) {
   let ref: HTMLSpanElement | undefined
@@ -195,7 +196,8 @@ export function ShellRollingResults(props: { part: ToolPart; animate?: boolean; 
   const reduce = useReducedMotion()
   const wiped = new Set<string>()
   const [mounted, setMounted] = createSignal(false)
-  const [open, setOpen] = createSignal(props.defaultOpen ?? true)
+  const key = () => toolOpenKey({ tool: props.part.tool, callID: props.part.callID, partID: props.part.id })
+  const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
   onMount(() => setMounted(true))
   const state = createMemo(() => props.part.state as Record<string, any>)
   const pending = createMemo(() => busy(props.part.state.status))
@@ -227,7 +229,9 @@ export function ShellRollingResults(props: { part: ToolPart; animate?: boolean; 
     const el = headerClipRef
     const viewport = el?.closest(".scroll-view__viewport") as HTMLElement | null
     const beforeY = el?.getBoundingClientRect().top ?? 0
-    setOpen((prev) => !prev)
+    const next = !open()
+    setOpen(next)
+    writeToolOpen(key(), next)
     if (viewport && el) {
       requestAnimationFrame(() => {
         const afterY = el.getBoundingClientRect().top

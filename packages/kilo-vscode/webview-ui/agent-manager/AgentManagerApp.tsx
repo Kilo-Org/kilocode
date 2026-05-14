@@ -1528,6 +1528,7 @@ const AgentManagerContent: Component = () => {
   const openReviewTab = () => {
     const sel = selection()
     if (sel === null) return
+    terms.setActiveId(undefined)
     setSidePanel(null)
     setReviewOpenForContext(sel, true)
     setReviewActive(true)
@@ -3007,76 +3008,73 @@ const AgentManagerContent: Component = () => {
           />
         </Show>
         <Show when={!contextEmpty() && !history()}>
-          {/* Stacking container: the terminal layer is an absolutely-
-              positioned overlay on top of the chat. This sub-container
-              is position:relative so the overlay does not cover the
-              tab bar above (which lives outside this stack). */}
+          {/* Terminal overlay is scoped to the main pane so it does not cover the tab bar or side panel. */}
           <div class="am-detail-stack">
-            {/* Terminal tabs are kept mounted regardless of visibility so
-                output keeps streaming across worktree switches without
-                detaching xterm from the paint tree. */}
-            {renderTerminalLayer({ state: terms })}
-            {/* Chat + side diff panel (hidden when review tab or terminal tab is active) */}
+            {/* Chat/terminal + side diff panel. Keep it mounted under the
+                review tab so live xterm canvases never leave the paint tree. */}
             <div
-              class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""}`}
-              style={{ display: reviewActive() || terms.activeId() ? "none" : undefined }}
+              class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""} ${reviewActive() ? "am-detail-content-hidden" : ""}`}
             >
-              <div class="am-chat-wrapper">
-                <ChatView
-                  onSelectSession={(id) => {
-                    if (localSessionIDs().includes(id)) {
-                      session.selectSession(id)
-                      if (selection() === null) setSelection(LOCAL)
-                      return
-                    }
-                    // Navigate to owning worktree instead of forcing into local mode
-                    if (worktreeSessionIds().has(id)) {
-                      const ms = managedSessions().find((s) => s.id === id)
-                      if (ms?.worktreeId) {
-                        selectWorktree(ms.worktreeId)
+              <div class={`am-main-pane ${terms.activeId() ? "am-main-pane-terminal-active" : ""}`}>
+                {/* Keep terminal tabs mounted so output streams across worktree switches. */}
+                {renderTerminalLayer({ state: terms })}
+                <div class="am-chat-wrapper">
+                  <ChatView
+                    onSelectSession={(id) => {
+                      if (localSessionIDs().includes(id)) {
                         session.selectSession(id)
-                        setReviewActive(false)
+                        if (selection() === null) setSelection(LOCAL)
                         return
                       }
-                    }
-                    openLocally(id)
-                  }}
-                  onShowHistory={() => setHistory(true)}
-                  onForkMessage={readOnly() ? undefined : handleForkSession}
-                  readonly={readOnly()}
-                  continueInWorktree={selection() === LOCAL}
-                  promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
-                  pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
-                />
-                <Show when={readOnly()}>
-                  <div class="am-readonly-banner">
-                    <Icon name="branch" size="small" />
-                    <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
-                    <Button
-                      variant="secondary"
-                      size="small"
-                      onClick={() => {
-                        if (!loaded()) return
-                        const sid = session.currentSessionID()
-                        if (!sid) return
-                        openLocally(sid)
-                      }}
-                    >
-                      {t("agentManager.session.openLocally")}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="small"
-                      onClick={() => {
-                        if (!loaded()) return
-                        const sid = session.currentSessionID()
-                        if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-                      }}
-                    >
-                      {t("agentManager.session.openInWorktree")}
-                    </Button>
-                  </div>
-                </Show>
+                      // Navigate to owning worktree instead of forcing into local mode
+                      if (worktreeSessionIds().has(id)) {
+                        const ms = managedSessions().find((s) => s.id === id)
+                        if (ms?.worktreeId) {
+                          selectWorktree(ms.worktreeId)
+                          session.selectSession(id)
+                          setReviewActive(false)
+                          return
+                        }
+                      }
+                      openLocally(id)
+                    }}
+                    onShowHistory={() => setHistory(true)}
+                    onForkMessage={readOnly() ? undefined : handleForkSession}
+                    readonly={readOnly()}
+                    continueInWorktree={selection() === LOCAL}
+                    promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                    pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
+                  />
+                  <Show when={readOnly()}>
+                    <div class="am-readonly-banner">
+                      <Icon name="branch" size="small" />
+                      <span class="am-readonly-text">{t("agentManager.session.readonly")}</span>
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => {
+                          if (!loaded()) return
+                          const sid = session.currentSessionID()
+                          if (!sid) return
+                          openLocally(sid)
+                        }}
+                      >
+                        {t("agentManager.session.openLocally")}
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="small"
+                        onClick={() => {
+                          if (!loaded()) return
+                          const sid = session.currentSessionID()
+                          if (sid) vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
+                        }}
+                      >
+                        {t("agentManager.session.openInWorktree")}
+                      </Button>
+                    </div>
+                  </Show>
+                </div>
               </div>
               <Show when={sidePanel() !== null}>
                 <div class="am-diff-resize" style={{ width: `${diffWidth()}px` }}>
@@ -3121,6 +3119,7 @@ const AgentManagerContent: Component = () => {
                         }}
                         onRevertFile={revertCtl.revert}
                         revertingFiles={revertCtl.reverting()}
+                        activeTerminalId={terms.activeId()}
                       />
                     </Show>
                   </div>
@@ -3151,6 +3150,7 @@ const AgentManagerContent: Component = () => {
                   }}
                   onRevertFile={revertCtl.revert}
                   revertingFiles={revertCtl.reverting()}
+                  activeTerminalId={terms.activeId()}
                   onClose={closeReviewTab}
                 />
               </div>

@@ -397,6 +397,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         if (pid && mid) setModel({ providerID: pid, modelID: mid })
                       }}
                       placement="top-start"
+                      portal={false}
                       deferDismiss
                     />
                     <ThinkingSelectorBase
@@ -603,6 +604,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   placement="top-start"
                   flip={false}
                   sameWidth
+                  portal={false}
                   deferDismiss
                   class="am-compare-popover"
                   trigger={
