@@ -2056,23 +2056,36 @@ function BashCopyButton(props: { value: () => string; label: string }) {
 function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
   const data = useData()
   const i18n = useI18n()
+  const cmdState = { signal: { aborted: false } }
+  const outState = { signal: { aborted: false } }
   let cmdRef: HTMLDivElement | undefined
   let outRef: HTMLDivElement | undefined
 
   createEffect(() => {
+    cmdState.signal.aborted = true
     if (!props.active) return
     const cmd = props.cmd
     if (!cmdRef || !cmd) return
+    const signal = { aborted: false }
+    cmdState.signal = signal
     cmdRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="shellscript">${escapeHtml(cmd)}</code></pre>`
-    void deferredHighlight(cmdRef)
+    void deferredHighlight(cmdRef, undefined, signal)
   })
 
   createEffect(() => {
+    outState.signal.aborted = true
     if (!props.active) return
     const out = props.output
     if (!outRef || !out) return
+    const signal = { aborted: false }
+    outState.signal = signal
     outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
-    void deferredHighlight(outRef)
+    void deferredHighlight(outRef, undefined, signal)
+  })
+
+  onCleanup(() => {
+    cmdState.signal.aborted = true
+    outState.signal.aborted = true
   })
 
   const openInEditor = () => {

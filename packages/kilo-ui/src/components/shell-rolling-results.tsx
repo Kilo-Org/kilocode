@@ -60,14 +60,22 @@ function ShellRollingCommand(props: { text: string; animate?: boolean }) {
 }
 
 function ShellOutputHighlight(props: { code: string; active?: boolean }) {
+  const state = { signal: { aborted: false } }
   let ref: HTMLDivElement | undefined
 
   createEffect(() => {
+    state.signal.aborted = true
     if (!props.active) return
     const code = props.code
     if (!ref || !code) return
+    const signal = { aborted: false }
+    state.signal = signal
     ref.innerHTML = `<pre data-slot="shell-expanded-pre"><code data-lang="log">${escapeHtml(code)}</code></pre>`
-    void deferredHighlight(ref)
+    void deferredHighlight(ref, undefined, signal)
+  })
+
+  onCleanup(() => {
+    state.signal.aborted = true
   })
 
   return <div ref={ref} />
