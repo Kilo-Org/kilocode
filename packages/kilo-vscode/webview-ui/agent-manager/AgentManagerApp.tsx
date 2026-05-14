@@ -120,6 +120,8 @@ import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
+import { createSidebarCollapse } from "./sidebar-collapse"
+import { SidebarToggleButton } from "./SidebarToggleButton"
 import { setTabWidths } from "./tab-widths"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
@@ -284,6 +286,10 @@ const AgentManagerContent: Component = () => {
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+  const sidebar = createSidebarCollapse(vscode)
+  const sidebarCollapsed = sidebar.collapsed
+  const expandSidebar = sidebar.expand
+  const toggleSidebar = sidebar.toggle
   const [sections, setSections] = createSignal<SectionState[]>([])
 
   // rAF coalescing for resize handlers — at most one signal write per frame
@@ -1280,6 +1286,8 @@ const AgentManagerContent: Component = () => {
         if (restored) setLocalSessionIDs(restored)
         // Recover sessions collapsed state from extension-persisted state
         if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
+        // Recover sidebar collapsed state and mark hydrated so transitions enable
+        sidebar.hydrate(state.sidebarCollapsed)
         // Clear busy state for worktrees that have been removed
         const ids = new Set(state.worktrees.map((wt) => wt.id))
         setBusyWorktrees((prev) => {
@@ -1757,12 +1765,14 @@ const AgentManagerContent: Component = () => {
 
   const handleCreateWorktree = () => {
     if (!loaded()) return
+    expandSidebar()
     vscode.postMessage({ type: "agentManager.createWorktree" })
   }
 
   // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
   const showAdvancedWorktreeDialog = () => {
     if (!loaded()) return
+    expandSidebar()
     dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
   }
 
@@ -1857,6 +1867,7 @@ const AgentManagerContent: Component = () => {
 
   const openLocally = (sid: string) => {
     saveTabMemory()
+    expandSidebar()
     const pending = activePendingId()
     if (pending) {
       setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
@@ -1870,6 +1881,7 @@ const AgentManagerContent: Component = () => {
 
   const handleAddSession = () => {
     const sel = selection()
+    expandSidebar()
     if (sel === LOCAL) return addPendingTab()
     if (sel) {
       // Deactivate any focused terminal so the new session is visible.
@@ -2110,8 +2122,17 @@ const AgentManagerContent: Component = () => {
   }
 
   return (
-    <div class="am-layout" onContextMenu={(e) => e.preventDefault()}>
-      <div class="am-sidebar" style={{ width: `${sidebarWidth()}px` }}>
+    <div
+      class="am-layout"
+      classList={{ "am-layout-hydrated": sidebar.hydrated() }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <div
+        class="am-sidebar"
+        classList={{ "am-sidebar-collapsed": sidebarCollapsed() }}
+        style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
+        aria-hidden={sidebarCollapsed()}
+      >
         <ResizeHandle
           direction="horizontal"
           size={sidebarWidth()}
@@ -2635,8 +2656,19 @@ const AgentManagerContent: Component = () => {
       </div>
 
       <div class="am-detail">
-        {/* Tab bar — visible when a section is selected and has tabs or a pending new session */}
-        <Show when={selection() !== null && !contextEmpty()}>
+        {/* Tab bar — full version with tabs renders when a section is selected
+            and has tabs; otherwise a minimal version still renders so the
+            sidebar toggle button stays at a fixed position. */}
+        <Show
+          when={selection() !== null && !contextEmpty()}
+          fallback={
+            <div class="am-tab-bar am-tab-bar-empty">
+              <div class="am-tab-leading">
+                <SidebarToggleButton collapsed={sidebarCollapsed()} onClick={toggleSidebar} />
+              </div>
+            </div>
+          }
+        >
           <DragDropProvider
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
@@ -2647,6 +2679,7 @@ const AgentManagerContent: Component = () => {
             <ConstrainDragYAxis />
             <div class="am-tab-bar" onPointerLeave={releaseTabs}>
               <div class="am-tab-leading">
+                <SidebarToggleButton collapsed={sidebarCollapsed()} onClick={toggleSidebar} />
                 <CurrentTabsMenu
                   items={tabMenuItems}
                   label={t("agentManager.tabsMenu.label")}

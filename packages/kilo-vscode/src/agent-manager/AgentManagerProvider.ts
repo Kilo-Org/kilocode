@@ -528,6 +528,10 @@ export class AgentManagerProvider implements Disposable {
       this.state?.setSessionsCollapsed(m.collapsed)
       return null
     }
+    if (m.type === "agentManager.setSidebarCollapsed") {
+      this.state?.setSidebarCollapsed(m.collapsed)
+      return null
+    }
     if (this.handleSection(m)) return null
     if (m.type === "agentManager.setReviewDiffStyle") {
       this.state?.setReviewDiffStyle(m.style)
@@ -854,6 +858,7 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.setTabOrder":
       case "agentManager.setWorktreeOrder":
       case "agentManager.setSessionsCollapsed":
+      case "agentManager.setSidebarCollapsed":
       case "agentManager.setReviewDiffStyle":
       case "agentManager.setDefaultBaseBranch":
       case "agentManager.createSection":
@@ -1496,6 +1501,7 @@ export class AgentManagerProvider implements Disposable {
       tabOrder: state.getTabOrder(),
       worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
+      sidebarCollapsed: state.getSidebarCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: true,
