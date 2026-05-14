@@ -214,9 +214,11 @@ const loadSkills = Effect.fnUntraced(function* (
   state: State,
   discovered: DiscoveryState,
   bus: Bus.Interface,
+  // kilocode_change start
   fsys: AppFileSystem.Interface, // kilocode_change
   directory: string, // kilocode_change
   worktree: string, // kilocode_change
+  // kilocode_change end
 ) {
   // kilocode_change start - seed built-in skills before discovery so user skills can override
   for (const skill of BUILTIN_SKILLS) {
