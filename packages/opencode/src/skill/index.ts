@@ -210,16 +210,7 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 })
 
-const loadSkills = Effect.fnUntraced(function* (
-  state: State,
-  discovered: DiscoveryState,
-  bus: Bus.Interface,
-  // kilocode_change start
-  fsys: AppFileSystem.Interface, // kilocode_change
-  directory: string, // kilocode_change
-  worktree: string, // kilocode_change
-  // kilocode_change end
-) {
+const loadSkills = Effect.fnUntraced(function* (state: State, discovered: DiscoveryState, bus: Bus.Interface, opts?: { fsys: AppFileSystem.Interface; directory: string; worktree: string }) { // kilocode_change
   // kilocode_change start - seed built-in skills before discovery so user skills can override
   for (const skill of BUILTIN_SKILLS) {
     state.skills[skill.name] = {
@@ -235,7 +226,7 @@ const loadSkills = Effect.fnUntraced(function* (
     concurrency: "unbounded",
     discard: true,
   })
-  yield* ProjectDesignSkill.add(fsys, state.skills, directory, worktree) // kilocode_change
+  if (opts) yield* ProjectDesignSkill.add(opts.fsys, state.skills, opts.directory, opts.worktree) // kilocode_change
 
   log.info("init", { count: Object.keys(state.skills).length })
 })
@@ -259,7 +250,7 @@ export const layer = Layer.effect(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
         const ctx = yield* InstanceState.context // kilocode_change
-        yield* loadSkills(s, yield* InstanceState.get(discovered), bus, fsys, ctx.directory, ctx.worktree) // kilocode_change
+        yield* loadSkills(s, yield* InstanceState.get(discovered), bus, { fsys, directory: ctx.directory, worktree: ctx.worktree }) // kilocode_change
         return s
       }),
     )
