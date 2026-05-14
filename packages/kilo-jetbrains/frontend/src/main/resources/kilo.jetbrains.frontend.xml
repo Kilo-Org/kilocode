@@ -12,6 +12,12 @@
                     icon="/icons/kilo.svg"
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
 
+        <virtualFileSystem key="kilo"
+                           implementationClass="ai.kilocode.client.fs.KiloVirtualFileSystem"/>
+
+        <fileEditorProvider id="kilo-editor"
+                            implementation="ai.kilocode.client.fs.KiloEditorProvider"/>
+
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"
@@ -25,6 +31,15 @@
     </extensions>
 
     <actions>
+        <action id="Kilo.NewSession"
+                class="ai.kilocode.client.actions.NewSessionAction"/>
+
+        <action id="Kilo.ShowProfile"
+                class="ai.kilocode.client.actions.ShowProfileAction"
+                text="Show profile"
+                description="Open the Kilo profile editor"
+                icon="AllIcons.General.User"/>
+
         <action id="Kilo.Restart"
                 class="ai.kilocode.client.actions.RestartKiloAction"/>
 
@@ -32,6 +47,8 @@
                 class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
         <group id="Kilo.SettingsGroup">
+            <reference ref="Kilo.ShowProfile"/>
+            <separator/>
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
         </group>
@@ -42,6 +59,13 @@
 
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
+
+        <group id="Kilo.ToolWindow.TitleActions">
+            <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.History"/>
+            <reference ref="Kilo.ShowProfile"/>
+            <reference ref="Kilo.Settings"/>
+        </group>
 
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
