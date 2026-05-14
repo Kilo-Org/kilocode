@@ -160,7 +160,7 @@ const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* (
 
   const results = yield* Effect.forEach(
     filteredSessions,
-     (session) =>
+    (session) =>
       Effect.gen(function* () {
         const messages = yield* svc.messages({ sessionID: session.id })
 

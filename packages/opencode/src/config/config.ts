@@ -387,7 +387,10 @@ export interface Interface {
   readonly getGlobal: () => Effect.Effect<Info>
   readonly getConsoleState: () => Effect.Effect<ConsoleState>
   readonly update: (config: Info) => Effect.Effect<void>
-  readonly updateGlobal: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<{ info: Info; changed: boolean }> // kilocode_change
+  readonly updateGlobal: (
+    config: Info,
+    options?: { dispose?: boolean },
+  ) => Effect.Effect<{ info: Info; changed: boolean }> // kilocode_change
   readonly invalidate: () => Effect.Effect<void>
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>

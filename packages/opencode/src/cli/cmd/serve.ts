@@ -35,9 +35,7 @@ export const ServeCommand = effectCmd({
     process.on("SIGTERM", shutdown)
     process.on("SIGINT", shutdown)
     process.on("SIGHUP", shutdown)
-    yield* Effect.promise(
-      () => new Promise<void>((resolve) => abort.signal.addEventListener("abort", () => resolve())),
-    )
+    yield* Effect.promise(() => new Promise<void>((resolve) => abort.signal.addEventListener("abort", () => resolve())))
     // kilocode_change end
   }),
 })

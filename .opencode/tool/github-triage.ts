@@ -45,23 +45,23 @@ Provide the team that should own the issue. This tool picks a random assignee fr
       .describe("The owning team"),
   },
   async execute(args) {
-  const issue = getIssueNumber()
-  // const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN })
-  const owner = "anomalyco"
-  const repo = "opencode"
-  const assignee = pick(TEAM[args.team])
+    const issue = getIssueNumber()
+    // const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN })
+    const owner = "anomalyco"
+    const repo = "opencode"
+    const assignee = pick(TEAM[args.team])
 
-  // await octokit.rest.issues.addAssignees({
-  //   owner,
-  //   repo,
-  //   issue_number: issue,
-  //   assignees: [args.assignee],
-  // })
-  await githubFetch(`/repos/${owner}/${repo}/issues/${issue}/assignees`, {
-    method: "POST",
-    body: JSON.stringify({ assignees: [args.assignee] }),
-  })
+    // await octokit.rest.issues.addAssignees({
+    //   owner,
+    //   repo,
+    //   issue_number: issue,
+    //   assignees: [args.assignee],
+    // })
+    await githubFetch(`/repos/${owner}/${repo}/issues/${issue}/assignees`, {
+      method: "POST",
+      body: JSON.stringify({ assignees: [args.assignee] }),
+    })
 
-  return `Assigned @${assignee} from ${args.team} to issue #${issue}`
-},
+    return `Assigned @${assignee} from ${args.team} to issue #${issue}`
+  },
 })

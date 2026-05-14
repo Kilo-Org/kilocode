@@ -373,8 +373,7 @@ describe("tool.task", () => {
     }),
   )
 
-  
-    it.instance(
+  it.instance(
     "execute shapes child permissions for task, todowrite, and primary tools",
     () =>
       Effect.gen(function* () {

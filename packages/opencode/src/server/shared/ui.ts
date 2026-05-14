@@ -1,9 +1,8 @@
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { Effect, Stream } from "effect"
-import { HttpBody, HttpClient, HttpClientRequest, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
+import { Effect } from "effect"
+import { HttpClient, HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { createHash } from "node:crypto"
-import { ProxyUtil } from "../proxy-util"
 
 const embeddedUIPromise = Flag.KILO_DISABLE_EMBEDDED_WEB_UI
   ? Promise.resolve(null)
@@ -25,21 +24,7 @@ export function cspForHtml(body: string) {
   return csp(match ? createHash("sha256").update(match[2]).digest("base64") : "")
 }
 
-function requestBody(request: HttpServerRequest.HttpServerRequest) {
-  if (request.method === "GET" || request.method === "HEAD") return HttpBody.empty
-  const len = request.headers["content-length"]
-  return HttpBody.stream(request.stream, request.headers["content-type"], len === undefined ? undefined : Number(len))
-}
-
-function proxyResponseHeaders(headers: Record<string, string>) {
-  const result = new Headers(headers)
-  // FetchHttpClient exposes decoded response bodies, so forwarding upstream
-  // transfer metadata makes browsers decode already-decoded assets again.
-  result.delete("content-encoding")
-  result.delete("content-length")
-  result.delete("transfer-encoding")
-  return result
-}
+// kilocode_change - upstream's proxy-to-app.opencode.ai helpers (requestBody, proxyResponseHeaders) are unused in Kilo because serveUIEffect 404s instead of proxying. Removed to keep the no-proxy contract obvious.
 
 export function upstreamURL(path: string) {
   return new URL(path, UI_UPSTREAM).toString()
@@ -87,24 +72,7 @@ export function serveUIEffect(
 
     if (embeddedWebUI) return yield* serveEmbeddedUIEffect(path, services.fs, embeddedWebUI)
 
-    const response = yield* services.client.execute(
-      HttpClientRequest.make(request.method)(upstreamURL(path), {
-        headers: ProxyUtil.headers(request.headers, { host: UI_UPSTREAM.host }),
-        body: requestBody(request),
-      }),
-    )
-    const headers = proxyResponseHeaders(response.headers)
-
-    if (response.headers["content-type"]?.includes("text/html")) {
-      const body = yield* response.text
-      headers.set("Content-Security-Policy", cspForHtml(body))
-      return HttpServerResponse.text(body, { status: response.status, headers })
-    }
-
-    headers.set("Content-Security-Policy", csp())
-    return HttpServerResponse.stream(response.stream.pipe(Stream.catchCause(() => Stream.empty)), {
-      status: response.status,
-      headers,
-    })
+    // kilocode_change - no proxy fallback to app.opencode.ai; Kilo serves the embedded UI only
+    return notFound()
   })
 }

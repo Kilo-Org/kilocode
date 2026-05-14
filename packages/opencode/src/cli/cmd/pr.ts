@@ -101,8 +101,8 @@ export const PrCommand = effectCmd({
           UI.println(`Found session: ${sessionUrl}`) // kilocode_change
           UI.println(`Importing session...`)
 
-          const importResult = yield* Effect.promise(() =>
-            Process.text([...cli, "import", sessionUrl], { nothrow: true }), // kilocode_change - run via current CLI
+          const importResult = yield* Effect.promise(
+            () => Process.text([...cli, "import", sessionUrl], { nothrow: true }), // kilocode_change - run via current CLI
           )
           if (importResult.code === 0) {
             const sessionIdMatch = importResult.text.trim().match(/Imported session: ([a-zA-Z0-9_-]+)/)

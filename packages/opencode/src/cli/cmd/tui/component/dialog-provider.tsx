@@ -212,7 +212,12 @@ export function createDialogProviderOptions() {
                 } else {
                   // kilocode_change end
                   dialog.replace(() => (
-                    <AutoMethod providerID={providerID} title={method.label} index={index} authorization={result.data!} />
+                    <AutoMethod
+                      providerID={providerID}
+                      title={method.label}
+                      index={index}
+                      authorization={result.data!}
+                    />
                   ))
                 } // kilocode_change
               }

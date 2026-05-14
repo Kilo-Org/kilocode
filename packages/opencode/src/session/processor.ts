@@ -527,7 +527,10 @@ export const layer: Layer.Layer<
             return
 
           case "finish-step": {
-            const completedSnapshot = yield* snapshot.track({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id }) // kilocode_change - pass IDs for slow-repo prompt
+            const completedSnapshot = yield* snapshot.track({
+              sessionID: ctx.sessionID,
+              messageID: ctx.assistantMessage.id,
+            }) // kilocode_change - pass IDs for slow-repo prompt
             const usage = Session.getUsage({
               model: ctx.model,
               usage: value.usage,

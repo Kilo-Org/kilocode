@@ -154,6 +154,7 @@ Options:
       --fork        fork the session when continuing (use with --continue or --session)  [boolean]
       --cloud-fork  fetch session from cloud and continue locally (use with --session)  [boolean]
   -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'opencode')  [string]
 ```
 
 ## kilo run
@@ -179,6 +180,7 @@ Options:
       --title                         title for the session (uses truncated prompt if no value provided)  [string]
       --attach                        attach to a running opencode server (e.g., http://localhost:4096)  [string]
   -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
       --dir                           directory to run in, path on remote server if attaching  [string]
       --port                          port for the local server (defaults to random port if no value provided)  [number]
       --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
@@ -202,6 +204,7 @@ Commands:
   kilo debug snapshot      snapshot debugging utilities
   kilo debug startup       print startup timing
   kilo debug agent <name>  show agent configuration details
+  kilo debug info          show debug information
   kilo debug paths         show global paths (data, config, cache, state)
   kilo debug wait          wait indefinitely (for debugging)
 
@@ -503,6 +506,16 @@ Options:
   --params   Tool params as JSON or a JS object literal  [string]
 ```
 
+### kilo debug info
+
+```
+show debug information
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
 ### kilo debug paths
 
 ```
@@ -529,7 +542,7 @@ Options:
 manage AI providers and credentials
 
 Commands:
-  kilo auth list         list providers  [aliases: ls]
+  kilo auth list         list providers and credentials  [aliases: ls]
   kilo auth login [url]  log in to a provider
   kilo auth logout       log out from a configured provider
 
@@ -541,7 +554,7 @@ Options:
 ### kilo auth list
 
 ```
-list providers
+list providers and credentials
 
 Options:
   --help     Show help  [boolean]
