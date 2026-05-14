@@ -40,7 +40,8 @@
   padding-right: 0;
   border-right-width: 0;
   overflow: hidden;
-  pointer-events: none;
+  /* Pointer events, focus, and a11y tree exclusion are all handled by the
+     inert attribute on the element. No need for pointer-events: none. */
 }
 
 .am-sidebar-collapsed > [data-component="resize-handle"] {

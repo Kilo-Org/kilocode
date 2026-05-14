@@ -2131,7 +2131,7 @@ const AgentManagerContent: Component = () => {
         class="am-sidebar"
         classList={{ "am-sidebar-collapsed": sidebarCollapsed() }}
         style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
-        aria-hidden={sidebarCollapsed()}
+        inert={sidebarCollapsed() || undefined}
       >
         <ResizeHandle
           direction="horizontal"
