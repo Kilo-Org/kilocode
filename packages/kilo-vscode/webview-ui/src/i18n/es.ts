@@ -1463,7 +1463,8 @@ export const dict = {
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.display.codeEdit.title": "Bloques de código",
-  "settings.display.codeEdit.description": "Elegir si los bloques de edición de código aparecen expandidos o colapsados por defecto",
+  "settings.display.codeEdit.description":
+    "Elegir si los bloques de edición de código aparecen expandidos o colapsados por defecto",
   "settings.display.codeEdit.expanded": "Expandido",
   "settings.display.codeEdit.collapsed": "Colapsado",
   "settings.providers.defaultModel.title": "Modelo predeterminado",

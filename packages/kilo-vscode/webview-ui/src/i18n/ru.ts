@@ -1447,7 +1447,8 @@ export const dict = {
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.display.codeEdit.title": "Редактирование кода",
-  "settings.display.codeEdit.description": "Выберите, показывать блоки редактирования кода развернутыми или свернутыми по умолчанию",
+  "settings.display.codeEdit.description":
+    "Выберите, показывать блоки редактирования кода развернутыми или свернутыми по умолчанию",
   "settings.display.codeEdit.expanded": "Развернуто",
   "settings.display.codeEdit.collapsed": "Свернуто",
   "settings.providers.defaultModel.title": "Модель по умолчанию",

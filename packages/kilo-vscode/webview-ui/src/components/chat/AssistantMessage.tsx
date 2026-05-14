@@ -186,12 +186,13 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                   message={props.message as SDKMessage}
                                   showAssistantCopyPartID={props.showAssistantCopyPartID}
                                   reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                  defaultOpen={part.type === "tool" ? toolDefaultOpen(tp().tool, open(), editOpen()) : undefined}
+                                  defaultOpen={
+                                    part.type === "tool" ? toolDefaultOpen(tp().tool, open(), editOpen()) : undefined
+                                  }
                                   feedback={props.feedback}
                                   animate={
                                     part.type === "tool" &&
-                                    (tp().state?.status === "pending" ||
-                                      tp().state?.status === "running")
+                                    (tp().state?.status === "pending" || tp().state?.status === "running")
                                   }
                                 />
                               }

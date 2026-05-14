@@ -1452,7 +1452,8 @@ export const dict = {
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.display.codeEdit.title": "Blokovi koda",
-  "settings.display.codeEdit.description": "Odaberite da li blokovi za uređivanje koda počinju prošireni ili skupljeni po defaultu",
+  "settings.display.codeEdit.description":
+    "Odaberite da li blokovi za uređivanje koda počinju prošireni ili skupljeni po defaultu",
   "settings.display.codeEdit.expanded": "Prošireno",
   "settings.display.codeEdit.collapsed": "Skupljeno",
   "settings.providers.defaultModel.title": "Zadani model",

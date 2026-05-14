@@ -1470,7 +1470,8 @@ export const dict = {
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.display.codeEdit.title": "Code-Blöcke",
-  "settings.display.codeEdit.description": "Wählen Sie, ob Code-Bearbeitungsblöcke standardmäßig erweitert oder reduziert angezeigt werden",
+  "settings.display.codeEdit.description":
+    "Wählen Sie, ob Code-Bearbeitungsblöcke standardmäßig erweitert oder reduziert angezeigt werden",
   "settings.display.codeEdit.expanded": "Erweitert",
   "settings.display.codeEdit.collapsed": "Reduziert",
   "settings.providers.defaultModel.title": "Standardmodell",

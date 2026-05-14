@@ -1409,7 +1409,8 @@ export const dict = {
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.display.codeEdit.title": "Редагування коду",
-  "settings.display.codeEdit.description": "Виберіть, чи показувати блоки редагування коду розгорнутими або згорнутими за замовчуванням",
+  "settings.display.codeEdit.description":
+    "Виберіть, чи показувати блоки редагування коду розгорнутими або згорнутими за замовчуванням",
   "settings.display.codeEdit.expanded": "Розгорнуто",
   "settings.display.codeEdit.collapsed": "Згорнуто",
 

@@ -1410,7 +1410,8 @@ export const dict = {
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.display.codeEdit.title": "Kod blokları",
-  "settings.display.codeEdit.description": "Kod düzenleme bloklarının varsayılan olarak genişletilmiş mi yoksa daraltılmış mı başlayacağını seçin",
+  "settings.display.codeEdit.description":
+    "Kod düzenleme bloklarının varsayılan olarak genişletilmiş mi yoksa daraltılmış mı başlayacağını seçin",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
 
