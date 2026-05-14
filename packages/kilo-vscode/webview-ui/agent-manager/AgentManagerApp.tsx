@@ -87,7 +87,14 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge, MermaidDownloadBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
-import { nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, reconcileLocalSessions, LOCAL } from "./navigate"
+import {
+  nextSelectionAfterDelete,
+  adjacentHint,
+  restoreLocalSessions,
+  reconcileLocalSessions,
+  filterUnassignedSessions,
+  LOCAL,
+} from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
@@ -723,9 +730,7 @@ const AgentManagerContent: Component = () => {
 
   // Sessions NOT in any worktree and not local
   const unassignedSessions = createMemo(() =>
-    [...session.sessions()]
-      .filter((s) => !worktreeSessionIds().has(s.id) && !localSet().has(s.id))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    filterUnassignedSessions(session.sessions(), worktreeSessionIds(), localSet()),
   )
 
   // Local sessions (resolved from session list + pending tabs, in insertion order)
