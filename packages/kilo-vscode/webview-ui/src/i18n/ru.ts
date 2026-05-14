@@ -1411,7 +1411,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
-  "settings.context.autoCompaction.description": "Автоматически сжимать контекст при заполнении",
+  "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
+  "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
+  "settings.context.compactionLimit.description":
+    "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",

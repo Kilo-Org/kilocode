@@ -71,6 +71,11 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
         workspaces.get(dir).deleteSession(id)
     }
 
+    override suspend fun rename(id: String, directory: String, title: String): ai.kilocode.rpc.dto.SessionDto {
+        val dir = sessions.getDirectory(id, directory)
+        return sessions.rename(id, dir, title)
+    }
+
     override suspend fun cloudSessions(directory: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         sessions.cloudSessions(directory, cursor, limit, gitUrl)
 

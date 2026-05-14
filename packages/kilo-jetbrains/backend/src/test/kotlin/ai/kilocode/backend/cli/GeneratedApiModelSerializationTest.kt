@@ -39,7 +39,7 @@ class GeneratedApiModelSerializationTest {
 
     @Test
     fun `empty provider list`() {
-        val src = """{"all":[],"default":{},"connected":[]}"""
+        val src = """{"all":[],"default":{},"connected":[],"failed":[]}"""
         val obj = json.decodeFromString<ProviderList200Response>(src)
         assertTrue(obj.all.isEmpty())
         assertTrue(obj.default.isEmpty())
@@ -81,7 +81,8 @@ class GeneratedApiModelSerializationTest {
                 }
             }],
             "default": {"code": "anthropic/claude-4"},
-            "connected": ["anthropic"]
+            "connected": ["anthropic"],
+            "failed": []
         }"""
         val obj = json.decodeFromString<ProviderList200Response>(src)
         assertEquals(1, obj.all.size)
@@ -132,7 +133,8 @@ class GeneratedApiModelSerializationTest {
                 }
             }],
             "default": {},
-            "connected": []
+            "connected": [],
+            "failed": []
         }"""
         val obj = json.decodeFromString<ProviderList200Response>(src)
         val model = obj.all[0].models["free-model"]!!
@@ -149,10 +151,20 @@ class GeneratedApiModelSerializationTest {
             "all": [],
             "default": {},
             "connected": [],
+            "failed": [],
             "future_field": "value"
         }"""
         val obj = json.decodeFromString<ProviderList200Response>(src)
         assertTrue(obj.all.isEmpty())
+    }
+
+    @Test
+    fun `provider list defaults omitted collection fields`() {
+        val obj = json.decodeFromString<ProviderList200Response>("{}")
+        assertTrue(obj.all.isEmpty())
+        assertTrue(obj.default.isEmpty())
+        assertTrue(obj.connected.isEmpty())
+        assertTrue(obj.failed.isEmpty())
     }
 
     // ------ Agent ------
@@ -286,5 +298,71 @@ class GeneratedApiModelSerializationTest {
     fun `empty skill list`() {
         val list = json.decodeFromString<List<AppSkills200ResponseInner>>("[]")
         assertTrue(list.isEmpty())
+    }
+
+    // ------ ProviderList200Response.failed non-empty ------
+
+    @Test
+    fun `provider list failed field handles non-empty list`() {
+        val src = """{
+            "all": [],
+            "default": {},
+            "connected": [],
+            "failed": ["openai", "anthropic"]
+        }"""
+        val obj = json.decodeFromString<ProviderList200Response>(src)
+        assertEquals(listOf("openai", "anthropic"), obj.failed)
+    }
+
+    @Test
+    fun `provider list failed field handles single failed provider`() {
+        val src = """{"all":[],"default":{},"connected":[],"failed":["openai"]}"""
+        val obj = json.decodeFromString<ProviderList200Response>(src)
+        assertEquals(listOf("openai"), obj.failed)
+    }
+
+    // ------ Model limits with realistic large values ------
+
+    @Test
+    fun `model limit context and output deserialize with large values`() {
+        val src = """{
+            "all": [{
+                "id": "p",
+                "name": "Provider",
+                "source": "api",
+                "env": [],
+                "options": {},
+                "models": {
+                    "big-model": {
+                        "id": "big-model",
+                        "providerID": "p",
+                        "name": "Big Model",
+                        "api": {"id": "p", "url": "", "npm": ""},
+                        "capabilities": {
+                            "temperature": true,
+                            "reasoning": false,
+                            "attachment": false,
+                            "toolcall": true,
+                            "input": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
+                            "output": {"text": true, "audio": false, "image": false, "video": false, "pdf": false},
+                            "interleaved": {"field":"reasoning_content"}
+                        },
+                        "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
+                        "limit": {"context": 1000000, "output": 32000},
+                        "status": "active",
+                        "options": {},
+                        "headers": {},
+                        "release_date": "2025-01-01"
+                    }
+                }
+            }],
+            "default": {},
+            "connected": [],
+            "failed": []
+        }"""
+        val obj = json.decodeFromString<ProviderList200Response>(src)
+        val model = obj.all[0].models["big-model"]!!
+        assertEquals(1000000.0, model.limit.context)
+        assertEquals(32000.0, model.limit.output)
     }
 }

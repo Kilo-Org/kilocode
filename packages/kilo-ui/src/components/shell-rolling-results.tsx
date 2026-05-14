@@ -3,6 +3,8 @@ import stripAnsi from "strip-ansi"
 import type { ToolPart } from "@kilocode/sdk/v2"
 import { useReducedMotion } from "../hooks/use-reduced-motion"
 import { useI18n } from "../context/i18n"
+import { deferredHighlight } from "../context/marked"
+import { escapeHtml } from "../util/escape-html"
 import { RollingResults } from "./rolling-results"
 import { Icon } from "./icon"
 import { IconButton } from "./icon-button"
@@ -55,6 +57,28 @@ function ShellRollingCommand(props: { text: string; animate?: boolean }) {
       </span>
     </div>
   )
+}
+
+function ShellOutputHighlight(props: { code: string; active?: boolean }) {
+  const state = { signal: { aborted: false } }
+  let ref: HTMLDivElement | undefined
+
+  createEffect(() => {
+    state.signal.aborted = true
+    if (!props.active) return
+    const code = props.code
+    if (!ref || !code) return
+    const signal = { aborted: false }
+    state.signal = signal
+    ref.innerHTML = `<pre data-slot="shell-expanded-pre"><code data-lang="log">${escapeHtml(code)}</code></pre>`
+    void deferredHighlight(ref, undefined, signal)
+  })
+
+  onCleanup(() => {
+    state.signal.aborted = true
+  })
+
+  return <div ref={ref} />
 }
 
 function ShellExpanded(props: { cmd: string; out: string; open: boolean }) {
@@ -156,9 +180,7 @@ function ShellExpanded(props: { cmd: string; out: string; open: boolean }) {
                 onScroll={updateMask}
                 style={{ "max-height": `${cap()}px` }}
               >
-                <pre data-slot="shell-expanded-pre">
-                  <code>{props.out}</code>
-                </pre>
+                <ShellOutputHighlight code={props.out} active={props.open} />
               </div>
             </>
           </Show>

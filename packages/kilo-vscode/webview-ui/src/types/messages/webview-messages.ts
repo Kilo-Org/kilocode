@@ -131,6 +131,12 @@ export interface OpenFileRequest {
   column?: number
 }
 
+export interface OpenContentRequest {
+  type: "openContent"
+  content: string
+  language?: string
+}
+
 export interface CancelLoginRequest {
   type: "cancelLogin"
 }
@@ -636,6 +642,12 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
+// Persist sidebar collapsed state
+export interface SetSidebarCollapsedRequest {
+  type: "agentManager.setSidebarCollapsed"
+  collapsed: boolean
+}
+
 // Persist review diff style preference
 export interface SetReviewDiffStyleRequest {
   type: "agentManager.setReviewDiffStyle"
@@ -1116,6 +1128,7 @@ export type WebviewMessage =
   | SetTabOrderRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
+  | SetSidebarCollapsedRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
@@ -1191,6 +1204,7 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | OpenContentRequest
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest
