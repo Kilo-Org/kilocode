@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -156,6 +157,36 @@ class KiloBackendSessionManager(
         directories.remove(id)
     }
 
+    /**
+     * Rename a session by sending `PATCH /session/{id}?directory={dir}` with `{"title":"..."}`.
+     *
+     * Uses raw HTTP because the generated Kotlin client is build-time only and
+     * this repo already uses raw HTTP for session create and cloud operations.
+     */
+    fun rename(id: String, dir: String, title: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val json = """{"title":"${escape(title)}"}"""
+        val patch = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addQueryParameter("directory", dir)
+            .build()
+        val request = Request.Builder()
+            .url(patch)
+            .method("PATCH", json.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session rename failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session rename failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseSession(raw!!)
+        }
+    }
+
     fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
         val h = http ?: throw IllegalStateException("Session manager not started")
         val url = base ?: throw IllegalStateException("Session manager not started")
@@ -238,9 +269,9 @@ class KiloBackendSessionManager(
         ),
         summary = s.summary?.let {
             SessionSummaryDto(
-                additions = it.additions.toInt(),
-                deletions = it.deletions.toInt(),
-                files = it.files.toInt(),
+                additions = it.additions.safeInt(),
+                deletions = it.deletions.safeInt(),
+                files = it.files.safeInt(),
             )
         },
     )
@@ -259,9 +290,9 @@ class KiloBackendSessionManager(
         ),
         summary = s.summary?.let {
             SessionSummaryDto(
-                additions = it.additions.toInt(),
-                deletions = it.deletions.toInt(),
-                files = it.files.toInt(),
+                additions = it.additions.safeInt(),
+                deletions = it.deletions.safeInt(),
+                files = it.files.safeInt(),
             )
         },
     )
@@ -269,8 +300,8 @@ class KiloBackendSessionManager(
     private fun statusDto(s: SessionStatus) = SessionStatusDto(
         type = s.type.value,
         message = s.message.ifBlank { null },
-        attempt = s.attempt.toInt(),
-        next = s.next.toLong(),
+        attempt = s.attempt.safeInt(),
+        next = s.next,
         requestID = s.requestID.ifBlank { null },
     )
 
@@ -288,4 +319,6 @@ class KiloBackendSessionManager(
             }
         }
     }
+
+    private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 }

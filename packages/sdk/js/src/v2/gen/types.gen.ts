@@ -2049,6 +2049,10 @@ export type Config = {
      */
     auto?: boolean
     /**
+     * Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.
+     */
+    threshold_percent?: number | null
+    /**
      * Enable pruning of old tool outputs (default: true)
      */
     prune?: boolean

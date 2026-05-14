@@ -1434,7 +1434,10 @@ export const dict = {
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
-  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, wenn er voll ist",
+  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
+  "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
+  "settings.context.compactionLimit.description":
+    "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",

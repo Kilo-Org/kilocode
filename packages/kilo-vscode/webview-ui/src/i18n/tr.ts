@@ -1374,7 +1374,10 @@ export const dict = {
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
-  "settings.context.autoCompaction.description": "Bağlam dolduğunda otomatik olarak sıkıştır",
+  "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
+  "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
+  "settings.context.compactionLimit.description":
+    "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",

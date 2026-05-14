@@ -91,7 +91,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Вимкніть знімки Kilo для цього проєкту. Ви втратите скасування/повторення для змін Kilo, але git продовжить відстежувати все.",
 
-  "ui.messagePart.openInDiffViewer": "Відкрити у переглядачі відмінностей",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Відкрити в переглядачі відмінностей",
+  "ui.messagePart.shell.command": "Команда",
+  "ui.messagePart.shell.output": "Вивід",
+  "ui.messagePart.openInEditor": "Відкрити в редакторі",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "Це було корисно",

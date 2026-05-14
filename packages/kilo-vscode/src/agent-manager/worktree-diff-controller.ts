@@ -1,7 +1,6 @@
-import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { SourceController } from "../diff/SourceController"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
-import { WorktreeDiffClient } from "../diff/shared/client"
+import { WorktreeDiffReverter, type StatusResolver } from "../diff/shared/reverter"
 import type { DiffFile } from "../diff/types"
 import type { DiffSource, DiffSourceDescriptor, DiffSourceFetch } from "../diff/sources/types"
 import type { ApplyConflict, GitOps } from "./GitOps"
@@ -20,12 +19,9 @@ export interface WorktreeDiffControllerContext {
   getRoot: () => string | undefined
   getStateReady: () => Promise<void> | undefined
   /**
-   * SDK client — used by `revert()` via `WorktreeDiffClient` for the one-shot
-   * file-status lookup. Hot polling paths (`request`, `requestFile`, polling)
-   * deliberately bypass the client and go through `localDiff`/`localDiffFile`
-   * to keep git spawns out of the Bun `kilo serve` process (see oven-sh/bun#18265).
+   * In-process diff paths deliberately bypass the SDK client to keep git spawns
+   * out of the Bun `kilo serve` process (see oven-sh/bun#18265).
    */
-  getClient: () => KiloClient
   git: GitOps
   /** In-process diff summary (replaces client.worktree.diffSummary). */
   localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
@@ -272,7 +268,11 @@ export class WorktreeDiffController {
     if (!target) return { ok: false, message: "Could not resolve diff target" }
 
     try {
-      const diff = new WorktreeDiffClient(this.ctx.getClient(), this.ctx.git, (...args) => this.ctx.log(...args))
+      const status: StatusResolver = async (current, item) => {
+        const diff = await this.ctx.localDiffFile(current.directory, current.baseBranch, item)
+        return diff?.status
+      }
+      const diff = new WorktreeDiffReverter(this.ctx.git, status, (...args) => this.ctx.log(...args))
       return await diff.revertFile(target, file)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)

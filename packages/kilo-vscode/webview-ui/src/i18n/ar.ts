@@ -1378,7 +1378,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
-  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً عند امتلائه",
+  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
+  "settings.context.compactionLimit.title": "حد الضغط التلقائي",
+  "settings.context.compactionLimit.description":
+    "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",

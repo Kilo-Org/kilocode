@@ -43,6 +43,7 @@ openApiGenerate {
         "anyOf<>" to "kotlin.Any",
         "number" to "kotlin.Double",
         "decimal" to "kotlin.Double",
+        "integer" to "kotlin.Long",
     ))
     openapiNormalizer.set(mapOf(
         "SIMPLIFY_ANYOF_STRING_AND_ENUM_STRING" to "true",

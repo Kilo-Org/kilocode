@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -26,6 +27,7 @@ import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.event.ListDataEvent
@@ -80,13 +82,13 @@ class HistoryControllerTest : BasePlatformTestCase() {
         rpc.cloudCursor = "next_1"
         val controller = controller()
 
-        controller.reloadCloud(gitUrl = "git@example.com:repo.git")
+        controller.reloadCloud()
         flush()
 
         assertEquals(1, controller.cloud.items.size)
         assertEquals("cloud_1", controller.cloud.items[0].id)
         assertEquals("next_1", controller.cloud.cursor)
-        assertEquals(FakeSessionRpcApi.CloudCall("/test", null, 150, "git@example.com:repo.git"), rpc.cloudCalls[0])
+        assertEquals(FakeSessionRpcApi.CloudCall("/test", null, 50, null), rpc.cloudCalls[0])
 
         rpc.cloud.clear()
         rpc.cloud += cloud("cloud_2", "Cloud Two")
@@ -95,7 +97,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf("cloud_1", "cloud_2"), controller.cloud.items.map { it.id })
-        assertEquals(FakeSessionRpcApi.CloudCall("/test", "next_1", 150, "git@example.com:repo.git"), rpc.cloudCalls[1])
+        assertEquals(FakeSessionRpcApi.CloudCall("/test", "next_1", 50, null), rpc.cloudCalls[1])
     }
 
     fun `test local delete calls rpc and removes item`() {
@@ -197,7 +199,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
         flush()
 
         val local = panel.defaultFocusedComponent
-        assertFalse(panel.listFocusable())
+        assertTrue(panel.listFocusable())
         assertEquals(-1, panel.selectedIndex())
         key(local, KeyEvent.VK_DOWN)
         assertEquals(0, panel.selectedIndex())
@@ -211,7 +213,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
 
         val cloud = panel.defaultFocusedComponent
         assertNotSame(local, cloud)
-        assertFalse(panel.listFocusable())
+        assertTrue(panel.listFocusable())
         assertEquals(-1, panel.selectedIndex())
         key(cloud, KeyEvent.VK_DOWN)
         assertEquals(0, panel.selectedIndex())
@@ -297,20 +299,381 @@ class HistoryControllerTest : BasePlatformTestCase() {
         assertEquals(KiloBundle.message("history.time.hours", 10), HistoryTime.relative(offset, now.toEpochMilli()))
     }
 
-    fun `test local renderer exposes delete and cloud renderer hides it`() {
-        rpc.listed += session("ses_1", "Local")
-        rpc.cloud += cloud("cloud_1", "Cloud")
+    fun `test history section boundaries are inclusive at 7 and 30 days`() {
+        val now = Instant.now()
+        val exactly7 = LocalHistoryItem(session("s7", "7d", now.minus(7, ChronoUnit.DAYS).toEpochMilli().toDouble()))
+        val exactly30 = LocalHistoryItem(session("s30", "30d", now.minus(30, ChronoUnit.DAYS).toEpochMilli().toDouble()))
+        val within7 = LocalHistoryItem(session("s6", "6d", now.minus(6, ChronoUnit.DAYS).toEpochMilli().toDouble()))
+        val within30 = LocalHistoryItem(session("s29", "29d", now.minus(29, ChronoUnit.DAYS).toEpochMilli().toDouble()))
+        val beyond30 = LocalHistoryItem(session("s31", "31d", now.minus(31, ChronoUnit.DAYS).toEpochMilli().toDouble()))
+
+        assertEquals(HistorySection.WEEK, HistoryTime.section(exactly7, now.toEpochMilli()))
+        assertEquals(HistorySection.WEEK, HistoryTime.section(within7, now.toEpochMilli()))
+        assertEquals(HistorySection.MONTH, HistoryTime.section(exactly30, now.toEpochMilli()))
+        assertEquals(HistorySection.MONTH, HistoryTime.section(within30, now.toEpochMilli()))
+        assertEquals(HistorySection.OLDER, HistoryTime.section(beyond30, now.toEpochMilli()))
+    }
+
+    fun `test list is focusable and uses multiple interval selection`() {
         val panel = HistoryPanel(parent, controller())
         flush()
 
-        assertTrue(panel.deleteVisible(0))
+        assertTrue(panel.listFocusable())
+        assertEquals(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION, panel.listSelectionMode())
+    }
+
+    fun `test load more button is focusable`() {
+        rpc.cloud += cloud("cloud_1", "Cloud")
+        rpc.cloudCursor = "next"
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+
+        assertTrue(panel.loadMoreFocusable())
+    }
+
+    fun `test rename updates local item title`() {
+        rpc.listed += session("ses_1", "Original")
+        val controller = controller()
+        flush()
+
+        controller.reloadLocal()
+        flush()
+
+        val item = controller.local.items[0]
+        controller.rename(item, "Renamed")
+        flush()
+
+        assertEquals("Renamed", controller.local.items[0].title)
+        assertEquals(listOf(Triple("ses_1", "/test", "Renamed")), rpc.renames)
+    }
+
+    fun `test data context exposes selection and controller`() {
+        rpc.listed += session("ses_1", "Alpha")
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+
+        panel.select(0)
+
+        val sel = panel.getData(HistoryDataKeys.SELECTION.name) as? HistorySelection
+        assertNotNull(sel)
+        assertEquals(1, sel!!.selectedLocal.size)
+        assertEquals("ses_1", sel.selectedLocal[0].id)
+
+        val ctrl = panel.getData(HistoryDataKeys.CONTROLLER.name)
+        assertSame(controller, ctrl)
+    }
+
+    // ------ Multi-selection and cloud selection data context ------
+
+    fun `test data context exposes local multi-selection`() {
+        rpc.listed += session("ses_1", "Alpha")
+        rpc.listed += session("ses_2", "Beta")
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+
+        panel.selectIndices(0, 1)
+
+        val sel = panel.getData(HistoryDataKeys.SELECTION.name) as? HistorySelection
+        assertNotNull(sel)
+        assertEquals(HistorySource.LOCAL, sel!!.source)
+        assertEquals(2, sel.selectedLocal.size)
+        assertTrue(sel.selectedLocal.map { it.id }.containsAll(listOf("ses_1", "ses_2")))
+    }
+
+    fun `test data context exposes cloud selection`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
 
         panel.clickCloud()
         flush()
-        assertFalse(panel.cloudDeleteVisible(0))
+        panel.select(0)
+
+        val sel = panel.getData(HistoryDataKeys.SELECTION.name) as? HistorySelection
+        assertNotNull(sel)
+        assertEquals(HistorySource.CLOUD, sel!!.source)
+        assertTrue(sel.selectedLocal.isEmpty())
+        assertEquals(1, sel.cloudItems.size)
+        assertEquals("cloud_1", sel.cloudItems[0].id)
+    }
+
+    fun `test data context exposes session manager`() {
+        val manager = FakeManager()
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller, manager = manager)
+        flush()
+
+        assertSame(manager, panel.getData(SessionManager.KEY.name))
+    }
+
+    fun `test data context returns null for absent session manager`() {
+        val controller = controller()
+        val panel = HistoryPanel(parent, controller)
+        flush()
+
+        assertNull(panel.getData(SessionManager.KEY.name))
+    }
+
+    fun `test local list uses multiple interval selection mode`() {
+        val panel = HistoryPanel(parent, controller())
+        flush()
+
+        assertEquals(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION, panel.listSelectionMode())
+    }
+
+    fun `test cloud list uses single selection mode`() {
+        val panel = HistoryPanel(parent, controller())
+        flush()
+
+        panel.clickCloud()
+        flush()
+
+        assertEquals(javax.swing.ListSelectionModel.SINGLE_SELECTION, panel.listSelectionMode())
+    }
+
+    // ------ Rename failure and directory selection ------
+
+    fun `test rename failure keeps original title and sets error`() {
+        rpc.listed += session("ses_1", "Original")
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        rpc.renameThrows = IllegalStateException("rename failed")
+        val item = controller.local.items[0]
+        controller.rename(item, "Renamed")
+        flush()
+
+        assertEquals("Original", controller.local.items[0].title)
+        assertNotNull(controller.local.error)
+    }
+
+    fun `test rename uses item directory when present`() {
+        val dto = session("ses_1", "Original").copy(directory = "/worktree/path")
+        rpc.listed += dto
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        val item = controller.local.items[0]
+        assertEquals("/worktree/path", item.directory)
+
+        controller.rename(item, "Renamed")
+        flush()
+
+        assertEquals(listOf(Triple("ses_1", "/worktree/path", "Renamed")), rpc.renames)
+    }
+
+    fun `test rename falls back to workspace directory when item directory is workspace`() {
+        // When session.directory matches workspace directory (not a worktree override)
+        rpc.listed += session("ses_1", "Original")
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        val item = controller.local.items[0]
+        controller.rename(item, "Renamed")
+        flush()
+
+        assertEquals(listOf(Triple("ses_1", "/test", "Renamed")), rpc.renames)
+    }
+
+    // ------ HistoryModel update/sorting ------
+
+    fun `test model update re-sorts items by updated time`() {
+        val now = java.time.Instant.now()
+        rpc.listed += session("ses_1", "Alpha", now.toEpochMilli().toDouble())
+        rpc.listed += session("ses_2", "Beta", now.minusSeconds(100).toEpochMilli().toDouble())
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        // ses_1 is newer so comes first
+        assertEquals("ses_1", controller.local.items[0].id)
+
+        // Update ses_2 to be newer
+        val updated = session("ses_2", "Beta Updated", now.plusSeconds(100).toEpochMilli().toDouble())
+        controller.local.update(LocalHistoryItem(updated))
+
+        // Now ses_2 should come first
+        assertEquals("ses_2", controller.local.items[0].id)
+        assertEquals("Beta Updated", controller.local.items[0].title)
+    }
+
+    fun `test model update with unknown id leaves model unchanged`() {
+        rpc.listed += session("ses_1", "Alpha")
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        val before = controller.local.items.toList()
+        val unknown = session("unknown_id", "Unknown")
+        controller.local.update(LocalHistoryItem(unknown))
+
+        assertEquals(before.map { it.id }, controller.local.items.map { it.id })
+    }
+
+    fun `test model update removes renamed item from active filter`() {
+        rpc.listed += session("ses_1", "Alpha")
+        rpc.listed += session("ses_2", "Beta")
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        controller.local.setFilter("alpha")
+        assertEquals(listOf("ses_1"), controller.local.visibleItems.map { it.id })
+
+        controller.local.update(LocalHistoryItem(session("ses_1", "Gamma")))
+
+        assertTrue(controller.local.visibleItems.isEmpty())
+    }
+
+    fun `test model update adds renamed item to active filter`() {
+        rpc.listed += session("ses_1", "Alpha")
+        rpc.listed += session("ses_2", "Beta")
+        val controller = controller()
+        controller.reloadLocal()
+        flush()
+
+        controller.local.setFilter("gamma")
+        assertTrue(controller.local.visibleItems.isEmpty())
+
+        controller.local.update(LocalHistoryItem(session("ses_2", "Gamma")))
+
+        assertEquals(listOf("ses_2"), controller.local.visibleItems.map { it.id })
+    }
+
+    fun `test cloud load passes git url when repo only enabled`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        val url = "git@github.com:test/repo.git"
+        val controller = controllerWithGit(url)
+
+        controller.reloadCloud()
+        flush()
+
+        assertEquals(1, rpc.cloudCalls.size)
+        assertEquals(url, rpc.cloudCalls[0].gitUrl)
+        assertEquals(true, controller.repoOnly)
+        assertEquals(url, controller.gitUrl)
+    }
+
+    fun `test cloud load passes null when no git url`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        val controller = controllerWithGit(null)
+
+        controller.reloadCloud()
+        flush()
+
+        assertEquals(1, rpc.cloudCalls.size)
+        assertNull(rpc.cloudCalls[0].gitUrl)
+        assertEquals(false, controller.repoOnly)
+        assertNull(controller.gitUrl)
+    }
+
+    fun `test cloud git url resolves once across overlapping reloads`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        val calls = AtomicInteger()
+        val controller = HistoryController(sessions, workspace, scope, gitUrlProvider = {
+            calls.incrementAndGet()
+            Thread.sleep(100)
+            "git@github.com:test/repo.git"
+        })
+
+        controller.reloadCloud()
+        controller.reloadCloud()
+        flush()
+
+        assertEquals(1, calls.get())
+        assertEquals(2, rpc.cloudCalls.size)
+    }
+
+    fun `test cloud load passes null when repo only disabled`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        val url = "git@github.com:test/repo.git"
+        val controller = controllerWithGit(url)
+
+        controller.reloadCloud()
+        flush()
+        assertEquals(url, rpc.cloudCalls[0].gitUrl)
+
+        controller.applyRepoOnly(false)
+        flush()
+
+        assertEquals(2, rpc.cloudCalls.size)
+        assertNull(rpc.cloudCalls[1].gitUrl)
+    }
+
+    fun `test load more passes git url when repo only enabled`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        rpc.cloudCursor = "next_1"
+        val url = "git@github.com:test/repo.git"
+        val controller = controllerWithGit(url)
+
+        controller.reloadCloud()
+        flush()
+
+        rpc.cloud.clear()
+        rpc.cloud += cloud("cloud_2", "Cloud Two")
+        rpc.cloudCursor = null
+        controller.loadMoreCloud()
+        flush()
+
+        assertEquals(2, rpc.cloudCalls.size)
+        assertEquals(url, rpc.cloudCalls[1].gitUrl)
+    }
+
+    fun `test repo only checkbox visible only when git url exists`() {
+        val url = "git@github.com:test/repo.git"
+        val panel = HistoryPanel(parent, controllerWithGit(url))
+        flush()
+
+        panel.clickCloud()
+        flush()
+
+        assertTrue(panel.repoOnlyVisible())
+        assertTrue(panel.repoOnlySelected())
+    }
+
+    fun `test repo only checkbox hidden when no git url`() {
+        val panel = HistoryPanel(parent, controllerWithGit(null))
+        flush()
+
+        panel.clickCloud()
+        flush()
+
+        assertFalse(panel.repoOnlyVisible())
+    }
+
+    fun `test repo only checkbox toggle reloads cloud history`() {
+        rpc.cloud += cloud("cloud_1", "Cloud One")
+        val url = "git@github.com:test/repo.git"
+        val panel = HistoryPanel(parent, controllerWithGit(url))
+        flush()
+
+        panel.clickCloud()
+        flush()
+
+        val before = rpc.cloudCalls.size
+
+        panel.clickRepoOnly()
+        flush()
+
+        assertTrue(rpc.cloudCalls.size > before)
+        assertFalse(panel.repoOnlySelected())
     }
 
     private fun controller() = HistoryController(sessions, workspace, scope)
+
+    private fun controllerWithGit(url: String?) = HistoryController(
+        sessions,
+        workspace,
+        scope,
+        gitUrlProvider = { url },
+    )
 
     private fun controller(opened: MutableList<String>) = HistoryController(sessions, workspace, scope, open = { open ->
         val id = when (open) {
@@ -319,6 +682,12 @@ class HistoryControllerTest : BasePlatformTestCase() {
         }
         opened.add(id)
     })
+
+    private class FakeManager : SessionManager {
+        override fun newSession() {}
+        override fun showHistory() {}
+        override fun openSession(ref: SessionRef) {}
+    }
 
     private fun collect(controller: HistoryController): MutableList<String> {
         val events = mutableListOf<String>()

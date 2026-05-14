@@ -8,7 +8,11 @@ import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.openapi.application.ApplicationManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 class HistoryController(
     private val sessions: KiloSessionService,
@@ -16,21 +20,43 @@ class HistoryController(
     private val cs: CoroutineScope,
     open: (SessionRef) -> Unit = {},
     private val deleted: (String) -> Unit = {},
+    private val gitUrlProvider: () -> String? = { resolveGitRemoteUrl(workspace.directory) },
 ) {
     companion object {
-        const val CLOUD_LIMIT = 150
+        const val CLOUD_LIMIT = 50
     }
 
     val local = HistoryModel<LocalHistoryItem>()
     val cloud = CloudHistoryModel()
 
+    /** Resolved once on first cloud load; null means no remote found. Written from IO, read on EDT. */
+    @Volatile
+    var gitUrl: String? = null
+        private set
+
+    @Volatile
+    private var resolved = false
+    private val lock = Mutex()
+
+    /** Whether to filter cloud history by the current repository. */
+    var repoOnly: Boolean = false
+        private set
+
+    /** Notified on EDT when [repoOnly] changes (e.g. to update checkbox state). */
+    var onRepoOnlyChanged: ((Boolean) -> Unit)? = null
+
+    private fun updateRepoOnly(value: Boolean) {
+        if (repoOnly == value) return
+        repoOnly = value
+        edt { onRepoOnlyChanged?.invoke(value) }
+    }
+
     private val deleting = mutableSetOf<String>()
     private val opener = open
-    private var git: String? = null
 
-    fun reload(gitUrl: String? = null) {
+    fun reload() {
         reloadLocal()
-        reloadCloud(gitUrl)
+        reloadCloud()
     }
 
     fun reloadLocal() {
@@ -46,8 +72,7 @@ class HistoryController(
         }
     }
 
-    fun reloadCloud(gitUrl: String? = null) {
-        git = gitUrl
+    fun reloadCloud() {
         loadCloud(reset = true)
     }
 
@@ -56,14 +81,20 @@ class HistoryController(
         loadCloud(reset = false)
     }
 
+    fun applyRepoOnly(value: Boolean) {
+        updateRepoOnly(value)
+        edt { reloadCloud() }
+    }
+
     fun delete(item: LocalHistoryItem) {
         edt {
             if (item.id in deleting) return@edt
             deleting.add(item.id)
             local.refresh()
+            val dir = item.directory ?: workspace.directory
             cs.launch {
                 try {
-                    sessions.deleteSession(item.id, item.directory ?: workspace.directory)
+                    sessions.deleteSession(item.id, dir)
                     edt {
                         deleting.remove(item.id)
                         local.remove(item.id)
@@ -75,6 +106,18 @@ class HistoryController(
                         local.fail(e.message ?: KiloBundle.message("history.error.local.delete"))
                     }
                 }
+            }
+        }
+    }
+
+    fun rename(item: LocalHistoryItem, title: String) {
+        val dir = item.directory ?: workspace.directory
+        cs.launch {
+            try {
+                val updated = sessions.renameSession(item.id, dir, title)
+                edt { local.update(LocalHistoryItem(updated)) }
+            } catch (e: Exception) {
+                edt { local.fail(e.message ?: KiloBundle.message("history.error.local.rename")) }
             }
         }
     }
@@ -91,11 +134,12 @@ class HistoryController(
 
     private fun loadCloud(reset: Boolean) {
         val cursor = cloud.cursor.takeUnless { reset }
-        val gitUrl = git
         edt { cloud.start(reset) }
         cs.launch {
+            val url = resolveUrlIfNeeded()
+            val filter = if (repoOnly) url else null
             try {
-                val result = sessions.cloudSessions(workspace.directory, cursor, CLOUD_LIMIT, gitUrl)
+                val result = sessions.cloudSessions(workspace.directory, cursor, CLOUD_LIMIT, filter)
                 val items = result.sessions.map(::cloudItem)
                 edt {
                     if (reset) cloud.replace(items, result.nextCursor)
@@ -104,6 +148,28 @@ class HistoryController(
             } catch (e: Exception) {
                 edt { cloud.fail(e.message ?: KiloBundle.message("history.error.cloud")) }
             }
+        }
+    }
+
+    /**
+     * Resolves [gitUrl] on first cloud load. Subsequent calls return the cached value.
+     * Also enables [repoOnly] by default when a URL is found the first time.
+     *
+     * Must be called from a coroutine. Writes [gitUrl] directly (volatile) and then
+     * propagates state updates to EDT via [edt].
+     */
+    private suspend fun resolveUrlIfNeeded(): String? {
+        if (resolved) return gitUrl
+        return lock.withLock {
+            if (resolved) return@withLock gitUrl
+            val url = withContext(Dispatchers.IO) {
+                gitUrlProvider()
+            }
+            // Write gitUrl directly (volatile) so it is visible before EDT callbacks fire.
+            gitUrl = url
+            resolved = true
+            if (url != null) updateRepoOnly(true)
+            url
         }
     }
 }

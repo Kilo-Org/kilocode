@@ -91,7 +91,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Bu proje için Kilo anlık görüntülerini kapat. Kilo değişiklikleri için geri alma/yeniden yapmayı kaybedersiniz, ancak git her şeyi izlemeye devam eder.",
 
-  "ui.messagePart.openInDiffViewer": "Fark görüntüleyicide aç",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Fark Görüntüleyicide Aç",
+  "ui.messagePart.shell.command": "Komut",
+  "ui.messagePart.shell.output": "Çıktı",
+  "ui.messagePart.openInEditor": "Düzenleyicide Aç",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "Bu yardımcı oldu",
