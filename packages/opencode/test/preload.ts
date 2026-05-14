@@ -20,6 +20,7 @@ process.env["XDG_CACHE_HOME"] = path.join(dir, "cache")
 process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
+process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
@@ -65,7 +66,7 @@ delete process.env["KILO_SERVER_USERNAME"]
 process.env["KILO_DB"] = ":memory:"
 
 // Now safe to import from src/
-const Log = await import("@opencode-ai/core/util/log")
+const { Log } = await import("@opencode-ai/core/util/log")
 const { initProjectors } = await import("../src/server/projectors")
 
 void Log.init({

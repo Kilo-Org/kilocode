@@ -129,6 +129,13 @@ console.log("\n=== vscode ===\n")
 await import(`../packages/kilo-vscode/script/publish.ts`)
 // kilocode_change end
 
+// kilocode_change start - Kilo does not ship the opencode desktop app
+// if (Script.release) {
+//   await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
+//   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
+// }
+// kilocode_change end
+
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 

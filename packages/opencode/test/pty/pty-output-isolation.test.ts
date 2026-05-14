@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { Effect } from "effect"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Pty } from "../../src/pty"
 import { tmpdir } from "../fixture/fixture"
 import { setTimeout as sleep } from "node:timers/promises"
@@ -10,7 +11,7 @@ describe("pty", () => {
   test("does not leak output when websocket objects are reused", async () => {
     await using dir = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: dir.path,
       fn: () =>
         AppRuntime.runPromise(
@@ -60,7 +61,7 @@ describe("pty", () => {
   test("does not leak output when Bun recycles websocket objects before re-connect", async () => {
     await using dir = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: dir.path,
       fn: () =>
         AppRuntime.runPromise(
@@ -106,7 +107,7 @@ describe("pty", () => {
     if (process.platform === "win32") return // kilocode_change - ConPTY does not echo writes the way Unix PTYs do, so the positive assertion below is unreachable on Windows
     await using dir = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: dir.path,
       fn: () =>
         AppRuntime.runPromise(

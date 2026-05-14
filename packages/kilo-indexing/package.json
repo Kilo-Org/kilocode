@@ -57,5 +57,6 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "typescript": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

@@ -957,5 +957,6 @@
     "web-tree-sitter": "^0.24.7",
     "yaml": "2.8.3",
     "zod": "^3.24.2"
-  }
+  },
+  "peerDependencies": {}
 }

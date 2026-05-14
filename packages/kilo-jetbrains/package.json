@@ -4,5 +4,9 @@
   "scripts": {
     "build": "bun script/build.ts",
     "build:production": "bun script/build.ts --production"
-  }
+  },
+  "version": "7.2.49",
+  "dependencies": {},
+  "devDependencies": {},
+  "peerDependencies": {}
 }

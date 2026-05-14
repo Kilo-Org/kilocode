@@ -12,11 +12,8 @@ import { Auth } from "../auth"
 import { Env } from "../env"
 import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc
 import { type InstanceContext } from "../project/instance"
-import { InstanceStore } from "../project/instance-store"
 import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { existsSync } from "fs"
-import { GlobalBus } from "@/bus/global"
-import { Event } from "../server/event"
 import { Account } from "@/account/account"
 import { isRecord } from "@/util/record"
 import type { ConsoleState } from "./console-state"
@@ -91,6 +88,37 @@ export type Warning = z.infer<typeof Warning>
 
 const { caught: caughtWarning } = KilocodeConfig
 // kilocode_change end
+
+async function substituteWellKnownRemoteConfig(input: { value: unknown; dir: string; source: string }) {
+  if (!isRecord(input.value) || typeof input.value.url !== "string") return
+
+  const url = await ConfigVariable.substitute({
+    text: input.value.url,
+    type: "virtual",
+    dir: input.dir,
+    source: input.source,
+  })
+  const headers = isRecord(input.value.headers)
+    ? Object.fromEntries(
+        await Promise.all(
+          Object.entries(input.value.headers)
+            .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+            .map(async ([key, value]) => [
+              key,
+              await ConfigVariable.substitute({
+                text: value,
+                type: "virtual",
+                dir: input.dir,
+                source: input.source,
+              }),
+            ]),
+        ),
+      )
+    : undefined
+
+  return { url, headers }
+}
+void substituteWellKnownRemoteConfig // kilocode_change - unused; kept for upstream-merge parity (Kilo's well-known fetch below uses its own warn-instead-of-fail wrapper)
 
 async function resolveLoadedPlugins<T extends { plugin?: ConfigPlugin.Spec[] }>(config: T, filepath: string) {
   if (!config.plugin) return config
@@ -245,8 +273,14 @@ export const Info = Schema.Struct({
       ]),
     ),
   ).annotate({ description: "MCP (Model Context Protocol) server configurations" }),
-  formatter: Schema.optional(ConfigFormatter.Info),
-  lsp: Schema.optional(ConfigLSP.Info),
+  formatter: Schema.optional(ConfigFormatter.Info).annotate({
+    description:
+      "Enable or configure formatters. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
+  }),
+  lsp: Schema.optional(ConfigLSP.Info).annotate({
+    description:
+      "Enable or configure LSP servers. Omit or set to false to disable, true to enable built-ins, or an object to enable built-ins with overrides.",
+  }),
   instructions: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
     description: "Additional instruction files or patterns to include",
   }),
@@ -352,9 +386,9 @@ export interface Interface {
   readonly get: () => Effect.Effect<Info>
   readonly getGlobal: () => Effect.Effect<Info>
   readonly getConsoleState: () => Effect.Effect<ConsoleState>
-  readonly update: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<void>
-  readonly updateGlobal: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<Info> // kilocode_change
-  readonly invalidate: (wait?: boolean) => Effect.Effect<void>
+  readonly update: (config: Info) => Effect.Effect<void>
+  readonly updateGlobal: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<{ info: Info; changed: boolean }> // kilocode_change
+  readonly invalidate: () => Effect.Effect<void>
   readonly directories: () => Effect.Effect<string[]>
   readonly waitForDependencies: () => Effect.Effect<void>
   readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
@@ -439,15 +473,7 @@ export const layer = Layer.effect(
     const env = yield* Env.Service
     const npmSvc = yield* Npm.Service
 
-    const readConfigFile = Effect.fnUntraced(function* (filepath: string) {
-      return yield* fs.readFileString(filepath).pipe(
-        Effect.catchIf(
-          (e) => e.reason._tag === "NotFound",
-          () => Effect.succeed(undefined),
-        ),
-        Effect.orDie,
-      )
-    })
+    const readConfigFile = (filepath: string) => fs.readFileStringSafe(filepath).pipe(Effect.orDie)
 
     const loadConfig = Effect.fnUntraced(function* (
       text: string,
@@ -617,6 +643,37 @@ export const layer = Layer.effect(
         for (const [key, value] of Object.entries(auth)) {
           if (value.type === "wellknown") {
             const url = key.replace(/\/+$/, "")
+            // kilocode_change start - upstream's well-known fetch (with remote_config indirection) is bypassed by Kilo's warn-instead-of-fail wrapper below; kept for merge visibility
+            // process.env[value.key] = value.token
+            // log.debug("fetching remote config", { url: `${url}/.well-known/opencode` })
+            // const response = yield* Effect.promise(() => fetch(`${url}/.well-known/opencode`))
+            // if (!response.ok) {
+            //   throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
+            // }
+            // const wellknown = (yield* Effect.promise(() => response.json())) as {
+            //   config?: Record<string, unknown>
+            //   remote_config?: unknown
+            // }
+            // const remote = yield* Effect.promise(() =>
+            //   substituteWellKnownRemoteConfig({
+            //     value: wellknown.remote_config,
+            //     dir: url,
+            //     source: `${url}/.well-known/opencode`,
+            //   }),
+            // )
+            // const fetchedConfig = remote
+            //   ? ((yield* Effect.promise(async () => {
+            //       log.debug("fetching remote config", { url: remote.url })
+            //       const response = await fetch(remote.url, { headers: remote.headers })
+            //       if (!response.ok)
+            //         throw new Error(`failed to fetch remote config from ${remote.url}: ${response.status}`)
+            //       const data = await response.json()
+            //       return isRecord(data) && isRecord(data.config) ? data.config : data
+            //     })) as Record<string, unknown>)
+            //   : {}
+            // const remoteConfig = mergeConfig(wellknown.config ?? {}, fetchedConfig as Info)
+            // if (!remoteConfig.$schema) remoteConfig.$schema = "https://opencode.ai/config.json"
+            // kilocode_change end
             const source = `${url}/.well-known/opencode`
             process.env[value.key] = value.token
             log.debug("fetching remote config", { url: source })
@@ -969,21 +1026,8 @@ export const layer = Layer.effect(
       }
     })
 
-    const invalidate = Effect.fn("Config.invalidate")(function* (wait?: boolean) {
+    const invalidate = Effect.fn("Config.invalidate")(function* () {
       yield* invalidateGlobal
-      const task = InstanceStore.disposeAllInstances()
-        .catch(() => undefined)
-        .finally(() =>
-          GlobalBus.emit("event", {
-            directory: "global",
-            payload: {
-              type: Event.Disposed.type,
-              properties: {},
-            },
-          }),
-        )
-      if (wait) yield* Effect.promise(() => task)
-      else void task
     })
 
     // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
@@ -1028,9 +1072,8 @@ export const layer = Layer.effect(
       }
       // kilocode_change end
 
-      // Only tear down running instances if the config actually changed.
       if (changed) yield* invalidate()
-      return next
+      return { info: next, changed }
     })
 
     return Service.of({
