@@ -290,7 +290,7 @@ const IndexingTab: Component = () => {
           }
         >
           {/* Kilo provider: model is chosen from the Cloud-managed catalog only.
-              No free-text override or dimension field — the catalog entry
+              No free-text override or dimension field, the catalog entry
               determines the dimension server-side. */}
           <SettingsRow
             title={language.t("settings.indexing.kiloModel.title")}
