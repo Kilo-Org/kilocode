@@ -200,11 +200,11 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
 export const defaultLayer = layer.pipe(Layer.provide(Project.defaultLayer))
 
 // kilocode_change start - promise helpers for legacy Kilo callsites without an Effect boundary
-export const disposeInstance = (ctx: InstanceContext) =>
+export const disposeInstance = (ctx: InstanceContext): Promise<void> =>
   import("@/effect/app-runtime").then((mod) => mod.AppRuntime.runPromise(Service.use((store) => store.dispose(ctx))))
-export const disposeAllInstances = () =>
+export const disposeAllInstances = (): Promise<void> =>
   import("@/effect/app-runtime").then((mod) => mod.AppRuntime.runPromise(Service.use((store) => store.disposeAll())))
-export const reloadInstance = (input: LoadInput) =>
+export const reloadInstance = (input: LoadInput): Promise<InstanceContext> =>
   import("@/effect/app-runtime").then((mod) => mod.AppRuntime.runPromise(Service.use((store) => store.reload(input))))
 // kilocode_change end
 
