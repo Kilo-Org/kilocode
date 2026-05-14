@@ -29,6 +29,7 @@ export interface SkillsConfig {
 
 export interface CompactionConfig {
   auto?: boolean
+  threshold_percent?: number | null
   prune?: boolean
 }
 

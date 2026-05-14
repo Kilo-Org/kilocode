@@ -120,7 +120,6 @@ export class AgentManagerProvider implements Disposable {
       getState: () => this.getStateManager(),
       getRoot: () => this.getRoot(),
       getStateReady: () => this.stateReady,
-      getClient: () => this.connectionService.getClient(),
       git: this.gitOps,
       localDiff: (dir, base) => localDiffSummary(this.gitOps, dir, base, (...args) => this.log(...args)),
       localDiffFile: (dir, base, file) => localDiffFile(this.gitOps, dir, base, file, (...args) => this.log(...args)),
@@ -251,6 +250,7 @@ export class AgentManagerProvider implements Disposable {
       return
     }
 
+    await this.ensureGitExclude(manager)
     const loaded = await state.load()
     manager.cleanupOrphanedTempDirs()
 
@@ -289,6 +289,12 @@ export class AgentManagerProvider implements Disposable {
     // are registered with their directory overrides so the recovery queries the
     // correct CLI backend Instances.
     this.panel?.sessions.recoverPendingPrompts()
+  }
+
+  private async ensureGitExclude(manager: WorktreeManager): Promise<void> {
+    await manager.ensureGitExclude().catch((err) => {
+      this.log("Failed to update git exclude:", err)
+    })
   }
 
   private async recoverWorktrees(manager: WorktreeManager, state: WorktreeStateManager): Promise<void> {
@@ -520,6 +526,10 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
       this.state?.setSessionsCollapsed(m.collapsed)
+      return null
+    }
+    if (m.type === "agentManager.setSidebarCollapsed") {
+      this.state?.setSidebarCollapsed(m.collapsed)
       return null
     }
     if (this.handleSection(m)) return null
@@ -848,6 +858,7 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.setTabOrder":
       case "agentManager.setWorktreeOrder":
       case "agentManager.setSessionsCollapsed":
+      case "agentManager.setSidebarCollapsed":
       case "agentManager.setReviewDiffStyle":
       case "agentManager.setDefaultBaseBranch":
       case "agentManager.createSection":
@@ -1490,6 +1501,7 @@ export class AgentManagerProvider implements Disposable {
       tabOrder: state.getTabOrder(),
       worktreeOrder: state.getWorktreeOrder(),
       sessionsCollapsed: state.getSessionsCollapsed(),
+      sidebarCollapsed: state.getSidebarCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
       isGitRepo: true,

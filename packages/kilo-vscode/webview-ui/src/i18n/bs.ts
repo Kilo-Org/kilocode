@@ -469,6 +469,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrujte se besplatno da nastavite i istražite preko 500 modela. Traje 2 minute, bez kreditne kartice. Ili se vratite kasnije.",
   "error.promotionLimit.action": "Registracija",
+  "error.providerAuth.title": "{{provider}} vas je odjavio",
+  "error.providerAuth.description": "Ponovo se povežite sa {{provider}}, a zatim ponovo pošaljite poruku.",
+  "error.providerAuth.chatgpt.title": "OpenAI vas je odjavio",
+  "error.providerAuth.chatgpt.description":
+    "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
 
   "error.chain.unknown": "Nepoznata greška",
   "error.chain.causedBy": "Uzrok:",
@@ -1411,7 +1416,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
-  "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst kada je pun",
+  "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
+  "settings.context.compactionLimit.title": "Limit automatske kompresije",
+  "settings.context.compactionLimit.description":
+    "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",

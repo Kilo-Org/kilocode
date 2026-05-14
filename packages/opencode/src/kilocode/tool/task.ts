@@ -24,6 +24,11 @@ export namespace KiloTask {
     if (info.mode === "primary") throw new Error(`Agent "${name}" is a primary agent and cannot be used as a subagent`)
   }
 
+  /** Kilo keeps delegation one level deep to avoid recursive subagent chains. */
+  export function nestedTask(): false {
+    return false
+  }
+
   /**
    * Build inherited permission rules from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions

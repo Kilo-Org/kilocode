@@ -44,6 +44,12 @@ permission:
 
 Resolve the manual part of an upstream merge.
 
+**Do not load the `kilocode-merge-minimizer` skill.** That skill is for
+authoring new Kilo changes against shared upstream files; during an upstream
+merge it gives the wrong guidance (it nudges toward extracting Kilo logic out
+of conflict regions, which is exactly the opposite of what merge resolution
+needs). Follow the rules in this agent file instead.
+
 The user will provide the upstream version (for example `v1.1.50` or `1.1.50`)
 in their first message. If they don't, infer it from the current branch name,
 from `upstream-merge-report-<version>.md`, or from the newest relevant report

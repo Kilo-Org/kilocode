@@ -2,9 +2,15 @@ import DOMPurify from "dompurify"
 import { fnv1a } from "../context/marked"
 import { mountMermaidActions } from "./markdown-mermaid-actions"
 
+// DOMPurify >= 3.1.7 dropped foreignObject from the default HTML integration
+// points, which caused the inner <div> / <span> / <p> labels Mermaid renders
+// inside <foreignObject> to be stripped during sanitization, leaving every
+// shape with empty text. Restoring it via HTML_INTEGRATION_POINTS keeps the
+// labels while still sanitizing untrusted markup.
 const svgConfig = {
   USE_PROFILES: { html: true, svg: true, svgFilters: true },
   ADD_TAGS: ["foreignObject"],
+  HTML_INTEGRATION_POINTS: { foreignobject: true },
   FORBID_TAGS: ["script"],
   FORBID_CONTENTS: ["script"],
 }

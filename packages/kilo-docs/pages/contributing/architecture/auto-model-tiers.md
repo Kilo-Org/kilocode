@@ -96,10 +96,9 @@ Auto: Small does not appear in the model picker. It is filtered out by the UI (s
 
 ### Defaults
 
-- **Authenticated users**: Default to `kilo-auto/balanced` (defined in `packages/kilo-gateway/src/api/constants.ts`)
-- **Unauthenticated users**: Default to `kilo-auto/free`
+- **All new users**: Default to `kilo-auto/free` (defined in `packages/kilo-gateway/src/api/constants.ts`)
 
-This means a brand-new user who hasn't signed in gets a working experience immediately — no model selection required.
+This means a brand-new user gets a working experience immediately — no model selection or credits required.
 
 ### What users see
 
@@ -167,7 +166,7 @@ The client-side chain works as follows:
 | Free model disappears mid-session | User's next message fails | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted. |
 | Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier | Set clear expectations in UI. Curate model lists, don't just pick the cheapest. |
 | Cross-family model switching breaks context | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free tier (which may switch models). |
-| Users don't understand the tier differences | Wrong tier selected, poor experience | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose. |
+| Users don't understand the tier differences | Wrong tier selected, poor experience | Clear descriptions in the model picker. Good defaults (Free for all new users) so most users never need to actively choose. |
 
 ## Data and compliance
 

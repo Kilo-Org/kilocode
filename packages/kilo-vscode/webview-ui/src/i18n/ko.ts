@@ -465,6 +465,11 @@ export const dict = {
   "error.promotionLimit.description":
     "무료로 가입하여 500개 이상의 모델을 탐색하세요. 2분이면 완료, 신용카드 불필요. 또는 나중에 다시 오세요.",
   "error.promotionLimit.action": "가입하기",
+  "error.providerAuth.title": "{{provider}}에서 로그아웃되었습니다",
+  "error.providerAuth.description": "{{provider}}에 다시 연결한 후 메시지를 다시 보내주세요.",
+  "error.providerAuth.chatgpt.title": "OpenAI에서 로그아웃되었습니다",
+  "error.providerAuth.chatgpt.description":
+    "ChatGPT에 다시 로그인한 후 메시지를 다시 보내 Codex 모델을 계속 사용하세요.",
 
   "error.chain.unknown": "알 수 없는 오류",
   "error.chain.causedBy": "원인:",
@@ -1381,7 +1386,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
   "settings.context.autoCompaction.title": "자동 압축",
-  "settings.context.autoCompaction.description": "컨텍스트가 가득 차면 자동으로 압축",
+  "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
+  "settings.context.compactionLimit.title": "자동 압축 한도",
+  "settings.context.compactionLimit.description":
+    "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",

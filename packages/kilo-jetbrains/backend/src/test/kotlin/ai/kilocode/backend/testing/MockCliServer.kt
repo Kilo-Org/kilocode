@@ -41,7 +41,7 @@ class MockCliServer : AutoCloseable {
     @Volatile var notificationsStatus = 200
 
     // Project-scoped REST responses
-    @Volatile var providers = """{"all":[],"default":{},"connected":[]}"""
+    @Volatile var providers = """{"all":[],"default":{},"connected":[],"failed":[]}"""
     @Volatile var agents = "[]"
     @Volatile var commands = "[]"
     @Volatile var skills = "[]"
@@ -62,9 +62,21 @@ class MockCliServer : AutoCloseable {
     @Volatile var sessionGetStatus = 200
     @Volatile var sessionDeleteStatus = 200
     @Volatile var sessionStatusesStatus = 200
+    @Volatile var cloudSessions = """{"cliSessions":[],"nextCursor":null}"""
+    @Volatile var cloudSessionImport = """{"id":"ses_imported","slug":"imported","projectID":"prj_test","directory":"/test","title":"Imported Session","version":"1.0.0","time":{"created":1000,"updated":1000}}"""
+    @Volatile var cloudSessionsStatus = 200
+    @Volatile var cloudSessionImportStatus = 200
+    @Volatile var lastCloudSessionsPath: String? = null
+    @Volatile var lastCloudSessionImportPath: String? = null
+    @Volatile var lastCloudSessionImportBody: String? = null
     @Volatile var summarizeStatus = 200
     @Volatile var lastSummarizePath: String? = null
     @Volatile var lastSummarizeBody: String? = null
+    @Volatile var sessionRenameStatus = 200
+    @Volatile var sessionRenameResponse = """{"id":"ses_test","slug":"test","projectID":"prj_test","directory":"/test","title":"Renamed","version":"1.0.0","time":{"created":1000,"updated":2000}}"""
+    @Volatile var lastSessionRenamePath: String? = null
+    @Volatile var lastSessionRenameBody: String? = null
+    @Volatile var lastSessionRenameMethod: String? = null
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -220,13 +232,28 @@ class MockCliServer : AutoCloseable {
                     lastExperimentalSessionPath = path
                     respond(output, recentSessionsStatus, recentSessions)
                 }
+                bare == "/kilo/cloud-sessions" -> {
+                    lastCloudSessionsPath = path
+                    respond(output, cloudSessionsStatus, cloudSessions)
+                }
+                bare == "/kilo/cloud/session/import" && method == "POST" -> {
+                    lastCloudSessionImportPath = path
+                    lastCloudSessionImportBody = body
+                    respond(output, cloudSessionImportStatus, cloudSessionImport)
+                }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
-                bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->
+                bare.matches(Regex("/session/ses_.+")) && !bare.contains("/summarize") && method == "GET" ->
                     respond(output, sessionGetStatus, sessionCreate)
-                bare.matches(Regex("/session/ses_[^/]+")) && method == "DELETE" ->
+                bare.matches(Regex("/session/ses_.+")) && !bare.contains("/summarize") && method == "DELETE" ->
                     respond(output, sessionDeleteStatus, "true")
+                bare.matches(Regex("/session/ses_.+")) && !bare.contains("/summarize") && method == "PATCH" -> {
+                    lastSessionRenamePath = path
+                    lastSessionRenameBody = body
+                    lastSessionRenameMethod = method
+                    respond(output, sessionRenameStatus, sessionRenameResponse)
+                }
                 bare.matches(Regex("/session/ses_[^/]+/summarize")) && method == "POST" -> {
                     lastSummarizePath = path
                     lastSummarizeBody = body

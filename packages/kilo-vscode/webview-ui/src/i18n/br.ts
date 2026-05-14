@@ -465,6 +465,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Cadastre-se gratuitamente para continuar e explorar mais de 500 modelos. Leva 2 minutos, sem cartão de crédito. Ou volte mais tarde.",
   "error.promotionLimit.action": "Cadastrar-se",
+  "error.providerAuth.title": "{{provider}} desconectou você",
+  "error.providerAuth.description": "Reconecte o {{provider}} e envie sua mensagem novamente.",
+  "error.providerAuth.chatgpt.title": "OpenAI desconectou você",
+  "error.providerAuth.chatgpt.description":
+    "Faça login no ChatGPT novamente e envie sua mensagem de novo para continuar usando os modelos Codex.",
 
   "error.chain.unknown": "Erro desconhecido",
   "error.chain.causedBy": "Causado por:",
@@ -1414,7 +1419,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Ativar snapshots",
   "settings.checkpoints.enable.description": "Criar pontos de verificação antes de editar arquivos",
   "settings.context.autoCompaction.title": "Compactação automática",
-  "settings.context.autoCompaction.description": "Compactar automaticamente o contexto quando estiver cheio",
+  "settings.context.autoCompaction.description": "Compactar automaticamente o contexto antes que atinja o limite",
+  "settings.context.compactionLimit.title": "Limite de compactação automática",
+  "settings.context.compactionLimit.description":
+    "Compacte quando o contexto atingir esta porcentagem da janela do modelo. Deixe em branco para usar apenas a margem de segurança.",
   "settings.context.prune.title": "Remover saídas antigas",
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",

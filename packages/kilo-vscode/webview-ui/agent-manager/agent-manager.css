@@ -23,6 +23,38 @@
   background: var(--surface-interactive-base);
 }
 
+/* Collapsed sidebar: width animates closed; the layout-hydrated class delays
+   the transition until after the first state push so we don't see a flash on
+   initial render when the persisted state is "collapsed". */
+.am-layout-hydrated .am-sidebar {
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    padding 180ms ease,
+    border-right-width 180ms ease;
+}
+
+.am-sidebar-collapsed {
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-width: 0;
+  overflow: hidden;
+  /* Pointer events, focus, and a11y tree exclusion are all handled by the
+     inert attribute on the element. No need for pointer-events: none. */
+}
+
+.am-sidebar-collapsed > [data-component="resize-handle"] {
+  display: none;
+}
+
+/* Empty tab bar — rendered when no session is selected so the sidebar
+   toggle button sits in the same pixel position regardless of state.
+   Drops the leading slot's border-right because there's nothing after it. */
+.am-tab-bar-empty .am-tab-leading {
+  border-right: none;
+}
+
 /* Fixed local repo item */
 
 .am-local-item {
@@ -1403,7 +1435,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-tabs-menu-search-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .am-tabs-menu-list {
@@ -2482,7 +2514,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-name-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Dialog overrides for prompt-input-container — resizable from bottom edge */
@@ -2665,7 +2697,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-mm-search-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .am-mm-list {
@@ -2808,7 +2840,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-advanced-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Branch selector */

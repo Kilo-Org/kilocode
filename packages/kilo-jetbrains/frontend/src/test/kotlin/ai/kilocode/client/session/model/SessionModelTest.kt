@@ -332,6 +332,17 @@ class SessionModelTest : UsefulTestCase() {
         assertEquals(state, (events.single() as SessionModelEvent.StateChanged).state)
     }
 
+    fun `test setState duplicate is no-op`() {
+        val state = SessionState.Busy("thinking")
+        model.setState(state)
+        events.clear()
+
+        model.setState(state)
+
+        assertTrue(events.isEmpty())
+        assertEquals(state, model.state)
+    }
+
     fun `test setState to Error stores error data`() {
         model.setState(SessionState.Error("something broke", "timeout"))
 

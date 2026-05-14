@@ -1,3 +1,8 @@
+---
+title: Use MCP Tool | Kilo Code Docs
+description: Learn how the use_mcp_tool tool enables Kilo Code to interact with external tools provided by Model Context Protocol servers for extended capabilities.
+---
+
 # use_mcp_tool
 
 The `use_mcp_tool` tool enables interaction with external tools provided by connected Model Context Protocol (MCP) servers. It extends Kilo Code's capabilities with domain-specific functionality through a standardized protocol.

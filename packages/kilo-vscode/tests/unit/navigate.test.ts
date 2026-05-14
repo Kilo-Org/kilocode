@@ -5,6 +5,7 @@ import {
   adjacentHint,
   restoreLocalSessions,
   reconcileLocalSessions,
+  filterUnassignedSessions,
   LOCAL,
 } from "../../webview-ui/agent-manager/navigate"
 
@@ -185,6 +186,105 @@ describe("adjacentHint", () => {
   it("works with single-item list", () => {
     expect(adjacentHint("a", "b", ["a", "b"], "prev", "next")).toBe("prev")
     expect(adjacentHint("b", "a", ["a", "b"], "prev", "next")).toBe("next")
+  })
+})
+
+describe("filterUnassignedSessions", () => {
+  const at = (day: number) => `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`
+  const info = (id: string, day: number, parentID?: string | null) => ({
+    id,
+    createdAt: at(day),
+    ...(parentID === undefined ? {} : { parentID }),
+  })
+
+  it("keeps root sessions with undefined parent IDs", () => {
+    const result = filterUnassignedSessions([info("old", 1), info("new", 3)], new Set(), new Set())
+
+    expect(result.map((s) => s.id)).toEqual(["new", "old"])
+  })
+
+  it("keeps root sessions with null parent IDs", () => {
+    const result = filterUnassignedSessions([info("root", 1, null)], new Set(), new Set())
+
+    expect(result.map((s) => s.id)).toEqual(["root"])
+  })
+
+  it("filters child sessions with parent IDs", () => {
+    const result = filterUnassignedSessions(
+      [info("parent", 2), info("child", 3, "parent"), info("orphan", 4, "missing")],
+      new Set(),
+      new Set(),
+    )
+
+    expect(result.map((s) => s.id)).toEqual(["parent"])
+  })
+
+  it("filters string parent IDs even when they are empty", () => {
+    const result = filterUnassignedSessions([info("blank", 2, ""), info("root", 1)], new Set(), new Set())
+
+    expect(result.map((s) => s.id)).toEqual(["root"])
+  })
+
+  it("filters worktree sessions while keeping other roots", () => {
+    const result = filterUnassignedSessions(
+      [info("root", 1), info("worktree", 3), info("other", 2)],
+      new Set(["worktree"]),
+      new Set(),
+    )
+
+    expect(result.map((s) => s.id)).toEqual(["other", "root"])
+  })
+
+  it("filters local tab sessions while keeping other roots", () => {
+    const result = filterUnassignedSessions(
+      [info("root", 1), info("local", 3), info("other", 2)],
+      new Set(),
+      new Set(["local"]),
+    )
+
+    expect(result.map((s) => s.id)).toEqual(["other", "root"])
+  })
+
+  it("applies child, worktree, and local filters before sorting", () => {
+    const result = filterUnassignedSessions(
+      [info("old-root", 1), info("child", 6, "old-root"), info("worktree", 5), info("local", 4), info("new-root", 3)],
+      new Set(["worktree"]),
+      new Set(["local"]),
+    )
+
+    expect(result.map((s) => s.id)).toEqual(["new-root", "old-root"])
+  })
+
+  it("returns an empty list when every session is filtered", () => {
+    const result = filterUnassignedSessions(
+      [info("child", 3, "root"), info("worktree", 2), info("local", 1)],
+      new Set(["worktree"]),
+      new Set(["local"]),
+    )
+
+    expect(result).toEqual([])
+  })
+
+  it("does not mutate the input order", () => {
+    const sessions = [info("old", 1), info("new", 3), info("mid", 2)]
+
+    filterUnassignedSessions(sessions, new Set(), new Set())
+
+    expect(sessions.map((s) => s.id)).toEqual(["old", "new", "mid"])
+  })
+
+  it("preserves session objects and extra fields", () => {
+    const root = { ...info("root", 1), title: "Existing session" }
+    const result = filterUnassignedSessions([root], new Set(), new Set())
+
+    expect(result[0]).toBe(root)
+    expect(result[0]?.title).toBe("Existing session")
+  })
+
+  it("keeps a parent root when its child is filtered", () => {
+    const result = filterUnassignedSessions([info("root", 1), info("child", 2, "root")], new Set(), new Set())
+
+    expect(result.map((s) => s.id)).toEqual(["root"])
   })
 })
 

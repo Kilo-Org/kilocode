@@ -680,7 +680,7 @@ describe("WorktreeManager.discoverWorktrees", () => {
 // ---------------------------------------------------------------------------
 
 describe("WorktreeManager.ensureGitExclude", () => {
-  it("adds .kilo/worktrees/ to .git/info/exclude", async () => {
+  it("adds Agent Manager state and worktrees to .git/info/exclude", async () => {
     const root = await createTempRepo()
     const mgr = createManager(root)
 
@@ -688,6 +688,7 @@ describe("WorktreeManager.ensureGitExclude", () => {
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
     expect(content).toContain(".kilo/worktrees/")
+    expect(content).toContain(".kilo/agent-manager.json")
   })
 
   it("adds only specific legacy Agent Manager paths", async () => {

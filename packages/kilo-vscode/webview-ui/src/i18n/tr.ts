@@ -466,6 +466,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Devam etmek ve 500'den fazla modeli keşfetmek için ücretsiz kayıt olun. 2 dakika sürer, kredi kartı gerekmez. Ya da daha sonra gelin.",
   "error.promotionLimit.action": "Kayıt Ol",
+  "error.providerAuth.title": "{{provider}} oturumunuzu kapattı",
+  "error.providerAuth.description": "{{provider}} bağlantısını yeniden kurun ve mesajınızı tekrar gönderin.",
+  "error.providerAuth.chatgpt.title": "OpenAI oturumunuzu kapattı",
+  "error.providerAuth.chatgpt.description":
+    "Codex modellerini kullanmaya devam etmek için ChatGPT ile tekrar giriş yapın ve mesajınızı yeniden gönderin.",
 
   "error.chain.unknown": "Bilinmeyen hata",
   "error.chain.causedBy": "Nedeni:",
@@ -1369,7 +1374,10 @@ export const dict = {
     "Dosya düzenlemelerinden önce kontrol noktaları oluştur, böylece önceki durumları geri yükleyebilirsiniz",
 
   "settings.context.autoCompaction.title": "Otomatik Sıkıştırma",
-  "settings.context.autoCompaction.description": "Bağlam dolduğunda otomatik olarak sıkıştır",
+  "settings.context.autoCompaction.description": "Bağlam sınıra ulaşmadan önce otomatik olarak sıkıştır",
+  "settings.context.compactionLimit.title": "Otomatik sıkıştırma sınırı",
+  "settings.context.compactionLimit.description":
+    "Bağlam model penceresinin bu yüzdesine ulaştığında sıkıştır. Yalnızca güvenlik tamponunu kullanmak için boş bırakın.",
   "settings.context.prune.title": "Eski Çıktıları Temizle",
   "settings.context.prune.description": "Sıkıştırma sırasında eski araç çıktılarını kaldır",
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",

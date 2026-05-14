@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "ในเครื่อง",
+  "agentManager.sidebar.collapse": "ย่อแถบด้านข้าง",
+  "agentManager.sidebar.expand": "แสดงแถบด้านข้าง",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "เซสชัน",
   "agentManager.notGitRepo": "ไม่ใช่ git repository",

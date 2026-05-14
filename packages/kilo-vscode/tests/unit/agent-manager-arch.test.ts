@@ -35,6 +35,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -181,6 +182,16 @@ describe("Agent Manager Provider Messages", () => {
     }
 
     expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+  })
+
+  it("initializeState updates local git exclude before loading persisted state", () => {
+    const body = getMethodBody("initializeState")
+    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
+    const load = body.indexOf("const loaded = await state.load()")
+
+    expect(exclude).toBeGreaterThanOrEqual(0)
+    expect(load).toBeGreaterThanOrEqual(0)
+    expect(exclude).toBeLessThan(load)
   })
 
   it("async shutdown waits for terminal router cleanup", () => {

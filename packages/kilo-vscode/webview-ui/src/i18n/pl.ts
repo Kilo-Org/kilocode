@@ -467,6 +467,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Zarejestruj się za darmo, aby kontynuować i odkryć ponad 500 modeli. Zajmie to 2 minuty, bez karty kredytowej. Lub wróć później.",
   "error.promotionLimit.action": "Zarejestruj się",
+  "error.providerAuth.title": "{{provider}} wylogował Cię",
+  "error.providerAuth.description": "Połącz się ponownie z {{provider}}, a następnie wyślij wiadomość jeszcze raz.",
+  "error.providerAuth.chatgpt.title": "OpenAI wylogowało Cię",
+  "error.providerAuth.chatgpt.description":
+    "Zaloguj się ponownie do ChatGPT, a następnie wyślij wiadomość jeszcze raz, aby kontynuować korzystanie z modeli Codex.",
 
   "error.chain.unknown": "Nieznany błąd",
   "error.chain.causedBy": "Spowodowany przez:",
@@ -1406,7 +1411,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Włącz migawki",
   "settings.checkpoints.enable.description": "Twórz punkty kontrolne przed edycją plików",
   "settings.context.autoCompaction.title": "Automatyczna kompakcja",
-  "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, gdy jest pełny",
+  "settings.context.autoCompaction.description": "Automatycznie kompaktuj kontekst, zanim osiągnie limit",
+  "settings.context.compactionLimit.title": "Limit automatycznego kompaktowania",
+  "settings.context.compactionLimit.description":
+    "Kompaktuj, gdy kontekst osiągnie ten procent okna modelu. Pozostaw puste, aby używać tylko bufora bezpieczeństwa.",
   "settings.context.prune.title": "Przytnij stare wyjścia",
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",

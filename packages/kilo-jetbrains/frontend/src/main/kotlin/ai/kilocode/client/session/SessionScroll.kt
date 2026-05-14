@@ -3,8 +3,8 @@ package ai.kilocode.client.session
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.session.ui.SessionStyleTarget
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.IconLoader
@@ -50,7 +50,7 @@ internal class SessionScroll(
     internal val jump: JBLabel
     val view: JComponent? get() = component.viewport.view as? JComponent
 
-    private var style = SessionStyle.current()
+    private var style = SessionEditorStyle.current()
     private var tail = true
     private var auto = false
     private var opening = false
@@ -71,7 +71,7 @@ internal class SessionScroll(
         component.verticalScrollBar.addAdjustmentListener { onScroll() }
         root.addOverlay(jump) { _, child ->
             val size = child.preferredSize
-            val gap = JBUI.scale(UiStyle.Space.PAD)
+            val gap = UiStyle.Gap.pad()
             Rectangle(
                 host.x + host.width - size.width - gap,
                 host.y + host.height - size.height - gap,
@@ -83,7 +83,7 @@ internal class SessionScroll(
 
     fun show(panel: JPanel) {
         if (component.viewport.view === panel) return
-        (panel as? SessionStyleTarget)?.applyStyle(style)
+        (panel as? SessionEditorStyleTarget)?.applyStyle(style)
         component.viewport.setView(panel)
         component.repaint()
         updateJump()
@@ -128,12 +128,12 @@ internal class SessionScroll(
         updateJump()
     }
 
-    fun applyStyle(style: SessionStyle) {
+    fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         jump.icon = patchedIcon(ICON)
         messages.applyStyle(style)
         val view = component.viewport.view
-        if (view !== messages) (view as? SessionStyleTarget)?.applyStyle(style)
+        if (view !== messages) (view as? SessionEditorStyleTarget)?.applyStyle(style)
         refresh()
     }
 

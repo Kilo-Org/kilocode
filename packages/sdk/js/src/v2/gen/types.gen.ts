@@ -126,6 +126,10 @@ export type QuestionOption = {
   description: string
   labelKey?: string
   descriptionKey?: string
+  /**
+   * Optional agent/mode name to pre-select in the UI when this option is picked
+   */
+  mode?: string
 }
 
 export type QuestionInfo = {

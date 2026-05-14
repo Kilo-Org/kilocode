@@ -121,13 +121,14 @@ export function buildFamilyCosts(
   family: Set<string>,
   messages: Record<string, Array<{ role: string; cost?: number }>>,
   sessions: Record<string, { parentID?: string | null } | undefined>,
+  parents: Map<string, string> = new Map(),
 ): Map<string, number> {
   const totals = new Map<string, number>()
   for (const sid of family) totals.set(sid, calcTotalCost(messages[sid] ?? []))
 
   const own = new Map<string, number>(totals)
   for (const sid of family) {
-    const parent = sessions[sid]?.parentID
+    const parent = sessions[sid]?.parentID ?? parents.get(sid)
     if (!parent || !own.has(parent)) continue
     own.set(parent, (own.get(parent) ?? 0) - (totals.get(sid) ?? 0))
   }
@@ -137,6 +138,32 @@ export function buildFamilyCosts(
     if (cost > 0) costs.set(sid, cost)
   }
   return costs
+}
+
+/**
+ * Build child session ID -> parent session ID links from task tool metadata.
+ * This fills the gap when child messages are synced before their SessionInfo.
+ */
+export function buildFamilyParents(
+  family: Set<string>,
+  messages: Record<string, CostMessage[]>,
+  parts: Record<string, TaskPart[]>,
+): Map<string, string> {
+  const parents = new Map<string, string>()
+  for (const sid of family) {
+    const msgs = messages[sid]
+    if (!msgs) continue
+    for (const msg of msgs) {
+      const list = parts[msg.id]
+      if (!list) continue
+      for (const p of list) {
+        const child = childID(p)
+        if (!child || !family.has(child) || parents.has(child)) continue
+        parents.set(child, sid)
+      }
+    }
+  }
+  return parents
 }
 
 const LABEL_CAP = 24

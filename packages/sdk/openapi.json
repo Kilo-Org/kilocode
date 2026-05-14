@@ -9182,6 +9182,10 @@
           },
           "descriptionKey": {
             "type": "string"
+          },
+          "mode": {
+            "description": "Optional agent/mode name to pre-select in the UI when this option is picked",
+            "type": "string"
           }
         },
         "required": ["label", "description"],
@@ -12461,6 +12465,19 @@
             "properties": {
               "auto": {
                 "type": "boolean"
+              },
+              "threshold_percent": {
+                "description": "Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.",
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 100
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "prune": {
                 "type": "boolean"

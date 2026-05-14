@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
 /**
  * Pure session model — single source of truth for session content and runtime state.
  *
- * **EDT-only access** — no synchronization. [ai.kilocode.client.session.update.SessionController] guarantees all
+ * **EDT-only access** — no synchronization. [ai.kilocode.client.session.controller.SessionController] guarantees all
  * reads and writes happen on the EDT.
  *
  * In addition to the flat message list, the model maintains a derived
@@ -175,6 +175,7 @@ class SessionModel {
     }
 
     fun setState(state: SessionState) {
+        if (this.state == state) return
         this.state = state
         fire(SessionModelEvent.StateChanged(state))
         updateHeader()

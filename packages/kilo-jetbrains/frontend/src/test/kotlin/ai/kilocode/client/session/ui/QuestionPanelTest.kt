@@ -4,7 +4,8 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
@@ -55,7 +56,7 @@ class QuestionPanelTest : BasePlatformTestCase() {
         workspaces = KiloWorkspaceService(scope, workspaceRpc)
         workspace = workspaces.workspace("/test")
         val root = BorderLayoutPanel()
-        controller = SessionController(parent, "ses_test", sessions, workspace, app, scope, root)
+        controller = SessionController(parent, SessionRef.Local("ses_test"), sessions, workspace, app, scope, root)
         panel = QuestionPanel(controller)
     }
 

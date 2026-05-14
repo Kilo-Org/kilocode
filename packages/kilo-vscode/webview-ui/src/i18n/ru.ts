@@ -466,6 +466,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Зарегистрируйтесь бесплатно, чтобы продолжить и исследовать более 500 моделей. Займёт 2 минуты, кредитная карта не нужна. Или вернитесь позже.",
   "error.promotionLimit.action": "Зарегистрироваться",
+  "error.providerAuth.title": "Сеанс {{provider}} завершен",
+  "error.providerAuth.description": "Подключитесь к {{provider}} снова, затем отправьте сообщение еще раз.",
+  "error.providerAuth.chatgpt.title": "Сеанс OpenAI завершен",
+  "error.providerAuth.chatgpt.description":
+    "Войдите в ChatGPT снова, затем отправьте сообщение еще раз, чтобы продолжить использование моделей Codex.",
 
   "error.chain.unknown": "Неизвестная ошибка",
   "error.chain.causedBy": "Причина:",
@@ -1406,7 +1411,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Включить снимки",
   "settings.checkpoints.enable.description": "Создавать контрольные точки перед редактированием файлов",
   "settings.context.autoCompaction.title": "Автоматическое сжатие",
-  "settings.context.autoCompaction.description": "Автоматически сжимать контекст при заполнении",
+  "settings.context.autoCompaction.description": "Автоматически сжимать контекст до достижения лимита",
+  "settings.context.compactionLimit.title": "Лимит автоматического сжатия",
+  "settings.context.compactionLimit.description":
+    "Сжимать, когда контекст достигает этого процента окна модели. Оставьте пустым, чтобы использовать только буфер безопасности.",
   "settings.context.prune.title": "Очистить старые выходные данные",
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",

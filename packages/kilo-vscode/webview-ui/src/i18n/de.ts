@@ -471,6 +471,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registriere dich kostenlos, um weiterzumachen und über 500 Modelle zu entdecken. Dauert 2 Minuten, keine Kreditkarte nötig. Oder komm später wieder.",
   "error.promotionLimit.action": "Registrieren",
+  "error.providerAuth.title": "{{provider}} hat Sie abgemeldet",
+  "error.providerAuth.description": "Verbinden Sie {{provider}} erneut und senden Sie Ihre Nachricht noch einmal.",
+  "error.providerAuth.chatgpt.title": "OpenAI hat Sie abgemeldet",
+  "error.providerAuth.chatgpt.description":
+    "Melden Sie sich erneut bei ChatGPT an und senden Sie Ihre Nachricht noch einmal, um weiterhin Codex-Modelle zu verwenden.",
 
   "error.chain.unknown": "Unbekannter Fehler",
   "error.chain.causedBy": "Verursacht durch:",
@@ -1429,7 +1434,10 @@ export const dict = {
   "settings.checkpoints.enable.description":
     "Prüfpunkte vor Dateibearbeitungen erstellen, um vorherige Zustände wiederherstellen zu können",
   "settings.context.autoCompaction.title": "Automatische Komprimierung",
-  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, wenn er voll ist",
+  "settings.context.autoCompaction.description": "Kontext automatisch komprimieren, bevor er das Limit erreicht",
+  "settings.context.compactionLimit.title": "Limit für automatische Komprimierung",
+  "settings.context.compactionLimit.description":
+    "Komprimieren, wenn der Kontext diesen Prozentsatz des Modellfensters erreicht. Leer lassen, um nur den Sicherheitspuffer zu verwenden.",
   "settings.context.prune.title": "Alte Ausgaben bereinigen",
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",

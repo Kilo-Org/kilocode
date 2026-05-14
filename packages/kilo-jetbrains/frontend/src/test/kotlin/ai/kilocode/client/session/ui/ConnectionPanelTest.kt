@@ -1,8 +1,8 @@
 package ai.kilocode.client.session.ui
 
-import ai.kilocode.client.session.update.SessionController
-import ai.kilocode.client.session.update.SessionControllerEvent
-import ai.kilocode.client.session.update.SessionControllerTestBase
+import ai.kilocode.client.session.controller.SessionController
+import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.controller.SessionControllerTestBase
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.ConfigWarningDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -45,7 +45,7 @@ class ConnectionPanelTest : SessionControllerTestBase() {
 
         assertTrue(panel.isVisible)
         assertEquals("CLI startup failed", panel.summaryText())
-        assertEquals(UiStyle.Colors.error(), panel.summaryColor())
+        assertEquals(UiStyle.Colors.errorLabelForeground(), panel.summaryColor())
         assertTrue(panel.toggleVisible())
         assertFalse(panel.toggleExpanded())
         assertFalse(panel.detailsVisible())
@@ -103,7 +103,7 @@ class ConnectionPanelTest : SessionControllerTestBase() {
 
         assertTrue(panel.isVisible)
         assertEquals("Configuration warnings", panel.summaryText())
-        assertEquals(UiStyle.Colors.warning(), panel.summaryColor())
+        assertEquals(UiStyle.Colors.warningLabelForeground(), panel.summaryColor())
         assertTrue(panel.toggleVisible())
         assertFalse(panel.toggleExpanded())
         assertFalse(panel.detailsVisible())

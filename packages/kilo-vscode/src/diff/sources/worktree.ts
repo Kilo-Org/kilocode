@@ -1,9 +1,8 @@
 import * as vscode from "vscode"
-import type { KiloConnectionService } from "../../services/cli-backend"
 import { GitOps } from "../../agent-manager/GitOps"
 import { diffSummary, diffFile } from "../../agent-manager/local-diff"
 import type { WorktreeDiffEntry } from "../../agent-manager/types"
-import { WorktreeDiffClient, type DiffTarget } from "../shared/client"
+import { WorktreeDiffReverter, type DiffTarget, type StatusResolver } from "../shared/reverter"
 import { resolveLocalDiffTarget } from "../shared/target"
 import { appendOutput, getWorkspaceRoot } from "../../review-utils"
 import type { DiffFile } from "../types"
@@ -32,10 +31,7 @@ export interface WorktreeDiffSourceOptions {
  * `before`/`after` per file on demand via `fetchFile`. Runs entirely in the
  * extension host — no `kilo serve` round-trip.
  */
-export function createWorktreeDiffSource(
-  connection: KiloConnectionService,
-  opts: WorktreeDiffSourceOptions = {},
-): DiffSource {
+export function createWorktreeDiffSource(opts: WorktreeDiffSourceOptions = {}): DiffSource {
   const output = vscode.window.createOutputChannel("Kilo Diff: Workspace")
   const log = (...args: unknown[]) => appendOutput(output, "WorktreeDiffSource", ...args)
   const git = new GitOps({ log })
@@ -63,6 +59,11 @@ export function createWorktreeDiffSource(
     }
     target = await resolveLocalDiffTarget(git, log, getWorkspaceRoot())
     return target
+  }
+
+  const status: StatusResolver = async (current, file) => {
+    const entry = await diffFile(git, current.directory, current.baseBranch, file, log)
+    return entry?.status
   }
 
   return {
@@ -98,8 +99,7 @@ export function createWorktreeDiffSource(
       if (!current) return { ok: false, message: "Could not resolve diff target" }
 
       try {
-        const client = connection.getClient()
-        const diff = new WorktreeDiffClient(client, git, log)
+        const diff = new WorktreeDiffReverter(git, status, log)
         return await diff.revertFile(current, file)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)

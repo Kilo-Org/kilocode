@@ -29,6 +29,7 @@ import { effectCmd } from "../effect-cmd"
 import { ServerAuth } from "@/server/auth"
 import { ShellTool } from "../../tool/shell"
 import { ShellID } from "../../tool/shell/id"
+import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
@@ -305,13 +306,8 @@ export const RunCommand = effectCmd({
         type: "boolean",
         describe: "auto-approve all permissions (for autonomous/pipeline usage)",
         default: false,
-      })
-      // kilocode_change end
-      .option("dangerously-skip-permissions", {
-        type: "boolean",
-        describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
-        default: false,
       }),
+  // kilocode_change end
   handler: Effect.fn("Cli.run")(function* (args) {
     const agentSvc = yield* Agent.Service
     yield* Effect.promise(async () => {
@@ -582,25 +578,27 @@ export const RunCommand = effectCmd({
 
             if (event.type === "permission.asked") {
               const permission = event.properties
-              if (permission.sessionID !== sessionID) continue
-
+              // kilocode_change start - In auto mode, approve root and tracked Task child permissions only
               if (args.auto) {
-                // kilocode_change - In auto mode, automatically approve all permissions without prompting
+                if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
                 await sdk.permission.reply({
                   requestID: permission.id,
                   reply: "once",
                 })
-              } else {
-                UI.println(
-                  UI.Style.TEXT_WARNING_BOLD + "!",
-                  UI.Style.TEXT_NORMAL +
-                    `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
-                )
-                await sdk.permission.reply({
-                  requestID: permission.id,
-                  reply: "reject",
-                })
+                continue
               }
+
+              if (permission.sessionID !== sessionID) continue
+              UI.println(
+                UI.Style.TEXT_WARNING_BOLD + "!",
+                UI.Style.TEXT_NORMAL +
+                  `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
+              )
+              await sdk.permission.reply({
+                requestID: permission.id,
+                reply: "reject",
+              })
+              // kilocode_change end
             }
             // kilocode_change start - network retry handling
             if (event.type === "session.network.asked") {
@@ -621,7 +619,6 @@ export const RunCommand = effectCmd({
                 requestID: request.id,
               })
             }
-            // kilocode_change end
           }
         }
 
@@ -693,6 +690,7 @@ export const RunCommand = effectCmd({
           UI.error("Session not found")
           process.exit(1)
         }
+        const auto = KiloRunAuto.create(sessionID) // kilocode_change
         await share(sdk, sessionID)
 
         loop().catch((e) => {

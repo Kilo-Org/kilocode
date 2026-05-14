@@ -466,6 +466,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Tilmeld dig gratis for at fortsætte og udforske over 500 modeller. Tager 2 minutter, intet kreditkort nødvendigt. Eller kom tilbage senere.",
   "error.promotionLimit.action": "Tilmeld dig",
+  "error.providerAuth.title": "{{provider}} har logget dig af",
+  "error.providerAuth.description": "Forbind til {{provider}} igen, og send din besked på ny.",
+  "error.providerAuth.chatgpt.title": "OpenAI har logget dig af",
+  "error.providerAuth.chatgpt.description":
+    "Log ind med ChatGPT igen, og send din besked på ny for at fortsætte med at bruge Codex-modeller.",
 
   "error.chain.unknown": "Ukendt fejl",
   "error.chain.causedBy": "Forårsaget af:",
@@ -1400,7 +1405,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver snapshots",
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, når den er fuld",
+  "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
+  "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
+  "settings.context.compactionLimit.description":
+    "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
   "settings.context.prune.title": "Fjern gamle output",
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",

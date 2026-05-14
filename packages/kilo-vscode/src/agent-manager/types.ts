@@ -126,6 +126,7 @@ interface StateMessage {
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
+  sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   reviewMarkdownRender?: boolean
   isGitRepo?: boolean
@@ -456,6 +457,11 @@ interface SetSessionsCollapsedIn {
   collapsed: boolean
 }
 
+interface SetSidebarCollapsedIn {
+  type: "agentManager.setSidebarCollapsed"
+  collapsed: boolean
+}
+
 interface SetReviewDiffStyleIn {
   type: "agentManager.setReviewDiffStyle"
   style: "unified" | "split"
@@ -736,6 +742,7 @@ export type AgentManagerInMessage =
   | SetTabOrderIn
   | SetWorktreeOrderIn
   | SetSessionsCollapsedIn
+  | SetSidebarCollapsedIn
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn

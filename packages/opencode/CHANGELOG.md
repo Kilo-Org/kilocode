@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 7.2.51
+
+### Patch Changes
+
+- [#10121](https://github.com/Kilo-Org/kilocode/pull/10121) [`9963b02`](https://github.com/Kilo-Org/kilocode/commit/9963b0271a78244f773e6192721376618d0a3549) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Auto-approve Task subagent tool permissions when running `kilo run --auto`.
+
+- [#10114](https://github.com/Kilo-Org/kilocode/pull/10114) [`0676243`](https://github.com/Kilo-Org/kilocode/commit/0676243df3afcd97fa7fc40da3c8bf9b092156c3) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Remove `--dangerously-skip-permissions` CLI flag which did nothing
+
+- [#10137](https://github.com/Kilo-Org/kilocode/pull/10137) [`33a233f`](https://github.com/Kilo-Org/kilocode/commit/33a233fd117f23ce967bda7318dc6b3aa3c83e11) - Prevent subagents from spawning nested subagents.
+
+- [#10142](https://github.com/Kilo-Org/kilocode/pull/10142) [`00313bf`](https://github.com/Kilo-Org/kilocode/commit/00313bfcd4326cf24ffda674da3befe493633b20) Thanks [@truffle-dev](https://github.com/truffle-dev)! - Clarify that semantic search returns matching code snippets with paths, line ranges, and relevance scores.
+
+## 7.2.50
+
 ## 7.2.49
 
 ### Patch Changes

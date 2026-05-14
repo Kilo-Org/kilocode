@@ -114,16 +114,6 @@
     "semi": false,
     "printWidth": 120
   },
-  "trustedDependencies": [
-    "esbuild",
-    "node-pty",
-    "protobufjs",
-    "tree-sitter",
-    "tree-sitter-bash",
-    "tree-sitter-powershell",
-    "web-tree-sitter",
-    "electron"
-  ],
   "overrides": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
@@ -145,6 +135,6 @@
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.2.49",
+  "version": "7.2.52",
   "peerDependencies": {}
 }

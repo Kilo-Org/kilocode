@@ -470,6 +470,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrer deg gratis for å fortsette og utforske over 500 modeller. Tar 2 minutter, ingen kredittkort nødvendig. Eller kom tilbake senere.",
   "error.promotionLimit.action": "Registrer deg",
+  "error.providerAuth.title": "{{provider}} logget deg ut",
+  "error.providerAuth.description": "Koble til {{provider}} på nytt, og send meldingen din igjen.",
+  "error.providerAuth.chatgpt.title": "OpenAI logget deg ut",
+  "error.providerAuth.chatgpt.description":
+    "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
   "error.chain.unknown": "Ukjent feil",
   "error.chain.causedBy": "Forårsaket av:",
@@ -1399,7 +1404,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Komprimer automatisk kontekst når den er full",
+  "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
+  "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
+  "settings.context.compactionLimit.description":
+    "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
   "settings.context.prune.title": "Fjern gamle utdata",
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",

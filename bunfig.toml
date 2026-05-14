@@ -1,5 +1,6 @@
 [install]
 exact = true
+minimumReleaseAge = 410520 # seconds (~4.75 days / ~114 hours)
 
 [test]
 root = "./do-not-run-tests-from-root"

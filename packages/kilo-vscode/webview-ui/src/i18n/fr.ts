@@ -473,6 +473,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Inscrivez-vous gratuitement pour continuer et explorer plus de 500 modèles. 2 minutes, sans carte bancaire. Ou revenez plus tard.",
   "error.promotionLimit.action": "S'inscrire",
+  "error.providerAuth.title": "{{provider}} vous a déconnecté",
+  "error.providerAuth.description": "Reconnectez {{provider}}, puis renvoyez votre message.",
+  "error.providerAuth.chatgpt.title": "OpenAI vous a déconnecté",
+  "error.providerAuth.chatgpt.description":
+    "Reconnectez-vous à ChatGPT, puis renvoyez votre message pour continuer à utiliser les modèles Codex.",
 
   "error.chain.unknown": "Erreur inconnue",
   "error.chain.causedBy": "Causé par :",
@@ -1436,7 +1441,11 @@ export const dict = {
   "settings.checkpoints.enable.title": "Activer les instantanés",
   "settings.checkpoints.enable.description": "Créer des points de contrôle avant les modifications de fichiers",
   "settings.context.autoCompaction.title": "Compaction automatique",
-  "settings.context.autoCompaction.description": "Compacter automatiquement le contexte lorsqu'il est plein",
+  "settings.context.autoCompaction.description":
+    "Compacter automatiquement le contexte avant qu'il n'atteigne la limite",
+  "settings.context.compactionLimit.title": "Limite de compactage automatique",
+  "settings.context.compactionLimit.description":
+    "Compacter lorsque le contexte atteint ce pourcentage de la fenêtre du modèle. Laissez vide pour utiliser uniquement la marge de sécurité.",
   "settings.context.prune.title": "Élaguer les anciennes sorties",
   "settings.context.prune.description": "Supprimer les anciennes sorties d'outils pendant la compaction",
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",
