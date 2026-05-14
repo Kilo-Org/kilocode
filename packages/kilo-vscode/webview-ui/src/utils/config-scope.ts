@@ -4,7 +4,7 @@ import type { Config } from "../types/messages"
 // global one. Settings that are inherently per-repository (e.g. commit message
 // conventions) belong here so they don't leak across workspaces.
 const PROJECT_SCOPED_KEYS: ReadonlySet<string> = new Set(["commit_message"])
-const PROJECT_INDEXING_KEYS: ReadonlySet<string> = new Set(["enabled", "dimension"])
+const PROJECT_INDEXING_KEYS: ReadonlySet<string> = new Set(["enabled"])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -12,9 +12,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function splitIndexing(value: unknown) {
   if (!isRecord(value)) return { global: value, project: undefined }
-  const entries = Object.entries(value).map(([key, item]) => [key, key === "dimension" ? null : item] as const)
-  const global = Object.fromEntries(entries.filter(([key]) => !PROJECT_INDEXING_KEYS.has(key)))
-  const project = Object.fromEntries(entries.filter(([key]) => PROJECT_INDEXING_KEYS.has(key)))
+  const global = Object.fromEntries(Object.entries(value).filter(([key]) => !PROJECT_INDEXING_KEYS.has(key)))
+  const project = Object.fromEntries(Object.entries(value).filter(([key]) => PROJECT_INDEXING_KEYS.has(key)))
   return {
     global: Object.keys(global).length > 0 ? global : undefined,
     project: Object.keys(project).length > 0 ? project : undefined,
