@@ -20,6 +20,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import { rm } from "fs/promises" // kilocode_change
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
+import { ProjectDesignSkill } from "../kilocode/skill/design" // kilocode_change
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
@@ -209,7 +210,14 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 })
 
-const loadSkills = Effect.fnUntraced(function* (state: State, discovered: DiscoveryState, bus: Bus.Interface) {
+const loadSkills = Effect.fnUntraced(function* (
+  state: State,
+  discovered: DiscoveryState,
+  bus: Bus.Interface,
+  fsys: AppFileSystem.Interface, // kilocode_change
+  directory: string, // kilocode_change
+  worktree: string, // kilocode_change
+) {
   // kilocode_change start - seed built-in skills before discovery so user skills can override
   for (const skill of BUILTIN_SKILLS) {
     state.skills[skill.name] = {
@@ -225,6 +233,7 @@ const loadSkills = Effect.fnUntraced(function* (state: State, discovered: Discov
     concurrency: "unbounded",
     discard: true,
   })
+  yield* ProjectDesignSkill.add(fsys, state.skills, directory, worktree) // kilocode_change
 
   log.info("init", { count: Object.keys(state.skills).length })
 })
@@ -247,7 +256,8 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
-        yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
+        const ctx = yield* InstanceState.context // kilocode_change
+        yield* loadSkills(s, yield* InstanceState.get(discovered), bus, fsys, ctx.directory, ctx.worktree) // kilocode_change
         return s
       }),
     )
