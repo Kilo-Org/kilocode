@@ -35,6 +35,7 @@ interface AnnotationHandlers {
   deleteComment: (id: string) => void
   cancelDraft: () => void
   labels: AnnotationLabels
+  activeTerminalId?: string
 }
 
 function focusWhenConnected(el: HTMLTextAreaElement): void {
@@ -269,7 +270,12 @@ export function buildReviewAnnotation(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
       window.dispatchEvent(
         new MessageEvent("message", {
-          data: { type: "appendReviewComments", comments: [comment], autoSend: true },
+          data: {
+            type: handlers.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
+            comments: [comment],
+            autoSend: true,
+            targetTerminalId: handlers.activeTerminalId,
+          },
         }),
       )
       handlers.deleteComment(comment.id)

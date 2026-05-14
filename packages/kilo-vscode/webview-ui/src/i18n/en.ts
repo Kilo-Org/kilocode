@@ -280,6 +280,19 @@ export const dict = {
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
+  "speechToText.tooltip.start": "Start voice input",
+  "speechToText.tooltip.stop": "Stop capturing",
+  "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
+  "speechToText.tooltip.error": "Speech input failed. Click to clear.",
+  "speechToText.error.title": "Speech input failed",
+  "speechToText.error.loginRequired": "Sign in to Kilo to use speech input.",
+  "speechToText.error.permission": "Microphone permission was denied.",
+  "speechToText.error.microphone": "Could not start the microphone.",
+  "speechToText.error.recording": "Recording failed.",
+  "speechToText.error.emptyRecording": "No audio was recorded.",
+  "speechToText.error.emptyTranscript": "No speech was detected.",
+  "speechToText.error.encoding": "Could not encode the recording.",
+  "speechToText.toast.transcribed": "Transcription inserted",
 
   "prompt.toast.pasteUnsupported.title": "Unsupported paste",
   "prompt.toast.pasteUnsupported.description": "Only images or PDFs can be pasted here.",
@@ -1225,6 +1238,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
   "settings.experimental.agentManagerTool.description":
     "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
+  "settings.experimental.speechToText.title": "Speech to Text",
+  "settings.experimental.speechToText.description":
+    "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Enable and sign in to the Kilo provider to use voice input in prompt fields.",
+  "settings.experimental.speechToTextModel.title": "Speech to Text Model",
+  "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",

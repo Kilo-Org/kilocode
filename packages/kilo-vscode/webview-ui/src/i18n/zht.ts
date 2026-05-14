@@ -278,6 +278,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 
+  "speechToText.tooltip.start": "開始語音輸入",
+  "speechToText.tooltip.stop": "停止擷取音訊",
+  "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
+  "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
+  "speechToText.error.title": "語音輸入失敗",
+  "speechToText.error.loginRequired": "登入 Kilo 以使用語音輸入。",
+  "speechToText.error.permission": "麥克風權限被拒絕。",
+  "speechToText.error.microphone": "無法啟動麥克風。",
+  "speechToText.error.recording": "錄音失敗。",
+  "speechToText.error.emptyRecording": "未錄製任何音訊。",
+  "speechToText.error.emptyTranscript": "未偵測到語音。",
+  "speechToText.error.encoding": "無法編碼錄音。",
+  "speechToText.toast.transcribed": "已插入轉錄文字",
+
   "prompt.toast.pasteUnsupported.title": "不支援的貼上",
   "prompt.toast.pasteUnsupported.description": "這裡只能貼上圖片或 PDF 檔案。",
   "prompt.toast.modelAgentRequired.title": "請選擇 Agent 和模型",
@@ -1171,6 +1185,11 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
   "settings.experimental.agentManagerTool.description":
     "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
+  "settings.experimental.speechToText.title": "語音轉文字",
+  "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
+  "settings.experimental.speechToText.disabledDescription": "啟用並登入 Kilo provider 以在提示詞欄位中使用語音輸入。",
+  "settings.experimental.speechToTextModel.title": "語音轉文字模型",
+  "settings.experimental.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",

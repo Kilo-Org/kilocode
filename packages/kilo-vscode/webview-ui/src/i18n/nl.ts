@@ -283,6 +283,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
 
+  "speechToText.tooltip.start": "Spraakinvoer starten",
+  "speechToText.tooltip.stop": "Audio vastleggen stoppen",
+  "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
+  "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
+  "speechToText.error.title": "Spraakinvoer mislukt",
+  "speechToText.error.loginRequired": "Meld u aan bij Kilo om spraakinvoer te gebruiken.",
+  "speechToText.error.permission": "Microfoontoegang is geweigerd.",
+  "speechToText.error.microphone": "Kon de microfoon niet starten.",
+  "speechToText.error.recording": "Opname mislukt.",
+  "speechToText.error.emptyRecording": "Er is geen audio opgenomen.",
+  "speechToText.error.emptyTranscript": "Er is geen spraak gedetecteerd.",
+  "speechToText.error.encoding": "Kon de opname niet coderen.",
+  "speechToText.toast.transcribed": "Transcriptie ingevoegd",
+
   "prompt.toast.pasteUnsupported.title": "Plakken niet ondersteund",
   "prompt.toast.pasteUnsupported.description": "Hier kunnen alleen afbeeldingen of PDF's worden geplakt.",
   "prompt.toast.modelAgentRequired.title": "Selecteer een agent en model",
@@ -1240,6 +1254,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager-tool",
   "settings.experimental.agentManagerTool.description":
     "Sta agents toe om lokale Agent Manager-sessies en worktree-sessies te starten vanuit een tool call",
+  "settings.experimental.speechToText.title": "Spraak naar tekst",
+  "settings.experimental.speechToText.description":
+    "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Schakel Kilo provider in en meld u aan om spraakinvoer in promptvelden te gebruiken.",
+  "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
+  "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",

@@ -50,6 +50,7 @@ import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
+import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
@@ -1119,6 +1120,9 @@ function McpTool(props: ToolProps) {
       <BasicTool
         icon="mcp"
         status={props.status}
+        tool={props.tool}
+        partID={props.partID}
+        callID={props.callID}
         trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
@@ -1341,7 +1345,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           <div data-slot="assistant-copy-wrapper">
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              placement="right"
+              placement="top"
               gutter={4}
             >
               <IconButton
@@ -2143,7 +2147,8 @@ ToolRegistry.register({
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
-    const [open, setOpen] = createSignal(props.defaultOpen ?? true)
+    const key = () => toolOpenKey(props)
+    const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
 
     // also apply processCarriageReturns for Windows CLI tools
     const cmd = createMemo(() => {

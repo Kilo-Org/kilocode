@@ -1650,16 +1650,38 @@ body.am-wt-dragging-active * {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   isolation: isolate;
+}
+
+.am-detail-content-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .am-detail-split {
   flex-direction: row;
 }
 
-.am-detail-split .am-chat-wrapper {
+.am-main-pane {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  min-height: 0;
   min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+.am-main-pane-terminal-active .am-chat-wrapper {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.am-detail-split .am-main-pane {
   border-right: 1px solid var(--border-weak-base);
 }
 
@@ -4331,9 +4353,9 @@ body.vscode-high-contrast-light {
  * subtree and stop xterm's internal rAF render loop, causing the
  * "press Enter to see content" bug on worktree switches.
  *
- * Stack:  position:relative container hosting the chat, review, and
- *         terminal layer. Sits below the tab bar inside `.am-detail`.
- * Layer:  absolute-positioned overlay covering the stack.
+ * Stack:  position:relative container hosting the main pane, review,
+ *         and side panel. Sits below the tab bar inside `.am-detail`.
+ * Layer:  absolute-positioned overlay covering the main pane.
  *         `pointer-events: none` when no terminal is active, letting
  *         clicks fall through to the chat behind it.
  * Slots:  absolute-positioned and stacked inside the layer; only the
@@ -4355,7 +4377,7 @@ body.vscode-high-contrast-light {
   opacity: 0;
   pointer-events: none;
   background: var(--vscode-terminal-background, #1e1e1e);
-  z-index: 1;
+  z-index: 30;
   /* Force a dedicated compositor layer so opacity flips do not re-lay-out
      the xterm canvases underneath. */
   will-change: opacity;

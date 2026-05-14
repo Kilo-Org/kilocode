@@ -282,6 +282,20 @@ export const dict = {
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
 
+  "speechToText.tooltip.start": "Iniciar entrada de voz",
+  "speechToText.tooltip.stop": "Parar captura",
+  "speechToText.tooltip.transcribing": "Transcrevendo... Clique para cancelar.",
+  "speechToText.tooltip.error": "Falha na entrada de voz. Clique para limpar.",
+  "speechToText.error.title": "Falha na entrada de voz",
+  "speechToText.error.loginRequired": "Faça login no Kilo para usar a entrada de voz.",
+  "speechToText.error.permission": "A permissão do microfone foi negada.",
+  "speechToText.error.microphone": "Não foi possível iniciar o microfone.",
+  "speechToText.error.recording": "A gravação falhou.",
+  "speechToText.error.emptyRecording": "Nenhum áudio foi gravado.",
+  "speechToText.error.emptyTranscript": "Nenhuma fala foi detectada.",
+  "speechToText.error.encoding": "Não foi possível codificar a gravação.",
+  "speechToText.toast.transcribed": "Transcrição inserida",
+
   "prompt.toast.pasteUnsupported.title": "Colagem não suportada",
   "prompt.toast.pasteUnsupported.description": "Somente imagens ou PDFs podem ser colados aqui.",
   "prompt.toast.modelAgentRequired.title": "Selecione um agente e modelo",
@@ -1241,6 +1255,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Ferramenta Agent Manager",
   "settings.experimental.agentManagerTool.description":
     "Permitir que agentes iniciem sessões locais e sessões worktree do Agent Manager a partir de uma chamada de ferramenta",
+  "settings.experimental.speechToText.title": "Fala para texto",
+  "settings.experimental.speechToText.description":
+    "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Ative e faça login no Kilo provider para usar a entrada de voz nos campos de prompt.",
+  "settings.experimental.speechToTextModel.title": "Modelo de fala para texto",
+  "settings.experimental.speechToTextModel.description":
+    "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
   "settings.experimental.continueOnDeny.title": "Continuar ao negar",
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",

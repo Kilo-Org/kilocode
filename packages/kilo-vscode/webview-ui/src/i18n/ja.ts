@@ -279,6 +279,20 @@ export const dict = {
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
 
+  "speechToText.tooltip.start": "音声入力を開始",
+  "speechToText.tooltip.stop": "音声キャプチャを停止",
+  "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
+  "speechToText.tooltip.error": "音声入力に失敗しました。クリックしてクリア。",
+  "speechToText.error.title": "音声入力に失敗しました",
+  "speechToText.error.loginRequired": "音声入力を使用するにはKiloにサインインしてください。",
+  "speechToText.error.permission": "マイクの許可が拒否されました。",
+  "speechToText.error.microphone": "マイクを起動できませんでした。",
+  "speechToText.error.recording": "録音に失敗しました。",
+  "speechToText.error.emptyRecording": "音声が録音されていません。",
+  "speechToText.error.emptyTranscript": "音声が検出されませんでした。",
+  "speechToText.error.encoding": "録音をエンコードできませんでした。",
+  "speechToText.toast.transcribed": "文字起こしを挿入しました",
+
   "prompt.toast.pasteUnsupported.title": "サポートされていない貼り付け",
   "prompt.toast.pasteUnsupported.description": "ここでは画像またはPDFのみ貼り付け可能です。",
   "prompt.toast.modelAgentRequired.title": "エージェントとモデルを選択",
@@ -1229,6 +1243,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
   "settings.experimental.agentManagerTool.description":
     "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
+  "settings.experimental.speechToText.title": "音声認識",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
+  "settings.experimental.speechToText.disabledDescription":
+    "プロンプトフィールドで音声入力を使用するには、Kilo providerを有効にしてサインインしてください。",
+  "settings.experimental.speechToTextModel.title": "音声認識モデル",
+  "settings.experimental.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",

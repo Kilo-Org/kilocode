@@ -776,6 +776,15 @@
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
+        "kilo-code.new.speechToText.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable experimental speech-to-text voice input in prompt fields. Uses your Kilo account through the Kilo Gateway."
+        },
+        "kilo-code.new.speechToText.model": {
+          "type": "string",
+          "description": "Model to use for experimental speech-to-text voice input. Requires Kilo Gateway."
+        },
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,

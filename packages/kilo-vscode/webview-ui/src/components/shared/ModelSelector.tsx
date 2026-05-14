@@ -96,6 +96,8 @@ export interface ModelSelectorBaseProps {
   favorites?: boolean
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
+  /** Render inline instead of through a portal when nested in a dialog. */
+  portal?: boolean
 }
 
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
@@ -537,6 +539,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       minHeight={200}
       placement={props.placement ?? "top-start"}
       deferDismiss={props.deferDismiss}
+      portal={props.portal}
       open={open()}
       onOpenChange={setOpen}
       triggerAs={Button}
