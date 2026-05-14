@@ -341,11 +341,9 @@ function renderable(part: PartType, showReasoningSummaries = true) {
   return !!PART_MAPPING[part.type]
 }
 
-// kilocode_change - toolDefaultOpen takes `edit` param for apply_patch too
 export function toolDefaultOpen(tool: string, shell = false, edit = false) {
   if (tool === "bash") return shell
   if (tool === "edit" || tool === "write") return edit
-  // kilocode_change: apply_patch also respects code_edit_display
   if (tool === "apply_patch") return edit
 }
 
