@@ -135,4 +135,97 @@ describe("session.network", () => {
       },
     })
   })
+
+  test("restore auto-resolves pending request and clears the list", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { promise } = await SessionNetwork.ask({
+          sessionID: SessionID.make("ses_test"),
+          message: "Connection reset by server",
+          abort: new AbortController().signal,
+        })
+        const pending = await SessionNetwork.list()
+        expect(pending).toHaveLength(1)
+        const req = pending[0]!
+
+        await SessionNetwork.restore({ requestID: req.id })
+        await expect(promise).resolves.toBeUndefined()
+        expect(await SessionNetwork.list()).toHaveLength(0)
+      },
+    })
+  })
+
+  test("restore publishes both Restored and Replied events", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const seen: string[] = []
+        const offRestored = Bus.subscribe(SessionNetwork.Event.Restored, () => seen.push("restored"))
+        const offReplied = Bus.subscribe(SessionNetwork.Event.Replied, () => seen.push("replied"))
+        try {
+          const { promise } = await SessionNetwork.ask({
+            sessionID: SessionID.make("ses_test"),
+            message: "Connection reset by server",
+            abort: new AbortController().signal,
+          })
+          const pending = await SessionNetwork.list()
+          const req = pending[0]!
+          await SessionNetwork.restore({ requestID: req.id })
+          await promise
+          expect(seen).toStrictEqual(["restored", "replied"])
+        } finally {
+          offRestored()
+          offReplied()
+        }
+      },
+    })
+  })
+
+  test("restore is idempotent after auto-resume", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { promise } = await SessionNetwork.ask({
+          sessionID: SessionID.make("ses_test"),
+          message: "Connection reset by server",
+          abort: new AbortController().signal,
+        })
+        const pending = await SessionNetwork.list()
+        const req = pending[0]!
+        await SessionNetwork.restore({ requestID: req.id })
+        await promise
+
+        // Second restore call lands after auto-resume cleaned up — should be a no-op
+        await SessionNetwork.restore({ requestID: req.id })
+        expect(await SessionNetwork.list()).toHaveLength(0)
+      },
+    })
+  })
+
+  test("manual reply after auto-resume is a no-op", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { promise } = await SessionNetwork.ask({
+          sessionID: SessionID.make("ses_test"),
+          message: "Connection reset by server",
+          abort: new AbortController().signal,
+        })
+        const pending = await SessionNetwork.list()
+        const req = pending[0]!
+        await SessionNetwork.restore({ requestID: req.id })
+        await promise
+
+        // TUI may still POST /reply if the user pressed Enter on the flash —
+        // it should be a clean no-op, not a crash.
+        await SessionNetwork.reply({ requestID: req.id })
+        expect(await SessionNetwork.list()).toHaveLength(0)
+      },
+    })
+  })
 })

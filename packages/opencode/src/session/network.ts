@@ -240,6 +240,10 @@ export namespace SessionNetwork {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
       })
+      // #9792: the DNS probe already verified the network is back, so resume
+      // automatically instead of waiting for the user to press Enter on a
+      // dialog that was only ever needed for sustained outages.
+      await reply({ requestID })
     },
   )
 
