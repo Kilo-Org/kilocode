@@ -1438,6 +1438,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "Kodeblokker",
+  "settings.display.codeEdit.description": "Velg om kodeblokker skal starte utvidet eller minimert som standard",
+  "settings.display.codeEdit.expanded": "Utvidet",
+  "settings.display.codeEdit.collapsed": "Minimert",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

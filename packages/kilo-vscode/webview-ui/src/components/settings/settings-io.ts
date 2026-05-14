@@ -34,6 +34,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "layout",
   "auto_collapse_reasoning",
   "terminal_command_display",
+  "code_edit_display",
   "indexing",
   "experimental",
 ]

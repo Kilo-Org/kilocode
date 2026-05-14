@@ -125,7 +125,15 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const session = useSession()
   const display = useDisplay()
   const { config } = useConfig()
+
+  function toolDefaultOpen(tool: string, shell: boolean, edit: boolean) {
+    if (tool === "bash") return shell
+    if (tool === "edit" || tool === "write") return edit
+    if (tool === "apply_patch") return false
+  }
+
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const editOpen = createMemo(() => config().code_edit_display !== "collapsed")
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
@@ -177,6 +185,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                   message={props.message as SDKMessage}
                                   showAssistantCopyPartID={props.showAssistantCopyPartID}
                                   reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                  defaultOpen={part.type === "tool" ? toolDefaultOpen((part as unknown as ToolPart).tool, open(), editOpen()) : undefined}
                                   feedback={props.feedback}
                                   animate={
                                     part.type === "tool" &&

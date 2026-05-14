@@ -1418,6 +1418,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "บล็อกแก้ไขโค้ด",
+  "settings.display.codeEdit.description": "เลือกว่าบล็อกแก้ไขโค้ดจะเริ่มต้นแบบขยายหรือยุบตามค่าเริ่มต้น",
+  "settings.display.codeEdit.expanded": "ขยาย",
+  "settings.display.codeEdit.collapsed": "ยุบ",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",

@@ -185,6 +185,9 @@ export const Info = Schema.Struct({
   terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
     description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  code_edit_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
+    description: "Controls whether code edit/diff blocks are expanded or collapsed by default in the VS Code chat UI",
+  }),
   // kilocode_change end
   // kilocode_change start - nullable for delete sentinel
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({

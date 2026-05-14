@@ -1420,6 +1420,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "코드 편집 블록",
+  "settings.display.codeEdit.description": "코드 편집 블록을 기본적으로 펼쳐서 표시할지 접어서 표시할지 선택합니다",
+  "settings.display.codeEdit.expanded": "펼쳐서",
+  "settings.display.codeEdit.collapsed": "접어서",
   "settings.providers.defaultModel.title": "기본 모델",
   "settings.providers.defaultModel.description": "대화의 기본 모델",
   "settings.providers.smallModel.title": "소형 모델",

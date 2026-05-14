@@ -1409,6 +1409,11 @@ export const dict = {
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
+  "settings.display.codeEdit.title": "Kod blokları",
+  "settings.display.codeEdit.description": "Kod düzenleme bloklarının varsayılan olarak genişletilmiş mi yoksa daraltılmış mı başlayacağını seçin",
+  "settings.display.codeEdit.expanded": "Genişletilmiş",
+  "settings.display.codeEdit.collapsed": "Daraltılmış",
+
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",
   "settings.providers.smallModel.title": "Küçük Model",

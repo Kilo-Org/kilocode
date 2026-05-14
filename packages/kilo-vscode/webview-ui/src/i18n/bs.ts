@@ -1450,6 +1450,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "Blokovi koda",
+  "settings.display.codeEdit.description": "Odaberite da li blokovi za uređivanje koda počinju prošireni ili skupljeni po defaultu",
+  "settings.display.codeEdit.expanded": "Prošireno",
+  "settings.display.codeEdit.collapsed": "Skupljeno",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",

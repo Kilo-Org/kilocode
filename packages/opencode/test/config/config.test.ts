@@ -145,6 +145,24 @@ test("loads JSON config file", async () => {
   })
 })
 
+test("loads code_edit_display config field", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://app.kilo.ai/config.json",
+        code_edit_display: "collapsed",
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(config.code_edit_display).toBe("collapsed")
+    },
+  })
+})
+
 test("loads shell config field", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

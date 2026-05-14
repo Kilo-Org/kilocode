@@ -1356,6 +1356,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "程式碼編輯區塊",
+  "settings.display.codeEdit.description": "選擇程式碼編輯區塊預設展開或折疊",
+  "settings.display.codeEdit.expanded": "展開",
+  "settings.display.codeEdit.collapsed": "折疊",
   "settings.providers.defaultModel.title": "預設模型",
   "settings.providers.defaultModel.description": "對話的主要模型",
   "settings.providers.smallModel.title": "小模型",

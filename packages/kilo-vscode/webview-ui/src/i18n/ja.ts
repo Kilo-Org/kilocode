@@ -1435,6 +1435,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "コード編集ブロック",
+  "settings.display.codeEdit.description": "コード編集ブロックの表示状態を選択します",
+  "settings.display.codeEdit.expanded": "展開",
+  "settings.display.codeEdit.collapsed": "折りたたみ",
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",

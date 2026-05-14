@@ -1454,6 +1454,11 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+
+  "settings.display.codeEdit.title": "Blocos de código",
+  "settings.display.codeEdit.description": "Escolher se os blocos de edição de código começam expandidos ou recolhidos por padrão",
+  "settings.display.codeEdit.expanded": "Expandido",
+  "settings.display.codeEdit.collapsed": "Recolhido",
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",

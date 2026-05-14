@@ -76,6 +76,8 @@ describe("buildExport", () => {
       instructions: ["rule1.md"],
       snapshot: true,
       share: "manual",
+      terminal_command_display: "collapsed",
+      code_edit_display: "collapsed",
     }
     const result = buildExport(cfg)
     expect(result.model).toBe("test-model")
@@ -86,6 +88,8 @@ describe("buildExport", () => {
     expect(result.instructions).toEqual(["rule1.md"])
     expect(result.snapshot).toBe(true)
     expect(result.share).toBe("manual")
+    expect(result.terminal_command_display).toBe("collapsed")
+    expect(result.code_edit_display).toBe("collapsed")
   })
 
   it("handles empty config", () => {
@@ -333,7 +337,7 @@ describe("mergeConfig", () => {
 // Round-trip
 // ---------------------------------------------------------------------------
 describe("round-trip", () => {
-  it("export then import preserves all fields including secrets", () => {
+  it("export then import preserves all fields including secrets and display settings", () => {
     const original: Config = {
       model: "test-model",
       agent: { coder: { mode: "primary", prompt: "Code" } },
@@ -341,6 +345,8 @@ describe("round-trip", () => {
       mcp: { gh: { command: "npx", env: { TOKEN: "secret" } } },
       permission: { read: "allow" },
       instructions: ["rules.md"],
+      terminal_command_display: "collapsed",
+      code_edit_display: "expanded",
     }
     const exported = buildExport(original)
     const json = JSON.stringify(exported)
@@ -355,6 +361,8 @@ describe("round-trip", () => {
       expect(result.config.mcp?.gh?.env?.TOKEN).toBe("secret")
       expect(result.config.permission).toEqual({ read: "allow" })
       expect(result.config.instructions).toEqual(["rules.md"])
+      expect(result.config.terminal_command_display).toBe("collapsed")
+      expect(result.config.code_edit_display).toBe("expanded")
     }
   })
 })
@@ -378,6 +386,8 @@ describe("constants", () => {
     expect(KNOWN_KEYS).toContain("permission")
     expect(KNOWN_KEYS).toContain("model")
     expect(KNOWN_KEYS).toContain("instructions")
+    expect(KNOWN_KEYS).toContain("terminal_command_display")
+    expect(KNOWN_KEYS).toContain("code_edit_display")
   })
 
   it("KNOWN_KEYS matches all keys in the Config interface (drift guard)", async () => {

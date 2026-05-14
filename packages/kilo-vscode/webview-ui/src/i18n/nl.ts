@@ -1420,6 +1420,11 @@ export const dict = {
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
 
+  "settings.display.codeEdit.title": "Codeblokken",
+  "settings.display.codeEdit.description": "Kies of codeblokken standaard uitgevouwen of ingeklapt worden weergegeven",
+  "settings.display.codeEdit.expanded": "Uitgevouwen",
+  "settings.display.codeEdit.collapsed": "Ingeklapt",
+
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",
   "settings.providers.smallModel.title": "Klein Model",
