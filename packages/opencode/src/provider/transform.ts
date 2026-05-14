@@ -464,10 +464,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
 
   if (
-    id.includes("deepseek-chat") ||
-    id.includes("deepseek-reasoner") ||
-    id.includes("deepseek-r1") ||
-    id.includes("deepseek-v3") ||
+    // kilocode_change start - deepseek removed; handled in openai-compatible case
     id.includes("minimax") ||
     // id.includes("glm") || // kilocode_change
     // id.includes("kimi") || // kilocode_change
@@ -610,15 +607,16 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "venice-ai-sdk-provider":
     // https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort
     case "@ai-sdk/openai-compatible":
-      if (model.api.id.toLowerCase().includes("deepseek-v4")) {
+      if (model.api.id.toLowerCase().includes("deepseek")) {
         return {
-          none: { thinking: { type: "disabled" } },
+          // DeepSeek models default to high thinking, which is one of the two only supported levels:
           high: { reasoningEffort: "high" },
           max: { reasoningEffort: "max" },
+          none: { thinking: { type: "disabled" } }, // The no-thinking mode is also supported, this way.
         }
       }
-      const efforts = [...WIDELY_SUPPORTED_EFFORTS]
-      return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
+      const efforts = [...WIDELY_SUPPORTED_EFFORTS] // kilocode_change
+      return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }])) // kilocode_change
 
     case "@ai-sdk/azure":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure

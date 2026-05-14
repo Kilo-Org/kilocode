@@ -2215,7 +2215,7 @@ describe("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test("deepseek returns empty object", () => {
+  test("deepseek returns thinking variants", () => {
     const model = createMockModel({
       id: "deepseek/deepseek-chat",
       providerID: "deepseek",
@@ -2226,7 +2226,11 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({})
+    expect(result).toEqual({
+      none: { thinking: { type: "disabled" } },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    })
   })
 
   test("minimax returns empty object", () => {
