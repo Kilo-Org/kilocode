@@ -1,14 +1,25 @@
-Use this tool to suggest switching to plan agent when the user's request would benefit from planning before implementation.
+Offer a switch to planning mode before implementation work starts.
 
-If they explicitly mention wanting to create a plan ALWAYS call this tool first.
+## When to use
 
-This tool will ask the user if they want to switch to plan agent.
+- User explicitly asks for a plan before coding
+- Task spans multiple files or subsystems and needs decomposition
+- Work requires research, design, or architecture decisions before edits
+- You want to separate planning from execution in a dedicated flow
 
-Call this tool when:
-- The user's request is complex and would benefit from planning first
-- You want to research and design before making changes
-- The task involves multiple files or significant architectural decisions
+## When NOT to use
 
-Do NOT call this tool:
-- For simple, straightforward tasks
-- When the user explicitly wants immediate implementation
+- User wants immediate implementation of a simple change — use direct tool calls instead
+- Work is already fully planned and ready to execute — use `PlanExit` after finishing the plan
+- You only need a quick clarification from the user — use `Question`
+
+## Examples
+
+- "Make me a plan for refactoring auth" → offer planning mode first
+- "Before coding, design how this feature should work" → switch to planning flow
+- "Map out changes across CLI and extension" → use planning before editing
+
+## Constraints
+
+- Call this before implementation when the user explicitly asks for a plan.
+- Use this only to start planning, not to record or finalize a plan.

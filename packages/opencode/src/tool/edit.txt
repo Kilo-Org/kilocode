@@ -1,10 +1,31 @@
-Performs exact string replacements in files. 
+Replace exact text in an existing file and rewrite the file in place.
 
-Usage:
-- You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file. 
-- When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: line number + colon + space (e.g., `1: `). Everything after that space is the actual file content to match. Never include any part of the line number prefix in the oldString or newString.
-- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.
-- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.
-- The edit will FAIL if `oldString` is not found in the file with an error "oldString not found in content".
-- The edit will FAIL if `oldString` is found multiple times in the file with an error "Found multiple matches for oldString. Provide more surrounding lines in oldString to identify the correct match." Either provide a larger string with more surrounding context to make it unique or use `replaceAll` to change every instance of `oldString`. 
-- Use `replaceAll` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.
+## When to use
+
+- Change a focused block in an existing file when you know the current text
+- Rename repeated strings across one file with `replaceAll`
+- Make surgical edits without replacing the whole file
+- Update indentation-sensitive code after reading exact file contents
+- Adjust an existing file while preserving the rest of it unchanged
+
+## When NOT to use
+
+- Replace an entire file with new contents — use `Write`
+- Make coordinated edits across many files or create/delete files — use `ApplyPatch`
+- Read the current file contents first — use `Read`
+- Search for candidate files or strings — use `Glob` or `Grep`
+
+## Examples
+
+- "Rename `getCwd` to `getCurrentWorkingDirectory` in one file" → use `replaceAll: true`
+- "Change one branch in this function" → pass the exact surrounding block as `oldString`
+- "Insert content into an existing file" → replace a nearby anchor string with anchor plus new text
+- "Fix indentation-sensitive code from `Read` output" → copy text after the `line: ` prefix only
+
+## Constraints
+
+- Read the file before editing it.
+- Copy `oldString` exactly from file contents, excluding the `line: ` prefix added by `Read`.
+- Keep `oldString` and `newString` different.
+- Provide more surrounding context when `oldString` is not unique, or use `replaceAll`.
+- Prefer `Edit` over `Write` for existing files.

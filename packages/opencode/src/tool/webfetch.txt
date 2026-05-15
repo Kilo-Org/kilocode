@@ -1,13 +1,28 @@
-- Fetches content from a specified URL
-- Takes a URL and optional format as input
-- Fetches the URL content, converts to requested format (markdown by default)
-- Returns the content in the specified format
-- Use this tool when you need to retrieve and analyze web content
+Fetch a specific URL and return its contents as Markdown, plain text, HTML, or an image attachment.
 
-Usage notes:
-  - IMPORTANT: if another tool is present that offers better web fetching capabilities, is more targeted to the task, or has fewer restrictions, prefer using that tool instead of this one.
-  - The URL must be a fully-formed valid URL
-  - HTTP URLs will be automatically upgraded to HTTPS
-  - Format options: "markdown" (default), "text", or "html"
-  - This tool is read-only and does not modify any files
-  - Results may be summarized if the content is very large
+## When to use
+
+- Retrieve content from a known URL for analysis
+- Convert HTML pages into Markdown or plain text for easier reading
+- Fetch raw HTML when structure matters
+- Open remote images as attachments
+- Inspect a single page without running a broader web search
+
+## When NOT to use
+
+- Discover relevant websites or recent sources first — use `WebSearch`
+- Read local files from disk — use `Read`
+- Search repository code or docs — use `Grep`, `Read`, or `SemanticSearch`
+
+## Examples
+
+- "Fetch `https://example.com/docs` as Markdown" → use default `format`
+- "Get plain text from this article" → set `format: text`
+- "Inspect page source" → set `format: html`
+- "Open this image URL" → fetch and return it as an attachment
+
+## Constraints
+
+- Provide a fully formed `http://` or `https://` URL.
+- Use `timeout` in seconds and keep it at or below 120.
+- Prefer a more targeted web tool when one exists for the task.

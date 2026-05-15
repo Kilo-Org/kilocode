@@ -1,12 +1,29 @@
-Search and read past conversations from the current project on this machine, including its git worktrees. Use this to recall previous work, find how something was implemented before, or retrieve context from another worktree in the same repo.
+Search and read past local Kilo conversations for this project and its git worktrees.
 
-Two modes:
-1. **Search** - Find sessions by title keyword in the current project and its worktrees. Returns a list of matching sessions with their title, directory, and last updated time. Use this first to locate relevant conversations.
-2. **Read** - Retrieve the full transcript of a specific session by ID. Returns the conversation messages (user prompts and assistant responses) so you can understand what was discussed and done.
+## When to use
 
-Usage notes:
-  - Search matches against session titles using case-insensitive substring matching
-  - Results are limited to the current project/worktree family
-  - Reading a session from a different project is rejected
-  - Use search mode first to find session IDs, then read mode to get the full conversation
-  - Session transcripts can be large; prefer searching first to narrow down which session to read
+- Recall how a feature or fix was discussed in an earlier session
+- Find prior conversations by session title before reopening them
+- Recover context from another worktree in the same repository family
+- Review previous assistant and user messages for implementation history
+- Check whether related work already happened in another local session
+
+## When NOT to use
+
+- Search current source files for code or text — use `Grep` or `SemanticSearch`
+- Read current repository files or docs — use `Read`
+- Look up information outside this project family — use `WebSearch` or `WebFetch`
+
+## Examples
+
+- "Find sessions about auth refactor" → use `mode: search` with a title keyword query
+- "Open session `abc123`" → use `mode: read` with that `sessionID`
+- "See what I did in another worktree" → search first, then read the chosen session
+- "Check prior discussion before reimplementing this" → retrieve the earlier transcript
+
+## Constraints
+
+- Use `mode: search` before `mode: read` when you do not already know the session ID.
+- Provide `query` for `search` mode.
+- Provide `sessionID` for `read` mode.
+- Expect access to be limited to the current project or worktree family.

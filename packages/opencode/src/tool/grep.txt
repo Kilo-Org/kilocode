@@ -1,9 +1,30 @@
-- Fast content search tool that works with any codebase size
-- Searches file contents using regular expressions
-- Supports full regex syntax (eg. "log.*Error", "function\s+\w+", etc.)
-- Filter files by pattern with the include parameter (eg. "*.js", "*.{ts,tsx}")
-- Returns file paths and line numbers with at least one match sorted by modification time
-- Use this tool when you need to find files containing specific patterns
-- If you need to identify/count the number of matches within files, use the Bash tool with `rg` (ripgrep) directly. Do NOT use `grep`.
-- When you are doing an open-ended search where you do not know the exact symbol name, use the SemanticSearch tool instead
-- When you are doing a deep search that may require multiple tool invocations, use the Task tool instead
+Search file contents with a regular expression and return matching files, line numbers, and line text.
+
+## When to use
+
+- Find known identifiers, strings, or regex patterns across files
+- Locate exact API names, flags, or error messages in code or docs
+- Filter content search to specific file globs with `include`
+- Confirm whether a known pattern still exists after edits
+- Narrow large codebases before using `Read`
+
+## When NOT to use
+
+- Find files by filename only — use `Glob`
+- Read full contents of a known file — use `Read`
+- Explore code by meaning when exact names are unknown — use `SemanticSearch`
+- Count every match in detail or use advanced ripgrep flags — use `Bash`
+- Delegate long multi-step investigation across many searches — use `Task`
+
+## Examples
+
+- "Find `function\\s+loadConfig`" → regex search for a known function definition
+- "Search `TODO|FIXME` in TypeScript files" → use alternation plus `include: *.ts`
+- "Look for `log.*Error` under `packages/opencode`" → set `path` to a subdirectory
+- "Find imports from `@/kilocode`" → search exact import text across source files
+
+## Constraints
+
+- Provide a regex pattern, not a filename glob.
+- Use `include` only to filter which files are searched.
+- Use `Bash` with `rg` when you need total match counts instead of file-level hits.

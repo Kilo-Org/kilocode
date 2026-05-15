@@ -1,8 +1,27 @@
-Writes a file to the local filesystem.
+Write full file contents to disk, creating the file or replacing the entire existing file.
 
-Usage:
-- This tool will overwrite the existing file if there is one at the provided path.
-- If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.
-- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.
-- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
-- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
+## When to use
+
+- Create a new file with complete contents in one step
+- Replace an entire file when line-level editing is not useful
+- Materialize generated content that already has its final form
+- Write non-trivial content after you have confirmed the exact destination path
+
+## When NOT to use
+
+- Change part of an existing file — use `Edit`
+- Make multi-file patch-style updates, moves, or deletes — use `ApplyPatch`
+- Inspect an existing file before replacing it — use `Read`
+- Search for the right path to write — use `Glob`
+
+## Examples
+
+- "Create `src/config.json` with this full JSON body" → write complete contents to a new file
+- "Replace `README.md` entirely" → read it first, then overwrite with full new text
+- "Write generated fixture data to one file" → use when incremental edits are unnecessary
+- "Create a small config file in a new directory" → write full contents to the target path
+
+## Constraints
+
+- Read an existing file before overwriting it.
+- Prefer `Edit` for existing-file changes and `Write` for whole-file replacement or new files.

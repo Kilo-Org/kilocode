@@ -1,14 +1,28 @@
-- Search the web using Exa AI - performs real-time web searches and can scrape content from specific URLs
-- Provides up-to-date information for current events and recent data
-- Supports configurable result counts and returns the content from the most relevant websites
-- Use this tool for accessing information beyond knowledge cutoff
-- Searches are performed automatically within a single API call
+Search the web with Exa for current information and summarized source content.
 
-Usage notes:
-  - Supports live crawling modes: 'fallback' (backup if cached unavailable) or 'preferred' (prioritize live crawling)
-  - Search types: 'auto' (balanced), 'fast' (quick results), 'deep' (comprehensive search)
-  - Configurable context length for optimal LLM integration
-  - Domain filtering and advanced search options available
+## When to use
 
-The current year is {{year}}. You MUST use this year when searching for recent information or current events
-- Example: If the current year is 2026 and the user asks for "latest AI news", search for "AI news 2026", NOT "AI news 2025"
+- Look up information beyond model knowledge cutoff
+- Find recent news, releases, pricing, or documentation updates
+- Compare several web sources in one search result set
+- Use live crawling when cached results may be stale
+- Gather web context before following up on a specific page with `WebFetch`
+
+## When NOT to use
+
+- Fetch one known URL directly — use `WebFetch`
+- Search local repository files — use `Grep`, `Read`, or `SemanticSearch`
+- Recall prior local conversations — use `Recall`
+
+## Examples
+
+- "Latest AI news {{year}}" → include current year for recent topics
+- "Bun workspace filters documentation" → search current docs across sources
+- "Price of service X {{year}}" → use live web data beyond cutoff
+- "Deep search for PostgreSQL logical replication changes" → set `type: deep`
+
+## Constraints
+
+- Include the current year `{{year}}` in queries about recent information or current events.
+- Use `livecrawl: preferred` only when fresh crawling should take priority over cached results.
+- Use `type: fast`, `auto`, or `deep` to match the needed depth.

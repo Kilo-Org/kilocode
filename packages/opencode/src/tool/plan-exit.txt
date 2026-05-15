@@ -1,13 +1,24 @@
-Signal that planning is complete and the plan is ready for implementation.
+Signal that planning is complete and the saved plan is ready for implementation.
 
-Call this tool once you have finalized the plan file and are confident it is ready. This ends your planning turn and hands control back to the user.
+## When to use
 
-Call this tool:
-- After you have written a complete plan to the plan file
-- After you have clarified any questions with the user
-- When you are confident the plan is ready for implementation
+- Finish a planning session after writing the plan file
+- End planning after resolving open questions and trade-offs
+- Hand control back once the plan is ready to execute
 
-Do NOT call this tool:
-- Before you have created or finalized the plan
-- If you still have unanswered questions about the implementation
-- If the user has indicated they want to continue planning
+## When NOT to use
+
+- Start a planning workflow — use `PlanEnter`
+- Ask follow-up questions before the plan is settled — use `Question`
+- Continue revising an unfinished plan — keep planning instead
+
+## Examples
+
+- "I finished the plan file" → signal readiness with `PlanExit`
+- "Planning is done and implementation can begin" → end planning turn
+- "All open questions are resolved" → return the plan path and finish planning
+
+## Constraints
+
+- Call this only after the plan file is finalized.
+- Do not call this while required implementation questions remain open.

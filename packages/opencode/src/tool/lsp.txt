@@ -1,24 +1,32 @@
-Interact with Language Server Protocol (LSP) servers to get code intelligence features.
+Query configured Language Server Protocol servers for symbol, reference, hover, and call-hierarchy data.
 
-Supported operations:
-- goToDefinition: Find where a symbol is defined
-- findReferences: Find all references to a symbol
-- hover: Get hover information (documentation, type info) for a symbol
-- documentSymbol: Get all symbols (functions, classes, variables) in a document
-- workspaceSymbol: List project-wide symbols matching a query string
-- goToImplementation: Find implementations of an interface or abstract method
-- prepareCallHierarchy: Get call hierarchy item at a position (functions/methods)
-- incomingCalls: Find all functions/methods that call the function at a position
-- outgoingCalls: Find all functions/methods called by the function at a position
+## When to use
 
-All operations require:
-- filePath: The file to operate on
-- line: The line number (1-based, as shown in editors)
-- character: The character offset (1-based, as shown in editors)
+- Jump from a symbol use to its definition with `goToDefinition`
+- List references or implementations of a symbol
+- Inspect hover documentation or type information at a position
+- Enumerate symbols in one file with `documentSymbol`
+- Search project-wide symbols with `workspaceSymbol`
+- Trace callers or callees with call hierarchy operations
 
-workspaceSymbol also accepts:
-- query: A query string to filter symbols by. Empty string requests all symbols.
+## When NOT to use
 
-For workspaceSymbol, filePath is not sent in the LSP workspace/symbol request. It is used by opencode to select and start the matching LSP server.
+- Search raw text or regex patterns — use `Grep`
+- Read source code around a known path — use `Read`
+- Find files by name or extension — use `Glob`
+- Explore code when no LSP server is available for the language — use `SemanticSearch` or `Grep`
 
-Note: LSP servers must be configured for the file type. If no server is available, an error will be returned.
+## Examples
+
+- "Find definition of symbol at `src/app.ts:42:7`" → use `goToDefinition`
+- "Show hover docs for this function call" → use `hover`
+- "List all symbols in `server.ts`" → use `documentSymbol`
+- "Search workspace symbols matching `Config`" → use `workspaceSymbol` with `query`
+- "See who calls this method" → use `prepareCallHierarchy` followed by `incomingCalls`
+
+## Constraints
+
+- Provide `line` and `character` as 1-based editor positions.
+- Provide a `filePath` for every operation, including `workspaceSymbol`.
+- Use `query` only for `workspaceSymbol`; omit it for other operations.
+- Call this only for file types with a configured LSP server.

@@ -1,5 +1,25 @@
-Load a specialized skill when the task at hand matches one of the skills listed in the system prompt.
+Load a specialized skill so its workflow instructions and bundled resources become available in the current conversation.
 
-Use this tool to inject the skill's instructions and resources into current conversation. The output may contain detailed workflow guidance as well as references to scripts, files, etc in the same directory as the skill.
+## When to use
 
-The skill name must match one of the skills listed in your system prompt.
+- Activate a process skill before starting work in that domain
+- Load a language or framework skill before editing code that depends on it
+- Follow a repository-specific workflow such as debugging, testing, or merge handling
+- Inspect bundled skill resources such as scripts or reference files when the skill exposes them
+
+## When NOT to use
+
+- Read ordinary project files or docs — use `Read`
+- Delegate work to another agent — use `Task`
+- Search the repository for code or filenames — use `Grep` or `Glob`
+
+## Examples
+
+- "Load `systematic-debugging` before fixing this failure" → activate the debugging workflow first
+- "Load `typescript-development` before changing TS code" → bring in domain-specific guidance
+- "Load `verification-before-completion` near the end" → follow completion checks before claiming success
+
+## Constraints
+
+- Pass a skill name exactly as listed in available skills.
+- Load a relevant skill before acting when the task matches that skill.

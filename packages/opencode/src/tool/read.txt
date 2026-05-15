@@ -1,14 +1,29 @@
-Read a file or directory from the local filesystem. If the path does not exist, an error is returned.
+Read files or directories from the local filesystem and return numbered text, directory entries, or supported attachments.
 
-Usage:
-- The filePath parameter should be an absolute path.
-- By default, this tool returns up to 2000 lines from the start of the file.
-- The offset parameter is the line number to start from (1-indexed).
-- To read later sections, call this tool again with a larger offset.
-- Use the grep tool to find specific content in large files or files with long lines.
-- If you are unsure of the correct file path, use the glob tool to look up filenames by glob pattern.
-- Contents are returned with each line prefixed by its line number as `<line>: <content>`. For example, if a file has contents "foo\n", you will receive "1: foo\n". For directories, entries are returned one per line (without line numbers) with a trailing `/` for subdirectories.
-- Any line longer than 2000 characters is truncated.
-- Call this tool in parallel when you know there are multiple files you want to read.
-- Avoid tiny repeated slices (30 line chunks). If you need more context, read a larger window.
-- This tool can read image files and PDFs and return them as file attachments.
+## When to use
+
+- Inspect source files, configs, or docs before editing them
+- Read a directory listing to confirm paths and nearby files
+- Continue through a large file with `offset` and `limit`
+- Open images or PDFs as attachments when file inspection is needed
+- Read several known files in parallel when they can be understood independently
+
+## When NOT to use
+
+- Find files by name pattern when the path is unknown — use `Glob`
+- Search for exact text or regex matches across files — use `Grep`
+- Explore code by semantic meaning instead of path — use `SemanticSearch`
+- Modify file contents — use `Edit`, `Write`, or `ApplyPatch`
+
+## Examples
+
+- "Read `src/index.ts`" → return numbered lines from start of file
+- "Continue this file from line 400" → set `offset: 400`
+- "Show contents of `packages/opencode/src/tool/`" → return directory entries with `/` on subdirectories
+- "Open this PDF" → return the file as an attachment when format is supported
+
+## Constraints
+
+- Use `offset` as a 1-indexed starting line.
+- Read larger windows instead of many tiny repeated slices when more context is needed.
+- Expect lines longer than 2000 characters to be truncated.

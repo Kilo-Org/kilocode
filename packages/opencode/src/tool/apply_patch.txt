@@ -1,33 +1,31 @@
-Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:
+Apply structured multi-file patches that add, update, move, or delete files.
 
-*** Begin Patch
-[ one or more file sections ]
-*** End Patch
+## When to use
 
-Within that envelope, you get a sequence of file operations.
-You MUST include a header to specify the action you are taking.
-Each operation starts with one of three headers:
+- Make coordinated edits across multiple files in one tool call
+- Rename a file while changing its contents with `*** Move to:`
+- Create and delete files as part of one atomic patch
+- Apply line-level diffs when exact string replacement is awkward
+- Preserve reviewable patch structure for large edits
 
-*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).
-*** Delete File: <path> - remove an existing file. Nothing follows.
-*** Update File: <path> - patch an existing file in place (optionally with a rename).
+## When NOT to use
 
-Example patch:
+- Replace an exact known string in one file — use `Edit`
+- Replace an entire file with new contents — use `Write`
+- Inspect file contents before editing — use `Read`
+- Search for files or symbols to change — use `Glob` or `Grep`
 
-```
-*** Begin Patch
-*** Add File: hello.txt
-+Hello world
-*** Update File: src/app.py
-*** Move to: src/main.py
-@@ def greet():
--print("Hi")
-+print("Hello, world!")
-*** Delete File: obsolete.txt
-*** End Patch
-```
+## Examples
 
-It is important to remember:
+- "Add `hello.txt` with one line" → use `*** Add File:` and prefix each content line with `+`
+- "Rename `src/app.py` to `src/main.py` while editing it" → use `*** Update File:` with `*** Move to:`
+- "Delete `obsolete.txt`" → use `*** Delete File:` with no body
+- "Patch several files at once" → include multiple file sections inside one patch envelope
 
-- You must include a header with your intended action (Add/Delete/Update)
-- You must prefix new lines with `+` even when creating a new file
+## Constraints
+
+- Wrap every patch in `*** Begin Patch` and `*** End Patch`.
+- Start each file section with exactly one header: `*** Add File:`, `*** Update File:`, or `*** Delete File:`.
+- Prefix every added line in `*** Add File:` sections with `+`.
+- Include at least one file hunk in the patch.
+- Use `*** Move to:` only inside an `*** Update File:` section.

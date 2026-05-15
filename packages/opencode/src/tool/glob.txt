@@ -1,6 +1,29 @@
-- Fast file pattern matching tool that works with any codebase size
-- Supports glob patterns like "**/*.js" or "src/**/*.ts"
-- Returns matching file paths sorted by modification time
-- Use this tool when you need to find files by name patterns
-- When you are doing an open-ended search that may require multiple rounds of globbing and grepping, use the Task tool instead
-- You have the capability to call multiple tools in a single response. It is always better to speculatively perform multiple searches as a batch that are potentially useful.
+Match file paths by glob pattern and return absolute paths sorted by modification time.
+
+## When to use
+
+- Find files by name, extension, or directory pattern
+- Narrow a search to likely files before using `Read` or `Grep`
+- Resolve uncertain paths such as `src/**/*.ts` or `**/*.test.ts`
+- Search from a specific directory with the optional `path` parameter
+- Run multiple filename searches in parallel when several patterns may help
+
+## When NOT to use
+
+- Search inside file contents — use `Grep`
+- Read contents of a known file — use `Read`
+- Explore code by meaning instead of filename — use `SemanticSearch`
+- Delegate broad multi-step repository exploration — use `Task`
+
+## Examples
+
+- "Find all TypeScript test files" → pattern `**/*.test.ts`
+- "List Markdown files under docs" → pattern `docs/**/*.md`
+- "Search only in `packages/opencode`" → set `path` to that directory
+- "Match absolute config paths under home directory" → use an absolute glob pattern
+
+## Constraints
+
+- Provide a glob pattern, not a regex.
+- Pass `path` only when it points to a directory.
+- Omit `path` instead of passing `undefined` or `null`.
