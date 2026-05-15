@@ -4,7 +4,32 @@ import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
 
 group = "ai.kilocode.jetbrains"
-version = "7.0.1"
+
+fun checked(value: String): String {
+    if (value == "0.0.0-dev") return value
+    require(Regex("^[0-9]+\\.[0-9]+\\.[0-9]+(-rc\\.[0-9]+)?$").matches(value)) {
+        "Invalid JetBrains plugin version: $value"
+    }
+    return value
+}
+
+fun gitTag(): String? {
+    val text = providers.exec {
+        commandLine("git", "tag", "--points-at", "HEAD")
+    }.standardOutput.asText.get()
+    return text.lineSequence().map { it.trim() }.firstOrNull { it.startsWith("jetbrains/v") }
+}
+
+val release = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false).get()
+val ver = if (release) checked(
+    gitTag()?.removePrefix("jetbrains/v")
+        ?: error("Missing JetBrains plugin version. Publish builds must run from a jetbrains/v<version> tag."),
+) else checked(gitTag()?.removePrefix("jetbrains/v") ?: "0.0.0-dev")
+
+val notes = providers.gradleProperty("kilo.changeNotes").orElse("Release candidate build.")
+val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
+
+version = ver
 
 plugins {
     application
@@ -59,9 +84,39 @@ intellijPlatform {
     splitMode = true
     splitModeTarget = SplitModeTarget.BOTH
 
+    pluginConfiguration {
+        id = "ai.kilocode.jetbrains"
+        name = "Kilo Code"
+        version = provider { ver }
+        changeNotes = notes
+
+        ideaVersion {
+            untilBuild = provider { null }
+        }
+
+        vendor {
+            name = "Kilo Code"
+            url = "https://kilo.ai"
+        }
+    }
+
+    publishing {
+        token = providers.environmentVariable("JETBRAINS_MARKETPLACE_TOKEN")
+        channels = channel.map { value ->
+            if (value.isBlank() || value == "default") return@map listOf("default")
+            listOf(value)
+        }
+    }
+
+    signing {
+        certificateChain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
+        password = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD")
+    }
+
     pluginVerification {
         ides {
-            create(IntelliJPlatformType.IntellijIdeaCommunity, libs.versions.intellij.platform)
+            create(IntelliJPlatformType.IntellijIdea, libs.versions.intellij.platform)
         }
     }
 }

@@ -117,7 +117,7 @@ class PromptPanel(
                 ?: return@addActionListener
             val ctx = DataManager.getInstance().getDataContext(button)
             val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
-            action.update(event)
+            ActionUtil.updateAction(action, event)
             ActionUtil.performAction(action, event)
         }
     }

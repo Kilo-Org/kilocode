@@ -200,8 +200,8 @@ object KiloCliDataParser {
                     val file = d.str("file") ?: return@mapNotNull null
                     DiffFileDto(
                         file = file,
-                        additions = d.long("additions")?.toInt() ?: 0,
-                        deletions = d.long("deletions")?.toInt() ?: 0,
+                        additions = d.long("additions")?.safeInt() ?: 0,
+                        deletions = d.long("deletions")?.safeInt() ?: 0,
                         patch = d.str("patch"),
                     )
                 } ?: emptyList()
@@ -537,9 +537,9 @@ object KiloCliDataParser {
             ),
             summary = summary?.let {
                 SessionSummaryDto(
-                    additions = it.long("additions")?.toInt() ?: 0,
-                    deletions = it.long("deletions")?.toInt() ?: 0,
-                    files = it.long("files")?.toInt() ?: 0,
+                    additions = it.long("additions")?.safeInt() ?: 0,
+                    deletions = it.long("deletions")?.safeInt() ?: 0,
+                    files = it.long("files")?.safeInt() ?: 0,
                 )
             },
         )
@@ -564,7 +564,7 @@ object KiloCliDataParser {
         return SessionStatusDto(
             type = type,
             message = st.str("message"),
-            attempt = st.long("attempt")?.toInt(),
+            attempt = st.long("attempt")?.safeInt(),
             next = st.long("next"),
             requestID = st.str("requestID"),
         )
@@ -678,6 +678,8 @@ private fun JsonObject.num(key: String): Double? =
 
 private fun JsonObject.long(key: String): Long? =
     this[key]?.jsonPrimitive?.longOrNull
+
+private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
 private fun JsonObject?.map(key: String): Map<String, String> {
     val obj = this?.get(key)?.jsonObject ?: return emptyMap()

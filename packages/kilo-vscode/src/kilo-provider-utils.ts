@@ -222,6 +222,7 @@ export interface SessionRefreshContext {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   listSessions: ((dir: string) => Promise<Session[]>) | null
   sessionDirectories: Map<string, string>
+  worktreeDirectories?: () => string[]
   workspaceDirectory: string
   postMessage(message: unknown): void
 }
@@ -245,7 +246,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
 
   const sessions = await list(ctx.workspaceDirectory)
   const projectID = sessions[0]?.projectID
-  const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const worktreeDirs = new Set([...(ctx.worktreeDirectories?.() ?? []), ...ctx.sessionDirectories.values()])
   const failed = new Set<string>()
   const extra = await Promise.all(
     [...worktreeDirs].map((dir) =>
@@ -339,6 +340,7 @@ export function resolveNewSessionDirectory(input: {
   currentSessionID?: string
   contextSessionID?: string
   agentManagerContext?: string
+  contextDirectory?: string
   sessionDirectories: Map<string, string>
   workspaceDirectory: string
 }) {
@@ -349,6 +351,8 @@ export function resolveNewSessionDirectory(input: {
       workspaceDirectory: input.workspaceDirectory,
     })
   }
+
+  if (input.contextDirectory) return input.contextDirectory
 
   return resolveContextDirectory({
     currentSessionID: input.currentSessionID,

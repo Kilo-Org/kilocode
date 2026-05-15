@@ -837,6 +837,21 @@ class KiloCliDataParserTest {
     }
 
     @Test
+    fun `parseChatEvent - session status clamps large attempt`() {
+        val data = globalEvent("""
+            "type": "session.status",
+            "properties": {
+                "sessionID": "ses_1",
+                "status": {"type": "retry", "message": "Retrying...", "attempt": 2147483648, "next": 9223372036854775807}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.status", data) as ChatEventDto.SessionStatusChanged
+        assertEquals(Int.MAX_VALUE, result.status.attempt)
+        assertEquals(Long.MAX_VALUE, result.status.next)
+    }
+
+    @Test
     fun `parseChatEvent - session status offline with requestID`() {
         val data = globalEvent("""
             "type": "session.status",
@@ -968,6 +983,21 @@ class KiloCliDataParserTest {
         assertEquals(1, result.diff.size)
         assertEquals("src/A.kt", result.diff[0].file)
         assertEquals(3, result.diff[0].additions)
+    }
+
+    @Test
+    fun `parseChatEvent - session diff clamps large counts`() {
+        val data = globalEvent("""
+            "type": "session.diff",
+            "properties": {
+                "sessionID": "ses_1",
+                "diff": [{"file": "src/A.kt", "additions": 2147483648, "deletions": 9223372036854775807, "patch": "@@ ..."}]
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.diff", data) as ChatEventDto.SessionDiffChanged
+        assertEquals(Int.MAX_VALUE, result.diff[0].additions)
+        assertEquals(Int.MAX_VALUE, result.diff[0].deletions)
     }
 
     // ================================================================

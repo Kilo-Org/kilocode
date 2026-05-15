@@ -2049,6 +2049,10 @@ export type Config = {
      */
     auto?: boolean
     /**
+     * Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.
+     */
+    threshold_percent?: number | null
+    /**
      * Enable pruning of old tool outputs (default: true)
      */
     prune?: boolean
@@ -7242,6 +7246,46 @@ export type KiloFimResponses = {
 }
 
 export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
+
+export type KiloAudioTranscriptionsData = {
+  body?: {
+    model: string
+    input_audio: {
+      data: string
+      format: string
+    }
+    language?: string
+    prompt?: string
+    temperature?: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/audio/transcriptions"
+}
+
+export type KiloAudioTranscriptionsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloAudioTranscriptionsError = KiloAudioTranscriptionsErrors[keyof KiloAudioTranscriptionsErrors]
+
+export type KiloAudioTranscriptionsResponses = {
+  /**
+   * Transcription response
+   */
+  200: {
+    text: string
+    usage?: unknown
+  }
+}
+
+export type KiloAudioTranscriptionsResponse = KiloAudioTranscriptionsResponses[keyof KiloAudioTranscriptionsResponses]
 
 export type KiloNotificationsData = {
   body?: never

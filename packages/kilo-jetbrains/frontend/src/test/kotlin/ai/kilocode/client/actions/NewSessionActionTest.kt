@@ -5,6 +5,7 @@ import ai.kilocode.client.session.SessionRef
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 @Suppress("UnstableApiUsage")
@@ -14,7 +15,7 @@ class NewSessionActionTest : BasePlatformTestCase() {
         val action = NewSessionAction()
         val event = event(manager)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
         action.actionPerformed(event)
 
         assertEquals(1, manager.created)
@@ -28,7 +29,7 @@ class NewSessionActionTest : BasePlatformTestCase() {
         val action = NewSessionAction()
         val presentation = Presentation().apply { copyFrom(action.templatePresentation) }
 
-        action.update(AnActionEvent.createFromDataContext("", presentation) { null })
+        ActionUtil.updateAction(action, AnActionEvent.createFromDataContext("", presentation) { null })
 
         assertFalse(presentation.isEnabled)
     }

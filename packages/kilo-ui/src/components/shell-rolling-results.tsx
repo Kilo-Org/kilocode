@@ -3,6 +3,8 @@ import stripAnsi from "strip-ansi"
 import type { ToolPart } from "@kilocode/sdk/v2"
 import { useReducedMotion } from "../hooks/use-reduced-motion"
 import { useI18n } from "../context/i18n"
+import { deferredHighlight } from "../context/marked"
+import { escapeHtml } from "../util/escape-html"
 import { RollingResults } from "./rolling-results"
 import { Icon } from "./icon"
 import { IconButton } from "./icon-button"
@@ -11,6 +13,7 @@ import { Tooltip } from "./tooltip"
 import { GROW_SPRING } from "./motion"
 import { useSpring } from "./motion-spring"
 import { busy, createThrottledValue, updateScrollMask, useCollapsible, useRowWipe, useToolFade } from "./tool-utils"
+import { readToolOpen, toolOpenKey, writeToolOpen } from "./tool-open-state"
 
 function ShellRollingSubtitle(props: { text: string; animate?: boolean }) {
   let ref: HTMLSpanElement | undefined
@@ -55,6 +58,28 @@ function ShellRollingCommand(props: { text: string; animate?: boolean }) {
       </span>
     </div>
   )
+}
+
+function ShellOutputHighlight(props: { code: string; active?: boolean }) {
+  const state = { signal: { aborted: false } }
+  let ref: HTMLDivElement | undefined
+
+  createEffect(() => {
+    state.signal.aborted = true
+    if (!props.active) return
+    const code = props.code
+    if (!ref || !code) return
+    const signal = { aborted: false }
+    state.signal = signal
+    ref.innerHTML = `<pre data-slot="shell-expanded-pre"><code data-lang="log">${escapeHtml(code)}</code></pre>`
+    void deferredHighlight(ref, undefined, signal)
+  })
+
+  onCleanup(() => {
+    state.signal.aborted = true
+  })
+
+  return <div ref={ref} />
 }
 
 function ShellExpanded(props: { cmd: string; out: string; open: boolean }) {
@@ -156,9 +181,7 @@ function ShellExpanded(props: { cmd: string; out: string; open: boolean }) {
                 onScroll={updateMask}
                 style={{ "max-height": `${cap()}px` }}
               >
-                <pre data-slot="shell-expanded-pre">
-                  <code>{props.out}</code>
-                </pre>
+                <ShellOutputHighlight code={props.out} active={props.open} />
               </div>
             </>
           </Show>
@@ -173,7 +196,8 @@ export function ShellRollingResults(props: { part: ToolPart; animate?: boolean; 
   const reduce = useReducedMotion()
   const wiped = new Set<string>()
   const [mounted, setMounted] = createSignal(false)
-  const [open, setOpen] = createSignal(props.defaultOpen ?? true)
+  const key = () => toolOpenKey({ tool: props.part.tool, callID: props.part.callID, partID: props.part.id })
+  const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
   onMount(() => setMounted(true))
   const state = createMemo(() => props.part.state as Record<string, any>)
   const pending = createMemo(() => busy(props.part.state.status))
@@ -205,7 +229,9 @@ export function ShellRollingResults(props: { part: ToolPart; animate?: boolean; 
     const el = headerClipRef
     const viewport = el?.closest(".scroll-view__viewport") as HTMLElement | null
     const beforeY = el?.getBoundingClientRect().top ?? 0
-    setOpen((prev) => !prev)
+    const next = !open()
+    setOpen(next)
+    writeToolOpen(key(), next)
     if (viewport && el) {
       requestAnimationFrame(() => {
         const afterY = el.getBoundingClientRect().top

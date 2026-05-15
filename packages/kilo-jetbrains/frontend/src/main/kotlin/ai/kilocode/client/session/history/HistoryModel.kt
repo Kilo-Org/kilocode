@@ -48,6 +48,12 @@ open class HistoryModel<T : HistoryItem> : AbstractListModel<T>() {
         filter()
     }
 
+    fun update(item: T) {
+        if (all.none { it.id == item.id }) return
+        all = HistoryTime.sorted(all.map { if (it.id == item.id) item else it })
+        filter()
+    }
+
     fun fail(message: String) {
         loading = false
         loaded = true
@@ -59,8 +65,6 @@ open class HistoryModel<T : HistoryItem> : AbstractListModel<T>() {
         query = value.trim().lowercase()
         filter()
     }
-
-    fun hasFilter(): Boolean = query.isNotEmpty()
 
     fun refresh() {
         val end = size.coerceAtLeast(1) - 1

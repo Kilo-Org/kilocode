@@ -35,8 +35,8 @@ internal object HistoryTime {
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
         if (date == today) return HistorySection.TODAY
         if (date == today.minusDays(1)) return HistorySection.YESTERDAY
-        if (date.isAfter(today.minusDays(7)) && date.isBefore(today)) return HistorySection.WEEK
-        if (date.isAfter(today.minusDays(30)) && date.isBefore(today)) return HistorySection.MONTH
+        if (!date.isBefore(today.minusDays(7)) && date.isBefore(today)) return HistorySection.WEEK
+        if (!date.isBefore(today.minusDays(30)) && date.isBefore(today)) return HistorySection.MONTH
         return HistorySection.OLDER
     }
 

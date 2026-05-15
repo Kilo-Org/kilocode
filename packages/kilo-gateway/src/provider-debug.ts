@@ -5,6 +5,7 @@ import { getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
+import { buildRequestHeaders } from "./provider.js"
 
 /**
  * Debug version of createKilo with extensive logging
@@ -40,12 +41,7 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
     console.log("  - URL:", String(input))
     console.log("  - Method:", init?.method || "GET")
 
-    const headers = new Headers(init?.headers)
-
-    // Add custom headers
-    Object.entries(customHeaders).forEach(([key, value]) => {
-      headers.set(key, value)
-    })
+    const headers = buildRequestHeaders(customHeaders, init?.headers)
 
     // Add authorization if API key exists
     if (apiKey) {

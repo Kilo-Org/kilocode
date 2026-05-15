@@ -1,0 +1,167 @@
+# kilocode_change - new file
+name: publish-jetbrains
+
+on:
+  push:
+    tags:
+      - "jetbrains/*"
+
+concurrency:
+  group: publish-jetbrains-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  publish:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf zip
+
+      - name: Validate version tag
+        id: version
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if [[ "$tag" != jetbrains/v* ]]; then
+            echo "Unsupported tag '$tag'. Expected jetbrains/v<version>." >&2
+            exit 1
+          fi
+
+          version="${tag#jetbrains/v}"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            {
+              echo "version=$version"
+              echo "kind=rc"
+              echo "marketplace_channel=eap"
+              echo "cli_channel=rc"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            {
+              echo "version=$version"
+              echo "kind=stable"
+              echo "marketplace_channel=default"
+              echo "cli_channel=latest"
+            } >> "$GITHUB_OUTPUT"
+            echo "Stable JetBrains Marketplace publishing is implemented but intentionally disabled; use an rc tag such as jetbrains/v7.0.1-rc.1." >&2
+            exit 1
+          fi
+
+          echo "Unsupported JetBrains plugin version '$version'. Expected jetbrains/vx.y.z-rc.n or jetbrains/vx.y.z." >&2
+          exit 1
+
+      - name: Validate publishing secrets
+        run: |
+          missing=0
+          for name in JETBRAINS_MARKETPLACE_TOKEN JETBRAINS_CERTIFICATE_CHAIN JETBRAINS_PRIVATE_KEY JETBRAINS_PRIVATE_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required secret: $name" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+        env:
+          JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Prepare CLI resources
+        working-directory: packages/kilo-jetbrains
+        run: bun script/build.ts --production --prepare-cli
+        env:
+          KILO_VERSION: ${{ steps.version.outputs.version }}
+          KILO_CHANNEL: ${{ steps.version.outputs.cli_channel }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+
+      - name: Verify plugin
+        working-directory: packages/kilo-jetbrains
+        run: ./gradlew verifyPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        env:
+          CHANNEL: ${{ steps.version.outputs.marketplace_channel }}
+
+      - name: Publish to JetBrains Marketplace
+        working-directory: packages/kilo-jetbrains
+        run: ./gradlew publishPlugin -Pproduction=true -Pkilo.channel="$CHANNEL"
+        env:
+          CHANNEL: ${{ steps.version.outputs.marketplace_channel }}
+          JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Resolve plugin archive
+        id: archive
+        run: |
+          mapfile -t signed < <(compgen -G "packages/kilo-jetbrains/build/distributions/*-signed.zip")
+          if [[ "${#signed[@]}" -eq 1 ]]; then
+            echo "path=${signed[0]}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "${#signed[@]}" -gt 1 ]]; then
+            echo "Expected exactly one signed JetBrains plugin ZIP, found ${#signed[@]}." >&2
+            printf '%s\n' "${signed[@]}" >&2
+            exit 1
+          fi
+
+          mapfile -t files < <(compgen -G "packages/kilo-jetbrains/build/distributions/*.zip")
+          if [[ "${#files[@]}" -ne 1 ]]; then
+            echo "Expected exactly one JetBrains plugin ZIP, found ${#files[@]}." >&2
+            printf '%s\n' "${files[@]}" >&2
+            exit 1
+          fi
+          echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload to GitHub Release
+        run: |
+          tag="$GITHUB_REF_NAME"
+          title="JetBrains $VERSION"
+          notes="JetBrains plugin $VERSION."
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$ARCHIVE" --clobber --repo "$GITHUB_REPOSITORY"
+            exit 0
+          fi
+          gh release create "$tag" "$ARCHIVE" --title "$title" --notes "$notes" --prerelease --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+
+      - name: Upload workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilo-jetbrains-${{ steps.version.outputs.version }}
+          path: packages/kilo-jetbrains/build/distributions/*.zip
+          if-no-files-found: ignore

@@ -12,6 +12,18 @@ export const LOCAL = "local" as const
 
 type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
 
+type SessionLike = { id: string; parentID?: string | null; createdAt: string }
+
+export function filterUnassignedSessions<T extends SessionLike>(
+  sessions: T[],
+  worktree: Set<string>,
+  local: Set<string>,
+): T[] {
+  return [...sessions]
+    .filter((s) => (s.parentID === undefined || s.parentID === null) && !worktree.has(s.id) && !local.has(s.id))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index
   if (!current) {
