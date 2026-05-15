@@ -9,10 +9,11 @@ KiloClaw uses Kilo Gateway credits by default — if you route requests through 
 
 ## Instance Hosting
 
-KiloClaw hosting is **free during the beta period**. Each user gets a dedicated machine (2 shared vCPUs, 3 GB RAM, 10 GB SSD) at no cost.
+KiloClaw hosting is available at **$9 per month** for our standard plan. Each user gets a dedicated machine (2 shared vCPUs, 3 GB RAM, 10 GB SSD).
 
-> ℹ️ **Info**
-> Beta pricing is subject to change. Paid hosting tiers may be introduced after the beta period ends. Any changes will be announced in advance.
+### Commit Plan
+
+Save on hosting with our commit plan: **$8 per month** when you pay upfront for 6 months ($48 total).
 
 ## Model Inference
 
