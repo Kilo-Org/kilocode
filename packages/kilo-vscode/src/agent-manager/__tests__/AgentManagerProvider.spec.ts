@@ -101,6 +101,7 @@ function createHarness() {
     prBridge: { handleMessage: ReturnType<typeof vi.fn> }
     activeSessionId: string | undefined
     stateReady: Promise<void> | undefined
+    contextTarget: ReturnType<typeof vi.fn>
     createWorktreeOnDisk: ReturnType<typeof vi.fn>
     runSetupScriptForWorktree: ReturnType<typeof vi.fn>
     createSessionInWorktree: ReturnType<typeof vi.fn>
@@ -121,6 +122,7 @@ function createHarness() {
   manager.prBridge = { handleMessage: vi.fn().mockReturnValue(false) }
   manager.activeSessionId = undefined
   manager.stateReady = Promise.resolve()
+  manager.contextTarget = vi.fn()
   manager.createWorktreeOnDisk = vi.fn()
   manager.runSetupScriptForWorktree = vi.fn().mockResolvedValue(undefined)
   manager.createSessionInWorktree = vi.fn()
@@ -201,5 +203,29 @@ describe("AgentManagerProvider worktree creation", () => {
     const result = await manager.onMessage({ type: "requestFileSearch", query: "src", requestId: "r1" })
 
     expect(result).toEqual({ type: "requestFileSearch", query: "src", requestId: "r1", sessionID: "session-wt" })
+  })
+
+  it("resolves new sends to the selected worktree directory", async () => {
+    const manager = createHarness()
+    const state = {
+      getWorktree: vi.fn().mockReturnValue({ id: "wt-1", path: "/repo/.kilo/worktrees/wt-1" }),
+    }
+    manager.getStateManager.mockReturnValue(state)
+    manager.contextTarget.mockResolvedValue(undefined)
+
+    const result = await manager.onMessage({
+      type: "sendMessage",
+      text: "continue",
+      agentManagerContext: "wt-1",
+      draftID: "draft-1",
+    })
+
+    expect(result).toEqual({
+      type: "sendMessage",
+      text: "continue",
+      agentManagerContext: "wt-1",
+      draftID: "draft-1",
+      contextDirectory: "/repo/.kilo/worktrees/wt-1",
+    })
   })
 })

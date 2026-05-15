@@ -41,7 +41,7 @@ console.log("\n📦 Rebuilding SDK...")
 await $`bun run --cwd ../sdk/js build`.cwd(root)
 
 console.log("\n🔧 Preparing CLI binary...")
-await $`bun script/local-bin.ts`.cwd(root)
+await $`bun script/local-bin.ts --force`.cwd(root)
 
 console.log("\n✅ Type-checking...")
 await $`bun run typecheck`.cwd(root)

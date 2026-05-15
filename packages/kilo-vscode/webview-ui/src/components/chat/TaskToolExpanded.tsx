@@ -116,7 +116,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
 
   return (
     <div data-component="tool-part-wrapper">
-      <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
+      <BasicTool
+        icon="task"
+        status={props.status}
+        tool={props.tool}
+        partID={props.partID}
+        callID={props.callID}
+        trigger={trigger()}
+        defaultOpen
+      >
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
             <Show when={running() && childToolParts().length === 0}>

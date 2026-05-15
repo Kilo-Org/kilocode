@@ -3,8 +3,9 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
-import ai.kilocode.client.session.ui.SessionStyle
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import javax.swing.ScrollPaneConstants
 
@@ -44,14 +45,14 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test title shown instead of name when title is set`() {
-        val t = Tool("p1", "bash").also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
+        val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.RUNNING; it.title = "Install deps" }
         val view = ToolView(t)
         assertTrue(view.labelText().contains("Install deps"))
         assertTrue(view.labelText().contains("Shell"))
     }
 
     fun `test blank title falls back to tool name`() {
-        val t = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED; it.title = "   " }
+        val t = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "   " }
         val view = ToolView(t)
         assertTrue(view.labelText().contains("Shell"))
     }
@@ -207,7 +208,7 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test bash output uses editor font settings`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
 
         assertEditorFont(view.bodyFont(), style)
@@ -218,7 +219,7 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test tool header uses editor-derived fonts`() {
-        val style = SessionStyle.current()
+        val style = SessionEditorStyle.current()
         val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
 
         assertEditorFont(view.titleFont(), style)
@@ -229,7 +230,7 @@ class ToolViewTest : BasePlatformTestCase() {
 
     fun `test applyStyle updates tool fonts in place`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.COMPLETED))
-        val style = SessionStyle.create(family = "Courier New", size = 25)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 25)
 
         view.applyStyle(style)
 
@@ -265,7 +266,7 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test large tool output is truncated in preview`() {
-        val out = "x".repeat(UiStyle.Size.toolBodyLimit() + 1_000)
+        val out = "x".repeat(SessionUiStyle.View.Tool.PREVIEW_LIMIT + 1_000)
         val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
             it.input = mapOf("command" to "log")
             it.output = out
@@ -280,7 +281,7 @@ class ToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test large generic tool output is truncated in preview`() {
-        val out = "x".repeat(UiStyle.Size.toolBodyLimit() + 1_000)
+        val out = "x".repeat(SessionUiStyle.View.Tool.PREVIEW_LIMIT + 1_000)
         val t = tool("p1", "glob", ToolExecState.COMPLETED).also {
             it.output = out
         }
@@ -297,14 +298,14 @@ class ToolViewTest : BasePlatformTestCase() {
 
     fun `test update changes state icon`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING))
-        val updated = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED }
+        val updated = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED }
         view.update(updated)
         assertFalse(view.labelText().contains("Running"))
     }
 
     fun `test update changes title`() {
         val view = ToolView(tool("p1", "bash", ToolExecState.RUNNING, title = "old"))
-        val updated = Tool("p1", "bash").also { it.state = ToolExecState.COMPLETED; it.title = "new title" }
+        val updated = Tool("p1", "bash", toolKind("bash")).also { it.state = ToolExecState.COMPLETED; it.title = "new title" }
         view.update(updated)
         assertTrue(view.labelText().contains("new title"))
     }
@@ -319,21 +320,21 @@ class ToolViewTest : BasePlatformTestCase() {
     // ---- contentId ------
 
     fun `test contentId matches Tool id`() {
-        val view = ToolView(Tool("part99", "edit").also { it.state = ToolExecState.PENDING })
+        val view = ToolView(Tool("part99", "edit", toolKind("edit")).also { it.state = ToolExecState.PENDING })
         assertEquals("part99", view.contentId)
     }
 
     // ---- helpers ------
 
     private fun tool(id: String, name: String, state: ToolExecState, title: String? = null): Tool =
-        Tool(id, name).also { it.state = state; it.title = title }
+        Tool(id, name, toolKind(name)).also { it.state = state; it.title = title }
 
-    private fun assertEditorFont(font: java.awt.Font, style: SessionStyle) {
+    private fun assertEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.editorFamily, font.name)
         assertEquals(style.editorSize, font.size)
     }
 
-    private fun assertSmallEditorFont(font: java.awt.Font, style: SessionStyle) {
+    private fun assertSmallEditorFont(font: java.awt.Font, style: SessionEditorStyle) {
         assertEquals(style.editorFamily, font.name)
         assertTrue(font.size < style.editorSize)
     }

@@ -77,6 +77,27 @@ describe("WorktreeStateManager", () => {
       expect(s.worktreeId).toBeNull()
     })
 
+    it("drops obsolete session prefs while loading state", async () => {
+      const file = path.join(root, ".kilo", "agent-manager.json")
+      fs.writeFileSync(
+        file,
+        JSON.stringify({
+          worktrees: {},
+          sessions: {
+            "local-1": {
+              worktreeId: null,
+              createdAt: new Date().toISOString(),
+              prefs: { agent: "code" },
+            },
+          },
+        }),
+      )
+
+      await manager.load()
+
+      expect(manager.getSession("local-1")).not.toHaveProperty("prefs")
+    })
+
     it("filters sessions by worktreeId", () => {
       const wt1 = manager.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
       const wt2 = manager.addWorktree({ branch: "b", path: "/tmp/b", parentBranch: "main" })
@@ -401,6 +422,40 @@ describe("WorktreeStateManager", () => {
       const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
       const data = JSON.parse(content)
       expect(data.sessionsCollapsed).toBeUndefined()
+    })
+  })
+
+  describe("sidebarCollapsed", () => {
+    it("defaults to false", () => {
+      expect(manager.getSidebarCollapsed()).toBe(false)
+    })
+
+    it("sets and gets collapsed state", () => {
+      manager.setSidebarCollapsed(true)
+      expect(manager.getSidebarCollapsed()).toBe(true)
+
+      manager.setSidebarCollapsed(false)
+      expect(manager.getSidebarCollapsed()).toBe(false)
+    })
+
+    it("persists and loads collapsed state", async () => {
+      manager.setSidebarCollapsed(true)
+      await manager.flush()
+      await manager.save()
+
+      const loaded = new WorktreeStateManager(root, () => {})
+      await loaded.load()
+      expect(loaded.getSidebarCollapsed()).toBe(true)
+    })
+
+    it("does not persist when false", async () => {
+      manager.setSidebarCollapsed(false)
+      await manager.flush()
+      await manager.save()
+
+      const content = fs.readFileSync(path.join(root, ".kilo", "agent-manager.json"), "utf-8")
+      const data = JSON.parse(content)
+      expect(data.sidebarCollapsed).toBeUndefined()
     })
   })
 

@@ -6,7 +6,8 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionMeta
-import ai.kilocode.client.session.update.SessionController
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
@@ -53,7 +54,7 @@ class PermissionPanelTest : BasePlatformTestCase() {
         app = KiloAppService(scope, api)
         workspaces = KiloWorkspaceService(scope, work)
         workspace = workspaces.workspace("/test")
-        controller = SessionController(parent, "ses_test", sessions, workspace, app, scope, BorderLayoutPanel())
+        controller = SessionController(parent, SessionRef.Local("ses_test"), sessions, workspace, app, scope, BorderLayoutPanel())
         panel = PermissionPanel(controller)
     }
 

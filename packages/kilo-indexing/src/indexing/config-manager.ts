@@ -22,6 +22,9 @@ export interface IndexingConfigInput {
   searchMaxResults?: number
   embeddingBatchSize?: number
   scannerMaxBatchRetries?: number
+  kiloApiKey?: string
+  kiloBaseUrl?: string
+  kiloOrganizationId?: string
   openAiKey?: string
   ollamaBaseUrl?: string
   openAiCompatibleBaseUrl?: string
@@ -51,6 +54,7 @@ export class CodeIndexConfigManager {
   private lancedbVectorStoreDirectory?: string
   private modelId?: string
   private modelDimension?: number
+  private kiloOptions?: { apiKey: string; baseUrl?: string; organizationId?: string }
   private openAiOptions?: { apiKey: string }
   private ollamaOptions?: { baseUrl: string; modelId?: string }
   private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
@@ -102,6 +106,9 @@ export class CodeIndexConfigManager {
       this.modelDimension = undefined
     }
 
+    this.kiloOptions = input.kiloApiKey
+      ? { apiKey: input.kiloApiKey, baseUrl: input.kiloBaseUrl, organizationId: input.kiloOrganizationId }
+      : undefined
     this.openAiOptions = input.openAiKey ? { apiKey: input.openAiKey } : undefined
     const url = input.ollamaBaseUrl ?? (input.embedderProvider === "ollama" ? "http://localhost:11434" : undefined)
     this.ollamaOptions = url ? { baseUrl: url, modelId: input.modelId } : undefined
@@ -130,6 +137,9 @@ export class CodeIndexConfigManager {
       lancedbVectorStoreDirectory: this.lancedbVectorStoreDirectory,
       modelId: this.modelId,
       modelDimension: this.modelDimension,
+      kiloApiKey: this.kiloOptions?.apiKey ?? "",
+      kiloBaseUrl: this.kiloOptions?.baseUrl ?? "",
+      kiloOrganizationId: this.kiloOptions?.organizationId ?? "",
       openAiKey: this.openAiOptions?.apiKey ?? "",
       ollamaBaseUrl: this.ollamaOptions?.baseUrl ?? "",
       openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl ?? "",
@@ -154,6 +164,8 @@ export class CodeIndexConfigManager {
     // LanceDB doesn't need a qdrant URL; qdrant does
     const hasStore = isLancedb || !!qdrant
 
+    if (provider === "kilo")
+      return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
     if (provider === "openai") return !!(this.openAiOptions?.apiKey && hasStore)
     if (provider === "ollama") return !!(this.ollamaOptions?.baseUrl && hasStore)
     if (provider === "openai-compatible")
@@ -194,6 +206,9 @@ export class CodeIndexConfigManager {
       return true
 
     // Auth changes
+    if ((prev.kiloApiKey ?? "") !== (this.kiloOptions?.apiKey ?? "")) return true
+    if ((prev.kiloBaseUrl ?? "") !== (this.kiloOptions?.baseUrl ?? "")) return true
+    if ((prev.kiloOrganizationId ?? "") !== (this.kiloOptions?.organizationId ?? "")) return true
     if ((prev.openAiKey ?? "") !== (this.openAiOptions?.apiKey ?? "")) return true
     if ((prev.ollamaBaseUrl ?? "") !== (this.ollamaOptions?.baseUrl ?? "")) return true
     if (
@@ -247,6 +262,7 @@ export class CodeIndexConfigManager {
       lancedbVectorStoreDirectoryPlaceholder: this.lancedbVectorStoreDirectory,
       modelId: this.modelId,
       modelDimension: this.modelDimension,
+      kiloOptions: this.kiloOptions,
       openAiOptions: this.openAiOptions,
       ollamaOptions: this.ollamaOptions,
       openAiCompatibleOptions: this.openAiCompatibleOptions,

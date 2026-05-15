@@ -23,11 +23,13 @@ function createConnection() {
   const client = {
     global: {
       config: {
+        get: async () => ({ data: {} }),
         update: async () => ({ data: {} }),
       },
     },
     config: {
       get: async () => ({ data: {} }),
+      update: async () => ({ data: {} }),
     },
   }
 

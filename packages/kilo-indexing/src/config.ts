@@ -3,6 +3,7 @@ import type { IndexingConfigInput } from "./indexing/config-manager"
 import type { EmbedderProvider } from "./indexing/interfaces/manager"
 
 const providers = [
+  "kilo",
   "openai",
   "ollama",
   "openai-compatible",
@@ -26,6 +27,15 @@ export const IndexingConfig = z
       .optional()
       .describe("Override embedding vector dimension (auto-detected from model if omitted)"),
     vectorStore: z.enum(["lancedb", "qdrant"]).optional().describe("Vector store backend (default: qdrant)"),
+    kilo: z
+      .object({
+        apiKey: z.string().optional(),
+        baseUrl: z.string().optional(),
+        organizationId: z.string().optional(),
+      })
+      .strict()
+      .optional()
+      .describe("Kilo-hosted embedding provider options"),
     openai: z
       .object({ apiKey: z.string().optional() })
       .strict()
@@ -134,6 +144,9 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     searchMaxResults: cfg?.searchMaxResults,
     embeddingBatchSize: cfg?.embeddingBatchSize,
     scannerMaxBatchRetries: cfg?.scannerMaxBatchRetries,
+    kiloApiKey: cfg?.kilo?.apiKey,
+    kiloBaseUrl: cfg?.kilo?.baseUrl,
+    kiloOrganizationId: cfg?.kilo?.organizationId,
     openAiKey: cfg?.openai?.apiKey,
     ollamaBaseUrl: cfg?.ollama?.baseUrl,
     openAiCompatibleBaseUrl: cfg?.["openai-compatible"]?.baseUrl,

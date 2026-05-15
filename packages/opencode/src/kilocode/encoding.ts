@@ -117,6 +117,27 @@ function isUtf8(bytes: Buffer): boolean {
   }
 }
 
+// Windows-resilient mkdir -p.
+// fs.mkdir(dir, { recursive: true }) should be idempotent, but on Windows
+// with NTFS reparse points (OneDrive), directory junctions, or WSL-served
+// paths, libuv can still throw EEXIST. This wrapper catches that specific
+// error so callers get the promised 'directory exists' semantics.
+//
+//   https://github.com/Kilo-Org/kilocode/issues/9618
+//   https://github.com/Kilo-Org/kilocode/issues/9755
+function isEexist(err: unknown): boolean {
+  return typeof err === "object" && err !== null && "code" in err && (err as NodeJS.ErrnoException).code === "EEXIST"
+}
+
+async function mkdirSafe(dir: string): Promise<void> {
+  try {
+    await mkdir(dir, { recursive: true })
+  } catch (err: unknown) {
+    if (isEexist(err)) return
+    throw err
+  }
+}
+
 export function detect(bytes: Buffer): string {
   if (bytes.length === 0) return DEFAULT
   if (isUtf8(bytes)) return hasUtf8Bom(bytes) ? UTF8_BOM : DEFAULT
@@ -161,6 +182,6 @@ export function readSync(path: string): { text: string; encoding: string } {
 
 /** Write text, ensuring parent directory exists, using the given encoding. */
 export async function write(path: string, text: string, encoding: string = DEFAULT): Promise<void> {
-  await mkdir(dirname(path), { recursive: true })
+  await mkdirSafe(dirname(path))
   await writeFile(path, encode(text, encoding))
 }

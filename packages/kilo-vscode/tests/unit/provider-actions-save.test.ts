@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test"
-import { disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import { connectProvider, disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
 function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged: ExistingGlobal = existing) {
   const calls = {
-    set: [] as Array<{ providerID: string; auth: { type: string; key: string } }>,
+    set: [] as Array<{ providerID: string; auth: { type: string; key: string; metadata?: Record<string, string> } }>,
     remove: [] as Array<{ providerID: string }>,
     posts: [] as unknown[],
     config: [] as Array<{ config: Record<string, unknown> }>,
@@ -18,7 +18,10 @@ function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged
   const ctx = {
     client: {
       auth: {
-        set: async (input: { providerID: string; auth: { type: string; key: string } }) => {
+        set: async (input: {
+          providerID: string
+          auth: { type: string; key: string; metadata?: Record<string, string> }
+        }) => {
           calls.set.push(input)
           return { data: true }
         },
@@ -114,6 +117,54 @@ describe("disconnectProvider", () => {
     expect(calls.remove).toEqual([{ providerID: "openai" }])
     expect(calls.config).toEqual([{ config: { disabled_providers: ["groq"] } }])
     expect(calls.refresh).toBe(1)
+  })
+})
+
+describe("connectProvider", () => {
+  it("stores api auth metadata from provider prompts", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "azure", "sk-test", {
+      resourceName: " my-resource ",
+      empty: "   ",
+    })
+
+    expect(calls.set).toEqual([
+      {
+        providerID: "azure",
+        auth: {
+          type: "api",
+          key: "sk-test",
+          metadata: { resourceName: "my-resource" },
+        },
+      },
+    ])
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toContainEqual({ type: "providerConnected", requestId: "req", providerID: "azure" })
+  })
+
+  it("stores azure endpoint URL metadata from provider prompts", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "azure", "sk-test", {
+      endpointType: "baseURL",
+      baseURL: " https://my-resource.openai.azure.com/openai ",
+      resourceName: "   ",
+    })
+
+    expect(calls.set).toEqual([
+      {
+        providerID: "azure",
+        auth: {
+          type: "api",
+          key: "sk-test",
+          metadata: {
+            endpointType: "baseURL",
+            baseURL: "https://my-resource.openai.azure.com/openai",
+          },
+        },
+      },
+    ])
   })
 })
 

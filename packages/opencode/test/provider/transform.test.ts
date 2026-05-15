@@ -3611,3 +3611,92 @@ describe("ProviderTransform.variants", () => {
   })
 })
 // kilocode_change end
+
+// kilocode_change start - tests for reasoningSummary guard
+describe("ProviderTransform.options - OpenAI Responses API params guard", () => {
+  const sessionID = "test-session"
+
+  const gpt5Model = (npm: string, providerID: string, apiId = "gpt-5.4"): any => ({
+    id: `${providerID}/${apiId}`,
+    providerID,
+    api: { id: apiId, npm, url: "" },
+    name: apiId,
+    capabilities: {
+      temperature: true,
+      reasoning: true,
+      attachment: true,
+      toolcall: true,
+      input: { text: true, audio: false, image: false, video: false, pdf: false },
+      output: { text: true, audio: false, image: false, video: false, pdf: false },
+      interleaved: false,
+    },
+    cost: { input: 0, output: 0 },
+    limit: { context: 200000, output: 32000 },
+    options: {},
+    headers: {},
+  })
+
+  test("includes reasoningSummary and textVerbosity for @ai-sdk/openai", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@ai-sdk/openai", "openai"),
+      sessionID,
+    })
+    expect(result.reasoningSummary).toBe("auto")
+    expect(result.reasoningEffort).toBe("medium")
+    expect(result.textVerbosity).toBe("low")
+  })
+
+  test("includes reasoningSummary for @ai-sdk/azure", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@ai-sdk/azure", "azure"),
+      sessionID,
+    })
+    expect(result.reasoningSummary).toBe("auto")
+  })
+
+  test("excludes reasoningSummary and textVerbosity for @ai-sdk/openai-compatible", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@ai-sdk/openai-compatible", "my-proxy"),
+      sessionID,
+    })
+    expect(result.reasoningSummary).toBeUndefined()
+    expect(result.textVerbosity).toBeUndefined()
+    expect(result.reasoningEffort).toBe("medium")
+  })
+
+  test("excludes reasoningSummary for unknown SDK packages", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@ai-sdk/xai", "xai"),
+      sessionID,
+    })
+    expect(result.reasoningSummary).toBeUndefined()
+    expect(result.reasoningEffort).toBe("medium")
+  })
+
+  test("includes reasoningSummary for @openrouter/ai-sdk-provider", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@openrouter/ai-sdk-provider", "openrouter"),
+      sessionID,
+    })
+    expect(result.reasoningSummary).toBe("auto")
+  })
+
+  test("includes reasoningSummary for @kilocode/kilo-gateway", () => {
+    const result = ProviderTransform.options({
+      model: gpt5Model("@kilocode/kilo-gateway", "kilo"),
+      sessionID,
+    })
+    expect(result.reasoningSummary).toBe("auto")
+  })
+
+  test("reasoningEffort remains universal across all providers", () => {
+    for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/xai", "@ai-sdk/deepinfra"]) {
+      const result = ProviderTransform.options({
+        model: gpt5Model(npm, "test"),
+        sessionID,
+      })
+      expect(result.reasoningEffort).toBe("medium")
+    }
+  })
+})
+// kilocode_change end

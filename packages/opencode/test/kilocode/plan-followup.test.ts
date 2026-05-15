@@ -181,7 +181,7 @@ async function latestUser(sessionID: SessionID) {
 }
 
 async function sessions() {
-  return Array.fromAsync(Session.list())
+  return AppRuntime.runPromise(Session.Service.use((svc) => svc.list()))
 }
 
 async function waitQuestion(sessionID: string) {
@@ -291,6 +291,34 @@ describe("plan follow-up", () => {
         PlanFollowup.ANSWER_NEW_SESSION,
         PlanFollowup.ANSWER_CONTINUE,
       ])
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+    }))
+
+  test("ask - Continue here option carries mode: code so VS Code picker updates immediately", () =>
+    withInstance(async () => {
+      const seeded = await seed({ text: "1. Build" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      const continueOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
+      expect(continueOpt?.mode).toBe("code")
+
+      // Start new session should not carry a mode (it opens a new session — the
+      // current picker is irrelevant once the session switches).
+      const newOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
+      expect(newOpt?.mode).toBeUndefined()
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
@@ -604,7 +632,7 @@ describe("plan follow-up", () => {
       if (!newSessionID || !next) throw new Error("expected follow-up session")
       expect(next.id).toBe(newSessionID)
       expect(next.parentID).toBeUndefined()
-      const planPath = Session.plan(await Session.get(seeded.sessionID))
+      const planPath = Session.plan(await Session.get(seeded.sessionID), Instance.current)
       const messages = await Session.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       expect(user?.info.role).toBe("user")
@@ -714,7 +742,7 @@ describe("plan follow-up", () => {
       if (next) {
         const planPath = await Instance.provide({
           directory: dir,
-          fn: async () => Session.plan(await Session.get(seeded.sessionID)),
+          fn: async () => Session.plan(await Session.get(seeded.sessionID), Instance.current),
         })
         const messages = await Session.messages({ sessionID: next.id })
         const user = messages.find((item) => item.info.role === "user")

@@ -136,29 +136,18 @@ There are also optional overrides for other services:
 
 If you open an issue through the GitHub web UI, GitHub will guide you through the correct template automatically.
 
-If you open an issue through `gh issue create`, the API, or another tool that bypasses the web UI, include the equivalent required fields yourself so the issue still matches the template.
+If you open an issue through `gh issue create`, the API, or another tool that bypasses the web UI, include the equivalent required fields yourself so the issue still matches the template. Issues that skip required fields may be auto-closed by the compliance bot.
 
 Current required fields by issue type:
 
-- **Bug report:** include a `Description`.
-- **Feature request:** prefix the title with `[FEATURE]:`, include confirmation that the feature has not already been suggested, and add a description of the enhancement.
-- **Question:** include the `Question`.
-
-Recommended fields for bug reports, even when not strictly required by the template:
-
-- Plugins
-- Kilo version
-- Steps to reproduce
-- Screenshot and/or share link
-- Operating System
-- Terminal
+- **Bug report:** include a `Description`. When you can, also add Plugins, Kilo version, Steps to reproduce, Screenshot and/or share link, Operating System, and Terminal so the report matches the full bug template.
+- **Feature request:** use a title prefixed with `[FEATURE]:`, complete the required checkbox confirming you have searched for duplicates, and fill in `Describe the enhancement you want to request`.
+- **Question:** include the `Question` field.
 
 ## Pull Request Expectations
 
-- **Issue First Policy:** All PRs must reference an existing issue.
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
-- **PR Titles:** Follow conventional commit standards (`feat:`, `fix:`, `docs:`, etc.).
 
 ## Issue First Policy
 

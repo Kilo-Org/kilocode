@@ -1,4 +1,5 @@
-- Find files most relevant to the search query using semantic search.
+- Find code snippets most relevant to the search query using semantic search.
+- Returns matching content with file paths, line ranges, and relevance scores.
 - Searches based on meaning rather than exact text matches.
 - By default searches entire workspace, with capability to filter by path.
 

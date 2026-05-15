@@ -95,6 +95,7 @@ export const dict = {
   "command.session.share.description": "Del denne sesjonen og kopier URL-en til utklippstavlen",
   "command.session.unshare": "Slutt å dele sesjon",
   "command.session.unshare.description": "Slutt å dele denne sesjonen",
+  "command.session.export": "Eksporter sesjonsutskrift",
 
   "palette.search.placeholder": "Søk i filer, kommandoer og sesjoner",
   "palette.empty": "Ingen resultater funnet",
@@ -140,6 +141,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-nøkkel",
   "provider.connect.apiKey.placeholder": "API-nøkkel",
   "provider.connect.apiKey.required": "API-nøkkel er påkrevd",
+  "provider.connect.prompt.required": "{{field}} er påkrevd",
+  "provider.connect.azure.endpointType.label": "Velg Azure-endepunktskonfigurasjon",
+  "provider.connect.azure.endpointType.resourceName.label": "Ressursnavn",
+  "provider.connect.azure.endpointType.resourceName.hint": "Bygg endepunktet fra ditt Azure-ressursnavn",
+  "provider.connect.azure.endpointType.baseURL.label": "Full endepunkts-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Bruk et egendefinert Azure OpenAI-endepunkt",
+  "provider.connect.azure.resourceName.label": "Azure-ressursnavn",
+  "provider.connect.azure.resourceName.placeholder": "f.eks. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-endepunkts-URL",
+  "provider.connect.azure.baseURL.placeholder": "f.eks. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen gir deg tilgang til et utvalg av pålitelige optimaliserte modeller for kodeagenter.",
   "provider.connect.opencodeZen.line2":
@@ -262,6 +273,7 @@ export const dict = {
   "prompt.attachment.remove": "Fjern vedlegg",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
+  "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
@@ -274,6 +286,20 @@ export const dict = {
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
+
+  "speechToText.tooltip.start": "Start taleinndata",
+  "speechToText.tooltip.stop": "Stopp lydfangst",
+  "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
+  "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
+  "speechToText.error.title": "Taleinndata mislyktes",
+  "speechToText.error.loginRequired": "Logg på Kilo for å bruke taleinndata.",
+  "speechToText.error.permission": "Mikrofontillatelse ble nektet.",
+  "speechToText.error.microphone": "Kunne ikke starte mikrofonen.",
+  "speechToText.error.recording": "Opptak mislyktes.",
+  "speechToText.error.emptyRecording": "Ingen lyd ble tatt opp.",
+  "speechToText.error.emptyTranscript": "Ingen tale ble oppdaget.",
+  "speechToText.error.encoding": "Kunne ikke kode opptaket.",
+  "speechToText.toast.transcribed": "Transkripsjon satt inn",
 
   "prompt.toast.pasteUnsupported.title": "Liming ikke støttet",
   "prompt.toast.pasteUnsupported.description": "Kun bilder eller PDF-er kan limes inn her.",
@@ -460,6 +486,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrer deg gratis for å fortsette og utforske over 500 modeller. Tar 2 minutter, ingen kredittkort nødvendig. Eller kom tilbake senere.",
   "error.promotionLimit.action": "Registrer deg",
+  "error.providerAuth.title": "{{provider}} logget deg ut",
+  "error.providerAuth.description": "Koble til {{provider}} på nytt, og send meldingen din igjen.",
+  "error.providerAuth.chatgpt.title": "OpenAI logget deg ut",
+  "error.providerAuth.chatgpt.description":
+    "Logg på ChatGPT igjen, og send meldingen din på nytt for å fortsette å bruke Codex-modeller.",
 
   "error.chain.unknown": "Ukjent feil",
   "error.chain.causedBy": "Forårsaket av:",
@@ -1147,6 +1178,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Bruk en smart tastbinding for å utløse innebygde oppgaver",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofullføring",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofullføringsforslag i chatfeltet",
+  "settings.autocomplete.modelsHint":
+    "For å velge hvilken modell som brukes til autofullføring, se Modellinnstillinger.",
   "settings.notifications.agent.title": "Agentfullføring",
   "settings.notifications.agent.description": "Vis varsling når agenten fullfører en oppgave",
   "settings.notifications.permissions.title": "Tillatelsesforespørsler",
@@ -1183,6 +1216,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
   "settings.experimental.agentManagerTool.description":
     "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
+  "settings.experimental.speechToText.title": "Tale til tekst",
+  "settings.experimental.speechToText.description":
+    "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Aktiver Kilo provider og logg på for å bruke taleinndata i prompt-felt.",
+  "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
+  "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
@@ -1199,8 +1239,19 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktiver indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebaseindeksering på eller av.",
+  "settings.indexing.globalEnable.title": "Aktiver globalt",
+  "settings.indexing.globalEnable.description": "Aktiver indeksering for hvert arbeidsområde.",
+  "settings.indexing.projectEnable.title": "Aktiver for dette prosjektet",
+  "settings.indexing.projectEnable.description":
+    "Aktiver indeksering for dette arbeidsområdet når global indeksering er slått av.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Global indeksering er aktivert, så dette prosjektet er allerede dekket.",
   "settings.indexing.provider.title": "Embedding-leverandør",
   "settings.indexing.provider.description": "Velg leverandøren som brukes til å generere embeddings for semantisk søk.",
+  "settings.indexing.kiloModel.title": "Kilo-modellforhåndsvalg",
+  "settings.indexing.kiloModel.description": "Velg en støttet Kilo-hostet embedding-modell.",
+  "settings.indexing.kiloSignIn.title": "Kilo-pålogging kreves",
+  "settings.indexing.kiloSignIn.description": "Logg inn på Kilo for å bruke hostede embeddings.",
   "settings.indexing.model.title": "Embedding-modell",
   "settings.indexing.model.description": "Overstyr standard embedding-modell for den valgte leverandøren.",
   "settings.indexing.vectorStore.title": "Vektordatabase",
@@ -1376,7 +1427,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Aktiver øyeblikksbilder",
   "settings.checkpoints.enable.description": "Opprett kontrollpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
-  "settings.context.autoCompaction.description": "Komprimer automatisk kontekst når den er full",
+  "settings.context.autoCompaction.description": "Komprimer automatisk kontekst før den når grensen",
+  "settings.context.compactionLimit.title": "Grense for automatisk komprimering",
+  "settings.context.compactionLimit.description":
+    "Komprimer når konteksten når denne prosentandelen av modellvinduet. La stå tomt for å bare bruke sikkerhetsbufferen.",
   "settings.context.prune.title": "Fjern gamle utdata",
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",
@@ -1531,9 +1585,14 @@ export const dict = {
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
   "notifications.action.tryModelGeneric": "Prøv modell",
-  "diffViewer.source.workspace.label": "Lokale endringer",
+  "diffViewer.source.workspace.label": "Gren",
   "diffViewer.source.workspace.tooltip":
     "Alle endringer på denne grenen sammenlignet med basegrenen. Inkluderer ikke-committede filer (staged, unstaged, usporede) og lokale commits som ennå ikke er i basen.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Filer med endringer du har lagt til i gits staging-område (`git add`), slik de vil vises i neste commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip": "Filer endret i arbeidstreet, men ikke staget ennå, pluss usporet (nye) filer.",
   "diffViewer.source.session.label": "Økt",
   "diffViewer.source.session.tooltip":
     "Filer endret av Kilo i løpet av gjeldende økt, basert på øyeblikksbilder per tur. Tilbakestilles når du starter en ny økt.",
@@ -1541,4 +1600,12 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshots er deaktivert for dette repositoriet. Rediger konfigurasjonsfilene for å vise øktens endringer.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
 } satisfies Partial<Record<Keys, string>>

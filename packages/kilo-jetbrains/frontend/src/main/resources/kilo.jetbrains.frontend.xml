@@ -40,6 +40,9 @@
                 class="ai.kilocode.client.actions.KiloSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
 
+        <action id="Kilo.History"
+                class="ai.kilocode.client.actions.HistoryAction"/>
+
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"
                 text="Send Prompt"
@@ -55,5 +58,25 @@
             <keyboard-shortcut keymap="$default"
                                first-keystroke="alt S"/>
         </action>
+
+        <action id="Kilo.Session.Open"
+                class="ai.kilocode.client.actions.OpenSessionAction">
+            <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
+        </action>
+
+        <action id="Kilo.Session.Rename"
+                class="ai.kilocode.client.actions.RenameSessionAction"
+                use-shortcut-of="RenameElement"/>
+
+        <action id="Kilo.Session.Delete"
+                class="ai.kilocode.client.actions.DeleteSessionAction"
+                use-shortcut-of="$Delete"/>
+
+        <group id="Kilo.History.ContextMenu">
+            <reference ref="Kilo.Session.Open"/>
+            <separator/>
+            <reference ref="Kilo.Session.Rename"/>
+            <reference ref="Kilo.Session.Delete"/>
+        </group>
     </actions>
 </idea-plugin>

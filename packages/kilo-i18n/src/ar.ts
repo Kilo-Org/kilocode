@@ -91,5 +91,14 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "أوقف لقطات Kilo لهذا المشروع. ستفقد ميزة التراجع/الإعادة لتعديلات Kilo، لكن git سيستمر في تتبع كل شيء.",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "فتح في عارض الفروقات",
+  "ui.messagePart.shell.command": "الأمر",
+  "ui.messagePart.shell.output": "المخرجات",
+  "ui.messagePart.openInEditor": "فتح في المحرر",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "كان هذا مفيدًا",
+  "ui.message.feedback.notHelpful": "لم يكن هذا مفيدًا",
+  "ui.message.feedback.clearRating": "مسح التقييم",
 }

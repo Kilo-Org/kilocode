@@ -341,3 +341,26 @@ describe("Encoding.read / Encoding.readSync / Encoding.write", () => {
     })
   })
 })
+
+
+describe("Encoding.write with existing parent directories", () => {
+  test("creates parent and writes file", async () => {
+    await tmp(async (dir) => {
+      const filepath = path.join(dir, "subdir", "test.txt");
+      await Encoding.write(filepath, "hello");
+      const text = await fs.readFile(filepath, "utf8");
+      expect(text).toBe("hello");
+    });
+  });
+
+  test("writes into existing directory (Windows EEXIST resiliency)", async () => {
+    await tmp(async (dir) => {
+      const existing = path.join(dir, "exists");
+      await fs.mkdir(existing, { recursive: true });
+      const filepath = path.join(existing, "test.txt");
+      await Encoding.write(filepath, "hello");
+      const text = await fs.readFile(filepath, "utf8");
+      expect(text).toBe("hello");
+    });
+  });
+});

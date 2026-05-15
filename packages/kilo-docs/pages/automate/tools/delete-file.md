@@ -1,3 +1,8 @@
+---
+title: Delete File Tool | Kilo Code Docs
+description: Learn how the delete_file tool safely removes files and directories from the workspace across all platforms as an alternative to rm commands.
+---
+
 # delete_file
 
 Delete a file or directory from the workspace. This tool provides a safe alternative to rm commands and works across all platforms.

@@ -3,7 +3,7 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
-import type { MessageV2 } from "@/session/message-v2"
+import { MessageV2 } from "@/session/message-v2"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -11,7 +11,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 export type ReviewTelemetry = {
   mode: "review"
   feature: "code_reviews"
-  command: "local-review" | "local-review-uncommitted"
+  command: "review" | "local-review" | "local-review-uncommitted"
 }
 
 export namespace KiloSessionProcessor {
@@ -19,11 +19,32 @@ export namespace KiloSessionProcessor {
   export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
   export const REASONING_LENGTH_WARNING =
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
+  export const PROVIDER_FINISH_ERROR_MESSAGE =
+    "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
-  export function reviewTelemetry(command: string): ReviewTelemetry | undefined {
-    if (command === "local-review" || command === "local-review-uncommitted") {
+  export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
+    if (command === "review" || command === "local-review" || command === "local-review-uncommitted") {
       return { mode: "review", feature: "code_reviews", command }
     }
+  }
+
+  /**
+   * Tag the text parts of a prompt with review telemetry metadata so that
+   * downstream LLM completions in the same turn (including child sessions
+   * spawned by subtask commands) are attributed to the originating review
+   * command. No-op when the command is not a recognized review command.
+   */
+  export function markReviewTelemetry(
+    parts: Array<{ type: string; metadata?: Record<string, unknown> }>,
+    command: string | undefined,
+  ): ReviewTelemetry | undefined {
+    const tel = reviewTelemetry(command)
+    if (!tel) return
+    for (const part of parts) {
+      if (part.type !== "text") continue
+      part.metadata = { ...part.metadata, ...tel }
+    }
+    return tel
   }
 
   export function extractReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
@@ -33,9 +54,8 @@ export namespace KiloSessionProcessor {
       if (!meta) continue
       if (meta.mode !== "review") continue
       if (meta.feature !== "code_reviews") continue
-      const command = meta.command
-      if (command !== "local-review" && command !== "local-review-uncommitted") continue
-      return { mode: "review", feature: "code_reviews", command }
+      const tel = reviewTelemetry(typeof meta.command === "string" ? meta.command : undefined)
+      if (tel) return tel
     }
   }
 
@@ -165,5 +185,17 @@ export namespace KiloSessionProcessor {
     }
     log.warn("length stop", { messageID: input.msg.id })
     return OUTPUT_LENGTH_WARNING
+  }
+
+  export function providerFinishError(msg: MessageV2.Assistant) {
+    if (msg.finish !== "error") return false
+    if (msg.error) return false
+    const err = new MessageV2.APIError({
+      message: PROVIDER_FINISH_ERROR_MESSAGE,
+      isRetryable: true,
+    }).toObject()
+    msg.error = err
+    log.warn("provider finish error", { messageID: msg.id })
+    return err
   }
 }

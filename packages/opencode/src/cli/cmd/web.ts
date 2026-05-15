@@ -3,7 +3,7 @@ import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { Instance } from "../../project/instance" // kilocode_change
+import { InstanceStore } from "../../project/instance-store" // kilocode_change
 import open from "open"
 import { networkInterfaces } from "os"
 
@@ -80,7 +80,7 @@ export const WebCommand = cmd({
     const abort = new AbortController()
     const shutdown = async () => {
       try {
-        await Instance.disposeAll()
+        await InstanceStore.disposeAllInstances()
         await server.stop(true)
       } finally {
         abort.abort()

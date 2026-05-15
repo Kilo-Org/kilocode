@@ -65,6 +65,9 @@ data class PartDto(
     val output: String? = null,
     val error: String? = null,
     val time: PartTimeDto? = null,
+    val reason: String? = null,
+    val cost: Double? = null,
+    val tokens: TokensDto? = null,
 )
 
 @Serializable
@@ -194,6 +197,13 @@ sealed class ChatEventDto {
     data class SessionStatusChanged(
         val sessionID: String,
         val status: SessionStatusDto,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.updated")
+    data class SessionUpdated(
+        val sessionID: String,
+        val session: SessionDto,
     ) : ChatEventDto()
 
     @Serializable

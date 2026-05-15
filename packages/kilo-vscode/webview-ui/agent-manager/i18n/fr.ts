@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "local",
+  "agentManager.sidebar.collapse": "Réduire la barre latérale",
+  "agentManager.sidebar.expand": "Afficher la barre latérale",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONS",
   "agentManager.notGitRepo": "Ce n'est pas un dépôt git",
@@ -49,6 +51,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Ouvrir le Terminal",
   "agentManager.tab.newOptions": "Plus d'options de nouvel onglet",
+  "agentManager.tabsMenu.label": "Rechercher les onglets ouverts",
+  "agentManager.tabsMenu.search": "Rechercher des onglets...",
+  "agentManager.tabsMenu.empty": "Aucun onglet correspondant",
+  "agentManager.tabsMenu.status.waiting": "Attente",
+  "agentManager.tabsMenu.status.working": "En cours",
+  "agentManager.tabsMenu.status.retry": "Réessai",
 
   "agentManager.terminal.new": "Nouvel onglet de terminal",
   "agentManager.terminal.ended": "terminal terminé — fermez l'onglet pour ignorer",

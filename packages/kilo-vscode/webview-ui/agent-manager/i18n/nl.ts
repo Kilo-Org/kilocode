@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokaal",
+  "agentManager.sidebar.collapse": "Zijbalk inklappen",
+  "agentManager.sidebar.expand": "Zijbalk tonen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIES",
   "agentManager.notGitRepo": "Geen git repository",
@@ -53,6 +55,12 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
   "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+  "agentManager.tabsMenu.label": "Open tabbladen zoeken",
+  "agentManager.tabsMenu.search": "Tabbladen zoeken...",
+  "agentManager.tabsMenu.empty": "Geen overeenkomende tabbladen",
+  "agentManager.tabsMenu.status.waiting": "Wacht",
+  "agentManager.tabsMenu.status.working": "Bezig",
+  "agentManager.tabsMenu.status.retry": "Opnieuw",
 
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",

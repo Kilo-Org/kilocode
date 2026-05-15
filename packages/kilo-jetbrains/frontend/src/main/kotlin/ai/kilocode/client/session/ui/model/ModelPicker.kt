@@ -1,7 +1,7 @@
 package ai.kilocode.client.session.ui.model
 
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -9,8 +9,8 @@ import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.ExperimentalUI
 import com.intellij.ui.JBColor
+import com.intellij.ui.NewUI
 import com.intellij.ui.ListUtil
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.ScrollPaneFactory
@@ -38,14 +38,14 @@ import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 
 private val popupBackground: Color
-    get() = if (ExperimentalUI.isNewUI()) JBUI.CurrentTheme.Popup.BACKGROUND else UIUtil.getListBackground()
+    get() = if (NewUI.isEnabled()) JBUI.CurrentTheme.Popup.BACKGROUND else UIUtil.getListBackground()
 
 private const val MODEL_PICKER_MIN_WIDTH = 420
 private const val MODEL_PICKER_MAX_WIDTH = 760
 private const val MODEL_PICKER_MAX_VISIBLE_ROWS = 10
 private const val MODEL_PICKER_EMPTY_LIST_HEIGHT = 120
 
-class ModelPicker : UiStyle.Pickers.Label() {
+class ModelPicker : PickerButton() {
 
     data class Item(
         val id: String,

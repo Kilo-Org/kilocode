@@ -14,13 +14,32 @@ export interface AnnotationLabels {
   delete: string
 }
 
+// A draft is the active unsaved inline comment composer opened from the gutter.
+// It becomes a normal comment only after the user submits the textarea.
 export interface AnnotationMeta {
   type: "comment" | "draft"
   comment: ReviewComment | null
   file: string
   side: AnnotationSide
   line: number
+  endLine?: number
   editing?: boolean
+}
+
+type SpeechDraft = Pick<AnnotationMeta, "file" | "side" | "line" | "endLine">
+
+export function reviewDraftSpeechKey(draft: SpeechDraft): string {
+  return `draft:${draft.file}:${draft.side}:${draft.line}:${draft.endLine ?? draft.line}`
+}
+
+export function reviewEditSpeechKey(id: string): string {
+  return `edit:${id}`
+}
+
+export function reviewAnnotationSpeechKey(meta: AnnotationMeta): string | undefined {
+  if (meta.type === "draft") return reviewDraftSpeechKey(meta)
+  if (!meta.editing || !meta.comment) return undefined
+  return reviewEditSpeechKey(meta.comment.id)
 }
 
 interface AnnotationHandlers {
@@ -32,6 +51,11 @@ interface AnnotationHandlers {
   deleteComment: (id: string) => void
   cancelDraft: () => void
   labels: AnnotationLabels
+  activeTerminalId?: string
+  speech?: {
+    active: () => boolean
+    render: (meta: AnnotationMeta, textarea: HTMLTextAreaElement) => HTMLElement | undefined
+  }
 }
 
 function focusWhenConnected(el: HTMLTextAreaElement): void {
@@ -76,7 +100,7 @@ export function buildFileAnnotations(
   file: string,
   fileComments: ReviewComment[],
   edit: string | null,
-  draft: { file: string; side: AnnotationSide; line: number } | null,
+  draft: { file: string; side: AnnotationSide; line: number; endLine?: number } | null,
   draftMeta: AnnotationMeta | null,
 ): { annotations: DiffLineAnnotation<AnnotationMeta>[]; draftMeta: AnnotationMeta | null } {
   const result: DiffLineAnnotation<AnnotationMeta>[] = fileComments.map((c) => ({
@@ -93,8 +117,21 @@ export function buildFileAnnotations(
   }))
 
   if (draft && draft.file === file) {
-    if (!draftMeta || draftMeta.file !== draft.file || draftMeta.side !== draft.side || draftMeta.line !== draft.line) {
-      draftMeta = { type: "draft", comment: null, file: draft.file, side: draft.side, line: draft.line }
+    if (
+      !draftMeta ||
+      draftMeta.file !== draft.file ||
+      draftMeta.side !== draft.side ||
+      draftMeta.line !== draft.line ||
+      draftMeta.endLine !== draft.endLine
+    ) {
+      draftMeta = {
+        type: "draft",
+        comment: null,
+        file: draft.file,
+        side: draft.side,
+        line: draft.line,
+        endLine: draft.endLine,
+      }
     }
     result.push({ side: draft.side, lineNumber: draft.line, metadata: draftMeta })
   }
@@ -133,6 +170,8 @@ export function buildReviewAnnotation(
     submitButton.className = "am-annotation-btn am-annotation-btn-submit"
     submitButton.textContent = handlers.labels.comment
 
+    const speech = handlers.speech?.render(meta, textarea)
+    if (speech) actions.appendChild(speech)
     actions.appendChild(cancelButton)
     actions.appendChild(submitButton)
     wrapper.appendChild(header)
@@ -142,11 +181,12 @@ export function buildReviewAnnotation(
     focusWhenConnected(textarea)
 
     const submit = () => {
+      if (handlers.speech?.active()) return
       const text = textarea.value.trim()
       if (!text) return
       const diff = handlers.diffs.find((item) => item.file === meta.file)
       const content = meta.side === "deletions" ? (diff?.before ?? "") : (diff?.after ?? "")
-      const selected = extractLines(content, meta.line, meta.line)
+      const selected = extractLines(content, meta.line, meta.endLine ?? meta.line)
       handlers.addComment(meta.file, meta.side, meta.line, text, selected)
     }
 
@@ -199,6 +239,8 @@ export function buildReviewAnnotation(
     saveButton.className = "am-annotation-btn am-annotation-btn-submit"
     saveButton.textContent = handlers.labels.save
 
+    const speech = handlers.speech?.render(meta, textarea)
+    if (speech) actions.appendChild(speech)
     actions.appendChild(cancelButton)
     actions.appendChild(saveButton)
     wrapper.appendChild(header)
@@ -214,6 +256,7 @@ export function buildReviewAnnotation(
 
     saveButton.addEventListener("click", (event) => {
       event.stopPropagation()
+      if (handlers.speech?.active()) return
       const text = textarea.value.trim()
       if (!text) return
       handlers.updateComment(comment.id, text)
@@ -227,6 +270,7 @@ export function buildReviewAnnotation(
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
+        if (handlers.speech?.active()) return
         const text = textarea.value.trim()
         if (!text) return
         handlers.updateComment(comment.id, text)
@@ -253,7 +297,12 @@ export function buildReviewAnnotation(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
       window.dispatchEvent(
         new MessageEvent("message", {
-          data: { type: "appendReviewComments", comments: [comment], autoSend: true },
+          data: {
+            type: handlers.activeTerminalId ? "appendReviewCommentsToTerminal" : "appendReviewComments",
+            comments: [comment],
+            autoSend: true,
+            targetTerminalId: handlers.activeTerminalId,
+          },
         }),
       )
       handlers.deleteComment(comment.id)

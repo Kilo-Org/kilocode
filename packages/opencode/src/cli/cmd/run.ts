@@ -28,6 +28,7 @@ import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "@/util/locale"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { AppRuntime } from "@/effect/app-runtime"
+import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
@@ -302,12 +303,7 @@ export const RunCommand = cmd({
           default: false,
         })
         // kilocode_change end
-        // kilocode_change end
-        .option("dangerously-skip-permissions", {
-          type: "boolean",
-          describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
-          default: false,
-        })
+      // kilocode_change end
     )
   },
   handler: async (args) => {
@@ -484,6 +480,9 @@ export const RunCommand = cmd({
 
           if (event.type === "message.part.updated") {
             const part = event.properties.part
+            // kilocode_change start - track Task child sessions for --auto permission replies
+            if (args.auto) KiloRunAuto.track(auto, part)
+            // kilocode_change end
             if (part.sessionID !== sessionID) continue
 
             if (part.type === "tool" && (part.state.status === "completed" || part.state.status === "error")) {
@@ -579,25 +578,38 @@ export const RunCommand = cmd({
           if (event.type === "permission.asked") {
             // kilocode_change start
             const permission = event.properties
-            if (permission.sessionID !== sessionID) continue
 
-            if (args.auto || args.autoApprove) {
-              // kilocode_change - In auto/auto-approve mode, automatically approve all permissions without prompting
+            // kilocode_change start - auto-approve mode (yolo): approve all permissions globally, including subagents
+            if (args.autoApprove) {
               await sdk.permission.reply({
                 requestID: permission.id,
                 reply: "once",
               })
-            } else {
-              UI.println(
-                UI.Style.TEXT_WARNING_BOLD + "!",
-                UI.Style.TEXT_NORMAL +
-                  `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
-              )
+              continue
+            }
+            // kilocode_change end
+
+            // kilocode_change start - In auto mode, approve root and tracked Task child permissions only
+            if (args.auto) {
+              if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
               await sdk.permission.reply({
                 requestID: permission.id,
-                reply: "reject",
+                reply: "once",
               })
+              continue
             }
+            // kilocode_change end
+
+            if (permission.sessionID !== sessionID) continue
+            UI.println(
+              UI.Style.TEXT_WARNING_BOLD + "!",
+              UI.Style.TEXT_NORMAL +
+                `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
+            )
+            await sdk.permission.reply({
+              requestID: permission.id,
+              reply: "reject",
+            })
             // kilocode_change end
           }
           // kilocode_change start - network retry handling
@@ -691,6 +703,7 @@ export const RunCommand = cmd({
         UI.error("Session not found")
         process.exit(1)
       }
+      const auto = KiloRunAuto.create(sessionID) // kilocode_change
       await share(sdk, sessionID)
 
       loop().catch((e) => {

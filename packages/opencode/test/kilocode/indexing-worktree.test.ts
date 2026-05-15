@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { mkdir } from "node:fs/promises"
 import type { Config } from "../../src/config/config"
-import { AppRuntime } from "../../src/effect/app-runtime"
+import { getBootstrapRunEffect } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
-import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { Instance } from "../../src/project/instance"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 const cfg: Partial<Config.Info> = {
   plugin: ["@kilocode/kilo-indexing"],
@@ -27,7 +26,7 @@ const configDir = process.env["KILO_CONFIG_DIR"]
 afterEach(async () => {
   if (configDir === undefined) delete process.env["KILO_CONFIG_DIR"]
   else process.env["KILO_CONFIG_DIR"] = configDir
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("indexing worktree disable", () => {
@@ -39,7 +38,7 @@ describe("indexing worktree disable", () => {
 
     await Instance.provide({
       directory: dir,
-      init: () => AppRuntime.runPromise(InstanceBootstrap),
+      init: await getBootstrapRunEffect(),
       fn: async () => {
         const status = await KiloIndexing.current()
 
@@ -60,7 +59,7 @@ describe("indexing worktree disable", () => {
 
     await Instance.provide({
       directory: dir,
-      init: () => AppRuntime.runPromise(InstanceBootstrap),
+      init: await getBootstrapRunEffect(),
       fn: async () => {
         const status = await KiloIndexing.current()
 

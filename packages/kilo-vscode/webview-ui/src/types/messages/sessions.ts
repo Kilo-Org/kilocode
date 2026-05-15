@@ -10,7 +10,7 @@ export interface Message {
   createdAt: string
   time?: { created: number; completed?: number }
   agent?: string
-  model?: { providerID: string; modelID: string }
+  model?: { providerID: string; modelID: string; variant?: string }
   providerID?: string
   modelID?: string
   mode?: string
