@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "../../fixture/fixture"
 import { resolveThreadDirectory } from "../../../src/cli/cmd/tui/thread"
-// kilocode_change start - imports for auto-approve plumbing test
+// kilocode_change start - extra bun:test helpers + module spies for auto-approve plumbing test
+import { afterEach, mock, spyOn } from "bun:test"
 import * as App from "../../../src/cli/cmd/tui/app"
 import { Rpc } from "@/util/rpc"
 import { UI } from "../../../src/cli/ui"
