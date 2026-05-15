@@ -9,7 +9,6 @@ import com.intellij.openapi.ui.popup.PopupShowOptions
 import com.intellij.openapi.ui.popup.util.PopupUtil
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.JBColor
 import com.intellij.ui.NewUI
 import com.intellij.ui.ListUtil
 import com.intellij.ui.SearchTextField
@@ -405,6 +404,4 @@ internal object ModelText {
     fun small(item: ModelPicker.Item): Boolean = item.provider == "kilo" && item.id in small
 
     fun providerSort(id: String): Int = if (id == "kilo") 0 else 1
-
-    fun freeBg(): JBColor = JBColor.namedColor("Kilo.ModelPicker.freeBadgeBackground", JBColor(0x95D6AC, 0x7FCA99))
 }
