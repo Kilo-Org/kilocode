@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.2.52",
+  "version": "7.3.0",
   "name": "@opencode-ai/core",
   "type": "module",
   "license": "MIT",

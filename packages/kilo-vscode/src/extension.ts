@@ -23,6 +23,14 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 import { markWorkspace } from "./util/spotlight"
 
 let agentManager: AgentManagerProvider | undefined
+let shuttingDown = false
+
+const RESTORE_KEY = "kilo.workbench.restore"
+
+type RestoreState = {
+  sidebar?: boolean
+  agentManager?: boolean
+}
 
 const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
   panel.title = title || EXTENSION_DISPLAY_NAME
@@ -34,11 +42,21 @@ const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
+  shuttingDown = false
 
   const telemetry = TelemetryProxy.getInstance()
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
+  const closeSidebar = restore.sidebar === false
+  const remember = (patch: RestoreState) => {
+    const next = { ...restore, ...patch }
+    if (shuttingDown && patch.sidebar === false) next.sidebar = restore.sidebar
+    if (shuttingDown && patch.agentManager === false) next.agentManager = restore.agentManager
+    restore = next
+    void context.workspaceState.update(RESTORE_KEY, restore)
+  }
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)
@@ -105,7 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
+    onSidebarVisibilityChange: (visible) => remember({ sidebar: visible }),
+  })
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -115,6 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   )
+  if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")
 
   // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
@@ -131,6 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
+  agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
   agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)
 
@@ -169,8 +191,13 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        if (restore.agentManager === false) {
+          panel.dispose()
+          return Promise.resolve()
+        }
         const ctx = agentManagerHost.wrapExistingPanel(panel, {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
+          worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()
@@ -452,6 +479,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Dispose services when extension deactivates (kills the server)
   context.subscriptions.push({
     dispose: () => {
+      shuttingDown = true
       unsubscribeStateChange()
       browserAutomationService.dispose()
       provider.dispose()
@@ -461,6 +489,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export async function deactivate() {
+  shuttingDown = true
   await agentManager?.shutdown()
   TelemetryProxy.getInstance().shutdown()
 }

@@ -89,6 +89,8 @@ function TodoToolCard(props: { part: ToolPart }) {
           input={state()?.input ?? {}}
           metadata={state()?.metadata ?? {}}
           tool={props.part.tool}
+          partID={props.part.id}
+          callID={props.part.callID}
           output={state()?.output}
           status={state()?.status}
           defaultOpen

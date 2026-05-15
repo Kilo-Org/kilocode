@@ -91,7 +91,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Désactivez les instantanés Kilo pour ce projet. Vous perdez l'annulation/restauration des modifications faites par Kilo, mais git continue de tout suivre.",
 
-  "ui.messagePart.openInDiffViewer": "Ouvrir dans la visionneuse de différences",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Ouvrir dans le visualiseur de différences",
+  "ui.messagePart.shell.command": "Commande",
+  "ui.messagePart.shell.output": "Sortie",
+  "ui.messagePart.openInEditor": "Ouvrir dans l'éditeur",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "C'était utile",

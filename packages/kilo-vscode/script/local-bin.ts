@@ -2,6 +2,7 @@
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
+import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
 
@@ -158,6 +159,7 @@ async function main() {
     log(
       `CLI binary already present at ${relative(kiloVscodeDir, targetBinPath)} (${Math.round(st.size / 1024 / 1024)}MB). Use --force to rebuild.`,
     )
+    await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
     return
   }
 
@@ -181,6 +183,7 @@ async function main() {
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
   chmodSync(targetBinPath, 0o755)
+  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 
   // Record the CLI source version so future runs detect when a rebuild is needed
   const hash = await cliSourceHash()

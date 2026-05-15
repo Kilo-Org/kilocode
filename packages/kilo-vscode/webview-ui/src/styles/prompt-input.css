@@ -563,6 +563,54 @@
   box-shadow: 0 0 0 1px var(--surface-base, var(--vscode-editor-background));
 }
 
+.prompt-speech-button {
+  position: relative;
+}
+
+.prompt-speech-button--recording {
+  color: var(--vscode-errorForeground, #f48771);
+
+  [data-slot="icon-svg"] {
+    color: currentColor !important;
+  }
+
+  .prompt-speech-icon {
+    animation: prompt-speech-recording-pulse 1.1s ease-in-out infinite;
+  }
+}
+
+.prompt-speech-button--recording::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 2px var(--surface-base, var(--vscode-editor-background));
+}
+
+.prompt-speech-button--error {
+  color: var(--vscode-charts-yellow, #cca700);
+
+  [data-slot="icon-svg"] {
+    color: currentColor !important;
+  }
+}
+
+@keyframes prompt-speech-recording-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+}
+
 /* ============================================
    Enhance Prompt Spinner
    ============================================ */

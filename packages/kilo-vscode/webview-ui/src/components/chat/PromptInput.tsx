@@ -19,8 +19,11 @@ import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useConfig } from "../../context/config"
+import { useProvider } from "../../context/provider"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
+import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
+import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
@@ -29,11 +32,12 @@ import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
+import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
+import { fileName, dirName, buildHighlightSegments, atEnd, insertSpacedText, isPromptBusy } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
@@ -66,7 +70,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const indexing = useIndexing()
-  const { features } = useConfig()
+  const { config, features, settings } = useConfig()
+  const provider = useProvider()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
@@ -135,6 +140,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let preEnhanceText: string | null = null
 
   const ghost = useGhostText(vscode, text, () => server.isConnected())
+  const speech = useSpeechToText(vscode, server, language)
 
   const replaceReviewComments = (next: ReviewComment[]) => {
     setReviewComments(next)
@@ -323,11 +329,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
+  const onExport = () => {
+    const id = session.currentSessionID()
+    if (id) session.exportSessionTranscript(id)
+  }
+  window.addEventListener("exportSessionTranscript", onExport)
+  onCleanup(() => window.removeEventListener("exportSessionTranscript", onExport))
+
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
+  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(settings())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
-  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
-  const showStop = () => isBusy() && !hasInput()
+  const canSend = () =>
+    !isDisabled() &&
+    !terminal.pending() &&
+    !git.pending() &&
+    !props.blocked?.() &&
+    (speech.state() === "recording" || (hasInput() && !speech.active()))
+  const sendLabel = () => {
+    if (props.blocked?.()) return language.t("prompt.action.send.blocked")
+    if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    return language.t("prompt.action.send")
+  }
+  const showStop = () => isBusy() && !hasInput() && speech.state() !== "recording"
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
@@ -645,6 +670,54 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
   }
 
+  const insertSpeechText = (value: string) => {
+    const ref = textareaRef
+    const current = text()
+    const start = ref?.selectionStart ?? current.length
+    const end = ref?.selectionEnd ?? start
+    const result = insertSpacedText(current, value, start, end)
+
+    setText(result.text)
+    if (!ref) return
+    ref.value = result.text
+    ref.setSelectionRange(result.pos, result.pos)
+    ref.focus()
+    adjustHeight()
+    syncHighlightScroll()
+    ghost.scheduleRequest(result.text, ref)
+  }
+
+  const startSpeech = () => {
+    speech.start({ model: speechModel(), insert: insertSpeechText })
+  }
+
+  const transcribeAndSend = () => {
+    const key = draftKey()
+    const id = sid()
+    const context = ctx()
+    const value = text()
+    const comments = reviewComments()
+    const images = imageAttach.images()
+    speech.stop({
+      done: () => void handleSend(),
+      ready: () =>
+        draftKey() === key &&
+        sid() === id &&
+        ctx() === context &&
+        text() === value &&
+        reviewComments() === comments &&
+        imageAttach.images() === images,
+    })
+  }
+
+  const handleSendClick = () => {
+    if (speech.state() !== "recording" || !canSend()) {
+      void handleSend()
+      return
+    }
+    transcribeAndSend()
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -676,7 +749,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || git.pending() || props.blocked?.())
+    if (
+      (!message && imgs.length === 0) ||
+      isDisabled() ||
+      speech.active() ||
+      terminal.pending() ||
+      git.pending() ||
+      props.blocked?.()
+    )
       return
 
     const mentionFiles = mention.parseFileAttachments(draft)
@@ -684,6 +764,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
     const id = sid()
     const sel = session.selected(id)
+    const context = ctx()
+    const key = draftKey()
 
     const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
       showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
@@ -705,15 +787,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    const key = draftKey()
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, context)
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, context)
     }
+
+    drafts.delete(key)
+    reviewDrafts.delete(key)
+    imageDrafts.delete(key)
+    if (draftKey() !== key) return
 
     history.append(draft)
     history.reset()
@@ -722,9 +808,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageAttach.clear()
     mention.closeMention()
     slash.close()
-    drafts.delete(key)
-    reviewDrafts.delete(key)
-    imageDrafts.delete(key)
 
     if (textareaRef) textareaRef.style.height = "auto"
   }
@@ -1042,19 +1125,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               <WandSparkles size={16} class={enhancing() ? "enhance-spinner" : ""} />
             </Button>
           </Tooltip>
+          <Show when={canUseSpeech()}>
+            <SpeechToTextButton speech={speech} disabled={isDisabled()} start={startSpeech} label={language.t} />
+          </Show>
           <Show
             when={showStop()}
             fallback={
-              <Tooltip
-                value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
-                placement="top"
-              >
+              <Tooltip value={sendLabel()} placement="top">
                 <Button
                   variant="ghost"
                   size="small"
-                  onClick={() => void handleSend()}
+                  onClick={handleSendClick}
                   aria-disabled={!canSend()}
-                  aria-label={language.t("prompt.action.send")}
+                  aria-label={sendLabel()}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />

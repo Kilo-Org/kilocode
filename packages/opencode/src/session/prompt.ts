@@ -1387,6 +1387,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             const task = msg.parts.filter((part) => part.type === "compaction" || part.type === "subtask")
             if (task && !lastFinished) tasks.push(...task)
           }
+          // kilocode_change end
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 
@@ -1824,15 +1825,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       const templateParts = yield* resolvePromptParts(template)
-      // kilocode_change start - mark local review commands for completion telemetry
-      const telemetry = KiloSessionProcessor.reviewTelemetry(input.command)
-      if (telemetry) {
-        for (const part of templateParts) {
-          if (part.type !== "text") continue
-          part.metadata = { ...part.metadata, ...telemetry }
-        }
-      }
-      // kilocode_change end
+      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
       const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
       const parts = isSubtask
         ? [

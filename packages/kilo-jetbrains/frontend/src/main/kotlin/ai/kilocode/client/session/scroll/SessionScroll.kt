@@ -1,4 +1,4 @@
-package ai.kilocode.client.session
+package ai.kilocode.client.session.scroll
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.SessionMessageListPanel
@@ -7,26 +7,17 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.icons.CachedImageIcon
-import com.intellij.ui.svg.SvgAttributePatcher
-import com.intellij.util.SVGLoader
 import com.intellij.util.ui.JBUI
-import java.awt.Color
 import java.awt.Cursor
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollBar
-
-private const val ICON_DIGEST = 0x5c011b0bb17L
-private const val OPAQUE_ALPHA = 255
 
 internal class SessionScroll(
     private val root: SessionRootPanel,
@@ -35,7 +26,6 @@ internal class SessionScroll(
     body: JPanel,
 ) {
     companion object {
-        private val ICON = IconLoader.getIcon("/icons/scroll-bottom.svg", SessionScroll::class.java)
         private const val THRESHOLD = 32
         private const val OPEN_PASSES = 12
     }
@@ -58,7 +48,7 @@ internal class SessionScroll(
     private var seq = 0
 
     init {
-        jump = JBLabel(patchedIcon(ICON)).apply {
+        jump = JBLabel(ScrollButtonIcon.create()).apply {
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = KiloBundle.message("session.scroll.bottom")
             isVisible = false
@@ -130,7 +120,7 @@ internal class SessionScroll(
 
     fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        jump.icon = patchedIcon(ICON)
+        jump.icon = ScrollButtonIcon.create()
         messages.applyStyle(style)
         val view = component.viewport.view
         if (view !== messages) (view as? SessionEditorStyleTarget)?.applyStyle(style)
@@ -230,35 +220,4 @@ internal class SessionScroll(
         root.overlay.revalidate()
         root.overlay.repaint()
     }
-}
-
-private fun patchedIcon(icon: Icon): Icon {
-    val cached = icon as? CachedImageIcon ?: return icon
-    return cached.createWithPatcher(object : SVGLoader.SvgElementColorPatcherProvider, SvgAttributePatcher {
-        override fun digest(): LongArray {
-            val bg = JBUI.CurrentTheme.Button.defaultButtonColorStart().rgb.toLong()
-            val fg = JBUI.CurrentTheme.Button.defaultButtonForeground().rgb.toLong()
-            return longArrayOf(bg, fg, ICON_DIGEST)
-        }
-
-        override fun attributeForPath(path: String) = this
-
-        override fun patchColors(attributes: MutableMap<String, String>) {
-            when (attributes["id"]) {
-                "ScrollButton.Background" ->
-                    set(attributes, "fill", JBUI.CurrentTheme.Button.defaultButtonColorStart())
-
-                "ScrollButton.Foreground" ->
-                    set(attributes, "stroke", JBUI.CurrentTheme.Button.defaultButtonForeground())
-            }
-        }
-
-        private fun set(attributes: MutableMap<String, String>, key: String, color: Color) {
-            if (!attributes.containsKey(key) || attributes[key] == "none") return
-            attributes[key] = "rgb(${color.red},${color.green},${color.blue})"
-            if (color.alpha != OPAQUE_ALPHA) {
-                attributes["$key-opacity"] = "${color.alpha / OPAQUE_ALPHA.toFloat()}"
-            }
-        }
-    })
 }

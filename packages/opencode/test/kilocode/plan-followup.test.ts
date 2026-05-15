@@ -296,6 +296,34 @@ describe("plan follow-up", () => {
       await expect(pending).resolves.toBe("break")
     }))
 
+  test("ask - Continue here option carries mode: code so VS Code picker updates immediately", () =>
+    withInstance(async () => {
+      const seeded = await seed({ text: "1. Build" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      const continueOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
+      expect(continueOpt?.mode).toBe("code")
+
+      // Start new session should not carry a mode (it opens a new session — the
+      // current picker is irrelevant once the session switches).
+      const newOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
+      expect(newOpt?.mode).toBeUndefined()
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+    }))
+
   test("ask - hides custom answer row on VS Code where the main prompt input handles typed replies", () =>
     withInstance(async () => {
       const prev = process.env.KILO_CLIENT

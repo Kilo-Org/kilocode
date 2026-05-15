@@ -16,6 +16,7 @@ import { SessionTable } from "@/session/session.sql"
 import * as Log from "@opencode-ai/core/util/log"
 import type { LanguageModelUsage, ProviderMetadata } from "ai"
 import type { Provider } from "@/provider/provider"
+import { ENV_FEATURE } from "@kilocode/kilo-gateway"
 
 export namespace KiloSession {
   const log = Log.create({ service: "session.kilo" })
@@ -49,6 +50,17 @@ export namespace KiloSession {
   // ---------------------------------------------------------------------------
 
   const overrides = new Map<string, string>()
+  const parents = new Map<string, string>()
+  const roots = new Map<string, string>()
+
+  export function register(input: { id: string; parentID?: string; platform?: string }) {
+    const root = input.parentID ? (roots.get(input.parentID) ?? input.parentID) : input.id
+    const platform = input.platform ?? (input.parentID ? resolvePlatform(input.parentID) : undefined)
+
+    roots.set(input.id, root)
+    if (input.parentID) parents.set(input.id, input.parentID)
+    if (platform) overrides.set(input.id, platform)
+  }
 
   export function setPlatformOverride(id: string, platform: string) {
     overrides.set(id, platform)
@@ -58,8 +70,42 @@ export namespace KiloSession {
     return overrides.get(id)
   }
 
+  export function resolvePlatform(id: string): string | undefined {
+    const override = overrides.get(id)
+    if (override) return override
+    const parent = parents.get(id)
+    if (!parent) return undefined
+    return resolvePlatform(parent)
+  }
+
+  export function resolveRoot(id: string): string {
+    return roots.get(id) ?? id
+  }
+
+  export function featureForPlatform(platform: string | undefined): string | undefined {
+    switch (platform) {
+      case "agent-manager":
+        return "agent-manager"
+      case "vscode":
+        return "vscode-extension"
+      case "cli":
+        return "cli"
+      default:
+        return undefined
+    }
+  }
+
   export function clearPlatformOverride(id: string) {
     overrides.delete(id)
+    parents.delete(id)
+    roots.delete(id)
+  }
+
+  export function attribution(id: string): { rootID: string; feature?: string } {
+    const rootID = resolveRoot(id)
+    const platform = resolvePlatform(rootID) ?? process.env["KILO_PLATFORM"]
+    const feature = featureForPlatform(platform) ?? process.env[ENV_FEATURE]
+    return { rootID, ...(feature ? { feature } : {}) }
   }
 
   // ---------------------------------------------------------------------------

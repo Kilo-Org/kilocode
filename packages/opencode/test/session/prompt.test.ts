@@ -1,6 +1,7 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { FetchHttpClient } from "effect/unstable/http"
-import { expect } from "bun:test"
+import { afterEach, expect, mock, spyOn } from "bun:test" // kilocode_change - spy on review telemetry
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change - assert review command telemetry
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath } from "url"
@@ -215,6 +216,12 @@ function makeHttp() {
 
 const it = testEffect(makeHttp())
 const unix = process.platform !== "win32" ? it.live : it.live.skip
+
+// kilocode_change start - restore any spies between tests so review telemetry spy never leaks
+afterEach(() => {
+  mock.restore()
+})
+// kilocode_change end
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -1984,6 +1991,41 @@ it.live("applies agent variant only when using agent model", () =>
     },
   ),
 )
+
+// kilocode_change start - /review subtask path tags child completions for telemetry
+it.live(
+  "review command marks child completions with review telemetry",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const trackSpy = spyOn(Telemetry, "trackLlmCompletion")
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({
+          title: "Review telemetry",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        // child subagent's first LLM step needs non-zero usage so trackStep fires
+        yield* llm.text("review done", { usage: { input: 100, output: 50 } })
+
+        yield* prompt.command({
+          sessionID: chat.id,
+          command: "review",
+          arguments: "",
+          agent: "general",
+        })
+
+        const tagged = trackSpy.mock.calls
+          .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
+          .find((p) => p.mode === "review" && p.feature === "code_reviews" && p.command === "review")
+        expect(tagged).toBeDefined()
+      }),
+      { git: true, config: providerCfg },
+    ),
+  30_000,
+)
+// kilocode_change end
 
 // Agent / command resolution errors
 

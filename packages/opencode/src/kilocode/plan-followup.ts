@@ -297,6 +297,7 @@ export namespace PlanFollowup {
               labelKey: "plan.followup.answer.continue",
               description: "Implement the plan in this session",
               descriptionKey: "plan.followup.answer.continue.description",
+              mode: "code",
             },
           ],
         },

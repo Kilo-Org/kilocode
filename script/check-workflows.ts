@@ -42,6 +42,7 @@ const active = new Set([
   "generate.yml",
   "nix-eval.yml",
   "nix-hashes.yml",
+  "publish-jetbrains.yml",
   "publish.yml",
   "smoke-test.yml",
   "source-check-links.yml",

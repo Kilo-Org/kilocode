@@ -691,7 +691,7 @@ export namespace KiloSessions {
   }
 
   async function meta(sessionId?: string) {
-    const override = sessionId ? KiloSession.getPlatformOverride(sessionId) : undefined
+    const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)
