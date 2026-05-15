@@ -11,6 +11,7 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto

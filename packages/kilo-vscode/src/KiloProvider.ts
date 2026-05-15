@@ -17,6 +17,7 @@ import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreCo
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
+import { exportTranscript } from "./kilo-provider/export-transcript"
 import {
   TelemetryProxy,
   type TelemetryPropertiesProvider,
@@ -68,10 +69,12 @@ import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession } from "./kilo-provider/abort"
 import {
   buildAutocompleteSettingsMessage,
-  routeAutocompleteMessage,
   validAutocompleteSetting,
   watchAutocompleteConfig,
 } from "./services/autocomplete/settings"
+import { validSpeechToTextSetting } from "./speech-to-text/settings"
+import { sendSpeechToTextSettings, watchSpeechToTextConfig } from "./speech-to-text/config"
+import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
@@ -112,7 +115,7 @@ import {
   handleQuestionReject,
   fetchAndSendPendingQuestions,
 } from "./kilo-provider/handlers/question"
-import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
+import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 
 import {
@@ -135,6 +138,7 @@ import type { KiloProviderOptions } from "./kilo-provider/options"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
+type ContextMessage = { contextDirectory?: unknown }
 // Helper to map agent data to the subset of fields sent to the webview
 const mapAgent = (a: Agent) => ({
   name: a.name,
@@ -229,6 +233,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private webviewMessageDisposable: vscode.Disposable | null = null
   private autocompleteConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
+  private speechToTextDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
   private autoApproveBridge: ReturnType<typeof createAutoApproveBridge> | null = null
@@ -446,10 +451,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
     this.setupWebviewMessageHandler(webviewView.webview)
 
-    vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
+    this.setSidebarVisible(webviewView.visible)
     this.visibilityDisposable?.dispose()
     this.visibilityDisposable = webviewView.onDidChangeVisibility(() => {
-      vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
+      this.setSidebarVisible(webviewView.visible)
       if (this.statsPoller) {
         this.statsPoller.setEnabled(webviewView.visible)
         this.statsPoller.setVisible(webviewView.visible)
@@ -457,6 +462,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.focusSession(webviewView.visible ? this.currentSession?.id : undefined)
     })
     this.initializeConnection()
+  }
+
+  private setSidebarVisible(visible: boolean): void {
+    vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
+    this.opts.onSidebarVisibilityChange?.(visible)
   }
 
   /**
@@ -592,6 +602,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
+    this.speechToTextDisposable?.dispose()
+    this.speechToTextDisposable = watchSpeechToTextConfig(this)
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -604,9 +616,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (intercepted === null) return
       message = intercepted
 
-      await routeSuggestionWebviewMessage(this.questionCtx, message)
-      if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
-      if (await routeAutocompleteMessage(message, (msg) => this.postMessage(msg))) return
+      if (
+        await routeEarlyMessage(message, {
+          question: this.questionCtx,
+          client: this.client,
+          connection: this.connectionService,
+          dir: this.getWorkspaceDirectory(this.currentSession?.id),
+          post: (msg) => this.postMessage(msg),
+          exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
+        })
+      ) {
+        return
+      }
+      if (this.handleEditorOpenMessage(message)) return
       if (
         await handleSidebarWorktreeMessage(message, {
           post: (msg) => this.postMessage(msg),
@@ -633,7 +655,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.readyResolvers.splice(0).forEach((r) => r())
           break
         case "sendMessage": {
-          const files = parseMessageFiles(message.files)
+          const msg = message as typeof message & ContextMessage
           await this.handleSendMessage(
             message.text,
             typeof message.messageID === "string" ? message.messageID : undefined,
@@ -643,13 +665,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
-            files,
+            parseMessageFiles(message.files),
             typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
+            typeof msg.contextDirectory === "string" ? msg.contextDirectory : undefined,
           )
           break
         }
         case "sendCommand": {
-          const files = parseMessageFiles(message.files)
+          const msg = message as typeof message & ContextMessage
           await this.handleSendCommand(
             message.command,
             message.arguments,
@@ -660,8 +683,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.modelID,
             message.agent,
             message.variant,
-            files,
+            parseMessageFiles(message.files),
             typeof message.agentManagerContext === "string" ? message.agentManagerContext : undefined,
+            typeof msg.contextDirectory === "string" ? msg.contextDirectory : undefined,
           )
           break
         }
@@ -670,7 +694,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleAbort(message.sessionID)
           break
         case "revertSession":
-          this.handleRevertSession(message.sessionID, message.messageID).catch((e) =>
+          this.handleRevertSession(message.sessionID, message.messageID, message.partID).catch((e) =>
             console.error("[Kilo New] handleRevertSession failed:", e),
           )
           break
@@ -771,11 +795,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "saveImage":
           return saveImage(this.getWorkspaceDirectory(this.currentSession?.id), message)
-        case "openFile":
-          if (message.filePath) {
-            this.handleOpenFile(message.filePath, message.line, message.column)
-          }
-          break
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
@@ -1072,13 +1091,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "fetchMarketplaceData": {
-          const workspace = this.getProjectDirectory(this.currentSession?.id)
-          const mp = this.getMarketplace()
-          // Fetch skills from CLI backend (authoritative source) so the
-          // marketplace doesn't need to duplicate the CLI's skill scanning.
-          const skills = await this.fetchCliSkills()
-          const data = await mp.fetchData(workspace, skills)
-          this.postMessage({ type: "marketplaceData", ...data })
+          await this.handleFetchMarketplaceData()
           break
         }
         case "filterMarketplaceItems": {
@@ -1126,6 +1139,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const d = diff as import("./DiffVirtualProvider").DiffVirtualFile
     d.initialDiffStyle = initialDiffStyle === "split" ? "split" : "unified"
     this.diffVirtualProvider.open(d)
+  }
+
+  private async handleFetchMarketplaceData(): Promise<void> {
+    const workspace = this.getProjectDirectory(this.currentSession?.id)
+    const mp = this.getMarketplace()
+    const skills = await this.fetchCliSkills()
+    const data = await mp.fetchData(workspace, skills)
+    this.postMessage({ type: "marketplaceData", ...data })
   }
 
   /**
@@ -1301,6 +1322,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.sendSpeechToTextSettings()
       this.postMessage({ type: "extensionDataReady" })
 
       if (this.cachedGitRepo) this.startStatsPolling()
@@ -1336,7 +1358,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getContextDirectory()
-      const { data: session } = await this.client.session.create({ directory: workspaceDir }, { throwOnError: true })
+      const { data: session } = await this.client.session.create(
+        { directory: workspaceDir, platform: this.opts.platform },
+        { throwOnError: true },
+      )
       this.setCurrentSession(session)
       this.contextSessionID = session.id
       this.trackDirectory(session.id, workspaceDir)
@@ -1526,6 +1551,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             client.session.list({ directory: dir, roots: true }, { throwOnError: true }).then(({ data }) => data)
         : null,
       sessionDirectories: this.sessionDirectories,
+      worktreeDirectories: this.opts.worktreeDirectories,
       workspaceDirectory: this.getWorkspaceDirectory(),
       postMessage: (msg: unknown) => this.postMessage(msg),
     }
@@ -1640,6 +1666,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to rename session",
+      })
+    }
+  }
+
+  /**
+   * Export a full session transcript as Markdown.
+   */
+  private async handleExportSessionTranscript(sessionID: string): Promise<void> {
+    if (!this.client) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      return
+    }
+
+    try {
+      const saved = await exportTranscript(this.client, {
+        sessionID,
+        dir: this.getWorkspaceDirectory(sessionID),
+      })
+      if (saved) void vscode.window.showInformationMessage("Session transcript exported as Markdown.")
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to export session transcript:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to export session transcript",
       })
     }
   }
@@ -2341,6 +2391,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private sendSpeechToTextSettings(): void {
+    sendSpeechToTextSettings(this)
+  }
+
   /** Returns the number of sessions currently in "busy" state. */
   private getBusySessionCount(): number {
     return getBusySessionCount(this.sessionStatusMap)
@@ -2356,6 +2410,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.provider !== undefined ||
       partial.disabled_providers !== undefined ||
       partial.enabled_providers !== undefined
+    const refreshAgents =
+      partial.default_agent !== undefined ||
+      partial.agent !== undefined ||
+      project.default_agent !== undefined ||
+      project.agent !== undefined
     const hasGlobal = Object.keys(partial).length > 0
     const hasProject = Object.keys(project).length > 0
 
@@ -2388,7 +2447,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         globalConfig: global,
         features: configFeatures(merged),
       })
-      if (refreshProviders) await this.fetchAndSendProviders()
+      await Promise.all([
+        refreshProviders ? this.fetchAndSendProviders() : Promise.resolve(),
+        refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
+      ])
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Config write succeeded but post-write refresh failed:", error)
       const patch =
@@ -2417,7 +2479,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       details: getConfigErrorDetails(error),
     })
   }
-  private async resolveSession(sessionID?: string, draftID?: string, context?: string) {
+  private async resolveSession(sessionID?: string, draftID?: string, context?: string, contextDirectory?: string) {
     if (!this.client) return undefined
 
     const dir = resolveNewSessionDirectory({
@@ -2425,12 +2487,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       currentSessionID: this.currentSession?.id,
       contextSessionID: this.contextSessionID,
       agentManagerContext: context,
+      contextDirectory,
       sessionDirectories: this.sessionDirectories,
       workspaceDirectory: this.getRootDirectory(),
     })
 
     if (!sessionID && !this.currentSession) {
-      const { data: session } = await this.client.session.create({ directory: dir }, { throwOnError: true })
+      const { data: session } = await this.client.session.create(
+        { directory: dir, platform: this.opts.platform },
+        { throwOnError: true },
+      )
       this.setCurrentSession(session)
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
@@ -2534,6 +2600,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: MessageFile[],
     context?: string,
+    contextDirectory?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2550,7 +2617,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     let resolved: { sid: string; dir: string } | undefined
     try {
-      resolved = await this.resolveSession(sessionID, draftID, context)
+      resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
 
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
@@ -2611,6 +2678,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     variant?: string,
     files?: MessageFile[],
     context?: string,
+    contextDirectory?: string,
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2627,7 +2695,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     let resolved: { sid: string; dir: string } | undefined
     try {
-      resolved = await this.resolveSession(sessionID, draftID, context)
+      resolved = await this.resolveSession(sessionID, draftID, context, contextDirectory)
 
       if (messageID) {
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
@@ -2696,10 +2764,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleRevertSession(sessionID: string, messageID: string): Promise<void> {
+  private async handleRevertSession(sessionID: string, messageID: string, partID?: string): Promise<void> {
     if (!this.client) return
     const dir = this.getWorkspaceDirectory(sessionID)
-    const { data, error } = await this.client.session.revert({ sessionID, messageID, directory: dir })
+    const { data, error } = await this.client.session.revert({ sessionID, messageID, partID, directory: dir })
     if (error) {
       console.error("[Kilo New] KiloProvider: Failed to revert session:", error)
       this.postMessage({ type: "error", message: "Failed to revert session", sessionID })
@@ -2889,6 +2957,35 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
   }
 
+  private handleEditorOpenMessage(message: {
+    type?: string
+    filePath?: string
+    line?: number
+    column?: number
+    content?: string
+    language?: string
+  }): boolean {
+    if (message.type === "openFile") {
+      if (message.filePath) this.handleOpenFile(message.filePath, message.line, message.column)
+      return true
+    }
+    if (message.type === "openContent") {
+      if (message.content) this.handleOpenContent(message.content, message.language)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Handle openContent request - open arbitrary text in an untitled VS Code editor tab.
+   */
+  private handleOpenContent(content: string, language?: string): void {
+    vscode.workspace.openTextDocument({ content, language: language || "log" }).then(
+      (doc) => vscode.window.showTextDocument(doc, { preview: true }),
+      (err) => console.error("[Kilo New] KiloProvider: Failed to open content:", err),
+    )
+  }
+
   /**
    * Handle openFile request from the webview — open a file in the VS Code editor.
    * Resolves relative paths against the current session's directory (which may be
@@ -2920,6 +3017,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleUpdateSetting(key: string, value: unknown): Promise<void> {
     const { section, leaf } = buildSettingPath(key)
     if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
+    if (section === "speechToText" && !validSpeechToTextSetting(leaf, value)) return
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
     await config.update(leaf, value, vscode.ConfigurationTarget.Global)
   }
@@ -2960,6 +3058,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Re-send all settings to the webview so the UI reflects the reset
     this.postMessage(buildAutocompleteSettingsMessage())
+    this.sendSpeechToTextSettings()
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
@@ -3091,9 +3190,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Config was updated without a full dispose (e.g. permission-only save).
-    // Fetch and push the updated config so the Settings panel reflects the change.
+    // Fetch and push the updated config + refresh agents and providers so the
+    // Settings panel and mode/model pickers reflect the change.
     if (event.type === "global.config.updated") {
-      void this.fetchAndSendConfigUpdated()
+      void Promise.all([this.fetchAndSendConfigUpdated(), this.fetchAndSendAgents(), this.fetchAndSendProviders()])
       return
     }
 
@@ -3460,6 +3560,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
+    this.speechToTextDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.streams.dispose()

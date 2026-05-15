@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "本機",
+  "agentManager.sidebar.collapse": "收合側邊欄",
+  "agentManager.sidebar.expand": "顯示側邊欄",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "工作階段",
   "agentManager.notGitRepo": "不是 git 儲存庫",

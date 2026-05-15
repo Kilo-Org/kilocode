@@ -1,3 +1,8 @@
+---
+title: Write to File Tool | Kilo Code Docs
+description: Learn how the write_to_file tool creates new files or replaces existing file content with an interactive diff-based approval process.
+---
+
 # write_to_file
 
 The `write_to_file` tool creates new files or completely replaces existing file content with an interactive approval process. It provides a diff view for reviewing changes before they're applied.

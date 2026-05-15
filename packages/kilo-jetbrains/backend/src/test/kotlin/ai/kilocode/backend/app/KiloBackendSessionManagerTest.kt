@@ -20,6 +20,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -472,6 +473,134 @@ class KiloBackendSessionManagerTest {
         assertNotNull(result)
     }
 
+    // ------ Session rename ------
+
+    @Test
+    fun `rename patches session title and returns updated session`() = runBlocking {
+        mock.sessionRenameResponse = """{
+            "id": "ses_1",
+            "slug": "s1",
+            "projectID": "prj_test",
+            "directory": "/test",
+            "title": "New Name",
+            "version": "1.0.0",
+            "time": {"created": 1000, "updated": 2000}
+        }"""
+        val app = setup()
+        ready(app)
+
+        val session = app.sessions.rename("ses_1", "/test", "New Name")
+
+        assertEquals("ses_1", session.id)
+        assertEquals("New Name", session.title)
+        val path = mock.lastSessionRenamePath ?: error("missing rename request")
+        assertTrue(path.startsWith("/session/ses_1?"), "Expected /session/ses_1?... got $path")
+        assertTrue(path.contains("directory=%2Ftest"), "Expected directory=/test in $path")
+        assertEquals("PATCH", mock.lastSessionRenameMethod)
+        assertEquals("""{"title":"New Name"}""", mock.lastSessionRenameBody)
+    }
+
+    @Test
+    fun `rename response preserves directory parentId summary and timestamps`() = runBlocking {
+        mock.sessionRenameResponse = """{
+            "id": "ses_1",
+            "slug": "s1",
+            "projectID": "prj_test",
+            "directory": "/worktree/path",
+            "title": "Renamed",
+            "version": "2.0.0",
+            "time": {"created": 1000, "updated": 9999},
+            "parentID": "ses_parent",
+            "summary": {"additions": 5, "deletions": 3, "files": 2}
+        }"""
+        val app = setup()
+        ready(app)
+
+        val session = app.sessions.rename("ses_1", "/test", "Renamed")
+
+        assertEquals("/worktree/path", session.directory)
+        assertEquals("ses_parent", session.parentID)
+        assertEquals(1000.0, session.time.created)
+        assertEquals(9999.0, session.time.updated)
+        assertNotNull(session.summary)
+        assertEquals(5, session.summary!!.additions)
+        assertEquals(3, session.summary!!.deletions)
+        assertEquals(2, session.summary!!.files)
+    }
+
+    @Test
+    fun `rename url-encodes session id and directory for special characters`() = runBlocking {
+        // Session IDs/directories may contain spaces, slashes, plus signs, and ampersands
+        val app = setup()
+        ready(app)
+
+        app.sessions.rename("ses_a/b c", "/my dir/project", "New Name")
+
+        val path = mock.lastSessionRenamePath ?: error("missing rename request")
+        assertTrue(path.startsWith("/session/ses_a%2Fb%20c?"), "Expected encoded session path in $path")
+        assertTrue(path.contains("directory=%2Fmy%20dir%2Fproject"), "Expected encoded directory in $path")
+    }
+
+    @Test
+    fun `rename url-encodes ampersand plus and query separators`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.rename("ses_a+b&c?d", "/path?a=1&b=2", "Title")
+
+        val path: String = mock.lastSessionRenamePath ?: error("missing rename request")
+        val bare = path.substringBefore("?")
+        val query = path.substringAfter("?", "")
+        assertTrue(path.contains("/session/ses_a+b&c%3Fd?"), "Unexpected encoded session id: $path")
+        assertFalse(query.contains("/path?a=1&b=2"), "Directory must be encoded as one query value: $query")
+        assertTrue(query.contains("directory=%2Fpath%3Fa%3D1%26b%3D2"), "Unexpected encoded directory: $query")
+    }
+
+    @Test
+    fun `rename encodes title in json body`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.rename("ses_1", "/test", "Has \"quotes\" and \\ backslash")
+
+        assertEquals("""{"title":"Has \"quotes\" and \\ backslash"}""", mock.lastSessionRenameBody)
+    }
+
+    @Test
+    fun `rename encodes title control characters in json body`() = runBlocking {
+        val app = setup()
+        ready(app)
+
+        app.sessions.rename("ses_1", "/test", "Line\nTab\tReturn\rBell\u0007")
+
+        assertEquals("""{"title":"Line\nTab\tReturn\rBell\u0007"}""", mock.lastSessionRenameBody)
+    }
+
+    @Test
+    fun `rename surfaces server failure`() = runBlocking {
+        mock.sessionRenameStatus = 500
+        mock.sessionRenameResponse = """{"error":"boom"}"""
+        val app = setup()
+        ready(app)
+
+        val err = assertFailsWith<RuntimeException> {
+            app.sessions.rename("ses_1", "/test", "New Name")
+        }
+
+        assertTrue(err.message.orEmpty().contains("HTTP 500"))
+        assertTrue(err.message.orEmpty().contains("boom"))
+    }
+
+    @Test
+    fun `rename throws before start`() = runBlocking {
+        val app = setup()
+        // Don't connect — manager is not started
+
+        assertFailsWith<IllegalStateException> {
+            app.sessions.rename("ses_1", "/test", "Title")
+        }
+    }
+
     // ------ Session with summary ------
 
     @Test
@@ -495,5 +624,33 @@ class KiloBackendSessionManagerTest {
         assertEquals(42, session.summary!!.additions)
         assertEquals(7, session.summary!!.deletions)
         assertEquals(3, session.summary!!.files)
+    }
+
+    @Test
+    fun `status and summary long values clamp to shared dto int range`() = runBlocking {
+        mock.sessions = """[{
+            "id": "ses_big",
+            "slug": "big",
+            "projectID": "prj",
+            "directory": "/d",
+            "title": "Big",
+            "version": "1",
+            "time": {"created": 1, "updated": 1},
+            "summary": {"additions": 2147483648, "deletions": 9223372036854775807, "files": 3}
+        }]"""
+        mock.sessionStatuses = """{
+            "ses_big": {"type":"retry","attempt":2147483648,"message":"retrying","next":9223372036854775807,"requestID":"req"}
+        }"""
+        val app = setup()
+        ready(app)
+
+        val result = app.sessions.list("/d")
+        val session = result.sessions[0]
+        val status = result.statuses["ses_big"] ?: error("missing status")
+
+        assertEquals(Int.MAX_VALUE, session.summary?.additions)
+        assertEquals(Int.MAX_VALUE, session.summary?.deletions)
+        assertEquals(Int.MAX_VALUE, status.attempt)
+        assertEquals(Long.MAX_VALUE, status.next)
     }
 }

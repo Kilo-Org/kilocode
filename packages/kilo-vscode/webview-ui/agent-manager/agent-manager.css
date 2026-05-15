@@ -23,6 +23,38 @@
   background: var(--surface-interactive-base);
 }
 
+/* Collapsed sidebar: width animates closed; the layout-hydrated class delays
+   the transition until after the first state push so we don't see a flash on
+   initial render when the persisted state is "collapsed". */
+.am-layout-hydrated .am-sidebar {
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    padding 180ms ease,
+    border-right-width 180ms ease;
+}
+
+.am-sidebar-collapsed {
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-width: 0;
+  overflow: hidden;
+  /* Pointer events, focus, and a11y tree exclusion are all handled by the
+     inert attribute on the element. No need for pointer-events: none. */
+}
+
+.am-sidebar-collapsed > [data-component="resize-handle"] {
+  display: none;
+}
+
+/* Empty tab bar — rendered when no session is selected so the sidebar
+   toggle button sits in the same pixel position regardless of state.
+   Drops the leading slot's border-right because there's nothing after it. */
+.am-tab-bar-empty .am-tab-leading {
+  border-right: none;
+}
+
 /* Fixed local repo item */
 
 .am-local-item {
@@ -1618,16 +1650,38 @@ body.am-wt-dragging-active * {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   isolation: isolate;
+}
+
+.am-detail-content-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .am-detail-split {
   flex-direction: row;
 }
 
-.am-detail-split .am-chat-wrapper {
+.am-main-pane {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  min-height: 0;
   min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+.am-main-pane-terminal-active .am-chat-wrapper {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.am-detail-split .am-main-pane {
   border-right: 1px solid var(--border-weak-base);
 }
 
@@ -2092,6 +2146,11 @@ body.am-wt-dragging-active * {
   gap: 6px;
 }
 
+.am-annotation-speech {
+  display: flex;
+  align-items: center;
+}
+
 .am-annotation-btn {
   padding: 2px 10px;
   font-size: inherit;
@@ -2499,10 +2558,23 @@ body.am-wt-dragging-active * {
 .am-nv-dialog .am-prompt-input-wrapper {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.am-nv-dialog .am-prompt-input-container:has([class~="model-selector-popover"][data-component="popover-content"]),
+.am-nv-dialog-content:has([class~="model-selector-popover"][data-component="popover-content"]),
+[data-component="dialog"]:has(.am-nv-dialog [class~="model-selector-popover"][data-component="popover-content"])
+  [data-slot="dialog-body"] {
+  overflow: visible;
 }
 
 .am-nv-dialog .am-prompt-input-ghost-wrapper {
   height: 100%;
+}
+
+.am-nv-dialog [class~="prompt-input-hint"] {
+  flex-shrink: 0;
 }
 
 .am-nv-dialog .am-prompt-input {
@@ -4299,9 +4371,9 @@ body.vscode-high-contrast-light {
  * subtree and stop xterm's internal rAF render loop, causing the
  * "press Enter to see content" bug on worktree switches.
  *
- * Stack:  position:relative container hosting the chat, review, and
- *         terminal layer. Sits below the tab bar inside `.am-detail`.
- * Layer:  absolute-positioned overlay covering the stack.
+ * Stack:  position:relative container hosting the main pane, review,
+ *         and side panel. Sits below the tab bar inside `.am-detail`.
+ * Layer:  absolute-positioned overlay covering the main pane.
  *         `pointer-events: none` when no terminal is active, letting
  *         clicks fall through to the chat behind it.
  * Slots:  absolute-positioned and stacked inside the layer; only the
@@ -4323,7 +4395,7 @@ body.vscode-high-contrast-light {
   opacity: 0;
   pointer-events: none;
   background: var(--vscode-terminal-background, #1e1e1e);
-  z-index: 1;
+  z-index: 30;
   /* Force a dedicated compositor layer so opacity flips do not re-lay-out
      the xterm canvases underneath. */
   will-change: opacity;

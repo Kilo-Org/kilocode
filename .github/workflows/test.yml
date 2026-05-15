@@ -41,10 +41,20 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # kilocode_change start
       - name: Setup Node
-        uses: actions/setup-node@v6 # kilocode_change
+        id: setup-node
+        continue-on-error: ${{ runner.os == 'Windows' }}
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
+
+      - name: Retry Setup Node on Windows
+        if: runner.os == 'Windows' && steps.setup-node.outcome == 'failure'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      # kilocode_change end
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun

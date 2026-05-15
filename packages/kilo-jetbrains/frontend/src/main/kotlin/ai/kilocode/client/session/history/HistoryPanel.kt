@@ -1,20 +1,26 @@
 package ai.kilocode.client.session.history
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.iconButton
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
-import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.actionSystem.ActionGroup
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.ListUtil
+import com.intellij.ui.PopupHandler
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.ScrollingUtil
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.tabs.JBTabs
@@ -49,14 +55,19 @@ import javax.swing.event.ListDataListener
 class HistoryPanel(
     parent: Disposable,
     private val controller: HistoryController,
-    private val gitUrl: () -> String? = { null },
     private val nav: () -> Unit = {},
-) : BorderLayoutPanel(), Disposable {
+    private val manager: SessionManager? = null,
+) : BorderLayoutPanel(), Disposable, DataProvider {
     private val localSearch = search(controller.local)
     private val cloudSearch = search(controller.cloud)
     private val localList = localList()
     private val cloudList = cloudList()
     private val more = LoadMoreButton()
+    private val repoOnly = JBCheckBox(KiloBundle.message("history.cloud.repo.only"), true).apply {
+        isVisible = false
+        border = JBUI.Borders.emptyLeft(UiStyle.Gap.lg())
+        addActionListener { controller.applyRepoOnly(isSelected) }
+    }
     private val localPanel = panel(localSearch, localList)
     private val cloudPanel = panel(cloudSearch, cloudList, more)
     private val cards = CardLayout()
@@ -89,6 +100,9 @@ class HistoryPanel(
         bind(localList, controller.local)
         bind(cloudList, controller.cloud)
         bindTheme()
+        controller.onRepoOnlyChanged = { value ->
+            repoOnly.isSelected = value
+        }
         addHierarchyListener { e ->
             if (e.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() == 0L) return@addHierarchyListener
             if (isShowing && stale) {
@@ -111,7 +125,7 @@ class HistoryPanel(
     fun refresh() {
         stale = false
         updateTheme()
-        controller.reload(gitUrl())
+        controller.reload()
     }
 
     private fun bindTheme() {
@@ -162,19 +176,30 @@ class HistoryPanel(
         )
     }
 
-    private fun back() = BorderLayoutPanel().apply {
-        add(JButton(KiloBundle.message("history.back"), AllIcons.Actions.Back).apply {
-            putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, true)
-            isFocusable = false
+    private fun back(): BorderLayoutPanel {
+        val label = KiloBundle.message("history.back")
+        val btn = HoverIcon().apply {
+            icon = AllIcons.Actions.Back
+            toolTipText = label
+            accessibleContext.accessibleName = label
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             addActionListener { nav() }
-        }, BorderLayout.WEST)
-        border = JBUI.Borders.emptyRight(UiStyle.Gap.lg())
+        }
+        return BorderLayoutPanel().apply {
+            add(btn, BorderLayout.WEST)
+            border = JBUI.Borders.emptyRight(UiStyle.Gap.lg())
+        }
     }
 
     private fun panel(search: SearchTextField, list: JList<out HistoryItem>, footer: JComponent? = null): JComponent {
         return BorderLayoutPanel().apply {
-            add(search, BorderLayout.NORTH)
+            val north = BorderLayoutPanel().apply {
+                add(search, BorderLayout.CENTER)
+                if (list === cloudList) {
+                    add(repoOnly, BorderLayout.SOUTH)
+                }
+            }
+            add(north, BorderLayout.NORTH)
             add(JBScrollPane(list).apply {
                 border = JBUI.Borders.empty()
                 viewportBorder = JBUI.Borders.empty()
@@ -188,21 +213,22 @@ class HistoryPanel(
     }
 
     private fun localList() = JBList(controller.local).apply {
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
-        isFocusable = false
+        selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
+        isFocusable = true
         cellRenderer = LocalHistoryRenderer(controller.local)
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         emptyText.text = KiloBundle.message("history.empty")
         addMouseListener(object : MouseAdapter() {
-            override fun mouseReleased(e: MouseEvent) {
-                if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_RELEASED, true)) return
-                val item = clicked(this@apply, e) ?: return
-                if (deleteClick(this@apply, e)) {
+            override fun mouseClicked(e: MouseEvent) {
+                val row = locationToIndex(e.point)
+                val box = row.takeIf { it >= 0 }?.let { getCellBounds(it, it) } ?: return
+                if (!box.contains(e.point)) return
+                if (e.clickCount == 1 && HistoryRenderer.isDeleteClick(this@apply, box, e.point)) {
+                    val item = model.getElementAt(row)
                     confirm(item)
-                    e.consume()
-                    return
+                } else if (e.clickCount == 2) {
+                    selectedValue?.let(::activate)
                 }
-                activate(item)
             }
         })
         registerKeyboardAction(
@@ -210,20 +236,19 @@ class HistoryPanel(
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JComponent.WHEN_FOCUSED,
         )
-        ListUtil.installAutoSelectOnMouseMove(this)
+        installContextMenu(this)
         ScrollingUtil.installActions(this)
     }
 
     private fun cloudList() = JBList(controller.cloud).apply {
         selectionMode = ListSelectionModel.SINGLE_SELECTION
-        isFocusable = false
+        isFocusable = true
         cellRenderer = CloudHistoryRenderer(controller.cloud)
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         emptyText.text = KiloBundle.message("history.empty")
         addMouseListener(object : MouseAdapter() {
-            override fun mouseReleased(e: MouseEvent) {
-                if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_RELEASED, true)) return
-                clicked(this@apply, e)?.let(::activate)
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.clickCount == 2) selectedValue?.let(::activate)
             }
         })
         registerKeyboardAction(
@@ -231,7 +256,7 @@ class HistoryPanel(
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JComponent.WHEN_FOCUSED,
         )
-        ListUtil.installAutoSelectOnMouseMove(this)
+        installContextMenu(this)
         ScrollingUtil.installActions(this)
     }
 
@@ -253,6 +278,7 @@ class HistoryPanel(
         syncList(cloudList, controller.cloud)
         more.isEnabled = controller.cloud.cursor != null && !controller.cloud.loading
         more.isVisible = controller.cloud.cursor != null || controller.cloud.loading
+        repoOnly.isVisible = controller.gitUrl != null
         cards.show(body, if (loading()) CARD_LOAD else CARD_TABS)
         revalidate()
         repaint()
@@ -272,13 +298,6 @@ class HistoryPanel(
         }
     }
 
-    private fun deleteClick(list: JBList<LocalHistoryItem>, e: MouseEvent): Boolean {
-        val row = list.locationToIndex(e.point)
-        val box = row.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return false
-        if (!box.contains(e.point)) return false
-        return HistoryRenderer.isDeleteClick(list, box, e.point)
-    }
-
     private fun activate(item: HistoryItem) {
         when (item) {
             is LocalHistoryItem -> controller.open(item)
@@ -286,16 +305,52 @@ class HistoryPanel(
         }
     }
 
+    override fun getData(dataId: String): Any? {
+        if (SessionManager.KEY.`is`(dataId)) return manager
+        if (HistoryDataKeys.CONTROLLER.`is`(dataId)) return controller
+        if (HistoryDataKeys.SELECTION.`is`(dataId)) {
+            val source = selectedSource()
+            val local = if (source == HistorySource.LOCAL) localList.selectedValuesList.filterIsInstance<LocalHistoryItem>() else emptyList()
+            val cloud = if (source == HistorySource.CLOUD) cloudList.selectedValuesList.filterIsInstance<CloudHistoryItem>() else emptyList()
+            return HistorySelection(source, local, cloud)
+        }
+        return null
+    }
+
+    private fun installContextMenu(list: JBList<out HistoryItem>) {
+        val group = ActionManager.getInstance().getAction("Kilo.History.ContextMenu")
+        if (group is ActionGroup) {
+            PopupHandler.installPopupMenu(list, group, ActionPlaces.POPUP)
+        }
+    }
+
     private fun confirm(item: LocalHistoryItem) {
         if (controller.deleting(item)) return
-        val result = Messages.showYesNoDialog(
+        val result = com.intellij.openapi.ui.Messages.showYesNoDialog(
             this,
             KiloBundle.message("history.delete.confirm.message", title(item)),
             KiloBundle.message("history.delete.confirm.title"),
-            Messages.getWarningIcon(),
+            com.intellij.openapi.ui.Messages.getWarningIcon(),
         )
-        if (result != Messages.YES) return
+        if (result != com.intellij.openapi.ui.Messages.YES) return
         controller.delete(item)
+    }
+
+    internal fun confirmDelete(items: List<LocalHistoryItem>) {
+        val active = items.filter { !controller.deleting(it) }
+        if (active.isEmpty()) return
+        val msg = if (active.size == 1)
+            KiloBundle.message("history.delete.confirm.message", title(active[0]))
+        else
+            KiloBundle.message("history.delete.confirm.message.multiple", active.size)
+        val result = com.intellij.openapi.ui.Messages.showYesNoDialog(
+            this,
+            msg,
+            KiloBundle.message("history.delete.confirm.title"),
+            com.intellij.openapi.ui.Messages.getWarningIcon(),
+        )
+        if (result != com.intellij.openapi.ui.Messages.YES) return
+        active.forEach { controller.delete(it) }
     }
 
     internal fun itemCount() = activeModel().size
@@ -306,29 +361,38 @@ class HistoryPanel(
         activeList().selectedIndex = index
     }
 
+    internal fun selectIndices(vararg indices: Int) {
+        activeList().selectedIndices = indices
+    }
+
     internal fun selectedIndex() = activeList().selectedIndex
 
     internal fun listFocusable() = activeList().isFocusable
+
+    internal fun listSelectionMode() = activeList().selectionMode
+
+    internal fun loadMoreFocusable() = more.isFocusable
 
     internal fun listCursor() = activeList().cursor.type
 
     internal fun backText(): String? {
         val view = activeInfo().foreSideComponent ?: return null
-        return UIUtil.uiTraverser(view).filter(JButton::class.java).firstOrNull()?.text
+        return UIUtil.uiTraverser(view).filter(HoverIcon::class.java).firstOrNull()?.toolTipText
     }
 
     internal fun backCursor(): Int? {
         val view = activeInfo().foreSideComponent ?: return null
-        return UIUtil.uiTraverser(view).filter(JButton::class.java).firstOrNull()?.cursor?.type
+        return UIUtil.uiTraverser(view).filter(HoverIcon::class.java).firstOrNull()?.cursor?.type
     }
 
     internal fun clickBack() {
         val view = activeInfo().foreSideComponent ?: return
-        UIUtil.uiTraverser(view).filter(JButton::class.java).firstOrNull()?.doClick()
+        UIUtil.uiTraverser(view).filter(HoverIcon::class.java).firstOrNull()?.doClick()
     }
 
     internal fun clickDelete() {
-        localList.selectedValue?.let(controller::delete)
+        val items = localList.selectedValuesList.filterIsInstance<LocalHistoryItem>()
+        items.forEach { controller.delete(it) }
     }
 
     internal fun clickCloud() {
@@ -354,16 +418,12 @@ class HistoryPanel(
         return items.indices.mapNotNull { HistoryRenderer.section(items, it) }
     }
 
-    internal fun deleteVisible(index: Int, selected: Boolean = true): Boolean {
-        val item = controller.local.getElementAt(index)
-        val view = localList.cellRenderer.getListCellRendererComponent(localList, item, index, selected, false)
-        return view is HistoryRenderer<*> && view.deleteVisible()
-    }
+    internal fun repoOnlyVisible() = repoOnly.isVisible
 
-    internal fun cloudDeleteVisible(index: Int, selected: Boolean = true): Boolean {
-        val item = controller.cloud.getElementAt(index)
-        val view = cloudList.cellRenderer.getListCellRendererComponent(cloudList, item, index, selected, false)
-        return view is HistoryRenderer<*> && view.deleteVisible()
+    internal fun repoOnlySelected() = repoOnly.isSelected
+
+    internal fun clickRepoOnly() {
+        repoOnly.doClick()
     }
 
     private fun activeList(): JBList<out HistoryItem> = if (tabs.selectedInfo === cloudInfo) cloudList else localList
@@ -385,15 +445,14 @@ class HistoryPanel(
     }
 
     override fun dispose() {
-        // no-op
+        controller.onRepoOnlyChanged = null
     }
 
     private class LoadMoreButton : JButton(KiloBundle.message("history.cloud.load.more")) {
         private var over = false
 
         init {
-            isFocusable = false
-            setRequestFocusEnabled(false)
+            isFocusable = true
             isContentAreaFilled = false
             isBorderPainted = false
             isOpaque = false

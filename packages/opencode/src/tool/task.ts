@@ -8,6 +8,7 @@ import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
+import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
 import { Effect, Schema } from "effect"
 
 export interface TaskPromptOps {
@@ -189,6 +190,7 @@ export const TaskTool = Tool.define(
         (costBefore) =>
           Effect.gen(function* () {
             const parts = yield* ops.resolvePromptParts(params.prompt)
+            KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
             // kilocode_change start - share child prompt between foreground and background paths
             const child = {
               messageID,

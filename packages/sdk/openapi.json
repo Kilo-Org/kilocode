@@ -10481,6 +10481,100 @@
         ]
       }
     },
+    "/kilo/audio/transcriptions": {
+      "post": {
+        "operationId": "kilo.audio.transcriptions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Speech to text transcription",
+        "description": "Proxy an audio transcription request to the Kilo Gateway",
+        "responses": {
+          "200": {
+            "description": "Transcription response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "usage": {}
+                  },
+                  "required": ["text"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "input_audio": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "string"
+                      },
+                      "format": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["data", "format"]
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "temperature": {
+                    "type": "number"
+                  }
+                },
+                "required": ["model", "input_audio"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.audio.transcriptions({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/notifications": {
       "get": {
         "operationId": "kilo.notifications",
@@ -11214,6 +11308,10 @@
           },
           "descriptionKey": {
             "description": "Optional i18n key for the description",
+            "type": "string"
+          },
+          "mode": {
+            "description": "Optional agent/mode name to pre-select in the UI when this option is picked",
             "type": "string"
           }
         },
@@ -16408,6 +16506,19 @@
               "auto": {
                 "description": "Enable automatic compaction when context is full (default: true)",
                 "type": "boolean"
+              },
+              "threshold_percent": {
+                "description": "Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.",
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 100
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "prune": {
                 "description": "Enable pruning of old tool outputs (default: true)",

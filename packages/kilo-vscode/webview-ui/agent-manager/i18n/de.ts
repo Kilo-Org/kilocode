@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "lokal",
+  "agentManager.sidebar.collapse": "Seitenleiste einklappen",
+  "agentManager.sidebar.expand": "Seitenleiste anzeigen",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SITZUNGEN",
   "agentManager.notGitRepo": "Kein Git-Repository",

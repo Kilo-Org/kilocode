@@ -96,6 +96,7 @@ export const dict = {
   "command.session.share.description": "이 세션을 공유하고 URL을 클립보드에 복사",
   "command.session.unshare": "세션 공유 중지",
   "command.session.unshare.description": "이 세션 공유 중지",
+  "command.session.export": "세션 기록 내보내기",
 
   "palette.search.placeholder": "파일, 명령어 및 세션 검색",
   "palette.empty": "결과 없음",
@@ -271,6 +272,7 @@ export const dict = {
   "prompt.attachment.remove": "첨부 파일 제거",
   "prompt.action.send": "전송",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
+  "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
@@ -280,6 +282,20 @@ export const dict = {
   "prompt.action.resetModel": "모델을 기본값으로 재설정",
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
+
+  "speechToText.tooltip.start": "음성 입력 시작",
+  "speechToText.tooltip.stop": "음성 캡처 중지",
+  "speechToText.tooltip.transcribing": "변환 중... 취소하려면 클릭하세요.",
+  "speechToText.tooltip.error": "음성 입력에 실패했습니다. 지우려면 클릭하세요.",
+  "speechToText.error.title": "음성 입력 실패",
+  "speechToText.error.loginRequired": "음성 입력을 사용하려면 Kilo에 로그인하세요.",
+  "speechToText.error.permission": "마이크 권한이 거부되었습니다.",
+  "speechToText.error.microphone": "마이크를 시작할 수 없습니다.",
+  "speechToText.error.recording": "녹음에 실패했습니다.",
+  "speechToText.error.emptyRecording": "녹음된 오디오가 없습니다.",
+  "speechToText.error.emptyTranscript": "음성이 감지되지 않았습니다.",
+  "speechToText.error.encoding": "녹음을 인코딩할 수 없습니다.",
+  "speechToText.toast.transcribed": "변환 텍스트 삽입됨",
 
   "prompt.toast.pasteUnsupported.title": "지원되지 않는 붙여넣기",
   "prompt.toast.pasteUnsupported.description": "이미지나 PDF만 붙여넣을 수 있습니다.",
@@ -1223,6 +1239,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
   "settings.experimental.agentManagerTool.description":
     "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
+  "settings.experimental.speechToText.title": "음성 텍스트 변환",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",
+  "settings.experimental.speechToText.disabledDescription":
+    "프롬프트 필드에서 음성 입력을 사용하려면 Kilo provider를 활성화하고 로그인하세요.",
+  "settings.experimental.speechToTextModel.title": "음성 텍스트 변환 모델",
+  "settings.experimental.speechToTextModel.description": "음성 입력에 사용할 Kilo Gateway 변환 모델을 선택하세요.",
   "settings.experimental.continueOnDeny.title": "거부 시 계속",
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
@@ -1386,7 +1409,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "스냅샷 활성화",
   "settings.checkpoints.enable.description": "파일 편집 전 체크포인트를 생성하여 이전 상태를 복원할 수 있습니다",
   "settings.context.autoCompaction.title": "자동 압축",
-  "settings.context.autoCompaction.description": "컨텍스트가 가득 차면 자동으로 압축",
+  "settings.context.autoCompaction.description": "컨텍스트가 한도에 도달하기 전에 자동으로 압축",
+  "settings.context.compactionLimit.title": "자동 압축 한도",
+  "settings.context.compactionLimit.description":
+    "컨텍스트가 모델 창의 이 비율에 도달하면 압축합니다. 안전 버퍼만 사용하려면 비워 두세요.",
   "settings.context.prune.title": "이전 출력 정리",
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",

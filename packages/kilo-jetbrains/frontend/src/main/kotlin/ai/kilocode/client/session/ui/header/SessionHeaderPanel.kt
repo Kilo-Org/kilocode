@@ -108,7 +108,7 @@ class SessionHeaderPanel(
         add(output)
         add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(cacheRead)
-        add(Box.createHorizontalStrut(UiStyle.Gap.small()))
+        add(Box.createHorizontalStrut(UiStyle.Gap.sm()))
         add(cacheWrite)
     }
     private val todoRow = JPanel(FlowLayout(FlowLayout.LEFT, UiStyle.Gap.md(), 0)).apply {

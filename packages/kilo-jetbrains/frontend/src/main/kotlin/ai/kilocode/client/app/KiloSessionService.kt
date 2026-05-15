@@ -124,6 +124,12 @@ class KiloSessionService internal constructor(
         list(dir)
     }
 
+    suspend fun renameSession(id: String, dir: String, newTitle: String): ai.kilocode.rpc.dto.SessionDto {
+        val session = call { rename(id, dir, newTitle) }
+        _sessions.value = _sessions.value.map { if (it.id == id) session else it }
+        return session
+    }
+
     suspend fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
         call { cloudSessions(dir, cursor, limit, gitUrl) }
 

@@ -156,7 +156,7 @@ export namespace Telemetry {
     taskId?: string
     mode?: "review"
     feature?: "code_reviews"
-    command?: "local-review" | "local-review-uncommitted"
+    command?: "review" | "local-review" | "local-review-uncommitted"
     apiProvider: string
     modelId: string
     inputTokens?: number

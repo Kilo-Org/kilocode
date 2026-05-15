@@ -250,6 +250,10 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
                   "description": "Optional i18n key for the label; clients translate and still reply with \`label\`",
                   "type": "string",
                 },
+                "mode": {
+                  "description": "Optional agent/mode name to pre-select in the UI when this option is picked",
+                  "type": "string",
+                },
               },
               "ref": "QuestionOption",
               "required": [

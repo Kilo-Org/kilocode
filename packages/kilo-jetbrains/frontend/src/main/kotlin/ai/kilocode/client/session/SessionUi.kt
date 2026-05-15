@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel

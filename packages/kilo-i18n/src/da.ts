@@ -91,7 +91,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Slå Kilos snapshots fra for dette projekt. Du mister fortryd/gentag for Kilo-ændringer, men git sporer stadig alt.",
 
-  "ui.messagePart.openInDiffViewer": "Åbn i diff-viser",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Åbn i Diff-visning",
+  "ui.messagePart.shell.command": "Kommando",
+  "ui.messagePart.shell.output": "Output",
+  "ui.messagePart.openInEditor": "Åbn i editor",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "Dette var nyttigt",

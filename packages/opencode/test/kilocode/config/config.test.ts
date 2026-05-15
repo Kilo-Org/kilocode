@@ -11,6 +11,7 @@ import { Npm } from "@opencode-ai/core/npm"
 import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
+import { ConfigMarkdown } from "../../../src/config/markdown"
 import { Env } from "../../../src/env"
 import { KiloIndexing } from "../../../src/kilocode/indexing"
 import { Instance } from "../../../src/project/instance"
@@ -64,12 +65,33 @@ const cfg: Partial<Config.Info> = {
   },
 }
 
-describe("kilocode indexing config", () => {
-  afterEach(async () => {
-    await disposeAllInstances()
-    await clear(true)
-  })
+afterEach(async () => {
+  delete process.env.KILO_MD_TEST
+  await disposeAllInstances()
+  await clear(true)
+})
 
+describe("markdown substitutions", () => {
+  test("applies file and env substitutions to parsed markdown body", async () => {
+    process.env.KILO_MD_TEST = "env content"
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(path.join(dir, "body.md"), "file content")
+        await Filesystem.write(
+          path.join(dir, "SKILL.md"),
+          ["---", "name: test", "description: Test", "---", "{file:body.md}", "{env:KILO_MD_TEST}"].join("\n"),
+        )
+      },
+    })
+
+    const md = await ConfigMarkdown.parse(path.join(tmp.path, "SKILL.md"))
+
+    expect(md.content).toContain("file content")
+    expect(md.content).toContain("env content")
+  })
+})
+
+describe("kilocode indexing config", () => {
   test("keeps global indexing enabled in global config", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()

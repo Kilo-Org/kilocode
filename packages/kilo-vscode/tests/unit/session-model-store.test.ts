@@ -216,4 +216,76 @@ describe("per-mode model memory", () => {
     expect(result.modelSelections["code"]).toEqual(claude)
     expect(Object.keys(result.sessionOverrides)).toHaveLength(0)
   })
+
+  it("clearing both session override and per-mode selection falls back to config default", () => {
+    let store = emptyStore()
+    // Simulate mode model set in config (getModeModel returns claude).
+    const configured: ResolveEnv = {
+      ...env(),
+      getModeModel: (name) => (name === "code" ? claude : null),
+    }
+
+    // User picked gpt globally for "code"
+    let result = applyModel(store, "code", gpt, undefined)
+    store = { ...store, ...result }
+
+    // User then overrode the session with claude
+    result = applyModel(store, "code", claude, "session-a")
+    store = { ...store, ...result }
+
+    // Simulate clearModelOverride: clear both session override and per-mode selection
+    const reset: ModelStore = {
+      ...store,
+      sessionOverrides: {},
+      modelSelections: { ...store.modelSelections, code: null },
+    }
+
+    // Should fall through to the configured per-mode model (claude from config)
+    expect(getSelected(reset, configured, "session-a", "code")).toEqual(claude)
+  })
+
+  it("clearing only session override but not per-mode selection leaves persisted pick visible", () => {
+    let store = emptyStore()
+    const e = env()
+
+    // User picked claude globally for "code"
+    const result = applyModel(store, "code", claude, undefined)
+    store = { ...store, ...result }
+
+    // User then overrode the session with gpt
+    const r2 = applyModel(store, "code", gpt, "session-a")
+    store = { ...store, ...r2 }
+
+    // Simulate OLD behaviour: only clear session override, leave modelSelections intact
+    const partial: ModelStore = { ...store, sessionOverrides: {} }
+
+    // The persisted per-mode selection (claude) is still returned — this is
+    // why the reset appeared to "do nothing" when config also resolved to claude.
+    expect(getSelected(partial, e, "session-a", "code")).toEqual(claude)
+  })
+
+  it("switching from plan to implementation uses implementation config after clearing stale memory", () => {
+    let store = emptyStore()
+    const configured: ResolveEnv = {
+      ...env(),
+      getModeModel: (name) => (name === "code" ? gpt : name === "plan" ? claude : null),
+    }
+
+    // Old manual memory says implementation/code should use claude.
+    let result = applyModel(store, "code", claude, undefined)
+    store = { ...store, ...result }
+
+    // Current plan session is using its own model.
+    result = applyModel(store, "plan", claude, "session-a")
+    store = { ...store, ...result, agentSelections: { "session-a": "plan" } }
+
+    const switched: ModelStore = {
+      ...store,
+      agentSelections: { "session-a": "code" },
+      sessionOverrides: {},
+      modelSelections: { ...store.modelSelections, code: null },
+    }
+
+    expect(getSelected(switched, configured, "session-a", "code")).toEqual(gpt)
+  })
 })

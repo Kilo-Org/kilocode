@@ -4,7 +4,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.session.history.clicked
+import ai.kilocode.client.session.history.itemAt
 import ai.kilocode.client.session.history.title
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
@@ -71,7 +71,7 @@ class EmptySessionPanel(
         emptyText.clear()
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                val item = clicked(this@apply, e) ?: return
+                val item = itemAt(this@apply, e) ?: return
                 controller.openSession(SessionRef.Local(item.session))
             }
 
