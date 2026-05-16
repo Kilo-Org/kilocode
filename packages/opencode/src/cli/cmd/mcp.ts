@@ -19,6 +19,15 @@ import { Filesystem } from "@/util/filesystem"
 import { Bus } from "../../bus"
 import { AppRuntime } from "../../effect/app-runtime"
 import { Effect } from "effect"
+// kilocode_change start
+import {
+  handleMcpAddArgs,
+  McpAddJsonCommand,
+  McpGetCommand,
+  McpRemoveCommand,
+  resolveConfigTarget,
+} from "../../kilocode/cli/cmd/mcp"
+// kilocode_change end
 
 function getAuthStatusIcon(status: MCP.AuthStatus): string {
   switch (status) {
@@ -101,7 +110,12 @@ export const McpCommand = cmd({
   builder: (yargs) =>
     yargs
       .command(McpAddCommand)
+      // kilocode_change start
+      .command(McpAddJsonCommand)
+      .command(McpGetCommand)
+      // kilocode_change end
       .command(McpListCommand)
+      .command(McpRemoveCommand) // kilocode_change
       .command(McpAuthCommand)
       .command(McpLogoutCommand)
       .command(McpDebugCommand)
@@ -409,37 +423,11 @@ export const McpLogoutCommand = cmd({
   },
 })
 
-async function resolveConfigPath(baseDir: string, global = false) {
-  // kilocode_change start - prefer kilo.json/.kilo over opencode.json/.opencode
-  // Check for existing config files (prefer .jsonc over .json, check .kilo/ and .opencode/ subdirectory too)
-  const candidates = [
-    path.join(baseDir, "kilo.json"),
-    path.join(baseDir, "kilo.jsonc"),
-    path.join(baseDir, "opencode.json"),
-    path.join(baseDir, "opencode.jsonc"),
-  ]
-
-  if (!global) {
-    candidates.push(
-      path.join(baseDir, ".kilo", "kilo.json"),
-      path.join(baseDir, ".kilo", "kilo.jsonc"),
-      path.join(baseDir, ".kilo", "opencode.json"),
-      path.join(baseDir, ".kilo", "opencode.jsonc"),
-      path.join(baseDir, ".opencode", "opencode.json"),
-      path.join(baseDir, ".opencode", "opencode.jsonc"),
-    )
-  }
-
-  for (const candidate of candidates) {
-    if (await Filesystem.exists(candidate)) {
-      return candidate
-    }
-  }
-
-  // Default to kilo.json if none exist
-  return path.join(baseDir, "kilo.json")
-  // kilocode_change end
+// kilocode_change start - delegate to shared resolveConfigTarget for canonical path resolution
+async function resolveConfigPath(_baseDir: string, global = false) {
+  return resolveConfigTarget(global ? "global" : "project")
 }
+// kilocode_change end
 
 async function addMcpToConfig(name: string, mcpConfig: ConfigMCP.Info, configPath: string) {
   let text = "{}"
@@ -459,12 +447,72 @@ async function addMcpToConfig(name: string, mcpConfig: ConfigMCP.Info, configPat
 }
 
 export const McpAddCommand = cmd({
-  command: "add",
+  command: "add [name] [commandOrUrl] [args..]", // kilocode_change
   describe: "add an MCP server",
-  async handler() {
+  // kilocode_change start
+  builder: (yargs) =>
+    yargs
+      .positional("name", {
+        describe: "name of the MCP server",
+        type: "string",
+      })
+      .positional("commandOrUrl", {
+        describe: "command or URL for the MCP server",
+        type: "string",
+      })
+      .positional("args", {
+        describe: "arguments for local MCP servers",
+        type: "string",
+        array: true,
+      })
+      .option("callback-port", {
+        describe: "fixed port for OAuth callback",
+        type: "number",
+      })
+      .option("client-id", {
+        describe: "OAuth client ID for remote servers",
+        type: "string",
+      })
+      .option("client-secret", {
+        describe: "prompt for OAuth client secret or read MCP_CLIENT_SECRET",
+        type: "boolean",
+      })
+      .option("env", {
+        alias: "e",
+        describe: "set environment variables, e.g. -e KEY=value",
+        type: "string",
+        array: true,
+      })
+      .option("header", {
+        alias: "H",
+        describe: 'set HTTP headers, e.g. -H "Authorization: Bearer ..."',
+        type: "string",
+        array: true,
+      })
+      .option("scope", {
+        alias: "s",
+        describe: "configuration scope (local, user, or project)",
+        type: "string",
+        choices: ["local", "user", "project", "global"],
+        default: "local",
+      })
+      .option("type", {
+        alias: "t",
+        describe: "MCP server type (local or remote, defaults to local)",
+        type: "string",
+        choices: ["local", "remote"],
+      }),
+  // kilocode_change end
+  async handler(args) { // kilocode_change
     await Instance.provide({
       directory: process.cwd(),
       async fn() {
+        // kilocode_change start
+        if (args.name || args.commandOrUrl || args["--"]?.length) {
+          await handleMcpAddArgs(args)
+          return
+        }
+        // kilocode_change end
         UI.empty()
         prompts.intro("Add MCP server")
 

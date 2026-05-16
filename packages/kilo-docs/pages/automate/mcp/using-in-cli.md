@@ -107,10 +107,32 @@ You can manage MCP servers from the CLI:
 | Command | Description |
 |---|---|
 | `kilo mcp list` | List all configured MCP servers |
-| `kilo mcp add` | Add an MCP server |
-| `kilo mcp auth` | Authenticate with an MCP server |
+| `kilo mcp add` | Add an MCP server interactively or from arguments |
+| `kilo mcp add-json <name> <json>` | Add an MCP server from a JSON string |
+| `kilo mcp get <name>` | Show details for a configured MCP server |
+| `kilo mcp remove <name>` | Remove an MCP server from config |
+| `kilo mcp auth [name]` | Authenticate with an OAuth-enabled MCP server |
+| `kilo mcp logout [name]` | Remove OAuth credentials for an MCP server |
+| `kilo mcp debug <name>` | Debug OAuth connection details for an MCP server |
 
 Inside the interactive TUI, use the `/mcps` slash command to toggle MCP servers on or off.
+
+`kilo mcp add` also supports Kilo-native arguments:
+
+```bash
+# Add remote server
+kilo mcp add --type=remote sentry https://mcp.sentry.dev/mcp
+
+# Add remote server with headers
+kilo mcp add --type=remote corridor https://app.corridor.dev/api/mcp -H "Authorization: Bearer ..."
+
+# Add local server (local is the default type)
+kilo mcp add my-server -e API_KEY=xxx -- npx my-mcp-server
+```
+
+For scope flags, `local` and `project` write project config; `user` and `global` write global config.
+`kilo mcp add-json` accepts the same Kilo MCP server object used under `mcp.<name>` in config; `type` must be `"local"` or `"remote"`.
+Transport names used by other MCP clients, such as `stdio`, `sse`, or `http`, are not valid Kilo config types.
 
 ## Examples
 

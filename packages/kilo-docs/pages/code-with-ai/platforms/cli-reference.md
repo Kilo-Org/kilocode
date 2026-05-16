@@ -29,11 +29,14 @@ Options:
 manage MCP (Model Context Protocol) servers
 
 Commands:
-  kilo mcp add            add an MCP server
-  kilo mcp list           list MCP servers and their status  [aliases: ls]
-  kilo mcp auth [name]    authenticate with an OAuth-enabled MCP server
-  kilo mcp logout [name]  remove OAuth credentials for an MCP server
-  kilo mcp debug <name>   debug OAuth connection for an MCP server
+  kilo mcp add [name] [commandOrUrl] [args..]  add an MCP server
+  kilo mcp add-json <name> <json>              add an MCP server from a JSON string
+  kilo mcp get <name>                          get details about an MCP server
+  kilo mcp list                                list MCP servers and their status  [aliases: ls]
+  kilo mcp remove <name>                       remove an MCP server  [aliases: rm]
+  kilo mcp auth [name]                         authenticate with an OAuth-enabled MCP server
+  kilo mcp logout [name]                       remove OAuth credentials for an MCP server
+  kilo mcp debug <name>                        debug OAuth connection for an MCP server
 
 Options:
   --help     Show help  [boolean]
@@ -44,6 +47,47 @@ Options:
 
 ```
 add an MCP server
+
+Positionals:
+  name          name of the MCP server  [string]
+  commandOrUrl  command or URL for the MCP server  [string]
+  args          arguments for local MCP servers  [string]
+
+Options:
+      --help           Show help  [boolean]
+      --version        Show version number  [boolean]
+      --callback-port  fixed port for OAuth callback  [number]
+      --client-id      OAuth client ID for remote servers  [string]
+      --client-secret  prompt for OAuth client secret or read MCP_CLIENT_SECRET  [boolean]
+  -e, --env            set environment variables, e.g. -e KEY=value  [array]
+  -H, --header         set HTTP headers, e.g. -H "Authorization: Bearer ..."  [array]
+  -s, --scope          configuration scope (local, user, or project)  [string] [choices: "local", "user", "project", "global"] [default: "local"]
+  -t, --type           MCP server type (local or remote)  [string] [choices: "local", "remote"] [default: "local"]
+```
+
+### kilo mcp add-json
+
+```
+add an MCP server from a JSON string
+
+Positionals:
+  name  name of the MCP server  [string]
+  json  Kilo MCP server JSON  [string]
+
+Options:
+      --help           Show help  [boolean]
+      --version        Show version number  [boolean]
+  -s, --scope          configuration scope (local, user, or project)  [string] [choices: "local", "user", "project", "global"] [default: "local"]
+      --client-secret  prompt for OAuth client secret or read MCP_CLIENT_SECRET  [boolean]
+```
+
+### kilo mcp get
+
+```
+get details about an MCP server
+
+Positionals:
+  name  name of the MCP server  [string]
 
 Options:
   --help     Show help  [boolean]
@@ -58,6 +102,20 @@ list MCP servers and their status
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
+```
+
+### kilo mcp remove
+
+```
+remove an MCP server
+
+Positionals:
+  name  name of the MCP server  [string]
+
+Options:
+      --help     Show help  [boolean]
+      --version  Show version number  [boolean]
+  -s, --scope    configuration scope (local, user, or project)  [string] [choices: "local", "user", "project", "global"]
 ```
 
 ### kilo mcp auth
