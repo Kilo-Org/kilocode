@@ -57,7 +57,7 @@ export function NetworkPrompt(props: { request: SessionNetworkWait }) {
         >
           <text fg={theme.success}>Network reconnected</text>
           <text fg={theme.text}>Connection restored.</text>
-          <text fg={theme.textMuted}>Resuming automatically...</text>
+          <text fg={theme.textMuted}>Resuming...</text>
           <text fg={theme.textMuted}>Press Esc to stop.</text>
         </Show>
       </box>
