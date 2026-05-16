@@ -2275,12 +2275,13 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
-  test("mistral-medium-3.5 with reasoning returns variants", () => {
+  // kilocode_change start
+  test("mistral-medium-3-5 with reasoning returns variants", () => {
     const model = createMockModel({
-      id: "mistral/mistral-medium-3.5",
+      id: "mistral/mistral-medium-3-5",
       providerID: "mistral",
       api: {
-        id: "mistral-medium-3.5",
+        id: "mistral-medium-3-5",
         url: "https://api.mistral.com",
         npm: "@ai-sdk/mistral",
       },
@@ -2291,6 +2292,39 @@ describe("ProviderTransform.variants", () => {
       high: { reasoningEffort: "high" },
     })
   })
+
+  test("mistral-medium-latest returns variants when metadata lags", () => {
+    const model = createMockModel({
+      id: "mistral/mistral-medium-latest",
+      providerID: "mistral",
+      api: {
+        id: "mistral-medium-latest",
+        url: "https://api.mistral.com",
+        npm: "@ai-sdk/mistral",
+      },
+      capabilities: { reasoning: false },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(result).toEqual({
+      high: { reasoningEffort: "high" },
+    })
+  })
+
+  test("older mistral medium aliases without reasoning stay disabled", () => {
+    const model = createMockModel({
+      id: "mistral/mistral-medium-2508",
+      providerID: "mistral",
+      api: {
+        id: "mistral-medium-2508",
+        url: "https://api.mistral.com",
+        npm: "@ai-sdk/mistral",
+      },
+      capabilities: { reasoning: false },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(result).toEqual({})
+  })
+  // kilocode_change end
 
   test("mistral without reasoning returns empty object", () => {
     const model = createMockModel({

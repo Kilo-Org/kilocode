@@ -70,7 +70,7 @@ Then set your default model:
 
 ## Reasoning Variants
 
-Mistral's adjustable reasoning support is exposed only for reasoning-capable Mistral Small 4 models: `mistral-small-2603` and `mistral-small-latest`. When one of these models is selected, Kilo offers a `high` variant that sends `reasoningEffort: "high"` to the Mistral provider.
+Mistral's adjustable reasoning support is exposed only for reasoning-capable Mistral Small 4 and Medium 3.5 models: `mistral-small-2603`, `mistral-small-latest`, `mistral-medium-3-5`, and `mistral-medium-latest`. When one of these models is selected, Kilo offers a `high` variant that sends `reasoningEffort: "high"` to the Mistral provider.
 
 Other Mistral models do not get automatic reasoning variants, even if they appear in the same provider. See Mistral's [adjustable reasoning documentation](https://docs.mistral.ai/capabilities/reasoning/adjustable) for provider-level details.
 

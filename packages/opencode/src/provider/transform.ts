@@ -447,6 +447,15 @@ function anthropicAdaptiveEfforts(apiId: string): string[] | null {
   return null
 }
 
+// kilocode_change start
+function isMistralAdjustableReasoningModel(apiId: string): boolean {
+  const id = apiId.toLowerCase()
+  return ["mistral-small-2603", "mistral-small-latest", "mistral-medium-3-5", "mistral-medium-latest"].some(
+    (candidate) => id.includes(candidate),
+  )
+}
+// kilocode_change end
+
 export function variants(model: Provider.Model): Record<string, Record<string, any>> {
   // kilocode_change start
   if (
@@ -458,7 +467,13 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
   }
   // kilocode_change end
 
-  if (!model.capabilities.reasoning) return {}
+  // kilocode_change start - Mistral's catalog metadata can lag behind newly adjustable models.
+  if (
+    !model.capabilities.reasoning &&
+    !(model.api.npm === "@ai-sdk/mistral" && isMistralAdjustableReasoningModel(model.api.id))
+  )
+    return {}
+  // kilocode_change end
 
   const id = model.id.toLowerCase()
   const adaptiveEfforts = anthropicAdaptiveEfforts(model.api.id)
@@ -802,11 +817,8 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@ai-sdk/mistral":
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
       // https://docs.mistral.ai/capabilities/reasoning/adjustable
-      if (!model.capabilities.reasoning) return {}
       // Only Mistral Small 4 and Medium 3.5 support reasoning
-      const MISTRAL_REASONING_IDS = ["mistral-small-2603", "mistral-small-latest", "mistral-medium-3.5"]
-      const mistralId = model.api.id.toLowerCase()
-      if (!MISTRAL_REASONING_IDS.some((id) => mistralId.includes(id))) return {}
+      if (!isMistralAdjustableReasoningModel(model.api.id)) return {} // kilocode_change
       return {
         high: { reasoningEffort: "high" },
       }
