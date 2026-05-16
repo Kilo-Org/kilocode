@@ -1128,7 +1128,6 @@ export const dict = {
   "ui.sessionTurn.cancel": "Отмена",
   "ui.sessionTurn.status.thinking": "Думаю...",
   "ui.sessionTurn.status.consideringNextSteps": "Продумываю следующие шаги...",
-||||||| parent of 4c08cf81f3 (feat(vscode): make turn completion visible in chat)
   "session.turn.completed.seconds": "Работал {{ seconds }}с",
   "session.turn.completed.minutes": "Работал {{ minutes }}мин",
   "session.turn.completed.hours": "Работал {{ hours }}ч {{ minutes }}мин",

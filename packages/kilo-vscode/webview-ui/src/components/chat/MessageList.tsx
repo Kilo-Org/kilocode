@@ -245,7 +245,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     return index() > active
                   })
 
-                  return <VscodeSessionTurn turn={turn} queued={queued()} onForkMessage={props.onForkMessage} />
+                  const isLast = createMemo(() => index() === visibleTurns().length - 1)
+
+                  return <VscodeSessionTurn turn={turn} queued={queued()} isLast={isLast()} onForkMessage={props.onForkMessage} />
                 }}
               </Virtualizer>
             </Show>

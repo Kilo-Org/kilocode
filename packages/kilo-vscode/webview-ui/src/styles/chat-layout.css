@@ -260,3 +260,13 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* Turn Completion Indicator */
+.turn-completion-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--vscode-charts-green);
+}
