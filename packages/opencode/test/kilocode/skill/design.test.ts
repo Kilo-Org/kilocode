@@ -29,6 +29,9 @@ describe("DESIGN.md skill", () => {
             "Use this when creating or modifying UI so visual choices follow the project's DESIGN.md design system, including colors, typography, layout, components, and style guardrails.",
           )
           expect(item!.location).toBe(path.join(dir, "DESIGN.md"))
+          expect(item!.content).toContain("DESIGN.md is the project's design-system source of truth for UI work.")
+          expect(item!.content).toContain("Design tokens are exact values to follow; prose explains how to apply them.")
+          expect(item!.content).toContain("Use existing tokens, components, and guardrails before inventing new visual rules.")
           expect(item!.content).toContain("Use warm neutrals")
         }),
       { git: true },
