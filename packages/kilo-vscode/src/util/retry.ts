@@ -15,6 +15,9 @@ const MAX_MS = 300_000
 /** Maximum number of retry attempts */
 const MAX_RETRIES = BACKOFF_DELAYS_MS.length
 
+/** Synthetic status used when an SDK request fails before an HTTP response exists. */
+const NETWORK_ERROR_STATUS = 0
+
 /** HTTP status codes that are safe to retry */
 const RETRYABLE = new Set([408, 409, 425, 429, 500, 502, 503, 504])
 
@@ -22,6 +25,7 @@ const RETRYABLE = new Set([408, 409, 425, 429, 500, 502, 503, 504])
  * Whether an HTTP status code is retryable.
  */
 export function retryable(status: number): boolean {
+  if (status === NETWORK_ERROR_STATUS) return true
   if (RETRYABLE.has(status)) return true
   return status >= 500
 }
