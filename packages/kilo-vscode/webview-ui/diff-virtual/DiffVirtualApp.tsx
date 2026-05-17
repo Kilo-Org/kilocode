@@ -17,6 +17,7 @@ import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider } from "../src/context/vscode"
 import { isMarkdownFile, MarkdownDiffView } from "../agent-manager/MarkdownDiffView"
+import { resetScroll } from "./scroll"
 
 type DiffStyle = "unified" | "split"
 
@@ -32,6 +33,7 @@ const DiffVirtualContent: Component = () => {
   const [diff, setDiff] = createSignal<DiffVirtualFile | null>(null)
   const [style, setStyle] = createSignal<DiffStyle>("unified")
   const [markdown, setMarkdown] = createSignal(false)
+  let scroller: HTMLDivElement | undefined
 
   const handler = (event: MessageEvent) => {
     const msg = event.data as {
@@ -44,6 +46,7 @@ const DiffVirtualContent: Component = () => {
       setDiff(msg.diff)
       setStyle(msg.initialDiffStyle ?? "unified")
       setMarkdown(msg.markdownRender === true)
+      resetScroll(scroller)
     }
   }
 
@@ -112,7 +115,7 @@ const DiffVirtualContent: Component = () => {
                 </Tooltip>
               </Show>
             </div>
-            <div class="am-review-diff" style={{ width: "100%" }}>
+            <div ref={scroller} class="am-review-diff" style={{ width: "100%" }}>
               <Show when={view()}>
                 {(v) => (
                   <Show
