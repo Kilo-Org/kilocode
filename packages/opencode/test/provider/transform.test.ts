@@ -2229,6 +2229,21 @@ describe("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
+  test("openrouter deepseek v4 exposes reasoning effort variants", () => {
+    const model = createMockModel({
+      id: "deepseek/deepseek-v4-pro",
+      providerID: "openrouter",
+      api: {
+        id: "deepseek/deepseek-v4-pro",
+        url: "https://openrouter.ai/api/v1",
+        npm: "@openrouter/ai-sdk-provider",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(result.low).toEqual({ reasoning: { effort: "low" } })
+    expect(result.high).toEqual({ reasoning: { effort: "high" } })
+  })
+
   test("minimax returns empty object", () => {
     const model = createMockModel({
       id: "minimax/minimax-model",
