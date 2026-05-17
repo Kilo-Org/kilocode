@@ -1,5 +1,6 @@
 import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import * as Clipboard from "@tui/util/clipboard"
+import { isPasteSummaryEnabled, PASTE_SUMMARY_ENABLED_KEY } from "@tui/util/paste-summary"
 import * as Selection from "@tui/util/selection"
 import { createCliRenderer, MouseButton, TextAttributes, type CliRendererConfig } from "@opentui/core" // kilocode_change
 import { RouteProvider, useRoute } from "@tui/context/route"
@@ -312,9 +313,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     renderer.clearSelection()
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
-  const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
-    kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
-  )
+  const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(isPasteSummaryEnabled(kv, sync.data.config))
 
   KiloApp.useSessionEffects({ route, sdk, sync }) // kilocode_change
 
@@ -775,8 +774,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       onSelect: (dialog) => {
         setPasteSummaryEnabled((prev) => {
           const next = !prev
-          kv.set("paste_summary_enabled", next)
-          return next
+          kv.set(PASTE_SUMMARY_ENABLED_KEY, next)
+          return isPasteSummaryEnabled(kv, sync.data.config)
         })
         dialog.clear()
       },

@@ -27,6 +27,7 @@ import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import * as Editor from "@tui/util/editor"
 import { useExit } from "../../context/exit"
 import * as Clipboard from "../../util/clipboard"
+import { isPasteSummaryEnabled } from "../../util/paste-summary"
 import type { AssistantMessage, FilePart, UserMessage } from "@kilocode/sdk/v2"
 import { TuiEvent } from "../../event"
 import { iife } from "@/util/iife"
@@ -1280,7 +1281,7 @@ export function Prompt(props: PromptProps) {
                 const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
                 if (
                   (lineCount >= 5 || pastedContent.length > 800) && // kilocode_change #7252 delay paste summary
-                  kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary)
+                  isPasteSummaryEnabled(kv, sync.data.config)
                 ) {
                   pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
                   return
