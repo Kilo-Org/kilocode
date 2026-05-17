@@ -400,11 +400,16 @@ const live: Layer.Layer<
               toolName: lower,
             }
           }
+          const error = repairToolCallError({
+            tool: failed.toolCall.toolName,
+            error: failed.error.message,
+            tools,
+          })
           return {
             ...failed.toolCall,
             input: JSON.stringify({
               tool: failed.toolCall.toolName,
-              error: failed.error.message,
+              error,
             }),
             toolName: "invalid",
           }
@@ -522,6 +527,14 @@ export function hasToolCalls(messages: ModelMessage[]): boolean {
     }
   }
   return false
+}
+
+export function repairToolCallError(input: { tool: string; error: string; tools: Record<string, Tool> }): string {
+  if (input.tools[input.tool]) return input.error
+  const names = Object.keys(input.tools)
+    .filter((name) => name !== "invalid")
+    .sort()
+  return `Unknown tool: ${input.tool}. Available tools: ${names.join(", ") || "none"}`
 }
 
 export * as LLM from "./llm"

@@ -119,6 +119,45 @@ describe("session.llm.hasToolCalls", () => {
   })
 })
 
+describe("session.llm.repairToolCallError", () => {
+  test("returns a clear error for unknown tool names", () => {
+    const error = LLM.repairToolCallError({
+      tool: "skills_branstrom",
+      error: "tools.skills_branstrom.execute is not a function",
+      tools: {
+        invalid: tool({
+          description: "Invalid tool",
+          inputSchema: z.object({}),
+          execute: async () => ({ output: "" }),
+        }),
+        skill: tool({
+          description: "Load a skill",
+          inputSchema: z.object({}),
+          execute: async () => ({ output: "" }),
+        }),
+      },
+    })
+
+    expect(error).toBe("Unknown tool: skills_branstrom. Available tools: skill")
+  })
+
+  test("keeps the provider error for registered tools", () => {
+    const error = LLM.repairToolCallError({
+      tool: "skill",
+      error: "bad input",
+      tools: {
+        skill: tool({
+          description: "Load a skill",
+          inputSchema: z.object({}),
+          execute: async () => ({ output: "" }),
+        }),
+      },
+    })
+
+    expect(error).toBe("bad input")
+  })
+})
+
 type Capture = {
   url: URL
   headers: Headers
