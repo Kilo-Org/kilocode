@@ -267,7 +267,9 @@ export const layer = Layer.effect(
             item = agents[key] = {
               name: key,
               mode: "all",
-              permission: Permission.merge(defaults, user),
+              // kilocode_change start - custom agents should be able to ask the user by default
+              permission: Permission.merge(defaults, Permission.fromConfig({ question: "allow" }), user),
+              // kilocode_change end
               options: {},
               native: false,
             }
