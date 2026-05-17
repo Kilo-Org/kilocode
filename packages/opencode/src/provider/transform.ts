@@ -100,6 +100,30 @@ function normalizeMessages(
       .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
   }
 
+  // kilocode_change start - Kilo gateway/OpenRouter reject assistant history turns with no sendable content.
+  if (model.api.npm === "@kilocode/kilo-gateway" || model.api.npm === "@openrouter/ai-sdk-provider") {
+    msgs = msgs
+      .map((msg) => {
+        if (msg.role !== "assistant") return msg
+        if (typeof msg.content === "string") {
+          if (msg.content === "") return undefined
+          return msg
+        }
+        if (!Array.isArray(msg.content)) return msg
+        const filtered = msg.content.filter((part) => {
+          if (part.type === "text" || part.type === "reasoning") {
+            return part.text !== ""
+          }
+          return true
+        })
+        const sendable = filtered.some((part) => part.type !== "reasoning")
+        if (!sendable) return undefined
+        return { ...msg, content: filtered }
+      })
+      .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
+  }
+  // kilocode_change end
+
   if (model.api.id.includes("claude")) {
     const scrub = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, "_")
     msgs = msgs.map((msg) => {
