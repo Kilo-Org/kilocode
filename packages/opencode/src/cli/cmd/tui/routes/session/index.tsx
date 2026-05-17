@@ -78,6 +78,7 @@ import { QuestionPrompt } from "./question"
 import { Suggest } from "@/kilocode/suggestion/tui/render" // kilocode_change
 import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt" // kilocode_change
 import { NetworkPrompt } from "./network" // kilocode_change
+import { requestsForSession } from "./requests" // kilocode_change
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
 import { formatTranscript } from "../../util/transcript"
@@ -139,23 +140,22 @@ export function Session() {
       .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
+  // kilocode_change start - child sessions should keep their own blocking prompts visible
   const permissions = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.permission[x.id] ?? [])
+    return requestsForSession(session(), children(), sync.data.permission)
   })
   const questions = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.question[x.id] ?? [])
+    return requestsForSession(session(), children(), sync.data.question)
   })
+  // kilocode_change end
   // kilocode_change start
   const suggestions = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.suggestion[x.id] ?? [])
+    return requestsForSession(session(), children(), sync.data.suggestion)
   })
   const network = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.network[x.id] ?? [])
+    return requestsForSession(session(), children(), sync.data.network)
   })
+  // kilocode_change end
   const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
   const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0])
