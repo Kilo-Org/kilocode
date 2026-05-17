@@ -39,6 +39,7 @@ import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", async () => {
   await using tmp = await tmpdir({
@@ -161,4 +162,40 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
       expect(captured).toBeDefined()
     },
   })
+})
+
+test("KILO_DISABLE_MODELS_FETCH skips live model fetches", async () => {
+  const original = Flag.KILO_DISABLE_MODELS_FETCH
+
+  try {
+    Flag.KILO_DISABLE_MODELS_FETCH = true
+
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        captured = undefined
+        ModelCache.clear("kilo")
+
+        const models = await ModelCache.fetch("kilo")
+        const refreshed = await ModelCache.refresh("kilo")
+
+        expect(models).toEqual({})
+        expect(refreshed).toEqual({})
+        expect(captured).toBeUndefined()
+      },
+    })
+  } finally {
+    Flag.KILO_DISABLE_MODELS_FETCH = original
+    ModelCache.clear("kilo")
+  }
 })

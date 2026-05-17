@@ -3,6 +3,7 @@ import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
 import * as Log from "@opencode-ai/core/util/log"
+import { Flag } from "@opencode-ai/core/flag/flag"
 
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })
@@ -75,6 +76,11 @@ export namespace ModelCache {
       return cached
     }
 
+    if (Flag.KILO_DISABLE_MODELS_FETCH) {
+      log.debug("model fetch disabled", { providerID })
+      return {}
+    }
+
     // Cache miss - fetch models
     log.info("fetching models", { providerID })
 
@@ -112,6 +118,11 @@ export namespace ModelCache {
    * @returns Freshly fetched models
    */
   export async function refresh(providerID: string, options?: any): Promise<Record<string, any>> {
+    if (Flag.KILO_DISABLE_MODELS_FETCH) {
+      log.debug("model refresh disabled", { providerID })
+      return get(providerID) ?? {}
+    }
+
     // Check if refresh already in progress
     const existing = inFlightRefresh.get(providerID)
     if (existing) {
