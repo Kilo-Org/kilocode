@@ -1,7 +1,6 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
-import { isAbsolutePath } from "./path-utils"
 import type {
   KiloClient,
   Session,
@@ -81,6 +80,7 @@ import { openConfig } from "./kilo-provider/open-config"
 import * as McpOAuth from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
+import * as fileLinks from "./kilo-provider/file-links"
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -2973,7 +2973,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (message.content) this.handleOpenContent(message.content, message.language)
       return true
     }
+    if (message.type === "validateFiles") {
+      const msg = message as { id: string; paths: string[] }
+      this.handleValidateFiles(msg.id, msg.paths)
+      return true
+    }
     return false
+  }
+
+  /** Stat-check candidate paths and respond with which ones are real files. */
+  private handleValidateFiles(id: string, paths: string[]): void {
+    const root = this.getWorkspaceDirectory(this.currentSession?.id)
+    fileLinks
+      .validateFiles(root, paths)
+      .then((existing) => this.postMessage({ type: "validateFilesResult", id, existing }))
+      .catch((err) => console.error("[Kilo New] handleValidateFiles failed:", err))
   }
 
   /**
@@ -2988,26 +3002,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Handle openFile request from the webview — open a file in the VS Code editor.
-   * Resolves relative paths against the current session's directory (which may be
-   * a worktree path registered via setSessionDirectory), falling back to workspace root.
-   * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
+   * Delegates to file-links.ts which resolves paths, falls back to workspace search,
+   * and shows a warning when the file is not found.
    */
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
-    const uri = isAbsolutePath(filePath)
-      ? vscode.Uri.file(filePath)
-      : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory(this.currentSession?.id)), filePath)
-    vscode.workspace.openTextDocument(uri).then(
-      (doc) => {
-        const options: vscode.TextDocumentShowOptions = { preview: true }
-        if (line !== undefined && line > 0) {
-          const col = column !== undefined && column > 0 ? column - 1 : 0
-          const pos = new vscode.Position(line - 1, col)
-          options.selection = new vscode.Range(pos, pos)
-        }
-        vscode.window.showTextDocument(doc, options)
-      },
-      (err) => console.error("[Kilo New] KiloProvider: Failed to open file:", uri.fsPath, err),
-    )
+    fileLinks.openFile(this.getWorkspaceDirectory(this.currentSession?.id), filePath, line, column)
   }
 
   /**
