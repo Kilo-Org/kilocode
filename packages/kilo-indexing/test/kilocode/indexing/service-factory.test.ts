@@ -154,6 +154,21 @@ describe("CodeIndexServiceFactory", () => {
     })
   })
 
+  test("creates vector store for OpenRouter Gemini embedding preview", () => {
+    const factory = createFactory({
+      embedderProvider: "openrouter",
+      openAiKey: undefined,
+      openRouterApiKey: "or-test",
+      modelId: "google/gemini-embedding-2-preview",
+      vectorStoreProvider: "lancedb",
+    })
+
+    const store = factory.createVectorStore() as unknown as { vectorSize: number }
+
+    expect(store).toBeDefined()
+    expect(store.vectorSize).toBe(3072)
+  })
+
   test("creates Kilo embedder with Cloud-provided model", async () => {
     const factory = createFactory({
       embedderProvider: "kilo",
@@ -177,6 +192,7 @@ describe("CodeIndexServiceFactory", () => {
       input: ["hello"],
       model: "mistralai/mistral-embed-2312",
       encoding_format: "base64",
+      dimensions: 1024,
     })
   })
 })

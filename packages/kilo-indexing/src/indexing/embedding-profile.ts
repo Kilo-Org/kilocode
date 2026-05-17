@@ -20,7 +20,7 @@ export function resolveEmbeddingProfile(
   modelDimension?: number,
 ): EmbeddingProfile | undefined {
   const id = modelId ?? getDefaultModelId(provider)
-  const dim = getModelDimension(provider, id) ?? parseDimension(modelDimension)
+  const dim = parseDimension(modelDimension) ?? getModelDimension(provider, id)
   if (!dim) return undefined
   return {
     provider,
