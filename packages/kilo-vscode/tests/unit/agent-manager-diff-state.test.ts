@@ -5,6 +5,7 @@ import {
   allOpenFiles,
   expandableOpenFiles,
   initialOpenFiles,
+  shouldAutoLoadDiffDetail,
   toggleOpenFiles,
 } from "../../webview-ui/agent-manager/diff-open-policy"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
@@ -75,6 +76,14 @@ describe("agent manager diff state", () => {
         diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }),
       ]),
     ).toEqual(["src/app.ts"])
+  })
+
+  it("auto-loads only reviewable diff details", () => {
+    expect(shouldAutoLoadDiffDetail(diff({ file: "src/app.ts", additions: 3 }))).toBe(true)
+    expect(shouldAutoLoadDiffDetail(diff({ file: "src/generated.ts", generatedLike: true }))).toBe(false)
+    expect(shouldAutoLoadDiffDetail(diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1 }))).toBe(
+      false,
+    )
   })
 
   it("toggles reviewable files based on whether every reviewable file is open", () => {

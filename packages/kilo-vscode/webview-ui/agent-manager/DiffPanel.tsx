@@ -35,6 +35,7 @@ import {
   allOpenFiles,
   initialOpenFiles,
   isLargeDiffFile,
+  shouldAutoLoadDiffDetail,
   toggleOpenFiles,
 } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
@@ -487,7 +488,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
-                const isLoadingDetail = () => props.loadingFiles?.has(diff.file) ?? false
+                const isLoadingDetail = () =>
+                  (props.loadingFiles?.has(diff.file) ?? false) || shouldAutoLoadDiffDetail(diff)
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                 return (

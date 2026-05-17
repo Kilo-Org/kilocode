@@ -7,8 +7,12 @@ export function isLargeDiffFile(diff: WorktreeFileDiff): boolean {
   return diff.additions + diff.deletions > EXTREME_DIFF_CHANGED_LINES
 }
 
+export function shouldAutoLoadDiffDetail(diff: WorktreeFileDiff): boolean {
+  return !isLargeDiffFile(diff) && diff.generatedLike !== true
+}
+
 export function expandableOpenFiles(diffs: WorktreeFileDiff[]): string[] {
-  return diffs.filter((diff) => !isLargeDiffFile(diff) && diff.generatedLike !== true).map((diff) => diff.file)
+  return diffs.filter(shouldAutoLoadDiffDetail).map((diff) => diff.file)
 }
 
 export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
