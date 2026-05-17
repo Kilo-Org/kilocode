@@ -482,7 +482,9 @@ export const layer = Layer.effect(
       // kilocode_change start
       const data = ConfigParse.effectSchema(
         Info,
-        KiloGatekeeperConfig.validate(normalizeLoadedConfig(parsed, source), source, warnings),
+        KiloGatekeeperConfig.validate(normalizeLoadedConfig(parsed, source), source, warnings, {
+          migrate: Flag.KILO_EXPERIMENTAL_GATEKEEPER,
+        }),
         source,
       )
       // kilocode_change end
@@ -999,16 +1001,23 @@ export const layer = Layer.effect(
     const update = Effect.fn("Config.update")(function* (config: Info, options?: { dispose?: boolean }) {
       // kilocode_change start - delegate Kilo project config update behavior.
       const ctx = yield* InstanceState.context
-      yield* KilocodeConfig.updateProjectConfig({
-        fs,
-        directory: ctx.directory,
-        worktree: ctx.worktree,
-        config,
-        read: readConfigFile,
-        parse: (input, file) => ConfigParse.schema(Info.zod, ConfigParse.jsonc(input, file), file),
-        patch: (input, patch) => patchJsonc(input, patch),
-        writable,
-      })
+        yield* KilocodeConfig.updateProjectConfig({
+          fs,
+          directory: ctx.directory,
+          worktree: ctx.worktree,
+          config,
+          read: readConfigFile,
+          parse: (input, file) =>
+            ConfigParse.schema(
+              Info.zod,
+              KiloGatekeeperConfig.validate(ConfigParse.jsonc(input, file), file, undefined, {
+                migrate: Flag.KILO_EXPERIMENTAL_GATEKEEPER,
+              }),
+              file,
+            ),
+          patch: (input, patch) => patchJsonc(input, patch),
+          writable,
+        })
       // kilocode_change end
       if (options?.dispose !== false) {
         // Fail loudly if no instance is bound — silently skipping would
@@ -1047,7 +1056,13 @@ export const layer = Layer.effect(
       let next: Info
       let changed: boolean
       if (!file.endsWith(".jsonc")) {
-        const existing = ConfigParse.effectSchema(Info, ConfigParse.jsonc(before, file), file)
+        const existing = ConfigParse.effectSchema(
+          Info,
+          KiloGatekeeperConfig.validate(ConfigParse.jsonc(before, file), file, undefined, {
+            migrate: Flag.KILO_EXPERIMENTAL_GATEKEEPER,
+          }),
+          file,
+        )
         // kilocode_change - use `patch` (writableGlobal) so empty-string sentinels are stripped via undefined
         const merged = KilocodeConfig.mergeConfig(writable(existing), patch)
         const serialized = JSON.stringify(merged, null, 2)
@@ -1056,7 +1071,13 @@ export const layer = Layer.effect(
         next = merged
       } else {
         const updated = patchJsonc(before, patch)
-        next = ConfigParse.effectSchema(Info, ConfigParse.jsonc(updated, file), file)
+        next = ConfigParse.effectSchema(
+          Info,
+          KiloGatekeeperConfig.validate(ConfigParse.jsonc(updated, file), file, undefined, {
+            migrate: Flag.KILO_EXPERIMENTAL_GATEKEEPER,
+          }),
+          file,
+        )
         changed = updated !== before
         if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
       }

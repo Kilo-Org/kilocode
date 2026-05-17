@@ -7,6 +7,7 @@ import { ZodOverride } from "@/util/effect-zod"
 export namespace KiloGatekeeperConfig {
   export const DEFAULT_MODEL = "kilo-auto/balanced" as const
   const Legacy = ["stage1_model", "stage2_model", "mode", "hard_deny", "timeout", "max_tokens", "max_token"] as const
+  const Unsafe = new Set(["approve_all", "always_allow", "auto_approve", "yolo", "off", "disabled", "false"])
 
   const List = Schema.mutable(Schema.Array(Schema.String))
   const zInfo = z
@@ -48,9 +49,72 @@ export namespace KiloGatekeeperConfig {
   export type Info = Schema.Schema.Type<typeof Info>
 
   type ConfigLike = { gatekeeper?: Info | null }
+  type Value = Record<string, unknown>
   type Warn = { path: string; message: string; detail?: string }
 
-  export function validate(data: unknown, source: string, warnings?: Warn[]): unknown {
+  function cleanMode(value: unknown) {
+    if (typeof value !== "string") return undefined
+    const mode = value.trim().toLowerCase().replace(/[\s-]+/g, "_")
+    if (!mode) return undefined
+    return mode
+  }
+
+  function parseModel(value: unknown) {
+    if (typeof value !== "string") return undefined
+    if (!/^[^/\s]+\/[^/\s]+$/.test(value)) return undefined
+    const parsed = ConfigModelID.zod.safeParse(value)
+    if (!parsed.success) return undefined
+    return parsed.data
+  }
+
+  function warn(warnings: Warn[] | undefined, path: string, message: string) {
+    warnings?.push({ path, message })
+  }
+
+  function migrate(base: Value, value: Value, source: string, warnings?: Warn[]) {
+    const next = { ...base }
+    const mode = cleanMode(value.mode)
+    const hasEnabled = next.enabled !== undefined && next.enabled !== null
+    const hasModel = next.model !== undefined && next.model !== null
+    const stage2 = parseModel(value.stage2_model)
+    const stage1 = parseModel(value.stage1_model)
+    const pick = stage2 ?? stage1
+    const invalid = [value.stage2_model, value.stage1_model].some((item) => item !== undefined) && !pick && !hasModel
+
+    if (stage1 && stage2 && stage1 !== stage2) {
+      warn(warnings, source, `Legacy Gatekeeper model conflict: stage2_model overrides stage1_model (${stage2} over ${stage1})`)
+    }
+
+    if (hasModel && pick && next.model !== pick) {
+      warn(warnings, source, `legacy Gatekeeper model ignored because gatekeeper.model is already set to ${String(next.model)}`)
+    }
+
+    if (!hasModel && pick) next.model = pick
+    if (invalid) {
+      warn(warnings, source, "Legacy Gatekeeper model could not be migrated automatically; review stage1_model/stage2_model manually")
+    }
+
+    if (!mode) {
+      if (!hasEnabled && pick) next.enabled = true
+      return next
+    }
+
+    if (Unsafe.has(mode)) {
+      if (!hasEnabled) next.enabled = false
+      warn(
+        warnings,
+        source,
+        `Legacy Gatekeeper mode '${mode}' was not migrated because approve-all/disabled behavior is unsafe`,
+      )
+      return next
+    }
+
+    if (!hasEnabled) next.enabled = false
+    warn(warnings, source, `Legacy Gatekeeper mode '${mode}' is ambiguous and requires manual review`)
+    return next
+  }
+
+  export function validate(data: unknown, source: string, warnings?: Warn[], options?: { migrate?: boolean }): unknown {
     if (typeof data !== "object" || data === null || Array.isArray(data)) return data
     if (!("gatekeeper" in data)) return data
 
@@ -59,16 +123,10 @@ export namespace KiloGatekeeperConfig {
     if (typeof value !== "object" || Array.isArray(value)) return data
 
     const keys = Legacy.filter((key) => key in value)
-    const gatekeeper = keys.length
+    const base = (keys.length
       ? Object.fromEntries(Object.entries(value).filter(([key]) => !Legacy.includes(key as (typeof Legacy)[number])))
-      : value
-
-    if (keys.length) {
-      warnings?.push({
-        path: source,
-        message: `Unsupported legacy Gatekeeper field${keys.length === 1 ? "" : "s"} ignored: ${keys.join(", ")}`,
-      })
-    }
+      : value) as Value
+    const gatekeeper = options?.migrate && keys.length ? migrate(base, value as Value, source, warnings) : base
 
     const parsed = zInfo.safeParse(gatekeeper)
     if (parsed.success) {

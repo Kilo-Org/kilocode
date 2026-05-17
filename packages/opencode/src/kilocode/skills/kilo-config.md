@@ -276,6 +276,8 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 
 `context_aware` defaults to `true` only when Gatekeeper is enabled and you omit field. Set `context_aware: false` to preserve bare tool-call checks for later Gatekeeper runtime features.
 
+When `KILO_EXPERIMENTAL_GATEKEEPER` is enabled, legacy Gatekeeper `stage1_model` / `stage2_model` fields inside `gatekeeper` migrate to `gatekeeper.model` and enable Gatekeeper when safe. Legacy approve-all or disabled modes are not converted into enabled Gatekeeper. `small_model` is never changed by this migration.
+
 ## Other Top-Level Fields
 
 | Field | Type | Description |

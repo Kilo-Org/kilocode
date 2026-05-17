@@ -4,6 +4,7 @@ import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -49,6 +50,7 @@ const clear = (wait = false) =>
   Effect.runPromise(Config.Service.use((svc) => svc.invalidate(wait)).pipe(Effect.scoped, Effect.provide(layer)))
 const warnings = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)))
+const gate = Flag.KILO_EXPERIMENTAL_GATEKEEPER
 
 async function writeConfig(dir: string, config: object, name = "kilo.json") {
   await Filesystem.write(path.join(dir, name), JSON.stringify(config))
@@ -69,6 +71,7 @@ const cfg: Partial<Config.Info> = {
 }
 
 afterEach(async () => {
+  ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = gate
   delete process.env.KILO_MD_TEST
   await disposeAllInstances()
   await clear(true)
@@ -305,18 +308,100 @@ describe("gatekeeper config", () => {
     })
   })
 
-  test("reports warnings for unsupported gatekeeper v1 fields", async () => {
+  test("migrates legacy gatekeeper stage model when feature flag is enabled", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, {
+          $schema: "https://app.kilo.ai/config.json",
+          small_model: "anthropic/claude-3-5-haiku-latest",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-sonnet-4-20250514",
+          },
+        })
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        const list = await warnings()
+        expect(config.small_model).toBe("anthropic/claude-3-5-haiku-latest")
+        expect(config.gatekeeper?.enabled).toBe(true)
+        expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+        expect(list.some((item) => item.message.includes("Unsupported legacy Gatekeeper"))).toBe(false)
+      },
+    })
+  })
+
+  test("does not activate migrated gatekeeper when feature flag is disabled", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, {
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-sonnet-4-20250514",
+          },
+        })
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = false
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.gatekeeper?.enabled).not.toBe(true)
+        expect(config.gatekeeper?.model).toBe("kilo-auto/balanced")
+      },
+    })
+  })
+
+  test("does not enable unsafe legacy gatekeeper mode", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, {
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-sonnet-4-20250514",
+            mode: "approve_all",
+          },
+        })
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        const list = await warnings()
+        expect(config.gatekeeper?.enabled).toBe(false)
+        expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+        expect(list.some((item) => item.message.includes("approve-all") || item.message.includes("disabled"))).toBe(true)
+      },
+    })
+  })
+
+  test("keeps modern gatekeeper config unchanged during legacy migration", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await writeConfig(dir, {
           $schema: "https://app.kilo.ai/config.json",
           gatekeeper: {
             enabled: true,
-            stage1_model: "anthropic/claude-sonnet-4-20250514",
+            model: "anthropic/claude-haiku-4-20250514",
+            stage2_model: "anthropic/claude-sonnet-4-20250514",
           },
         })
       },
     })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
 
     await Instance.provide({
       directory: tmp.path,
@@ -324,14 +409,93 @@ describe("gatekeeper config", () => {
         const config = await load()
         const list = await warnings()
         expect(config.gatekeeper?.enabled).toBe(true)
-        expect(config.gatekeeper?.model).toBe("kilo-auto/balanced")
-        expect(list.length).toBeGreaterThan(0)
-        expect(list.some((item) => item.message.includes("stage1_model"))).toBe(true)
+        expect(config.gatekeeper?.model).toBe("anthropic/claude-haiku-4-20250514")
+        expect(list.some((item) => item.message.includes("legacy Gatekeeper model") && item.message.includes("ignored"))).toBe(true)
       },
     })
   })
 
-  test("reports warnings for unsupported gatekeeper v1 fields in global config", async () => {
+  test("prefers stage2_model over stage1_model and warns on conflict", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, {
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-haiku-4-20250514",
+            stage2_model: "anthropic/claude-sonnet-4-20250514",
+          },
+        })
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        const list = await warnings()
+        expect(config.gatekeeper?.enabled).toBe(true)
+        expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+        expect(list.some((item) => item.message.includes("model conflict") && item.message.includes("stage2_model"))).toBe(true)
+      },
+    })
+  })
+
+  test("disables ambiguous legacy gatekeeper mode and warns", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, {
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-sonnet-4-20250514",
+            mode: "strict",
+          },
+        })
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        const list = await warnings()
+        expect(config.gatekeeper?.enabled).toBe(false)
+        expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+        expect(list.some((item) => item.message.includes("ambiguous") && item.message.includes("strict"))).toBe(true)
+      },
+    })
+  })
+
+  test("warns when legacy gatekeeper model cannot be migrated", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await writeConfig(dir, {
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "bad",
+          },
+        })
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        const list = await warnings()
+        expect(config.gatekeeper?.enabled).not.toBe(true)
+        expect(config.gatekeeper?.model).toBe("kilo-auto/balanced")
+        expect(list.some((item) => item.message.includes("could not be migrated automatically"))).toBe(true)
+      },
+    })
+  })
+
+  test("migrates legacy gatekeeper fields from global config", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()
 
@@ -340,10 +504,10 @@ describe("gatekeeper config", () => {
     await clear(true)
 
     try {
+      ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
       await writeConfig(globalTmp.path, {
         $schema: "https://app.kilo.ai/config.json",
         gatekeeper: {
-          enabled: true,
           stage1_model: "anthropic/claude-sonnet-4-20250514",
         },
       })
@@ -352,14 +516,162 @@ describe("gatekeeper config", () => {
         directory: tmp.path,
         fn: async () => {
           const config = await load()
-          const list = await warnings()
           expect(config.gatekeeper?.enabled).toBe(true)
-          expect(config.gatekeeper?.model).toBe("kilo-auto/balanced")
-          expect(
-            list.some(
-              (item) => item.path === path.join(globalTmp.path, "kilo.json") && item.message.includes("stage1_model"),
-            ),
-          ).toBe(true)
+          expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear(true)
+    }
+  })
+
+  test("updates config file that still contains legacy gatekeeper fields", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Filesystem.write(
+          path.join(dir, "kilo.jsonc"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+            gatekeeper: {
+              enabled: true,
+              stage1_model: "anthropic/claude-sonnet-4-20250514",
+            },
+          }),
+        )
+      },
+    })
+
+    ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await Effect.runPromise(
+          Config.Service.use((svc) =>
+            svc.update({
+              gatekeeper: {
+                context_aware: false,
+              },
+            }),
+          ).pipe(Effect.scoped, Effect.provide(layer)),
+        )
+
+        const file = path.join(tmp.path, "kilo.jsonc")
+        const text = await Filesystem.readText(file)
+        expect(text).toContain("stage1_model")
+        expect(text).toContain("context_aware")
+
+        await clear(true)
+        const config = await load()
+        expect(config.gatekeeper?.enabled).toBe(true)
+        expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+        expect(config.gatekeeper?.context_aware).toBe(false)
+      },
+    })
+  })
+
+  test("updates global json config that still contains legacy gatekeeper fields", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear(true)
+
+    try {
+      ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+      await writeConfig(
+        globalTmp.path,
+        {
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-sonnet-4-20250514",
+          },
+        },
+        "kilo.json",
+      )
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await Effect.runPromise(
+            Config.Service.use((svc) =>
+              svc.updateGlobal(
+                {
+                  gatekeeper: {
+                    context_aware: false,
+                  },
+                },
+                { dispose: false },
+              ),
+            ).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          const file = path.join(globalTmp.path, "kilo.json")
+          const text = await Filesystem.readText(file)
+          expect(text).not.toContain("stage1_model")
+          expect(text).toContain("context_aware")
+
+          await clear(true)
+          const config = await load()
+          expect(config.gatekeeper?.enabled).toBe(true)
+          expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+          expect(config.gatekeeper?.context_aware).toBe(false)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear(true)
+    }
+  })
+
+  test("updates global jsonc config that still contains legacy gatekeeper fields", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear(true)
+
+    try {
+      ;(Flag as { KILO_EXPERIMENTAL_GATEKEEPER: boolean }).KILO_EXPERIMENTAL_GATEKEEPER = true
+      await Filesystem.write(
+        path.join(globalTmp.path, "kilo.jsonc"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          gatekeeper: {
+            stage1_model: "anthropic/claude-sonnet-4-20250514",
+          },
+        }),
+      )
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await Effect.runPromise(
+            Config.Service.use((svc) =>
+              svc.updateGlobal(
+                {
+                  gatekeeper: {
+                    context_aware: false,
+                  },
+                },
+                { dispose: false },
+              ),
+            ).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          const file = path.join(globalTmp.path, "kilo.jsonc")
+          const text = await Filesystem.readText(file)
+          expect(text).toContain("stage1_model")
+          expect(text).toContain("context_aware")
+
+          await clear(true)
+          const config = await load()
+          expect(config.gatekeeper?.enabled).toBe(true)
+          expect(config.gatekeeper?.model).toBe("anthropic/claude-sonnet-4-20250514")
+          expect(config.gatekeeper?.context_aware).toBe(false)
         },
       })
     } finally {

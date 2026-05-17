@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Support top-level Gatekeeper configuration with default model and context-aware settings.
+Support top-level Gatekeeper configuration and migrate legacy Gatekeeper model settings when the Gatekeeper feature flag is enabled.
