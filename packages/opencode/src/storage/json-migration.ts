@@ -9,6 +9,9 @@ import path from "path"
 import { existsSync } from "fs"
 import { Filesystem } from "@/util/filesystem"
 import { Glob } from "@opencode-ai/core/util/glob"
+// kilocode_change start - report legacy storage scan progress during startup migration
+import { reportScanProgress } from "@/kilocode/storage/json-migration-progress"
+// kilocode_change end
 
 const log = Log.create({ service: "json-migration" })
 
@@ -74,6 +77,13 @@ export async function run(db: SQLiteBunDatabase<any, any> | NodeSQLiteDatabase<a
     return Glob.scan(pattern, { cwd: storageDir, absolute: true })
   }
 
+  // kilocode_change start - report legacy storage scan progress during startup migration
+  async function scan(label: string, pattern: string) {
+    reportScanProgress(options, label)
+    return list(pattern)
+  }
+  // kilocode_change end
+
   async function read(files: string[], start: number, end: number) {
     const count = end - start
     // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
@@ -108,15 +118,15 @@ export async function run(db: SQLiteBunDatabase<any, any> | NodeSQLiteDatabase<a
 
   // Pre-scan all files upfront to avoid repeated glob operations
   log.info("scanning files...")
-  const [projectFiles, sessionFiles, messageFiles, partFiles, todoFiles, permFiles, shareFiles] = await Promise.all([
-    list("project/*.json"),
-    list("session/*/*.json"),
-    list("message/*/*.json"),
-    list("part/*/*.json"),
-    list("todo/*.json"),
-    list("permission/*.json"),
-    list("session_share/*.json"),
-  ])
+  // kilocode_change start - scan sequentially so large legacy stores do not look frozen at startup
+  const projectFiles = await scan("scan-projects", "project/*.json")
+  const sessionFiles = await scan("scan-sessions", "session/*/*.json")
+  const messageFiles = await scan("scan-messages", "message/*/*.json")
+  const partFiles = await scan("scan-parts", "part/*/*.json")
+  const todoFiles = await scan("scan-todos", "todo/*.json")
+  const permFiles = await scan("scan-permissions", "permission/*.json")
+  const shareFiles = await scan("scan-shares", "session_share/*.json")
+  // kilocode_change end
 
   log.info("file scan complete", {
     projects: projectFiles.length,
