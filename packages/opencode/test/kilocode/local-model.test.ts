@@ -505,6 +505,49 @@ describe("edge cases and error handling", () => {
   })
 })
 
+// ── Regression tests for #9980 ──────────────────────────────────────────────
+// CLI --model must win over cached model.json state and invalid explicit values
+// must not silently fall back to the last persisted model.
+
+describe("#9980: CLI model overrides persisted startup state", () => {
+  test("13: --model beats stale persisted model and rewrites model.json", async () => {
+    mockArgs = { model: "anthropic/claude-opus" }
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        model: { code: SONNET },
+        favorite: [],
+        variant: {},
+      },
+    })
+    try {
+      expect(local.model.current()).toEqual(OPUS)
+      await local.model.flush()
+      const data = await readModelJson()
+      expect(data.model.code).toEqual(OPUS)
+    } finally {
+      dispose()
+    }
+  })
+
+  test("14: invalid --model blocks fallback to cached model", async () => {
+    mockArgs = { model: "anthropic/not-real" }
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        model: { code: SONNET },
+        favorite: [],
+        variant: {},
+      },
+    })
+    try {
+      expect(local.model.current()).toBeUndefined()
+    } finally {
+      dispose()
+    }
+  })
+})
+
 // ── Regression tests for #9050 follow-up ────────────────────────────────────
 // Configured agent defaults should win on restart/project switch, while manual
 // selections for those agents remain active only in the current process.

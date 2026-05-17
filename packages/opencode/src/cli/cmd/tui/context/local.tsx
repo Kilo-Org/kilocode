@@ -192,6 +192,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         // kilocode_change end
       }
 
+      const args = useArgs()
+      // kilocode_change start - explicit CLI models beat cached state and do not silently fall back
+      const argsModel = createMemo(() => {
+        if (!args.model) return { present: false as const }
+        const { providerID, modelID } = parseModel(args.model)
+        if (!providerID || !modelID) return { present: true as const, value: undefined }
+        return { present: true as const, value: { providerID, modelID } }
+      })
+      // kilocode_change end
+
       Filesystem.readJson(filePath)
         .then((x: any) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
@@ -202,21 +212,21 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         .catch(() => {})
         .finally(() => {
           setModelStore("ready", true)
-          if (state.pending) save()
-        })
-
-      const args = useArgs()
-      const fallbackModel = createMemo(() => {
-        if (args.model) {
-          const { providerID, modelID } = parseModel(args.model)
-          if (isModelValid({ providerID, modelID })) {
-            return {
-              providerID,
-              modelID,
+          // kilocode_change start - re-apply --model after async state load so stale picks are not restored
+          const explicit = argsModel()
+          let appliedExplicit = false
+          if (explicit.value && isModelValid(explicit.value)) {
+            const a = agent.current()
+            if (a) {
+              apply(a.name, explicit.value, !a.model)
+              appliedExplicit = true
             }
           }
-        }
+          // kilocode_change end
+          if (state.pending || appliedExplicit) save()
+        })
 
+      const fallbackModel = createMemo(() => {
         if (sync.data.config.model) {
           const { providerID, modelID } = parseModel(sync.data.config.model)
           if (isModelValid({ providerID, modelID })) {
@@ -246,6 +256,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       })
 
       const currentModel = createMemo(() => {
+        // kilocode_change start - a requested --model must never be hidden by persisted fallback state
+        const explicit = argsModel()
+        if (explicit.present) {
+          return explicit.value && isModelValid(explicit.value) ? explicit.value : undefined
+        }
+        // kilocode_change end
         const a = agent.current()
         if (!a) return fallbackModel() // kilocode_change - guard against empty agent list
         // kilocode_change start - configured models beat stale persisted picks
