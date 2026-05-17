@@ -9,6 +9,14 @@ const GITIGNORE = ".gitignore"
  * Patterns for sensitive environment files, applied only when no .kilocodeignore exists.
  */
 const SENSITIVE_PATTERNS = [".env", ".env.*"]
+const KILO_MANAGED_PATTERNS = [
+  ".kilo/node_modules/",
+  ".kilo/package.json",
+  ".kilo/package-lock.json",
+  ".kilocode/node_modules/",
+  ".kilocode/package.json",
+  ".kilocode/package-lock.json",
+]
 
 // Matches Windows drive-letter absolute paths (e.g. "C:/" or "c:\").
 // path.isAbsolute() on POSIX does not recognise these, so we check explicitly
@@ -38,6 +46,8 @@ export class FileIgnoreController {
     if (!this.workspacePath) {
       return
     }
+
+    this.ignoreInstance.add(KILO_MANAGED_PATTERNS)
 
     // Try .kilocodeignore first — if it exists, use only that.
     // Use existsSync to distinguish "missing" from "unreadable" — permission

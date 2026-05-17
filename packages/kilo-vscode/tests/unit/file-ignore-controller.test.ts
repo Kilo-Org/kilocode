@@ -68,6 +68,19 @@ describe("FileIgnoreController", () => {
       // .kilocodeignore pattern should apply
       expect(controller.validateAccess(path.join(workspace, "dist", "bundle.js"))).toBe(false)
     })
+
+    it("always blocks Kilo-managed dependency files", async () => {
+      const workspace = await createTempWorkspace()
+      await fs.writeFile(path.join(workspace, ".kilocodeignore"), "dist/\n")
+
+      const controller = new FileIgnoreController(workspace)
+      await controller.initialize()
+
+      expect(controller.validateAccess(path.join(workspace, ".kilo", "node_modules", "foo.js"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilo", "package.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilocode", "node_modules", "foo.js"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
+    })
   })
 
   describe("when no .kilocodeignore exists (fallback)", () => {
