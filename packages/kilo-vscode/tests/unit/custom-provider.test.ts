@@ -131,6 +131,39 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("accepts xhigh reasoning effort variants", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Reasoning Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-xhigh": {
+          name: "Reasoning Model",
+          reasoning: true,
+          variants: {
+            xhigh: { reasoningEffort: "xhigh" },
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Reasoning Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          "model-xhigh": {
+            name: "Reasoning Model",
+            reasoning: true,
+            variants: {
+              xhigh: { reasoningEffort: "xhigh" },
+            },
+          },
+        },
+      },
+    })
+  })
+
   it("rejects unknown fields", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Bad Provider",

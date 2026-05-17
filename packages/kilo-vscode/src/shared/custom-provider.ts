@@ -14,7 +14,7 @@ export const EnvSchema = z
 const VariantConfigSchema = z.object({
   enable_thinking: z.boolean().optional(),
   thinking: z.object({ type: z.enum(["enabled", "disabled"]) }).optional(),
-  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high"]).optional(),
+  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]).optional(),
   chat_template_args: z.object({ enable_thinking: z.boolean() }).optional(),
 })
 
