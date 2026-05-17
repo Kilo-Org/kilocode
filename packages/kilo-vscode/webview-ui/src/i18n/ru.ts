@@ -1619,4 +1619,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "Нет подходящих веток",
   "diffViewer.baseBranch.loading": "Загрузка веток…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "План готов:",
 }

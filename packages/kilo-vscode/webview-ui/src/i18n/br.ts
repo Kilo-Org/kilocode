@@ -1629,4 +1629,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "Nenhum branch correspondente",
   "diffViewer.baseBranch.loading": "Carregando branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plano pronto:",
 }

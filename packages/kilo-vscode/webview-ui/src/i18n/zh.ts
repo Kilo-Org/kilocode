@@ -1549,4 +1549,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "没有匹配的分支",
   "diffViewer.baseBranch.loading": "正在加载分支…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "计划已准备就绪：",
 } satisfies Partial<Record<Keys, string>>

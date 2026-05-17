@@ -1635,4 +1635,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "Sin ramas que coincidan",
   "diffViewer.baseBranch.loading": "Cargando ramas…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "El plan está listo:",
 }

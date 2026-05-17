@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
+import { Agent } from "../../src/agent/agent"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
+import { ModelID, ProviderID } from "../../src/provider/schema"
 import { ToolRegistry } from "../../src/tool/registry"
 import type * as Tool from "../../src/tool/tool"
 import { Instance } from "../../src/project/instance"
@@ -13,7 +15,11 @@ import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { testEffect } from "../lib/effect"
 
 const node = CrossSpawnSpawner.defaultLayer
-const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node))
+const it = testEffect(Layer.mergeAll(Agent.defaultLayer, ToolRegistry.defaultLayer, node))
+const ref = {
+  providerID: ProviderID.make("test"),
+  modelID: ModelID.make("test-model"),
+}
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -112,6 +118,56 @@ describe("kilocode tool registry indexing", () => {
             const ids = yield* registry.ids()
 
             expect(ids).toContain("semantic_search")
+          } finally {
+            ready.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("omits semantic_search hint from glob and grep descriptions when indexing is not ready", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const ready = spyOn(KiloIndexing, "ready").mockReturnValue(false)
+
+          try {
+            const agent = yield* Agent.Service
+            const build = yield* agent.get("build")
+            const registry = yield* ToolRegistry.Service
+            const tools = yield* registry.tools({ ...ref, agent: build })
+            const glob = tools.find((tool) => tool.id === "glob")?.description ?? ""
+            const grep = tools.find((tool) => tool.id === "grep")?.description ?? ""
+
+            expect(glob).not.toContain("semantic_search")
+            expect(grep).not.toContain("semantic_search")
+          } finally {
+            ready.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
+
+  it.live("includes semantic_search hint in glob and grep descriptions when indexing is ready", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const ready = spyOn(KiloIndexing, "ready").mockReturnValue(true)
+
+          try {
+            const agent = yield* Agent.Service
+            const build = yield* agent.get("build")
+            const registry = yield* ToolRegistry.Service
+            const tools = yield* registry.tools({ ...ref, agent: build })
+            const ids = tools.map((tool) => tool.id)
+            const glob = tools.find((tool) => tool.id === "glob")?.description ?? ""
+            const grep = tools.find((tool) => tool.id === "grep")?.description ?? ""
+
+            expect(ids).toContain("semantic_search")
+            expect(glob).toContain("semantic_search")
+            expect(grep).toContain("semantic_search")
           } finally {
             ready.mockRestore()
           }
