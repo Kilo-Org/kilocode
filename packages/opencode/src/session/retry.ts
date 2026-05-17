@@ -62,14 +62,13 @@ export function retryable(error: Err) {
     if (isKiloError(error)) return undefined
     // kilocode_change end
 
-    // 5xx errors are transient server failures and should always be retried,
-    // even when the provider SDK doesn't explicitly mark them as retryable.
-    if (!error.data.isRetryable && !(status !== undefined && status >= 500)) return undefined
-
     // kilocode_change start - FreeUsageLimitError is not retryable: retrying the same
     // capped model is futile and the backoff loop cannot be broken by switching
     // models in the chat selector (the retry loop holds a stale model ref).
     if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
+    // 429 and 5xx errors are transient provider failures and should be retried,
+    // even when the provider SDK doesn't explicitly mark them as retryable.
+    if (!error.data.isRetryable && !(status === 429 || (status !== undefined && status >= 500))) return undefined
     // kilocode_change end
     return error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message
   }

@@ -183,6 +183,18 @@ describe("session.retry.retryable", () => {
     expect(SessionRetry.retryable(error)).toBe("Internal server error")
   })
 
+  test("retries 429 errors even when isRetryable is false", () => {
+    const error = MessageV2.APIError.Schema.parse(
+      new MessageV2.APIError({
+        message: "Too Many Requests",
+        isRetryable: false,
+        statusCode: 429,
+      }).toObject(),
+    )
+
+    expect(SessionRetry.retryable(error)).toBe("Too Many Requests")
+  })
+
   test("retries 502 bad gateway errors", () => {
     const error = MessageV2.APIError.Schema.parse(
       new MessageV2.APIError({
