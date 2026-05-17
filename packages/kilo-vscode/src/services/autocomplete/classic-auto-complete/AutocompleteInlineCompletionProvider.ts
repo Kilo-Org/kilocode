@@ -393,7 +393,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
             return []
           }
 
-          const isAccessible = controller.validateAccess(document.fileName)
+          const isAccessible = controller.validateDocumentAccess(document.fileName)
           if (!isAccessible) {
             return []
           }

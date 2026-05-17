@@ -168,11 +168,44 @@ describe("FileIgnoreController", () => {
       expect(controller.validateAccess("relative/file.ts")).toBe(false)
     })
 
+    it("allows standalone editor documents except sensitive env files", async () => {
+      const controller = new FileIgnoreController("")
+      await controller.initialize()
+
+      expect(controller.validateDocumentAccess("/some/file.ts")).toBe(true)
+      expect(controller.validateDocumentAccess("/some/.env")).toBe(false)
+      expect(controller.validateDocumentAccess("/some/.env.local")).toBe(false)
+    })
+
     it("filterPaths returns empty array", async () => {
       const controller = new FileIgnoreController("")
       await controller.initialize()
 
       expect(controller.filterPaths(["/some/file.ts", "other.ts"])).toEqual([])
+    })
+  })
+
+  describe("active editor document access", () => {
+    it("keeps workspace ignore rules while allowing external source files", async () => {
+      const workspace = await createTempWorkspace()
+      await fs.writeFile(path.join(workspace, ".gitignore"), "node_modules/\n")
+
+      const controller = new FileIgnoreController(workspace)
+      await controller.initialize()
+
+      expect(controller.validateDocumentAccess(path.join(workspace, "node_modules", "foo.js"))).toBe(false)
+      expect(controller.validateDocumentAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
+      expect(controller.validateDocumentAccess("/outside/project/file.ts")).toBe(true)
+    })
+
+    it("blocks sensitive standalone env documents", async () => {
+      const workspace = await createTempWorkspace()
+
+      const controller = new FileIgnoreController(workspace)
+      await controller.initialize()
+
+      expect(controller.validateDocumentAccess("/outside/project/.env")).toBe(false)
+      expect(controller.validateDocumentAccess("/outside/project/.env.production")).toBe(false)
     })
   })
 })

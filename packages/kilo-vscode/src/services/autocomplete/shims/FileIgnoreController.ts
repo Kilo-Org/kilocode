@@ -20,6 +20,11 @@ function toPosix(filePath: string): string {
   return filePath.replace(/\\/g, "/")
 }
 
+function isSensitiveFileName(filePath: string): boolean {
+  const basename = path.basename(toPosix(filePath))
+  return basename === ".env" || basename.startsWith(".env.")
+}
+
 export class FileIgnoreController {
   private workspacePath: string
   private ignoreInstance: Ignore = ignore()
@@ -125,6 +130,24 @@ export class FileIgnoreController {
     }
 
     return !this.ignoreInstance.ignores(relative)
+  }
+
+  /**
+   * Returns true if the active editor document can be used for autocomplete.
+   * Workspace files still honor ignore rules; standalone files are allowed so
+   * VS Code tabs outside the workspace can receive completions.
+   */
+  validateDocumentAccess(filePath: string): boolean {
+    if (!filePath) {
+      return false
+    }
+
+    const relative = this.workspacePath ? this.toRelativePath(filePath) : null
+    if (relative) {
+      return !this.ignoreInstance.ignores(relative)
+    }
+
+    return !isSensitiveFileName(filePath)
   }
 
   /**
