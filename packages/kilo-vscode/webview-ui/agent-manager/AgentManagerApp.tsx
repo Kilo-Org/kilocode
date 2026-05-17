@@ -125,6 +125,7 @@ import {
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
+import { initialDetailFiles } from "./diff-open-policy"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -1329,16 +1330,19 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.worktreeDiff") {
         const ev = msg as AgentManagerWorktreeDiffMessage
         let staleFiles: Set<string> | undefined
+        let preloadFiles: string[] = []
         setDiffDatas((prev) => {
           const existing = prev[ev.sessionId]
           const merged = existing
             ? mergeWorktreeDiffs(existing, ev.diffs)
             : { diffs: ev.diffs, stale: new Set<string>() }
           staleFiles = merged.stale
+          preloadFiles = initialDetailFiles(merged.diffs)
           const next = merged.diffs
           if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
           return { ...prev, [ev.sessionId]: next }
         })
+        preloadInitialDiffDetails(ev.sessionId, preloadFiles)
         if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
       }
 
@@ -1573,6 +1577,15 @@ const AgentManagerContent: Component = () => {
   }
 
   const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
+    const loading = diffFileLoading()[sessionId] ?? {}
+    for (const file of files) {
+      if (loading[file]) continue
+      setDiffFilePending(sessionId, file, true)
+      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+    }
+  }
+
+  const preloadInitialDiffDetails = (sessionId: string, files: string[]) => {
     const loading = diffFileLoading()[sessionId] ?? {}
     for (const file of files) {
       if (loading[file]) continue

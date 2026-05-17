@@ -4,6 +4,7 @@ import {
   EXTREME_DIFF_CHANGED_LINES,
   allOpenFiles,
   expandableOpenFiles,
+  initialDetailFiles,
   initialOpenFiles,
   toggleOpenFiles,
 } from "../../webview-ui/agent-manager/diff-open-policy"
@@ -65,6 +66,17 @@ describe("agent manager diff state", () => {
 
     const many = Array.from({ length: 26 }, (_, i) => diff({ file: `src/${i}.ts` }))
     expect(initialOpenFiles(many)).toHaveLength(26)
+  })
+
+  it("preloads detail only for summarized files that open initially", () => {
+    expect(
+      initialDetailFiles([
+        diff({ file: "src/summary.ts", summarized: true }),
+        diff({ file: "src/loaded.ts", summarized: false, before: "old\n", after: "new\n" }),
+        diff({ file: "src/generated.ts", generatedLike: true, summarized: true }),
+        diff({ file: "src/huge.ts", additions: EXTREME_DIFF_CHANGED_LINES + 1, summarized: true }),
+      ]),
+    ).toEqual(["src/summary.ts"])
   })
 
   it("expands only reviewable files from the bulk action", () => {

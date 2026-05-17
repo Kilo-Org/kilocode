@@ -13,6 +13,7 @@ import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import { FullScreenDiffView } from "../agent-manager/FullScreenDiffView"
 import { mergeWorktreeDiffs } from "../agent-manager/diff-state"
+import { initialDetailFiles } from "../agent-manager/diff-open-policy"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { getVSCodeAPI, VSCodeProvider, useVSCode } from "../src/context/vscode"
@@ -99,6 +100,10 @@ const DiffViewerContent: Component = () => {
     }
   }
 
+  const preloadInitialDiffDetails = (next: WorktreeFileDiff[]) => {
+    for (const file of initialDetailFiles(next)) requestDiffFile(file)
+  }
+
   const unsubscribe = vscode.onMessage((msg) => {
     if (msg.type === "diffViewer.diffs") {
       // Preserve cached `before`/`after` across polls so summarized polling
@@ -106,6 +111,7 @@ const DiffViewerContent: Component = () => {
       // worktree diff merge — see worktree-diff-controller.ts.
       const merged = mergeWorktreeDiffs(diffs(), msg.diffs)
       setDiffs(merged.diffs)
+      preloadInitialDiffDetails(merged.diffs)
       if (merged.stale.size > 0) refreshStaleDiffs(merged.stale)
       return
     }

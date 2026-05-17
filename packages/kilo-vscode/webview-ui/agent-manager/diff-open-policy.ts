@@ -15,6 +15,11 @@ export function initialOpenFiles(diffs: WorktreeFileDiff[]): string[] {
   return expandableOpenFiles(diffs)
 }
 
+export function initialDetailFiles(diffs: WorktreeFileDiff[]): string[] {
+  const open = new Set(initialOpenFiles(diffs))
+  return diffs.filter((diff) => open.has(diff.file) && diff.summarized === true).map((diff) => diff.file)
+}
+
 export function allOpenFiles(diffs: WorktreeFileDiff[], open: string[]): boolean {
   const targets = expandableOpenFiles(diffs)
   if (targets.length === 0) return false
