@@ -95,6 +95,7 @@ export const dict = {
   "command.session.share.description": "Del denne sesjonen og kopier URL-en til utklippstavlen",
   "command.session.unshare": "Slutt å dele sesjon",
   "command.session.unshare.description": "Slutt å dele denne sesjonen",
+  "command.session.export": "Eksporter sesjonsutskrift",
 
   "palette.search.placeholder": "Søk i filer, kommandoer og sesjoner",
   "palette.empty": "Ingen resultater funnet",
@@ -272,6 +273,7 @@ export const dict = {
   "prompt.attachment.remove": "Fjern vedlegg",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Svar på eller avvis det ventende spørsmålet først",
+  "prompt.action.send.recording": "Transkriber og send",
   "prompt.action.stop": "Stopp",
   "prompt.action.enhance": "Forbedre prompt",
   "prompt.action.autoApprove.enable": "Aktiver automatisk godkjenning",
@@ -284,6 +286,20 @@ export const dict = {
   "prompt.action.indexing": "Indekseringsinnstillinger",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
+
+  "speechToText.tooltip.start": "Start taleinndata",
+  "speechToText.tooltip.stop": "Stopp lydfangst",
+  "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
+  "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
+  "speechToText.error.title": "Taleinndata mislyktes",
+  "speechToText.error.loginRequired": "Logg på Kilo for å bruke taleinndata.",
+  "speechToText.error.permission": "Mikrofontillatelse ble nektet.",
+  "speechToText.error.microphone": "Kunne ikke starte mikrofonen.",
+  "speechToText.error.recording": "Opptak mislyktes.",
+  "speechToText.error.emptyRecording": "Ingen lyd ble tatt opp.",
+  "speechToText.error.emptyTranscript": "Ingen tale ble oppdaget.",
+  "speechToText.error.encoding": "Kunne ikke kode opptaket.",
+  "speechToText.toast.transcribed": "Transkripsjon satt inn",
 
   "prompt.toast.pasteUnsupported.title": "Liming ikke støttet",
   "prompt.toast.pasteUnsupported.description": "Kun bilder eller PDF-er kan limes inn her.",
@@ -1200,6 +1216,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
   "settings.experimental.agentManagerTool.description":
     "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
+  "settings.experimental.speechToText.title": "Tale til tekst",
+  "settings.experimental.speechToText.description":
+    "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Aktiver Kilo provider og logg på for å bruke taleinndata i prompt-felt.",
+  "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
+  "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
@@ -1585,4 +1608,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Planen er klar:",
 } satisfies Partial<Record<Keys, string>>

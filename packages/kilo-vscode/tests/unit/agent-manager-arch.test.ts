@@ -30,6 +30,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/agent-manager/review-annotation-speech.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),

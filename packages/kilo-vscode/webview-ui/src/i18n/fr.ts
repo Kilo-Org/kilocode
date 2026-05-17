@@ -93,6 +93,7 @@ export const dict = {
   "command.session.share.description": "Partager cette session et copier l'URL dans le presse-papiers",
   "command.session.unshare": "Ne plus partager la session",
   "command.session.unshare.description": "Arrêter de partager cette session",
+  "command.session.export": "Exporter la transcription de la session",
 
   "palette.search.placeholder": "Rechercher des fichiers, des commandes et des sessions",
   "palette.empty": "Aucun résultat trouvé",
@@ -271,6 +272,7 @@ export const dict = {
   "prompt.attachment.remove": "Supprimer la pièce jointe",
   "prompt.action.send": "Envoyer",
   "prompt.action.send.blocked": "Répondez ou rejetez d'abord la question en attente",
+  "prompt.action.send.recording": "Transcrire et envoyer",
   "prompt.action.stop": "Arrêter",
   "prompt.action.enhance": "Améliorer le prompt",
   "prompt.action.autoApprove.enable": "Activer l'approbation automatique",
@@ -283,6 +285,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
+
+  "speechToText.tooltip.start": "Démarrer la saisie vocale",
+  "speechToText.tooltip.stop": "Arrêter la capture audio",
+  "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
+  "speechToText.tooltip.error": "La saisie vocale a échoué. Cliquez pour effacer.",
+  "speechToText.error.title": "La saisie vocale a échoué",
+  "speechToText.error.loginRequired": "Connectez-vous à Kilo pour utiliser la saisie vocale.",
+  "speechToText.error.permission": "L'autorisation du microphone a été refusée.",
+  "speechToText.error.microphone": "Impossible de démarrer le microphone.",
+  "speechToText.error.recording": "L'enregistrement a échoué.",
+  "speechToText.error.emptyRecording": "Aucun son n'a été enregistré.",
+  "speechToText.error.emptyTranscript": "Aucune voix n'a été détectée.",
+  "speechToText.error.encoding": "Impossible d'encoder l'enregistrement.",
+  "speechToText.toast.transcribed": "Transcription insérée",
 
   "prompt.toast.pasteUnsupported.title": "Collage non supporté",
   "prompt.toast.pasteUnsupported.description": "Seules les images ou les PDF peuvent être collés ici.",
@@ -1260,6 +1276,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Outil Agent Manager",
   "settings.experimental.agentManagerTool.description":
     "Autoriser les agents à démarrer des sessions locales Agent Manager et des sessions worktree depuis un appel d'outil",
+  "settings.experimental.speechToText.title": "Transcription vocale",
+  "settings.experimental.speechToText.description":
+    "Activez la saisie vocale dans les champs de prompt en utilisant votre compte Kilo via Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Activez Kilo provider et connectez-vous pour utiliser la saisie vocale dans les champs de prompt.",
+  "settings.experimental.speechToTextModel.title": "Modèle de transcription vocale",
+  "settings.experimental.speechToTextModel.description":
+    "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
   "settings.experimental.continueOnDeny.title": "Continuer en cas de refus",
   "settings.experimental.continueOnDeny.description":
     "Continuer la boucle de l'agent lorsqu'une autorisation est refusée",
@@ -1630,4 +1654,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "Aucune branche correspondante",
   "diffViewer.baseBranch.loading": "Chargement des branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Le plan est prêt :",
 }

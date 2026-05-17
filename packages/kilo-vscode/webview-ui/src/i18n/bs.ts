@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Podijeli ovu sesiju i kopiraj URL u međuspremnik",
   "command.session.unshare": "Ukini dijeljenje sesije",
   "command.session.unshare.description": "Zaustavi dijeljenje ove sesije",
+  "command.session.export": "Izvezi transkript sesije",
 
   "palette.search.placeholder": "Pretraži datoteke, komande i sesije",
   "palette.empty": "Nema rezultata",
@@ -270,6 +271,7 @@ export const dict = {
   "prompt.attachment.remove": "Ukloni prilog",
   "prompt.action.send": "Pošalji",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
+  "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
@@ -281,6 +283,20 @@ export const dict = {
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
+
+  "speechToText.tooltip.start": "Započni glasovni unos",
+  "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
+  "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
+  "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
+  "speechToText.error.title": "Glasovni unos nije uspio",
+  "speechToText.error.loginRequired": "Prijavite se na Kilo da koristite glasovni unos.",
+  "speechToText.error.permission": "Dozvola za mikrofon je odbijena.",
+  "speechToText.error.microphone": "Nije moguće pokrenuti mikrofon.",
+  "speechToText.error.recording": "Snimanje nije uspjelo.",
+  "speechToText.error.emptyRecording": "Zvuk nije snimljen.",
+  "speechToText.error.emptyTranscript": "Govor nije otkriven.",
+  "speechToText.error.encoding": "Nije moguće kodirati snimak.",
+  "speechToText.toast.transcribed": "Prijepis ubačen",
 
   "prompt.toast.pasteUnsupported.title": "Nepodržano lijepljenje",
   "prompt.toast.pasteUnsupported.description": "Ovdje se mogu zalijepiti samo slike ili PDF-ovi.",
@@ -1241,6 +1257,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager alat",
   "settings.experimental.agentManagerTool.description":
     "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
+  "settings.experimental.speechToText.title": "Govor u tekst",
+  "settings.experimental.speechToText.description":
+    "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Omogućite i prijavite se na Kilo provider da koristite glasovni unos u poljima za promptove.",
+  "settings.experimental.speechToTextModel.title": "Model govora u tekst",
+  "settings.experimental.speechToTextModel.description":
+    "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1601,4 +1625,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan je spreman:",
 }

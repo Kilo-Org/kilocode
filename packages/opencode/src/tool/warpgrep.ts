@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Instance } from "../project/instance"
 import { Bus } from "../bus"
 import { TuiEvent } from "../cli/cmd/tui/event"
@@ -31,6 +32,7 @@ export const CodebaseSearchTool = Tool.define(
             always: ["*"],
             metadata: { query: params.query },
           })
+          Telemetry.trackToolUsed("codebase_search", ctx.sessionID) // kilocode_change
 
           const apiKey = process.env["MORPH_API_KEY"]
 

@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Compartir esta sesión y copiar la URL al portapapeles",
   "command.session.unshare": "Dejar de compartir sesión",
   "command.session.unshare.description": "Dejar de compartir esta sesión",
+  "command.session.export": "Exportar transcripción de la sesión",
 
   "palette.search.placeholder": "Buscar archivos, comandos y sesiones",
   "palette.empty": "No se encontraron resultados",
@@ -270,6 +271,7 @@ export const dict = {
   "prompt.attachment.remove": "Eliminar adjunto",
   "prompt.action.send": "Enviar",
   "prompt.action.send.blocked": "Responda o descarte la pregunta pendiente primero",
+  "prompt.action.send.recording": "Transcribir y enviar",
   "prompt.action.stop": "Detener",
   "prompt.action.enhance": "Mejorar prompt",
   "prompt.action.autoApprove.enable": "Activar aprobación automática",
@@ -282,6 +284,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
   "prompt.action.indexing": "Configuración de indexación",
+
+  "speechToText.tooltip.start": "Iniciar entrada de voz",
+  "speechToText.tooltip.stop": "Detener captura",
+  "speechToText.tooltip.transcribing": "Transcribiendo... Haz clic para cancelar.",
+  "speechToText.tooltip.error": "Falló la entrada de voz. Haz clic para borrar.",
+  "speechToText.error.title": "Falló la entrada de voz",
+  "speechToText.error.loginRequired": "Inicia sesión en Kilo para usar la entrada de voz.",
+  "speechToText.error.permission": "Se denegó el permiso del micrófono.",
+  "speechToText.error.microphone": "No se pudo iniciar el micrófono.",
+  "speechToText.error.recording": "La grabación falló.",
+  "speechToText.error.emptyRecording": "No se grabó ningún audio.",
+  "speechToText.error.emptyTranscript": "No se detectó voz.",
+  "speechToText.error.encoding": "No se pudo codificar la grabación.",
+  "speechToText.toast.transcribed": "Transcripción insertada",
 
   "prompt.toast.pasteUnsupported.title": "Pegado no soportado",
   "prompt.toast.pasteUnsupported.description": "Solo se pueden pegar imágenes o PDFs aquí.",
@@ -1248,6 +1264,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Herramienta Agent Manager",
   "settings.experimental.agentManagerTool.description":
     "Permitir que los agentes inicien sesiones locales y sesiones de worktree de Agent Manager desde una llamada de herramienta",
+  "settings.experimental.speechToText.title": "Voz a texto",
+  "settings.experimental.speechToText.description":
+    "Habilita la entrada de voz en los campos de prompt usando tu cuenta de Kilo a través de Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Habilita e inicia sesión en Kilo provider para usar la entrada de voz en los campos de prompt.",
+  "settings.experimental.speechToTextModel.title": "Modelo de voz a texto",
+  "settings.experimental.speechToTextModel.description":
+    "Elige el modelo de transcripción de Kilo Gateway para la entrada de voz.",
   "settings.experimental.continueOnDeny.title": "Continuar al denegar",
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
@@ -1611,4 +1635,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "Sin ramas que coincidan",
   "diffViewer.baseBranch.loading": "Cargando ramas…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "El plan está listo:",
 }

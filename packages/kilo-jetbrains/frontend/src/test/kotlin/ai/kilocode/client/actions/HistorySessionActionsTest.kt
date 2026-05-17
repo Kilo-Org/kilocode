@@ -20,6 +20,7 @@ import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
@@ -71,7 +72,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val local = localItem("ses_1")
         val event = event(action, manager, selection(HistorySource.LOCAL, listOf(local)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertTrue(event.presentation.isEnabledAndVisible)
     }
@@ -81,7 +82,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val item = cloudItem("cloud_1")
         val event = event(action, manager, selection(HistorySource.CLOUD, emptyList(), listOf(item)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertTrue(event.presentation.isEnabledAndVisible)
     }
@@ -91,7 +92,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val local = localItem("ses_1")
         val event = event(action, null, selection(HistorySource.LOCAL, listOf(local)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -100,7 +101,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val action = OpenSessionAction()
         val event = event(action, manager, selection(HistorySource.LOCAL, emptyList()), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -110,7 +111,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val items = listOf(localItem("ses_1"), localItem("ses_2"))
         val event = event(action, manager, selection(HistorySource.LOCAL, items), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -160,7 +161,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val local = localItem("ses_1")
         val event = event(action, manager, selection(HistorySource.LOCAL, listOf(local)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertTrue(event.presentation.isEnabledAndVisible)
     }
@@ -170,7 +171,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val item = cloudItem("cloud_1")
         val event = event(action, manager, selection(HistorySource.CLOUD, emptyList(), listOf(item)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -180,7 +181,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val local = localItem("ses_1")
         val event = event(action, null, selection(HistorySource.LOCAL, listOf(local)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -189,7 +190,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val action = DeleteSessionAction()
         val event = event(action, manager, selection(HistorySource.LOCAL, emptyList()), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -260,7 +261,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val local = localItem("ses_1")
         val event = event(action, manager, selection(HistorySource.LOCAL, listOf(local)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertTrue(event.presentation.isEnabledAndVisible)
     }
@@ -269,7 +270,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val action = RenameSessionAction()
         val event = event(action, manager, selection(HistorySource.LOCAL, emptyList()), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -279,7 +280,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val items = listOf(localItem("ses_1"), localItem("ses_2"))
         val event = event(action, manager, selection(HistorySource.LOCAL, items), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }
@@ -289,7 +290,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val item = cloudItem("cloud_1")
         val event = event(action, manager, selection(HistorySource.CLOUD, emptyList(), listOf(item)), controller)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabledAndVisible)
     }

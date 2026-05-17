@@ -248,6 +248,7 @@ interface SessionContextValue {
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
+  exportSessionTranscript: (id: string) => void
   syncSession: (sessionID: string) => void
 
   // Cloud session preview
@@ -2141,6 +2142,18 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "renameSession", sessionID: id, title })
   }
 
+  function exportSessionTranscript(id: string) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot export session transcript: not connected")
+      return
+    }
+    if (id.startsWith("cloud:")) {
+      console.warn("[Kilo New] Cannot export cloud session transcript")
+      return
+    }
+    vscode.postMessage({ type: "exportSessionTranscript", sessionID: id })
+  }
+
   // Computed values
   const currentSession = () => {
     const id = currentSessionID()
@@ -2429,6 +2442,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectSession,
     deleteSession,
     renameSession,
+    exportSessionTranscript,
     syncSession,
     cloudPreviewId,
     selectCloudSession,

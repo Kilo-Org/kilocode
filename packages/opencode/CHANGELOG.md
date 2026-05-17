@@ -1,5 +1,34 @@
 # @kilocode/cli
 
+## 7.3.0
+
+### Patch Changes
+
+- [#10279](https://github.com/Kilo-Org/kilocode/pull/10279) [`a3769d8`](https://github.com/Kilo-Org/kilocode/commit/a3769d83de3e1121c05877f5673dbcb5d3429c6b) - Keep Enhance Prompt focused on rewriting draft prompts instead of answering question-shaped drafts directly.
+
+## 7.2.54
+
+### Minor Changes
+
+- [#10218](https://github.com/Kilo-Org/kilocode/pull/10218) [`4860e65`](https://github.com/Kilo-Org/kilocode/commit/4860e654ca1cc46c4e99acc3f40d4f1302e34944) - Support setting an auto-compaction threshold percentage so long sessions can compact before the context window is full.
+
+### Patch Changes
+
+- [#10136](https://github.com/Kilo-Org/kilocode/pull/10136) [`8af638e`](https://github.com/Kilo-Org/kilocode/commit/8af638e7e20c645b22d96da5e30665e8e9cbf6ad) - Show ChatGPT sign-in again when Codex authentication expires.
+
+- [#8754](https://github.com/Kilo-Org/kilocode/pull/8754) [`e498c02`](https://github.com/Kilo-Org/kilocode/commit/e498c02f7acc5c228bbd45f9e4f294bf5def21ca) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Fix TUI diff rendering when header-like content lines appear inside a unified diff hunk.
+
+- [#10158](https://github.com/Kilo-Org/kilocode/pull/10158) [`d8245a0`](https://github.com/Kilo-Org/kilocode/commit/d8245a0ceb0989b8596c5a5d17fd1095ba9521be) - Fix Mermaid diagrams rendering with empty text inside every shape by restoring the `foreignObject` HTML integration point that DOMPurify dropped in 3.1.7.
+
+- [#10197](https://github.com/Kilo-Org/kilocode/pull/10197) [`1ea86fb`](https://github.com/Kilo-Org/kilocode/commit/1ea86fb6e15cbe486cb0af6f26995d0b1b2745a2) - Prevent Kilo Gateway Responses requests from replaying transient provider item IDs when request storage is disabled.
+
+- Updated dependencies [[`4860e65`](https://github.com/Kilo-Org/kilocode/commit/4860e654ca1cc46c4e99acc3f40d4f1302e34944), [`1af7973`](https://github.com/Kilo-Org/kilocode/commit/1af79731a8ed925f1f69aa536ba90a53b89e8dfb), [`1ea86fb`](https://github.com/Kilo-Org/kilocode/commit/1ea86fb6e15cbe486cb0af6f26995d0b1b2745a2), [`f5dc95b`](https://github.com/Kilo-Org/kilocode/commit/f5dc95b99394c17ad7140bb034bc15a0f9de60b6)]:
+  - @kilocode/sdk@7.3.0
+  - @kilocode/kilo-gateway@7.3.0
+  - @kilocode/plugin@7.2.53
+  - @kilocode/kilo-indexing@7.2.53
+  - @kilocode/kilo-telemetry@7.2.53
+
 ## 7.2.51
 
 ### Patch Changes

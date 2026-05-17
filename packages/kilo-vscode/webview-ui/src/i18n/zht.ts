@@ -96,6 +96,7 @@ export const dict = {
   "command.session.share.description": "分享此工作階段並將連結複製到剪貼簿",
   "command.session.unshare": "取消分享工作階段",
   "command.session.unshare.description": "停止分享此工作階段",
+  "command.session.export": "匯出會話紀錄",
 
   "palette.search.placeholder": "搜尋檔案、命令和工作階段",
   "palette.empty": "找不到結果",
@@ -268,6 +269,7 @@ export const dict = {
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "傳送",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
+  "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
   "prompt.action.autoApprove.enable": "啟用自動核准",
@@ -277,6 +279,20 @@ export const dict = {
   "prompt.action.resetModel": "重置模型為預設值",
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
+
+  "speechToText.tooltip.start": "開始語音輸入",
+  "speechToText.tooltip.stop": "停止擷取音訊",
+  "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
+  "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
+  "speechToText.error.title": "語音輸入失敗",
+  "speechToText.error.loginRequired": "登入 Kilo 以使用語音輸入。",
+  "speechToText.error.permission": "麥克風權限被拒絕。",
+  "speechToText.error.microphone": "無法啟動麥克風。",
+  "speechToText.error.recording": "錄音失敗。",
+  "speechToText.error.emptyRecording": "未錄製任何音訊。",
+  "speechToText.error.emptyTranscript": "未偵測到語音。",
+  "speechToText.error.encoding": "無法編碼錄音。",
+  "speechToText.toast.transcribed": "已插入轉錄文字",
 
   "prompt.toast.pasteUnsupported.title": "不支援的貼上",
   "prompt.toast.pasteUnsupported.description": "這裡只能貼上圖片或 PDF 檔案。",
@@ -1171,6 +1187,11 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
   "settings.experimental.agentManagerTool.description":
     "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
+  "settings.experimental.speechToText.title": "語音轉文字",
+  "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
+  "settings.experimental.speechToText.disabledDescription": "啟用並登入 Kilo provider 以在提示詞欄位中使用語音輸入。",
+  "settings.experimental.speechToTextModel.title": "語音轉文字模型",
+  "settings.experimental.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
@@ -1535,4 +1556,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "沒有相符的分支",
   "diffViewer.baseBranch.loading": "正在載入分支…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "計畫已準備就緒：",
 } satisfies Partial<Record<Keys, string>>

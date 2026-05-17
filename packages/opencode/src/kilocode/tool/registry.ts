@@ -13,6 +13,9 @@ const log = Log.create({ service: "kilocode-tool-registry" })
 type Deps = { agent: Agent.Interface; truncate: Truncate.Interface }
 
 export namespace KiloToolRegistry {
+  const hint =
+    "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`"
+
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
   export function infos() {
@@ -83,5 +86,13 @@ export namespace KiloToolRegistry {
       // The extension is the only client that can consume the Agent Manager start event.
       ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.agent_manager_tool === true ? [tools.manager] : []),
     ]
+  }
+
+  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def }): Tool.Def[] {
+    if (!extra.semantic) return tools
+    return tools.map((tool) => {
+      if (tool.id !== "glob" && tool.id !== "grep") return tool
+      return { ...tool, description: `${tool.description}\n${hint}` }
+    })
   }
 }

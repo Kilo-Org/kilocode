@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "このセッションを共有しURLをクリップボードにコピー",
   "command.session.unshare": "セッションの共有を停止",
   "command.session.unshare.description": "このセッションの共有を停止",
+  "command.session.export": "セッション記録をエクスポート",
 
   "palette.search.placeholder": "ファイル、コマンド、セッションを検索",
   "palette.empty": "結果が見つかりません",
@@ -268,6 +269,7 @@ export const dict = {
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
+  "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
@@ -278,6 +280,20 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
   "prompt.action.indexing": "インデックス設定",
+
+  "speechToText.tooltip.start": "音声入力を開始",
+  "speechToText.tooltip.stop": "音声キャプチャを停止",
+  "speechToText.tooltip.transcribing": "文字起こし中... クリックしてキャンセル。",
+  "speechToText.tooltip.error": "音声入力に失敗しました。クリックしてクリア。",
+  "speechToText.error.title": "音声入力に失敗しました",
+  "speechToText.error.loginRequired": "音声入力を使用するにはKiloにサインインしてください。",
+  "speechToText.error.permission": "マイクの許可が拒否されました。",
+  "speechToText.error.microphone": "マイクを起動できませんでした。",
+  "speechToText.error.recording": "録音に失敗しました。",
+  "speechToText.error.emptyRecording": "音声が録音されていません。",
+  "speechToText.error.emptyTranscript": "音声が検出されませんでした。",
+  "speechToText.error.encoding": "録音をエンコードできませんでした。",
+  "speechToText.toast.transcribed": "文字起こしを挿入しました",
 
   "prompt.toast.pasteUnsupported.title": "サポートされていない貼り付け",
   "prompt.toast.pasteUnsupported.description": "ここでは画像またはPDFのみ貼り付け可能です。",
@@ -1229,6 +1245,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager ツール",
   "settings.experimental.agentManagerTool.description":
     "エージェントがツール呼び出しから Agent Manager のローカルセッションとワークツリーセッションを開始できるようにする",
+  "settings.experimental.speechToText.title": "音声認識",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
+  "settings.experimental.speechToText.disabledDescription":
+    "プロンプトフィールドで音声入力を使用するには、Kilo providerを有効にしてサインインしてください。",
+  "settings.experimental.speechToTextModel.title": "音声認識モデル",
+  "settings.experimental.speechToTextModel.description": "音声入力に使用するKilo Gateway文字起こしモデルを選択します。",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
@@ -1585,4 +1608,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "一致するブランチがありません",
   "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "プランの準備ができました:",
 }

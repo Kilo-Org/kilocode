@@ -226,28 +226,31 @@ export const layer: Layer.Layer<
 
         return {
           custom,
-          builtin: [
-            tool.invalid,
-            ...(questionEnabled ? [tool.question] : []),
-            tool.bash,
-            tool.read,
-            tool.glob,
-            tool.grep,
-            tool.edit,
-            tool.write,
-            tool.task,
-            tool.fetch,
-            tool.todo,
-            tool.search,
-            tool.skill,
-            tool.patch,
-            // kilocode_change start
-            tool.plan,
-            ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
-            ...KiloToolRegistry.extra(kilo, cfg),
-            // kilocode_change end
-            ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-          ],
+          builtin: KiloToolRegistry.describe(
+            [
+              tool.invalid,
+              ...(questionEnabled ? [tool.question] : []),
+              tool.bash,
+              tool.read,
+              tool.glob,
+              tool.grep,
+              tool.edit,
+              tool.write,
+              tool.task,
+              tool.fetch,
+              tool.todo,
+              tool.search,
+              tool.skill,
+              tool.patch,
+              // kilocode_change start
+              tool.plan,
+              ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
+              ...KiloToolRegistry.extra(kilo, cfg),
+              // kilocode_change end
+              ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+            ],
+            kilo,
+          ), // kilocode_change
           task: tool.task,
           read: tool.read,
         }

@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Bu oturumu paylaş ve URL'yi panoya kopyala",
   "command.session.unshare": "Paylaşımı kaldır",
   "command.session.unshare.description": "Bu oturumun paylaşımını durdur",
+  "command.session.export": "Oturum dökümünü dışa aktar",
 
   "palette.search.placeholder": "Dosya, komut ve oturum ara",
   "palette.empty": "Sonuç bulunamadı",
@@ -269,6 +270,7 @@ export const dict = {
   "prompt.attachment.remove": "Eki kaldır",
   "prompt.action.send": "Gönder",
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
+  "prompt.action.send.recording": "Yazıya dök ve gönder",
   "prompt.action.stop": "Durdur",
   "prompt.action.enhance": "Komutu geliştir",
   "prompt.action.indexing": "İndeksleme ayarları",
@@ -279,6 +281,20 @@ export const dict = {
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
+
+  "speechToText.tooltip.start": "Sesli girişi başlat",
+  "speechToText.tooltip.stop": "Ses yakalamayı durdur",
+  "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
+  "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
+  "speechToText.error.title": "Sesli giriş başarısız oldu",
+  "speechToText.error.loginRequired": "Sesli girişi kullanmak için Kilo'ya giriş yapın.",
+  "speechToText.error.permission": "Mikrofon izni reddedildi.",
+  "speechToText.error.microphone": "Mikrofon başlatılamadı.",
+  "speechToText.error.recording": "Kayıt başarısız oldu.",
+  "speechToText.error.emptyRecording": "Hiçbir ses kaydedilmedi.",
+  "speechToText.error.emptyTranscript": "Hiçbir konuşma algılanmadı.",
+  "speechToText.error.encoding": "Kayıt kodlanamadı.",
+  "speechToText.toast.transcribed": "Döküm eklendi",
 
   "prompt.toast.pasteUnsupported.title": "Desteklenmeyen yapıştırma",
   "prompt.toast.pasteUnsupported.description": "Buraya sadece görsel veya PDF yapıştırılabilir.",
@@ -1233,6 +1249,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager Aracı",
   "settings.experimental.agentManagerTool.description":
     "Ajanların bir araç çağrısından Agent Manager yerel oturumları ve worktree oturumları başlatmasına izin ver",
+  "settings.experimental.speechToText.title": "Sesten metne",
+  "settings.experimental.speechToText.description":
+    "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Komut alanlarında sesli girişi kullanmak için Kilo provider'ı etkinleştirin ve giriş yapın.",
+  "settings.experimental.speechToTextModel.title": "Sesten metne modeli",
+  "settings.experimental.speechToTextModel.description": "Sesli giriş için Kilo Gateway transkripsiyon modelini seçin.",
   "settings.experimental.continueOnDeny.title": "Reddetme Durumunda Devam Et",
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
@@ -1612,4 +1635,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan hazır:",
 }
