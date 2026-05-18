@@ -216,7 +216,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             Reddit
           </span>
           , {language.t("settings.aboutKiloCode.feedback.or")}{" "}
-          <span style={linkStyle} onClick={() => open("https://kilo.ai/discord")}>
+          <span style={linkStyle} onClick={() => open("https://kilo.codes/discord")}>
             Discord
           </span>
           .

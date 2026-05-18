@@ -7,7 +7,7 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 
 const GITHUB_ISSUES_URL = "https://github.com/Kilo-Org/kilocode/issues/new/choose"
-const DISCORD_URL = "https://kilo.ai/discord"
+const DISCORD_URL = "https://kilo.codes/discord"
 const SUPPORT_URL = "https://kilo.ai/support"
 
 const KiloLogo = (): JSX.Element => {

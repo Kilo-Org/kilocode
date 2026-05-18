@@ -33,7 +33,7 @@ Before enabling Code Reviews:
 
 - **Compute and review time are free during limited beta**
   - Feedback is welcome in the Code Reviews beta Discord channel:
-    - [Kilo Discord](https://discord.gg/hZnd57qN)
+    - [Kilo Discord](https://kilo.codes/discord)
 - **Kilo Code credits are still used** when the agent performs model reasoning during a review.
 
 ## Getting Started

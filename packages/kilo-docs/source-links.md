@@ -85,7 +85,7 @@
   <!-- packages/opencode/src/mcp/oauth-provider.ts -->
 - <https://kilo.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
-- <https://kilo.ai/discord>
+- <https://kilo.codes/discord>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilo.ai/docs>

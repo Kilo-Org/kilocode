@@ -43,7 +43,7 @@ const contributingItems: DropdownItem[] = [
     description: "Our community guidelines",
   },
   { label: "GitHub Repository", href: "https://github.com/Kilo-Org/", description: "View source and issues" },
-  { label: "Discord Community", href: "https://kilo.ai/discord", description: "Join our community" },
+  { label: "Discord Community", href: "https://kilo.codes/discord", description: "Join our community" },
 ]
 
 const helpItems: DropdownItem[] = [
