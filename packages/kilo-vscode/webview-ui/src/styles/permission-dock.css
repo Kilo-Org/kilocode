@@ -5,6 +5,7 @@
 [data-component="dock-prompt"][data-kind="permission"] {
   animation: permission-slide-in 0.3s ease-out;
   margin: 12px;
+  max-height: min(72dvh, calc(100dvh - 96px));
   border: 1px solid
     color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 40%, var(--vscode-panel-border, transparent));
   border-radius: 0.25rem;
@@ -28,6 +29,10 @@
   [data-slot="permission-body"] {
     padding: 10px 16px 0;
     gap: 8px;
+  }
+
+  [data-slot="permission-content"] {
+    overflow: hidden;
   }
 
   [data-slot="permission-header-title"] {
@@ -110,13 +115,17 @@
     word-break: break-all;
   }
 
+  [data-slot="permission-scroll"] {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
   [data-slot="permission-diffs"] {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin: 8px 0;
-    max-height: 420px;
-    overflow: auto;
   }
 
   [data-slot="permission-diff"] {
@@ -352,6 +361,7 @@
   [data-slot="permission-actions"] {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-start;

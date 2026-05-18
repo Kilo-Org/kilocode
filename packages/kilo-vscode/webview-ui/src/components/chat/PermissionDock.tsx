@@ -261,26 +261,28 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
-        <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
+        <div data-slot="permission-scroll">
+          <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
 
-        {(() => {
-          const desc = description()
-          if (!desc)
-            return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
-          if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
-          return (
-            <div data-slot="permission-patterns">
-              <span data-slot="permission-patterns-title">{desc.title}</span>
-              <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+          {(() => {
+            const desc = description()
+            if (!desc)
+              return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
+            if (desc.kind === "single") return <div data-slot="permission-hint">{desc.text}</div>
+            return (
+              <div data-slot="permission-patterns">
+                <span data-slot="permission-patterns-title">{desc.title}</span>
+                <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+              </div>
+            )
+          })()}
+
+          <Show when={diffs().length > 0}>
+            <div data-slot="permission-diffs" data-count={diffs().length}>
+              <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
             </div>
-          )
-        })()}
-
-        <Show when={diffs().length > 0}>
-          <div data-slot="permission-diffs" data-count={diffs().length}>
-            <For each={diffs()}>{(diff) => <PermissionDiff filediff={diff} />}</For>
-          </div>
-        </Show>
+          </Show>
+        </div>
 
         <div data-slot="permission-actions">
           <Button
