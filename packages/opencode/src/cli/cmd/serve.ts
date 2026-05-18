@@ -4,6 +4,9 @@ import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstanceRuntime } from "../../project/instance-runtime" // kilocode_change
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+
+const log = Log.create({ service: "serve" }) // kilocode_change
 
 export const ServeCommand = effectCmd({
   command: "serve",
@@ -20,24 +23,48 @@ export const ServeCommand = effectCmd({
     const server = yield* Effect.promise(() => Server.listen(opts))
     console.log(`kilo server listening on http://${server.hostname}:${server.port}`) // kilocode_change
 
-    // kilocode_change start - graceful signal shutdown
-    // yield* Effect.never
-    yield* Effect.promise(
-      () =>
-        new Promise<void>((resolve) => {
-          const shutdown = async () => {
-            try {
-              await InstanceRuntime.disposeAllInstances()
-              await server.stop(true)
-            } finally {
-              resolve()
-            }
+    // kilocode_change start
+    const abort = new AbortController()
+    const shutdown = async (reason: string) => {
+      if (abort.signal.aborted) return
+      log.info("shutting down", { reason })
+      try {
+        await InstanceRuntime.disposeAllInstances()
+        await server.stop(true)
+      } finally {
+        abort.abort()
+      }
+    }
+    process.on("SIGTERM", () => shutdown("sigterm"))
+    process.on("SIGINT", () => shutdown("sigint"))
+    process.on("SIGHUP", () => shutdown("sighup"))
+
+    // Orphan detection: exit if parent dies without sending a signal
+    const parentPid = process.ppid
+    const orphanWatch = setInterval(() => {
+      if (abort.signal.aborted) return
+      const orphaned = (() => {
+        if (process.ppid !== parentPid) return true
+        if (parentPid === 1) return false
+        try {
+          process.kill(parentPid, 0)
+          return false
+        } catch (err) {
+          const code = (err as NodeJS.ErrnoException).code
+          if (code !== "ESRCH") {
+            log.debug("parent liveness check failed", { parentPid, code, error: err })
+            return false
           }
-          process.once("SIGTERM", shutdown)
-          process.once("SIGINT", shutdown)
-          process.once("SIGHUP", shutdown)
-        }),
-    )
+          log.debug("detected dead parent", { parentPid, error: err })
+          return true
+        }
+      })()
+      if (!orphaned) return
+      shutdown("parent-exit")
+    }, 1000)
+    orphanWatch.unref()
     // kilocode_change end
+
+    yield* Effect.promise(() => new Promise<void>((resolve) => abort.signal.addEventListener("abort", resolve)))
   }),
 })
