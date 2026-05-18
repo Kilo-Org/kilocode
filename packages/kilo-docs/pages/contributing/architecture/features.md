@@ -20,4 +20,4 @@ These pages document the architecture and design of current or planned features,
 | [Track Repo URL](/docs/contributing/architecture/track-repo-url) | Usage tracking by repository/project |
 | [Voice Transcription](/docs/contributing/architecture/voice-transcription) | Live voice input for chat |
 
-To propose a new feature design, start with [How to Write Good Specs](/docs/contributing/architecture/how-to-write-good-specs), then use the [Spec Template](/docs/contributing/architecture/feature-template).
+To propose a new feature design, consider using the [Spec Template](/docs/contributing/architecture/feature-template).

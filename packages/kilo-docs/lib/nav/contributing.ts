@@ -23,10 +23,6 @@ export const ContributingNav: NavSection[] = [
         children: "Architecture Overview",
       },
       {
-        href: "/contributing/architecture/how-to-write-good-specs",
-        children: "How to Write Good Specs",
-      },
-      {
         href: "/contributing/architecture/features",
         children: "Features",
         subLinks: [
