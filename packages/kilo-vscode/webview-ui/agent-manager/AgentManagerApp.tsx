@@ -1328,22 +1328,7 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.worktreeDiff") {
-        const ev = msg as AgentManagerWorktreeDiffMessage
-        let staleFiles: Set<string> | undefined
-        let preloadFiles: string[] = []
-        setDiffDatas((prev) => {
-          const existing = prev[ev.sessionId]
-          const merged = existing
-            ? mergeWorktreeDiffs(existing, ev.diffs)
-            : { diffs: ev.diffs, stale: new Set<string>() }
-          staleFiles = merged.stale
-          preloadFiles = initialDetailFiles(merged.diffs)
-          const next = merged.diffs
-          if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
-          return { ...prev, [ev.sessionId]: next }
-        })
-        preloadInitialDiffDetails(ev.sessionId, preloadFiles)
-        if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
+        handleWorktreeDiffMessage(msg as AgentManagerWorktreeDiffMessage)
       }
 
       if (msg.type === "agentManager.worktreeDiffFile") {
@@ -1576,7 +1561,7 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
   }
 
-  const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
+  const requestDiffDetails = (sessionId: string, files: Iterable<string>) => {
     const loading = diffFileLoading()[sessionId] ?? {}
     for (const file of files) {
       if (loading[file]) continue
@@ -1585,13 +1570,15 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  const preloadInitialDiffDetails = (sessionId: string, files: string[]) => {
-    const loading = diffFileLoading()[sessionId] ?? {}
-    for (const file of files) {
-      if (loading[file]) continue
-      setDiffFilePending(sessionId, file, true)
-      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+  const handleWorktreeDiffMessage = (ev: AgentManagerWorktreeDiffMessage) => {
+    const existing = diffDatas()[ev.sessionId]
+    const merged = existing ? mergeWorktreeDiffs(existing, ev.diffs) : { diffs: ev.diffs, stale: new Set<string>() }
+    const next = merged.diffs
+    if (!existing || existing.length !== next.length || !existing.every((old, i) => old === next[i])) {
+      setDiffDatas((prev) => ({ ...prev, [ev.sessionId]: next }))
     }
+    requestDiffDetails(ev.sessionId, initialDetailFiles(next))
+    requestDiffDetails(ev.sessionId, merged.stale)
   }
 
   const diffFileLoadingForCurrent = createMemo(() => {
