@@ -47,8 +47,6 @@ export class FileIgnoreController {
       return
     }
 
-    this.ignoreInstance.add(KILO_MANAGED_PATTERNS)
-
     // Try .kilocodeignore first — if it exists, use only that.
     // Use existsSync to distinguish "missing" from "unreadable" — permission
     // errors on readFileSync will propagate instead of being silently swallowed.
@@ -58,6 +56,7 @@ export class FileIgnoreController {
       if (kilocodeignoreContent.trim()) {
         this.ignoreInstance.add(kilocodeignoreContent)
         this.ignoreInstance.add(KILOCODEIGNORE)
+        this.ignoreInstance.add(KILO_MANAGED_PATTERNS)
         this.loadedContents.push({ file: KILOCODEIGNORE, content: kilocodeignoreContent })
         return
       }
@@ -75,6 +74,7 @@ export class FileIgnoreController {
 
     // Always add sensitive patterns in the fallback path.
     this.ignoreInstance.add(SENSITIVE_PATTERNS)
+    this.ignoreInstance.add(KILO_MANAGED_PATTERNS)
   }
 
   private cacheRealpath(input: string, resolved: string): void {

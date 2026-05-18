@@ -71,7 +71,10 @@ describe("FileIgnoreController", () => {
 
     it("always blocks Kilo-managed dependency files", async () => {
       const workspace = await createTempWorkspace()
-      await fs.writeFile(path.join(workspace, ".kilocodeignore"), "dist/\n")
+      await fs.writeFile(
+        path.join(workspace, ".kilocodeignore"),
+        "dist/\n!.kilo/package.json\n!.kilocode/package.json\n",
+      )
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
@@ -127,7 +130,7 @@ describe("FileIgnoreController", () => {
 
     it("always blocks Kilo-managed dependency files", async () => {
       const workspace = await createTempWorkspace()
-      await fs.writeFile(path.join(workspace, ".gitignore"), "dist/\n")
+      await fs.writeFile(path.join(workspace, ".gitignore"), "dist/\n!.kilo/package.json\n!.kilocode/package.json\n")
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
