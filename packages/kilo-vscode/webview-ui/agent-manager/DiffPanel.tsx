@@ -227,10 +227,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
         if (!props.onRequestDiff) return
         const loading = props.loadingFiles ?? new Set<string>()
         for (const file of next) {
-          if (loading.has(file)) continue
           const diff = props.diffs.find((item) => item.file === file)
           if (!diff || diff.summarized !== true) continue
           const value = diffToken(diff)
+          if (loading.has(file)) {
+            requested.set(file, value)
+            continue
+          }
           if (requested.get(file) === value) continue
           requested.set(file, value)
           props.onRequestDiff(file)
