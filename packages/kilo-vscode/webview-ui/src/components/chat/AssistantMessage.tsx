@@ -247,7 +247,9 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       defaultOpen={
-                                        part.type === "tool" ? toolDefaultOpen(tp().tool, open(), editOpen()) : undefined
+                                        part.type === "tool"
+                                          ? toolDefaultOpen(tp().tool, open(), editOpen())
+                                          : undefined
                                       }
                                       feedback={props.feedback}
                                       animate={
