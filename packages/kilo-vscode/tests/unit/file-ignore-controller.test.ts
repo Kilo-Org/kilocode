@@ -78,7 +78,10 @@ describe("FileIgnoreController", () => {
 
       expect(controller.validateAccess(path.join(workspace, ".kilo", "node_modules", "foo.js"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, ".kilo", "package.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilo", "package-lock.json"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, ".kilocode", "node_modules", "foo.js"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilocode", "package.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilocode", "package-lock.json"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
     })
   })
@@ -120,6 +123,22 @@ describe("FileIgnoreController", () => {
 
       expect(controller.validateAccess(path.join(workspace, ".env"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, ".env.local"))).toBe(false)
+    })
+
+    it("always blocks Kilo-managed dependency files", async () => {
+      const workspace = await createTempWorkspace()
+      await fs.writeFile(path.join(workspace, ".gitignore"), "dist/\n")
+
+      const controller = new FileIgnoreController(workspace)
+      await controller.initialize()
+
+      expect(controller.validateAccess(path.join(workspace, ".kilo", "node_modules", "foo.js"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilo", "package.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilo", "package-lock.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilocode", "node_modules", "foo.js"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilocode", "package.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, ".kilocode", "package-lock.json"))).toBe(false)
+      expect(controller.validateAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
     })
   })
 
