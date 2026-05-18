@@ -1589,8 +1589,17 @@ export const SessionProvider: ParentComponent = (props) => {
         produce((sessions) => {
           for (const id of Object.keys(sessions)) {
             if (id.startsWith("cloud:")) continue
-            if (kept?.has(id)) continue
-            if (!ids.has(id)) delete sessions[id]
+          if (kept?.has(id)) continue
+          if (!ids.has(id)) {
+            delete sessions[id]
+            // kilocode_change - also prune sessionOverrides to prevent unbounded accumulation on OOM
+            setStore(
+              "sessionOverrides",
+              produce((overrides) => {
+                delete overrides[id]
+              }),
+            )
+          }
           }
         }),
       )
@@ -1683,7 +1692,6 @@ export const SessionProvider: ParentComponent = (props) => {
           return next
         })
       }
-      setPermissions((prev) => removeSessionPermissions(prev, sessionID))
       setStatusMap(
         produce((map) => {
           delete map[sessionID]
@@ -1695,6 +1703,13 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
+      setStore(
+        "sessionOverrides",
+        produce((overrides) => {
+          delete overrides[sessionID]
+        }),
+      ) // kilocode_change - prevent unbounded sessionOverrides accumulation on OOM
+      setPermissions((prev) => removeSessionPermissions(prev, sessionID))
       if (currentSessionID() === sessionID) {
         setCurrentSessionID(undefined)
         setLoading(false)
