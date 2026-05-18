@@ -73,7 +73,18 @@ describe("FileIgnoreController", () => {
       const workspace = await createTempWorkspace()
       await fs.writeFile(
         path.join(workspace, ".kilocodeignore"),
-        "dist/\n!.kilo/package.json\n!.kilocode/package.json\n",
+        [
+          "dist/",
+          "!.kilo/package.json",
+          "!.kilo/pnpm-lock.yaml",
+          "!.kilo/bun.lock",
+          "!.kilo/yarn.lock",
+          "!.kilocode/package.json",
+          "!.kilocode/pnpm-lock.yaml",
+          "!.kilocode/bun.lock",
+          "!.kilocode/yarn.lock",
+          "",
+        ].join("\n"),
       )
 
       const controller = new FileIgnoreController(workspace)
@@ -138,7 +149,21 @@ describe("FileIgnoreController", () => {
 
     it("always blocks Kilo-managed dependency files", async () => {
       const workspace = await createTempWorkspace()
-      await fs.writeFile(path.join(workspace, ".gitignore"), "dist/\n!.kilo/package.json\n!.kilocode/package.json\n")
+      await fs.writeFile(
+        path.join(workspace, ".gitignore"),
+        [
+          "dist/",
+          "!.kilo/package.json",
+          "!.kilo/pnpm-lock.yaml",
+          "!.kilo/bun.lock",
+          "!.kilo/yarn.lock",
+          "!.kilocode/package.json",
+          "!.kilocode/pnpm-lock.yaml",
+          "!.kilocode/bun.lock",
+          "!.kilocode/yarn.lock",
+          "",
+        ].join("\n"),
+      )
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
