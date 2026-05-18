@@ -12,21 +12,23 @@ import { Filesystem } from "@/util/filesystem"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+// kilocode_change start
+import {
+  type ShareData,
+  shouldAttachShareAuthHeaders as _shouldAttachShareAuthHeaders,
+  fetchShareData,
+} from "@/kilocode/share/share-next-api"
+// kilocode_change end
 
 const log = Log.create({ service: "import" }) // kilocode_change
 
 const decodeMessageInfo = Schema.decodeUnknownSync(MessageV2.Info)
 const decodePart = Schema.decodeUnknownSync(MessageV2.Part)
 
-/** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
-export type ShareData =
-  | { type: "session"; data: SDKSession }
-  | { type: "message"; data: Message }
-  | { type: "part"; data: Part }
-  | { type: "session_diff"; data: unknown }
-  | { type: "model"; data: unknown }
-
 // kilocode_change start
+/** Re-exported from share-next-api for backward compatibility. */
+export type { ShareData }
+
 /** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
 export function parseShareUrl(url: string): string | null {
   const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
@@ -34,13 +36,10 @@ export function parseShareUrl(url: string): string | null {
 }
 // kilocode_change end
 
-export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: string): boolean {
-  try {
-    return new URL(shareUrl).origin === new URL(accountBaseUrl).origin
-  } catch {
-    return false
-  }
-}
+// kilocode_change start
+/** @deprecated Import from \`@/kilocode/share/share-next-api\` directly. */
+export const shouldAttachShareAuthHeaders = _shouldAttachShareAuthHeaders
+// kilocode_change end
 
 /**
  * Transform ShareNext API response (flat array) into the nested structure for local file storage.
@@ -153,24 +152,23 @@ export const ImportCommand = cmd({
           return
         }
 
-        const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
-        const response = await fetch(`${base}/session/${encodeURIComponent(slug)}`)
+        // Fetch flat ShareData[] from the ShareNext API (/api/shares/:id/data)
+        // and fold it into the nested { info, messages } shape for local storage.
+        const items = await fetchShareData(slug).catch(() => undefined)
 
-        if (!response.ok) {
-          process.stdout.write(`Failed to fetch share data: ${response.statusText}`)
+        if (!items) {
+          process.stdout.write(`Failed to fetch share data: ${slug}`)
           process.stdout.write(EOL)
           return
         }
 
-        const data = await response.json()
+        exportData = transformShareData(items) ?? undefined
 
-        if (!data || typeof data !== "object" || !data.info || !data.messages || !Array.isArray(data.messages)) {
+        if (!exportData) {
           process.stdout.write(`Share not found or empty: ${slug}`)
           process.stdout.write(EOL)
           return
         }
-
-        exportData = data
         // kilocode_change end
       } else {
         exportData = await Filesystem.readJson<NonNullable<typeof exportData>>(args.file).catch(() => undefined)
