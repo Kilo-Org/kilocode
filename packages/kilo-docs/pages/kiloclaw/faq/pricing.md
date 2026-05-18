@@ -9,7 +9,7 @@ KiloClaw uses Kilo Gateway credits by default — if you route requests through 
 
 ## Instance Hosting
 
-KiloClaw hosting provides each user with a dedicated machine (2 shared vCPUs, 3 GB RAM, 10 GB SSD). Visit [https://app.kilo.ai/claw](https://app.kilo.ai/claw) for current pricing and plans.
+Each user gets a dedicated machine (2 shared vCPUs, 3 GB RAM, 10 GB SSD). Visit [kilo.ai/pricing](https://kilo.ai/pricing) for current pricing and plans.
 
 ## Model Inference
 

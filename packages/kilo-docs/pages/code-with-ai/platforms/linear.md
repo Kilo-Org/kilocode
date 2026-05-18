@@ -26,6 +26,8 @@ The bot will:
 - Show a thinking/processing animation in Linear while it works
 - Link the resulting pull request back to the issue
 
+{% image src="/docs/img/connect/linear/linear-fix-issue.png" alt="Asking @kilo to fix an issue in Linear" width="800" /%}
+
 ### Apply changes across multiple repositories
 
 If a fix or upgrade needs to land in several repos at once:
@@ -36,6 +38,8 @@ If a fix or upgrade needs to land in several repos at once:
 
 The bot handles each repository independently, creating separate branches and pull requests for each.
 
+{% image src="/docs/img/connect/linear/linear-multi-repo.png" alt="Asking @kilo to apply changes across multiple repositories from Linear" width="800" /%}
+
 ### Get help understanding an issue
 
 Before jumping into a fix, ask the bot to analyze the problem:
@@ -45,6 +49,8 @@ Before jumping into a fix, ask the bot to analyze the problem:
 ```
 
 The bot examines the issue context and searches the connected codebase to surface likely causes.
+
+{% image src="/docs/img/connect/linear/linear-understand-issue.png" alt="Asking @kilo to analyze the cause of a Linear issue" width="800" /%}
 
 ---
 
