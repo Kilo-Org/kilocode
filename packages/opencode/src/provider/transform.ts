@@ -612,7 +612,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     case "@ai-sdk/openai-compatible":
       const efforts = [...WIDELY_SUPPORTED_EFFORTS]
       if (model.api.id.toLowerCase().includes("deepseek-v4")) {
-        efforts.push("max")
+        efforts.push("xhigh", "max")
       }
       return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
 
