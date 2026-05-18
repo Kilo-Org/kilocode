@@ -2240,8 +2240,10 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
+    expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
     expect(result.low).toEqual({ reasoning: { effort: "low" } })
     expect(result.high).toEqual({ reasoning: { effort: "high" } })
+    expect(result.max).toEqual({ reasoning: { effort: "max" } })
   })
 
   test("minimax returns empty object", () => {
@@ -2533,8 +2535,10 @@ describe("ProviderTransform.variants", () => {
         },
       })
       const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
       expect(result.low).toEqual({ reasoning: { effort: "low" } })
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
+      expect(result.max).toEqual({ reasoning: { effort: "max" } })
     })
 
     test("codex models return OPENAI_EFFORTS with object-based reasoning format", () => {

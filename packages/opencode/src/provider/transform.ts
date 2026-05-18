@@ -513,6 +513,10 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         !model.id.includes("deepseek-v4") // kilocode_change
       )
         return {}
+      if (model.id.includes("deepseek-v4")) {
+        const efforts = [...WIDELY_SUPPORTED_EFFORTS, "max"]
+        return Object.fromEntries(efforts.map((effort) => [effort, { reasoning: { effort } }]))
+      }
       return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
 
     case "@ai-sdk/gateway":
