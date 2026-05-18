@@ -1,8 +1,11 @@
 // kilocode_change new file
 //
 // Verifies that the Perplexity provider integration:
-//   • is OpenAI-compatible and points at https://api.perplexity.ai
+//   • is positioned as the Perplexity *Agent API* (an OpenRouter-style alternative
+//     in Kilo Code) — not a Sonar search/answer endpoint
+//   • is OpenAI-compatible and pinned to https://api.perplexity.ai
 //   • accepts both `PERPLEXITY_API_KEY` and `PPLX_API_KEY` env vars
+//   • defaults to `gpt-5.5` (the routed Agent-API model)
 //   • attaches the `X-Pplx-Integration: kilo-code/<version>` attribution header
 //
 // See https://docs.perplexity.ai for the API surface.
@@ -13,12 +16,14 @@ import path from "path"
 import {
   PERPLEXITY_INTEGRATION_HEADER,
   PERPLEXITY_INTEGRATION_SLUG,
+  PERPLEXITY_API_BASE_URL,
+  PERPLEXITY_DEFAULT_MODEL,
   perplexityIntegrationValue,
   patchCustomLoaderResult,
 } from "../../src/kilocode/provider/provider"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider"
+import { Provider } from "@/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Env } from "../../src/env"
 import { makeRuntime } from "../../src/effect/run-service"
@@ -37,7 +42,7 @@ async function listProviders() {
   )
 }
 
-describe("perplexity attribution constants", () => {
+describe("perplexity Agent API — positioning constants", () => {
   test("slug is kilo-code", () => {
     expect(PERPLEXITY_INTEGRATION_SLUG).toBe("kilo-code")
   })
@@ -46,17 +51,24 @@ describe("perplexity attribution constants", () => {
     expect(PERPLEXITY_INTEGRATION_HEADER).toBe("X-Pplx-Integration")
   })
 
+  test("base URL is the Agent API host", () => {
+    expect(PERPLEXITY_API_BASE_URL).toBe("https://api.perplexity.ai")
+  })
+
+  test("default model is gpt-5.5 (Agent API)", () => {
+    expect(PERPLEXITY_DEFAULT_MODEL).toBe("gpt-5.5")
+  })
+
   test("integration value is `<slug>/<version>`", () => {
     const value = perplexityIntegrationValue()
     expect(value.startsWith(`${PERPLEXITY_INTEGRATION_SLUG}/`)).toBe(true)
-    // version comes from InstallationVersion (`local` in tests, real version in prod)
     const [slug, version] = value.split("/")
     expect(slug).toBe("kilo-code")
     expect(version.length).toBeGreaterThan(0)
   })
 })
 
-describe("patchCustomLoaderResult — perplexity", () => {
+describe("patchCustomLoaderResult — perplexity attribution header", () => {
   test("injects the X-Pplx-Integration header onto the options", () => {
     const result = { options: {} as Record<string, any> }
     patchCustomLoaderResult("perplexity", result, {})
@@ -78,8 +90,8 @@ describe("patchCustomLoaderResult — perplexity", () => {
   })
 })
 
-describe("perplexity provider — env-var loading", () => {
-  test("loads when PERPLEXITY_API_KEY is set, includes attribution header, points at api.perplexity.ai", async () => {
+describe("perplexity Agent API — env-var loading and default model", () => {
+  test("loads when PERPLEXITY_API_KEY is set; baseURL=api.perplexity.ai; default model gpt-5.5", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
@@ -92,24 +104,25 @@ describe("perplexity provider — env-var loading", () => {
     })
     await Instance.provide({
       directory: tmp.path,
-      init: async () => {
+      init: Effect.promise(async () => {
         setEnv("PERPLEXITY_API_KEY", "test-pplx-key")
-      },
+      }).pipe(Effect.asVoid),
       fn: async () => {
         const providers = await listProviders()
         const perplexity = providers[ProviderID.make("perplexity")]
         expect(perplexity).toBeDefined()
         if (!perplexity) throw new Error("expected Perplexity provider")
 
-        // OpenAI-compatible endpoint
-        // (the upstream models.dev entry sets api: 'https://api.perplexity.ai/v1' by convention,
-        //  but we only assert the host is correct; trailing-slash handling is upstream)
+        // Pinned Agent API endpoint
+        expect(perplexity.options.baseURL).toBe(PERPLEXITY_API_BASE_URL)
+
         // Attribution header is on the merged options
         expect(perplexity.options.headers).toBeDefined()
         expect(perplexity.options.headers[PERPLEXITY_INTEGRATION_HEADER]).toBe(perplexityIntegrationValue())
 
-        // Default chat model is sonar-pro
-        expect(perplexity.models["sonar-pro"]).toBeDefined()
+        // Default model — gpt-5.5 routed through the Agent API.
+        expect(perplexity.models[PERPLEXITY_DEFAULT_MODEL]).toBeDefined()
+        expect(perplexity.models[PERPLEXITY_DEFAULT_MODEL].api.url).toBe(PERPLEXITY_API_BASE_URL)
       },
     })
   })
@@ -127,9 +140,9 @@ describe("perplexity provider — env-var loading", () => {
     })
     await Instance.provide({
       directory: tmp.path,
-      init: async () => {
+      init: Effect.promise(async () => {
         setEnv("PPLX_API_KEY", "test-pplx-fallback")
-      },
+      }).pipe(Effect.asVoid),
       fn: async () => {
         const providers = await listProviders()
         const perplexity = providers[ProviderID.make("perplexity")]
@@ -138,8 +151,12 @@ describe("perplexity provider — env-var loading", () => {
 
         // The fallback env var should populate apiKey via the custom loader
         expect(perplexity.options.apiKey).toBe("test-pplx-fallback")
+        // baseURL is still pinned to the Agent API host
+        expect(perplexity.options.baseURL).toBe(PERPLEXITY_API_BASE_URL)
         // And attribution header should still be present
         expect(perplexity.options.headers[PERPLEXITY_INTEGRATION_HEADER]).toBe(perplexityIntegrationValue())
+        // gpt-5.5 is the routed default
+        expect(perplexity.models[PERPLEXITY_DEFAULT_MODEL]).toBeDefined()
       },
     })
   })

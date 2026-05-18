@@ -38,6 +38,7 @@ export function providerNoteKey(providerID: string) {
   if (providerID === "openai") return "dialog.provider.openai.note"
   if (providerID === "google") return "dialog.provider.google.note"
   if (providerID === "openrouter") return "dialog.provider.openrouter.note"
+  if (providerID === "perplexity") return "dialog.provider.perplexity.note"
   if (providerID === "vercel") return "dialog.provider.vercel.note"
   return undefined
 }

@@ -110,6 +110,7 @@ export const dict = {
   "dialog.provider.openai.note": "GPT and Codex models with API key or ChatGPT login",
   "dialog.provider.google.note": "Gemini models for fast, structured responses",
   "dialog.provider.openrouter.note": "Access all supported models from one provider",
+  "dialog.provider.perplexity.note": "Agent API with frontier models — an OpenRouter alternative",
   "dialog.provider.vercel.note": "Unified access to AI models with smart routing",
 
   "dialog.model.select.title": "Select model",

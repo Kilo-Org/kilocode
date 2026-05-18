@@ -8,6 +8,8 @@
   <!-- packages/opencode/src/provider/models.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
+- <https://api.perplexity.ai>
+  <!-- packages/opencode/src/kilocode/provider/provider.ts -->
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
 - <https://app.kilo.ai/claw>

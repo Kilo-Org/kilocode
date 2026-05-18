@@ -1406,6 +1406,24 @@ const layer: Layer.Layer<
           })
         }
 
+        // kilocode_change start - run discoverModels for perplexity (Agent API gpt-5.5 default)
+        const perplexity = ProviderID.make("perplexity")
+        if (discoveryLoaders[perplexity] && providers[perplexity] && isProviderAllowed(perplexity)) {
+          yield* Effect.promise(async () => {
+            try {
+              const discovered = await discoveryLoaders[perplexity]()
+              for (const [modelID, model] of Object.entries(discovered)) {
+                if (!providers[perplexity].models[modelID]) {
+                  providers[perplexity].models[modelID] = model
+                }
+              }
+            } catch (e) {
+              log.warn("state discovery error", { id: "perplexity", error: e })
+            }
+          })
+        }
+        // kilocode_change end
+
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderID.make(id)
           if (!isProviderAllowed(providerID)) {

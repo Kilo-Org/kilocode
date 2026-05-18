@@ -10,16 +10,61 @@ import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kiloc
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { optionalOmitUndefined } from "@/util/schema"
-import { InstallationVersion } from "@/installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 
-// Perplexity attribution slug — required by Perplexity for first-party integrations.
-// See https://docs.perplexity.ai
+// Perplexity Agent API — positioned in Kilo Code as an alternative to OpenRouter:
+// one OpenAI-compatible endpoint that routes to many frontier models (GPT-5.5,
+// Claude, Gemini, …) via a single API key.
 export const PERPLEXITY_INTEGRATION_HEADER = "X-Pplx-Integration"
 export const PERPLEXITY_INTEGRATION_SLUG = "kilo-code"
 export const perplexityIntegrationValue = () => `${PERPLEXITY_INTEGRATION_SLUG}/${InstallationVersion}`
+
+// Perplexity Agent API base URL. OpenAI-compatible; `gpt-5.5` is the routed default.
+export const PERPLEXITY_API_BASE_URL = "https://api.perplexity.ai"
+export const PERPLEXITY_DEFAULT_MODEL = "gpt-5.5"
+
+// Models routed by the Perplexity Agent API. `gpt-5.5` is the default; the routing
+// layer accepts the same OpenAI/Anthropic/Google identifiers OpenRouter uses, so
+// the Kilo model picker can target frontier models through a single API key.
+//
+// Returned as a `Record<string, Model>` so it can be plugged into the provider
+// discovery hook (alongside the sonar-* models that come from the upstream
+// models.dev snapshot).
+function perplexityAgentApiModels(): Record<string, any> {
+  return {
+    [PERPLEXITY_DEFAULT_MODEL]: {
+      id: ModelID.make(PERPLEXITY_DEFAULT_MODEL),
+      providerID: ProviderID.make("perplexity"),
+      name: "GPT 5.5 (Agent API)",
+      family: "gpt-5",
+      release_date: "",
+      api: {
+        id: PERPLEXITY_DEFAULT_MODEL,
+        url: PERPLEXITY_API_BASE_URL,
+        npm: "@ai-sdk/openai-compatible",
+      },
+      status: "active",
+      headers: {},
+      options: {},
+      cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+      limit: { context: 400_000, output: 128_000 },
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: true, video: false, pdf: true },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      variants: {},
+      recommendedIndex: 0,
+    },
+  }
+}
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -161,9 +206,13 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         options: { headers: DEFAULT_HEADERS },
       }),
 
-    // Perplexity (Sonar) — OpenAI-compatible Agent API at https://api.perplexity.ai
-    // Default model is `sonar-pro`. We:
+    // Perplexity Agent API — a Kilo-Code alternative to OpenRouter.
+    // OpenAI-compatible endpoint at https://api.perplexity.ai routes to many
+    // frontier models (GPT-5.5, Claude, Gemini, …) with a single API key.
+    // We:
     //   • support `PPLX_API_KEY` as a fallback to `PERPLEXITY_API_KEY`
+    //   • pin baseURL to api.perplexity.ai (the Agent API endpoint)
+    //   • inject `gpt-5.5` as the default routed model
     //   • attach the `X-Pplx-Integration: kilo-code/<version>` attribution header
     //     on every outgoing request (see patchCustomLoaderResult)
     perplexity: Effect.fnUntraced(function* (input: any) {
@@ -179,6 +228,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         env.PPLX_API_KEY
 
       const options: Record<string, any> = {
+        baseURL: PERPLEXITY_API_BASE_URL,
         headers: {
           [PERPLEXITY_INTEGRATION_HEADER]: perplexityIntegrationValue(),
         },
@@ -188,6 +238,9 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
       return {
         autoload: Boolean(apiKey),
         options,
+        async discoverModels() {
+          return perplexityAgentApiModels()
+        },
       }
     }),
   }
