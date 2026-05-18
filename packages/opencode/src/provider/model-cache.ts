@@ -8,6 +8,11 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })
 
+  function modelsFetchDisabled() {
+    const value = process.env.KILO_DISABLE_MODELS_FETCH?.toLowerCase()
+    return Flag.KILO_DISABLE_MODELS_FETCH || value === "true" || value === "1"
+  }
+
   // Cache structure
   const cache = new Map<
     string,
@@ -76,7 +81,7 @@ export namespace ModelCache {
       return cached
     }
 
-    if (Flag.KILO_DISABLE_MODELS_FETCH) {
+    if (modelsFetchDisabled()) {
       log.debug("model fetch disabled", { providerID })
       return {}
     }
@@ -118,9 +123,9 @@ export namespace ModelCache {
    * @returns Freshly fetched models
    */
   export async function refresh(providerID: string, options?: any): Promise<Record<string, any>> {
-    if (Flag.KILO_DISABLE_MODELS_FETCH) {
+    if (modelsFetchDisabled()) {
       log.debug("model refresh disabled", { providerID })
-      return get(providerID) ?? {}
+      return {}
     }
 
     // Check if refresh already in progress
