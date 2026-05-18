@@ -1,3 +1,4 @@
+// kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import { isPasteSummaryEnabled, PASTE_SUMMARY_ENABLED_KEY } from "../../../src/cli/cmd/tui/util/paste-summary"
 

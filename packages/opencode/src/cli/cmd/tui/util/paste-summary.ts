@@ -1,3 +1,4 @@
+// kilocode_change - new file
 export const PASTE_SUMMARY_ENABLED_KEY = "paste_summary_enabled"
 
 type PasteSummaryKV = {
