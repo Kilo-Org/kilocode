@@ -131,7 +131,7 @@ To contribute:
 
 ## Engineering Specs
 
-For larger features, we write engineering specs to align on requirements before implementation. Check out the [Architecture](/docs/contributing/architecture) section to see planned features and learn how to contribute specs.
+For larger features, we write engineering specs to align on requirements before implementation. Read [How to Write Good Specs](/docs/contributing/architecture/how-to-write-good-specs) for the shared standard, then use the [Spec Template](/docs/contributing/architecture/feature-template) when proposing a new feature.
 
 ## Documentation Contributions
 
