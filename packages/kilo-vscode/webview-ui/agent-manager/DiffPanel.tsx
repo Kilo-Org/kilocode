@@ -489,7 +489,8 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                 const isDeleted = () => diff.status === "deleted"
                 const isLargeCollapsed = () => isLargeDiffFile(diff) && !open().includes(diff.file)
                 const isLoadingDetail = () =>
-                  (props.loadingFiles?.has(diff.file) ?? false) || shouldAutoLoadDiffDetail(diff)
+                  (props.loadingFiles?.has(diff.file) ?? false) ||
+                  (shouldAutoLoadDiffDetail(diff) && !requested.has(diff.file))
                 const fileCommentCount = () => (commentsByFile().get(diff.file) ?? []).length
 
                 return (
