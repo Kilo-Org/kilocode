@@ -62,6 +62,8 @@ import type {
   GlobalUpgradeResponses,
   IndexingStatusResponses,
   InstanceDisposeResponses,
+  KiloAudioTranscriptionsErrors,
+  KiloAudioTranscriptionsResponses,
   KiloClawChatCredentialsResponses,
   KiloClawStatusResponses,
   KiloCloudSessionGetErrors,
@@ -5745,6 +5747,60 @@ export class Organization extends HeyApiClient {
   }
 }
 
+export class Audio extends HeyApiClient {
+  /**
+   * Speech to text transcription
+   *
+   * Proxy an audio transcription request to the Kilo Gateway
+   */
+  public transcriptions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      model?: string
+      input_audio?: {
+        data: string
+        format: string
+      }
+      language?: string
+      prompt?: string
+      temperature?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "model" },
+            { in: "body", key: "input_audio" },
+            { in: "body", key: "language" },
+            { in: "body", key: "prompt" },
+            { in: "body", key: "temperature" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KiloAudioTranscriptionsResponses,
+      KiloAudioTranscriptionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilo/audio/transcriptions",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Session3 extends HeyApiClient {
   /**
    * Get cloud session
@@ -6064,6 +6120,11 @@ export class Kilo extends HeyApiClient {
   private _organization?: Organization
   get organization(): Organization {
     return (this._organization ??= new Organization({ client: this.client }))
+  }
+
+  private _audio?: Audio
+  get audio(): Audio {
+    return (this._audio ??= new Audio({ client: this.client }))
   }
 
   private _cloud?: Cloud

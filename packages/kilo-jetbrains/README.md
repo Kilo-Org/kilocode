@@ -52,6 +52,12 @@ The built plugin archive is at `build/distributions/kilo.jetbrains-<version>.zip
 
 ---
 
+## Releasing
+
+See [RELEASING.md](RELEASING.md) for the full release process, including how to tag and push an RC, where to watch workflow progress, and how to install RC builds via the custom plugin repository.
+
+---
+
 ## Run the plugin
 
 Use the `runIde` Gradle task (available in the Gradle tool window or via the "Run JetBrains Plugin" run configuration) to launch a sandboxed IntelliJ instance with the plugin installed.

@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "محلي",
+  "agentManager.sidebar.collapse": "طي الشريط الجانبي",
+  "agentManager.sidebar.expand": "إظهار الشريط الجانبي",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "الجلسات",
   "agentManager.notGitRepo": "ليس مستودع git",

@@ -91,7 +91,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "ปิดสแน็ปช็อตของ Kilo สำหรับโปรเจกต์นี้ คุณจะสูญเสียการยกเลิก/ทำซ้ำสำหรับการเปลี่ยนแปลงของ Kilo แต่ git ยังคงติดตามทุกอย่าง",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "เปิดในตัวดูความแตกต่าง",
+  "ui.messagePart.shell.command": "คำสั่ง",
+  "ui.messagePart.shell.output": "ผลลัพธ์",
+  "ui.messagePart.openInEditor": "เปิดในตัวแก้ไข",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "สิ่งนี้มีประโยชน์",

@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-docs",
-  "version": "7.2.52",
+  "version": "7.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack --port 3002",
@@ -16,7 +16,7 @@
     "@vscode/codicons": "^0.0.44",
     "@xyflow/react": "12.10.2",
     "js-yaml": "^4.1.0",
-    "mermaid": "11.12.3",
+    "mermaid": "11.15.0",
     "next": "^16.1.5",
     "posthog-js": "^1.335.3",
     "prismjs": "^1.30.0",

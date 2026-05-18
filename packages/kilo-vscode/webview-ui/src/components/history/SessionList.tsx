@@ -119,6 +119,9 @@ const SessionList: Component<SessionListProps> = (props) => {
             <ContextMenu.Item onSelect={() => startRename(item)}>
               <ContextMenu.ItemLabel>{language.t("common.rename")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => session.exportSessionTranscript(item.id)}>
+              <ContextMenu.ItemLabel>{language.t("command.session.export")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => confirmDelete(item)}>
               <ContextMenu.ItemLabel>{language.t("common.delete")}</ContextMenu.ItemLabel>

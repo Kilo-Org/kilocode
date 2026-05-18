@@ -71,6 +71,7 @@ interface StateFile {
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
+  sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   defaultBaseBranch?: string
 }
@@ -99,6 +100,7 @@ export class WorktreeStateManager {
   private tabOrder: Record<string, string[]> = {}
   private worktreeOrder: string[] = []
   private collapsed = false
+  private sidebar = false
   private reviewDiffStyle: "unified" | "split" = "unified"
   private defaultBase: string | undefined
   private readonly log: (msg: string) => void
@@ -523,6 +525,19 @@ export class WorktreeStateManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Sidebar collapsed
+  // ---------------------------------------------------------------------------
+
+  getSidebarCollapsed(): boolean {
+    return this.sidebar
+  }
+
+  setSidebarCollapsed(value: boolean): void {
+    this.sidebar = value
+    void this.save()
+  }
+
+  // ---------------------------------------------------------------------------
   // Review diff style
   // ---------------------------------------------------------------------------
 
@@ -636,6 +651,7 @@ export class WorktreeStateManager {
     }
     const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.collapsed = data.sessionsCollapsed ?? false
+    this.sidebar = data.sidebarCollapsed ?? false
     if (data.reviewDiffStyle === "split") {
       this.reviewDiffStyle = "split"
     }
@@ -740,6 +756,9 @@ export class WorktreeStateManager {
     }
     if (this.collapsed) {
       data.sessionsCollapsed = true
+    }
+    if (this.sidebar) {
+      data.sidebarCollapsed = true
     }
     if (this.reviewDiffStyle === "split") {
       data.reviewDiffStyle = "split"

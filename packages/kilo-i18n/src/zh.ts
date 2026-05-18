@@ -86,7 +86,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "关闭本项目的 Kilo 快照。你将失去对 Kilo 更改的撤销/重做，但 git 仍会追踪所有内容。",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "在差异查看器中打开",
+  "ui.messagePart.shell.command": "命令",
+  "ui.messagePart.shell.output": "输出",
+  "ui.messagePart.openInEditor": "在编辑器中打开",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "这有帮助",

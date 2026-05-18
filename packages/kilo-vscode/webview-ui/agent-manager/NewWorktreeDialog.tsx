@@ -15,8 +15,11 @@ import { useVSCode } from "../src/context/vscode"
 import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
+import { useConfig } from "../src/context/config"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
+import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
+import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
 import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import {
   MultiModelSelector,
@@ -27,7 +30,9 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
+import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { convertToMentionPath } from "../src/utils/path-mentions"
+import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
 import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -65,6 +70,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const server = useServer()
   const session = useSession()
   const provider = useProvider()
+  const { config, settings } = useConfig()
 
   const [tab, setTab] = createSignal<DialogTab>("new")
 
@@ -91,6 +97,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
   const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
+  const speech = useSpeechToText(vscode, server, { t })
+  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(settings())
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {
@@ -196,6 +205,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   const canSubmit = () => {
     if (starting()) return false
+    if (speech.active()) return false
     if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
     return true
   }
@@ -248,6 +258,26 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     if (!textareaRef) return
     textareaRef.style.height = "auto"
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+  }
+
+  const insertSpeechText = (value: string) => {
+    const ref = textareaRef
+    const current = prompt()
+    const start = ref?.selectionStart ?? current.length
+    const end = ref?.selectionEnd ?? start
+    const result = insertSpacedText(current, value, start, end)
+
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    if (!ref) return
+    ref.value = result.text
+    ref.setSelectionRange(result.pos, result.pos)
+    ref.focus()
+    adjustHeight()
+  }
+
+  const startSpeech = () => {
+    speech.start({ model: speechModel(), insert: insertSpeechText })
   }
 
   // --- Import tab state ---
@@ -397,6 +427,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         if (pid && mid) setModel({ providerID: pid, modelID: mid })
                       }}
                       placement="top-start"
+                      portal={false}
                       deferDismiss
                     />
                     <ThinkingSelectorBase
@@ -421,7 +452,11 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     </Show>
                   </Show>
                 </div>
-                <div class="prompt-input-hint-actions" />
+                <div class="prompt-input-hint-actions">
+                  <Show when={canUseSpeech()}>
+                    <SpeechToTextButton speech={speech} disabled={starting()} start={startSpeech} label={t} />
+                  </Show>
+                </div>
               </div>
             </div>
 
@@ -603,6 +638,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   placement="top-start"
                   flip={false}
                   sameWidth
+                  portal={false}
                   deferDismiss
                   class="am-compare-popover"
                   trigger={

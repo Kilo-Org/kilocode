@@ -2,6 +2,7 @@ import { type Component, createEffect, createMemo, onCleanup } from "solid-js"
 import type { AnnotationSide, DiffLineAnnotation, SelectedLineRange } from "@pierre/diffs"
 import { markdownCommentBlocks, type MarkdownRange } from "./markdown-comment-ranges"
 import type { AnnotationMeta } from "./review-annotations"
+import { annotationSelector, isAnnotationMutation } from "./markdown-annotation-mutation"
 
 type Insert = "after" | "list" | "table"
 
@@ -88,11 +89,11 @@ function matches(annotation: DiffLineAnnotation<AnnotationMeta>, anchor: Anchor,
   return true
 }
 
+const selector = annotationSelector()
+
 function removeInserted(root: HTMLElement, layer: HTMLElement): void {
   layer.replaceChildren()
-  root
-    .querySelectorAll(".am-markdown-inline-annotations, .am-markdown-list-annotation, .am-markdown-table-annotation")
-    .forEach((node) => node.remove())
+  root.querySelectorAll(selector).forEach((node) => node.remove())
 }
 
 function insertHost(anchor: Anchor, host: HTMLElement): void {
@@ -206,7 +207,10 @@ export const MarkdownAnnotationLayer: Component<MarkdownAnnotationLayerProps> = 
     const root = props.root()
     if (!root) return
     observer?.disconnect()
-    observer = new MutationObserver(schedule)
+    observer = new MutationObserver((mutations) => {
+      if (mutations.every(isAnnotationMutation)) return
+      schedule()
+    })
     observer.observe(root, { childList: true, subtree: true })
   })
 

@@ -3,7 +3,7 @@ package ai.kilocode.client.session.ui.model
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import com.intellij.icons.AllIcons
 import com.intellij.ui.CollectionListModel
-import com.intellij.ui.ExperimentalUI
+import com.intellij.ui.NewUI
 import com.intellij.ui.components.JBList
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.EmptyIcon
@@ -273,7 +273,7 @@ class ModelPickerTest : BasePlatformTestCase() {
     ) = ModelPicker.Item(id, display, provider, name, index, free = free)
 
     private fun favoriteInset(list: JBList<*>): Int {
-        if (!ExperimentalUI.isNewUI()) return 0
+        if (!NewUI.isEnabled()) return 0
         val inner = JBUI.CurrentTheme.Popup.Selection.innerInsets()
         val edge = JBUI.CurrentTheme.Popup.Selection.LEFT_RIGHT_INSET.get()
         return edge + if (list.componentOrientation.isLeftToRight) inner.right else inner.left
