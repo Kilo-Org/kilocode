@@ -1,5 +1,5 @@
-import path from "path"
-import { pathToFileURL } from "url"
+import path from "node:path"
+import { pathToFileURL } from "node:url"
 import z from "zod"
 import { Effect, Layer, Context, Schema } from "effect"
 import { zod } from "@/util/effect-zod"
@@ -20,6 +20,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import { rm } from "fs/promises" // kilocode_change
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
+import { isPathWithinAllowlist } from "@/util/path-safety" // kilocode_change
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
@@ -324,7 +325,30 @@ export async function remove(location: string) {
     throw new Error("cannot remove built-in skill")
   }
   const resolved = path.resolve(location)
+
+  // SEC-001: Enforce path-traversal guard — only allow removal of skill
+  // directories that fall within a known config/skills allowlist.
+  // Use the layers already wired into the Effect runtime (config + global).
+  let allowedDirs: string[] = []
+  try {
+    const { runPromise } = makeRuntime(
+      Config.Service,
+      Layer.provideMerge(Config.defaultLayer, Global.layer),
+    )
+    const cfgDirs: string[] = await runPromise((svc) => svc.directories())
+    allowedDirs = cfgDirs
+  } catch {
+    // If the runtime is unavailable (e.g. CLI pre-init), fall through to
+    // the rm call below — os-level permission errors will surface then.
+  }
+  // Also include the current working directory as a project root candidate
+  // so skill files under `.kilo/skills/` can be removed without a config fetch.
+  allowedDirs = [...allowedDirs, process.cwd()]
+
   const dir = path.dirname(resolved)
+  if (!isPathWithinAllowlist(dir, allowedDirs)) {
+    throw new Error(`refusing to remove skill outside allowed directories: ${dir}`)
+  }
   await rm(dir, { recursive: true, force: true })
 }
 // kilocode_change end

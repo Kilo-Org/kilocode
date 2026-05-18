@@ -29,6 +29,26 @@ const log = Log.create({ service: "claw-chat" })
 
 type SDK = ReturnType<typeof useSDK>
 
+// SEC-005: Redact known sensitive keys so credentials never reach log files.
+const SENSITIVE_KEYS = new Set([
+  "apiKey",
+  "token",
+  "secret",
+  "password",
+  "authorization",
+  "accessToken",
+  "refreshToken",
+  "api_key",
+  "apikey",
+  "x-api-key",
+])
+
+function sanitizeForLog(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => (SENSITIVE_KEYS.has(k) ? [k, "***REDACTED***"] : [k, v])),
+  )
+}
+
 /**
  * Poll the KiloClaw instance status every `interval` ms.
  */
@@ -85,7 +105,7 @@ export function createClawChat(sdk: SDK) {
       await chat.send(text)
       return true
     } catch (err) {
-      log.error("send failed", { error: errText(err) })
+      log.error("send failed", sanitizeForLog({ error: errText(err) }))
       setError("Failed to send message")
       return false
     }
@@ -98,7 +118,7 @@ export function createClawChat(sdk: SDK) {
       await selectConversation(id)
       return id
     } catch (err) {
-      log.error("createConversation failed", { error: errText(err) })
+      log.error("createConversation failed", sanitizeForLog({ error: errText(err) }))
       setError("Failed to create conversation")
       return null
     }
@@ -112,7 +132,7 @@ export function createClawChat(sdk: SDK) {
       setConversationStatus(result.status)
       return true
     } catch (err) {
-      log.error("selectConversation failed", { error: errText(err) })
+      log.error("selectConversation failed", sanitizeForLog({ error: errText(err) }))
       setError("Failed to load conversation")
       return false
     }
@@ -124,7 +144,7 @@ export function createClawChat(sdk: SDK) {
       await chat.renameConversation(conversationId, title)
       return true
     } catch (err) {
-      log.error("renameConversation failed", { error: errText(err) })
+      log.error("renameConversation failed", sanitizeForLog({ error: errText(err) }))
       setError("Failed to rename conversation")
       return false
     }
@@ -136,7 +156,7 @@ export function createClawChat(sdk: SDK) {
       await chat.deleteConversation(conversationId)
       return true
     } catch (err) {
-      log.error("deleteConversation failed", { error: errText(err) })
+      log.error("deleteConversation failed", sanitizeForLog({ error: errText(err) }))
       setError("Failed to delete conversation")
       return false
     }
@@ -171,7 +191,7 @@ export function createClawChat(sdk: SDK) {
       cleanup.unsubTyping?.()
       if (chat) {
         chat.disconnect().catch((err) => {
-          log.error("disconnect failed", { error: errText(err) })
+          log.error("disconnect failed", sanitizeForLog({ error: errText(err) }))
         })
       }
       chat = null

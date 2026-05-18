@@ -7,9 +7,12 @@ import z from "zod"
 import { Skill } from "@/skill"
 import { Agent } from "@/agent/agent"
 import { lazy } from "@/util/lazy"
+import { Global } from "@opencode-ai/core/global"
 import { errors } from "../../error"
 import { SessionImportRoutes } from "@/kilocode/session-import/routes"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
+import path from "node:path"
+import { isPathWithinAllowlist } from "@/util/path-safety"
 
 export const KilocodeRoutes = lazy(() =>
   new Hono()
@@ -62,6 +65,26 @@ export const KilocodeRoutes = lazy(() =>
       ),
       async (c) => {
         const { location } = c.req.valid("json")
+        const resolved = path.resolve(location)
+        const dir = path.dirname(resolved)
+
+        // SEC-001 (route-level defense-in-depth): reject path-traversal attempts.
+        // Derive the project root from the request so the client cannot force deletion
+        // outside its own workspace by injecting `../` into `location`.
+        const rawDir = c.req.query("directory") || c.req.header("x-kilo-directory") || process.cwd()
+        const projectDir = path.resolve(decodeURIComponent(rawDir))
+        const allowedDirs = [
+          Global.Path.config,
+          path.join(projectDir, ".kilocode"),
+          path.join(projectDir, ".kilo"),
+          path.join(projectDir, ".opencode"),
+          path.join(process.env.HOME ?? "", ".config", "kilo"),
+          projectDir,
+        ]
+        if (!isPathWithinAllowlist(dir, allowedDirs)) {
+          return c.json({ error: `path traversal blocked: ${dir}` }, 400)
+        }
+
         await Skill.remove(location)
         return c.json(true)
       },
