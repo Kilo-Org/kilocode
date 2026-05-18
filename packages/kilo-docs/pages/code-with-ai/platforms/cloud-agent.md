@@ -24,7 +24,7 @@ Before using Cloud Agents:
 ## Cost
 
 - **Compute is free during limited beta**
-  - Please provide any feedback in our Cloud Agents beta Discord channel: [Kilo Discord](https://kilo.ai/discord)
+  - Please provide any feedback in our Cloud Agents beta Discord channel: [Kilo Discord](https://kilo.codes/discord)
 - **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
 
 ## How to Use

@@ -85,9 +85,6 @@
   <!-- packages/opencode/src/mcp/oauth-provider.ts -->
 - <https://kilo.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
-- <https://kilo.ai/discord>
-  <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
-  <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilo.ai/docs>
   <!-- packages/kilo-vscode/webview-ui/src/hooks/useSlashCommand.ts -->
   <!-- packages/opencode/src/kilocode/cli/cmd/tui/app.tsx -->
@@ -103,6 +100,9 @@
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
 - <https://kilo.ai/support>
+  <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
+- <https://kilo.codes/discord>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://kilocode.ai>

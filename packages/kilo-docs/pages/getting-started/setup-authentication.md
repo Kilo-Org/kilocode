@@ -146,5 +146,5 @@ To set a default model:
 {% /tabs %}
 
 {% callout type="info" title="Need Help?" %}
-Reach out to our [support team](mailto:hi@kilo.ai) or join our [Discord community](https://kilo.ai/discord).
+Reach out to our [support team](mailto:hi@kilo.ai) or join our [Discord community](https://kilo.codes/discord).
 {% /callout %}

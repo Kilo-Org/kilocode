@@ -52,7 +52,7 @@ Some free models may be rate limited by the upstream provider. If you hit a rate
 Kilo's cloud services — App Builder, Code Reviewer, and others — also support free models. Select any model labeled "(free)" in the model dropdown when configuring a cloud task.
 
 {% callout type="tip" %}
-Available free models change over time as Kilo partners with different inference providers. Subscribe to our blog or join our [Discord](https://kilo.ai/discord) for updates.
+Available free models change over time as Kilo partners with different inference providers. Subscribe to our blog or join our [Discord](https://kilo.codes/discord) for updates.
 {% /callout %}
 
 ## Free Autocomplete

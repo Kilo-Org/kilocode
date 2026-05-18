@@ -41,7 +41,7 @@ The OpenClaw process is automatically restarted when it crashes. Check the Gatew
 
 1. Run **OpenClaw Doctor**
 2. Try a **Redeploy** to apply the latest platform image
-3. If the issue persists, join the [Kilo Discord](https://kilo.ai/discord) and share details in the KiloClaw channel
+3. If the issue persists, join the [Kilo Discord](https://kilo.codes/discord) and share details in the KiloClaw channel
 
 ## I changed the model but the agent is still using the old one
 

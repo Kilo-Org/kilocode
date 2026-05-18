@@ -73,7 +73,7 @@ Download pre-built binaries from the [Releases page](https://github.com/Kilo-Org
 ## Links
 
 - [GitHub](https://github.com/Kilo-Org/kilocode)
-- [Discord](https://kilo.ai/discord)
+- [Discord](https://kilo.codes/discord)
 - [VS Code Extension](https://kilo.ai/vscode-marketplace)
 - [Website](https://kilo.ai)
 

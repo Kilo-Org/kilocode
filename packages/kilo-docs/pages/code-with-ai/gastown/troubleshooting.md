@@ -133,4 +133,4 @@ If you can't resolve an issue:
 
 1. **Ask the Mayor** — it can diagnose most problems
 2. **Check the event timeline** — see exactly what happened and when
-3. **Contact support** — reach out at [kilo.ai/discord](https://kilo.ai/discord) with your town ID
+3. **Contact support** — reach out at [kilo.codes/discord](https://kilo.codes/discord) with your town ID

@@ -12,7 +12,7 @@ There are lots of ways to contribute to the project:
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
-The Kilo Community is [on Discord](https://kilo.ai/discord).
+The Kilo Community is [on Discord](https://kilo.codes/discord).
 
 ## Developing Kilo CLI
 
