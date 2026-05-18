@@ -2522,6 +2522,21 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
     })
 
+    test("deepseek v4 exposes reasoning effort variants", () => {
+      const model = createMockModel({
+        id: "kilo/deepseek/deepseek-v4-pro",
+        providerID: "kilo",
+        api: {
+          id: "deepseek/deepseek-v4-pro",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+    })
+
     test("codex models return OPENAI_EFFORTS with object-based reasoning format", () => {
       const model = createMockModel({
         id: "kilo/openai/gpt-5.2-codex",
