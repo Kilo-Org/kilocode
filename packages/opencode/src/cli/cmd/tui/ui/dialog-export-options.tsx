@@ -33,6 +33,11 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
     active: "filename" as "filename" | "thinking" | "toolDetails" | "assistantMetadata" | "openWithoutSaving",
   })
 
+  const toggleOption = (option: "thinking" | "toolDetails" | "assistantMetadata" | "openWithoutSaving") => {
+    setStore("active", option)
+    setStore(option, !store[option])
+  }
+
   useKeyboard((evt) => {
     if (evt.name === "return") {
       evt.preventDefault()
@@ -120,7 +125,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "thinking" ? theme.backgroundElement : undefined}
-          onMouseUp={() => setStore("active", "thinking")}
+          onMouseUp={() => toggleOption("thinking")}
         >
           <text fg={store.active === "thinking" ? theme.primary : theme.textMuted}>
             {store.thinking ? "[x]" : "[ ]"}
@@ -132,7 +137,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "toolDetails" ? theme.backgroundElement : undefined}
-          onMouseUp={() => setStore("active", "toolDetails")}
+          onMouseUp={() => toggleOption("toolDetails")}
         >
           <text fg={store.active === "toolDetails" ? theme.primary : theme.textMuted}>
             {store.toolDetails ? "[x]" : "[ ]"}
@@ -144,7 +149,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "assistantMetadata" ? theme.backgroundElement : undefined}
-          onMouseUp={() => setStore("active", "assistantMetadata")}
+          onMouseUp={() => toggleOption("assistantMetadata")}
         >
           <text fg={store.active === "assistantMetadata" ? theme.primary : theme.textMuted}>
             {store.assistantMetadata ? "[x]" : "[ ]"}
@@ -156,7 +161,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "openWithoutSaving" ? theme.backgroundElement : undefined}
-          onMouseUp={() => setStore("active", "openWithoutSaving")}
+          onMouseUp={() => toggleOption("openWithoutSaving")}
         >
           <text fg={store.active === "openWithoutSaving" ? theme.primary : theme.textMuted}>
             {store.openWithoutSaving ? "[x]" : "[ ]"}
