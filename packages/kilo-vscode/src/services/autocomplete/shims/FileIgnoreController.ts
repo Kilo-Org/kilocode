@@ -13,9 +13,17 @@ const KILO_MANAGED_PATTERNS = [
   ".kilo/node_modules/",
   ".kilo/package.json",
   ".kilo/package-lock.json",
+  ".kilo/pnpm-lock.yaml",
+  ".kilo/bun.lock",
+  ".kilo/bun.lockb",
+  ".kilo/yarn.lock",
   ".kilocode/node_modules/",
   ".kilocode/package.json",
   ".kilocode/package-lock.json",
+  ".kilocode/pnpm-lock.yaml",
+  ".kilocode/bun.lock",
+  ".kilocode/bun.lockb",
+  ".kilocode/yarn.lock",
 ]
 
 // Matches Windows drive-letter absolute paths (e.g. "C:/" or "c:\").
