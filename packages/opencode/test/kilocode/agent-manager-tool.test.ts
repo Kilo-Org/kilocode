@@ -34,6 +34,24 @@ const ctx = {
 }
 
 describe("agent_manager tool", () => {
+  test("overview returns read-only snapshot without side effects", async () => {
+    const tool = await init()
+    const calls: unknown[] = []
+
+    const result = await runtime.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "overview" },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => calls.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    // No permission ask for read-only overview
+    expect(calls).toEqual([])
+    expect(result.output).toContain("Agent Manager Overview")
+  })
+
   test("asks for agent_manager permission", async () => {
     const tool = await init()
     const calls: unknown[] = []

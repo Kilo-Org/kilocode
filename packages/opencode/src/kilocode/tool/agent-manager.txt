@@ -1,6 +1,16 @@
-Start Agent Manager sessions in the VS Code extension.
+Manage Agent Manager sessions in the VS Code extension.
 
-Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
+Actions:
+
+## overview (read-only)
+
+Use `{ "action": "overview" }` to inspect the current Agent Manager state without creating anything.
+Returns active worktrees, their sessions, git stats (uncommitted files, ahead/behind), and cached PR badges.
+Use this before starting new work to understand what is already running.
+
+## start (default)
+
+Use this action when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
 
 Modes:
 - `worktree`: creates a new Agent Manager git worktree for each task, like the New Worktree dialog.
