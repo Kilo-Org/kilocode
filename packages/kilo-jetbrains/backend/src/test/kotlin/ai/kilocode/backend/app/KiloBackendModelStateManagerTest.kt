@@ -120,7 +120,8 @@ class KiloBackendModelStateManagerTest {
     }
 
     private fun start(): Int {
-        mock.path = """{"home":"$dir","state":"$dir","config":"$dir","worktree":"$dir","directory":"$dir"}"""
+        val path = dir.toString().replace("\\", "/")
+        mock.path = """{"home":"$path","state":"$path","config":"$path","worktree":"$path","directory":"$path"}"""
         return mock.start()
     }
 }

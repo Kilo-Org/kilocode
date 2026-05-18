@@ -127,6 +127,24 @@ tasks {
     }
 }
 
+// Compile-only typecheck: verifies Kotlin compiles (including generated API client)
+// without running processResources, CLI binary prep, or buildPlugin.
+tasks.register("typecheck") {
+    dependsOn(
+        ":shared:compileKotlin",
+        ":frontend:compileKotlin",
+        ":backend:compileKotlin",
+        ":frontend:compileTestKotlin",
+        ":backend:compileTestKotlin",
+    )
+}
+
+// CLI binaries must be present before packaging. Wire the check here (not in
+// :backend:processResources) so compile/test tasks work without CLI binaries.
+tasks.named("buildPlugin") {
+    dependsOn(":backend:checkCli")
+}
+
 tasks.named<JavaExec>("runIde") {
     dependsOn(":backend:processResources")
     jvmArgumentProviders += CommandLineArgumentProvider {

@@ -67,8 +67,9 @@
 
 ## Build
 
-- **Full build**: `bun run build` from `packages/kilo-jetbrains/` (builds CLI + Gradle plugin).
-- **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present).
+- **Typecheck**: `bun run typecheck` or `./gradlew typecheck` from `packages/kilo-jetbrains/` — compiles all Kotlin sources including the generated API client. Does NOT require CLI binaries.
+- **Full build**: `bun run build` from `packages/kilo-jetbrains/` (prepares CLI binaries + runs Gradle `buildPlugin`).
+- **Gradle only**: `./gradlew buildPlugin` from `packages/kilo-jetbrains/` (requires CLI binaries already present in `backend/build/generated/cli/`; run `bun run build --prepare-cli` first).
 - **Via Turbo**: `bun turbo build --filter=@kilocode/kilo-jetbrains` from repo root.
 - **Run in sandbox**: `./gradlew runIde` — launches sandboxed IntelliJ with the plugin. Does NOT build CLI binaries.
 
