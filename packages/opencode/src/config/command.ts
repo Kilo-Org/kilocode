@@ -17,11 +17,15 @@ import type { Warning } from "./config"
 
 const log = Log.create({ service: "config" })
 
+export const ReasoningLevel = Schema.Literal("off", "low", "medium", "high")
+export type ReasoningLevel = Schema.Schema.Type<typeof ReasoningLevel>
+
 export const Info = Schema.Struct({
   template: Schema.String,
   description: Schema.optional(Schema.String),
   agent: Schema.optional(Schema.String),
   model: Schema.optional(ConfigModelID),
+  reasoning: Schema.optional(ReasoningLevel), // kilocode_change
   subtask: Schema.optional(Schema.Boolean),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 

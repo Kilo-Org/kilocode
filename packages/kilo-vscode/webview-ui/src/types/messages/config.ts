@@ -20,6 +20,8 @@ export interface CommandConfig {
   description?: string
   agent?: string
   model?: string
+  reasoning?: "off" | "low" | "medium" | "high"
+  subtask?: boolean
 }
 
 export interface SkillsConfig {

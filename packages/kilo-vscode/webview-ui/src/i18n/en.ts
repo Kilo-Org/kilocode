@@ -1338,6 +1338,17 @@ export const dict = {
     "No custom commands configured. Add commands to your opencode.json to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
+  "settings.agentBehaviour.workflows.newCommand": "New Command",
+  "settings.agentBehaviour.workflows.model": "Model",
+  "settings.agentBehaviour.workflows.agent": "Agent",
+  "settings.agentBehaviour.workflows.reasoning": "Reasoning",
+  "settings.agentBehaviour.workflows.edit.title": "Edit Command",
+  "settings.agentBehaviour.workflows.delete": "Delete Command",
+  "settings.agentBehaviour.workflows.confirmDelete":
+    "Are you sure you want to delete the command \"/{name}\"?",
+  "settings.agentBehaviour.workflows.create.title": "Create Command",
+  "settings.agentBehaviour.workflows.create.name.placeholder":
+    "e.g. my-review",
 
   "settings.agentBehaviour.createMode": "Create New Mode",
   "settings.agentBehaviour.createMode.name": "Name",
