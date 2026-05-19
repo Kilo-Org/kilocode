@@ -23,7 +23,7 @@
 - Marked the recurring Kilo-owned workflow conflicts as `keepOurs` in `script/upstream/utils/config.ts`.
 - Marked `.opencode/opencode.jsonc` as `keepOurs`; it points at the Kilo schema and includes Kilo provider defaults.
 - Auto-resolved `.opencode-version` by accepting the transformed upstream branch version, which is written by the merge script immediately before merging.
-- Made `merge.ts` pull the explicit base branch from origin, so retrying from an untracked audit branch does not fail at branch setup.
+- Made `merge.ts` pull the explicit base branch from origin when it exists, while allowing local-only audit branches to be used as merge bases.
 
 ## Expected Effect
 

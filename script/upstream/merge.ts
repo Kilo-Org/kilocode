@@ -398,7 +398,12 @@ async function main() {
 
   // Create backup branch
   await git.checkout(config.baseBranch)
-  await git.pull(config.originRemote, config.baseBranch)
+  const remote = await $`git ls-remote --exit-code --heads ${config.originRemote} ${config.baseBranch}`.quiet().nothrow()
+  if (remote.exitCode === 0) {
+    await git.pull(config.originRemote, config.baseBranch)
+  } else {
+    logger.warn(`Remote branch ${config.originRemote}/${config.baseBranch} not found; using local base branch as-is`)
+  }
   const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
