@@ -28,7 +28,7 @@ export namespace KiloSessionPrompt {
    */
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
-    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
+    if (!["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)

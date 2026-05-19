@@ -125,12 +125,18 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
                 is ChatEventDto.QuestionRejected -> event.sessionID
                 is ChatEventDto.SessionStatusChanged -> event.sessionID
                 is ChatEventDto.SessionUpdated -> event.sessionID
+                is ChatEventDto.SessionCreated -> event.sessionID
                 is ChatEventDto.SessionIdle -> event.sessionID
                 is ChatEventDto.SessionCompacted -> event.sessionID
                 is ChatEventDto.SessionDiffChanged -> event.sessionID
                 is ChatEventDto.TodoUpdated -> event.sessionID
             }
-            val passes = sid == null || sid == id
+            // session.created from the same directory should pass through regardless of session id,
+            // so the frontend can adopt the newly created implementation session.
+            val passes = when (event) {
+                is ChatEventDto.SessionCreated -> event.session.directory == directory
+                else -> sid == null || sid == id
+            }
             if (passes) LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
             else LOG.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
             passes

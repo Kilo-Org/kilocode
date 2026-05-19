@@ -183,6 +183,27 @@ describe("plan_exit detection", () => {
       expect(user.info.agent).toBe("code")
     }))
 
+  test("shouldAskPlanFollowup returns true for KILO_CLIENT=jetbrains", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      try {
+        process.env.KILO_CLIENT = "jetbrains"
+        const seeded = await seed({
+          tools: [
+            {
+              tool: "plan_exit",
+              input: {},
+              output: "Plan is ready at .kilo/plans/plan.md. Ending planning turn.",
+            },
+          ],
+        })
+        expect(SessionPrompt.shouldAskPlanFollowup({ messages: seeded.messages, abort: AbortSignal.any([]) })).toBe(true)
+      } finally {
+        if (prev === undefined) delete process.env.KILO_CLIENT
+        else process.env.KILO_CLIENT = prev
+      }
+    }))
+
   test("plan agent completion without plan_exit does NOT trigger PlanFollowup", () =>
     withInstance(async () => {
       const seeded = await seed({

@@ -22,6 +22,7 @@ class QuestionViewTest : BasePlatformTestCase() {
 
     private val replies = mutableListOf<Pair<String, QuestionReplyDto>>()
     private val rejects = mutableListOf<String>()
+    private val modes = mutableListOf<String>()
     private var scrolls = 0
     private lateinit var view: QuestionView
 
@@ -30,6 +31,7 @@ class QuestionViewTest : BasePlatformTestCase() {
         view = QuestionView(
             reply = { id, dto -> replies.add(id to dto) },
             reject = { id -> rejects.add(id) },
+            mode = { name -> modes.add(name) },
             scroll = { scrolls++ },
         )
     }
@@ -426,6 +428,99 @@ class QuestionViewTest : BasePlatformTestCase() {
         assertEquals(1, replies.size)
         assertEquals("req_3", replies.single().first)
         assertEquals(listOf(listOf("A")), replies.single().second.answers)
+    }
+
+    // ------ localization: display text vs canonical reply label ------
+
+    fun `test localized option label is shown but canonical label is sent in reply`() {
+        view.show(
+            Question(
+                id = "req_loc",
+                items = listOf(
+                    QuestionItem(
+                        question = "Ready to implement?",
+                        header = "Implement",
+                        options = listOf(
+                            QuestionOption(
+                                label = "Continue here",
+                                description = "Implement the plan in this session",
+                                labelKey = "plan.followup.answer.continue",
+                                descriptionKey = "plan.followup.answer.continue.description",
+                                mode = "code",
+                            ),
+                        ),
+                        multiple = false,
+                        custom = false,
+                        questionKey = "plan.followup.question",
+                        headerKey = "plan.followup.header",
+                    )
+                ),
+            )
+        )
+
+        // The label in the UI should come from the bundle (or fallback to canonical if key missing)
+        val labelText = findAll<JBTextArea>(view).firstOrNull { it.text == "Continue here" }
+        assertNotNull("option label 'Continue here' should be visible", labelText)
+
+        // Selecting and submitting should send canonical label
+        option<JBRadioButton>(view, "Continue here").doClick()
+        button(view, "Submit").doClick()
+
+        assertFalse(view.isVisible)
+        assertEquals(listOf(listOf("Continue here")), replies.single().second.answers)
+    }
+
+    // ------ mode callback from option metadata ------
+
+    fun `test selecting option with mode records mode before submit`() {
+        view.show(
+            Question(
+                id = "req_mode",
+                items = listOf(
+                    QuestionItem(
+                        question = "Ready to implement?",
+                        header = "Implement",
+                        options = listOf(
+                            QuestionOption("Continue here", "desc", mode = "code"),
+                            QuestionOption("Start new session", "desc"),
+                        ),
+                        multiple = false,
+                        custom = false,
+                    )
+                ),
+            )
+        )
+
+        option<JBRadioButton>(view, "Continue here").doClick()
+
+        assertEquals("mode should be recorded on selection", listOf("code"), modes)
+
+        button(view, "Submit").doClick()
+        assertEquals("reply should use canonical label", listOf(listOf("Continue here")), replies.single().second.answers)
+    }
+
+    fun `test selecting option without mode records nothing`() {
+        view.show(
+            Question(
+                id = "req_nomode",
+                items = listOf(
+                    QuestionItem(
+                        question = "Ready to implement?",
+                        header = "Implement",
+                        options = listOf(
+                            QuestionOption("Continue here", "desc", mode = "code"),
+                            QuestionOption("Start new session", "desc"),
+                        ),
+                        multiple = false,
+                        custom = false,
+                    )
+                ),
+            )
+        )
+
+        option<JBRadioButton>(view, "Start new session").doClick()
+
+        assertTrue("no mode should be recorded when option has no mode", modes.isEmpty())
     }
 
     // ------ helpers ------

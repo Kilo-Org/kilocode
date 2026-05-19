@@ -37,6 +37,7 @@ import javax.swing.JPanel
 class QuestionView(
     private val reply: (String, QuestionReplyDto) -> Unit,
     private val reject: (String) -> Unit,
+    private val mode: (String) -> Unit = {},
     private val scroll: () -> Unit = {},
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
     override val sessionViewKind = SessionView.Kind.Default
@@ -216,8 +217,12 @@ class QuestionView(
         }
     }
 
+    private fun questionText(item: QuestionItem) = KiloBundle.dynamic(item.questionKey, item.question)
+    private fun labelText(opt: QuestionOption) = KiloBundle.dynamic(opt.labelKey, opt.label)
+    private fun descriptionText(opt: QuestionOption) = KiloBundle.dynamic(opt.descriptionKey, opt.description)
+
     private fun addContent(item: QuestionItem, set: MutableSet<String>) {
-        val title = text(item.question, UiStyle.Colors.fg(), true)
+        val title = text(questionText(item), UiStyle.Colors.fg(), true)
         title.border = JBUI.Borders.emptyBottom(UiStyle.Gap.xs())
         title.alignmentX = Component.LEFT_ALIGNMENT
         body.add(title)
@@ -254,7 +259,7 @@ class QuestionView(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
         }
-        val question = text(item.question, UiStyle.Colors.weak())
+        val question = text(questionText(item), UiStyle.Colors.weak())
         question.alignmentX = Component.LEFT_ALIGNMENT
         row.add(question)
 
@@ -312,10 +317,12 @@ class QuestionView(
     }
 
     private fun optionRow(toggle: AbstractButton, opt: QuestionOption): JPanel {
+        val display = labelText(opt)
+        val desc = descriptionText(opt)
         val row = JPanel(BorderLayout()).apply {
             isOpaque = false
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
-            toolTipText = opt.description.ifBlank { null }
+            toolTipText = desc.ifBlank { null }
             alignmentX = Component.LEFT_ALIGNMENT
         }
         val press = object : MouseAdapter() {
@@ -334,16 +341,16 @@ class QuestionView(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             addMouseListener(press)
         }
-        val label = text(opt.label, UiStyle.Colors.fg(), true)
+        val label = text(display, UiStyle.Colors.fg(), true)
         label.alignmentX = Component.LEFT_ALIGNMENT
         label.addMouseListener(press)
         col.add(label)
 
-        if (opt.description.isNotBlank()) {
-            val desc = text(opt.description, UiStyle.Colors.weak())
-            desc.alignmentX = Component.LEFT_ALIGNMENT
-            desc.addMouseListener(press)
-            col.add(desc)
+        if (desc.isNotBlank()) {
+            val descLabel = text(desc, UiStyle.Colors.weak())
+            descLabel.alignmentX = Component.LEFT_ALIGNMENT
+            descLabel.addMouseListener(press)
+            col.add(descLabel)
         }
 
         row.addMouseListener(press)
@@ -436,7 +443,18 @@ class QuestionView(
         }
     }
 
+    private fun selectedMode(item: QuestionItem, set: Set<String>): String? {
+        val modes = item.options
+            .filter { it.label in set }
+            .mapNotNull { it.mode?.takeIf { value -> value.isNotBlank() } }
+            .distinct()
+        return modes.singleOrNull()
+    }
+
     private fun refreshSelection() {
+        question?.items?.getOrNull(idx)?.let { item ->
+            selectedMode(item, selections.getOrNull(idx).orEmpty())?.let(mode)
+        }
         question?.let(::syncControls)
         refresh()
         scroll()

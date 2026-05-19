@@ -183,6 +183,13 @@ object KiloCliDataParser {
                 ChatEventDto.SessionUpdated(sid, dto)
             }
 
+            "session.created" -> {
+                val info = props["info"]?.jsonObject ?: return null
+                val dto = parseSessionObject(info)
+                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
+                ChatEventDto.SessionCreated(sid, dto)
+            }
+
             "session.idle" -> {
                 val sid = props.str("sessionID") ?: return null
                 ChatEventDto.SessionIdle(sid)
@@ -467,18 +474,26 @@ object KiloCliDataParser {
             val qo = q.jsonObject
             val options = qo["options"]?.jsonArray?.map { o ->
                 val oo = o.jsonObject
-                QuestionOptionDto(oo.str("label") ?: "", oo.str("description") ?: "")
+                QuestionOptionDto(
+                    label = oo.str("label") ?: "",
+                    description = oo.str("description") ?: "",
+                    labelKey = oo.str("labelKey"),
+                    descriptionKey = oo.str("descriptionKey"),
+                    mode = oo.str("mode"),
+                )
             } ?: emptyList()
             QuestionInfoDto(
                 question = qo.str("question") ?: "",
                 header = qo.str("header") ?: "",
                 options = options,
-                multiple = qo.str("multiple") == "true",
-                custom = qo.str("custom") != "false",
+                multiple = qo.bool("multiple") ?: false,
+                custom = qo.bool("custom") ?: true,
+                questionKey = qo.str("questionKey"),
+                headerKey = qo.str("headerKey"),
             )
         } ?: emptyList()
         val ref = toolRef(obj)
-        return QuestionRequestDto(id, sid, questions, ref)
+        return QuestionRequestDto(id, sid, questions, ref, obj.bool("blocking"))
     }
 
     internal fun parseModelFavorites(raw: JsonElement?): List<ModelSelectionDto> {
@@ -672,6 +687,10 @@ object KiloCliDataParser {
 // JsonObject convenience extensions
 private fun JsonObject.str(key: String): String? =
     this[key]?.jsonPrimitive?.contentOrNull
+
+private fun JsonObject.bool(key: String): Boolean? =
+    this[key]?.jsonPrimitive?.booleanOrNull
+        ?: this[key]?.jsonPrimitive?.contentOrNull?.toBooleanStrictOrNull()
 
 private fun JsonObject.num(key: String): Double? =
     this[key]?.jsonPrimitive?.doubleOrNull

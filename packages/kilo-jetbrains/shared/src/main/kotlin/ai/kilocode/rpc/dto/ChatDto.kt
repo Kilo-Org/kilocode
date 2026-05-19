@@ -207,6 +207,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.created")
+    data class SessionCreated(
+        val sessionID: String,
+        val session: SessionDto,
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.idle")
     data class SessionIdle(
         val sessionID: String,
@@ -272,6 +279,7 @@ data class QuestionRequestDto(
     val sessionID: String,
     val questions: List<QuestionInfoDto>,
     val tool: ToolRefDto? = null,
+    val blocking: Boolean? = null,
 )
 
 @Serializable
@@ -281,12 +289,17 @@ data class QuestionInfoDto(
     val options: List<QuestionOptionDto> = emptyList(),
     val multiple: Boolean = false,
     val custom: Boolean = true,
+    val questionKey: String? = null,
+    val headerKey: String? = null,
 )
 
 @Serializable
 data class QuestionOptionDto(
     val label: String,
     val description: String,
+    val labelKey: String? = null,
+    val descriptionKey: String? = null,
+    val mode: String? = null,
 )
 
 @Serializable

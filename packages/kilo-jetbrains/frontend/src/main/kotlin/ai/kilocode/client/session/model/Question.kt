@@ -15,9 +15,14 @@ data class QuestionItem(
     val options: List<QuestionOption>,
     val multiple: Boolean,
     val custom: Boolean,
+    val questionKey: String? = null,
+    val headerKey: String? = null,
 )
 
 data class QuestionOption(
     val label: String,
     val description: String,
+    val labelKey: String? = null,
+    val descriptionKey: String? = null,
+    val mode: String? = null,
 )

@@ -30,6 +30,7 @@ object ChatLogSummary {
         is ChatEventDto.QuestionRejected -> event.sessionID
         is ChatEventDto.SessionStatusChanged -> event.sessionID
         is ChatEventDto.SessionUpdated -> event.sessionID
+        is ChatEventDto.SessionCreated -> event.sessionID
         is ChatEventDto.SessionIdle -> event.sessionID
         is ChatEventDto.SessionCompacted -> event.sessionID
         is ChatEventDto.SessionDiffChanged -> event.sessionID
@@ -186,6 +187,12 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.updated",
             "title=${event.session.title.length}",
+        )
+
+        is ChatEventDto.SessionCreated -> join(
+            sid(event.sessionID),
+            "evt=session.created",
+            "dir=${event.session.directory}",
         )
 
         is ChatEventDto.SessionIdle -> join(

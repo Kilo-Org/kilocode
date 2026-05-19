@@ -12,6 +12,7 @@ import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -777,6 +778,61 @@ class KiloCliDataParserTest {
     }
 
     @Test
+    fun `parseChatEvent - question asked preserves metadata fields`() {
+        val data = globalEvent("""
+            "type": "question.asked",
+            "properties": {
+                "id": "q_plan",
+                "sessionID": "ses_1",
+                "blocking": true,
+                "questions": [{
+                    "question": "Ready to implement?",
+                    "header": "Implement",
+                    "questionKey": "plan.followup.question",
+                    "headerKey": "plan.followup.header",
+                    "multiple": false,
+                    "custom": false,
+                    "options": [
+                        {
+                            "label": "Continue here",
+                            "description": "Implement the plan in this session",
+                            "labelKey": "plan.followup.answer.continue",
+                            "descriptionKey": "plan.followup.answer.continue.description",
+                            "mode": "code"
+                        },
+                        {
+                            "label": "Start new session",
+                            "description": "Implement in a fresh session",
+                            "labelKey": "plan.followup.answer.newSession",
+                            "descriptionKey": "plan.followup.answer.newSession.description"
+                        }
+                    ]
+                }],
+                "tool": null
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("question.asked", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.QuestionAsked)
+        assertEquals(true, result.request.blocking)
+        val q = result.request.questions[0]
+        assertEquals("plan.followup.question", q.questionKey)
+        assertEquals("plan.followup.header", q.headerKey)
+        assertFalse(q.multiple)
+        assertFalse(q.custom)
+        val opt0 = q.options[0]
+        assertEquals("Continue here", opt0.label)
+        assertEquals("plan.followup.answer.continue", opt0.labelKey)
+        assertEquals("plan.followup.answer.continue.description", opt0.descriptionKey)
+        assertEquals("code", opt0.mode)
+        val opt1 = q.options[1]
+        assertEquals("Start new session", opt1.label)
+        assertEquals("plan.followup.answer.newSession", opt1.labelKey)
+        assertNull(opt1.mode)
+    }
+
+    @Test
     fun `parseChatEvent - question replied`() {
         val data = globalEvent("""
             "type": "question.replied",
@@ -939,6 +995,31 @@ class KiloCliDataParserTest {
         val result = KiloCliDataParser.parseChatEvent("session.compacted", data)
         assertNotNull(result)
         assertTrue(result is ChatEventDto.SessionCompacted)
+    }
+
+    @Test
+    fun `parseChatEvent - session created`() {
+        val data = globalEvent("""
+            "type": "session.created",
+            "properties": {
+                "sessionID": "ses_new",
+                "info": {
+                    "id": "ses_new",
+                    "projectID": "proj_1",
+                    "directory": "/test",
+                    "title": "Implementation",
+                    "version": "1",
+                    "time": { "created": 1.0, "updated": 2.0 }
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.created", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.SessionCreated)
+        assertEquals("ses_new", result.sessionID)
+        assertEquals("ses_new", result.session.id)
+        assertEquals("/test", result.session.directory)
     }
 
     @Test
@@ -1138,6 +1219,34 @@ class KiloCliDataParserTest {
         val result = KiloCliDataParser.parseQuestionRequests(raw)
         assertEquals(1, result.size)
         assertEquals("q1", result[0].id)
+    }
+
+    @Test
+    fun `parseQuestionRequests - preserves metadata fields`() {
+        val raw = """[{
+            "id": "q2",
+            "sessionID": "s1",
+            "blocking": true,
+            "questions": [{
+                "question": "Ready to implement?",
+                "header": "Implement",
+                "questionKey": "plan.followup.question",
+                "headerKey": "plan.followup.header",
+                "multiple": false,
+                "custom": false,
+                "options": [{"label": "Continue here", "description": "desc", "labelKey": "plan.followup.answer.continue", "mode": "code"}]
+            }]
+        }]"""
+        val result = KiloCliDataParser.parseQuestionRequests(raw)
+        assertEquals(1, result.size)
+        assertEquals(true, result[0].blocking)
+        val q = result[0].questions[0]
+        assertEquals("plan.followup.question", q.questionKey)
+        assertEquals("plan.followup.header", q.headerKey)
+        assertFalse(q.multiple)
+        assertFalse(q.custom)
+        assertEquals("code", q.options[0].mode)
+        assertEquals("plan.followup.answer.continue", q.options[0].labelKey)
     }
 
     // ================================================================

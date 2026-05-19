@@ -74,6 +74,7 @@ class SessionController(
   private val beforeUpdate: () -> Boolean = { false },
   private val afterUpdate: (Boolean) -> Unit = {},
   private val loaded: (Boolean) -> Unit = {},
+  private val now: () -> Long = { System.currentTimeMillis() },
 ) : Disposable {
 
     companion object {
@@ -104,6 +105,8 @@ class SessionController(
     private var disposed = false
     private var partType: String? = null
     private var tool: String? = null
+    private val followupTtlMs = 30_000L
+    private var followup: Long? = null
     private var eventJob: Job? = null
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
     private var recentsState: RecentsState = RecentsState.Idle
@@ -269,6 +272,15 @@ class SessionController(
         }
     }
 
+    fun selectAgentLocal(name: String) {
+        assertEdt()
+        LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config-local agent=$name" }
+        fire(SessionControllerEvent.WorkspaceReady) {
+            model.agent = name
+            syncModelSelection()
+        }
+    }
+
     fun selectModel(provider: String, id: String) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config model=$provider/$id" }
@@ -318,18 +330,22 @@ class SessionController(
     fun replyQuestion(requestId: String, answers: QuestionReplyDto) {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
+        val startNew = answers.answers.firstOrNull()?.firstOrNull()?.trim() == "Start new session"
+        if (startNew) followup = now() else followup = null
         cs.launch {
             try {
                 sessions.replyQuestion(requestId, directory, answers)
                 LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId ok=true" }
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { if (!disposed) followup = null }
             }
         }
     }
 
     fun rejectQuestion(requestId: String) {
         assertEdt()
+        followup = null
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
             try {
@@ -722,6 +738,8 @@ class SessionController(
 
             is ChatEventDto.SessionUpdated -> model.setSession(event.session)
 
+            is ChatEventDto.SessionCreated -> adoptFollowup(event)
+
             is ChatEventDto.SessionIdle -> {
                 // Treat session.idle as an explicit signal to return to Idle.
                 // Only apply if we're not in a more specific non-terminal state.
@@ -807,6 +825,18 @@ class SessionController(
     }
 
     private fun item(key: String): ModelItem? = model.models.firstOrNull { it.key == key }
+
+    private fun adoptFollowup(event: ChatEventDto.SessionCreated) {
+        assertEdt()
+        val time = followup ?: return
+        if (now() - time > followupTtlMs) {
+            followup = null
+            return
+        }
+        if (event.session.directory != directory) return
+        followup = null
+        openSession(event.session)
+    }
 
     private fun handle(events: List<ChatEventDto>) {
         updateModel {
@@ -1106,6 +1136,9 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.QuestionRejected -> event.sessionID == id
     is ChatEventDto.SessionStatusChanged -> event.sessionID == id
     is ChatEventDto.SessionUpdated -> event.sessionID == id
+    // session.created is already filtered by directory at the backend RPC layer;
+    // always pass through so the controller can adopt the new implementation session.
+    is ChatEventDto.SessionCreated -> true
     is ChatEventDto.SessionIdle -> event.sessionID == id
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
@@ -1235,9 +1268,19 @@ private fun toQuestion(dto: QuestionRequestDto): Question {
         QuestionItem(
             question = it.question,
             header = it.header,
-            options = it.options.map { opt -> QuestionOption(opt.label, opt.description) },
+            options = it.options.map { opt ->
+                QuestionOption(
+                    label = opt.label,
+                    description = opt.description,
+                    labelKey = opt.labelKey,
+                    descriptionKey = opt.descriptionKey,
+                    mode = opt.mode,
+                )
+            },
             multiple = it.multiple,
             custom = it.custom,
+            questionKey = it.questionKey,
+            headerKey = it.headerKey,
         )
     }
     return Question(id = dto.id, items = items, tool = ref)

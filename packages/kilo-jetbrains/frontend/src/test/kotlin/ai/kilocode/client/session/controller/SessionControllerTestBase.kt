@@ -148,6 +148,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         session: SessionDto? = null,
         beforeUpdate: () -> Boolean = { false },
         afterUpdate: (Boolean) -> Unit = {},
+        open: (SessionRef) -> Unit = {},
+        now: () -> Long = { System.currentTimeMillis() },
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
     ): SessionController {
         val root = Root()
@@ -164,6 +166,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             displayMs,
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
+            open = open,
+            now = now,
         )
         controllers.add(m)
         roots[m] = root
