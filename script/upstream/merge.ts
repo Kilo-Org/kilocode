@@ -520,8 +520,8 @@ async function main() {
 
   // 6k. Record the last merged upstream tag so future automation can find it
   // without walking ls-remote + isAncestor for every tag.
-  const versionFile = await writeVersion(targetVersion.tag)
-  logger.success(`Recorded ${targetVersion.tag} in ${versionFile.split("/").pop()}`)
+  const written = await writeVersion(targetVersion.tag)
+  logger.success(`Recorded ${targetVersion.tag} in ${written.split("/").pop()}`)
 
   // Clean untracked build artifacts from Kilo-specific directories.
   // These packages don't exist in upstream, so their .gitignore files are absent
