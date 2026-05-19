@@ -55,7 +55,7 @@ export const MarketplaceView = () => {
       if (msg.type === "marketplaceRemoveResult") {
         const removed = pending()
         setPending(null)
-        if (msg.success) {
+        if (msg.success && msg.removed !== false) {
           if (removed) {
             telemetry(TelemetryEventName.MARKETPLACE_ITEM_REMOVED, {
               itemId: removed.item.id,

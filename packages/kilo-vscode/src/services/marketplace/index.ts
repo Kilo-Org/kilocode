@@ -51,7 +51,7 @@ export class MarketplaceService {
   async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
     const result = await this.installer.remove(item, scope, workspace)
 
-    if (result.success) {
+    if (result.success && result.removed !== false) {
       vscode.window.showInformationMessage(`Successfully removed ${item.name}`)
     }
 

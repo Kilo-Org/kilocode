@@ -858,6 +858,7 @@ export interface MarketplaceRemoveResultMessage {
   success: boolean
   slug: string
   error?: string
+  removed?: boolean
 }
 
 export interface ProviderOAuthReadyMessage {

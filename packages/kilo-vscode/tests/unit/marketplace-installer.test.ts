@@ -93,4 +93,68 @@ describe("MarketplaceInstaller MCP format normalization", () => {
     const mcp = written.mcp?.already
     expect(mcp).toEqual({ type: "local", command: ["npx", "-y", "someserver"], environment: { KEY: "val" } })
   })
+
+  it("reports when an MCP entry was actually removed", async () => {
+    const paths = new TestPaths()
+    const installer = new MarketplaceInstaller(paths)
+    await fs.mkdir(path.dirname(paths.configPath("global")), { recursive: true })
+    await fs.writeFile(
+      paths.configPath("global"),
+      JSON.stringify({
+        mcp: {
+          memory: { type: "local", command: ["npx", "-y", "@modelcontextprotocol/server-memory"] },
+          github: { type: "remote", url: "https://example.com/mcp" },
+        },
+      }),
+    )
+
+    const result = await installer.remove(
+      {
+        type: "mcp",
+        id: "memory",
+        name: "Memory",
+        description: "test",
+        url: "https://example.com",
+        content: "{}",
+      },
+      "global",
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.removed).toBe(true)
+    const written = JSON.parse(await fs.readFile(paths.configPath("global"), "utf-8"))
+    expect(written.mcp.memory).toBeUndefined()
+    expect(written.mcp.github).toEqual({ type: "remote", url: "https://example.com/mcp" })
+  })
+
+  it("does not report success as a real MCP removal when the entry is absent", async () => {
+    const paths = new TestPaths()
+    const installer = new MarketplaceInstaller(paths)
+    await fs.mkdir(path.dirname(paths.configPath("global")), { recursive: true })
+    await fs.writeFile(
+      paths.configPath("global"),
+      JSON.stringify({
+        mcp: {
+          github: { type: "remote", url: "https://example.com/mcp" },
+        },
+      }),
+    )
+
+    const result = await installer.remove(
+      {
+        type: "mcp",
+        id: "memory",
+        name: "Memory",
+        description: "test",
+        url: "https://example.com",
+        content: "{}",
+      },
+      "global",
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.removed).toBe(false)
+    const written = JSON.parse(await fs.readFile(paths.configPath("global"), "utf-8"))
+    expect(written.mcp.github).toEqual({ type: "remote", url: "https://example.com/mcp" })
+  })
 })

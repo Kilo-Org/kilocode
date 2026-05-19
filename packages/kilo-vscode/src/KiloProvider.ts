@@ -1121,6 +1121,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             success: result.success,
             slug: result.slug,
             error: result.error,
+            removed: result.removed,
           })
           break
         }
@@ -1972,11 +1973,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async handleRemoveMcp(name: string): Promise<void> {
     // Remove from legacy files first so that the subsequent invalidation
     // causes the CLI to re-read config without the legacy entry.
-    await this.removeLegacyMcp(name)
+    const legacyRemoved = await this.removeLegacyMcp(name)
 
     const stub = { id: name, type: "mcp" as const, name, description: "", url: "", content: "" }
     const removed = await this.removeMarketplaceItemFromAllScopes(stub)
-    if (!removed) {
+    if (!removed && (legacyRemoved.project || legacyRemoved.global)) {
+      await this.invalidateAfterMarketplaceChange(legacyRemoved.global ? "global" : "project")
+    }
+    if (!removed && !legacyRemoved.project && !legacyRemoved.global) {
       console.error("[Kilo New] KiloProvider: Failed to remove MCP server:", name)
     }
   }
@@ -1985,26 +1989,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Remove an MCP server from legacy config files (.kilo/mcp.json, .kilocode/mcp.json,
    * and the VS Code global storage mcp_settings.json). These files are read by the
    * CLI-side McpMigrator and merged into config at the lowest precedence level.
-   * Returns true if the entry was found and removed from at least one file.
+   * Returns which config scope had at least one removed entry.
    */
-  private async removeLegacyMcp(name: string): Promise<boolean> {
+  private async removeLegacyMcp(name: string): Promise<{ project: boolean; global: boolean }> {
     const workspace = this.getProjectDirectory(this.currentSession?.id)
-    const files: vscode.Uri[] = []
+    const files: Array<{ uri: vscode.Uri; scope: "project" | "global" }> = []
 
     // Project-level legacy files
     if (workspace) {
-      files.push(vscode.Uri.file(path.join(workspace, ".kilo", "mcp.json")))
-      files.push(vscode.Uri.file(path.join(workspace, ".kilocode", "mcp.json")))
+      files.push({ uri: vscode.Uri.file(path.join(workspace, ".kilo", "mcp.json")), scope: "project" })
+      files.push({ uri: vscode.Uri.file(path.join(workspace, ".kilocode", "mcp.json")), scope: "project" })
     }
 
     // Global legacy file (VS Code extension global storage)
     const storage = this.extensionContext?.globalStorageUri
     if (storage) {
-      files.push(vscode.Uri.joinPath(storage, "settings", "mcp_settings.json"))
+      files.push({ uri: vscode.Uri.joinPath(storage, "settings", "mcp_settings.json"), scope: "global" })
     }
 
-    let removed = false
-    for (const uri of files) {
+    const removed = { project: false, global: false }
+    for (const { uri, scope } of files) {
       const bytes = await vscode.workspace.fs.readFile(uri).then(
         (b) => b,
         () => null,
@@ -2019,7 +2023,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         delete servers[name]
         const content = Buffer.from(JSON.stringify(parsed, null, 2), "utf8")
         await vscode.workspace.fs.writeFile(uri, content)
-        removed = true
+        removed[scope] = true
       } catch (err) {
         console.warn("[Kilo New] KiloProvider: Failed to remove legacy MCP from", uri.fsPath, err)
       }
@@ -2055,7 +2059,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async removeMarketplaceItem(item: MarketplaceItem, scope: "project" | "global"): Promise<RemoveResult> {
     const workspace = this.getProjectDirectory(this.currentSession?.id)
     const result = await this.getMarketplace().remove(item, scope, workspace)
-    if (result.success) {
+    if (result.success && result.removed !== false) {
       await this.invalidateAfterMarketplaceChange(scope)
     }
     return result
@@ -2073,8 +2077,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const project = await mp.remove(item, "project", workspace)
     const global = await mp.remove(item, "global", workspace)
 
-    if (project.success || global.success) {
-      const scope = global.success ? "global" : "project"
+    const removed = item.type === "mcp" ? project.removed || global.removed : project.success || global.success
+    if (removed) {
+      const scope =
+        item.type === "mcp" ? (global.removed ? "global" : "project") : global.success ? "global" : "project"
       await this.invalidateAfterMarketplaceChange(scope)
       return true
     }

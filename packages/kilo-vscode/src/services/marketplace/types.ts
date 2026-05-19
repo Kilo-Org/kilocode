@@ -81,4 +81,5 @@ export interface RemoveResult {
   success: boolean
   slug: string
   error?: string
+  removed?: boolean
 }

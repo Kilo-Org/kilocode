@@ -195,14 +195,17 @@ export class MarketplaceInstaller {
   }
 
   async removeMcp(item: McpMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
+    if (scope === "project" && !workspace) {
+      return { success: false, slug: item.id, error: "No workspace directory for project-scope remove" }
+    }
     const config = await this.readConfig(scope, workspace)
     if (!config.mcp?.[item.id]) {
-      return { success: true, slug: item.id }
+      return { success: true, slug: item.id, removed: false, error: "MCP server is not installed in this scope" }
     }
     delete config.mcp[item.id]
     if (Object.keys(config.mcp).length === 0) delete config.mcp
     await this.writeConfig(scope, workspace, config)
-    return { success: true, slug: item.id }
+    return { success: true, slug: item.id, removed: true }
   }
 
   async removeMode(item: ModeMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
