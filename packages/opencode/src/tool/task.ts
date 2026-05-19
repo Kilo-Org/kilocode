@@ -78,7 +78,7 @@ export const TaskTool = Tool.define(
       // kilocode_change start — flat two-level model:
       // subagents can never spawn their own subagents. Tool config and
       // subagent perms both reflect the rule unconditionally.
-      const hasTodo = next.permission.some((rule) => rule.permission === "todowrite")
+      const hasTodo = next.permission.some((rule) => rule.permission === "todowrite" && rule.action === "allow")
 
       const taskID = params.task_id
       const taskSession = taskID
