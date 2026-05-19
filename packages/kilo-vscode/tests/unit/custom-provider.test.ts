@@ -131,6 +131,33 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("accepts models with temperature enabled", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Temperature Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          temperature: true,
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Temperature Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            temperature: true,
+          },
+        },
+      },
+    })
+  })
+
   it("rejects unknown fields", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Bad Provider",

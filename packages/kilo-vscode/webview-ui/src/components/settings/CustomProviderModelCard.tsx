@@ -25,6 +25,7 @@ export type ModelEntry = {
   id: string
   name: string
   reasoning: boolean
+  temperature: boolean
   variants: VariantEntry[]
 }
 
@@ -224,6 +225,7 @@ type ModelCardProps = {
   onChangeId: (val: string) => void
   onChangeName: (val: string) => void
   onChangeReasoning: (val: boolean) => void
+  onChangeTemperature: (val: boolean) => void
   onRemove: () => void
   onAddVariant: () => void
   onRemoveVariant: (vi: number) => void
@@ -279,24 +281,42 @@ export function ModelCard(props: ModelCardProps) {
         />
       </div>
 
-      {/* Reasoning toggle */}
-      <label
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "8px",
-          cursor: "pointer",
-          "font-size": "var(--kilo-font-size-13)",
-          color: "var(--vscode-foreground)",
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={props.m.reasoning}
-          onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
-        />
-        {props.t("provider.custom.models.reasoning.label")}
-      </label>
+      <div style={{ display: "flex", "flex-wrap": "wrap", gap: "12px" }}>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.reasoning}
+            onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.reasoning.label")}
+        </label>
+        <label
+          style={{
+            display: "flex",
+            "align-items": "center",
+            gap: "8px",
+            cursor: "pointer",
+            "font-size": "var(--kilo-font-size-13)",
+            color: "var(--vscode-foreground)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={props.m.temperature}
+            onChange={(e) => props.onChangeTemperature(e.currentTarget.checked)}
+          />
+          {props.t("provider.custom.models.temperature.label")}
+        </label>
+      </div>
 
       {/* Variants — only available when reasoning is enabled */}
       <Show when={props.m.reasoning}>

@@ -11,7 +11,7 @@ function base(): FormState {
     name: "My Provider",
     baseURL: "https://example.com/v1",
     apiKey: "",
-    models: [{ id: "model-1", name: "Model One", reasoning: false, variants: [] }],
+    models: [{ id: "model-1", name: "Model One", reasoning: false, temperature: false, variants: [] }],
     headers: [],
     saving: false,
   }
@@ -154,5 +154,22 @@ describe("validateCustomProvider – variant name validation", () => {
     expect(out.result).toBeDefined()
     const saved = out.result!.config.models["model-1"] as Record<string, unknown>
     expect(saved.variants).toEqual({ eco: { enable_thinking: true, reasoningEffort: "low" } })
+  })
+
+  it("persists temperature in the saved config when enabled", () => {
+    const form = base()
+    form.models[0].temperature = true
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.temperature).toBe(true)
+  })
+
+  it("persists temperature false in the saved config when disabled", () => {
+    const form = base()
+    const out = validateCustomProvider(args(form))
+    expect(out.result).toBeDefined()
+    const saved = out.result!.config.models["model-1"] as Record<string, unknown>
+    expect(saved.temperature).toBe(false)
   })
 })

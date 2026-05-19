@@ -113,7 +113,7 @@ function serializeVariant(v: VariantEntry): [string, Record<string, unknown>] {
 
 function serializeModel(m: ModelEntry): [string, Record<string, unknown>] {
   const ventries = m.reasoning ? m.variants.filter((v) => v.name.trim()).map(serializeVariant) : []
-  const entry: Record<string, unknown> = { name: m.name.trim() }
+  const entry: Record<string, unknown> = { name: m.name.trim(), temperature: m.temperature }
   if (m.reasoning) entry.reasoning = true
   if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
   return [m.id.trim(), entry]

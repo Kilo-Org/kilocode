@@ -65,11 +65,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   function initModels(): ModelEntry[] {
     const cfg = props.existing?.config
-    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
+    if (!cfg?.models || typeof cfg.models !== "object")
+      return [{ id: "", name: "", reasoning: false, temperature: false, variants: [] }]
     const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
+    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, temperature: false, variants: [] }]
     return entries.map(([id, m]) => {
-      const raw = m as { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
+      const raw = m as {
+        name?: string
+        reasoning?: boolean
+        temperature?: boolean
+        variants?: Record<string, Record<string, unknown>>
+      }
       const variants: VariantEntry[] = Object.entries(raw?.variants ?? {}).map(([vname, vcfg]) => ({
         name: vname,
         enableThinking: typeof vcfg.enable_thinking === "boolean" ? (vcfg.enable_thinking as boolean) : undefined,
@@ -88,6 +94,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         id,
         name: raw?.name ?? id,
         reasoning: raw?.reasoning ?? false,
+        temperature: raw?.temperature ?? false,
         variants,
       }
     })
@@ -292,7 +299,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
+    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, temperature: false, variants: [] })
     const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
 
     setForm("models", merged)
@@ -321,7 +328,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, variants: [] }])
+    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, temperature: false, variants: [] }])
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
@@ -536,6 +543,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeId={(v) => setForm("models", i(), "id", v)}
                   onChangeName={(v) => setForm("models", i(), "name", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                  onChangeTemperature={(v) => setForm("models", i(), "temperature", v)}
                   onRemove={() => removeModel(i())}
                   onAddVariant={() => addVariant(i())}
                   onRemoveVariant={(vi) => removeVariant(i(), vi)}
