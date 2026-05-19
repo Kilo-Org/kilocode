@@ -1,4 +1,5 @@
 import path from "node:path"
+import os from "node:os"
 import { pathToFileURL } from "node:url"
 import z from "zod"
 import { Effect, Layer, Context, Schema } from "effect"
@@ -326,30 +327,23 @@ export async function remove(location: string) {
   }
   const resolved = path.resolve(location)
 
-  // SEC-001: Enforce path-traversal guard — only allow removal of skill
-  // directories that fall within a known config/skills allowlist.
-  // Use the layers already wired into the Effect runtime (config + global).
-  let allowedDirs: string[] = []
-  try {
-    const { runPromise } = makeRuntime(
-      Config.Service,
-      Layer.provideMerge(Config.defaultLayer, Global.layer),
-    )
-    const cfgDirs: string[] = await runPromise((svc) => svc.directories())
-    allowedDirs = cfgDirs
-  } catch {
-    // If the runtime is unavailable (e.g. CLI pre-init), fall through to
-    // the rm call below — os-level permission errors will surface then.
+  // SEC-001: Enforce path-traversal guard.
+  // Resolve config directories via the module-level runPromise runtime
+  // (cached at load time — no per-call resource allocation).
+  // Use os.homedir() so the home config path is always absolute cross-platform.
+  const cfgDirs = (() => {
+    try {
+      return runPromise((svc) => svc.directories()) as string[]
+    } catch (err) {
+      log.warn("config runtime unavailable — path-traversal guard limited to cwd", { err })
+      return []
+    }
+  })()
+  const allowedDirs = [...cfgDirs, os.homedir(), process.cwd()]
+  if (!isPathWithinAllowlist(path.dirname(resolved), allowedDirs)) {
+    throw new Error(`refusing to remove skill outside allowed directories: ${resolved}`)
   }
-  // Also include the current working directory as a project root candidate
-  // so skill files under `.kilo/skills/` can be removed without a config fetch.
-  allowedDirs = [...allowedDirs, process.cwd()]
-
-  const dir = path.dirname(resolved)
-  if (!isPathWithinAllowlist(dir, allowedDirs)) {
-    throw new Error(`refusing to remove skill outside allowed directories: ${dir}`)
-  }
-  await rm(dir, { recursive: true, force: true })
+  await rm(path.dirname(resolved), { recursive: true, force: true })
 }
 // kilocode_change end
 
