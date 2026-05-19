@@ -398,7 +398,7 @@ async function main() {
 
   // Create backup branch
   await git.checkout(config.baseBranch)
-  await git.pull(config.originRemote)
+  await git.pull(config.originRemote, config.baseBranch)
   const baseSha = await git.getCommitHash("HEAD")
   const backupBranch = await createBackupBranch(config.baseBranch)
   logger.info(`Created backup branch: ${backupBranch}`)
