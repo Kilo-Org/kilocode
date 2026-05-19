@@ -4,7 +4,7 @@
  * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
-import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, on, batch } from "solid-js"
+import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, batch } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
@@ -274,6 +274,8 @@ interface SessionContextValue {
 export const SessionContext = createContext<SessionContextValue>()
 
 export const SessionProvider: ParentComponent = (props) => {
+  let abortTimer: ReturnType<typeof setTimeout> | undefined
+
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
@@ -785,6 +787,9 @@ export const SessionProvider: ParentComponent = (props) => {
   })
   vscode.postMessage({ type: "requestFavorites" })
   onCleanup(unsubFavorites)
+  onCleanup(() => {
+    if (abortTimer) clearTimeout(abortTimer)
+  })
 
   function handleError(message: Extract<ExtensionMessage, { type: "error" }>) {
     if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
@@ -2029,7 +2034,9 @@ export const SessionProvider: ParentComponent = (props) => {
     })
     // Safety timeout: force idle if the CLI fails to send the status SSE event
     // This prevents the UI from being stuck in "Considering next steps..." forever
-    setTimeout(() => {
+    if (abortTimer) clearTimeout(abortTimer)
+    abortTimer = setTimeout(() => {
+      abortTimer = undefined
       // Only force-reset if this is still the current session and still busy
       if (currentSessionID() !== sessionID) return
       const cur = statusMap[sessionID]
