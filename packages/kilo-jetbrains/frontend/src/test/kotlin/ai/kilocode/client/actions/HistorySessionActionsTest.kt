@@ -43,6 +43,9 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
     private lateinit var workspace: Workspace
     private lateinit var controller: HistoryController
     private lateinit var manager: FakeManager
+    /** Counts fully-completed deletes (incremented on EDT after local.remove). */
+    @Volatile
+    private var deleteCount = 0
 
     override fun setUp() {
         super.setUp()
@@ -53,7 +56,7 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             it.state.value = KiloWorkspaceStateDto(status = KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
-        controller = HistoryController(sessions, workspace, scope)
+        controller = HistoryController(sessions, workspace, scope, deleted = { deleteCount++ })
         manager = FakeManager()
     }
 
@@ -210,9 +213,8 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         val event = event(action, manager, selection(HistorySource.LOCAL, items), controller)
 
         action.actionPerformed(event)
-        flush()
-
-        assertEquals(listOf("ses_1", "ses_2"), rpc.deletes.map { it.first })
+        awaitDeletes(2)
+        assertEquals(listOf("ses_1", "ses_2"), rpc.deletes.map { it.first }.sorted())
         assertTrue(controller.local.items.isEmpty())
     }
 
@@ -235,7 +237,8 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
         assertTrue(rpc.deletes.isEmpty())
 
         rpc.deleteGate?.complete(Unit)
-        waitFor { rpc.deletes.size == 1 }
+        awaitDeletes(1)
+
         assertEquals(listOf("ses_1"), rpc.deletes.map { it.first })
     }
 
@@ -463,6 +466,11 @@ class HistorySessionActionsTest : BasePlatformTestCase() {
             version = 1.0,
         )
     )
+
+    /** Waits until [n] deletes have fully completed (deleted callback fired on EDT after local.remove). */
+    private fun awaitDeletes(n: Int) {
+        waitFor { deleteCount >= n }
+    }
 
     private fun flush() = runBlocking {
         repeat(10) {

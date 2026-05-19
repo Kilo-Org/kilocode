@@ -302,7 +302,10 @@ export const layer: Layer.Layer<
     // goes backwards through parts until there are PRUNE_PROTECT tokens worth of tool
     // calls, then erases output of older tool calls to free context space
     // kilocode_change start - preserve normal opt-in pruning, but allow payload/compaction cleanup by default
-    const prune = Effect.fn("SessionCompaction.prune")(function* (input: { sessionID: SessionID; reason?: PruneReason }) {
+    const prune = Effect.fn("SessionCompaction.prune")(function* (input: {
+      sessionID: SessionID
+      reason?: PruneReason
+    }) {
       const cfg = yield* config.get()
       const reason = input.reason ?? "normal"
       if (cfg.compaction?.prune === false) return
@@ -469,7 +472,10 @@ export const layer: Layer.Layer<
       // kilocode_change end
 
       // kilocode_change start - fallback to chunked compaction when the first summary overflows
-      const fallback = KiloCompactionChunks.eligible({ result, error: processor.message.error ?? processor.compactError?.() })
+      const fallback = KiloCompactionChunks.eligible({
+        result,
+        error: processor.message.error ?? processor.compactError?.(),
+      })
         ? yield* KiloCompactionChunks.process({
             processors,
             session,

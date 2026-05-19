@@ -11689,6 +11689,9 @@
             "properties": {
               "created": {
                 "type": "number"
+              },
+              "restored": {
+                "type": "number"
               }
             },
             "required": ["created"]
@@ -11774,9 +11777,12 @@
               "requestID": {
                 "type": "string",
                 "pattern": "^que.*"
+              },
+              "time": {
+                "type": "number"
               }
             },
-            "required": ["sessionID", "requestID"]
+            "required": ["sessionID", "requestID", "time"]
           }
         },
         "required": ["type", "properties"]

@@ -209,7 +209,11 @@ function runtime(layer: Layer.Layer<LLM.Service>, context = 7_000) {
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(status),
       Layer.provide(bus),
-      Layer.provide(Layer.mock(Config.Service)({ get: () => Effect.succeed({ ...Config.Info.zod.parse({}), compaction: { reserved: 1_000 } }) })),
+      Layer.provide(
+        Layer.mock(Config.Service)({
+          get: () => Effect.succeed({ ...Config.Info.zod.parse({}), compaction: { reserved: 1_000 } }),
+        }),
+      ),
     ),
   )
 }
@@ -234,7 +238,9 @@ function fakeRuntime() {
               Effect.gen(function* () {
                 outputs.push(input.model.limit.output)
                 calls.push(JSON.stringify(stream.messages))
-                const text = stream.messages.some((msg) => JSON.stringify(msg).includes("Create a new anchored summary"))
+                const text = stream.messages.some((msg) =>
+                  JSON.stringify(msg).includes("Create a new anchored summary"),
+                )
                   ? "final summary"
                   : calls.length === 1
                     ? "chunk one"
@@ -332,7 +338,9 @@ describe("KiloCompactionChunks", () => {
     const chunks = await Effect.runPromise(KiloCompactionChunks.split({ messages, model, size: 2_000 }))
 
     expect(chunks.length).toBeGreaterThan(1)
-    expect(chunks.flatMap((chunk) => chunk.messages.map((msg) => msg.info.id))).toEqual(messages.map((msg) => msg.info.id))
+    expect(chunks.flatMap((chunk) => chunk.messages.map((msg) => msg.info.id))).toEqual(
+      messages.map((msg) => msg.info.id),
+    )
   })
 
   test("falls back to chunk workers after the first compaction overflows", async () => {
@@ -365,7 +373,9 @@ describe("KiloCompactionChunks", () => {
 
           const all = await svc.messages({ sessionID: session.id })
           const summaries = all.filter((msg) => msg.info.role === "assistant" && msg.info.summary)
-          const parts = summaries.flatMap((msg) => msg.parts).filter((part): part is MessageV2.TextPart => part.type === "text")
+          const parts = summaries
+            .flatMap((msg) => msg.parts)
+            .filter((part): part is MessageV2.TextPart => part.type === "text")
 
           expect(result).toBe("continue")
           expect(calls.length).toBeGreaterThanOrEqual(1)
@@ -445,7 +455,9 @@ describe("KiloCompactionChunks", () => {
 
           const all = await svc.messages({ sessionID: session.id })
           const summaries = all.filter((msg) => msg.info.role === "assistant" && msg.info.summary)
-          const parts = summaries.flatMap((msg) => msg.parts).filter((part): part is MessageV2.TextPart => part.type === "text")
+          const parts = summaries
+            .flatMap((msg) => msg.parts)
+            .filter((part): part is MessageV2.TextPart => part.type === "text")
 
           expect(result).toBe("continue")
           expect(calls.length).toBeGreaterThan(0)
@@ -545,7 +557,13 @@ describe("KiloCompactionChunks", () => {
         const old = await user(session.id, "old context")
         await assistant(session.id, old.id, tmp.path, "old reply")
         const large = await user(session.id, "large replay " + "x".repeat(40_000))
-        await SessionCompaction.create({ sessionID: session.id, agent: "build", model: ref, auto: true, overflow: true })
+        await SessionCompaction.create({
+          sessionID: session.id,
+          agent: "build",
+          model: ref,
+          auto: true,
+          overflow: true,
+        })
 
         const rt = liveRuntime(stub.layer)
         try {

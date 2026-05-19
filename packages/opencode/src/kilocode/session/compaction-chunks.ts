@@ -64,7 +64,10 @@ export namespace KiloCompactionChunks {
   export function needed(input: { cfg: Config.Info; model: Provider.Model; tokens: number }) {
     // Apply 1.3x multiplier to token estimate to compensate for Token.estimate
     // under-counting actual provider tokenizer counts by ~15-30%.
-    return Math.ceil(input.tokens * 1.3) + model(input.model).limit.output > usable({ cfg: input.cfg, model: model(input.model) })
+    return (
+      Math.ceil(input.tokens * 1.3) + model(input.model).limit.output >
+      usable({ cfg: input.cfg, model: model(input.model) })
+    )
   }
 
   export function replay(input: Input & { replay: Replay }) {
@@ -161,10 +164,12 @@ export namespace KiloCompactionChunks {
 
   function part(part: MessageV2.Part) {
     if (part.type === "text") return clip({ text: part.text, chars: TRANSCRIPT_MAX_CHARS, label: "Text" })
-    if (part.type === "reasoning") return `[Reasoning]: ${clip({ text: part.text, chars: TRANSCRIPT_MAX_CHARS, label: "Reasoning" })}`
+    if (part.type === "reasoning")
+      return `[Reasoning]: ${clip({ text: part.text, chars: TRANSCRIPT_MAX_CHARS, label: "Reasoning" })}`
     if (part.type === "file") return `[File attachment]: ${part.filename ?? part.url} (${part.mime})`
     if (part.type === "agent") return `[Agent]: ${part.name}`
-    if (part.type === "subtask") return `[Subtask ${part.agent}]: ${part.description}\n${clip({ text: part.prompt, chars: TRANSCRIPT_MAX_CHARS, label: "Subtask prompt" })}`
+    if (part.type === "subtask")
+      return `[Subtask ${part.agent}]: ${part.description}\n${clip({ text: part.prompt, chars: TRANSCRIPT_MAX_CHARS, label: "Subtask prompt" })}`
     if (part.type === "tool") {
       const head = `[Tool ${part.tool} ${part.state.status}]`
       if (part.state.status === "completed") {
@@ -174,7 +179,8 @@ export namespace KiloCompactionChunks {
           `output: ${clip({ text: part.state.output, chars: TOOL_OUTPUT_MAX_CHARS, label: "Tool output" })}`,
         ].join("\n")
       }
-      if (part.state.status === "error") return `${head}\n${clip({ text: part.state.error, chars: TOOL_OUTPUT_MAX_CHARS, label: "Tool error" })}`
+      if (part.state.status === "error")
+        return `${head}\n${clip({ text: part.state.error, chars: TOOL_OUTPUT_MAX_CHARS, label: "Tool error" })}`
       return `${head}\ninput: ${clip({ text: JSON.stringify(part.state.input), chars: TOOL_OUTPUT_MAX_CHARS, label: "Tool input" })}`
     }
     if (part.type === "step-finish") return `[Step finished]: ${part.reason}`
@@ -185,11 +191,12 @@ export namespace KiloCompactionChunks {
   function transcript(input: { messages: MessageV2.WithParts[] }) {
     return input.messages
       .map((msg, index) => {
-        const body = msg.parts
-          .map(part)
-          .filter(Boolean)
-          .join("\n\n")
-        return [`<message index=\"${index + 1}\" role=\"${msg.info.role}\">`, body || "[no content]", "</message>"].join("\n")
+        const body = msg.parts.map(part).filter(Boolean).join("\n\n")
+        return [
+          `<message index=\"${index + 1}\" role=\"${msg.info.role}\">`,
+          body || "[no content]",
+          "</message>",
+        ].join("\n")
       })
       .join("\n\n")
   }
@@ -239,10 +246,7 @@ export namespace KiloCompactionChunks {
         ...input.agent,
         options: {
           ...opts,
-          maxOutputTokens: Math.min(
-            OUTPUT,
-            typeof opts?.maxOutputTokens === "number" ? opts.maxOutputTokens : OUTPUT,
-          ),
+          maxOutputTokens: Math.min(OUTPUT, typeof opts?.maxOutputTokens === "number" ? opts.maxOutputTokens : OUTPUT),
         },
       }
       const out = yield* Effect.gen(function* () {
@@ -325,16 +329,15 @@ export namespace KiloCompactionChunks {
       const chunks = yield* split({ messages: input.messages, model: input.model, size })
       log.info("fallback", { chunks: chunks.length, concurrency: CONCURRENCY })
 
-      const partial = yield* Effect.forEach(
-        chunks,
-        (chunk) => summarize({ ...input, chunk, total: chunks.length }),
-        { concurrency: Math.min(CONCURRENCY, chunks.length) },
-      )
+      const partial = yield* Effect.forEach(chunks, (chunk) => summarize({ ...input, chunk, total: chunks.length }), {
+        concurrency: Math.min(CONCURRENCY, chunks.length),
+      })
       if (partial.some((item) => item.result !== "continue" || !item.output)) return "compact" as const
 
-      const final = chunks.length === 1 && (yield* large({ messages: chunks[0].messages, model: input.model, size }))
-        ? partial[0]
-        : yield* reduce({ ...input, summaries: partial.map((item) => item.output!), depth: 0 })
+      const final =
+        chunks.length === 1 && (yield* large({ messages: chunks[0].messages, model: input.model, size }))
+          ? partial[0]
+          : yield* reduce({ ...input, summaries: partial.map((item) => item.output!), depth: 0 })
       if (!final || final.result !== "continue" || !final.output) return "compact" as const
 
       yield* input.updatePart({

@@ -440,7 +440,13 @@ export async function CodexAuthPlugin(input: PluginInput): Promise<Hooks> {
             if (!currentAuth.access || currentAuth.expires < Date.now()) {
               log.info("refreshing codex access token")
               // kilocode_change start
-              await refreshCodexAuth({ input, getAuth, auth: currentAuth, refresh: refreshAccessToken, account: extractAccountId })
+              await refreshCodexAuth({
+                input,
+                getAuth,
+                auth: currentAuth,
+                refresh: refreshAccessToken,
+                account: extractAccountId,
+              })
               // kilocode_change end
             }
 

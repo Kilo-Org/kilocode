@@ -59,10 +59,7 @@ export function ModelInfoPanel(props: Props) {
       gap={1}
       flexShrink={0}
     >
-      <scrollbox
-        maxHeight={maxHeight()}
-        paddingRight={1}
-      >
+      <scrollbox maxHeight={maxHeight()} paddingRight={1}>
         <box>
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
             {m().name ?? m().id ?? "Model"}
@@ -141,7 +138,7 @@ export function ModelInfoPanel(props: Props) {
           </box>
         </Show>
         <Show when={desc()}>
-          <text fg={theme.textMuted}>{" "}</text>
+          <text fg={theme.textMuted}> </text>
           <text fg={theme.textMuted} width={23}>
             {desc()}
           </text>

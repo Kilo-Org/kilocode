@@ -58,11 +58,7 @@ describe("instruction markdown substitutions", () => {
         yield* write(path.join(dir, "subdir", "nested", "file.ts"), "const value = 1")
 
         const svc = yield* Instruction.Service
-        const results = yield* svc.resolve(
-          [],
-          path.join(dir, "subdir", "nested", "file.ts"),
-          MessageID.ascending(),
-        )
+        const results = yield* svc.resolve([], path.join(dir, "subdir", "nested", "file.ts"), MessageID.ascending())
 
         expect(results).toHaveLength(1)
         expect(results[0].content).toContain("file content")
