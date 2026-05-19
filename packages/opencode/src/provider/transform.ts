@@ -221,11 +221,11 @@ function normalizeMessages(
     })
   }
 
-  if (
-    typeof model.capabilities.interleaved === "object" &&
-    model.capabilities.interleaved.field &&
-    model.api.npm !== "@openrouter/ai-sdk-provider"
-  ) {
+  // kilocode_change start - Cerebras rejects replayed reasoning_content fields in assistant history.
+  const replay = model.api.npm !== "@openrouter/ai-sdk-provider" && model.api.npm !== "@ai-sdk/cerebras"
+  // kilocode_change end
+
+  if (typeof model.capabilities.interleaved === "object" && model.capabilities.interleaved.field && replay) { // kilocode_change
     const field = model.capabilities.interleaved.field
     return msgs.map((msg) => {
       if (msg.role === "assistant" && Array.isArray(msg.content)) {

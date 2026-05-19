@@ -1067,6 +1067,61 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
     expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBe("Let me think about this...")
   })
 
+  // kilocode_change start
+  test("Cerebras leaves reasoning parts out of openai-compatible provider options", () => {
+    const msgs = [
+      {
+        role: "assistant",
+        content: [
+          { type: "reasoning", text: "Cerebras should not receive this as reasoning_content." },
+          { type: "text", text: "Answer" },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(
+      msgs,
+      {
+        id: ModelID.make("cerebras/zai-glm-4.7"),
+        providerID: ProviderID.make("cerebras"),
+        api: {
+          id: "zai-glm-4.7",
+          url: "https://api.cerebras.ai/v1",
+          npm: "@ai-sdk/cerebras",
+        },
+        name: "Z.AI GLM 4.7",
+        capabilities: {
+          temperature: true,
+          reasoning: true,
+          attachment: false,
+          toolcall: true,
+          input: { text: true, audio: false, image: false, video: false, pdf: false },
+          output: { text: true, audio: false, image: false, video: false, pdf: false },
+          interleaved: {
+            field: "reasoning_content",
+          },
+        },
+        cost: {
+          input: 0.001,
+          output: 0.002,
+          cache: { read: 0.0001, write: 0.0002 },
+        },
+        limit: {
+          context: 128000,
+          output: 8192,
+        },
+        status: "active",
+        options: {},
+        headers: {},
+        release_date: "2026-05-01",
+      },
+      {},
+    )
+
+    expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBeUndefined()
+  })
+  // kilocode_change end
+
   test("Non-DeepSeek providers leave reasoning content unchanged", () => {
     const msgs = [
       {
