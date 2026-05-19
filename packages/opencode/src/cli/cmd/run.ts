@@ -590,7 +590,9 @@ export const RunCommand = cmd({
               requestID: permission.id,
               reply: "reject",
             })
+            // kilocode_change end
           }
+          // kilocode_change start: retry transient network requests with backoff before rejecting (Kilo network retry handling, not in upstream)
           if (event.type === "session.network.asked") {
             const request = event.properties
             if (request.sessionID !== sessionID) continue
