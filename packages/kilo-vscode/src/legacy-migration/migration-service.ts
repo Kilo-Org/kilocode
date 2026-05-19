@@ -6,6 +6,7 @@
  */
 
 import * as vscode from "vscode"
+import { parse as parseYaml } from "yaml"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type {
   McpLocalConfig,
@@ -844,6 +845,25 @@ const GROUP_TO_PERMISSION: Record<string, string> = {
 }
 const ALL_MODE_PERMISSIONS = ["read", "edit", "bash", "skill"]
 
+function fileRegexToGlobs(fileRegex: string): string[] {
+  const alternatives = fileRegex.match(/\\\.\((?:\?:)?([^()]+)\)\$$/)
+  if (alternatives) {
+    return alternatives[1]!
+      .split("|")
+      .filter((item) => /^[a-zA-Z0-9_-]+$/.test(item))
+      .map((ext) => `*.${ext}`)
+  }
+
+  const extension = fileRegex.match(/\\\.([a-zA-Z0-9_-]+)\$$/)
+  return extension ? [`*.${extension[1]}`] : []
+}
+
+function fileRegexPermission(fileRegex: string): PermissionObjectConfig {
+  const globs = fileRegexToGlobs(fileRegex)
+  const patterns = globs.length > 0 ? globs : [fileRegex]
+  return Object.fromEntries([["*", "deny"], ...patterns.map((pattern) => [pattern, "allow"])]) as PermissionObjectConfig
+}
+
 function convertCustomModePermissions(groups: LegacyCustomMode["groups"]): PermissionConfig {
   const permission: Record<string, unknown> = {}
   const allowed = new Set<string>()
@@ -854,7 +874,7 @@ function convertCustomModePermissions(groups: LegacyCustomMode["groups"]): Permi
     const permKey = GROUP_TO_PERMISSION[groupName] ?? groupName
     allowed.add(permKey)
 
-    const newValue = groupConfig?.fileRegex ? { [groupConfig.fileRegex]: "allow", "*": "deny" } : "allow"
+    const newValue = groupConfig?.fileRegex ? fileRegexPermission(groupConfig.fileRegex) : "allow"
 
     // Multiple legacy groups can map to the same permission key (browser + command → bash).
     // Merge rules so neither overwrites the other:
@@ -882,7 +902,8 @@ function convertCustomModePermissions(groups: LegacyCustomMode["groups"]): Permi
   return permission as PermissionConfig
 }
 
-function convertCustomMode(mode: LegacyCustomMode): AgentConfig {
+/** @internal - exported for testing only */
+export function convertCustomMode(mode: LegacyCustomMode): AgentConfig {
   const parts = [mode.roleDefinition]
   if (mode.customInstructions?.trim()) {
     parts.push(
@@ -897,7 +918,7 @@ function convertCustomMode(mode: LegacyCustomMode): AgentConfig {
   }
   return {
     mode: "primary",
-    description: mode.description ?? mode.whenToUse ?? mode.roleDefinition?.slice(0, 120),
+    description: mode.description ?? mode.whenToUse ?? mode.name,
     prompt: parts.filter(Boolean).join("\n\n"),
     permission: convertCustomModePermissions(mode.groups),
   }
@@ -1026,17 +1047,29 @@ function stripYamlQuotes(value: string): string {
   return value.replace(/^(['"])(.*)\1$/, "$2")
 }
 
-function parseCustomModesYaml(text: string): LegacyCustomMode[] | null {
+/** @internal - exported for testing only */
+export function parseCustomModesYaml(text: string): LegacyCustomMode[] | null {
   // Try JSON first
   const jsonResult = (() => {
     try {
-      const parsed = JSON.parse(text) as { customModes?: LegacyCustomMode[] }
-      return parsed.customModes ?? null
+      const parsed = JSON.parse(text) as LegacyCustomMode[] | { customModes?: LegacyCustomMode[] }
+      return Array.isArray(parsed) ? parsed : (parsed.customModes ?? null)
     } catch {
       return null
     }
   })()
   if (jsonResult) return jsonResult
+
+  const yamlResult = (() => {
+    try {
+      const parsed = parseYaml(text) as LegacyCustomMode[] | { customModes?: LegacyCustomMode[] } | null
+      if (Array.isArray(parsed)) return parsed
+      return parsed?.customModes ?? null
+    } catch {
+      return null
+    }
+  })()
+  if (yamlResult) return yamlResult
 
   // Parse the simple YAML shape:
   //   customModes:

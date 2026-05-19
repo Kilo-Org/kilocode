@@ -1,11 +1,68 @@
 import { describe, expect, it } from "bun:test"
 import {
   buildCustomModeList,
+  convertCustomMode,
   isNativeModeModified,
   buildMergedNativeMode,
+  parseCustomModesYaml,
 } from "../../../src/legacy-migration/migration-service"
 import { NATIVE_MODE_DEFAULTS } from "../../../src/legacy-migration/native-mode-defaults"
 import type { LegacyCustomMode, LegacyPromptComponent } from "../../../src/legacy-migration/legacy-types"
+
+// ---------------------------------------------------------------------------
+// legacy custom_modes.yaml parsing and conversion
+// ---------------------------------------------------------------------------
+
+describe("legacy custom mode YAML migration", () => {
+  it("preserves multiline custom instructions and restricted edit groups", () => {
+    const modes = parseCustomModesYaml(`- slug: my-mode
+  name: My Mode
+  roleDefinition: One-sentence role definition for this mode that is long enough to be visibly truncated when copied into the description field.
+  customInstructions: |-
+    First line of instructions.
+
+    ### Section A
+    - bullet a1
+    - bullet a2
+
+    ### Section B
+    - bullet b1
+    - bullet b2
+  groups:
+    - read
+    - - edit
+      - fileRegex: \\.(md|tex)$
+        description: Markdown and LaTeX files only
+    - browser
+    - mcp
+    - command
+  source: global
+`)
+
+    expect(modes).toHaveLength(1)
+    const mode = modes![0]!
+    expect(mode.customInstructions).toContain("### Section A")
+    expect(mode.customInstructions).toContain("### Section B")
+    expect(mode.groups[1]).toEqual([
+      "edit",
+      { fileRegex: "\\.(md|tex)$", description: "Markdown and LaTeX files only" },
+    ])
+
+    const agent = convertCustomMode(mode)
+    expect(agent.prompt).toContain("First line of instructions.")
+    expect(agent.prompt).toContain("### Section A")
+    expect(agent.prompt).toContain("### Section B")
+    expect(agent.description).toBe("My Mode")
+
+    const permission = agent.permission as Record<string, unknown>
+    expect(permission["- edit"]).toBeUndefined()
+    expect(permission.edit).toEqual({
+      "*": "deny",
+      "*.md": "allow",
+      "*.tex": "allow",
+    })
+  })
+})
 
 // ---------------------------------------------------------------------------
 // isNativeModeModified
