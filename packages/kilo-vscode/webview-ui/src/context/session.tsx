@@ -1594,7 +1594,11 @@ export const SessionProvider: ParentComponent = (props) => {
             if (id.startsWith("cloud:")) continue
             if (kept?.has(id)) continue
             if (!ids.has(id)) {
-              if (statusMap[id] && statusMap[id].type !== "idle") continue
+              // Preserve in-flight sessions, but only if they haven't been
+              // busy for too long — prevents stale-lock if the backend never
+              // sends an idle event (e.g. crash, lost SSE).
+              const busySince = busySinceMap[id]
+              if (statusMap[id]?.type !== "idle" && (!busySince || Date.now() - busySince < 300_000)) continue
               delete sessions[id]
             }
           }
