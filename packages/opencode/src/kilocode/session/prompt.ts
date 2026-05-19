@@ -113,7 +113,6 @@ export namespace KiloSessionPrompt {
       rules,
       input.agent.permission,
       rules.filter((rule) => rule.action === "deny"),
-      agentDenies,
     )
   }
 
