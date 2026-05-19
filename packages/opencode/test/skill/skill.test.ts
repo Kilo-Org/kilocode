@@ -2,6 +2,7 @@ import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Skill } from "../../src/skill"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { provideInstance, provideTmpdirInstance, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import path from "path"
@@ -339,6 +340,61 @@ description: A skill in the .agents/skills directory.
       { git: true },
     ),
   )
+
+  // kilocode_change start
+  it.live("keeps .agents skills available when Claude Code skills are disabled", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.acquireUseRelease(
+          Effect.sync(() => {
+            const prevClaude = Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS
+            const prevExternal = Flag.KILO_DISABLE_EXTERNAL_SKILLS
+            Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS = true
+            Flag.KILO_DISABLE_EXTERNAL_SKILLS = false
+            return { prevClaude, prevExternal }
+          }),
+          () =>
+            Effect.gen(function* () {
+              yield* Effect.promise(() =>
+                Promise.all([
+                  Bun.write(
+                    path.join(dir, ".claude", "skills", "claude-disabled-skill", "SKILL.md"),
+                    `---
+name: claude-disabled-skill
+description: A skill in the .claude/skills directory.
+---
+
+# Claude Disabled Skill
+`,
+                  ),
+                  Bun.write(
+                    path.join(dir, ".agents", "skills", "agent-enabled-skill", "SKILL.md"),
+                    `---
+name: agent-enabled-skill
+description: A skill in the .agents/skills directory.
+---
+
+# Agent Enabled Skill
+`,
+                  ),
+                ]),
+              )
+
+              const skill = yield* Skill.Service
+              const list = discovered(yield* skill.all())
+              expect(list.find((x) => x.name === "agent-enabled-skill")).toBeDefined()
+              expect(list.find((x) => x.name === "claude-disabled-skill")).toBeUndefined()
+            }),
+          (prev) =>
+            Effect.sync(() => {
+              Flag.KILO_DISABLE_CLAUDE_CODE_SKILLS = prev.prevClaude
+              Flag.KILO_DISABLE_EXTERNAL_SKILLS = prev.prevExternal
+            }),
+        ),
+      { git: true },
+    ),
+  )
+  // kilocode_change end
 
   it.live("properly resolves directories that skills live in", () =>
     provideTmpdirInstance(
