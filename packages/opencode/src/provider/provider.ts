@@ -880,7 +880,7 @@ const ProviderModalities = Schema.Struct({
 const ProviderInterleaved = Schema.Union([
   Schema.Boolean,
   Schema.Struct({
-    field: Schema.Literals(["reasoning_content", "reasoning_details"]),
+    field: Schema.Literals(["reasoning_content", "reasoning_details", "reasoning"]),
   }),
 ])
 
@@ -1055,7 +1055,11 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
         video: model.modalities?.output?.includes("video") ?? false,
         pdf: model.modalities?.output?.includes("pdf") ?? false,
       },
-      interleaved: model.interleaved ?? false,
+      interleaved:
+        model.interleaved ??
+        (provider.id === "cerebras" && model.id.toLowerCase().startsWith("zai-glm")
+          ? { field: "reasoning" }
+          : false),
     },
     release_date: model.release_date ?? "",
     variants: {},

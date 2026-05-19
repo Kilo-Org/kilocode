@@ -17,7 +17,7 @@ export const Model = Schema.Struct({
     Schema.Union([
       Schema.Literal(true),
       Schema.Struct({
-        field: Schema.Literals(["reasoning_content", "reasoning_details"]),
+        field: Schema.Literals(["reasoning_content", "reasoning_details", "reasoning"]),
       }),
     ]),
   ),
