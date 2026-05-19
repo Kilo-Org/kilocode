@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
+import fs from "fs/promises"
 import { Session as SessionNs } from "@/session/session"
+import { KiloSessionPrompt } from "@/kilocode/session/prompt"
+import type { MessageV2 } from "@/session/message-v2"
 import { Bus } from "../../../src/bus"
 import * as Log from "@opencode-ai/core/util/log"
 import { Instance } from "../../../src/project/instance"
@@ -83,6 +86,91 @@ describe("session.created event", () => {
 })
 
 describe("Session", () => {
+  test("plan filename uses a safe slug from the session title", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    const plan = await Instance.provide({
+      directory: tmp.path,
+      fn: () =>
+        SessionNs.plan(
+          {
+            slug: "quiet-otter",
+            title: "Fix OAuth callback: Windows/WSL path?",
+            time: { created: 1234567890 },
+          },
+          Instance.current,
+        ),
+    })
+
+    expect(plan).toBe(path.join(tmp.path, ".kilo", "plans", "1234567890-fix-oauth-callback-windows-wsl-path.md"))
+  })
+
+  test("plan filename falls back to session slug for default titles", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    const plan = await Instance.provide({
+      directory: tmp.path,
+      fn: () =>
+        SessionNs.plan(
+          {
+            slug: "quiet-otter",
+            title: "New session - 2026-05-19T12:34:56.789Z",
+            time: { created: 1234567890 },
+          },
+          Instance.current,
+        ),
+    })
+
+    expect(plan).toBe(path.join(tmp.path, ".kilo", "plans", "1234567890-quiet-otter.md"))
+  })
+
+  test("plan path uses the current user prompt while the session title is still default", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    const plan = await Instance.provide({
+      directory: tmp.path,
+      fn: () =>
+        KiloSessionPrompt.planPath({
+          session: {
+            slug: "quiet-otter",
+            title: "New session - 2026-05-19T12:34:56.789Z",
+            time: { created: 1234567890 },
+          } as SessionNs.Info,
+          userMessage: {
+            parts: [{ type: "text", text: "Create a release checklist for Windows installs" }],
+          } as MessageV2.WithParts,
+          instance: Instance.current,
+        }),
+    })
+
+    expect(plan).toBe(
+      path.join(tmp.path, ".kilo", "plans", "1234567890-create-a-release-checklist-for-windows-installs.md"),
+    )
+  })
+
+  test("plan filename reuses an existing file for the session timestamp", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const dir = path.join(tmp.path, ".kilo", "plans")
+    const existing = path.join(dir, "1234567890-create-login-flow.md")
+    await fs.mkdir(dir, { recursive: true })
+    await Bun.write(existing, "Existing plan")
+
+    const plan = await Instance.provide({
+      directory: tmp.path,
+      fn: () =>
+        SessionNs.plan(
+          {
+            slug: "quiet-otter",
+            title: "Generated conversation title",
+            time: { created: 1234567890 },
+          },
+          Instance.current,
+        ),
+    })
+
+    expect(plan).toBe(existing)
+  })
+
   test("remove works without an instance", async () => {
     await using tmp = await tmpdir({ git: true })
 

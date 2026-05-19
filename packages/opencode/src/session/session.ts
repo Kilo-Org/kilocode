@@ -1,5 +1,6 @@
 import { Slug } from "@opencode-ai/core/util/slug"
 import path from "path"
+import { readdirSync } from "fs" // kilocode_change
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Decimal } from "decimal.js"
@@ -325,12 +326,43 @@ export const Event = {
   // kilocode_change end
 }
 
-export function plan(input: { slug: string; time: { created: number } }, instance: InstanceContext) {
+// kilocode_change start - prefer readable plan filenames while preserving existing paths
+function planFilenameSlug(input: { slug: string; title?: string }) {
+  if (!input.title || isDefaultTitle(input.title)) return input.slug
+  const value = input.title
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "")
+    .slice(0, 80)
+    .replace(/-+$/, "")
+  return value || input.slug
+}
+
+function existingPlanFile(base: string, created: number, preferred: string) {
+  try {
+    const prefix = `${created}-`
+    const matches = readdirSync(base, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.startsWith(prefix) && entry.name.endsWith(".md"))
+      .map((entry) => entry.name)
+      .sort()
+    if (matches.includes(preferred)) return path.join(base, preferred)
+    const existing = matches[0]
+    return existing ? path.join(base, existing) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export function plan(input: { slug: string; title?: string; time: { created: number } }, instance: InstanceContext) {
   const base = instance.project.vcs
     ? path.join(instance.worktree, ".kilo", "plans") // kilocode_change
     : path.join(Global.Path.data, "plans")
-  return path.join(base, [input.time.created, input.slug].join("-") + ".md")
+  const filename = [input.time.created, planFilenameSlug(input)].join("-") + ".md"
+  return existingPlanFile(base, input.time.created, filename) ?? path.join(base, filename)
 }
+// kilocode_change end
 
 export const getUsage = (input: {
   model: Provider.Model

@@ -270,7 +270,7 @@ export const layer = Layer.effect(
       const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
       if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
         const ctx = yield* InstanceState.context
-        const plan = Session.plan(input.session, ctx)
+        const plan = KiloSessionPrompt.planPath({ session: input.session, userMessage, instance: ctx }) // kilocode_change
         if (!(yield* fsys.existsSafe(plan))) return input.messages
         const part = yield* sessions.updatePart({
           id: PartID.ascending(),
@@ -287,7 +287,7 @@ export const layer = Layer.effect(
       if (input.agent.name !== "plan" || assistantMessage?.info.agent === "plan") return input.messages
 
       const ctx = yield* InstanceState.context
-      const plan = Session.plan(input.session, ctx)
+      const plan = KiloSessionPrompt.planPath({ session: input.session, userMessage, instance: ctx }) // kilocode_change
       const exists = yield* fsys.existsSafe(plan)
       if (!exists) yield* fsys.ensureDir(path.dirname(plan)).pipe(Effect.catch(Effect.die))
       const part = yield* sessions.updatePart({

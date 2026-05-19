@@ -6,7 +6,7 @@ import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
-import { Instance } from "@/project/instance"
+import { Instance, type InstanceContext } from "@/project/instance"
 import type { SessionStatus } from "@/session/status"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
@@ -120,6 +120,26 @@ export namespace KiloSessionPrompt {
     return input.agent.permission
   }
 
+  function userMessageTitle(userMessage: MessageV2.WithParts) {
+    return userMessage.parts
+      .filter((part): part is MessageV2.TextPart => part.type === "text" && !("synthetic" in part && part.synthetic))
+      .map((part) => part.text.trim())
+      .find(Boolean)
+  }
+
+  export function planPath(input: {
+    session: Session.Info
+    userMessage?: MessageV2.WithParts
+    instance: InstanceContext
+  }) {
+    const title = !Session.isDefaultTitle(input.session.title)
+      ? input.session.title
+      : input.userMessage
+        ? userMessageTitle(input.userMessage)
+        : undefined
+    return Session.plan({ ...input.session, title }, input.instance)
+  }
+
   /**
    * Mutable cache for environment details, keyed by user message ID
    * so it recomputes when a new user message arrives.
@@ -212,7 +232,7 @@ export namespace KiloSessionPrompt {
     userMessage: MessageV2.WithParts
   }) {
     if (input.agent.name !== "plan") return
-    const plan = Session.plan(input.session, Instance.current)
+    const plan = planPath({ session: input.session, userMessage: input.userMessage, instance: Instance.current })
     const exists = await Filesystem.exists(plan)
     if (!exists) await ensurePlanDir(path.dirname(plan))
     const info = exists
