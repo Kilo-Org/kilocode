@@ -265,7 +265,7 @@ export const RunCommand = cmd({
       })
       .option("attach", {
         type: "string",
-        describe: "attach to a running opencode server (e.g., http://localhost:4096)", // kilocode_change: kept "opencode server" wording — kilo serve is opencode-compatible and users may attach to either
+        describe: "attach to a running kilo server (e.g., http://localhost:4096)", // kilocode_change: branding
       })
       .option("password", {
         alias: ["p"],
