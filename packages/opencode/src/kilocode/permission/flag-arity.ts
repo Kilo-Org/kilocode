@@ -1,4 +1,4 @@
-import { BashArity } from "@/permission/arity"
+import { prefix as base } from "@/permission/arity"
 
 /**
  * Flag-aware variant of {@link BashArity.prefix}.
@@ -27,7 +27,7 @@ import { BashArity } from "@/permission/arity"
  *
  * Multiple consecutive flag+arg pairs are supported (e.g. repeated
  * `--workspace` flags). Inputs that do not start with a known flag pair fall
- * through to {@link BashArity.prefix} unchanged.
+ * through to upstream arity unchanged.
  */
 export namespace KiloFlagArity {
   // <command> <flag>  →  flag takes one positional argument.
@@ -53,9 +53,9 @@ export namespace KiloFlagArity {
       if (!FLAG_ARG[cmd + " " + tokens[i]]) break
       flags.push(tokens[i], tokens[i + 1])
     }
-    if (flags.length === 0) return BashArity.prefix(tokens)
+    if (flags.length === 0) return base(tokens)
     const positional = [cmd, ...tokens.slice(1 + flags.length)]
-    const arity = BashArity.prefix(positional)
-    return [cmd, ...flags, ...arity.slice(1)]
+    const prefix = base(positional)
+    return [cmd, ...flags, ...prefix.slice(1)]
   }
 }

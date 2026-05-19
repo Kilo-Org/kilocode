@@ -21,7 +21,6 @@ import { BashArity } from "@/permission/arity"
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
-import { KiloFlagArity } from "@/kilocode/permission/flag-arity" // kilocode_change
 import { Effect, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -428,7 +427,7 @@ export const BashTool = Tool.define(
 
         if (tokens.length && (!cmd || !CWD.has(cmd))) {
           scan.patterns.add(source(node))
-          scan.always.add(KiloFlagArity.prefix(tokens).join(" ") + " *") // kilocode_change
+          scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
         }
       }
 

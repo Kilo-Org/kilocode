@@ -160,4 +160,4 @@ const ARITY: Record<string, number> = {
   "yarn run": 3, // yarn run dev
 }
 
-export * as BashArity from "./arity"
+export { KiloFlagArity as BashArity } from "@/kilocode/permission/flag-arity" // kilocode_change
