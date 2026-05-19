@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { KILO_API_BASE } from "@kilocode/kilo-gateway" // kilocode_change
 import { Instance } from "../project/instance"
 import { Bus } from "../bus"
 import { TuiEvent } from "../cli/cmd/tui/event"
@@ -10,7 +11,7 @@ import DESCRIPTION from "./warpgrep.txt"
 // FREE_PERIOD_TODO: Remove KILO_WARPGREP_PROXY_URL constant and the proxy
 // fallback below. After the free period ends, require MORPH_API_KEY and
 // return an error when it is missing.
-const KILO_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
+const KILO_WARPGREP_PROXY_URL = `${KILO_API_BASE}/api/gateway` // kilocode_change - honor KILO_API_URL
 
 const Parameters = Schema.Struct({
   query: Schema.String.annotate({

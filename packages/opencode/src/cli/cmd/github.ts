@@ -34,6 +34,7 @@ import { Git } from "@/git"
 import { setTimeout as sleep } from "node:timers/promises"
 import { Process } from "@/util/process"
 import { Effect } from "effect"
+import { KILO_API_BASE } from "@kilocode/kilo-gateway" // kilocode_change - honor KILO_API_URL
 
 type GitHubAuthor = {
   login: string
@@ -365,8 +366,8 @@ export const GithubInstallCommand = cmd({
             s.stop("Installed GitHub app")
 
             async function getInstallation() {
-              // kilocode_change start - updated to new endpoint
-              return await fetch(`https://api.kilo.ai/api/integrations/github/check-installation?owner=${app.owner}`)
+              // kilocode_change start - updated to new endpoint, honor KILO_API_URL
+              return await fetch(`${KILO_API_BASE}/api/integrations/github/check-installation?owner=${app.owner}`)
                 .then((res) => res.json())
                 .then((data) => data.installation)
               // kilocode_change end
@@ -752,7 +753,7 @@ export const GithubRunCommand = cmd({
 
       function normalizeOidcBaseUrl(): string {
         const value = process.env["OIDC_BASE_URL"]
-        if (!value) return "https://api.kilo.ai" // kilocode_change
+        if (!value) return KILO_API_BASE // kilocode_change - honor KILO_API_URL
         return value.replace(/\/+$/, "")
       }
 
