@@ -71,9 +71,22 @@ export const defaultConfig: MergeConfig = {
     "SECURITY.md",
     "AGENTS.md",
     // GitHub workflows - MANUAL REVIEW (can break CI/CD)
+    ".github/workflows/beta.yml",
+    ".github/workflows/close-issues.yml",
+    ".github/workflows/containers.yml",
+    ".github/workflows/disabled/daily-issues-recap.yml.disabled",
+    ".github/workflows/disabled/daily-pr-recap.yml.disabled",
+    ".github/workflows/duplicate-issues.yml",
+    ".github/workflows/generate.yml",
+    ".github/workflows/nix-hashes.yml",
     ".github/workflows/publish.yml",
     ".github/workflows/close-stale-prs.yml",
+    ".github/workflows/test.yml",
+    ".github/workflows/triage.yml",
+    ".github/workflows/typecheck.yml",
     ".github/pull_request_template.md",
+    // Kilo root agent config
+    ".opencode/opencode.jsonc",
     // Kilo-specific command files
     ".opencode/command/commit.md",
     // Kilo-specific publish scripts

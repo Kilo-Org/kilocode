@@ -42,7 +42,7 @@ import { transformConflictedScripts, transformAllScripts } from "./transforms/tr
 import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
 import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
-import { writeVersion } from "./utils/upstream"
+import { versionFile, writeVersion } from "./utils/upstream"
 
 interface MergeOptions {
   version?: string
@@ -578,6 +578,13 @@ async function main() {
     const autoResolved = resolved.filter((r) => r.action === "kept")
     if (autoResolved.length > 0) {
       logger.success(`Auto-resolved ${autoResolved.length} conflicts (kept Kilo's version)`)
+    }
+
+    const versionConflicted = (await git.getConflictedFiles()).includes(versionFile)
+    if (versionConflicted) {
+      await git.checkoutTheirs([versionFile])
+      await git.stageFiles([versionFile])
+      logger.success(`Auto-resolved ${versionFile} conflict (accepted recorded upstream tag)`)
     }
 
     // Step 7c: Try to auto-resolve remaining conflicts with post-merge transforms
