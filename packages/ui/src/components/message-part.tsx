@@ -2268,26 +2268,29 @@ ToolRegistry.register({
     const i18n = useI18n()
     const questions = createMemo(() => (props.input.questions ?? []) as QuestionInfo[])
     const answers = createMemo(() => (props.metadata.answers ?? []) as QuestionAnswer[])
+    const dismissed = createMemo(() => props.metadata.dismissed === true)
     const completed = createMemo(() => answers().length > 0)
+    const reviewable = createMemo(() => completed() || dismissed())
 
     const subtitle = createMemo(() => {
       const count = questions().length
       if (count === 0) return ""
       if (completed()) return i18n.t("ui.question.subtitle.answered", { count })
+      if (dismissed()) return i18n.t("ui.messagePart.questions.dismissed")
       return `${count} ${i18n.t(count > 1 ? "ui.common.question.other" : "ui.common.question.one")}`
     })
 
     return (
       <BasicTool
         {...props}
-        defaultOpen={completed()}
+        defaultOpen={reviewable()}
         icon="bubble-5"
         trigger={{
           title: i18n.t("ui.tool.questions"),
           subtitle: subtitle(),
         }}
       >
-        <Show when={completed()}>
+        <Show when={reviewable()}>
           <div data-component="question-answers">
             <For each={questions()}>
               {(q, i) => {
@@ -2295,7 +2298,11 @@ ToolRegistry.register({
                 return (
                   <div data-slot="question-answer-item">
                     <div data-slot="question-text">{q.question}</div>
-                    <div data-slot="answer-text">{answer().join(", ") || i18n.t("ui.question.answer.none")}</div>
+                    <div data-slot="answer-text">
+                      {dismissed()
+                        ? i18n.t("ui.messagePart.questions.dismissed")
+                        : answer().join(", ") || i18n.t("ui.question.answer.none")}
+                    </div>
                   </div>
                 )
               }}

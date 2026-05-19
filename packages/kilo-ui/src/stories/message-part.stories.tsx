@@ -163,6 +163,34 @@ const errorToolPart: ToolPart = {
   },
 }
 
+const dismissedQuestionPart: ToolPart = {
+  id: "part-question-dismissed",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-question-dismissed",
+  tool: "question",
+  state: {
+    status: "completed",
+    input: {
+      questions: [
+        {
+          question: "Should I continue with the refactor?",
+          header: "Continue?",
+          options: [
+            { label: "Continue", description: "Proceed with the planned refactor" },
+            { label: "Stop", description: "Leave the current code unchanged" },
+          ],
+        },
+      ],
+    },
+    output: "User dismissed the question.",
+    title: "Question dismissed",
+    metadata: { answers: [], dismissed: true },
+    time: { start: now - 6000, end: now - 5500 },
+  },
+}
+
 // Completed edit tool with full filediff metadata — exercises canOpenDiff()
 // so the "Open in Diff Viewer" icon button renders in the trigger.
 const editCompletedPart: ToolPart = {
@@ -264,6 +292,7 @@ const mockData = createMockData([completedToolPart, textPart])
 const mockDataRunning = createMockData([runningToolPart])
 // Only the error edit tool — matches old WithErrorTool single-part intent
 const mockDataError = createMockData([errorToolPart])
+const mockDataDismissedQuestion = createMockData([dismissedQuestionPart])
 // Reasoning + text — matches old WithReasoning single-reasoning intent
 const mockDataReasoning = createMockData([reasoningPart, textPart])
 // Completed bash tool — exercises ShellRollingResults path
@@ -341,6 +370,16 @@ export const WithRunningTool: Story = {
 export const WithErrorTool: Story = {
   render: () => (
     <AllProviders data={mockDataError}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Dismissed question → original question remains reviewable ---
+
+export const WithDismissedQuestion: Story = {
+  render: () => (
+    <AllProviders data={mockDataDismissedQuestion}>
       <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),

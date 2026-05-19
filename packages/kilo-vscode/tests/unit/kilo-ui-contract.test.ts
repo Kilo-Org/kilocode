@@ -171,6 +171,28 @@ describe("Write and apply_patch patch rendering contracts (source)", () => {
   })
 })
 
+describe("Question tool dismissed-review contract (source)", () => {
+  const sources = [
+    ["kilo-ui", KILO_MESSAGE_PART_FILE],
+    ["ui", MESSAGE_PART_FILE],
+  ] as const
+
+  for (const [label, file] of sources) {
+    it(`${label} renders dismissed questions with their original text`, () => {
+      const src = fs.readFileSync(file, "utf-8")
+      const block =
+        src.match(/ToolRegistry\.register\(\{\s*name:\s*"question"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ??
+        ""
+
+      expect(block).toContain("props.metadata.dismissed === true")
+      expect(block).toContain("completed() || dismissed()")
+      expect(block).toContain("<Show when={reviewable()}>")
+      expect(block).toContain('data-slot="question-text"')
+      expect(block).toContain('i18n.t("ui.messagePart.questions.dismissed")')
+    })
+  }
+})
+
 describe("Bash tool syntax highlighting and section labels (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
   const block =
