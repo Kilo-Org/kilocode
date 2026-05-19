@@ -2,12 +2,19 @@ import { TextAttributes } from "@opentui/core"
 import { useTheme } from "../context/theme"
 import { useDialog, type DialogContext } from "./dialog"
 import { useKeyboard } from "@opentui/solid"
+import { For } from "solid-js" // kilocode_change
 
 export type DialogAlertProps = {
   title: string
   message: string
   onConfirm?: () => void
 }
+
+// kilocode_change start
+export function dialogAlertMessageLines(message: string) {
+  return message.split(/\r\n|\r|\n/)
+}
+// kilocode_change end
 
 export function DialogAlert(props: DialogAlertProps) {
   const dialog = useDialog()
@@ -32,7 +39,11 @@ export function DialogAlert(props: DialogAlertProps) {
         </text>
       </box>
       <box paddingBottom={1}>
-        <text fg={theme.textMuted}>{props.message}</text>
+        {/* kilocode_change start */}
+        <For each={dialogAlertMessageLines(props.message)}>
+          {(line) => <text fg={theme.textMuted}>{line}</text>}
+        </For>
+        {/* kilocode_change end */}
       </box>
       <box flexDirection="row" justifyContent="flex-end" paddingBottom={1}>
         <box
