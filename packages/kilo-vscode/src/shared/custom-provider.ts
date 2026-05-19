@@ -97,6 +97,7 @@ export function parseCustomProviderSecret(raw: string): { value: { apiKey?: stri
 export function resolveCustomProviderAuth(apiKey: string | undefined, changed: boolean): CustomProviderAuthChange {
   const key = apiKey?.trim()
   if (!changed) return { mode: "preserve" }
+  if (key === MASKED_CUSTOM_PROVIDER_KEY) return { mode: "preserve" }
   if (key) return { mode: "set", key }
   return { mode: "clear" }
 }
@@ -104,6 +105,12 @@ export function resolveCustomProviderAuth(apiKey: string | undefined, changed: b
 export function resolveCustomProviderKey(auth: "api" | "oauth" | "wellknown" | undefined) {
   if (auth !== "api") return ""
   return MASKED_CUSTOM_PROVIDER_KEY
+}
+
+export function resolveCustomProviderKeyInput(current: string, next: string, touched: boolean) {
+  if (next === current) return { key: next, touched }
+  if (touched || current !== MASKED_CUSTOM_PROVIDER_KEY) return { key: next, touched: true }
+  return { key: next.replace(/^\*+/, ""), touched: true }
 }
 
 export function normalizeCustomProviderConfig(

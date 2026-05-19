@@ -14,7 +14,7 @@ import { useProvider } from "../../context/provider"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
-import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
+import { resolveCustomProviderKey, resolveCustomProviderKeyInput } from "../../../../src/shared/custom-provider"
 import { ModelCard } from "./CustomProviderModelCard"
 import type {
   ChatTemplateArgsValue,
@@ -501,10 +501,11 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               description={language.t("provider.custom.field.apiKey.description")}
               value={form.apiKey}
               onChange={(v) => {
-                const key = !apiTouched() && form.apiKey === MASKED_CUSTOM_PROVIDER_KEY ? v.replace(/^\*+/, "") : v
-                setApiTouched(true)
+                const next = resolveCustomProviderKeyInput(form.apiKey, v, apiTouched())
+                const key = next.key
+                setApiTouched(next.touched)
                 setForm("apiKey", key)
-                setFetchKey(key)
+                if (next.touched) setFetchKey(key)
               }}
             />
           </div>

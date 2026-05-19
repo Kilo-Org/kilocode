@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { connectProvider, disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import { MASKED_CUSTOM_PROVIDER_KEY } from "../../src/shared/custom-provider"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
@@ -195,6 +196,24 @@ describe("saveCustomProvider", () => {
 
     expect(calls.remove).toHaveLength(0)
     expect(calls.set).toEqual([{ providerID: "myprovider", auth: { type: "api", key: "sk-test" } }])
+  })
+
+  it("does not store the masked api key placeholder", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+
+    await saveCustomProvider(
+      ctx,
+      "req",
+      "myprovider",
+      createProvider(),
+      MASKED_CUSTOM_PROVIDER_KEY,
+      true,
+      null,
+      setCachedConfig,
+    )
+
+    expect(calls.set).toHaveLength(0)
+    expect(calls.remove).toHaveLength(0)
   })
 
   // Regression tests for https://github.com/Kilo-Org/kilocode/issues/9186

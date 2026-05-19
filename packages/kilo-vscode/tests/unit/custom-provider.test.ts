@@ -3,6 +3,7 @@ import {
   MASKED_CUSTOM_PROVIDER_KEY,
   parseCustomProviderSecret,
   resolveCustomProviderKey,
+  resolveCustomProviderKeyInput,
   resolveCustomProviderAuth,
   sanitizeCustomProviderConfig,
   validateProviderID,
@@ -44,6 +45,10 @@ describe("resolveCustomProviderAuth", () => {
     expect(resolveCustomProviderAuth(" sk-test ", true)).toEqual({ mode: "set", key: "sk-test" })
   })
 
+  it("preserves auth when the masked api key placeholder is submitted", () => {
+    expect(resolveCustomProviderAuth(MASKED_CUSTOM_PROVIDER_KEY, true)).toEqual({ mode: "preserve" })
+  })
+
   it("clears auth when the field was changed to empty", () => {
     expect(resolveCustomProviderAuth(undefined, true)).toEqual({ mode: "clear" })
   })
@@ -60,6 +65,28 @@ describe("resolveCustomProviderKey", () => {
 
   it("returns empty when there is no saved key", () => {
     expect(resolveCustomProviderKey(undefined)).toBe("")
+  })
+})
+
+describe("resolveCustomProviderKeyInput", () => {
+  it("does not mark unchanged empty input as touched", () => {
+    expect(resolveCustomProviderKeyInput("", "", false)).toEqual({ key: "", touched: false })
+  })
+
+  it("does not mark the masked placeholder as touched when it stays unchanged", () => {
+    expect(resolveCustomProviderKeyInput(MASKED_CUSTOM_PROVIDER_KEY, MASKED_CUSTOM_PROVIDER_KEY, false)).toEqual({
+      key: MASKED_CUSTOM_PROVIDER_KEY,
+      touched: false,
+    })
+  })
+
+  it("strips the masked placeholder prefix when the user enters a new key", () => {
+    expect(
+      resolveCustomProviderKeyInput(MASKED_CUSTOM_PROVIDER_KEY, `${MASKED_CUSTOM_PROVIDER_KEY}sk-test`, false),
+    ).toEqual({
+      key: "sk-test",
+      touched: true,
+    })
   })
 })
 
