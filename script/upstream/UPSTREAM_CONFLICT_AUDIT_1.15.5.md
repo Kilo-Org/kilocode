@@ -42,4 +42,6 @@
 - First retry reached 115 remaining manual conflicts, down from 124.
 - The retry exposed a shadowing bug that prevented `.opencode-version` from auto-resolving; fixed by keeping the imported repository-relative `versionFile` constant distinct from the absolute path returned by `writeVersion`.
 - The retry also hit a transient `.git/index.lock` while staging three keep-ours files, leaving `.github/workflows/nix-hashes.yml`, `.github/workflows/publish.yml`, and `packages/opencode/AGENTS.md` unresolved in that run.
-- Expected clean retry result after the shadowing fix and without the transient lock: 111 remaining manual conflicts.
+- Final retry reached 111 remaining manual conflicts, down from 124.
+- Final retry auto-resolved 22 keep-ours conflicts and `.opencode-version`.
+- Mergiraf fully resolved 26 conflicts, partially resolved 90 files, and skipped 22 non-textual conflicts.
