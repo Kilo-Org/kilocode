@@ -1043,6 +1043,45 @@ test("model modalities default correctly", async () => {
   })
 })
 
+// kilocode_change start
+test("custom provider attachment enables image input without modalities", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          provider: {
+            "test-provider": {
+              name: "Test",
+              npm: "@ai-sdk/openai-compatible",
+              env: [],
+              models: {
+                "vision-model": {
+                  name: "Vision Model",
+                  attachment: true,
+                  limit: { context: 8000, output: 2000 },
+                },
+              },
+              options: { apiKey: "test" },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const providers = await list()
+      const model = providers[ProviderID.make("test-provider")].models["vision-model"]
+      expect(model.capabilities.attachment).toBe(true)
+      expect(model.capabilities.input.image).toBe(true)
+    },
+  })
+})
+// kilocode_change end
+
 test("model with custom cost values", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

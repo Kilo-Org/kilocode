@@ -1044,7 +1044,7 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
       input: {
         text: model.modalities?.input?.includes("text") ?? false,
         audio: model.modalities?.input?.includes("audio") ?? false,
-        image: model.modalities?.input?.includes("image") ?? false,
+        image: model.modalities?.input?.includes("image") ?? model.attachment ?? false, // kilocode_change - attachment implies image input for config-only vision models
         video: model.modalities?.input?.includes("video") ?? false,
         pdf: model.modalities?.input?.includes("pdf") ?? false,
       },
@@ -1245,7 +1245,13 @@ const layer: Layer.Layer<
                 input: {
                   text: model.modalities?.input?.includes("text") ?? existingModel?.capabilities.input.text ?? true,
                   audio: model.modalities?.input?.includes("audio") ?? existingModel?.capabilities.input.audio ?? false,
-                  image: model.modalities?.input?.includes("image") ?? existingModel?.capabilities.input.image ?? false,
+                  // kilocode_change start - attachment implies image input for config-only vision models
+                  image:
+                    model.modalities?.input?.includes("image") ??
+                    existingModel?.capabilities.input.image ??
+                    model.attachment ??
+                    false,
+                  // kilocode_change end
                   video: model.modalities?.input?.includes("video") ?? existingModel?.capabilities.input.video ?? false,
                   pdf: model.modalities?.input?.includes("pdf") ?? existingModel?.capabilities.input.pdf ?? false,
                 },
