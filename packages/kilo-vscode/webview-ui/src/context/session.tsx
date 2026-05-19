@@ -1584,6 +1584,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // Sessions whose worktree directories failed to list are preserved —
       // their absence is transient, not a real deletion.
       const ids = new Set(loaded.map((s) => s.id))
+      const removed: string[] = []
       setStore(
         "sessions",
         produce((sessions) => {
@@ -1592,19 +1593,21 @@ export const SessionProvider: ParentComponent = (props) => {
           if (kept?.has(id)) continue
           if (!ids.has(id)) {
             delete sessions[id]
-            // kilocode_change - also prune sessionOverrides to prevent unbounded accumulation on OOM
-            setStore(
-              "sessionOverrides",
-              produce((overrides) => {
-                delete overrides[id]
-              }),
-            )
+            removed.push(id)
           }
           }
         }),
       )
       for (const s of loaded) {
         setStore("sessions", s.id, s)
+      }
+      if (removed.length > 0) {
+        setStore(
+          "sessionOverrides",
+          produce((overrides) => {
+            for (const id of removed) delete overrides[id]
+          }),
+        )
       }
     })
   }
