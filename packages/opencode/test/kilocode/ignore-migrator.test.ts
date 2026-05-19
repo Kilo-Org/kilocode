@@ -101,6 +101,14 @@ pattern2
     test("preserves nested path pattern", () => {
       expect(IgnoreMigrator.convertToGlob("config/secrets.json")).toBe("config/secrets.json")
     })
+
+    test("expands unrooted single-file patterns to nested matches", () => {
+      expect(IgnoreMigrator.convertToGlobs("secret.txt")).toEqual(["secret.txt", "*/secret.txt"])
+    })
+
+    test("does not expand rooted single-file patterns to nested matches", () => {
+      expect(IgnoreMigrator.convertToGlobs("/secret.txt")).toEqual(["secret.txt"])
+    })
   })
 
   describe("buildPermissionRules", () => {
@@ -117,6 +125,14 @@ pattern2
       expect(rules["secrets/*"]).toBe("deny")
     })
 
+    test("creates nested deny rule for unrooted single-file pattern", () => {
+      const patterns = [{ pattern: "secret.txt", negated: false, source: "project" as const }]
+      const rules = IgnoreMigrator.buildPermissionRules(patterns)
+
+      expect(rules["secret.txt"]).toBe("deny")
+      expect(rules["*/secret.txt"]).toBe("deny")
+    })
+
     test("creates allow rules for negated patterns", () => {
       const patterns = [
         { pattern: "*.env", negated: false, source: "project" as const },
@@ -126,6 +142,7 @@ pattern2
 
       expect(rules["*.env"]).toBe("deny")
       expect(rules[".env.example"]).toBe("allow")
+      expect(rules["*/.env.example"]).toBe("allow")
     })
 
     test("handles multiple deny patterns", () => {

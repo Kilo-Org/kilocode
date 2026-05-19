@@ -226,12 +226,20 @@ export const ReadTool = Tool.define(
         kind: stat?.type === "Directory" ? "directory" : "file",
       })
 
+      // kilocode_change start - evaluate in-worktree reads against relative paths
+      const permissionPath = path.relative(instance.worktree, filepath)
+      const permissionPattern =
+        permissionPath && !permissionPath.startsWith("..") && !path.isAbsolute(permissionPath)
+          ? permissionPath
+          : filepath
+
       yield* ctx.ask({
         permission: "read",
-        patterns: [filepath],
+        patterns: [permissionPattern],
         always: ["*"],
         metadata: {},
       })
+      // kilocode_change end
 
       if (!stat) return yield* miss(filepath)
 

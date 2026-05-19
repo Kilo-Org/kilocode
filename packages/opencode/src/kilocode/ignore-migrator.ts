@@ -64,7 +64,8 @@ export namespace IgnoreMigrator {
    * - `foo/` matches directory and all contents -> `foo/*`
    * - `*.env` matches anywhere in tree -> `*.env` (already works)
    * - `/foo` matches only at root -> `foo` (rooted)
-   * - `foo` matches anywhere -> `*foo*` or just `foo` depending on context
+   * - `foo` matches root `foo`; buildPermissionRules also adds `*/foo`
+   *   so unrooted filename patterns match nested files.
    *
    * Note: Opencode's wildcard `*` already matches any path depth because
    * it's converted to `.*` regex which matches `/` characters.
@@ -98,6 +99,21 @@ export namespace IgnoreMigrator {
     return glob
   }
 
+  // kilocode_change start
+  export function convertToGlobs(pattern: string): string[] {
+    const glob = convertToGlob(pattern)
+
+    // Gitignore treats an unrooted pattern without a slash as matching that
+    // name at any directory depth. Opencode permissions use exact wildcard
+    // patterns, so keep the root match and add an explicit nested match.
+    if (!pattern.startsWith("/") && !glob.includes("/")) {
+      return [glob, `*/${glob}`]
+    }
+
+    return [glob]
+  }
+  // kilocode_change end
+
   /**
    * Load patterns from a .kilocodeignore file
    */
@@ -130,16 +146,22 @@ export namespace IgnoreMigrator {
     // First pass: add deny rules
     for (const p of patterns) {
       if (!p.negated) {
-        const glob = convertToGlob(p.pattern)
-        rules[glob] = "deny"
+        // kilocode_change start
+        for (const glob of convertToGlobs(p.pattern)) {
+          rules[glob] = "deny"
+        }
+        // kilocode_change end
       }
     }
 
     // Second pass: add negated (allow) rules - these override denies
     for (const p of patterns) {
       if (p.negated) {
-        const glob = convertToGlob(p.pattern)
-        rules[glob] = "allow"
+        // kilocode_change start
+        for (const glob of convertToGlobs(p.pattern)) {
+          rules[glob] = "allow"
+        }
+        // kilocode_change end
       }
     }
 
