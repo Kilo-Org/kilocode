@@ -160,4 +160,4 @@ const ARITY: Record<string, number> = {
   "yarn run": 3, // yarn run dev
 }
 
-export const BashArity: never = undefined as never // kilocode_change
+export const BashArity_DoNotUse = { prefix } // kilocode_change
