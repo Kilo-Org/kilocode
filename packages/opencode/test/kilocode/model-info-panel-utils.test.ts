@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test"
-import { avgPrice, fmtCachedPrice, fmtContext, fmtPrice } from "../../src/kilocode/components/model-info-panel-utils"
+import {
+  avgPrice,
+  fmtCachedPrice,
+  fmtContext,
+  fmtOutputContext,
+  fmtPrice,
+} from "../../src/kilocode/components/model-info-panel-utils"
 
 describe("model info panel price formatting", () => {
   test("fmtPrice returns Free for zero", () => {
@@ -48,5 +54,13 @@ describe("model info panel context formatting", () => {
 
   test("returns exact value for small contexts", () => {
     expect(fmtContext(800)).toBe("800")
+  })
+
+  test("formats output context when present", () => {
+    expect(fmtOutputContext(65536)).toBe("65.5K")
+  })
+
+  test("omits zero output context", () => {
+    expect(fmtOutputContext(0)).toBeNull()
   })
 })

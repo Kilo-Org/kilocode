@@ -32,6 +32,11 @@ export function fmtContext(n: number): string {
   return String(n)
 }
 
+export function fmtOutputContext(n: number): string | null {
+  if (n <= 0) return null
+  return fmtContext(n)
+}
+
 export function fmtDate(s: string): string {
   const d = new Date(s)
   if (isNaN(d.getTime())) return s

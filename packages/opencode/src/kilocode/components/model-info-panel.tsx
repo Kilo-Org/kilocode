@@ -3,7 +3,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { createMemo, Show } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import type { Model } from "@kilocode/sdk/v2"
-import { avgPrice, fmtCachedPrice, fmtContext, fmtDate, fmtPrice } from "./model-info-panel-utils"
+import { avgPrice, fmtCachedPrice, fmtContext, fmtDate, fmtOutputContext, fmtPrice } from "./model-info-panel-utils"
 
 interface Props {
   model: Model
@@ -20,6 +20,7 @@ export function ModelInfoPanel(props: Props) {
   const cost = () => m().cost
   const cached = () => (cost() ? fmtCachedPrice(cost()) : null)
   const avg = () => (cost() ? avgPrice(cost()) : undefined)
+  const outputContext = () => fmtOutputContext(m().limit.output)
   const caps = () => m().capabilities
   const inputs = () => caps()?.input
   const outputs = () => caps()?.output
@@ -106,9 +107,17 @@ export function ModelInfoPanel(props: Props) {
               </box>
             </Show>
             <box flexDirection="row" justifyContent="space-between">
-              <text fg={theme.textMuted}>Context</text>
+              <text fg={theme.textMuted}>Total Context</text>
               <text fg={theme.text}>{m() ? fmtContext(m().limit.context) : "—"}</text>
             </box>
+            <Show when={outputContext()}>
+              {(limit) => (
+                <box flexDirection="row" justifyContent="space-between">
+                  <text fg={theme.textMuted}>Max Output</text>
+                  <text fg={theme.text}>{limit()}</text>
+                </box>
+              )}
+            </Show>
           </box>
         </Show>
         <Show when={caps()?.reasoning || inputLine() || outputLine()}>

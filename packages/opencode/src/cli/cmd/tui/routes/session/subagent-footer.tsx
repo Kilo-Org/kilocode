@@ -8,6 +8,7 @@ import { useCommandDialog } from "@tui/component/dialog-command"
 import { useKeybind } from "../../context/keybind"
 import { Locale } from "@/util/locale"
 import { useTerminalDimensions } from "@opentui/solid"
+import { fmtContext, fmtOutputContext } from "@/kilocode/components/model-info-panel-utils" // kilocode_change
 
 export function SubagentFooter() {
   const route = useRouteData("session")
@@ -42,6 +43,12 @@ export function SubagentFooter() {
 
     const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
     const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
+    // kilocode_change start - show total context and output context separately in the subagent footer
+    const context = model?.limit.context
+      ? `${Locale.number(tokens)} / ${fmtContext(model.limit.context)} (${pct})`
+      : Locale.number(tokens)
+    const output = model ? fmtOutputContext(model.limit.output) : null
+    // kilocode_change end
     const cost = msg.reduce((sum, item) => sum + (item.role === "assistant" ? item.cost : 0), 0)
 
     const money = new Intl.NumberFormat("en-US", {
@@ -50,7 +57,8 @@ export function SubagentFooter() {
     })
 
     return {
-      context: pct ? `${Locale.number(tokens)} (${pct})` : Locale.number(tokens),
+      context, // kilocode_change
+      output: output ? `${output} output` : undefined, // kilocode_change
       cost: cost > 0 ? money.format(cost) : undefined,
     }
   })
@@ -87,7 +95,9 @@ export function SubagentFooter() {
             <Show when={usage()}>
               {(item) => (
                 <text fg={theme.textMuted} wrapMode="none">
-                  {[item().context, item().cost].filter(Boolean).join(" · ")}
+                  {/* kilocode_change start */}
+                  {[item().context, item().output, item().cost].filter(Boolean).join(" · ")}
+                  {/* kilocode_change end */}
                 </text>
               )}
             </Show>
