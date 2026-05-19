@@ -1583,6 +1583,9 @@ export const SessionProvider: ParentComponent = (props) => {
       // entries from other projects accumulating in the store.
       // Sessions whose worktree directories failed to list are preserved —
       // their absence is transient, not a real deletion.
+      // Also preserve any session currently in flight (non-idle status) to
+      // avoid clearing an active session when the backend returns an
+      // incomplete list during session creation or other race conditions.
       const ids = new Set(loaded.map((s) => s.id))
       setStore(
         "sessions",
@@ -1590,7 +1593,10 @@ export const SessionProvider: ParentComponent = (props) => {
           for (const id of Object.keys(sessions)) {
             if (id.startsWith("cloud:")) continue
             if (kept?.has(id)) continue
-            if (!ids.has(id)) delete sessions[id]
+            if (!ids.has(id)) {
+              if (statusMap[id] && statusMap[id].type !== "idle") continue
+              delete sessions[id]
+            }
           }
         }),
       )
