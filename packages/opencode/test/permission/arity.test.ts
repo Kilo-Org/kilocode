@@ -1,4 +1,5 @@
 import { test, expect } from "bun:test"
+// kilocode_change start
 import { prefix } from "../../src/permission/arity"
 
 test("arity 1 - unknown commands default to first token", () => {
@@ -31,3 +32,4 @@ test("edge cases", () => {
   expect(prefix(["single"])).toEqual(["single"])
   expect(prefix(["git"])).toEqual(["git"])
 })
+// kilocode_change end

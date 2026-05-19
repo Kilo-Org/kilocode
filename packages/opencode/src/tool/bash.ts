@@ -17,10 +17,10 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Shell } from "@/shell/shell"
 
+import { KiloFlagArity } from "@/kilocode/permission/flag-arity" // kilocode_change
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
-import { KiloFlagArity } from "@/kilocode/permission/flag-arity" // kilocode_change
 import { Effect, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
