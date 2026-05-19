@@ -328,17 +328,10 @@ export async function remove(location: string) {
   const resolved = path.resolve(location)
 
   // SEC-001: Enforce path-traversal guard.
-  // Resolve config directories via the module-level runPromise runtime
-  // (cached at load time — no per-call resource allocation).
-  // Use os.homedir() so the home config path is always absolute cross-platform.
-  const cfgDirs = (() => {
-    try {
-      return runPromise((svc) => svc.directories()) as string[]
-    } catch (err) {
-      log.warn("config runtime unavailable — path-traversal guard limited to cwd", { err })
-      return []
-    }
-  })()
+  const cfgDirs = await Config.directories().catch((err) => {
+    log.warn("config runtime unavailable — path-traversal guard limited to cwd", { err })
+    return [] as string[]
+  })
   const allowedDirs = [...cfgDirs, os.homedir(), process.cwd()]
   if (!isPathWithinAllowlist(path.dirname(resolved), allowedDirs)) {
     throw new Error(`refusing to remove skill outside allowed directories: ${resolved}`)
