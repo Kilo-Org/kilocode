@@ -4,6 +4,105 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {})
 }
 
+export type EventServerConnected = {
+  type: "server.connected"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventGlobalDisposed = {
+  type: "global.disposed"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventGlobalConfigUpdated = {
+  type: "global.config.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventTuiPromptAppend = {
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    /**
+     * Duration in milliseconds
+     */
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
+}
+
+export type EventKilocodeAgentManagerStart = {
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      /**
+       * Initial prompt to send to the new session
+       */
+      prompt?: string
+      /**
+       * Short display name for the Agent Manager card
+       */
+      name?: string
+      /**
+       * Git branch name seed for worktree mode
+       */
+      branchName?: string
+    }>
+  }
+}
+
 export type Project = {
   id: string
   worktree: string
@@ -37,27 +136,6 @@ export type EventServerInstanceDisposed = {
   type: "server.instance.disposed"
   properties: {
     directory: string
-  }
-}
-
-export type EventServerConnected = {
-  type: "server.connected"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
-export type EventGlobalDisposed = {
-  type: "global.disposed"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
-export type EventGlobalConfigUpdated = {
-  type: "global.config.updated"
-  properties: {
-    [key: string]: unknown
   }
 }
 
@@ -189,60 +267,6 @@ export type EventLspUpdated = {
   type: "lsp.updated"
   properties: {
     [key: string]: unknown
-  }
-}
-
-export type EventTuiPromptAppend = {
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    /**
-     * Duration in milliseconds
-     */
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
   }
 }
 
@@ -593,30 +617,6 @@ export type EventCommandExecuted = {
     sessionID: string
     arguments: string
     messageID: string
-  }
-}
-
-export type EventKilocodeAgentManagerStart = {
-  type: "kilocode.agent_manager.start"
-  properties: {
-    requestID: string
-    sessionID: string
-    mode: "worktree" | "local"
-    versions?: boolean
-    tasks: Array<{
-      /**
-       * Initial prompt to send to the new session
-       */
-      prompt?: string
-      /**
-       * Short display name for the Agent Manager card
-       */
-      name?: string
-      /**
-       * Git branch name seed for worktree mode
-       */
-      branchName?: string
-    }>
   }
 }
 
@@ -1324,11 +1324,16 @@ export type GlobalEvent = {
   project?: string
   workspace?: string
   payload:
-    | EventProjectUpdated
-    | EventServerInstanceDisposed
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
+    | EventTuiPromptAppend
+    | EventTuiCommandExecute
+    | EventTuiToastShow
+    | EventTuiSessionSelect
+    | EventKilocodeAgentManagerStart
+    | EventProjectUpdated
+    | EventServerInstanceDisposed
     | EventFileEdited
     | EventFileWatcherUpdated
     | EventQuestionAsked
@@ -1336,10 +1341,6 @@ export type GlobalEvent = {
     | EventQuestionRejected
     | EventLspClientDiagnostics
     | EventLspUpdated
-    | EventTuiPromptAppend
-    | EventTuiCommandExecute
-    | EventTuiToastShow
-    | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
     | EventSessionNetworkAsked
@@ -1363,7 +1364,6 @@ export type GlobalEvent = {
     | EventSuggestionDismissed
     | EventSessionCompacted
     | EventCommandExecuted
-    | EventKilocodeAgentManagerStart
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventWorkspaceReady
@@ -2483,11 +2483,16 @@ export type File = {
 }
 
 export type Event =
-  | EventProjectUpdated
-  | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
+  | EventTuiPromptAppend
+  | EventTuiCommandExecute
+  | EventTuiToastShow
+  | EventTuiSessionSelect
+  | EventKilocodeAgentManagerStart
+  | EventProjectUpdated
+  | EventServerInstanceDisposed
   | EventFileEdited
   | EventFileWatcherUpdated
   | EventQuestionAsked
@@ -2495,10 +2500,6 @@ export type Event =
   | EventQuestionRejected
   | EventLspClientDiagnostics
   | EventLspUpdated
-  | EventTuiPromptAppend
-  | EventTuiCommandExecute
-  | EventTuiToastShow
-  | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
   | EventSessionNetworkAsked
@@ -2522,7 +2523,6 @@ export type Event =
   | EventSuggestionDismissed
   | EventSessionCompacted
   | EventCommandExecuted
-  | EventKilocodeAgentManagerStart
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
