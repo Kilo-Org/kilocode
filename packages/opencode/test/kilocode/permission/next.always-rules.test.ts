@@ -105,6 +105,40 @@ describe("saveAlwaysRules", () => {
     ),
   )
 
+  it.live("approved current-request patterns auto-allow future exact bash requests", () =>
+    withDir({ git: true }, () =>
+      Effect.gen(function* () {
+        const asking = yield* ask({
+          id: PermissionID.make("permission_exact_pattern"),
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install lodash"],
+          metadata: { command: "npm install lodash", rules: ["npm *", "npm install *"] },
+          always: ["npm install *"],
+          ruleset: [],
+        }).pipe(Effect.forkScoped)
+
+        yield* waitForPending(1)
+        yield* saveAlwaysRules({
+          requestID: PermissionID.make("permission_exact_pattern"),
+          approvedAlways: ["npm install lodash"],
+        })
+        yield* reply({ requestID: PermissionID.make("permission_exact_pattern"), reply: "once" })
+        yield* Fiber.join(asking)
+
+        const result = yield* ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["npm install lodash"],
+          metadata: {},
+          always: [],
+          ruleset: [],
+        })
+        expect(result).toBeUndefined()
+      }),
+    ),
+  )
+
   it.live("denied rules auto-deny future requests", () =>
     withDir({ git: true }, () =>
       Effect.gen(function* () {

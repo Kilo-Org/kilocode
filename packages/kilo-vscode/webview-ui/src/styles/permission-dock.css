@@ -278,6 +278,10 @@
     gap: 6px;
     padding: 3px 0 3px 8px;
     min-width: 0;
+
+    &[data-full-command] {
+      align-items: flex-start;
+    }
   }
 
   [data-slot="permission-rule-type"] {
@@ -296,6 +300,14 @@
     white-space: nowrap;
     min-width: 0;
     flex: 1;
+
+    &[data-full-command] {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
   }
 
   [data-slot="permission-rule-actions"] {

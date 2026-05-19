@@ -17,7 +17,15 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import {
+  commandRuleOptions,
+  describePatterns,
+  displayCommandRule,
+  isFullCommandRule,
+  resolveLabel,
+  savedRuleStates,
+  type RuleDecision,
+} from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
 import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
@@ -37,15 +45,23 @@ export const PermissionDock: Component<{
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
-  const rules = () => props.request.args?.rules ?? props.request.always ?? []
-  // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
-  // A bare "*" (global wildcard) becomes empty so only the tool name shows.
-  const label = (rule: string) => (rule === "*" ? "" : rule.replace(/ \*$/, ""))
-  const command = () => {
+  const rawRules = () => props.request.args?.rules ?? props.request.always ?? []
+  const rawCommand = () => {
     const cmd = props.request.args?.command
     if (typeof cmd !== "string") return undefined
+    return cmd
+  }
+  const bashRuleCommand = () => (props.request.toolName === "bash" ? rawCommand() : undefined)
+  const rules = () => commandRuleOptions(rawRules(), bashRuleCommand(), props.request.patterns)
+  const command = () => {
+    const cmd = rawCommand()
+    if (!cmd) return undefined
     // Normalize IDN/Unicode hostnames to punycode ASCII to prevent homograph attacks.
     return normalizeUrls(cmd)
+  }
+  const commandRuleLabel = (rule: string) => {
+    const label = displayCommandRule(rule, bashRuleCommand())
+    return isFullCommandRule(rule, bashRuleCommand()) ? normalizeUrls(label) : label
   }
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
@@ -217,7 +233,11 @@ export const PermissionDock: Component<{
                   <div data-slot="permission-rules">
                     <For each={rules()}>
                       {(rule, index) => (
-                        <div data-slot="permission-rule-row" data-decision={decision(index())}>
+                        <div
+                          data-slot="permission-rule-row"
+                          data-decision={decision(index())}
+                          data-full-command={isFullCommandRule(rule, bashRuleCommand()) ? "" : undefined}
+                        >
                           <div data-slot="permission-rule-actions">
                             <Tooltip value={approveTooltip(index())} placement="top">
                               <button
@@ -244,9 +264,12 @@ export const PermissionDock: Component<{
                               </button>
                             </Tooltip>
                           </div>
-                          <code data-slot="permission-rule">
+                          <code
+                            data-slot="permission-rule"
+                            data-full-command={isFullCommandRule(rule, bashRuleCommand()) ? "" : undefined}
+                          >
                             {command()
-                              ? label(rule)
+                              ? commandRuleLabel(rule)
                               : rule === "*"
                                 ? resolveLabel(props.request.toolName, language.t)
                                 : `${resolveLabel(props.request.toolName, language.t)} ${rule}`}

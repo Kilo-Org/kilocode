@@ -384,6 +384,7 @@ export const layer = Layer.effect(
       if (ConfigProtection.isRequest(existing.info)) return true // kilocode_change
 
       const validRules = new Set([
+        ...(existing.info.permission === "bash" ? existing.info.patterns : []),
         ...((existing.info.metadata?.rules as string[] | undefined) ?? []),
         ...existing.info.always,
       ])

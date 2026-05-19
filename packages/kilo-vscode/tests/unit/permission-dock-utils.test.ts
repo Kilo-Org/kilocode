@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { savedRuleStates } from "../../webview-ui/src/components/chat/permission-dock-utils"
+import {
+  MAX_FULL_COMMAND_RULE_LENGTH,
+  commandRuleOptions,
+  displayCommandRule,
+  isFullCommandRule,
+  savedRuleStates,
+} from "../../webview-ui/src/components/chat/permission-dock-utils"
 
 describe("savedRuleStates", () => {
   it("returns empty map when rule is undefined", () => {
@@ -61,5 +67,51 @@ describe("savedRuleStates", () => {
   it("returns empty map for empty config object", () => {
     const result = savedRuleStates(["npm *"], {})
     expect(result).toEqual({})
+  })
+})
+
+describe("commandRuleOptions", () => {
+  it("adds the full command as an exact auto-approve option when it is short enough", () => {
+    expect(commandRuleOptions(["npm *", "npm install *"], "npm install lodash", ["npm install lodash"])).toEqual([
+      "npm *",
+      "npm install *",
+      "npm install lodash",
+    ])
+  })
+
+  it("does not duplicate an existing full command option", () => {
+    expect(commandRuleOptions(["npm *", "npm install lodash"], "npm install lodash", ["npm install lodash"])).toEqual([
+      "npm *",
+      "npm install lodash",
+    ])
+  })
+
+  it("does not add an unreasonably long full command option", () => {
+    const command = "x".repeat(MAX_FULL_COMMAND_RULE_LENGTH + 1)
+    expect(commandRuleOptions(["node *"], command, [command])).toEqual(["node *"])
+  })
+
+  it("keeps empty or missing commands out of the rule options", () => {
+    expect(commandRuleOptions(["git *"], undefined)).toEqual(["git *"])
+    expect(commandRuleOptions(["git *"], "", [""])).toEqual(["git *"])
+  })
+
+  it("does not add a full command option when the request cannot save it as a pattern", () => {
+    expect(commandRuleOptions(["npm *", "git *"], "npm test && git status", ["npm test", "git status"])).toEqual([
+      "npm *",
+      "git *",
+    ])
+  })
+})
+
+describe("displayCommandRule", () => {
+  it("keeps short exact command rules visible in full", () => {
+    expect(displayCommandRule("npm install lodash", "npm install lodash")).toBe("npm install lodash")
+    expect(isFullCommandRule("npm install lodash", "npm install lodash")).toBe(true)
+  })
+
+  it("keeps wildcard command rules compact", () => {
+    expect(displayCommandRule("npm install *", "npm install lodash")).toBe("npm install")
+    expect(isFullCommandRule("npm install *", "npm install lodash")).toBe(false)
   })
 })

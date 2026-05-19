@@ -2,6 +2,8 @@ import type { PermissionRule } from "../../types/messages"
 
 export type RuleDecision = "approved" | "denied" | "pending"
 
+export const MAX_FULL_COMMAND_RULE_LENGTH = 240
+
 /**
  * Check which rules are already saved in the user's config and return
  * their initial toggle states (approved/denied). Rules not found in
@@ -16,6 +18,23 @@ export function savedRuleStates(rules: string[], saved: PermissionRule | undefin
     if (action === "deny") result[i] = "denied"
   }
   return result
+}
+
+export function commandRuleOptions(rules: string[], command: string | undefined, patterns: string[] = []): string[] {
+  if (!command) return rules
+  if (command.length > MAX_FULL_COMMAND_RULE_LENGTH) return rules
+  if (!patterns.includes(command)) return rules
+  if (rules.includes(command)) return rules
+  return [...rules, command]
+}
+
+export function isFullCommandRule(rule: string, command: string | undefined): boolean {
+  return !!command && command.length <= MAX_FULL_COMMAND_RULE_LENGTH && rule === command
+}
+
+export function displayCommandRule(rule: string, command: string | undefined): string {
+  if (isFullCommandRule(rule, command)) return rule
+  return rule === "*" ? "" : rule.replace(/ \*$/, "")
 }
 
 // ---------------------------------------------------------------------------
