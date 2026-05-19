@@ -17,6 +17,7 @@ import { parsePluginSpecifier, readPackageThemes, readPluginPackage, resolvePlug
 
 type Mode = "noop" | "add" | "replace"
 type Kind = "server" | "tui"
+type ConfigName = "kilo" | "opencode" | "tui" // kilocode_change
 
 export type Target = {
   kind: Kind
@@ -31,7 +32,7 @@ export type PatchDeps = {
   readText: (file: string) => Promise<string>
   write: (file: string, text: string) => Promise<void>
   exists: (file: string) => Promise<boolean>
-  files: (dir: string, name: "opencode" | "tui") => string[]
+  files: (dir: string, name: ConfigName) => string[] // kilocode_change
 }
 
 export type PatchInput = {
@@ -330,20 +331,73 @@ export async function readPluginManifest(target: string): Promise<ManifestResult
   }
 }
 
-function patchDir(input: PatchInput) {
+// kilocode_change start - split plugin config root selection from Kilo/OpenCode config filename selection.
+function patchRoot(input: PatchInput) {
   if (input.global) return input.config ?? Global.Path.config
   const git = input.vcs === "git" && input.worktree !== "/"
-  const root = git ? input.worktree : input.directory
-  return path.join(root, ".opencode")
+  return git ? input.worktree : input.directory
 }
 
-function patchName(kind: Kind): "opencode" | "tui" {
+function patchName(kind: Kind): ConfigName {
   if (kind === "server") return "opencode"
   return "tui"
 }
 
-async function patchOne(dir: string, target: Target, spec: string, force: boolean, dep: PatchDeps): Promise<PatchOne> {
-  const name = patchName(target.kind)
+function kiloName(kind: Kind): ConfigName {
+  if (kind === "server") return "kilo"
+  return "tui"
+}
+
+async function existingFile(dir: string, name: ConfigName, dep: PatchDeps) {
+  for (const file of dep.files(dir, name)) {
+    if (await dep.exists(file)) return { dir, name }
+  }
+}
+
+async function hasKiloConfig(dir: string, dep: PatchDeps) {
+  return Boolean((await existingFile(dir, "kilo", dep)) ?? (await existingFile(dir, "tui", dep)))
+}
+
+async function patchLocation(input: PatchInput, target: Target, dep: PatchDeps) {
+  const root = patchRoot(input)
+  const legacy = patchName(target.kind)
+  const kilo = kiloName(target.kind)
+
+  if (input.global) {
+    if (await hasKiloConfig(root, dep)) return (await existingFile(root, kilo, dep)) ?? { dir: root, name: kilo }
+    const existing = await existingFile(root, legacy, dep)
+    if (existing) return existing
+    return { dir: root, name: legacy }
+  }
+
+  if (await hasKiloConfig(root, dep)) return (await existingFile(root, kilo, dep)) ?? { dir: root, name: kilo }
+
+  const rootKilo = await existingFile(root, kilo, dep)
+  if (rootKilo) return rootKilo
+
+  const kiloDir = path.join(root, ".kilo")
+  if (await dep.exists(kiloDir)) {
+    return (await existingFile(kiloDir, kilo, dep)) ?? (await existingFile(kiloDir, legacy, dep)) ?? { dir: kiloDir, name: kilo }
+  }
+
+  const rootLegacy = await existingFile(root, legacy, dep)
+  if (rootLegacy) return rootLegacy
+
+  const legacyDir = path.join(root, ".opencode")
+  return (await existingFile(legacyDir, legacy, dep)) ?? { dir: legacyDir, name: legacy }
+}
+// kilocode_change end
+
+// kilocode_change start - pass the selected Kilo/OpenCode config filename into each patch operation.
+async function patchOne(
+  dir: string,
+  name: ConfigName,
+  target: Target,
+  spec: string,
+  force: boolean,
+  dep: PatchDeps,
+): Promise<PatchOne> {
+// kilocode_change end
   await using _ = await Flock.acquire(`plug-config:${Filesystem.resolve(path.join(dir, name))}`)
 
   const files = dep.files(dir, name)
@@ -419,10 +473,12 @@ async function patchOne(dir: string, target: Target, spec: string, force: boolea
 }
 
 export async function patchPluginConfig(input: PatchInput, dep: PatchDeps = defaultPatchDeps): Promise<PatchResult> {
-  const dir = patchDir(input)
   const items: PatchItem[] = []
+  let dir = patchRoot(input) // kilocode_change
   for (const target of input.targets) {
-    const hit = await patchOne(dir, target, input.spec, Boolean(input.force), dep)
+    const location = await patchLocation(input, target, dep) // kilocode_change
+    dir = location.dir // kilocode_change
+    const hit = await patchOne(location.dir, location.name, target, input.spec, Boolean(input.force), dep) // kilocode_change
     if (!hit.ok) {
       return {
         ...hit,

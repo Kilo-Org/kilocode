@@ -128,6 +128,49 @@ describe("plugin.install.task", () => {
     expect(tui.plugin).toEqual(["acme@1.2.3"])
   })
 
+  // kilocode_change start
+  test("writes server plugins to existing root kilo config", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const cfg = path.join(tmp.path, "kilo.jsonc")
+    await Bun.write(cfg, JSON.stringify({ plugin: ["seed@1.0.0"] }, null, 2))
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    const ok = await run(ctx(tmp.path))
+    expect(ok).toBe(true)
+
+    const server = await read(cfg)
+    expect(server.plugin).toEqual(["seed@1.0.0", "acme@1.2.3"])
+    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+  })
+
+  test("writes local plugin config under .kilo when the project uses that directory", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server", "tui"])
+    await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    const ok = await run(ctx(tmp.path))
+    expect(ok).toBe(true)
+
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
+    const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
+    expect(server.plugin).toEqual(["acme@1.2.3"])
+    expect(tui.plugin).toEqual(["acme@1.2.3"])
+    expect(await Filesystem.exists(path.join(tmp.path, ".opencode", "opencode.jsonc"))).toBe(false)
+  })
+  // kilocode_change end
+
   test("writes default options from exports config metadata", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server", "tui"], {
