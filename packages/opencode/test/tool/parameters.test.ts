@@ -217,6 +217,19 @@ describe("tool parameters", () => {
       })
       expect(parsed.todos.length).toBe(1)
     })
+    // kilocode_change start
+    test("accepts JSON-stringified todos array", () => {
+      const todos = [{ content: "do x", status: "pending", priority: "medium" }]
+      const parsed = parse(Todo, { todos: JSON.stringify(todos) })
+      expect(parsed.todos).toEqual(todos)
+    })
+
+    test("rejects JSON-stringified non-array todos", () => {
+      expect(accepts(Todo, { todos: JSON.stringify({ content: "do x", status: "pending", priority: "medium" }) })).toBe(
+        false,
+      )
+    })
+    // kilocode_change end
     test("rejects missing todos", () => {
       expect(accepts(Todo, {})).toBe(false)
     })

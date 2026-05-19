@@ -2,6 +2,7 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION_WRITE from "./todowrite.txt"
 import { Todo } from "../session/todo"
+import { zod, ZodOverride } from "../util/effect-zod" // kilocode_change
 // kilocode_change start
 import { TodoView } from "../kilocode/todo-view"
 // kilocode_change end
@@ -17,8 +18,18 @@ const TodoItem = Schema.Struct({
   priority: Schema.String.annotate({ description: "Priority level of the task: high, medium, low" }),
 })
 
+// kilocode_change start
+const TodoList = Schema.mutable(Schema.Array(TodoItem))
+const TodoListParameter = Schema.Union([TodoList, Schema.fromJsonString(TodoList)]).pipe(
+  Schema.annotate({
+    description: "The updated todo list",
+    [ZodOverride]: zod(TodoList).describe("The updated todo list"),
+  }),
+)
+// kilocode_change end
+
 export const Parameters = Schema.Struct({
-  todos: Schema.mutable(Schema.Array(TodoItem)).annotate({ description: "The updated todo list" }),
+  todos: TodoListParameter, // kilocode_change
 })
 
 type Metadata = {
