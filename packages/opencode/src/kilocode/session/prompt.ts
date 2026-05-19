@@ -107,16 +107,17 @@ export namespace KiloSessionPrompt {
     session: Pick<Session.Info, "permission">
   }) {
     const rules = input.session.permission ?? []
-    if (!modes.includes(input.agent.name)) return rules
+    const agentDenies = input.agent.permission.filter((rule) => rule.action === "deny")
+    if (!modes.includes(input.agent.name)) return Permission.merge(rules, agentDenies)
     return Permission.merge(
       rules,
       input.agent.permission,
       rules.filter((rule) => rule.action === "deny"),
+      agentDenies,
     )
   }
 
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
-    if (!modes.includes(input.agent.name)) return
     return input.agent.permission
   }
 

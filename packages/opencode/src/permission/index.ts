@@ -508,9 +508,11 @@ export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
   const result = new Set<string>()
   for (const tool of tools) {
     const permission = EDIT_TOOLS.includes(tool) ? "edit" : tool
-    const rule = ruleset.findLast((rule) => Wildcard.match(permission, rule.permission))
+    const rule = ruleset.findLast(
+      (rule) => Wildcard.match(permission, rule.permission) && rule.pattern === "*",
+    )
     if (!rule) continue
-    if (rule.pattern === "*" && rule.action === "deny") result.add(tool)
+    if (rule.action === "deny") result.add(tool)
   }
   return result
 }
