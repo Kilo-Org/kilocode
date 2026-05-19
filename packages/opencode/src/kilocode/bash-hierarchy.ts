@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { BashArity } from "@/permission/arity"
+import { KiloFlagArity } from "./permission/flag-arity"
 
 /**
  * Generates hierarchical always-patterns for a bash command and adds them
@@ -11,10 +11,14 @@ import { BashArity } from "@/permission/arity"
  * When the exact text matches the arity prefix (e.g. `"git branch"` with
  * prefix `["git", "branch"]`), the exact text is skipped because the
  * wildcard `"git branch *"` already covers it.
+ *
+ * Uses {@link KiloFlagArity.prefix} so that `<command> <flag> <arg>` patterns
+ * such as `pnpm --filter web typecheck` are kept intact instead of being
+ * truncated to `pnpm --filter *`.
  */
 export namespace BashHierarchy {
   export function addAll(target: Set<string>, command: string[], text: string) {
-    const prefix = BashArity.prefix(command)
+    const prefix = KiloFlagArity.prefix(command)
 
     // Add wildcard at each arity level: "git *", "git branch *", etc.
     for (let i = 1; i <= prefix.length; i++) {

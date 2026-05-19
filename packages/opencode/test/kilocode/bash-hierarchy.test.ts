@@ -61,4 +61,15 @@ describe("BashHierarchy.addAll", () => {
     // "git *" appears in both but Set deduplicates
     expect([...set].filter((p) => p === "git *")).toHaveLength(1)
   })
+
+  test("pnpm --filter <name> <subcommand> ladder includes the workspace filter", () => {
+    // Without flag-awareness this would produce a useless "pnpm --filter *" chip.
+    const result = collect(["pnpm", "--filter", "web", "typecheck"], "pnpm --filter web typecheck")
+    expect(result).toEqual(["pnpm *", "pnpm --filter *", "pnpm --filter web *", "pnpm --filter web typecheck *"])
+  })
+
+  test("git -C <path> <subcommand> ladder keeps the cwd flag", () => {
+    const result = collect(["git", "-C", "/tmp/repo", "status"], "git -C /tmp/repo status")
+    expect(result).toEqual(["git *", "git -C *", "git -C /tmp/repo *", "git -C /tmp/repo status *"])
+  })
 })
