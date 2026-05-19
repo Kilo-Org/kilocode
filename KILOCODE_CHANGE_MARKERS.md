@@ -1,0 +1,430 @@
+# KiloCode Change Markers Review
+
+## Scope
+- PR: https://github.com/Kilo-Org/kilocode/pull/10387
+- Base compared: main
+- Files checked: 396
+
+## Findings
+
+### F1
+- Severity: high
+- File: `packages/opencode/src/provider/provider.ts`
+- Lines/symbols: current PR lines 437-475 (`llmgateway`, `openrouter`, `nvidia`, `vercel`), 566-573 (`zenmux`), 842-858 (`cerebras`, `kilo`)
+- Suspect marker/change: marker-bearing Kilo provider branding headers from `main` were removed and values reverted from `https://kilo.ai/`, `Kilo Code`, `kilo`, and `KiloCode` to upstream `https://opencode.ai/` / `opencode` values.
+- Why it may be wrong: these were explicit `kilocode_change` lines in shared provider code. Losing both the markers and the Kilo values looks like an accidental upstream overwrite, not just a marker move.
+- Human verification needed: confirm whether Kilo should still send Kilo-branded referer/title/source/billing headers for llmgateway, openrouter, nvidia, vercel, zenmux, cerebras, and the kilo provider. If yes, restore the Kilo values with markers.
+
+### F2
+- Severity: medium
+- File: `packages/opencode/src/tool/registry.ts` and `packages/opencode/src/kilocode/tool/registry.ts`
+- Lines/symbols: `ToolRegistry` builtin list around current PR lines 219-239; removed `KiloToolRegistry.describe(...) // kilocode_change`; removed `KiloToolRegistry.describe` helper from `packages/opencode/src/kilocode/tool/registry.ts`.
+- Suspect marker/change: main wrapped builtin tools with `KiloToolRegistry.describe([...], kilo) // kilocode_change`, and the Kilo helper appended a semantic-search hint to `glob` and `grep` descriptions when semantic search was available. The PR returns the raw builtin list and the helper no longer exists.
+- Why it may be wrong: this is both a removed marker in shared code and an apparent loss of Kilo-specific tool-description behavior.
+- Human verification needed: confirm whether the semantic-search hint for `glob`/`grep` was intentionally removed. If not, restore the wrapper or move the behavior elsewhere with a marker at the shared callsite.
+
+### F3
+- Severity: medium
+- File: `packages/opencode/src/session/session.ts`
+- Lines/symbols: `createNext`/`create` around current PR lines 500-683; main marker `register attribution before session.created subscribers run` was replaced by post-create `KiloSession.setPlatformOverride` block.
+- Suspect marker/change: the marker did not merely move; the behavior changed from registering Kilo session attribution before `sync.run(Event.Created, ...)` to setting the platform override after `createNext` returns.
+- Why it may be wrong: main explicitly documented ordering before `session.created` subscribers run. The PR may preserve platform data for later reads, but it may no longer be available to `session.created` subscribers/ingest paths that run during `sync.run`.
+- Human verification needed: verify whether any Kilo telemetry/session ingest subscriber depends on the platform override during `session.created`. If yes, restore pre-event registration or add an equivalent pre-event marker.
+
+## Files Checked
+- `.github/ISSUE_TEMPLATE/bug-report.yml`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.github/ISSUE_TEMPLATE/feature-request.yml`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.github/ISSUE_TEMPLATE/question.yml`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.github/workflows/disabled/daily-issues-recap.yml.disabled`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.github/workflows/disabled/daily-pr-recap.yml.disabled`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.opencode-version`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.opencode/agent/triage.md`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.opencode/command/changelog.md`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `.opencode/tool/github-triage.ts`: Marker count increased (0 -> 2); markers added or expanded, no removal concern found.
+- `bun.lock`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/core/src/filesystem.ts`: Marker count unchanged (9); no marker removal detected.
+- `packages/core/src/flag/flag.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/core/src/kilocode/global.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/core/src/util/log.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/core/test/filesystem/filesystem.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/extensions/zed/extension.toml`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-docs/components/FlowDiagram/diagrams/wanted-lifecycle.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-docs/components/FlowDiagram/index.tsx`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-docs/markdoc/partials/cli-commands-table.md`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-docs/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-gateway/src/index.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-gateway/src/server/handlers.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-gateway/src/server/routes.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-gateway/test/api/models.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-i18n/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-indexing/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-indexing/src/config.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-jetbrains/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-telemetry/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/kilo-vscode/package.json`: Marker count unchanged (1); no marker removal detected.
+- `packages/kilo-vscode/tests/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/migration/20260427172553_slow_nightmare/migration.sql`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/migration/20260427172553_slow_nightmare/snapshot.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/migration/20260428004200_add_session_path/snapshot.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/migration/20260501142318_next_venus/migration.sql`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/migration/20260501142318_next_venus/snapshot.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/script/build.ts`: Marker count increased (29 -> 31); markers added or expanded, no removal concern found.
+- `packages/opencode/script/httpapi-exercise.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/acp/agent.ts`: Marker count unchanged (9); no marker removal detected.
+- `packages/opencode/src/bus/bus-event.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/bus/global.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/bus/index.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/bootstrap.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/account.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/acp.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/agent.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/cli/cmd/cmd.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/agent.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/config.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/file.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/index.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/lsp.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/ripgrep.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/skill.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/debug/snapshot.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/export.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/generate.ts`: Marker count unchanged (6); no marker removal detected.
+- `packages/opencode/src/cli/cmd/github.ts`: Marker count unchanged (24); no marker removal detected.
+- `packages/opencode/src/cli/cmd/import.ts`: Marker count unchanged (10); no marker removal detected.
+- `packages/opencode/src/cli/cmd/mcp.ts`: Marker count unchanged (7); no marker removal detected.
+- `packages/opencode/src/cli/cmd/plug.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/pr.ts`: Marker count decreased during effect command refactor; remaining Kilo PR command markers look moved/consolidated, no specific issue found.
+- `packages/opencode/src/cli/cmd/providers.ts`: Marker count decreased because `Instance.provide` wrapper comments were removed during `effectCmd`/`instance:false` refactor; Kilo auth/provider markers remain.
+- `packages/opencode/src/cli/cmd/remote.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/cli/cmd/run.ts`: Marker count increased (21 -> 23); markers added or expanded, no removal concern found.
+- `packages/opencode/src/cli/cmd/serve.ts`: Marker count increased (4 -> 5); markers added or expanded, no removal concern found.
+- `packages/opencode/src/cli/cmd/session.ts`: Marker count decreased due formatter/refactor consolidation of session list Kilo blocks; Kilo `--all`, `--search`, and JSON helpers remain marked.
+- `packages/opencode/src/cli/cmd/stats.ts`: Marker count increased (3 -> 5); markers added or expanded, no removal concern found.
+- `packages/opencode/src/cli/cmd/tui/app.tsx`: Marker count unchanged (26); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/attach.ts`: Marker count unchanged (7); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx`: Marker count unchanged (25); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/config/tui.ts`: Marker count unchanged (6); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/context/sync-v2.tsx`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/feature-plugins/system/session-v2.tsx`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/plugin/internal.ts`: Marker count unchanged (8); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/plugin/runtime.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/routes/session/index.tsx`: Marker count unchanged (58); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/routes/session/permission.tsx`: Marker count unchanged (16); no marker removal detected.
+- `packages/opencode/src/cli/cmd/tui/worker.ts`: Marker count decreased because basic-auth username logic moved to `server/auth.ts`, where Kilo username defaults are marked.
+- `packages/opencode/src/cli/cmd/web.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/cli/effect-cmd.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/cli/effect/prompt.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/config/config.ts`: Marker count increased (83 -> 85); markers added or expanded, no removal concern found.
+- `packages/opencode/src/config/paths.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/src/effect/app-runtime.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/file/watcher.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/git/index.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/index.ts`: Marker count unchanged (37); no marker removal detected.
+- `packages/opencode/src/kilo-sessions/kilo-sessions.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/kilo-sessions/remote-sender.ts`: Marker count decreased in a Kilo-owned path; no marker required there, lazy `WithInstance` import appears intentional.
+- `packages/opencode/src/kilocode/agent/index.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/kilocode/cli/cmd/roll-call.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/components/model-info-panel.tsx`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/config-validation.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/kilocode/config/config.ts`: Removed `new file` marker in a `kilocode` path; marker is not required for Kilo-owned files.
+- `packages/opencode/src/kilocode/indexing-event.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/indexing.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/kilocode/permission/allow-everything.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/permission/routes.ts`: Removed marker in a `kilocode` path; marker is not required for Kilo-owned files.
+- `packages/opencode/src/kilocode/plan-followup.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/provider/provider.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/commit-message.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/enhance-prompt.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/indexing.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/kilo-gateway.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/kilocode.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/network.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/remote.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/session-import.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/suggestion.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/groups/telemetry.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/commit-message.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/enhance-prompt.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/indexing.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/kilo-gateway.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/kilocode.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/network.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/remote.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/session-import.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/suggestion.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/handlers/telemetry.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/instance.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/public.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/httpapi/server.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/instance.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/src/kilocode/server/provider-auth-lifecycle.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/server/server.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/src/kilocode/session/compaction-chunks.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/kilocode/suggestion/index.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/permission/index.ts`: Marker count unchanged (65); no marker removal detected.
+- `packages/opencode/src/plugin/codex.ts`: Marker count increased (9 -> 11); markers added or expanded, no removal concern found.
+- `packages/opencode/src/plugin/index.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/project/bootstrap-service.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/project/bootstrap.ts`: Marker block collapsed to inline marker on service init list; Kilo bootstrap/shareNext exclusion remains marked.
+- `packages/opencode/src/project/instance-layer.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/project/instance-runtime.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/project/instance-store.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/project/instance.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/project/project.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/project/vcs.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/project/with-instance.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/provider/auth.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/provider/models.ts`: Marker count unchanged (8); no marker removal detected.
+- `packages/opencode/src/provider/provider.ts`: Finding F1: marker-bearing Kilo provider branding headers from main are gone in PR; requires restoration or explicit approval.
+- `packages/opencode/src/pty/ticket.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/auth.ts`: Marker count increased (0 -> 2); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/cors.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/server/error.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/fence.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/global-lifecycle.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/httpapi-server.node.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/httpapi-server.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/middleware.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/server/proxy.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/server/routes/global.ts`: Dispose/invalidate marker moved into `server/global-lifecycle` flow; behavior appears represented by helper, no specific issue found.
+- `packages/opencode/src/server/routes/instance/config.ts`: Marker count unchanged (7); no marker removal detected.
+- `packages/opencode/src/server/routes/instance/event.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/api.ts`: Marker count increased (0 -> 4); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/event.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/config.ts`: Marker count increased (0 -> 5); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/experimental.ts`: Marker count increased (0 -> 11); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/global.ts`: Marker count increased (0 -> 1); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/permission.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/pty.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/session.ts`: Marker count increased (0 -> 5); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/v2.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/v2/message.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/groups/v2/session.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/config.ts`: Marker count increased (0 -> 3); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/experimental.ts`: Marker count increased (0 -> 19); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/global.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/permission.ts`: Marker count increased (5 -> 8); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/provider.ts`: Marker count increased (4 -> 6); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/pty.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/session.ts`: Marker count increased (3 -> 6); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/tui.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/v2.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/v2/message.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/handlers/v2/session.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/middleware/authorization.ts`: Kilo username config marker moved to shared `server/auth.ts`; authorization middleware now consumes marked helper.
+- `packages/opencode/src/server/routes/instance/httpapi/middleware/error.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/middleware/instance-context.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/middleware/proxy.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/middleware/workspace-routing.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/httpapi/public.ts`: Marker count increased (0 -> 6); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/server.ts`: Marker count increased (0 -> 2); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/httpapi/websocket-tracker.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/index.ts`: Marker count increased (3 -> 10); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/middleware.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/project.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/src/server/routes/instance/provider.ts`: Marker count increased (4 -> 6); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/routes/instance/pty.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/instance/tui.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/routes/ui.ts`: UI markers moved partly to `server/shared/ui.ts`; embedded-only no-proxy fallback remains marked in both Hono and Effect helpers.
+- `packages/opencode/src/server/server.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/src/server/shared/fence.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/shared/pty-ticket.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/shared/public-ui.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/shared/tui-control.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/shared/ui.ts`: Marker count increased (0 -> 1); markers added or expanded, no removal concern found.
+- `packages/opencode/src/server/shared/workspace-routing.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/server/workspace.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/session/compaction.ts`: Marker count decreased by formatting/line relocation around existing Kilo compaction hooks; no specific removed-marker issue found.
+- `packages/opencode/src/session/network.ts`: Marker count unchanged (5); no marker removal detected.
+- `packages/opencode/src/session/processor.ts`: Marker count unchanged (56); no marker removal detected.
+- `packages/opencode/src/session/projectors-next.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/session/projectors.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/session/prompt.ts`: Marker count unchanged (83); no marker removal detected.
+- `packages/opencode/src/session/session.sql.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/src/session/session.ts`: Finding F3: platform attribution marker moved from pre-`session.created` registration to post-create override; timing needs human verification.
+- `packages/opencode/src/storage/db.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/src/sync/index.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/tool/registry.ts`: Finding F2: `KiloToolRegistry.describe(...) // kilocode_change` wrapper from main is removed; semantic-search hint behavior appears dropped.
+- `packages/opencode/src/tool/shell.ts`: Marker count increased (0 -> 23); markers added or expanded, no removal concern found.
+- `packages/opencode/src/tool/shell/id.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/tool/shell/prompt.ts`: Marker count increased (0 -> 3); markers added or expanded, no removal concern found.
+- `packages/opencode/src/tool/shell/shell.txt`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/tool/webfetch.ts`: Marker count unchanged (8); no marker removal detected.
+- `packages/opencode/src/util/effect-zod.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/util/error.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/util/lazy.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/util/timeout.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/event.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/schema.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session-entry-stepper.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session-entry.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session-event.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session-message-updater.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session-message.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session-prompt.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/session.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/v2/tool-output.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/src/worktree/index.ts`: Marker count unchanged (4); no marker removal detected.
+- `packages/opencode/test/AGENTS.md`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/acp/event-subscription.test.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/test/agent/agent.test.ts`: Marker count unchanged (70); no marker removal detected.
+- `packages/opencode/test/agent/plugin-agent-regression.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/bus/bus-effect.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/bus/bus-integration.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/bus/bus.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/cli/cmd/tui/sync.test.tsx`: Marker count unchanged (9); no marker removal detected.
+- `packages/opencode/test/cli/effect-cmd-instance-als.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/cli/tui/use-event.test.tsx`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/config/config.test.ts`: Marker count unchanged (19); no marker removal detected.
+- `packages/opencode/test/config/tui.test.ts`: Marker count unchanged (19); no marker removal detected.
+- `packages/opencode/test/control-plane/workspace.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/effect/instance-state.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/file/fsmonitor.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/file/index.test.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/test/file/path-traversal.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/file/watcher.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/fixture/agent-plugin.constants.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/fixture/agent-plugin.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/fixture/config.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/fixture/fixture.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/test/git/git.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/agent-global-config-dirs.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/agent-permission-overrides.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/agent-skill-permissions.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/bash-permission-metadata.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/builtin-skills.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/codex-auth-refresh.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/compaction-payload-recovery.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/config-gitignore.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/config-resilience.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/config-validation.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/config/config.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/config/indexing-default-plugin.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/edit-permission-filediff.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/encoding.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/external-directory-boundary.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/indexing-startup.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/indexing-worktree.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/instruction.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/kilo-loader-auth.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/kilo-models-401-fallback.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/model-cache-org.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/permission/env-read.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/permission/external-directory-allow.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/permission/next.always-rules.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/permission/next.reply-http.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/permission/next.reply-routing.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/plan-exit-detection.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/plan-followup.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/project-config-update.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/project-id.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/provider-list-failed-state.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/question-dismiss-all.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/semantic-search.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/server/httpapi-bridge.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/server/httpapi-public.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/server/permission-allow-everything.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/session-compaction-chunks.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/session-fork-remap.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/session-list.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/session-prompt-queue.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/session/instruction-substitution.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/snapshot-cache.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/snapshot-freeze-repro.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/kilocode/stats-subagent-cost.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/suggestion/auto-dismiss.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/suggestion/suggestion.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/kilocode/util/url.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/lib/effect.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/lsp/client.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/lsp/index.test.ts`: Marker count unchanged (8); no marker removal detected.
+- `packages/opencode/test/mcp/headers.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/mcp/lifecycle.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/mcp/oauth-auto-connect.test.ts`: Marker count unchanged (6); no marker removal detected.
+- `packages/opencode/test/mcp/oauth-browser.test.ts`: Marker count unchanged (21); no marker removal detected.
+- `packages/opencode/test/permission-task.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/permission/next.test.ts`: Marker count unchanged (15); no marker removal detected.
+- `packages/opencode/test/plugin/auth-override.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/plugin/loader-shared.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/preload.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/test/project/instance-bootstrap-regression.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/project/instance.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/project/project.test.ts`: Marker count unchanged (5); no marker removal detected.
+- `packages/opencode/test/project/vcs.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/project/worktree.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/provider/amazon-bedrock.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/provider/gitlab-duo.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/provider/provider.test.ts`: Marker count unchanged (10); no marker removal detected.
+- `packages/opencode/test/pty/pty-output-isolation.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/pty/pty-session.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/pty/pty-shell.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/pty/ticket.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/question/question.test.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/test/server/auth.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/experimental-session-list.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/server/global-bus.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/global-session-list.test.ts`: Marker count unchanged (7); no marker removal detected.
+- `packages/opencode/test/server/httpapi-authorization.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-bridge.test.ts`: Skip-block markers removed because parity tests are re-enabled with Kilo-specific exception marked inline; no specific issue found.
+- `packages/opencode/test/server/httpapi-config.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/server/httpapi-event.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-experimental.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/server/httpapi-instance-context.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-instance.legacy.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/server/httpapi-listen.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-mcp-oauth.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-mcp.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-parity.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-provider.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-sdk.test.ts`: Marker count unchanged (10); no marker removal detected.
+- `packages/opencode/test/server/httpapi-session.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-sync.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/httpapi-tui.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/session-actions.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/session-list.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/session-messages.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/session-select.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/workspace-routing.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/server/worktree-endpoint-repro.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/session/compaction.test.ts`: Marker count unchanged (6); no marker removal detected.
+- `packages/opencode/test/session/instruction.test.ts`: Local Config mock marker removed when replaced by `TestConfig.layer()`; human may verify fixture still covers Kilo warnings dependency, but no direct marker issue found.
+- `packages/opencode/test/session/llm.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/session/message-v2.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/session/messages-pagination.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/session/network.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/session/prompt.test.ts`: Marker count unchanged (32); no marker removal detected.
+- `packages/opencode/test/session/session-entry-stepper.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/session/session.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/session/structured-output-integration.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/snapshot/snapshot.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/sync/index.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/tool/apply_patch.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/tool/edit.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/tool/external-directory.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/tool/glob.test.ts`: Marker count increased (3 -> 6); markers added or expanded, no removal concern found.
+- `packages/opencode/test/tool/grep.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/tool/parameters.test.ts`: Marker count unchanged (2); no marker removal detected.
+- `packages/opencode/test/tool/question.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/tool/read.test.ts`: Marker count unchanged (3); no marker removal detected.
+- `packages/opencode/test/tool/recall.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/opencode/test/tool/registry.test.ts`: Marker count unchanged (5); no marker removal detected.
+- `packages/opencode/test/tool/shell.test.ts`: Marker count increased (0 -> 3); markers added or expanded, no removal concern found.
+- `packages/opencode/test/tool/truncation.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/tool/webfetch.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/tool/write.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/util/error.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/v2/session-message-updater.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/opencode/test/workspace/workspace-restore.test.ts`: Marker count unchanged (1); no marker removal detected.
+- `packages/sdk/js/script/build.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/sdk/js/src/v2/client.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/sdk/js/src/v2/gen/sdk.gen.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/sdk/js/src/v2/gen/types.gen.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `packages/sdk/openapi.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `script/raw-changelog.ts`: Marker count unchanged (3); no marker removal detected.
+- `script/upstream/package.json`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `script/upstream/transforms/transform-package-json.test.ts`: No `kilocode_change` markers in main or PR; no marker removal detected.
+- `script/upstream/transforms/transform-package-json.ts`: Marker count unchanged (4); no marker removal detected.
+- `specs/v2/session-concepts-gap.md`: No `kilocode_change` markers in main or PR; no marker removal detected.
