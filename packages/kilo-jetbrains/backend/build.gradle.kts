@@ -79,6 +79,16 @@ tasks.named("compileKotlin") {
 val cliDir = layout.buildDirectory.dir("generated/cli/cli")
 val production = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false)
 
+val prepareLocalCli by tasks.registering(PrepareLocalCliTask::class) {
+    description = "Prepare the local-platform CLI binary for JetBrains backend runs"
+    root.set(rootProject.layout.projectDirectory)
+    dir.set(cliDir)
+    bunPath.convention(
+        providers.gradleProperty("kilo.bun.path")
+            .orElse(providers.environmentVariable("BUN_EXE"))
+    )
+}
+
 val requiredPlatforms = listOf(
     "darwin-arm64",
     "darwin-x64",

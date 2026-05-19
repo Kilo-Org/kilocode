@@ -121,21 +121,52 @@ class KiloBackendCliManager(
         return target
     }
 
+    // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
+    internal fun buildEnv(pwd: String, base: Map<String, String> = System.getenv()): Map<String, String> = buildMap {
+        putAll(base)
+        put("KILO_SERVER_PASSWORD", pwd)
+        put("KILO_CLIENT", "jetbrains")
+        put("KILO_ENABLE_QUESTION_TOOL", "true")
+        put("KILO_PLATFORM", "jetbrains")
+        put("KILO_APP_NAME", "kilo-code")
+        put("KILO_DISABLE_CLAUDE_CODE", "true")
+        put("KILOCODE_FEATURE", "jetbrains-plugin")
+        ideEnv().forEach { (k, v) -> put(k, v) }
+        devStorageEnv()?.forEach { (k, v) -> put(k, v) }
+    }
+
+    private fun devStorageEnv(): Map<String, String>? {
+        val enabled = System.getProperty("kilo.dev.storage.isolated", "false").toBoolean()
+        if (!enabled) return null
+        val root = System.getProperty("kilo.dev.worktree.root") ?: run {
+            log.warn("kilo.dev.storage.isolated=true but kilo.dev.worktree.root is not set; skipping dev storage isolation")
+            return null
+        }
+        val dev = File(root, ".kilo-dev")
+        val data = File(dev, "data")
+        val config = File(dev, "config")
+        val state = File(dev, "state")
+        val cache = File(dev, "cache")
+        for (dir in listOf(data, config, state, cache)) {
+            if (!dir.mkdirs() && !dir.isDirectory) {
+                log.warn("Failed to create dev storage dir ${dir.absolutePath}; skipping dev storage isolation")
+                return null
+            }
+        }
+        log.info("Dev storage isolation enabled under ${dev.absolutePath}")
+        return mapOf(
+            "XDG_DATA_HOME" to data.absolutePath,
+            "XDG_CONFIG_HOME" to config.absolutePath,
+            "XDG_STATE_HOME" to state.absolutePath,
+            "XDG_CACHE_HOME" to cache.absolutePath,
+        )
+    }
+
     private suspend fun spawn(cli: File): CliServer.State =
         withContext(Dispatchers.IO) {
             val pwd = generatePassword()
 
-            val env = buildMap {
-                putAll(System.getenv())
-                put("KILO_SERVER_PASSWORD", pwd)
-                put("KILO_CLIENT", "jetbrains")
-                put("KILO_ENABLE_QUESTION_TOOL", "true")
-                put("KILO_PLATFORM", "jetbrains")
-                put("KILO_APP_NAME", "kilo-code")
-                put("KILO_DISABLE_CLAUDE_CODE", "true")
-                put("KILOCODE_FEATURE", "jetbrains-plugin")
-                ideEnv().forEach { (k, v) -> put(k, v) }
-            }
+            val env = buildEnv(pwd)
 
             val cmd = listOf(cli.absolutePath, "serve", "--port", "0")
             val builder = ProcessBuilder(cmd)

@@ -37,6 +37,7 @@ target
 
 # Local dev files
 opencode-dev
+.kilo-dev/
 UPCOMING_CHANGELOG.md
 logs/
 *.bun-build

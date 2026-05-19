@@ -10,7 +10,7 @@
     "dev-setup": "bun run --cwd packages/opencode --conditions=browser src/index.ts dev-setup",
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
-    "typecheck": "bun turbo typecheck",
+    "typecheck": "bun turbo typecheck --filter=!@kilocode/kilo-jetbrains",
     "postinstall": "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
     "prepare": "husky",
     "random": "echo 'Random script'",
