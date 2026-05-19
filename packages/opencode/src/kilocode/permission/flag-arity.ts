@@ -1,7 +1,7 @@
 import { prefix as base } from "@/permission/arity"
 
 /**
- * Flag-aware variant of {@link BashArity.prefix}.
+ * Flag-aware variant of the upstream arity prefix.
  *
  * The upstream arity table treats every token positionally, so a command like
  * `pnpm --filter web typecheck` collapses to the chip `pnpm --filter *` —

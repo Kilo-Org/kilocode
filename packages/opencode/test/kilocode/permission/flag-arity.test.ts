@@ -1,7 +1,7 @@
 import { test, expect, describe } from "bun:test"
-import { BashArity as KiloFlagArity } from "../../../src/permission/arity"
+import { KiloFlagArity } from "../../../src/kilocode/permission/flag-arity"
 
-describe("BashArity.prefix", () => {
+describe("KiloFlagArity.prefix", () => {
   test("pnpm --filter <name> <subcommand> keeps the filter pair intact", () => {
     // pnpm has arity 2, so the upstream behavior would slice ["pnpm", "--filter"]
     // and produce the chip "pnpm --filter *". We want the full command instead.
