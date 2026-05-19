@@ -4,7 +4,7 @@
  * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
-import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, batch } from "solid-js"
+import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, on, batch } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
@@ -2027,6 +2027,20 @@ export const SessionProvider: ParentComponent = (props) => {
       type: "abort",
       sessionID,
     })
+    // Safety timeout: force idle if the CLI fails to send the status SSE event
+    // This prevents the UI from being stuck in "Considering next steps..." forever
+    setTimeout(() => {
+      // Only force-reset if this is still the current session and still busy
+      if (currentSessionID() !== sessionID) return
+      const cur = statusMap[sessionID]
+      if (!cur || cur.type === "idle") return
+      setStatusMap(sessionID, { type: "idle" })
+      setBusySinceMap(
+        produce((map) => {
+          delete map[sessionID]
+        }),
+      )
+    }, 15_000)
   }
 
   function compact() {
