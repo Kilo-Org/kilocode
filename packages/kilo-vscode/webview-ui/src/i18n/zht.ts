@@ -96,6 +96,7 @@ export const dict = {
   "command.session.share.description": "分享此工作階段並將連結複製到剪貼簿",
   "command.session.unshare": "取消分享工作階段",
   "command.session.unshare.description": "停止分享此工作階段",
+  "command.session.export": "匯出會話紀錄",
 
   "palette.search.placeholder": "搜尋檔案、命令和工作階段",
   "palette.empty": "找不到結果",
@@ -176,6 +177,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
+  "model.group.collapse": "折疊 {{group}}",
+  "model.group.expand": "展開 {{group}}",
   "model.favorite.add": "加入我的最愛",
   "model.favorite.remove": "從我的最愛中移除",
 
@@ -268,6 +271,7 @@ export const dict = {
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "傳送",
   "prompt.action.send.blocked": "請先回答或忽略待處理的問題",
+  "prompt.action.send.recording": "轉錄並傳送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "改善提示詞",
   "prompt.action.autoApprove.enable": "啟用自動核准",
@@ -1554,4 +1558,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "沒有相符的分支",
   "diffViewer.baseBranch.loading": "正在載入分支…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "計畫已準備就緒：",
 } satisfies Partial<Record<Keys, string>>

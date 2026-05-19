@@ -96,6 +96,7 @@ export const dict = {
   "command.session.share.description": "分享此会话并将链接复制到剪贴板",
   "command.session.unshare": "取消分享会话",
   "command.session.unshare.description": "停止分享此会话",
+  "command.session.export": "导出会话记录",
 
   "palette.search.placeholder": "搜索文件、命令和会话",
   "palette.empty": "未找到结果",
@@ -176,6 +177,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
+  "model.group.collapse": "折叠 {{group}}",
+  "model.group.expand": "展开 {{group}}",
   "model.favorite.add": "添加到收藏夹",
   "model.favorite.remove": "从收藏夹中移除",
 
@@ -273,6 +276,7 @@ export const dict = {
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "发送",
   "prompt.action.send.blocked": "请先回答或忽略待处理的问题",
+  "prompt.action.send.recording": "转录并发送",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "优化提示词",
   "prompt.action.resetModel": "重置模型为默认值",
@@ -1547,4 +1551,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "没有匹配的分支",
   "diffViewer.baseBranch.loading": "正在加载分支…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "计划已准备就绪：",
 } satisfies Partial<Record<Keys, string>>

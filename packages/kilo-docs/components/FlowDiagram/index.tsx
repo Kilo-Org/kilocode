@@ -9,11 +9,7 @@ import { diagrams } from "./diagrams"
  * re-renders of FlowDiagram (otherwise React would unmount/remount it
  * on every parent render and tear down the ResizeObserver each time).
  */
-function FitOnResize({
-  useReactFlow,
-}: {
-  useReactFlow: typeof import("@xyflow/react").useReactFlow
-}) {
+function FitOnResize({ useReactFlow }: { useReactFlow: typeof import("@xyflow/react").useReactFlow }) {
   const { fitView } = useReactFlow()
   const containerRef = useRef<HTMLDivElement | null>(null)
 

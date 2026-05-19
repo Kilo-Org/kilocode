@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "このセッションを共有しURLをクリップボードにコピー",
   "command.session.unshare": "セッションの共有を停止",
   "command.session.unshare.description": "このセッションの共有を停止",
+  "command.session.export": "セッション記録をエクスポート",
 
   "palette.search.placeholder": "ファイル、コマンド、セッションを検索",
   "palette.empty": "結果が見つかりません",
@@ -175,6 +176,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.collapse": "{{group}} を折りたたむ",
+  "model.group.expand": "{{group}} を展開",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 
@@ -268,6 +271,7 @@ export const dict = {
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
   "prompt.action.send.blocked": "最初に保留中の質問に答えるか、閉じてください",
+  "prompt.action.send.recording": "文字起こしして送信",
   "prompt.action.stop": "停止",
   "prompt.action.enhance": "プロンプトを改善",
   "prompt.action.autoApprove.enable": "自動承認を有効化",
@@ -1606,4 +1610,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "一致するブランチがありません",
   "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "プランの準備ができました:",
 }

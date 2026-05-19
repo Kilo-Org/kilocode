@@ -20,15 +20,24 @@ import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pie
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
+import { useVSCode } from "../src/context/vscode"
+import { useServer } from "../src/context/server"
+import { useProvider } from "../src/context/provider"
+import { useConfig } from "../src/context/config"
+import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
+import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
   buildFileAnnotations,
   buildReviewAnnotation,
+  reviewDraftSpeechKey,
+  reviewEditSpeechKey,
   type AnnotationLabels,
   type AnnotationMeta,
 } from "./review-annotations"
+import { createReviewAnnotationSpeechRenderer } from "./review-annotation-speech"
 import {
   LONG_DIFF_MARKER_FILE_COUNT,
   allOpenFiles,
@@ -69,6 +78,13 @@ interface FullScreenDiffViewProps {
 
 export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) => {
   const { t } = useLanguage()
+  const vscode = useVSCode()
+  const server = useServer()
+  const provider = useProvider()
+  const { config, settings } = useConfig()
+  const speech = useSpeechToText(vscode, server, { t })
+  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(settings())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")
@@ -88,6 +104,21 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     null,
   )
   const [editing, setEditing] = createSignal<string | null>(null)
+  const speechKeys = createMemo(() => {
+    const keys = new Set<string>()
+    const current = draft()
+    const edit = editing()
+    if (current) keys.add(reviewDraftSpeechKey(current))
+    if (edit) keys.add(reviewEditSpeechKey(edit))
+    return keys
+  })
+  const reviewSpeech = createReviewAnnotationSpeechRenderer({
+    speech,
+    enabled: canUseSpeech,
+    model: speechModel,
+    label: t,
+    keys: speechKeys,
+  })
   const [activeFile, setActiveFile] = createSignal<string | null>(null)
   const [treeWidth, setTreeWidth] = createSignal(240)
   let nextId = 0
@@ -322,6 +353,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       cancelDraft,
       labels: labels(),
       activeTerminalId: props.activeTerminalId,
+      speech: reviewSpeech,
     })
   }
 

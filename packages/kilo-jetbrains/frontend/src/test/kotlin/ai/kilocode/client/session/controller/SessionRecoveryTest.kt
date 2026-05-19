@@ -110,7 +110,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
     fun `test busy status is seeded from statuses map`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -119,7 +119,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [busy] [considering next steps]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
@@ -131,7 +131,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             next = 5000L,
         ))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -140,7 +140,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [retry] [Rate limited]
             """,
-            m, show = false,
+            m, show = true,
         )
         val state = m.model.state as SessionState.Retry
         assertEquals(3, state.attempt)
@@ -154,7 +154,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             requestID = "req_xyz",
         ))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -163,7 +163,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [offline] [No network]
             """,
-            m, show = false,
+            m, show = true,
         )
         assertEquals("req_xyz", (m.model.state as SessionState.Offline).requestId)
     }
@@ -171,7 +171,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
     fun `test idle status in map leaves controller in Idle`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -180,14 +180,14 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [idle]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
     fun `test missing status entry leaves controller in Idle`() {
         rpc.statuses.value = emptyMap()
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -196,7 +196,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [idle]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
@@ -211,7 +211,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -229,7 +229,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
             [code] [kilo/gpt-5] [awaiting-permission]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
@@ -243,7 +243,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -259,7 +259,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
             [code] [kilo/gpt-5] [awaiting-question]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 }

@@ -1387,6 +1387,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             const task = msg.parts.filter((part) => part.type === "compaction" || part.type === "subtask")
             if (task && !lastFinished) tasks.push(...task)
           }
+          // kilocode_change end
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 

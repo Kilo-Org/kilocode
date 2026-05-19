@@ -298,6 +298,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const match = Binary.search(requests, event.properties.requestID, (r) => r.id)
           if (match.found) {
             setStore("network", event.properties.sessionID, match.index, "restored", true)
+            setStore("network", event.properties.sessionID, match.index, "time", "restored", event.properties.time) // kilocode_change
           }
           break
         }

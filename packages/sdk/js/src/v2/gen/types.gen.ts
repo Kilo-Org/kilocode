@@ -268,6 +268,7 @@ export type SessionNetworkWait = {
   restored: boolean
   time: {
     created: number
+    restored?: number
   }
 }
 
@@ -297,6 +298,7 @@ export type EventSessionNetworkRestored = {
   properties: {
     sessionID: string
     requestID: string
+    time: number
   }
 }
 
@@ -7266,6 +7268,7 @@ export type KiloAudioTranscriptionsData = {
       format: string
     }
     language?: string
+    prompt?: string
     temperature?: number
   }
   path?: never

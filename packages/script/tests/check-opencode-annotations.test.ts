@@ -4,7 +4,6 @@ import path from "node:path"
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".sh", ".bash", ".zsh"])
 const FILES = new Map<string, string>()
 const SCOPES = [
-  "sdks/vscode",
   "packages/opencode",
   "packages/extensions",
   "packages/ui",
@@ -175,7 +174,6 @@ describe("isExempt", () => {
     ["packages/opencode/src/config/config.ts", false],
     ["packages/opencode/src/indexing/search-service.ts", false],
     ["packages/ui/src/components/icon.tsx", false],
-    ["sdks/vscode/src/extension.ts", false],
     ["packages/extensions/zed/extension.toml", false],
     ["github/script/release", false],
     ["github/script/publish", false],
@@ -193,7 +191,7 @@ describe("isChecked", () => {
   const cases: Array<[string, boolean]> = [
     ["packages/opencode/src/index.ts", true],
     ["packages/ui/src/components/icon.tsx", true],
-    ["sdks/vscode/src/extension.ts", true],
+    ["sdks/vscode/src/extension.ts", false],
     ["packages/extensions/zed/extension.toml", true],
     ["packages/shared/src/index.ts", true],
     ["packages/script/src/index.ts", true],

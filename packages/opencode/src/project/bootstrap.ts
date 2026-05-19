@@ -46,16 +46,9 @@ export const layer = Layer.effect(
       yield* plugin.init()
       yield* Effect.promise(() => KilocodeBootstrap.init()).pipe(Effect.forkDetach) // kilocode_change
       // kilocode_change start - shareNext removed from list, handled by KilocodeBootstrap
-      yield* Effect.all(
-        [
-          lsp,
-          format,
-          file,
-          fileWatcher,
-          vcs,
-          snapshot,
-        ].map((s) => Effect.forkDetach(s.init())),
-      ).pipe(Effect.withSpan("InstanceBootstrap.init"))
+      yield* Effect.all([lsp, format, file, fileWatcher, vcs, snapshot].map((s) => Effect.forkDetach(s.init()))).pipe(
+        Effect.withSpan("InstanceBootstrap.init"),
+      )
       // kilocode_change end
 
       const projectID = ctx.project.id

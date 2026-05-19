@@ -150,7 +150,9 @@ export async function handle(args: ArgumentsCamelCase) {
   const structured = json || args.output === "md"
 
   if (!args.quiet && !structured) {
-    UI.println(`${color(UI.Style.TEXT_INFO)}Starting roll call for models with prompt: "${args.prompt}"${color(UI.Style.TEXT_NORMAL)}`)
+    UI.println(
+      `${color(UI.Style.TEXT_INFO)}Starting roll call for models with prompt: "${args.prompt}"${color(UI.Style.TEXT_NORMAL)}`,
+    )
     UI.println(
       `${color(UI.Style.TEXT_INFO)}Timeout per model: ${args.timeout}ms, Parallel calls: ${args.parallel}${color(UI.Style.TEXT_NORMAL)}`,
     )
@@ -178,7 +180,8 @@ export async function handle(args: ArgumentsCamelCase) {
       )
 
       if (models.length === 0) {
-        if (!args.quiet && !structured) UI.println(`${color(UI.Style.TEXT_WARNING)}No models to test after filtering.${color(UI.Style.TEXT_NORMAL)}`)
+        if (!args.quiet && !structured)
+          UI.println(`${color(UI.Style.TEXT_WARNING)}No models to test after filtering.${color(UI.Style.TEXT_NORMAL)}`)
         if (json) console.log(JSON.stringify([], null, 2))
         if (args.output === "md") console.log(formatMarkdown([]))
         if (structured) return
@@ -262,7 +265,12 @@ export async function handle(args: ArgumentsCamelCase) {
   })
 }
 
-async function call(model: Provider.Model, prompt: string, timeout: number, start: number): Promise<Omit<Result, "model">> {
+async function call(
+  model: Provider.Model,
+  prompt: string,
+  timeout: number,
+  start: number,
+): Promise<Omit<Result, "model">> {
   try {
     const language = await Provider.getLanguage(model)
     const sessionID = randomUUID()
@@ -305,7 +313,10 @@ async function call(model: Provider.Model, prompt: string, timeout: number, star
 }
 
 function error(cause: unknown) {
-  if (cause instanceof Error && (cause.name === "AbortError" || cause.message.includes("abort") || cause.message.includes("timeout"))) {
+  if (
+    cause instanceof Error &&
+    (cause.name === "AbortError" || cause.message.includes("abort") || cause.message.includes("timeout"))
+  ) {
     return { type: "timeout", message: "The operation timed out." }
   }
 

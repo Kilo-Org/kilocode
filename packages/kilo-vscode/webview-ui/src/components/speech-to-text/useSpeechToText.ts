@@ -26,12 +26,17 @@ type StartOptions = {
   insert: InsertTranscript
 }
 
+type StopOptions = {
+  done?: () => void
+  ready?: () => boolean
+}
+
 export type SpeechToText = {
   state: Accessor<SpeechState>
   error: Accessor<string | undefined>
   active: Accessor<boolean>
   start: (opts: StartOptions) => void
-  stop: () => void
+  stop: (opts?: StopOptions) => void
   cancel: () => void
   clear: () => void
 }
@@ -45,6 +50,8 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
   let request = ""
   let counter = 0
   let insert: InsertTranscript | undefined
+  let done: (() => void) | undefined
+  let ready: (() => boolean) | undefined
 
   const unsub = vscode.onMessage((msg) => {
     if (!isSpeechMessage(msg)) return
@@ -73,10 +80,12 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
       return
     }
 
+    const next = ready?.() === false ? undefined : done
     insert?.(text)
     cleanup()
     setState("idle")
     setError(undefined)
+    next?.()
   })
 
   onCleanup(() => {
@@ -113,8 +122,10 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
     })
   }
 
-  function stop() {
+  function stop(opts?: StopOptions) {
     if (state() !== "recording") return
+    done = opts?.done
+    ready = opts?.ready
     setState("transcribing")
     vscode.postMessage({ type: "speechToTextStop", requestId: request })
   }
@@ -143,6 +154,8 @@ export function useSpeechToText(vscode: VSCode, server: Server, lang: Lang): Spe
   function cleanup() {
     request = ""
     insert = undefined
+    done = undefined
+    ready = undefined
   }
 
   return { state, error, active, start, stop, cancel, clear }

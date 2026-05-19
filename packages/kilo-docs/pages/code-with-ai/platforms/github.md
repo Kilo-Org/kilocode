@@ -25,6 +25,8 @@ When you're reviewing a pull request and want a second opinion on a piece of cod
 
 The bot reads the review comment, the surrounding diff, and the relevant code in the repository to give you an informed answer.
 
+{% image src="/docs/img/connect/github/github-review.png" alt="Asking @kilocode-bot a question on a GitHub pull request review comment" width="800" /%}
+
 ### Fix issues directly from GitHub
 
 Tag the bot on any issue and ask it to handle the fix:
@@ -40,6 +42,8 @@ The bot will:
 - Create a branch with the implementation
 - Open a pull request
 
+{% image src="/docs/img/connect/github/github-issue.png" alt="Asking @kilocode-bot to fix a GitHub issue" width="800" /%}
+
 ### Diagnose bug reports
 
 When a bug report comes in and you want to understand what's going on before diving in:
@@ -49,6 +53,8 @@ When a bug report comes in and you want to understand what's going on before div
 ```
 
 The bot examines the bug report, searches the codebase for related code paths, and shares its analysis directly in the issue thread.
+
+{% image src="/docs/img/connect/github/github-bug.png" alt="Asking @kilocode-bot to diagnose a bug report on a GitHub issue" width="800" /%}
 
 ---
 

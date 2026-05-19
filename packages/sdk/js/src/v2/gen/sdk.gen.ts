@@ -5763,6 +5763,7 @@ export class Audio extends HeyApiClient {
         format: string
       }
       language?: string
+      prompt?: string
       temperature?: number
     },
     options?: Options<never, ThrowOnError>,
@@ -5777,6 +5778,7 @@ export class Audio extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "input_audio" },
             { in: "body", key: "language" },
+            { in: "body", key: "prompt" },
             { in: "body", key: "temperature" },
           ],
         },

@@ -329,14 +329,30 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
+  const onExport = () => {
+    const id = session.currentSessionID()
+    if (id) session.exportSessionTranscript(id)
+  }
+  window.addEventListener("exportSessionTranscript", onExport)
+  onCleanup(() => window.removeEventListener("exportSessionTranscript", onExport))
+
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
   const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
   const speechModel = () => selectedSpeechToTextModel(settings())
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () =>
-    hasInput() && !isDisabled() && !speech.active() && !terminal.pending() && !git.pending() && !props.blocked?.()
-  const showStop = () => isBusy() && !hasInput()
+    !isDisabled() &&
+    !terminal.pending() &&
+    !git.pending() &&
+    !props.blocked?.() &&
+    (speech.state() === "recording" || (hasInput() && !speech.active()))
+  const sendLabel = () => {
+    if (props.blocked?.()) return language.t("prompt.action.send.blocked")
+    if (speech.state() === "recording") return language.t("prompt.action.send.recording")
+    return language.t("prompt.action.send")
+  }
+  const showStop = () => isBusy() && !hasInput() && speech.state() !== "recording"
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
@@ -675,6 +691,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     speech.start({ model: speechModel(), insert: insertSpeechText })
   }
 
+  const transcribeAndSend = () => {
+    const key = draftKey()
+    const id = sid()
+    const context = ctx()
+    const value = text()
+    const comments = reviewComments()
+    const images = imageAttach.images()
+    speech.stop({
+      done: () => void handleSend(),
+      ready: () =>
+        draftKey() === key &&
+        sid() === id &&
+        ctx() === context &&
+        text() === value &&
+        reviewComments() === comments &&
+        imageAttach.images() === images,
+    })
+  }
+
+  const handleSendClick = () => {
+    if (speech.state() !== "recording" || !canSend()) {
+      void handleSend()
+      return
+    }
+    transcribeAndSend()
+  }
+
   const handleSend = async () => {
     const draft = text().trim()
 
@@ -721,6 +764,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
     const id = sid()
     const sel = session.selected(id)
+    const context = ctx()
+    const key = draftKey()
 
     const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
       showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
@@ -742,15 +787,19 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    const key = draftKey()
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId, context)
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, ctx())
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId, context)
     }
+
+    drafts.delete(key)
+    reviewDrafts.delete(key)
+    imageDrafts.delete(key)
+    if (draftKey() !== key) return
 
     history.append(draft)
     history.reset()
@@ -759,9 +808,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageAttach.clear()
     mention.closeMention()
     slash.close()
-    drafts.delete(key)
-    reviewDrafts.delete(key)
-    imageDrafts.delete(key)
 
     if (textareaRef) textareaRef.style.height = "auto"
   }
@@ -1085,16 +1131,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <Show
             when={showStop()}
             fallback={
-              <Tooltip
-                value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
-                placement="top"
-              >
+              <Tooltip value={sendLabel()} placement="top">
                 <Button
                   variant="ghost"
                   size="small"
-                  onClick={() => void handleSend()}
+                  onClick={handleSendClick}
                   aria-disabled={!canSend()}
-                  aria-label={language.t("prompt.action.send")}
+                  aria-label={sendLabel()}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                     <path d="M1.5 1.5L14.5 8L1.5 14.5V9L10 8L1.5 7V1.5Z" />

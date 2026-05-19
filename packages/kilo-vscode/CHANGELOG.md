@@ -1,5 +1,80 @@
 # kilo-code
 
+## 7.3.1
+
+### Minor Changes
+
+- [#10382](https://github.com/Kilo-Org/kilocode/pull/10382) [`6ce2ded`](https://github.com/Kilo-Org/kilocode/commit/6ce2ded75c452326d1eec840d728a1616c7fb1db) - Make sections in the model picker collapsible. Click any section header (Favorites, Recommended, or a provider like Kilo Gateway) to hide its models. Collapse state resets each time the picker opens.
+
+- [#10274](https://github.com/Kilo-Org/kilocode/pull/10274) [`14a25b0`](https://github.com/Kilo-Org/kilocode/commit/14a25b037bbbd7596aea88729989511ffe4dfce6) - Support speech-to-text voice input in Agent Manager inline review comments.
+
+- [#10286](https://github.com/Kilo-Org/kilocode/pull/10286) [`6fcc3b6`](https://github.com/Kilo-Org/kilocode/commit/6fcc3b6a1e77e419482fe5c0377767b5500dbd51) - Export full VS Code session transcripts as Markdown files.
+
+### Patch Changes
+
+- [#10280](https://github.com/Kilo-Org/kilocode/pull/10280) [`3ac16c5`](https://github.com/Kilo-Org/kilocode/commit/3ac16c5be5c27ca35d46ca20da9475c606e048c5) - Keep long New Worktree prompts clear of selector controls and show inline model picker options without clipping.
+
+- [#10278](https://github.com/Kilo-Org/kilocode/pull/10278) [`3031de6`](https://github.com/Kilo-Org/kilocode/commit/3031de63028e2ba07e0d171bd671fb7ee5b10c50) - Keep continued Agent Manager sessions in the selected worktree instead of moving them to Local.
+
+- [#10287](https://github.com/Kilo-Org/kilocode/pull/10287) [`233da82`](https://github.com/Kilo-Org/kilocode/commit/233da827686f6dd38f908519b216eacc1cc8a012) - Keep inline review voice capture stable in rendered Markdown diffs.
+
+- [#10132](https://github.com/Kilo-Org/kilocode/pull/10132) [`b914576`](https://github.com/Kilo-Org/kilocode/commit/b91457673cd6a810e356f4f4cae0c6d0f257c6b2) - Restore only the Kilo Code sidebar, Agent Manager, or both on VS Code restart based on which views were open before shutdown.
+
+- [#10277](https://github.com/Kilo-Org/kilocode/pull/10277) [`4b816f6`](https://github.com/Kilo-Org/kilocode/commit/4b816f621baa163c8aaf3ec84ce15219d77bae19) - Send recorded voice prompts directly when the prompt send button is pressed.
+
+## 7.3.0
+
+## 7.2.54
+
+### Minor Changes
+
+- [#10230](https://github.com/Kilo-Org/kilocode/pull/10230) [`26f5393`](https://github.com/Kilo-Org/kilocode/commit/26f5393be272a31390f6a317555099ed2addd1b0) - Add a collapsible sidebar in the Agent Manager. The toggle button sits left of the tab title and the collapsed state persists across reloads and restarts. Starting a new session or worktree automatically reopens the sidebar so the new entry is visible.
+
+- [#10218](https://github.com/Kilo-Org/kilocode/pull/10218) [`4860e65`](https://github.com/Kilo-Org/kilocode/commit/4860e654ca1cc46c4e99acc3f40d4f1302e34944) - Support setting an auto-compaction threshold percentage so long sessions can compact before the context window is full.
+
+- [#10228](https://github.com/Kilo-Org/kilocode/pull/10228) [`911e7ce`](https://github.com/Kilo-Org/kilocode/commit/911e7ce73383cfd5780ec80ff8e8b8187061a18a) - Add syntax highlighting to shell command output with Shiki, labeled "Command" and "Output" sections, per-section copy buttons, and an "Open in Editor" action that opens the full untruncated output in a VS Code editor tab.
+
+- [#10258](https://github.com/Kilo-Org/kilocode/pull/10258) [`1af7973`](https://github.com/Kilo-Org/kilocode/commit/1af79731a8ed925f1f69aa536ba90a53b89e8dfb) - Support experimental speech-to-text voice input in VS Code prompt fields through Kilo Gateway.
+
+### Patch Changes
+
+- [#10196](https://github.com/Kilo-Org/kilocode/pull/10196) [`174d467`](https://github.com/Kilo-Org/kilocode/commit/174d467a4967c53fddfc97ae9663ebf17c0fafbc) - Keep Agent Manager state hidden from Git before creating local sessions.
+
+- [#10156](https://github.com/Kilo-Org/kilocode/pull/10156) [`e805d2f`](https://github.com/Kilo-Org/kilocode/commit/e805d2f756b785776cb1f60b97a253e3ae4c837c) - Keep VS Code session timeline, token, context, and cost stats in sync after restoring a checkpoint.
+
+- [#10136](https://github.com/Kilo-Org/kilocode/pull/10136) [`8af638e`](https://github.com/Kilo-Org/kilocode/commit/8af638e7e20c645b22d96da5e30665e8e9cbf6ad) - Show ChatGPT sign-in again when Codex authentication expires.
+
+- [#8754](https://github.com/Kilo-Org/kilocode/pull/8754) [`e498c02`](https://github.com/Kilo-Org/kilocode/commit/e498c02f7acc5c228bbd45f9e4f294bf5def21ca) Thanks [@shssoichiro](https://github.com/shssoichiro)! - Fix TUI diff rendering when header-like content lines appear inside a unified diff hunk.
+
+- [#10265](https://github.com/Kilo-Org/kilocode/pull/10265) [`900ba85`](https://github.com/Kilo-Org/kilocode/commit/900ba85b838e035952ea6ca9adf20cbc923e8d99) - Ensure snapshot installs package a fresh CLI backend so new extension features are available in local VSIX builds.
+
+- [#10227](https://github.com/Kilo-Org/kilocode/pull/10227) [`e1e2454`](https://github.com/Kilo-Org/kilocode/commit/e1e2454b4285109f1d4ef34b93d5d47f612faaea) - Hide Task tool subagent sessions from Agent Manager session lists.
+
+- [#10229](https://github.com/Kilo-Org/kilocode/pull/10229) [`41e3cda`](https://github.com/Kilo-Org/kilocode/commit/41e3cda971c37d155de443e58ae2aeafdaf928b1) - Move worktree file revert diff status checks into the VS Code extension host so Kilo no longer asks the CLI server to run git diff commands through Bun during workspace and Agent Manager reverts.
+
+- [#10240](https://github.com/Kilo-Org/kilocode/pull/10240) [`09f0156`](https://github.com/Kilo-Org/kilocode/commit/09f0156bfc66643870835251eef873d6e62f2791) - Keep the New Worktree model picker open when interacting with its search field.
+
+- [#10243](https://github.com/Kilo-Org/kilocode/pull/10243) [`47c22a2`](https://github.com/Kilo-Org/kilocode/commit/47c22a28e98a50955bd9470a5b3f78bce5d5b4ba) - Keep chat tool cards open or closed when streaming updates remount them.
+
+- [#10159](https://github.com/Kilo-Org/kilocode/pull/10159) [`64e45ea`](https://github.com/Kilo-Org/kilocode/commit/64e45eaba30641dd7b36fb65f79ddee3c0e14cf1) - Use the VS Code-native placeholder color for input fields so placeholder text is consistently distinct from values you have typed (Settings, Agent Manager, prompt input, model search, etc.).
+
+- [#10206](https://github.com/Kilo-Org/kilocode/pull/10206) [`177f7df`](https://github.com/Kilo-Org/kilocode/commit/177f7df04937e13b3ea5abc5a9c79a56c9814ab6) - Reset the To-dos tab when reverting a session snapshot.
+
+- [#10158](https://github.com/Kilo-Org/kilocode/pull/10158) [`d8245a0`](https://github.com/Kilo-Org/kilocode/commit/d8245a0ceb0989b8596c5a5d17fd1095ba9521be) - Fix Mermaid diagrams rendering with empty text inside every shape by restoring the `foreignObject` HTML integration point that DOMPurify dropped in 3.1.7.
+
+- [#10256](https://github.com/Kilo-Org/kilocode/pull/10256) [`da9292f`](https://github.com/Kilo-Org/kilocode/commit/da9292fbccad9f4c20f439e240790da3ab3a92d3) - Support viewing Agent Manager terminal tabs alongside the right diff sidebar, and send review comments to the active terminal.
+
+- [#10275](https://github.com/Kilo-Org/kilocode/pull/10275) [`f5dc95b`](https://github.com/Kilo-Org/kilocode/commit/f5dc95b99394c17ad7140bb034bc15a0f9de60b6) - Keep GPT-4o voice transcriptions closer to the words that were spoken.
+
+- [#10095](https://github.com/Kilo-Org/kilocode/pull/10095) [`710c9dc`](https://github.com/Kilo-Org/kilocode/commit/710c9dca1e9d5f522fa3fe1495dc41ec1eea4b66) - Keep configured mode models in sync when switching modes in VS Code.
+
+- Updated dependencies [[`262c2d6`](https://github.com/Kilo-Org/kilocode/commit/262c2d670474f0da50aa0c900e49aad93863acaf), [`4860e65`](https://github.com/Kilo-Org/kilocode/commit/4860e654ca1cc46c4e99acc3f40d4f1302e34944), [`47c22a2`](https://github.com/Kilo-Org/kilocode/commit/47c22a28e98a50955bd9470a5b3f78bce5d5b4ba), [`1af7973`](https://github.com/Kilo-Org/kilocode/commit/1af79731a8ed925f1f69aa536ba90a53b89e8dfb), [`1ea86fb`](https://github.com/Kilo-Org/kilocode/commit/1ea86fb6e15cbe486cb0af6f26995d0b1b2745a2), [`f5dc95b`](https://github.com/Kilo-Org/kilocode/commit/f5dc95b99394c17ad7140bb034bc15a0f9de60b6)]:
+  - @kilocode/kilo-ui@7.2.53
+  - @kilocode/sdk@7.3.0
+  - @kilocode/kilo-gateway@7.3.0
+  - @opencode-ai/ui@7.2.53
+  - @kilocode/kilo-indexing@7.2.53
+
 ## 7.2.51
 
 ### Patch Changes

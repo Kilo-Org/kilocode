@@ -71,6 +71,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
   private closing: Promise<void> | undefined
+  private onVisibilityChange: ((visible: boolean) => void) | undefined
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
@@ -181,8 +182,13 @@ export class AgentManagerProvider implements Disposable {
     this.attachPanel(
       this.host.openPanel({
         onBeforeMessage: (msg) => this.onMessage(msg),
+        worktreeDirectories: () => this.getWorktreeDirectories(),
       }),
     )
+  }
+
+  public onPanelVisibilityChange(cb: (visible: boolean) => void): void {
+    this.onVisibilityChange = cb
   }
 
   /** Restore the Agent Manager panel from a previously serialized state.
@@ -212,6 +218,7 @@ export class AgentManagerProvider implements Disposable {
     this.panel = ctx
 
     this.statsPoller.setVisible(ctx.visible)
+    this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
       this.statsPoller.setVisible(visible)
     })
@@ -233,6 +240,7 @@ export class AgentManagerProvider implements Disposable {
         this.prBridge.poller.stop()
         this.diffs.stop()
         this.panel = undefined
+        this.onVisibilityChange?.(false)
       }
       ctx.sessions.dispose()
     })
@@ -378,7 +386,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.deleteWorktree") return this.onDeleteWorktree(m.worktreeId)
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
-    if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
+    if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId, m.sessionId)
     if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId, m.messageId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
   }
@@ -416,6 +424,15 @@ export class AgentManagerProvider implements Disposable {
         state.removeSession(m.sessionId)
       })
       return null
+    }
+
+    if ((m.type === "sendMessage" || m.type === "sendCommand") && !m.sessionID) {
+      const ctx = typeof m.agentManagerContext === "string" ? m.agentManagerContext : undefined
+      const worktree = ctx && ctx !== "local" ? this.getStateManager()?.getWorktree(ctx) : undefined
+      if (worktree) {
+        if (m.draftID) this.activeSessionId = m.draftID
+        return { ...msg, contextDirectory: worktree.path }
+      }
     }
 
     if ((m.type === "sendMessage" || m.type === "sendCommand") && m.draftID && !m.sessionID) {
@@ -1049,7 +1066,7 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /** Add a new session to an existing worktree. */
-  private async onAddSessionToWorktree(worktreeId: string): Promise<null> {
+  private async onAddSessionToWorktree(worktreeId: string, sessionId?: string): Promise<null> {
     let client: KiloClient
     try {
       client = this.connectionService.getClient()
@@ -1065,6 +1082,26 @@ export class AgentManagerProvider implements Disposable {
     const worktree = state.getWorktree(worktreeId)
     if (!worktree) {
       this.log(`Worktree ${worktreeId} not found`)
+      return null
+    }
+
+    if (sessionId) {
+      if (state.getSession(sessionId)) state.moveSession(sessionId, worktreeId)
+      else state.addSession(sessionId, worktreeId)
+      this.registerWorktreeSession(sessionId, worktree.path)
+      this.pushState()
+      this.postToWebview({
+        type: "agentManager.sessionAdded",
+        sessionId,
+        worktreeId,
+      })
+      this.host.capture("Agent Manager Session Started", {
+        source: PLATFORM,
+        sessionId,
+        worktreeId,
+        existing: true,
+      })
+      this.log(`Added existing session ${sessionId} to worktree ${worktreeId}`)
       return null
     }
 
@@ -1646,6 +1683,14 @@ export class AgentManagerProvider implements Disposable {
   /** Expose worktree session→directory mappings for the auto-approve toggle. */
   public getSessionDirectories(): ReadonlyMap<string, string> {
     return this.panel?.sessions.getSessionDirectories() ?? new Map()
+  }
+
+  public getWorktreeDirectories(): string[] {
+    return (
+      this.getStateManager()
+        ?.getWorktrees()
+        .map((wt) => wt.path) ?? []
+    )
   }
 
   /**

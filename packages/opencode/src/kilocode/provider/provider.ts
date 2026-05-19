@@ -14,7 +14,7 @@ import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
-export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
+export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
 
 // ---------------------------------------------------------------------------
 // Bundled providers

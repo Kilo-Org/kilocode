@@ -12,9 +12,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.CountDownLatch
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -366,25 +366,26 @@ class KiloBackendAppServiceTest {
 
     @Test
     fun `loading tracks progress through Loading state`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
         val svc = create()
-        val states = mutableListOf<KiloAppState>()
 
-        val collector = scope.launch {
-            svc.appState.collect { states.add(it) }
+        try {
+            svc.connect()
+
+            val loading = withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+            assertIs<KiloAppState.Loading>(loading)
+
+            gate.countDown()
+            val ready = withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            }
+            assertIs<KiloAppState.Ready>(ready)
+        } finally {
+            gate.countDown()
         }
-
-        svc.connect()
-
-        withTimeout(10_000) {
-            svc.appState.first { it is KiloAppState.Ready }
-        }
-
-        collector.cancel()
-
-        // Should have passed through Loading at least once
-        assertTrue(states.any { it is KiloAppState.Loading })
-        // Should have reached Ready
-        assertTrue(states.any { it is KiloAppState.Ready })
     }
 
     @Test

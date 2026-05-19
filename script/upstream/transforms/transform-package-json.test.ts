@@ -5,8 +5,8 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
   const ours = {
     scripts: {
       "dev-setup": "kilo dev-setup",
-      "postinstall": "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
-      "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
+      postinstall: "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
+      extension: "bun --cwd packages/kilo-vscode script/launch.ts",
     },
   }
   const pkg: Record<string, unknown> = {
@@ -25,7 +25,7 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
 test("fixScripts removes upstream-only dead scripts from root", () => {
   const pkg: Record<string, unknown> = {
     scripts: {
-      "dev": "bun run --cwd packages/opencode src/index.ts",
+      dev: "bun run --cwd packages/opencode src/index.ts",
       "dev:desktop": "bun --cwd packages/desktop-electron dev",
       "dev:web": "bun --cwd packages/app dev",
       "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",

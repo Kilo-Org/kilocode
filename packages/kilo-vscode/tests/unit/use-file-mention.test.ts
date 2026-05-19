@@ -35,16 +35,16 @@ describe("useFileMention", () => {
         type: "fileSearchResult",
         requestId: "file-search-1",
         dir: "/repo",
-        paths: ["sdks/vscode/src/extension.ts"],
-        items: [{ path: "sdks/vscode/src/extension.ts", type: "opened-file" }],
+        paths: ["packages/kilo-vscode/src/extension.ts"],
+        items: [{ path: "packages/kilo-vscode/src/extension.ts", type: "opened-file" }],
       })
     }
 
-    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "sdks/vscode/src/extension.ts" }])
+    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" }])
 
     mention.onInput("@ex", 3)
 
-    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "sdks/vscode/src/extension.ts" }])
+    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" }])
 
     dispose.fn?.()
   })

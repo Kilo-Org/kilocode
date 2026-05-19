@@ -37,6 +37,7 @@ class HistoryController(
     @Volatile
     private var resolved = false
     private val lock = Mutex()
+    private val deletes = Mutex()
 
     /** Whether to filter cloud history by the current repository. */
     var repoOnly: Boolean = false
@@ -94,7 +95,9 @@ class HistoryController(
             val dir = item.directory ?: workspace.directory
             cs.launch {
                 try {
-                    sessions.deleteSession(item.id, dir)
+                    deletes.withLock {
+                        sessions.deleteSession(item.id, dir)
+                    }
                     edt {
                         deleting.remove(item.id)
                         local.remove(item.id)

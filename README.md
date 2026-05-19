@@ -102,7 +102,9 @@ kilo run --auto "run tests and fix any failures"
 We welcome contributions from developers, writers, and enthusiasts!
 To get started, please read our [Contributing Guide](/CONTRIBUTING.md). It includes details on setting up your environment, coding standards, types of contribution and how to submit pull requests.
 
-See [RELEASING.md](RELEASING.md) for the release process.
+See [RELEASING.md](RELEASING.md) for the VS Code extension and CLI release process.
+
+See [packages/kilo-jetbrains/RELEASING.md](packages/kilo-jetbrains/RELEASING.md) for the JetBrains plugin release process.
 
 ## Code of Conduct
 
