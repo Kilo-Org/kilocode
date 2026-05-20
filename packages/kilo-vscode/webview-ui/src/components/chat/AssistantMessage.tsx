@@ -25,7 +25,9 @@ import { useLanguage } from "../../context/language"
 import { useServer } from "../../context/server"
 import { snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
+import type { QuestionRequest } from "../../types/messages"
 import { QuestionDock } from "./QuestionDock"
+import { tr } from "./question-dock-utils"
 import { SuggestBar } from "./SuggestBar"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
@@ -121,6 +123,57 @@ type ToolStateProps = {
   status?: string
 }
 
+export function dismissedQuestionRequest(part: SDKPart): Pick<QuestionRequest, "questions"> | undefined {
+  if (part.type !== "tool") return undefined
+  const tp = part as unknown as ToolPart
+  if (tp.tool !== "question") return undefined
+  const state = tp.state as ToolStateProps
+  if (state.status !== "completed") return undefined
+  if (state.metadata?.dismissed !== true) return undefined
+  if (!Array.isArray(state.input?.questions)) return undefined
+  return { questions: state.input.questions as QuestionRequest["questions"] }
+}
+
+function DismissedQuestionCard(props: { request: Pick<QuestionRequest, "questions"> }) {
+  const language = useLanguage()
+  return (
+    <div data-component="question-dock" data-state="dismissed" data-collapsed="false">
+      <div data-slot="question-dock-header">
+        <div data-slot="question-dock-header-content">
+          <div data-slot="question-header-title">{language.t("common.dismiss")}</div>
+        </div>
+      </div>
+      <div data-slot="question-dock-body">
+        <div data-slot="question-dock-body-inner">
+          <For each={props.request.questions}>
+            {(question) => (
+              <div data-slot="question-review">
+                <div data-slot="question-text">{tr(language.t, question.questionKey, question.question)}</div>
+                <div data-slot="question-options">
+                  <For each={question.options}>
+                    {(option) => (
+                      <div data-slot="question-option" data-readonly="true">
+                        <span data-slot="question-option-main">
+                          <span data-slot="option-label">{tr(language.t, option.labelKey, option.label)}</span>
+                          <Show when={option.description}>
+                            <span data-slot="option-description">
+                              {tr(language.t, option.descriptionKey, option.description)}
+                            </span>
+                          </Show>
+                        </span>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            )}
+          </For>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TodoToolCard(props: { part: ToolPart }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
@@ -193,6 +246,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
 
           // Active question tool parts render the interactive QuestionDock inline
           const activeQuestion = createMemo(() => matchToolRequest(part, "question", session.questions()))
+          const dismissedQuestion = createMemo(() => dismissedQuestionRequest(part))
 
           // Active suggestion tool parts render the interactive SuggestBar inline
           const activeSuggestion = createMemo(() => matchToolRequest(part, "suggest", session.suggestions()))
@@ -216,6 +270,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               when={
                 isUpstreamSuppressed ||
                 activeQuestion() ||
+                dismissedQuestion() ||
                 activeSuggestion() ||
                 bash() ||
                 planExit() ||
@@ -227,44 +282,53 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                   when={activeQuestion()}
                   fallback={
                     <Show
-                      when={activeSuggestion()}
+                      when={dismissedQuestion()}
                       fallback={
                         <Show
-                          when={planExit()}
+                          when={activeSuggestion()}
                           fallback={
                             <Show
-                              when={bash()}
+                              when={planExit()}
                               fallback={
                                 <Show
-                                  when={isUpstreamSuppressed}
+                                  when={bash()}
                                   fallback={
-                                    <Part
-                                      part={part}
-                                      message={props.message as SDKMessage}
-                                      showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      reasoningAutoCollapse={display.reasoningAutoCollapse()}
-                                      feedback={props.feedback}
-                                      animate={
-                                        part.type === "tool" &&
-                                        ((part as unknown as ToolPart).state?.status === "pending" ||
-                                          (part as unknown as ToolPart).state?.status === "running")
+                                    <Show
+                                      when={isUpstreamSuppressed}
+                                      fallback={
+                                        <Part
+                                          part={part}
+                                          message={props.message as SDKMessage}
+                                          showAssistantCopyPartID={props.showAssistantCopyPartID}
+                                          reasoningAutoCollapse={display.reasoningAutoCollapse()}
+                                          feedback={props.feedback}
+                                          animate={
+                                            part.type === "tool" &&
+                                            ((part as unknown as ToolPart).state?.status === "pending" ||
+                                              (part as unknown as ToolPart).state?.status === "running")
+                                          }
+                                        />
                                       }
-                                    />
+                                    >
+                                      <TodoToolCard part={part as unknown as ToolPart} />
+                                    </Show>
                                   }
                                 >
-                                  <TodoToolCard part={part as unknown as ToolPart} />
+                                  {(tool) => (
+                                    <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />
+                                  )}
                                 </Show>
                               }
                             >
-                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
+                              {(tp) => <PlanExitCard part={tp()} />}
                             </Show>
                           }
                         >
-                          {(tp) => <PlanExitCard part={tp()} />}
+                          {(req) => <SuggestBar request={req()} />}
                         </Show>
                       }
                     >
-                      {(req) => <SuggestBar request={req()} />}
+                      {(req) => <DismissedQuestionCard request={req()} />}
                     </Show>
                   }
                 >

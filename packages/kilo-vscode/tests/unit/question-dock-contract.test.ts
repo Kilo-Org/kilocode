@@ -27,6 +27,7 @@ function extractBody(source: string, name: string): string {
 
 describe("QuestionDock explicit submit contract", () => {
   const source = readFile(FILE)
+  const assistantMessage = readFile(path.join(ROOT, "webview-ui/src/components/chat/AssistantMessage.tsx"))
   const pick = extractBody(source, "pick")
 
   it("keeps option clicks local instead of replying immediately", () => {
@@ -57,5 +58,11 @@ describe("QuestionDock explicit submit contract", () => {
 
   it("keeps the footer Submit button wired to submit()", () => {
     expect(source).toContain('<Button variant="primary" size="small" onClick={submit} disabled={store.sending}>')
+  })
+
+  it("renders dismissed question tool parts from their saved input", () => {
+    expect(assistantMessage).toContain("function DismissedQuestionCard")
+    expect(assistantMessage).toContain("const dismissedQuestion = createMemo(() => dismissedQuestionRequest(part))")
+    expect(assistantMessage).toContain("<DismissedQuestionCard request={req()} />")
   })
 })
