@@ -441,33 +441,17 @@ exports[`tool parameters JSON Schema (wire shape) websearch 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
-    "contextMaxCharacters": {
-      "description": "Maximum characters for context string optimized for LLMs (default: 10000)",
-      "type": "number",
-    },
-    "livecrawl": {
-      "description": "Live crawl mode - 'fallback': use live crawling as backup if cached content unavailable, 'preferred': prioritize live crawling (default: 'fallback')",
-      "enum": [
-        "fallback",
-        "preferred",
-      ],
+    "country": {
+      "description": "Optional ISO 3166-1 alpha-2 country code to localize results",
       "type": "string",
     },
-    "numResults": {
-      "description": "Number of search results to return (default: 8)",
+    "max_results": {
+      "default": 5,
+      "description": "Maximum number of search results to return (default: 5)",
       "type": "number",
     },
     "query": {
-      "description": "Websearch query",
-      "type": "string",
-    },
-    "type": {
-      "description": "Search type - 'auto': balanced search (default), 'fast': quick results, 'deep': comprehensive search",
-      "enum": [
-        "auto",
-        "fast",
-        "deep",
-      ],
+      "description": "Search query",
       "type": "string",
     },
   },

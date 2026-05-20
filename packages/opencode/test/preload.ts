@@ -53,6 +53,7 @@ delete process.env["LLM_GATEWAY_API_KEY"]
 delete process.env["GROQ_API_KEY"]
 delete process.env["MISTRAL_API_KEY"]
 delete process.env["PERPLEXITY_API_KEY"]
+delete process.env["PPLX_API_KEY"] // kilocode_change
 delete process.env["TOGETHER_API_KEY"]
 delete process.env["XAI_API_KEY"]
 delete process.env["DEEPSEEK_API_KEY"]

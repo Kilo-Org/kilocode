@@ -151,7 +151,7 @@ function edit(info: ToolProps<typeof EditTool>) {
 function websearch(info: ToolProps<typeof WebSearchTool>) {
   inline({
     icon: "◈",
-    title: `Exa Web Search "${info.input.query}"`,
+    title: `Perplexity Web Search "${info.input.query}"`, // kilocode_change
   })
 }
 
