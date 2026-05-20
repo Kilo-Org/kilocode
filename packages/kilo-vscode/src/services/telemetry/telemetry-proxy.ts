@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { TelemetryEventName, type TelemetryPropertiesProvider } from "./types"
-import { buildTelemetryPayload, buildTelemetryAuthHeader } from "./telemetry-proxy-utils"
+import { buildTelemetryAuthHeader } from "./telemetry-proxy-utils"
 
 /**
  * Singleton proxy that captures telemetry events and forwards them to the CLI
