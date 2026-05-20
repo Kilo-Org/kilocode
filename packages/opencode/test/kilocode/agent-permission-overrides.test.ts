@@ -13,6 +13,61 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
+test("code agent defaults edit and bash to ask on clean config", async () => {
+  await using tmp = await tmpdir()
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      expect(code).toBeDefined()
+      expect(Permission.evaluate("edit", "src/index.ts", code!.permission).action).toBe("ask")
+      expect(Permission.evaluate("bash", "ls -la", code!.permission).action).toBe("ask")
+      // read and search tools remain non-destructive
+      expect(Permission.evaluate("read", "src/index.ts", code!.permission).action).toBe("allow")
+      expect(Permission.evaluate("grep", "*", code!.permission).action).toBe("allow")
+      expect(Permission.evaluate("glob", "*", code!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("code agent respects explicit edit:allow user override", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        edit: "allow",
+        bash: "allow",
+      },
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      expect(code).toBeDefined()
+      expect(Permission.evaluate("edit", "src/index.ts", code!.permission).action).toBe("allow")
+      expect(Permission.evaluate("bash", "npm install", code!.permission).action).toBe("allow")
+    },
+  })
+})
+
+test("code agent respects explicit edit:deny user override", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      permission: {
+        edit: "deny",
+      },
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const code = await load(tmp.path, (svc) => svc.get("code"))
+      expect(code).toBeDefined()
+      expect(Permission.evaluate("edit", "src/index.ts", code!.permission).action).toBe("deny")
+    },
+  })
+})
+
 test("ask agent honors user MCP allow over generated ask rule", async () => {
   await using tmp = await tmpdir({
     config: {

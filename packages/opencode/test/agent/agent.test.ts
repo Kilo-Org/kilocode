@@ -52,7 +52,7 @@ test("code agent has correct default properties", async () => {
       expect(code).toBeDefined()
       expect(code?.mode).toBe("primary")
       expect(code?.native).toBe(true)
-      expect(evalPerm(code, "edit")).toBe("allow")
+      expect(evalPerm(code, "edit")).toBe("ask") // kilocode_change - default is ask on clean config
       expect(evalPerm(code, "bash")).toBe("ask") // kilocode_change - safe-bash default is ask
     },
   })
@@ -322,8 +322,8 @@ test("agent permission config merges with defaults", async () => {
       expect(code).toBeDefined()
       // Specific pattern is denied
       expect(Permission.evaluate("bash", "rm -rf *", code!.permission).action).toBe("deny")
-      // Edit still allowed
-      expect(evalPerm(code, "edit")).toBe("allow")
+      // Edit still asks (default on clean config)
+      expect(evalPerm(code, "edit")).toBe("ask")
       // kilocode_change end
     },
   })
