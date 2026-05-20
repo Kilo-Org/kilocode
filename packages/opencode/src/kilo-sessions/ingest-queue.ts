@@ -1,6 +1,7 @@
 import { ulid } from "ulid"
 import type * as SDK from "@kilocode/sdk/v2"
 import type { KiloSession } from "@/kilocode/session"
+import { capDelay, exponential } from "@kilo-code/boxes/schedule"
 
 export namespace IngestQueue {
   export type Client = {
@@ -104,11 +105,7 @@ export namespace IngestQueue {
       return false
     }
 
-    function backoff(count: number) {
-      // Exponential backoff capped to keep the system responsive.
-      const clamped = Math.min(count, 6)
-      return Math.min(60_000, 1_000 * 2 ** (clamped - 1))
-    }
+    const sched = capDelay(60_000, exponential(1_000, 2, 6))
 
     function id(value: unknown) {
       if (!value) return undefined
@@ -232,7 +229,7 @@ export namespace IngestQueue {
             return
           }
 
-          const delay = backoff(count)
+          const { delay } = sched.next()
           retry.set(sessionId, { count, until: now() + delay })
           options.log.error("share sync failed", { sessionId, error: "network", attempt: count, retryInMs: delay })
           enqueue(sessionId, items, "fill", now() + delay)
@@ -276,7 +273,7 @@ export namespace IngestQueue {
           return
         }
 
-        const delay = backoff(count)
+        const { delay } = sched.next()
         retry.set(sessionId, { count, until: now() + delay })
         options.log.error("share sync failed", {
           sessionId,
