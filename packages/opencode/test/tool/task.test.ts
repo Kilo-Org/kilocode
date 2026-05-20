@@ -96,7 +96,7 @@ const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
     Config.defaultLayer,
-    Provider.defaultLayer,
+    Provider.defaultLayer, // kilocode_change - TaskTool resolves Provider.Service
     CrossSpawnSpawner.defaultLayer,
     Session.defaultLayer,
     Truncate.defaultLayer,

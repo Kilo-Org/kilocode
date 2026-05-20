@@ -359,6 +359,10 @@ exports[`tool parameters JSON Schema (wire shape) task 1`] = `
       "description": "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
       "type": "string",
     },
+    "variant": {
+      "description": "Optional reasoning level / variant to run this subtask at (e.g. 'low', 'medium', 'high', 'xhigh', 'max'). Valid values depend on the subagent's model (Claude Opus 4.7 exposes 'low' / 'medium' / 'high' / 'xhigh' / 'max'; OpenAI reasoning models expose 'none' / 'minimal' / 'low' / 'medium' / 'high' / 'xhigh'). Omit to use the subagent's configured variant or default reasoning. Invalid values return an error listing the available variants for the target model.",
+      "type": "string",
+    },
   },
   "required": [
     "description",
