@@ -1,6 +1,7 @@
 {
   lib,
   stdenvNoCC,
+  stdenv,
   callPackage,
   bun,
   nodejs,
@@ -8,6 +9,7 @@
   makeBinaryWrapper,
   models-dev,
   ripgrep,
+  patchelf,
   installShellFiles,
   versionCheckHook,
   writableTmpDirAsHomeHook,
@@ -24,6 +26,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     installShellFiles
     makeBinaryWrapper
     models-dev
+    patchelf
     writableTmpDirAsHomeHook
   ];
 
@@ -41,6 +44,9 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   env.KILO_DISABLE_MODELS_FETCH = true;
   env.KILO_VERSION = finalAttrs.version;
   env.KILO_CHANNEL = "local";
+  # The build script patches Bun single-file executables before smoke tests.
+  # Use the Nix store loader for package builds; release builds keep FHS defaults.
+  env.KILO_LINUX_INTERPRETER = lib.optionalString stdenvNoCC.hostPlatform.isLinux stdenv.cc.bintools.dynamicLinker;
 
   buildPhase = ''
     runHook preBuild

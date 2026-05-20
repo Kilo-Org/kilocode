@@ -238,7 +238,7 @@ for (const item of targets) {
       "arm64-musl": "/lib/ld-musl-aarch64.so.1",
     }
     const key = item.abi === "musl" ? `${item.arch}-musl` : item.arch
-    const interpreter = interpreters[key]
+    const interpreter = process.env.KILO_LINUX_INTERPRETER || interpreters[key]
     if (interpreter) {
       try {
         await $`patchelf --set-interpreter ${interpreter} dist/${name}/bin/kilo`
