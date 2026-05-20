@@ -32,6 +32,7 @@ import { SessionContext } from "../context/session"
 import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
+import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
@@ -179,6 +180,7 @@ export function mockSessionValue(overrides?: {
     hasOlderMessages: () => false,
     messageMutation: () => undefined,
     messages: () => [],
+    visibleMessages: () => [],
     userMessages: () => [],
     allMessages: () => ({}),
     allParts: () => ({}),
@@ -286,6 +288,7 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
 
     const value = {
       config: createMemo(() => cfg()),
+      globalConfig: createMemo(() => cfg()),
       settings,
       features,
       loading: () => false,
@@ -293,6 +296,14 @@ const ConfigWrapper: ParentComponent<{ config?: Config; onConfigChange?: (config
       saving: () => false,
       saveError: () => null,
       updateConfig: (partial: Partial<Config>) => {
+        setCfg((prev) => {
+          const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
+          props.onConfigChange?.(next)
+          return next
+        })
+        setDirty(true)
+      },
+      updateGlobalConfig: (partial: Partial<Config>) => {
         setCfg((prev) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config
           props.onConfigChange?.(next)
@@ -344,21 +355,23 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                       <NotificationsContext.Provider value={notifications}>
                         <SessionContext.Provider value={session as any}>
                           <IndexingProvider>
-                            <DataProvider data={data()} directory="/project/">
-                              <DiffComponentProvider component={Diff}>
-                                <CodeComponentProvider component={Code}>
-                                  <FileComponentProvider component={File}>
-                                    <MarkedProvider>
-                                      {props.noPadding ? (
-                                        props.children
-                                      ) : (
-                                        <div style={{ padding: "12px" }}>{props.children}</div>
-                                      )}
-                                    </MarkedProvider>
-                                  </FileComponentProvider>
-                                </CodeComponentProvider>
-                              </DiffComponentProvider>
-                            </DataProvider>
+                            <KiloEmbeddingModelsProvider>
+                              <DataProvider data={data()} directory="/project/">
+                                <DiffComponentProvider component={Diff}>
+                                  <CodeComponentProvider component={Code}>
+                                    <FileComponentProvider component={File}>
+                                      <MarkedProvider>
+                                        {props.noPadding ? (
+                                          props.children
+                                        ) : (
+                                          <div style={{ padding: "12px" }}>{props.children}</div>
+                                        )}
+                                      </MarkedProvider>
+                                    </FileComponentProvider>
+                                  </CodeComponentProvider>
+                                </DiffComponentProvider>
+                              </DataProvider>
+                            </KiloEmbeddingModelsProvider>
                           </IndexingProvider>
                         </SessionContext.Provider>
                       </NotificationsContext.Provider>

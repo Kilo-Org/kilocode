@@ -20,6 +20,7 @@ import { Shell } from "@/shell/shell"
 import { BashArity } from "@/permission/arity"
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
+import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { Effect, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -296,7 +297,7 @@ const ask = Effect.fn("BashTool.ask")(function* (ctx: Tool.Context, scan: Scan, 
     permission: "bash",
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command }, // kilocode_change
+    metadata: { command: normalizeUrls(command) }, // kilocode_change
   })
 })
 

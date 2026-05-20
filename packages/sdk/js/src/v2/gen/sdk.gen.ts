@@ -60,7 +60,10 @@ import type {
   GlobalHealthResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
+  IndexingStatusResponses,
   InstanceDisposeResponses,
+  KiloAudioTranscriptionsErrors,
+  KiloAudioTranscriptionsResponses,
   KiloClawChatCredentialsResponses,
   KiloClawStatusResponses,
   KiloCloudSessionGetErrors,
@@ -4794,6 +4797,38 @@ export class Network extends HeyApiClient {
   }
 }
 
+export class Indexing extends HeyApiClient {
+  /**
+   * Get indexing status
+   *
+   * Retrieve the current code indexing status for the active project.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<IndexingStatusResponses, unknown, ThrowOnError>({
+      url: "/indexing/status",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Suggestion extends HeyApiClient {
   /**
    * List pending suggestions
@@ -5712,6 +5747,60 @@ export class Organization extends HeyApiClient {
   }
 }
 
+export class Audio extends HeyApiClient {
+  /**
+   * Speech to text transcription
+   *
+   * Proxy an audio transcription request to the Kilo Gateway
+   */
+  public transcriptions<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      model?: string
+      input_audio?: {
+        data: string
+        format: string
+      }
+      language?: string
+      prompt?: string
+      temperature?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "model" },
+            { in: "body", key: "input_audio" },
+            { in: "body", key: "language" },
+            { in: "body", key: "prompt" },
+            { in: "body", key: "temperature" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KiloAudioTranscriptionsResponses,
+      KiloAudioTranscriptionsErrors,
+      ThrowOnError
+    >({
+      url: "/kilo/audio/transcriptions",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Session3 extends HeyApiClient {
   /**
    * Get cloud session
@@ -6033,6 +6122,11 @@ export class Kilo extends HeyApiClient {
     return (this._organization ??= new Organization({ client: this.client }))
   }
 
+  private _audio?: Audio
+  get audio(): Audio {
+    return (this._audio ??= new Audio({ client: this.client }))
+  }
+
   private _cloud?: Cloud
   get cloud(): Cloud {
     return (this._cloud ??= new Cloud({ client: this.client }))
@@ -6185,6 +6279,11 @@ export class KiloClient extends HeyApiClient {
   private _network?: Network
   get network(): Network {
     return (this._network ??= new Network({ client: this.client }))
+  }
+
+  private _indexing?: Indexing
+  get indexing(): Indexing {
+    return (this._indexing ??= new Indexing({ client: this.client }))
   }
 
   private _suggestion?: Suggestion

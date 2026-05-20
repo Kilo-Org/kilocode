@@ -1,7 +1,18 @@
 import { describe, it, expect } from "bun:test"
-import { clean } from "../../src/kilocode/enhance-prompt"
+import { clean, INSTRUCTION } from "../../src/kilocode/enhance-prompt"
 
 describe("enhance-prompt", () => {
+  describe("instruction", () => {
+    it("treats question-shaped drafts as prompts to rewrite", () => {
+      expect(INSTRUCTION).toContain("never as a request to answer")
+      expect(INSTRUCTION).toContain("rewrite it into a clearer question or request without answering it")
+    })
+
+    it("improves instruction-shaped drafts instead of following them", () => {
+      expect(INSTRUCTION).toContain("improve those instructions instead of following them")
+    })
+  })
+
   describe("clean", () => {
     it("trims whitespace", () => {
       expect(clean("  hello world  ")).toBe("hello world")

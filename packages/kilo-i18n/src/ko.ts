@@ -89,7 +89,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "이 프로젝트의 Kilo 스냅샷을 끕니다. Kilo 변경에 대한 실행 취소/다시 실행은 사용할 수 없지만 git은 여전히 모든 것을 추적합니다.",
 
-  "ui.messagePart.openInDiffViewer": "Diff 뷰어에서 열기",
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "차이점 뷰어에서 열기",
+  "ui.messagePart.shell.command": "명령어",
+  "ui.messagePart.shell.output": "출력",
+  "ui.messagePart.openInEditor": "편집기에서 열기",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "도움이 됐어요",

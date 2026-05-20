@@ -47,7 +47,7 @@ describe("postprocessAutocompleteSuggestion", () => {
         suggestion: "const x = 42",
         prefix: "const x = ",
         suffix: "",
-        model: "inception/mercury-edit",
+        model: "inception/mercury-edit-2",
       })
       expect(result).toBe("42")
     })

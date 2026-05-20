@@ -7,6 +7,7 @@ import {
   buildTextAfterMentionSelect,
   buildFileAttachments,
   buildMentionResults,
+  filterMentionResults,
   type MentionResult,
 } from "./file-mention-utils"
 
@@ -120,7 +121,7 @@ export function useFileMention(
     textarea.setSelectionRange(pos, pos)
     textarea.focus()
 
-    if (result.type === "file" || result.type === "folder")
+    if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
       setMentionedPaths((prev) => new Set([...prev, result.value]))
     closeMention()
     onSelect?.()
@@ -133,7 +134,12 @@ export function useFileMention(
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
-      setMentionResults(buildMentionResults(query, [], git?.() ?? true))
+      setMentionResults((prev) => {
+        const next = filterMentionResults(query, prev)
+        if (next.length) return next
+        return buildMentionResults(query, [], git?.() ?? true)
+      })
+      setMentionIndex(0)
       requestFileSearch(query)
     } else {
       closeMention()

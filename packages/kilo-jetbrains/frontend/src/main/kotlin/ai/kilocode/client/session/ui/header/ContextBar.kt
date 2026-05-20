@@ -2,7 +2,7 @@ package ai.kilocode.client.session.ui.header
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.ContextUsage
-import ai.kilocode.client.session.ui.SessionStyle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
@@ -15,14 +15,14 @@ import java.awt.RenderingHints
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-internal class ContextBar : JPanel(BorderLayout(UiStyle.Gap.inline(), 0)) {
+internal class ContextBar : JPanel(BorderLayout(UiStyle.Gap.md(), 0)) {
     private val used = JBLabel()
     private val limit = JBLabel()
     private val meter = Meter()
 
     init {
         isOpaque = false
-        border = JBUI.Borders.empty(UiStyle.Space.SM, 0, 0, 0)
+        border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
         add(used, BorderLayout.WEST)
         add(meter, BorderLayout.CENTER)
         add(limit, BorderLayout.EAST)
@@ -40,7 +40,7 @@ internal class ContextBar : JPanel(BorderLayout(UiStyle.Gap.inline(), 0)) {
         repaint()
     }
 
-    fun applyStyle(style: SessionStyle) {
+    fun applyStyle(style: SessionEditorStyle) {
         background = style.editorBackground
         foreground = style.editorForeground
         meter.background = style.editorBackground
@@ -143,7 +143,7 @@ private class Meter : JComponent() {
     fun reservedColor(): Color = shade(0.28f)
 
     private fun shade(alpha: Float): Color {
-        val base = background ?: UiStyle.Colors.panel()
+        val base = background ?: UiStyle.Colors.editorBackground()
         val grey = if (UiStyle.Colors.bright(base)) Color.BLACK else Color.WHITE
         return UiStyle.Colors.blend(base, grey, alpha)
     }

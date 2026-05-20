@@ -1,9 +1,8 @@
 import { lstat } from "fs/promises" // kilocode_change
 import { Effect, Option, Schema, Scope } from "effect"
 import { NonNegativeInt } from "@/util/schema"
-import { createReadStream } from "fs"
 import * as path from "path"
-import { Readable } from "stream" // kilocode_change
+import type { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
@@ -15,6 +14,7 @@ import { Instruction } from "../session/instruction"
 import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
+import * as TextStream from "../kilocode/text-stream"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -354,12 +354,14 @@ export const ReadTool = Tool.define(
   }),
 )
 
-// kilocode_change start
+// kilocode_change start - exported (so readDirectoryFiles can reuse it) and
+// routed through TextStream.withFallback so non-UTF-8 files are decoded via
+// iconv. The body otherwise matches upstream.
 export async function lines(filepath: string, opts: { limit: number; offset: number }) {
-  // kilocode_change end
-  // kilocode_change start - decode with detected encoding; replaces createReadStream(filepath, { encoding: "utf8" })
-  const encoded = await Encoding.read(filepath)
-  const stream = Readable.from([encoded.text])
+  return TextStream.withFallback(filepath, (stream) => readLines(stream, opts))
+}
+
+async function readLines(stream: Readable, opts: { limit: number; offset: number }) {
   // kilocode_change end
   const rl = createInterface({
     input: stream,

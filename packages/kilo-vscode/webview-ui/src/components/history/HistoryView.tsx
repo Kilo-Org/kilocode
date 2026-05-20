@@ -4,7 +4,7 @@
  * Contains a tab bar ("Local" | "Cloud") and an always-visible "Import session" button.
  */
 
-import { Component, createSignal } from "solid-js"
+import { Component, createEffect, createSignal, onCleanup } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
@@ -23,6 +23,21 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   const dialog = useDialog()
   const session = useSession()
   const [tab, setTab] = createSignal<"local" | "cloud">("local")
+  let content: HTMLDivElement | undefined
+
+  createEffect(() => {
+    tab()
+
+    const frame = requestAnimationFrame(() => {
+      content
+        ?.querySelector<
+          HTMLInputElement | HTMLTextAreaElement
+        >('[data-slot="list-search"] input, [data-slot="list-search"] textarea')
+        ?.focus()
+    })
+
+    onCleanup(() => cancelAnimationFrame(frame))
+  })
 
   function openImport() {
     dialog.show(() => (
@@ -66,7 +81,7 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
         </Button>
       </div>
 
-      <div class="history-view-content">
+      <div class="history-view-content" ref={content}>
         {tab() === "local" ? (
           <SessionList onSelectSession={props.onSelectSession} />
         ) : (

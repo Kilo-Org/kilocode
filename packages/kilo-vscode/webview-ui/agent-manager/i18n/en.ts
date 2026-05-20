@@ -1,5 +1,7 @@
 export const dict = {
   "agentManager.local": "local",
+  "agentManager.sidebar.collapse": "Collapse sidebar",
+  "agentManager.sidebar.expand": "Show sidebar",
   "agentManager.section.worktrees": "WORKTREES",
   "agentManager.section.sessions": "SESSIONS",
   "agentManager.notGitRepo": "Not a git repository",
@@ -53,7 +55,7 @@ export const dict = {
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
   "agentManager.tab.newOptions": "More new-tab options",
-  "agentManager.tabsMenu.label": "Search open tabs",
+  "agentManager.tabsMenu.label": "Search and switch tabs",
   "agentManager.tabsMenu.search": "Search tabs...",
   "agentManager.tabsMenu.empty": "No matching tabs",
   "agentManager.tabsMenu.status.waiting": "Wait",

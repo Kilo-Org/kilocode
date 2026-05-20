@@ -29,6 +29,7 @@ export interface SkillsConfig {
 
 export interface CompactionConfig {
   auto?: boolean
+  threshold_percent?: number | null
   prune?: boolean
 }
 
@@ -52,6 +53,7 @@ export interface CommitMessageConfig {
 }
 
 export type IndexingProvider =
+  | "kilo"
   | "openai"
   | "ollama"
   | "openai-compatible"
@@ -68,6 +70,7 @@ export interface IndexingConfig {
   model?: string
   dimension?: number
   vectorStore?: "lancedb" | "qdrant"
+  kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
   ollama?: { baseUrl?: string }
   "openai-compatible"?: { baseUrl?: string; apiKey?: string }
@@ -83,6 +86,20 @@ export interface IndexingConfig {
   searchMaxResults?: number
   embeddingBatchSize?: number
   scannerMaxBatchRetries?: number
+}
+
+export type KiloEmbeddingModel = {
+  id: string
+  name: string
+  dimension: number
+  scoreThreshold: number
+  note?: string
+}
+
+export type KiloEmbeddingModelCatalog = {
+  defaultModel: string
+  models: KiloEmbeddingModel[]
+  aliases: Record<string, string>
 }
 
 export type IndexingStatus = SdkIndexingStatus

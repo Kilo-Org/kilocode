@@ -37,7 +37,7 @@ export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
 export const POLL_INTERVAL_MS = 3000
 
 /** Default model for authenticated users */
-export const DEFAULT_MODEL = "kilo-auto/balanced"
+export const DEFAULT_MODEL = "kilo-auto/free"
 
 /** Default model for anonymous/free usage */
 export const DEFAULT_FREE_MODEL = "kilo-auto/free"
@@ -65,6 +65,7 @@ export const MODELS_FETCH_TIMEOUT_MS = 10 * 1000
  */
 export const HEADER_ORGANIZATIONID = "X-KILOCODE-ORGANIZATIONID"
 export const HEADER_TASKID = "X-KILOCODE-TASKID"
+export const HEADER_PARENT_TASKID = "X-KILOCODE-PARENT-TASKID"
 export const HEADER_PROJECTID = "X-KILOCODE-PROJECTID"
 export const HEADER_TESTER = "X-KILOCODE-TESTER"
 export const HEADER_EDITORNAME = "X-KILOCODE-EDITORNAME"

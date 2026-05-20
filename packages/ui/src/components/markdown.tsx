@@ -7,7 +7,7 @@ import { ComponentProps, createEffect, createResource, createSignal, onCleanup, 
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
-import { hasMermaid, preserveMermaid, renderMermaid } from "../kilocode/markdown-mermaid" // kilocode_change
+import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
 
 type Entry = {
   hash: string
@@ -340,6 +340,23 @@ export function Markdown(
       copied: i18n.t("ui.message.copied"),
     }
 
+    // kilocode_change start: Mermaid diagram rendering
+    const mermaid = {
+      rendering: i18n.t("ui.mermaid.rendering"),
+      renderError: (message: string) => i18n.t("ui.mermaid.renderError", { message }),
+      errorDefault: i18n.t("ui.mermaid.errorDefault"),
+      errorEmpty: i18n.t("ui.mermaid.errorEmpty"),
+      copied: i18n.t("ui.message.copied"),
+      copy: i18n.t("ui.message.copy"),
+      download: i18n.t("ui.mermaid.download"),
+      copySource: i18n.t("ui.mermaid.copySource"),
+      copySvg: i18n.t("ui.mermaid.copySvg"),
+      copyPng: i18n.t("ui.mermaid.copyPng"),
+      downloadSvg: i18n.t("ui.mermaid.downloadSvg"),
+      downloadPng: i18n.t("ui.mermaid.downloadPng"),
+    }
+    // kilocode_change end
+
     // kilocode_change start
     const fast = tryFastRender(container, content, local.streaming, decorate, setupCodeCopy, () => labels, copyCleanup)
     if (fast.handled) {
@@ -352,7 +369,7 @@ export function Markdown(
         pendingLabels = undefined
       }
       copyCleanup = fast.copyCleanup
-      kickMermaid(container, local.streaming ?? false)
+      kickMermaid(container, local.streaming ?? false, mermaid)
       kickHighlight(container, labels)
       return
     }
@@ -417,7 +434,7 @@ export function Markdown(
             const fromHash = fromEl.getAttribute("data-source-hash")
             const toCode = toEl.querySelector("code")?.textContent ?? ""
             if (fromHash === fnv1a(toCode)) return false
-            // Source changed during streaming — fall through so morphdom replaces
+            // Source changed during streaming — fall through so morphdom replaces // kilocode_change
             // the stale highlighted block with the updated plain block, which will
             // be re-highlighted on the next deferredHighlight pass.
           }
@@ -426,7 +443,7 @@ export function Markdown(
       })
       // kilocode_change end
 
-      kickMermaid(container, local.streaming ?? false) // kilocode_change
+      kickMermaid(container, local.streaming ?? false, mermaid) // kilocode_change
       kickHighlight(container, nextLabels)
     })
     // kilocode_change end
@@ -456,7 +473,7 @@ export function Markdown(
   // kilocode_change end
 
   // kilocode_change start: Mermaid diagram rendering
-  function kickMermaid(container: HTMLDivElement, streaming: boolean) {
+  function kickMermaid(container: HTMLDivElement, streaming: boolean, labels: MermaidLabels) {
     mermaidState.signal.aborted = true
     mermaidState.gen++
     if (!hasMermaid(container)) return
@@ -465,7 +482,7 @@ export function Markdown(
     const gen = mermaidState.gen
     const signal = { aborted: false }
     mermaidState.signal = signal
-    void renderMermaid(container, signal).catch((err) => {
+    void renderMermaid(container, signal, labels).catch((err) => {
       if (gen !== mermaidState.gen || signal.aborted) return
       console.warn("Mermaid render failed", err)
     })

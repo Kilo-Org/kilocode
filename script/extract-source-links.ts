@@ -48,6 +48,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/api\.openai\.com/,
   /^https?:\/\/api\.github\.com/,
   /^https?:\/\/api\.githubcopilot\.com/,
+  /^https?:\/\/[^/]+\.openai\.azure\.com\/openai/, // kilocode_change
   /^https?:\/\/api\.cloudflare\.com/,
   /^https?:\/\/api\.releases\.hashicorp\.com/,
   /^https?:\/\/auth\.openai\.com/,
@@ -84,7 +85,7 @@ const SKIP_DIRS = ["node_modules", ".storybook", "stories", "test", "tests", "__
 const SKIP_PATH_SEGMENTS = ["continuedev"]
 
 // Individual files to skip (data files full of non-user-facing URLs)
-const SKIP_FILES = ["models-snapshot.ts", "models-snapshot.js"]
+const SKIP_FILES = ["models-snapshot.ts", "models-snapshot.js", "check-forbidden-strings.ts"] // kilocode_change
 
 function shouldExclude(url: string): boolean {
   return EXCLUDE_PATTERNS.some((re) => re.test(url))

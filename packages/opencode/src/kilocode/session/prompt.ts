@@ -79,6 +79,29 @@ export namespace KiloSessionPrompt {
     yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
   })
 
+  export const recoverProviderFinishError = Effect.fn("KiloSessionPrompt.recoverProviderFinishError")(
+    function* (input: {
+      sessionID: SessionID
+      status: Pick<SessionStatus.Interface, "get">
+      sessions: Pick<Session.Interface, "messages" | "removeMessage">
+    }) {
+      const state = yield* input.status.get(input.sessionID)
+      if (state.type !== "idle") return
+
+      const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+      const tail = msgs.at(-1)
+      if (!tail || tail.info.role !== "assistant") return
+      if (tail.info.finish !== "error" || tail.info.error) return
+      if (!tail.parts.some((part) => part.type === "step-finish" && part.reason === "error")) return
+
+      const prev = msgs.at(-2)
+      if (!prev || prev.info.role !== "user") return
+      if (tail.info.parentID !== prev.info.id) return
+
+      yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+    },
+  )
+
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }
     session: Pick<Session.Info, "permission">
@@ -118,7 +141,17 @@ export namespace KiloSessionPrompt {
     cache: EnvCache
   }) {
     if (input.cache.user !== input.lastUser.id) {
-      input.cache.block = environmentDetails(input.lastUser.editorContext)
+      const ctx = (() => {
+        try {
+          return Instance.current
+        } catch {
+          return undefined
+        }
+      })()
+      input.cache.block = environmentDetails({
+        ...input.lastUser.editorContext,
+        ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
+      })
       input.cache.user = input.lastUser.id
     }
     if (!input.cache.block) return

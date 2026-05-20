@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "مشاركة هذه الجلسة ونسخ الرابط إلى الحافظة",
   "command.session.unshare": "إلغاء مشاركة الجلسة",
   "command.session.unshare.description": "إيقاف مشاركة هذه الجلسة",
+  "command.session.export": "تصدير سجل الجلسة",
 
   "palette.search.placeholder": "البحث في الملفات والأوامر والجلسات",
   "palette.empty": "لا توجد نتائج",
@@ -137,6 +138,16 @@ export const dict = {
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
+  "provider.connect.prompt.required": "{{field}} مطلوب",
+  "provider.connect.azure.endpointType.label": "حدد تكوين نقطة نهاية Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "اسم المورد",
+  "provider.connect.azure.endpointType.resourceName.hint": "قم بإنشاء نقطة النهاية من اسم مورد Azure الخاص بك",
+  "provider.connect.azure.endpointType.baseURL.label": "URL الكامل لنقطة النهاية",
+  "provider.connect.azure.endpointType.baseURL.hint": "استخدم نقطة نهاية Azure OpenAI مخصصة",
+  "provider.connect.azure.resourceName.label": "اسم مورد Azure",
+  "provider.connect.azure.resourceName.placeholder": "على سبيل المثال: my-models",
+  "provider.connect.azure.baseURL.label": "URL نقطة نهاية Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "على سبيل المثال: https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "يمنحك OpenCode Zen الوصول إلى مجموعة مختارة من النماذج الموثوقة والمحسنة لوكلاء البرمجة.",
   "provider.connect.opencodeZen.line2":
@@ -165,6 +176,8 @@ export const dict = {
   "model.tag.latest": "الأحدث",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
+  "model.group.collapse": "طي {{group}}",
+  "model.group.expand": "توسيع {{group}}",
   "model.favorite.add": "إضافة إلى المفضلة",
   "model.favorite.remove": "إزالة من المفضلة",
   "model.provider.anthropic": "Anthropic",
@@ -258,6 +271,7 @@ export const dict = {
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
   "prompt.action.send.blocked": "أجب عن السؤال المعلق أو تجاهله أولاً",
+  "prompt.action.send.recording": "تفريغ وإرسال",
   "prompt.action.stop": "توقف",
   "prompt.action.enhance": "تحسين النص",
   "prompt.action.autoApprove.enable": "تفعيل الموافقة التلقائية",
@@ -267,6 +281,20 @@ export const dict = {
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
+
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي",
+  "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
+  "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
+  "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
+  "speechToText.error.title": "فشل الإدخال الصوتي",
+  "speechToText.error.loginRequired": "قم بتسجيل الدخول إلى Kilo لاستخدام الإدخال الصوتي.",
+  "speechToText.error.permission": "تم رفض إذن الوصول إلى الميكروفون.",
+  "speechToText.error.microphone": "تعذر بدء تشغيل الميكروفون.",
+  "speechToText.error.recording": "فشل التسجيل.",
+  "speechToText.error.emptyRecording": "لم يتم تسجيل أي صوت.",
+  "speechToText.error.emptyTranscript": "لم يتم اكتشاف أي كلام.",
+  "speechToText.error.encoding": "تعذر تشفير التسجيل.",
+  "speechToText.toast.transcribed": "تم إدراج النص المنسوخ",
 
   "prompt.toast.pasteUnsupported.title": "لصق غير مدعوم",
   "prompt.toast.pasteUnsupported.description": "يمكن لصق الصور أو ملفات PDF فقط هنا.",
@@ -452,6 +480,11 @@ export const dict = {
   "error.promotionLimit.description":
     "سجّل مجانًا للمتابعة واستكشاف أكثر من 500 نموذج. يستغرق دقيقتين، بدون بطاقة ائتمان. أو عُد لاحقًا.",
   "error.promotionLimit.action": "التسجيل",
+  "error.providerAuth.title": "تم تسجيل خروجك من {{provider}}",
+  "error.providerAuth.description": "أعد الاتصال بـ {{provider}}، ثم أرسل رسالتك مرة أخرى.",
+  "error.providerAuth.chatgpt.title": "تسجيل الدخول باستخدام ChatGPT مرة أخرى",
+  "error.providerAuth.chatgpt.description":
+    "سجل الدخول باستخدام ChatGPT مرة أخرى، ثم أرسل رسالتك مرة أخرى لمواصلة استخدام نماذج Codex.",
 
   "error.chain.unknown": "خطأ غير معروف",
   "error.chain.causedBy": "بسبب:",
@@ -1026,8 +1059,17 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.globalEnable.title": "تمكين عام",
+  "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
+  "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
+  "settings.indexing.projectEnable.description": "تمكين الفهرسة لمساحة العمل هذه عندما تكون الفهرسة العامة متوقفة.",
+  "settings.indexing.projectEnable.disabledTooltip": "الفهرسة العامة مفعلة، لذا هذا المشروع مشمول بالفعل.",
   "settings.indexing.provider.title": "موفر التضمين",
   "settings.indexing.provider.description": "اختر الموفر المستخدم لإنشاء التضمينات للبحث الدلالي.",
+  "settings.indexing.kiloModel.title": "إعداد مسبق لنموذج Kilo",
+  "settings.indexing.kiloModel.description": "اختر نموذج تضمين مدعومًا ومستضافًا بواسطة Kilo.",
+  "settings.indexing.kiloSignIn.title": "تسجيل الدخول إلى Kilo مطلوب",
+  "settings.indexing.kiloSignIn.description": "سجّل الدخول إلى Kilo لاستخدام التضمينات المستضافة.",
   "settings.indexing.model.title": "نموذج التضمين",
   "settings.indexing.model.description": "تجاوز نموذج التضمين الافتراضي للموفر المحدد.",
   "settings.indexing.dimension.title": "بُعد المتجه",
@@ -1188,6 +1230,13 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
   "settings.experimental.agentManagerTool.description":
     "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
+  "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
+  "settings.experimental.speechToText.description":
+    "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "قم بتمكين وتسجيل الدخول إلى Kilo provider لاستخدام الإدخال الصوتي في حقول المطالبة.",
+  "settings.experimental.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
+  "settings.experimental.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
@@ -1354,7 +1403,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "تمكين اللقطات",
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
-  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً عند امتلائه",
+  "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
+  "settings.context.compactionLimit.title": "حد الضغط التلقائي",
+  "settings.context.compactionLimit.description":
+    "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
   "settings.context.prune.title": "تقليم المخرجات القديمة",
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
@@ -1512,9 +1564,15 @@ export const dict = {
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
   "notifications.action.tryModelGeneric": "جرّب النموذج",
-  "diffViewer.source.workspace.label": "التغييرات المحلية",
+  "diffViewer.source.workspace.label": "الفرع",
   "diffViewer.source.workspace.tooltip":
     "جميع التغييرات على هذا الفرع مقارنة بالفرع الأساسي. يشمل الملفات غير الملتزمة (staged و unstaged وغير المتتبعة) والالتزامات المحلية التي لم تُضف بعد إلى الأساس.",
+  "diffViewer.source.staged.label": "مُهيّأ",
+  "diffViewer.source.staged.tooltip":
+    "الملفات التي أضفت تغييراتها إلى منطقة التهيئة في git (`git add`)، كما ستظهر في الالتزام التالي.",
+  "diffViewer.source.unstaged.label": "غير مُهيّأ",
+  "diffViewer.source.unstaged.tooltip":
+    "الملفات المعدّلة في شجرة العمل ولكن لم يتم تهيئتها بعد، بالإضافة إلى الملفات غير المتتبعة (الجديدة).",
   "diffViewer.source.session.label": "الجلسة",
   "diffViewer.source.session.tooltip":
     "الملفات التي غيّرها Kilo خلال الجلسة الحالية، بناءً على لقطات لكل دور. يُعاد ضبطها عند بدء جلسة جديدة.",
@@ -1522,4 +1580,13 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "اللقطات معطّلة لهذا المستودع. يُرجى تعديل ملفات الإعدادات لعرض تغييرات الجلسة.",
+
+  "diffViewer.baseBranch.auto": "افتراضي",
+  "diffViewer.baseBranch.default": "افتراضي",
+  "diffViewer.baseBranch.remote": "بعيد",
+  "diffViewer.baseBranch.search": "البحث في الفروع",
+  "diffViewer.baseBranch.empty": "لا توجد فروع مطابقة",
+  "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "الخطة جاهزة:",
 }

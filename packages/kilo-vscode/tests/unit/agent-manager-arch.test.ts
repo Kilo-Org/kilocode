@@ -25,20 +25,27 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FullScreenDiffView.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/MarkdownDiffView.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/MarkdownAnnotationLayer.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/markdown-comment-ranges.ts"),
   path.join(ROOT, "webview-ui/agent-manager/DiffEndMarker.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/FileTree.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/review-annotations.ts"),
+  path.join(ROOT, "webview-ui/agent-manager/review-annotation-speech.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/MultiModelSelector.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/ApplyDialog.tsx"),
-  path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/CurrentTabsMenu.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/render.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
+  // Shared components that consume agent-manager CSS classes (e.g. am-dropdown,
+  // am-branch-item) used by both the agent manager and the diff viewer.
+  path.join(ROOT, "webview-ui/src/components/shared/BranchSelect.tsx"),
+  path.join(ROOT, "webview-ui/diff-viewer/BaseBranchPicker.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]!
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -176,6 +183,16 @@ describe("Agent Manager Provider Messages", () => {
     }
 
     expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+  })
+
+  it("initializeState updates local git exclude before loading persisted state", () => {
+    const body = getMethodBody("initializeState")
+    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
+    const load = body.indexOf("const loaded = await state.load()")
+
+    expect(exclude).toBeGreaterThanOrEqual(0)
+    expect(load).toBeGreaterThanOrEqual(0)
+    expect(exclude).toBeLessThan(load)
   })
 
   it("async shutdown waits for terminal router cleanup", () => {

@@ -3,6 +3,7 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.SendPromptContext
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -14,7 +15,7 @@ class StopSessionActionTest : BasePlatformTestCase() {
         val action = StopSessionAction()
         val event = event(action, ctx)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
         action.actionPerformed(event)
 
         assertTrue(event.presentation.isEnabled)
@@ -27,7 +28,7 @@ class StopSessionActionTest : BasePlatformTestCase() {
         val action = StopSessionAction()
         val event = event(action, null)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
 
         assertFalse(event.presentation.isEnabled)
     }
@@ -37,7 +38,7 @@ class StopSessionActionTest : BasePlatformTestCase() {
         val action = StopSessionAction()
         val event = event(action, ctx)
 
-        action.update(event)
+        ActionUtil.updateAction(action, event)
         action.actionPerformed(event)
 
         assertFalse(event.presentation.isEnabled)

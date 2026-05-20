@@ -165,26 +165,25 @@ Positionals:
   message  message to send  [string] [default: []]
 
 Options:
-      --help                          Show help  [boolean]
-      --version                       Show version number  [boolean]
-      --command                       the command to run, use message for args  [string]
-  -c, --continue                      continue the last session  [boolean]
-  -s, --session                       session id to continue  [string]
-      --fork                          fork the session before continuing (requires --continue or --session)  [boolean]
-      --share                         share the session  [boolean]
-  -m, --model                         model to use in the format of provider/model  [string]
-      --agent                         agent to use  [string]
-      --format                        format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
-  -f, --file                          file(s) to attach to message  [array]
-      --title                         title for the session (uses truncated prompt if no value provided)  [string]
-      --attach                        attach to a running opencode server (e.g., http://localhost:4096)  [string]
-  -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
-      --dir                           directory to run in, path on remote server if attaching  [string]
-      --port                          port for the local server (defaults to random port if no value provided)  [number]
-      --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
-      --thinking                      show thinking blocks  [boolean] [default: false]
-      --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
-      --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
+      --help      Show help  [boolean]
+      --version   Show version number  [boolean]
+      --command   the command to run, use message for args  [string]
+  -c, --continue  continue the last session  [boolean]
+  -s, --session   session id to continue  [string]
+      --fork      fork the session before continuing (requires --continue or --session)  [boolean]
+      --share     share the session  [boolean]
+  -m, --model     model to use in the format of provider/model  [string]
+      --agent     agent to use  [string]
+      --format    format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
+  -f, --file      file(s) to attach to message  [array]
+      --title     title for the session (uses truncated prompt if no value provided)  [string]
+      --attach    attach to a running opencode server (e.g., http://localhost:4096)  [string]
+  -p, --password  basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+      --dir       directory to run in, path on remote server if attaching  [string]
+      --port      port for the local server (defaults to random port if no value provided)  [number]
+      --variant   model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
+      --thinking  show thinking blocks  [boolean] [default: false]
+      --auto      auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -668,6 +667,25 @@ Options:
   --version  Show version number  [boolean]
   --verbose  use more verbose model output (includes metadata like costs)  [boolean]
   --refresh  refresh the models cache from models.dev  [boolean]
+```
+
+## kilo roll-call
+
+```
+batch-test text models matching a filter for connectivity and latency
+
+Positionals:
+  filter  regex to filter models by provider/modelID (required)  [string]
+
+Options:
+  --help      Show help  [boolean]
+  --version   Show version number  [boolean]
+  --prompt    Prompt to send to each model  [string] [default: "Hello"]
+  --timeout   Timeout for each model call in milliseconds  [number] [default: 25000]
+  --parallel  Number of parallel model calls  [number] [default: 5]
+  --verbose   Show verbose output  [boolean] [default: false]
+  --quiet     Suppress progress and decoration  [boolean] [default: false]
+  --output    Output format (table, json, or md)  [string] [choices: "table", "json", "md"] [default: "table"]
 ```
 
 ## kilo stats

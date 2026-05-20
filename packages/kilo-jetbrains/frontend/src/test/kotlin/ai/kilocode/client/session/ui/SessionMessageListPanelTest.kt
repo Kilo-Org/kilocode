@@ -1,7 +1,19 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.model.Permission
+import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.Question
+import ai.kilocode.client.session.model.QuestionItem
+import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.SessionModel
+import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.PermissionView
+import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TextView
+import ai.kilocode.client.session.views.ToolView
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
@@ -9,6 +21,7 @@ import ai.kilocode.rpc.dto.PartDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Container
 
 /**
  * Tests for [SessionMessageListPanel] — structural and index integrity.
@@ -232,7 +245,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         val message = panel.findMessage("a1")!!
         val text = message.part("p1") as TextView
         val comp = text.md.component
-        val style = SessionStyle.create(family = "Courier New", size = 24)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 24)
 
         panel.applyStyle(style)
 
@@ -246,7 +259,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     fun `test new content after applyStyle uses queued style`() {
         model.upsertMessage(msg("a1", "assistant"))
-        val style = SessionStyle.create(family = "Courier New", size = 25)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 25)
         panel.applyStyle(style)
 
         model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
@@ -256,7 +269,188 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(text.md.overrideSheet().contains("25pt"))
     }
 
+    // ------ active view tests ------
+
+    fun `test active question is anchored before progress footer`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("u1", "user"))
+        model.setState(SessionState.AwaitingQuestion(question()))
+
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+        val comps = item.components.toList()
+
+        assertTrue(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertSame(item.progress, comps.last())
+        assertTrue(comps.indexOf(qv) < comps.indexOf(item.progress))
+    }
+
+    fun `test active permission replaces active question`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingQuestion(question()))
+        model.setState(SessionState.AwaitingPermission(permission()))
+
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+        val comps = item.components.toList()
+
+        assertFalse(qv.isVisible)
+        assertTrue(pv.isVisible)
+        assertSame(item.progress, comps.last())
+    }
+
+    fun `test idle hides active prompt and keeps progress footer last`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingQuestion(question()))
+        model.setState(SessionState.Idle)
+
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+
+        assertFalse(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test cleared hides active prompt`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.AwaitingPermission(permission()))
+        model.clear()
+
+        val pv = find<PermissionView>(item)!!
+
+        assertFalse(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
+    // ------ question tool suppression ------
+
+    fun `test active linked question hides matching running question tool`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("tp1", "a1", "question", "call1", state = "running"))
+
+        val mv = item.findMessage("a1")!!
+        assertEquals(listOf("tp1"), mv.partIds())
+
+        model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
+
+        assertTrue(mv.partIds().isEmpty())
+    }
+
+    fun `test clearing active question restores hidden question tool`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", toolPart("tp1", "a1", "question", "call1", state = "running"))
+
+        model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
+        val mv = item.findMessage("a1")!!
+        assertTrue(mv.partIds().isEmpty())
+
+        model.setState(SessionState.Idle)
+
+        assertEquals(listOf("tp1"), mv.partIds())
+    }
+
+    fun `test active question does not hide unrelated question tool`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        // tool part with a different callId
+        model.updateContent("a1", toolPart("tp1", "a1", "question", "other-call", state = "running"))
+
+        model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
+
+        val mv = item.findMessage("a1")!!
+        assertEquals(listOf("tp1"), mv.partIds())
+    }
+
+    fun `test completed question tool remains visible while question active`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        // completed state — must NOT be suppressed even when callId matches
+        // No structured input/metadata so it renders as ToolView
+        model.updateContent("a1", toolPart("tp1", "a1", "question", "call1", state = "completed"))
+
+        model.setState(SessionState.AwaitingQuestion(question(tool = ToolCallRef("a1", "call1"))))
+
+        val mv = item.findMessage("a1")!!
+        assertEquals(listOf("tp1"), mv.partIds())
+        assertTrue(mv.part("tp1") is ToolView)
+    }
+
+    fun `test completed question update replaces generic tool view with question result view`() {
+        val item = panelWithPrompts()
+        model.upsertMessage(msg("a1", "assistant"))
+        // Running question tool — no structured data yet, renders as ToolView
+        model.updateContent("a1", toolPart("tp1", "a1", "question", "call1", state = "running"))
+
+        val mv = item.findMessage("a1")!!
+        assertTrue("Running question tool should be ToolView", mv.part("tp1") is ToolView)
+
+        // Complete with structured data — should replace ToolView with QuestionResultView
+        model.updateContent(
+            "a1",
+            toolPart(
+                "tp1", "a1", "question", "call1", state = "completed",
+                input = mapOf("questions" to """[{"question":"Which strategy?"},{"question":"Which checks?"}]"""),
+                metadata = mapOf("answers" to """[["Comprehensive"],["Build"]]"""),
+            ),
+        )
+
+        assertTrue("Completed question with data should be QuestionResultView", mv.part("tp1") is QuestionResultView)
+        assertEquals(listOf("tp1"), mv.partIds())
+    }
+
     // ------ helpers ------
+
+    private fun panelWithPrompts(): SessionMessageListPanel {
+        val q = QuestionView(
+            reply = { _, _ -> },
+            reject = { _ -> },
+        )
+        val p = PermissionView(
+            reply = { _, _ -> },
+        )
+        return SessionMessageListPanel(model, parent, q, p)
+    }
+
+    private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)
+
+    private fun <T> findCls(root: Container, cls: Class<T>): T? {
+        if (cls.isInstance(root)) return cls.cast(root)
+        for (child in root.components) {
+            if (cls.isInstance(child)) return cls.cast(child)
+            if (child is Container) {
+                val item = findCls(child, cls)
+                if (item != null) return item
+            }
+        }
+        return null
+    }
+
+    private fun question(id: String = "q1", tool: ToolCallRef? = null) = Question(
+        id = id,
+        tool = tool,
+        items = listOf(
+            QuestionItem(
+                question = "Proceed?",
+                header = "Confirm",
+                options = listOf(QuestionOption("Yes", "Continue")),
+                multiple = false,
+                custom = true,
+            ),
+        ),
+    )
+
+    private fun permission(id: String = "p1") = Permission(
+        id = id,
+        sessionId = "ses",
+        name = "edit",
+        patterns = listOf("*.kt"),
+        always = emptyList(),
+        meta = PermissionMeta(),
+    )
 
     private fun msg(id: String, role: String) = MessageDto(
         id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0),
@@ -264,5 +458,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     private fun part(id: String, mid: String, type: String, text: String? = null) = PartDto(
         id = id, sessionID = "ses", messageID = mid, type = type, text = text,
+    )
+
+    private fun toolPart(
+        id: String,
+        mid: String,
+        tool: String,
+        callId: String,
+        state: String = "running",
+        input: Map<String, String> = emptyMap(),
+        metadata: Map<String, String> = emptyMap(),
+    ) = PartDto(
+        id = id, sessionID = "ses", messageID = mid, type = "tool", tool = tool, callID = callId, state = state,
+        input = input, metadata = metadata,
     )
 }

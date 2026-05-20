@@ -9,6 +9,7 @@ import * as vscode from "vscode"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
+import { PLATFORM } from "./constants"
 import { DiffVirtualProvider } from "../DiffVirtualProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
@@ -35,6 +36,7 @@ export class VscodeHost implements Host {
 
   openPanel(opts: {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+    worktreeDirectories?: () => string[]
   }): PanelContext {
     const panel = vscode.window.createWebviewPanel(
       "kilo-code.new.AgentManagerPanel",
@@ -54,6 +56,7 @@ export class VscodeHost implements Host {
     panel: vscode.WebviewPanel,
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+      worktreeDirectories?: () => string[]
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -63,6 +66,7 @@ export class VscodeHost implements Host {
     panel: vscode.WebviewPanel,
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+      worktreeDirectories?: () => string[]
     },
   ): PanelContext {
     panel.webview.options = {
@@ -85,7 +89,9 @@ export class VscodeHost implements Host {
     })
 
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+      platform: PLATFORM,
       slimEditMetadata: true,
+      worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)

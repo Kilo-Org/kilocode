@@ -1,11 +1,9 @@
 /**
  * Indexing-local embedding model metadata registry.
  *
- * RATIONALE: The legacy codebase imported model metadata from a shared module
- * (`shared/embeddingModels`) that does not exist in this package. Rather than
- * recreating the full legacy module, we keep a focused registry of the models
- * the indexing engine needs to know about — primarily for dimension resolution,
- * default model selection, and score thresholds.
+ * RATIONALE: This registry only contains provider-local defaults and static
+ * metadata. Kilo-hosted embedding catalog metadata is fetched from Cloud so the
+ * model list is defined in one place.
  */
 
 import type { EmbedderProvider } from "./interfaces/manager"
@@ -16,8 +14,6 @@ interface ModelProfile {
   queryPrefix?: string
 }
 
-// ASSUMPTION: These dimensions and defaults match the provider documentation
-// as of 2025-Q1. Update when providers ship new embedding models.
 const profiles: Record<string, Record<string, ModelProfile>> = {
   openai: {
     "text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
@@ -60,6 +56,7 @@ const profiles: Record<string, Record<string, ModelProfile>> = {
 }
 
 const defaults: Record<string, string> = {
+  kilo: "",
   openai: "text-embedding-3-small",
   ollama: "nomic-embed-text",
   gemini: "gemini-embedding-001",
@@ -85,4 +82,13 @@ export function getModelScoreThreshold(provider: EmbedderProvider, modelId: stri
 
 export function getModelQueryPrefix(provider: EmbedderProvider, modelId: string): string | undefined {
   return profiles[provider]?.[modelId]?.queryPrefix
+}
+
+export function normalizeKiloModelId(modelId: string | undefined): string | undefined {
+  return modelId
+}
+
+export function hasModelProfile(provider: EmbedderProvider, modelId: string | undefined): boolean {
+  if (!modelId) return false
+  return profiles[provider]?.[modelId] !== undefined
 }

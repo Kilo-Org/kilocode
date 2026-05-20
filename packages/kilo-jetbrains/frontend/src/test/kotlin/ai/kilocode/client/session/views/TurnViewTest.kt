@@ -6,10 +6,11 @@ import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 
 /**
  * Tests for [TurnView] and [MessageView].
@@ -170,7 +171,10 @@ class TurnViewTest : BasePlatformTestCase() {
         mv.setSize(400, 200)
         mv.doLayout()
 
-        assertEquals(UiStyle.Card.groupGap(), mv.part("t1")!!.y - mv.part("r1")!!.bounds.maxY.toInt())
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+            mv.part("t1")!!.y - mv.part("r1")!!.bounds.maxY.toInt(),
+        )
     }
 
     fun `test consecutive messages use shared compact gap`() {
@@ -187,7 +191,7 @@ class TurnViewTest : BasePlatformTestCase() {
         val first = tv.messageView("u1")!!
         val second = tv.messageView("a2")!!
 
-        assertEquals(UiStyle.Card.groupGap(), second.y - first.bounds.maxY.toInt())
+        assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.GAP), second.y - first.bounds.maxY.toInt())
     }
 
     // ------ helpers ------

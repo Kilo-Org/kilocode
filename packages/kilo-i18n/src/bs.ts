@@ -96,7 +96,11 @@ export const dict = {
   "snapshot.slowRepo.answer.disable.description":
     "Isključi Kilo snapshotove za ovaj projekat. Izgubićete poništi/vrati za izmjene koje napravi Kilo, ali git i dalje prati sve.",
 
+  // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Otvori u pregledniku razlika",
+  "ui.messagePart.shell.command": "Naredba",
+  "ui.messagePart.shell.output": "Izlaz",
+  "ui.messagePart.openInEditor": "Otvori u editoru",
 
   // Message feedback (thumbs up/down per assistant response)
   "ui.message.feedback.helpful": "Ovo je bilo korisno",

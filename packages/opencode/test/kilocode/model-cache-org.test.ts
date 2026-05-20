@@ -16,11 +16,13 @@ mock.module("@kilocode/kilo-gateway", () => ({
   fetchKiloModels: async (options: any) => {
     captured = options
     return {
-      "test-model": {
-        id: "test-model",
-        name: "Test Model",
-        cost: { input: 0.001, output: 0.002 },
-        limit: { context: 128000, output: 4096 },
+      models: {
+        "test-model": {
+          id: "test-model",
+          name: "Test Model",
+          cost: { input: 0.001, output: 0.002 },
+          limit: { context: 128000, output: 4096 },
+        },
       },
     }
   },

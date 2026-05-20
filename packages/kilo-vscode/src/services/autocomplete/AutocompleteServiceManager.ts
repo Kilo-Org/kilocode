@@ -2,13 +2,13 @@ import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "./shims/i18n"
 import { TelemetryProxy, TelemetryEventName } from "../telemetry"
-import { AutocompleteModel } from "./AutocompleteModel"
 import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
 import type { KiloConnectionService } from "../cli-backend"
-import { getAutocompleteModel } from "../../shared/autocomplete-models"
+import { hasValidCredentials } from "./fim"
+import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -42,7 +42,7 @@ async function writeSettings(patch: Partial<AutocompleteServiceSettings>): Promi
 export class AutocompleteServiceManager {
   private static _instance: AutocompleteServiceManager | null = null
 
-  private readonly model: AutocompleteModel
+  private readonly connectionService: KiloConnectionService
   private readonly context: vscode.ExtensionContext
   private settings: AutocompleteServiceSettings | null = null
 
@@ -71,10 +71,8 @@ export class AutocompleteServiceManager {
     }
 
     this.context = context
+    this.connectionService = connectionService
     AutocompleteServiceManager._instance = this
-
-    // Register Internal Components
-    this.model = new AutocompleteModel(connectionService)
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
 
@@ -82,7 +80,8 @@ export class AutocompleteServiceManager {
     this.codeActionProvider = new AutocompleteCodeActionProvider()
     this.inlineCompletionProvider = new AutocompleteInlineCompletionProvider(
       this.context,
-      this.model,
+      DEFAULT_AUTOCOMPLETE_MODEL.id,
+      connectionService,
       this.updateCostTracking.bind(this),
       () => this.settings,
       workspacePath,
@@ -121,7 +120,7 @@ export class AutocompleteServiceManager {
     this.settings = readSettings()
 
     if (this.settings.model) {
-      this.model.setModel(this.settings.model)
+      this.inlineCompletionProvider.setModel(this.settings.model)
     }
 
     await this.updateGlobalContext()
@@ -320,15 +319,15 @@ export class AutocompleteServiceManager {
   }
 
   private getCurrentModelName(): string {
-    return this.model.getModelName()
+    return this.inlineCompletionProvider.getModelId()
   }
 
   private getCurrentProviderName(): string {
-    return this.model.getProviderDisplayName()
+    return getAutocompleteModel(this.inlineCompletionProvider.getModelId()).provider
   }
 
   private hasNoUsableProvider(): boolean {
-    return !this.model.hasValidCredentials()
+    return !hasValidCredentials(this.connectionService)
   }
 
   /**
@@ -368,7 +367,6 @@ export class AutocompleteServiceManager {
       snoozed: this.isSnoozed(),
       model: this.getCurrentModelName(),
       provider: this.getCurrentProviderName(),
-      profileName: this.model.profileName,
       hasNoUsableProvider: this.hasNoUsableProvider(),
       totalSessionCost: this.sessionCost,
       completionCount: this.completionCount,

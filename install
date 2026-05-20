@@ -517,10 +517,46 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
 fi
 
 # kilocode_change start
+logo_supports() {
+    case "${KILO_UNICODE_LOGO:-}" in
+        1|true|TRUE|yes|YES|on|ON)
+            return 0
+        ;;
+        0|false|FALSE|no|NO|off|OFF)
+            return 1
+        ;;
+    esac
+
+    if [ "${TERM:-}" = "dumb" ]; then
+        return 1
+    fi
+
+    if [ -n "${SSH_TTY:-}" ] || [ -n "${SSH_CLIENT:-}" ] || [ -n "${SSH_CONNECTION:-}" ]; then
+        return 1
+    fi
+
+    if [ -n "${ConEmuPID:-}" ] || [ -n "${ANSICON:-}" ]; then
+        return 1
+    fi
+
+    return 0
+}
+
+print_logo() {
+    if logo_supports; then
+        echo -e "██  ██ ██🬺🬏   ██  ██   ██🬺🬏     ████ ██     ██🬺🬏   "
+        echo -e "████🬺🬏   ██   ██     ██  ██   ██     ██       ██   "
+        echo -e "██  ██ ██████ 🬁🬬████ 🬁🬬██     🬁🬬████ 🬁🬬████ ██████ "
+        return
+    fi
+
+    echo -e "██  ██ ████   ██  ██   ███      ████ ██     ████   "
+    echo -e "████     ██   ██     ██  ██   ██     ██       ██   "
+    echo -e "██  ██ ██████ ██████   ██       ████ ██████ ██████ "
+}
+
 echo -e ""
-echo -e "██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ "
-echo -e "████   ██ ██     ██  ██   ██     ██     ██ "
-echo -e "██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ "
+print_logo
 echo -e ""
 echo -e ""
 echo -e "${MUTED}Kilo includes free models so you can start immediately:${NC}"

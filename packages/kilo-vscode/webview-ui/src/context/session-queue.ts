@@ -74,6 +74,12 @@ export function messageTurns(messages: Message[], boundary?: string): MessageTur
   return [...partials(lead), ...result]
 }
 
+export function visibleMessages(messages: Message[], boundary?: string): Message[] {
+  return messageTurns(messages, boundary).flatMap((turn) =>
+    turn.partial ? turn.assistant : [turn.user, ...turn.assistant],
+  )
+}
+
 function sameMessages(a: Message[], b: Message[]) {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) {

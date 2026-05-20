@@ -35,6 +35,7 @@ export interface BasicToolProps {
   animated?: boolean
   allowPendingToggle?: boolean // kilocode_change
   onSubtitleClick?: () => void
+  onOpenChange?: (open: boolean) => void // kilocode_change
   onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
   triggerHref?: string
   clickable?: boolean
@@ -124,6 +125,7 @@ export function BasicTool(props: BasicToolProps) {
     if (props.hideDetails) return // kilocode_change
     if (props.locked && !value) return
     setState("open", value)
+    props.onOpenChange?.(value) // kilocode_change
   }
 
   const trigger = () => (

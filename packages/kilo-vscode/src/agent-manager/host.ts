@@ -93,6 +93,7 @@ export interface Host {
    */
   openPanel(opts: {
     onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
+    worktreeDirectories?: () => string[]
   }): PanelContext
 
   /** Get the workspace/project root path. */

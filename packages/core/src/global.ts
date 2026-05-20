@@ -5,6 +5,7 @@ import os from "os"
 import { Context, Effect, Layer } from "effect"
 import { Flock } from "./util/flock"
 import { markNoIndex } from "./kilocode/spotlight" // kilocode_change
+import { ensureRealDir } from "./kilocode/global" // kilocode_change
 import { Flag } from "./flag/flag"
 
 const app = "kilo" // kilocode_change
@@ -42,12 +43,12 @@ export const Path = paths
 Flock.setGlobal({ state })
 
 await Promise.all([
-  fs.mkdir(Path.data, { recursive: true }),
-  fs.mkdir(Path.config, { recursive: true }),
-  fs.mkdir(Path.state, { recursive: true }),
-  fs.mkdir(Path.tmp, { recursive: true }),
-  fs.mkdir(Path.log, { recursive: true }),
-  fs.mkdir(Path.bin, { recursive: true }),
+  ensureRealDir(Path.data), // kilocode_change
+  ensureRealDir(Path.config), // kilocode_change
+  ensureRealDir(Path.state), // kilocode_change
+  ensureRealDir(Path.tmp), // kilocode_change
+  ensureRealDir(Path.log), // kilocode_change
+  ensureRealDir(Path.bin), // kilocode_change
 ])
 
 // kilocode_change start - keep generated Kilo data out of macOS Spotlight

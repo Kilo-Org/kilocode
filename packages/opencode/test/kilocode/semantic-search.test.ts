@@ -34,6 +34,13 @@ const baseCtx = {
 } satisfies Tool.Context
 
 describe("tool.semantic_search", () => {
+  test("describes code snippet results", async () => {
+    const tool = await initTool()
+
+    expect(tool.description).toContain("Find code snippets by semantic meaning")
+    expect(tool.description).toContain("Search for an exact symbol")
+  })
+
   test("throws when query is empty", async () => {
     const tool = await initTool()
     expect(rt.runPromise(tool.execute({ query: "" }, baseCtx))).rejects.toThrow("query is required")

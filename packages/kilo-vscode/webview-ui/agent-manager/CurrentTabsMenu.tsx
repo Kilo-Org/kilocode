@@ -231,13 +231,13 @@ export const CurrentTabsMenu: Component<CurrentTabsMenuProps> = (props) => {
 
   return (
     <Popover
-      placement="bottom-end"
+      placement="bottom-start"
       open={open()}
       onOpenChange={setOpen}
       modal={false}
       class="am-tabs-menu"
       trigger={
-        <Tooltip value={props.label} placement="bottom" inactive={open()}>
+        <Tooltip value={props.label} placement="top" gutter={8} inactive={open()}>
           <button class="am-tabs-menu-trigger" type="button" aria-label={props.label}>
             <SearchIcon />
           </button>

@@ -17,17 +17,19 @@ const real = await import("@kilocode/kilo-gateway")
 mock.module("@kilocode/kilo-gateway", () => ({
   ...real,
   fetchKiloModels: async () => ({
-    "free-model": {
-      id: "free-model",
-      name: "Free Model",
-      cost: { input: 0, output: 0 },
-      limit: { context: 128000, output: 4096 },
-    },
-    "paid-model": {
-      id: "paid-model",
-      name: "Paid Model",
-      cost: { input: 1.0, output: 2.0 },
-      limit: { context: 128000, output: 4096 },
+    models: {
+      "free-model": {
+        id: "free-model",
+        name: "Free Model",
+        cost: { input: 0, output: 0 },
+        limit: { context: 128000, output: 4096 },
+      },
+      "paid-model": {
+        id: "paid-model",
+        name: "Paid Model",
+        cost: { input: 1.0, output: 2.0 },
+        limit: { context: 128000, output: 4096 },
+      },
     },
   }),
 }))

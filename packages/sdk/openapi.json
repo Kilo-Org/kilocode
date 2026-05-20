@@ -415,9 +415,9 @@
         ]
       }
     },
-    "/experimental/workspace/adaptor": {
+    "/experimental/workspace/adapter": {
       "get": {
-        "operationId": "experimental.workspace.adaptor.list",
+        "operationId": "experimental.workspace.adapter.list",
         "parameters": [
           {
             "in": "query",
@@ -434,11 +434,11 @@
             }
           }
         ],
-        "summary": "List workspace adaptors",
-        "description": "List all available workspace adaptors for the current project.",
+        "summary": "List workspace adapters",
+        "description": "List all available workspace adapters for the current project.",
         "responses": {
           "200": {
-            "description": "Workspace adaptors",
+            "description": "Workspace adapters",
             "content": {
               "application/json": {
                 "schema": {
@@ -466,7 +466,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.adaptor.list({\n  ...\n})"
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.adapter.list({\n  ...\n})"
           }
         ]
       }
@@ -5549,9 +5549,15 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "failed": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
                     }
                   },
-                  "required": ["all", "default", "connected"]
+                  "required": ["all", "default", "connected", "failed"]
                 }
               }
             }
@@ -8332,6 +8338,47 @@
         ]
       }
     },
+    "/indexing/status": {
+      "get": {
+        "operationId": "indexing.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get indexing status",
+        "description": "Retrieve the current code indexing status for the active project.",
+        "responses": {
+          "200": {
+            "description": "Indexing status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexingStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.indexing.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/suggestion": {
       "get": {
         "operationId": "suggestion.list",
@@ -8603,6 +8650,72 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.capture({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/telemetry/setEnabled": {
+      "post": {
+        "operationId": "telemetry.setEnabled",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Set PostHog telemetry enabled state",
+        "description": "Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.",
+        "responses": {
+          "200": {
+            "description": "State updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["enabled"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.telemetry.setEnabled({\n  ...\n})"
           }
         ]
       }
@@ -10368,6 +10481,100 @@
         ]
       }
     },
+    "/kilo/audio/transcriptions": {
+      "post": {
+        "operationId": "kilo.audio.transcriptions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Speech to text transcription",
+        "description": "Proxy an audio transcription request to the Kilo Gateway",
+        "responses": {
+          "200": {
+            "description": "Transcription response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "usage": {}
+                  },
+                  "required": ["text"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string"
+                  },
+                  "input_audio": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "string"
+                      },
+                      "format": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["data", "format"]
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "prompt": {
+                    "type": "string"
+                  },
+                  "temperature": {
+                    "type": "number"
+                  }
+                },
+                "required": ["model", "input_audio"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilo.audio.transcriptions({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilo/notifications": {
       "get": {
         "operationId": "kilo.notifications",
@@ -11102,6 +11309,10 @@
           "descriptionKey": {
             "description": "Optional i18n key for the description",
             "type": "string"
+          },
+          "mode": {
+            "description": "Optional agent/mode name to pre-select in the UI when this option is picked",
+            "type": "string"
           }
         },
         "required": ["label", "description"]
@@ -11478,6 +11689,9 @@
             "properties": {
               "created": {
                 "type": "number"
+              },
+              "restored": {
+                "type": "number"
               }
             },
             "required": ["created"]
@@ -11563,9 +11777,12 @@
               "requestID": {
                 "type": "string",
                 "pattern": "^que.*"
+              },
+              "time": {
+                "type": "number"
               }
             },
-            "required": ["sessionID", "requestID"]
+            "required": ["sessionID", "requestID", "time"]
           }
         },
         "required": ["type", "properties"]
@@ -12469,6 +12686,102 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.workspace.ready": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workspace.ready"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": ["name"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.workspace.failed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workspace.failed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.workspace.restore": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workspace.restore"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "workspaceID": {
+                "type": "string",
+                "pattern": "^wrk.*"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses.*"
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "step": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["workspaceID", "sessionID", "total", "step"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.workspace.status": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workspace.status"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "workspaceID": {
+                "type": "string",
+                "pattern": "^wrk.*"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["connected", "connecting", "disconnected", "error"]
+              }
+            },
+            "required": ["workspaceID", "status"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.worktree.ready": {
         "type": "object",
         "properties": {
@@ -12623,102 +12936,6 @@
               }
             },
             "required": ["id"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.workspace.ready": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "workspace.ready"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": ["name"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.workspace.failed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "workspace.failed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.workspace.restore": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "workspace.restore"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "workspaceID": {
-                "type": "string",
-                "pattern": "^wrk.*"
-              },
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
-              },
-              "total": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              },
-              "step": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
-              }
-            },
-            "required": ["workspaceID", "sessionID", "total", "step"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.workspace.status": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "workspace.status"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "workspaceID": {
-                "type": "string",
-                "pattern": "^wrk.*"
-              },
-              "status": {
-                "type": "string",
-                "enum": ["connected", "connecting", "disconnected", "error"]
-              }
-            },
-            "required": ["workspaceID", "status"]
           }
         },
         "required": ["type", "properties"]
@@ -14113,9 +14330,7 @@
                 "maximum": 9007199254740991
               },
               "archived": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
+                "type": "number"
               }
             },
             "required": ["created", "updated"]
@@ -14229,13 +14444,19 @@
             "type": "string"
           },
           "processedFiles": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "totalFiles": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
           },
           "percent": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
           }
         },
         "required": ["state", "message", "processedFiles", "totalFiles", "percent"]
@@ -14670,9 +14891,7 @@
                       "archived": {
                         "anyOf": [
                           {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 9007199254740991
+                            "type": "number"
                           },
                           {
                             "type": "null"
@@ -14904,6 +15123,18 @@
                 "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
               },
               {
+                "$ref": "#/components/schemas/Event.workspace.ready"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.failed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.restore"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.status"
+              },
+              {
                 "$ref": "#/components/schemas/Event.worktree.ready"
               },
               {
@@ -14920,18 +15151,6 @@
               },
               {
                 "$ref": "#/components/schemas/Event.pty.deleted"
-              },
-              {
-                "$ref": "#/components/schemas/Event.workspace.ready"
-              },
-              {
-                "$ref": "#/components/schemas/Event.workspace.failed"
-              },
-              {
-                "$ref": "#/components/schemas/Event.workspace.restore"
-              },
-              {
-                "$ref": "#/components/schemas/Event.workspace.status"
               },
               {
                 "$ref": "#/components/schemas/Event.message.updated"
@@ -15031,6 +15250,7 @@
             "description": "Embedding provider to use for codebase indexing",
             "type": "string",
             "enum": [
+              "kilo",
               "openai",
               "ollama",
               "openai-compatible",
@@ -15056,6 +15276,22 @@
             "description": "Vector store backend (default: qdrant)",
             "type": "string",
             "enum": ["lancedb", "qdrant"]
+          },
+          "kilo": {
+            "description": "Kilo-hosted embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "organizationId": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
           },
           "openai": {
             "description": "OpenAI embedding provider options",
@@ -16277,6 +16513,19 @@
                 "description": "Enable automatic compaction when context is full (default: true)",
                 "type": "boolean"
               },
+              "threshold_percent": {
+                "description": "Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.",
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 100
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "prune": {
                 "description": "Enable pruning of old tool outputs (default: true)",
                 "type": "boolean"
@@ -17039,9 +17288,7 @@
                 "maximum": 9007199254740991
               },
               "archived": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 9007199254740991
+                "type": "number"
               }
             },
             "required": ["created", "updated"]
@@ -17652,6 +17899,18 @@
             "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
           },
           {
+            "$ref": "#/components/schemas/Event.workspace.ready"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.restore"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.status"
+          },
+          {
             "$ref": "#/components/schemas/Event.worktree.ready"
           },
           {
@@ -17668,18 +17927,6 @@
           },
           {
             "$ref": "#/components/schemas/Event.pty.deleted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.workspace.ready"
-          },
-          {
-            "$ref": "#/components/schemas/Event.workspace.failed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.workspace.restore"
-          },
-          {
-            "$ref": "#/components/schemas/Event.workspace.status"
           },
           {
             "$ref": "#/components/schemas/Event.message.updated"

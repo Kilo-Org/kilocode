@@ -5,6 +5,7 @@ package ai.kilocode.client.app
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
@@ -15,6 +16,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.Service
 import ai.kilocode.log.KiloLog
@@ -34,7 +36,7 @@ import kotlinx.coroutines.launch
  * Project-level frontend service for session management.
  *
  * Stateless with respect to "active session" — callers pass explicit
- * session IDs. [ai.kilocode.client.session.update.SessionController] owns the
+ * session IDs. [ai.kilocode.client.session.controller.SessionController] owns the
  * active session concept.
  */
 @Service(Service.Level.PROJECT)
@@ -76,12 +78,17 @@ class KiloSessionService internal constructor(
     fun refresh(dir: String) {
         cs.launch {
             try {
-                val result = call { list(dir) }
-                _sessions.value = result.sessions
+                list(dir)
             } catch (e: Exception) {
                 LOG.warn("kind=session-list dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             }
         }
+    }
+
+    suspend fun list(dir: String): SessionListDto {
+        val result = call { list(dir) }
+        _sessions.value = result.sessions
+        return result
     }
 
     /** Load recent sessions for the current worktree family. */
@@ -105,13 +112,29 @@ class KiloSessionService internal constructor(
     fun delete(id: String, dir: String) {
         cs.launch {
             try {
-                call { delete(id, dir) }
-                refresh(dir)
+                deleteSession(id, dir)
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             }
         }
     }
+
+    suspend fun deleteSession(id: String, dir: String) {
+        call { delete(id, dir) }
+        list(dir)
+    }
+
+    suspend fun renameSession(id: String, dir: String, newTitle: String): ai.kilocode.rpc.dto.SessionDto {
+        val session = call { rename(id, dir, newTitle) }
+        _sessions.value = _sessions.value.map { if (it.id == id) session else it }
+        return session
+    }
+
+    suspend fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto =
+        call { cloudSessions(dir, cursor, limit, gitUrl) }
+
+    suspend fun importCloudSession(id: String, dir: String): SessionDto =
+        call { importCloudSession(id, dir) }
 
     /** Register a worktree directory override for a session. */
     fun setDirectory(id: String, dir: String) {

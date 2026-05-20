@@ -13,6 +13,9 @@ const log = Log.create({ service: "kilocode-tool-registry" })
 type Deps = { agent: Agent.Interface; truncate: Truncate.Interface }
 
 export namespace KiloToolRegistry {
+  const hint =
+    "- When you are doing an open-ended search where you do not know the exact symbol name, use the `semantic_search` tool first to narrow down the search scope, then follow up with `Grep` and/or `Read`"
+
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
   export function infos() {
@@ -71,21 +74,6 @@ export namespace KiloToolRegistry {
     })
   }
 
-  /** Override question-tool client gating (adds "vscode" to allowed clients) */
-  export function question(): boolean {
-    return ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL
-  }
-
-  /** Plan tool is always registered in Kilo (gated by agent permission instead) */
-  export function plan(): boolean {
-    return true
-  }
-
-  /** Suggest tool is only registered for cli and vscode clients */
-  export function suggest(tool: Tool.Def): Tool.Def[] {
-    return ["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool] : []
-  }
-
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def; manager: Tool.Def },
@@ -100,8 +88,11 @@ export namespace KiloToolRegistry {
     ]
   }
 
-  /** Check for E2E LLM URL (uses KILO_E2E_LLM_URL env var) */
-  export function e2e(): boolean {
-    return !!process.env["KILO_E2E_LLM_URL"]
+  export function describe(tools: Tool.Def[], extra: { semantic?: Tool.Def }): Tool.Def[] {
+    if (!extra.semantic) return tools
+    return tools.map((tool) => {
+      if (tool.id !== "glob" && tool.id !== "grep") return tool
+      return { ...tool, description: `${tool.description}\n${hint}` }
+    })
   }
 }

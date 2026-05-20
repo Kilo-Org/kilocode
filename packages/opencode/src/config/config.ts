@@ -115,6 +115,7 @@ const LogLevelRef = Schema.Literals(["DEBUG", "INFO", "WARN", "ERROR"]).annotate
   identifier: "LogLevel",
   description: "Log level",
 })
+const Percent = Schema.Number.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(100)) // kilocode_change
 
 // kilocode_change - KiloIndexingConfig is still a Zod schema; bridge via ZodOverride
 const IndexingRef = Schema.Any.annotate({ [ZodOverride]: KiloIndexingConfig })
@@ -277,6 +278,12 @@ export const Info = Schema.Struct({
       auto: Schema.optional(Schema.Boolean).annotate({
         description: "Enable automatic compaction when context is full (default: true)",
       }),
+      // kilocode_change start
+      threshold_percent: Schema.optional(Schema.NullOr(Percent)).annotate({
+        description:
+          "Percentage of the model input/context window that triggers automatic compaction. The reserved safety buffer still applies if it would compact sooner.",
+      }),
+      // kilocode_change end
       prune: Schema.optional(Schema.Boolean).annotate({
         description: "Enable pruning of old tool outputs (default: true)",
       }),
@@ -544,7 +551,7 @@ export const layer = Layer.effect(
           )
           .pipe(
             Effect.catchIf(
-              (e) => e.reason._tag === "PermissionDenied",
+              (e) => e.reason._tag === "PermissionDenied" || e.reason._tag === "NotFound", // kilocode_change - also ignore NotFound (broken symlink/junction on Windows)
               () => Effect.void,
             ),
           )

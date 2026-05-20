@@ -2,11 +2,99 @@ import { sampledChecksum } from "@opencode-ai/core/util/encode"
 import { FileDiff, type FileDiffOptions, type SelectedLineRange, VirtualizedFileDiff } from "@pierre/diffs"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createEffect, createMemo, createSignal, on, onCleanup, splitProps, untrack } from "solid-js"
-import { createDefaultOptions, type DiffProps, styleVariables } from "@opencode-ai/ui/pierre"
+import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"
 import { acquireVirtualizer, virtualMetrics } from "@opencode-ai/ui/pierre/virtualizer"
 import { getWorkerPool } from "@opencode-ai/ui/pierre/worker"
 
 type SelectionSide = "additions" | "deletions"
+
+const OBSERVER_MARGIN = "2000px 0px"
+// Placeholder sizing only: keeps scroll position stable until Pierre renders.
+// This does not affect which files are expanded or collapsed.
+const ESTIMATED_LINE_HEIGHT = 20
+const MIN_PLACEHOLDER_HEIGHT = 160
+const MAX_PLACEHOLDER_HEIGHT = 1200
+type Job = { run: () => void; cancelled: boolean }
+
+// A review can contain many expanded diff components. Creating one
+// IntersectionObserver per diff showed up in profiles, so all deferred diffs
+// share a single observer and only register their element + render callback.
+const watchers = new Map<Element, Job>()
+const queue: Job[] = []
+let shared: IntersectionObserver | undefined
+let frame: number | undefined
+
+function lines(text: string): number {
+  if (!text) return 0
+  let count = 1
+  const cap = MAX_PLACEHOLDER_HEIGHT / ESTIMATED_LINE_HEIGHT
+  for (let i = 0; i < text.length; i++) {
+    if (text.charCodeAt(i) !== 10) continue
+    count++
+    if (count >= cap) return cap
+  }
+  return count
+}
+
+function release(node: Element) {
+  if (!shared) return
+  shared.unobserve(node)
+  if (watchers.size > 0) return
+  shared.disconnect()
+  shared = undefined
+}
+
+function enqueue(job: Job) {
+  queue.push(job)
+  schedule()
+}
+
+// When a large batch of diffs becomes near-visible at once, render one diff per
+// animation frame. This keeps the UI responsive while preserving expanded state.
+function schedule() {
+  if (frame !== undefined) return
+  frame = requestAnimationFrame(() => {
+    frame = undefined
+    const job = queue.shift()
+    if (job && !job.cancelled) job.run()
+    if (queue.length > 0) schedule()
+  })
+}
+
+// Defer Pierre's expensive DOM render until the diff is close to the viewport.
+// The caller still mounts an expanded diff container immediately, but the body
+// render is queued here so offscreen expanded diffs do not block worktree
+// switches or message handling.
+function observe(node: Element, cb: () => void): () => void {
+  if (typeof IntersectionObserver === "undefined") {
+    cb()
+    return () => {}
+  }
+
+  const job: Job = { run: cb, cancelled: false }
+
+  shared ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const item = watchers.get(entry.target)
+        if (!item) continue
+        watchers.delete(entry.target)
+        release(entry.target)
+        enqueue(item)
+      }
+    },
+    { rootMargin: OBSERVER_MARGIN },
+  )
+
+  watchers.set(node, job)
+  shared.observe(node)
+  return () => {
+    job.cancelled = true
+    if (!watchers.delete(node)) return
+    release(node)
+  }
+}
 
 function findElement(node: Node | null): HTMLElement | undefined {
   if (!node) return
@@ -68,6 +156,7 @@ export function Diff<T>(props: DiffProps<T>) {
   const [local, others] = splitProps(props, [
     "before",
     "after",
+    "fileDiff",
     "class",
     "classList",
     "annotations",
@@ -77,11 +166,25 @@ export function Diff<T>(props: DiffProps<T>) {
   ])
 
   const mobile = createMediaQuery("(max-width: 640px)")
+  const [visible, setVisible] = createSignal(false)
+
+  const before = createMemo(() => {
+    if (local.fileDiff) return local.fileDiff.deletionLines.join("")
+    return typeof local.before?.contents === "string" ? local.before.contents : ""
+  })
+  const after = createMemo(() => {
+    if (local.fileDiff) return local.fileDiff.additionLines.join("")
+    return typeof local.after?.contents === "string" ? local.after.contents : ""
+  })
+
+  const estimate = createMemo(() => {
+    const value = Math.max(lines(before()), lines(after())) * ESTIMATED_LINE_HEIGHT
+    if (value === 0) return MIN_PLACEHOLDER_HEIGHT
+    return Math.max(MIN_PLACEHOLDER_HEIGHT, Math.min(value, MAX_PLACEHOLDER_HEIGHT))
+  })
 
   const large = createMemo(() => {
-    const before = typeof local.before?.contents === "string" ? local.before.contents : ""
-    const after = typeof local.after?.contents === "string" ? local.after.contents : ""
-    return Math.max(before.length, after.length) > 500_000
+    return Math.max(before().length, after().length) > 500_000
   })
 
   const largeOptions = {
@@ -119,6 +222,17 @@ export function Diff<T>(props: DiffProps<T>) {
     return result.virtualizer
   }
 
+  createEffect(() => {
+    if (visible()) return
+    container.style.minHeight = `${estimate()}px`
+  })
+
+  createEffect(() => {
+    if (visible()) return
+    const cleanup = observe(container, () => setVisible(true))
+    onCleanup(cleanup)
+  })
+
   const getRoot = () => {
     const host = container.querySelector("diffs-container")
     if (!(host instanceof HTMLElement)) return
@@ -142,10 +256,7 @@ export function Diff<T>(props: DiffProps<T>) {
     host.removeAttribute("data-color-scheme")
   }
 
-  // Patch a bug in @pierre/diffs where `grid-template-columns: 100% auto` is set
-  // for `line-info-basic` separators under `@media (pointer: fine)`, causing the
-  // expand button to consume 100% of the gutter width and overlap the separator
-  // content text. We inject into `@layer unsafe` which overrides `@layer base`.
+  // Patch Pierre shadow styles for Kilo-specific layout and contrast tweaks.
   let separatorPatchSheet: CSSStyleSheet | null = null
   const patchSeparatorLayout = () => {
     const root = getRoot()
@@ -153,7 +264,7 @@ export function Diff<T>(props: DiffProps<T>) {
     if (!separatorPatchSheet) {
       separatorPatchSheet = new CSSStyleSheet()
       separatorPatchSheet.replaceSync(
-        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } }`,
+        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } [data-utility-button] { background-color: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base))); color: var(--vscode-button-foreground, var(--icon-invert-base, #fff)); } }`,
       )
     }
     if (!root.adoptedStyleSheets.includes(separatorPatchSheet))
@@ -355,7 +466,10 @@ export function Diff<T>(props: DiffProps<T>) {
 
   const setSelectedLines = (range: SelectedLineRange | null) => {
     const active = current()
-    if (!active) return
+    if (!active) {
+      lastSelection = range
+      return
+    }
 
     const fixed = fixSelection(range)
     if (fixed === undefined) {
@@ -563,16 +677,12 @@ export function Diff<T>(props: DiffProps<T>) {
   }
 
   createEffect(() => {
+    if (!visible()) return
+
     const opts = options()
     const workerPool = large() ? getWorkerPool("unified") : getWorkerPool(props.diffStyle)
     const virtualizer = getVirtualizer()
-    const beforeContents = typeof local.before?.contents === "string" ? local.before.contents : ""
-    const afterContents = typeof local.after?.contents === "string" ? local.after.contents : ""
-
-    const cacheKey = (contents: string) => {
-      if (!large()) return sampledChecksum(contents, contents.length)
-      return sampledChecksum(contents)
-    }
+    const annotations = untrack(() => local.annotations)
 
     // Preserve container height during re-render to prevent scroll jumps.
     // When Pierre tears down the DOM (innerHTML = ""), the container collapses
@@ -588,20 +698,29 @@ export function Diff<T>(props: DiffProps<T>) {
     setCurrent(instance)
 
     container.innerHTML = ""
-    instance.render({
-      oldFile: {
-        ...local.before,
-        contents: beforeContents,
-        cacheKey: cacheKey(beforeContents),
-      },
-      newFile: {
-        ...local.after,
-        contents: afterContents,
-        cacheKey: cacheKey(afterContents),
-      },
-      lineAnnotations: untrack(() => local.annotations),
-      containerWrapper: container,
-    })
+
+    if (local.fileDiff) {
+      instance.render({
+        fileDiff: local.fileDiff,
+        lineAnnotations: annotations,
+        containerWrapper: container,
+      })
+    } else {
+      const beforeContents = before()
+      const afterContents = after()
+
+      const cacheKey = (contents: string) => {
+        if (!large()) return sampledChecksum(contents, contents.length)
+        return sampledChecksum(contents)
+      }
+
+      instance.render({
+        oldFile: { ...local.before, contents: beforeContents, cacheKey: cacheKey(beforeContents) },
+        newFile: { ...local.after, contents: afterContents, cacheKey: cacheKey(afterContents) },
+        lineAnnotations: annotations,
+        containerWrapper: container,
+      })
+    }
 
     applyScheme()
     patchSeparatorLayout()

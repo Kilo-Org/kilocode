@@ -83,6 +83,9 @@ import * as Model from "../../util/model"
 import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
+import { splitDiffHunks } from "@/kilocode/tui/diff" // kilocode_change
+import { session as banner } from "@/kilocode/cli/logo" // kilocode_change
+
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
 import { bell } from "@/kilocode/bell" // kilocode_change
 import { SessionIndexing } from "@/kilocode/components/session-indexing" // kilocode_change
@@ -355,19 +358,12 @@ export function Session() {
   // Allow exit when in child session (prompt is hidden)
   const exit = useExit()
 
+  // kilocode_change start
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
-    // kilocode_change start
-    return exit.message.set(
-      [
-        ``,
-        `  ██ ▄█▀ ██ ██     ▄████▄  ${UI.Style.TEXT_DIM}${title}${UI.Style.TEXT_NORMAL}`,
-        `  ████   ██ ██     ██  ██  ${UI.Style.TEXT_DIM}kilo -s ${session()?.id}${UI.Style.TEXT_NORMAL}`,
-        `  ██ ▀█▄ ██ ██████ ▀████▀  `,
-      ].join("\n"),
-    )
-    // kilocode_change end
+    return exit.message.set(banner(title, session()?.id, UI.Style.TEXT_DIM, UI.Style.TEXT_NORMAL))
   })
+  // kilocode_change end
 
   // kilocode_change start - double ctrl+c to exit for child sessions
   const [exitPress, setExitPress] = createSignal(0)
@@ -2228,32 +2224,46 @@ function Edit(props: ToolProps<typeof EditTool>) {
   const ft = createMemo(() => filetype(props.input.filePath))
 
   const diffContent = createMemo(() => props.metadata.diff)
+  const hunks = createMemo(() => splitDiffHunks(diffContent() ?? "")) // kilocode_change
 
   return (
     <Switch>
       <Match when={props.metadata.diff !== undefined}>
         <BlockTool title={"← Edit " + normalizePath(props.input.filePath!)} part={props.part}>
-          <box paddingLeft={1}>
-            <diff
-              diff={diffContent()}
-              view={view()}
-              filetype={ft()}
-              syntaxStyle={syntax()}
-              showLineNumbers={true}
-              width="100%"
-              wrapMode={ctx.diffWrapMode()}
-              fg={theme.text}
-              addedBg={theme.diffAddedBg}
-              removedBg={theme.diffRemovedBg}
-              contextBg={theme.diffContextBg}
-              addedSignColor={theme.diffHighlightAdded}
-              removedSignColor={theme.diffHighlightRemoved}
-              lineNumberFg={theme.diffLineNumber}
-              lineNumberBg={theme.diffContextBg}
-              addedLineNumberBg={theme.diffAddedLineNumberBg}
-              removedLineNumberBg={theme.diffRemovedLineNumberBg}
-            />
+          {/* kilocode_change start */}
+          <box paddingLeft={1} flexDirection="column">
+            <For each={hunks()}>
+              {(hunk, i) => (
+                <>
+                  <Show when={i() > 0}>
+                    <text fg={theme.textMuted} alignSelf="center" height={2}>
+                      ...
+                    </text>
+                  </Show>
+                  <diff
+                    diff={hunk}
+                    view={view()}
+                    filetype={ft()}
+                    syntaxStyle={syntax()}
+                    showLineNumbers={true}
+                    width="100%"
+                    wrapMode={ctx.diffWrapMode()}
+                    fg={theme.text}
+                    addedBg={theme.diffAddedBg}
+                    removedBg={theme.diffRemovedBg}
+                    contextBg={theme.diffContextBg}
+                    addedSignColor={theme.diffHighlightAdded}
+                    removedSignColor={theme.diffHighlightRemoved}
+                    lineNumberFg={theme.diffLineNumber}
+                    lineNumberBg={theme.diffContextBg}
+                    addedLineNumberBg={theme.diffAddedLineNumberBg}
+                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                  />
+                </>
+              )}
+            </For>
           </box>
+          {/* kilocode_change end */}
           <Diagnostics diagnostics={props.metadata.diagnostics} filePath={props.input.filePath ?? ""} />
         </BlockTool>
       </Match>
@@ -2279,29 +2289,43 @@ function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
   })
 
   function Diff(p: { diff: string; filePath: string }) {
+    // kilocode_change start
+    const hunks = createMemo(() => splitDiffHunks(p.diff))
     return (
-      <box paddingLeft={1}>
-        <diff
-          diff={p.diff}
-          view={view()}
-          filetype={filetype(p.filePath)}
-          syntaxStyle={syntax()}
-          showLineNumbers={true}
-          width="100%"
-          wrapMode={ctx.diffWrapMode()}
-          fg={theme.text}
-          addedBg={theme.diffAddedBg}
-          removedBg={theme.diffRemovedBg}
-          contextBg={theme.diffContextBg}
-          addedSignColor={theme.diffHighlightAdded}
-          removedSignColor={theme.diffHighlightRemoved}
-          lineNumberFg={theme.diffLineNumber}
-          lineNumberBg={theme.diffContextBg}
-          addedLineNumberBg={theme.diffAddedLineNumberBg}
-          removedLineNumberBg={theme.diffRemovedLineNumberBg}
-        />
+      <box paddingLeft={1} flexDirection="column">
+        <For each={hunks()}>
+          {(hunk, i) => (
+            <>
+              <Show when={i() > 0}>
+                <text fg={theme.textMuted} alignSelf="center" height={2}>
+                  ...
+                </text>
+              </Show>
+              <diff
+                diff={hunk}
+                view={view()}
+                filetype={filetype(p.filePath)}
+                syntaxStyle={syntax()}
+                showLineNumbers={true}
+                width="100%"
+                wrapMode={ctx.diffWrapMode()}
+                fg={theme.text}
+                addedBg={theme.diffAddedBg}
+                removedBg={theme.diffRemovedBg}
+                contextBg={theme.diffContextBg}
+                addedSignColor={theme.diffHighlightAdded}
+                removedSignColor={theme.diffHighlightRemoved}
+                lineNumberFg={theme.diffLineNumber}
+                lineNumberBg={theme.diffContextBg}
+                addedLineNumberBg={theme.diffAddedLineNumberBg}
+                removedLineNumberBg={theme.diffRemovedLineNumberBg}
+              />
+            </>
+          )}
+        </For>
       </box>
     )
+    // kilocode_change end
   }
 
   function title(file: { type: string; relativePath: string; filePath: string; deletions: number }) {

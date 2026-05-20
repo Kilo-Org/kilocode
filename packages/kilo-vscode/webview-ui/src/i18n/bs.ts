@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Podijeli ovu sesiju i kopiraj URL u međuspremnik",
   "command.session.unshare": "Ukini dijeljenje sesije",
   "command.session.unshare.description": "Zaustavi dijeljenje ove sesije",
+  "command.session.export": "Izvezi transkript sesije",
 
   "palette.search.placeholder": "Pretraži datoteke, komande i sesije",
   "palette.empty": "Nema rezultata",
@@ -137,6 +138,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API ključ",
   "provider.connect.apiKey.placeholder": "API ključ",
   "provider.connect.apiKey.required": "API ključ je obavezan",
+  "provider.connect.prompt.required": "{{field}} je obavezno",
+  "provider.connect.azure.endpointType.label": "Odaberite konfiguraciju krajnje tačke za Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Ime resursa",
+  "provider.connect.azure.endpointType.resourceName.hint": "Izgradite krajnju tačku iz imena vašeg Azure resursa",
+  "provider.connect.azure.endpointType.baseURL.label": "Puni URL krajnje tačke",
+  "provider.connect.azure.endpointType.baseURL.hint": "Koristite prilagođenu Azure OpenAI krajnju tačku",
+  "provider.connect.azure.resourceName.label": "Ime Azure resursa",
+  "provider.connect.azure.resourceName.placeholder": "npr. my-models",
+  "provider.connect.azure.baseURL.label": "URL krajnje tačke za Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "npr. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen ti daje pristup kuriranom skupu pouzdanih, optimizovanih modela za coding agente.",
   "provider.connect.opencodeZen.line2":
@@ -167,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.collapse": "Sakrij {{group}}",
+  "model.group.expand": "Prikaži {{group}}",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.provider.anthropic": "Anthropic",
@@ -260,6 +273,7 @@ export const dict = {
   "prompt.attachment.remove": "Ukloni prilog",
   "prompt.action.send": "Pošalji",
   "prompt.action.send.blocked": "Prvo odgovorite ili odbacite pitanje na čekanju",
+  "prompt.action.send.recording": "Transkribuj i pošalji",
   "prompt.action.stop": "Zaustavi",
   "prompt.action.enhance": "Poboljšaj prompt",
   "prompt.action.autoApprove.enable": "Uključi automatsko odobravanje",
@@ -271,6 +285,20 @@ export const dict = {
   "prompt.action.resetModel": "Resetuj model na zadani",
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
+
+  "speechToText.tooltip.start": "Započni glasovni unos",
+  "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
+  "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
+  "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
+  "speechToText.error.title": "Glasovni unos nije uspio",
+  "speechToText.error.loginRequired": "Prijavite se na Kilo da koristite glasovni unos.",
+  "speechToText.error.permission": "Dozvola za mikrofon je odbijena.",
+  "speechToText.error.microphone": "Nije moguće pokrenuti mikrofon.",
+  "speechToText.error.recording": "Snimanje nije uspjelo.",
+  "speechToText.error.emptyRecording": "Zvuk nije snimljen.",
+  "speechToText.error.emptyTranscript": "Govor nije otkriven.",
+  "speechToText.error.encoding": "Nije moguće kodirati snimak.",
+  "speechToText.toast.transcribed": "Prijepis ubačen",
 
   "prompt.toast.pasteUnsupported.title": "Nepodržano lijepljenje",
   "prompt.toast.pasteUnsupported.description": "Ovdje se mogu zalijepiti samo slike ili PDF-ovi.",
@@ -459,6 +487,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registrujte se besplatno da nastavite i istražite preko 500 modela. Traje 2 minute, bez kreditne kartice. Ili se vratite kasnije.",
   "error.promotionLimit.action": "Registracija",
+  "error.providerAuth.title": "{{provider}} vas je odjavio",
+  "error.providerAuth.description": "Ponovo se povežite sa {{provider}}, a zatim ponovo pošaljite poruku.",
+  "error.providerAuth.chatgpt.title": "OpenAI vas je odjavio",
+  "error.providerAuth.chatgpt.description":
+    "Ponovo se prijavite na ChatGPT, a zatim ponovo pošaljite poruku da nastavite koristiti Codex modele.",
 
   "error.chain.unknown": "Nepoznata greška",
   "error.chain.causedBy": "Uzrok:",
@@ -759,6 +792,13 @@ export const dict = {
   "settings.indexing.dimension.title": "Dimenzija vektora",
   "settings.indexing.enable.description": "Uključite ili isključite semantičko indeksiranje baze koda.",
   "settings.indexing.enable.title": "Omogući indeksiranje",
+  "settings.indexing.globalEnable.title": "Omogući globalno",
+  "settings.indexing.globalEnable.description": "Omogući indeksiranje za svaki radni prostor.",
+  "settings.indexing.projectEnable.title": "Omogući za ovaj projekat",
+  "settings.indexing.projectEnable.description":
+    "Omogući indeksiranje za ovaj radni prostor kada je globalno indeksiranje isključeno.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globalno indeksiranje je omogućeno, tako da je ovaj projekat već obuhvaćen.",
   "settings.indexing.lancedbDirectory.description": "Opcionalni direktorij za lokalno LanceDB skladište.",
   "settings.indexing.lancedbDirectory.placeholder": "Ostavite prazno za zadano",
   "settings.indexing.lancedbDirectory.title": "LanceDB direktorij",
@@ -766,6 +806,10 @@ export const dict = {
   "settings.indexing.model.title": "Model embeddinga",
   "settings.indexing.provider.description":
     "Odaberite provajdera koji se koristi za generiranje embeddinga za semantičku pretragu.",
+  "settings.indexing.kiloModel.title": "Preset Kilo modela",
+  "settings.indexing.kiloModel.description": "Odaberite podržani model embeddinga hostovan na Kilo.",
+  "settings.indexing.kiloSignIn.title": "Potrebna je prijava na Kilo",
+  "settings.indexing.kiloSignIn.description": "Prijavite se na Kilo za korištenje hostovanih embeddinga.",
   "settings.indexing.provider.title": "Provajder embeddinga",
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",
@@ -1215,6 +1259,14 @@ export const dict = {
   "settings.experimental.agentManagerTool.title": "Agent Manager alat",
   "settings.experimental.agentManagerTool.description":
     "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
+  "settings.experimental.speechToText.title": "Govor u tekst",
+  "settings.experimental.speechToText.description":
+    "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Omogućite i prijavite se na Kilo provider da koristite glasovni unos u poljima za promptove.",
+  "settings.experimental.speechToTextModel.title": "Model govora u tekst",
+  "settings.experimental.speechToTextModel.description":
+    "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
   "settings.experimental.continueOnDeny.title": "Nastavi pri odbijanju",
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
@@ -1390,7 +1442,10 @@ export const dict = {
   "settings.checkpoints.enable.title": "Omogući snimke",
   "settings.checkpoints.enable.description": "Kreiraj kontrolne točke prije uređivanja datoteka",
   "settings.context.autoCompaction.title": "Automatska kompresija",
-  "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst kada je pun",
+  "settings.context.autoCompaction.description": "Automatski komprimiraj kontekst prije nego dostigne limit",
+  "settings.context.compactionLimit.title": "Limit automatske kompresije",
+  "settings.context.compactionLimit.description":
+    "Komprimiraj kada kontekst dostigne ovaj procenat prozora modela. Ostavite prazno da koristite samo sigurnosnu rezervu.",
   "settings.context.prune.title": "Očisti stare izlaze",
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
@@ -1548,9 +1603,15 @@ export const dict = {
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
   "notifications.action.tryModelGeneric": "Probaj model",
-  "diffViewer.source.workspace.label": "Lokalne izmjene",
+  "diffViewer.source.workspace.label": "Grana",
   "diffViewer.source.workspace.tooltip":
     "Sve promjene na ovoj grani u poređenju s osnovnom granom. Uključuje nekomitovane datoteke (staged, unstaged, nepraćene) i lokalne commitove koji još nisu u osnovi.",
+  "diffViewer.source.staged.label": "Pripremljeno",
+  "diffViewer.source.staged.tooltip":
+    "Datoteke s promjenama koje ste dodali u git pripremno područje (`git add`), kako će se pojaviti u sljedećem commitu.",
+  "diffViewer.source.unstaged.label": "Nepripremljeno",
+  "diffViewer.source.unstaged.tooltip":
+    "Datoteke izmijenjene u radnom stablu ali još nisu pripremljene, plus nepraćene (nove) datoteke.",
   "diffViewer.source.session.label": "Sesija",
   "diffViewer.source.session.tooltip":
     "Datoteke koje je Kilo promijenio tokom trenutne sesije, na osnovu snapshota po koraku. Resetuje se kada pokrenete novu sesiju.",
@@ -1558,4 +1619,13 @@ export const dict = {
   "diffViewer.group.git": "Git",
   "diffViewer.notice.snapshotsDisabled":
     "Snapshotovi su onemogućeni za ovaj repozitorij. Uredite konfiguracijske datoteke da biste prikazali promjene sesije.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan je spreman:",
 }

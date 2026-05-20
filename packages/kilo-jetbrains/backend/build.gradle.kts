@@ -11,6 +11,7 @@ kotlin {
 }
 
 val generatedApi = layout.buildDirectory.dir("generated/openapi/src/main/kotlin")
+val generatedSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.json")
 
 sourceSets {
     main {
@@ -19,10 +20,17 @@ sourceSets {
     }
 }
 
+val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
+    description = "Generate CLI OpenAPI spec into the build directory"
+    opencodeDir.set(rootProject.layout.projectDirectory.dir("../opencode"))
+    serverSrcDir.set(rootProject.layout.projectDirectory.dir("../opencode/src/server"))
+    spec.set(generatedSpec)
+}
+
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("jvm-okhttp4")
-    inputSpec.set("${rootDir}/../sdk/openapi.json")
+    inputSpec.set(generatedSpec.map { it.asFile.absolutePath })
     outputDir.set(layout.buildDirectory.dir("generated/openapi").get().asFile.absolutePath)
     packageName.set("ai.kilocode.jetbrains.api")
     apiPackage.set("ai.kilocode.jetbrains.api.client")
@@ -43,6 +51,7 @@ openApiGenerate {
         "anyOf<>" to "kotlin.Any",
         "number" to "kotlin.Double",
         "decimal" to "kotlin.Double",
+        "integer" to "kotlin.Long",
     ))
     openapiNormalizer.set(mapOf(
         "SIMPLIFY_ANYOF_STRING_AND_ENUM_STRING" to "true",
@@ -52,6 +61,10 @@ openApiGenerate {
     generateModelTests.set(false)
     generateApiDocumentation.set(false)
     generateModelDocumentation.set(false)
+}
+
+tasks.named("openApiGenerate") {
+    dependsOn(generateOpenApiSpec)
 }
 
 val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
@@ -75,42 +88,17 @@ val requiredPlatforms = listOf(
     "windows-arm64",
 )
 
-val localCli by tasks.registering(PrepareLocalCliTask::class) {
-    description = "Prepare local CLI binary for JetBrains dev"
-    val os = providers.systemProperty("os.name").map {
-        val name = it.lowercase()
-        if (name.contains("mac")) return@map "darwin"
-        if (name.contains("win")) return@map "windows"
-        if (name.contains("linux")) return@map "linux"
-        throw GradleException("Unsupported host OS: $it")
-    }
-    val arch = providers.systemProperty("os.arch").map {
-        val name = it.lowercase()
-        if (name == "aarch64" || name == "arm64") return@map "arm64"
-        if (name == "x86_64" || name == "amd64") return@map "x64"
-        throw GradleException("Unsupported host arch: $it")
-    }
-    script.set(rootProject.layout.projectDirectory.file("script/build.ts"))
-    root.set(rootProject.layout.projectDirectory)
-    out.set(cliDir)
-    platform.set(os.zip(arch) { a, b -> "$a-$b" })
-    exe.set(platform.map { if (it.startsWith("windows")) "kilo.exe" else "kilo" })
-}
-
 val prod = production
 val checkCli by tasks.registering(CheckCliTask::class) {
-    description = "Verify CLI binaries exist before building"
+    description = "Verify CLI binaries exist before packaging"
     dir.set(cliDir)
     this.production.set(prod)
     platforms.set(requiredPlatforms)
-    if (!prod.get()) {
-        dependsOn(localCli)
-    }
 }
 
-tasks.processResources {
-    dependsOn(checkCli)
-}
+// CLI binaries are verified only at packaging time (buildPlugin), not at
+// processResources time, so that Kotlin compile and tests work without binaries.
+// Wire checkCli to buildPlugin in the root build.gradle.kts instead.
 
 dependencies {
     intellijPlatform {

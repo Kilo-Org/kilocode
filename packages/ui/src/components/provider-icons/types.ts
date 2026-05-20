@@ -7,8 +7,12 @@ export const iconNames = [
   "zai",
   "zai-coding-plan",
   "xiaomi",
+  "xiaomi-token-plan-sgp", // kilocode_change
+  "xiaomi-token-plan-cn", // kilocode_change
+  "xiaomi-token-plan-ams", // kilocode_change
   "xai",
   "wandb",
+  "wafer.ai", // kilocode_change
   "vultr",
   "vivgrid",
   "vercel",
@@ -16,6 +20,8 @@ export const iconNames = [
   "v0",
   "upstage",
   "togetherai",
+  "the-grid-ai", // kilocode_change
+  "tencent-tokenhub", // kilocode_change
   "tencent-coding-plan",
   "synthetic",
   "submodel",
@@ -26,6 +32,7 @@ export const iconNames = [
   "scaleway",
   "sap-ai-core",
   "requesty",
+  "regolo-ai", // kilocode_change
   "qiniu-ai",
   "qihang-ai",
   "privatemode-ai",
@@ -34,7 +41,6 @@ export const iconNames = [
   "perplexity-agent",
   "ovhcloud",
   "openrouter",
-  "llmgateway",
   "opencode",
   "opencode-go",
   "openai",
@@ -42,6 +48,7 @@ export const iconNames = [
   "nvidia",
   "novita-ai",
   "nova",
+  "neuralwatt", // kilocode_change
   "nebius",
   "nano-gpt",
   "morph",
@@ -49,6 +56,7 @@ export const iconNames = [
   "moonshotai-cn",
   "modelscope",
   "moark",
+  "mixlayer", // kilocode_change
   "mistral",
   "minimax",
   "minimax-coding-plan",
@@ -57,8 +65,10 @@ export const iconNames = [
   "meganova",
   "lucidquery",
   "lmstudio",
+  "llmgateway", // kilocode_change
   "llama",
   "kuae-cloud-coding-plan",
+  "kiro", // kilocode_change
   "kimi-for-coding",
   "kilo",
   "jiekou",
@@ -67,6 +77,7 @@ export const iconNames = [
   "inception",
   "iflowcn",
   "huggingface",
+  "hpc-ai", // kilocode_change
   "helicone",
   "groq",
   "google",
@@ -75,6 +86,7 @@ export const iconNames = [
   "gitlab",
   "github-models",
   "github-copilot",
+  "frogbot", // kilocode_change
   "friendli",
   "firmware",
   "fireworks-ai",
@@ -82,6 +94,7 @@ export const iconNames = [
   "evroc",
   "drun",
   "dinference",
+  "digitalocean", // kilocode_change
   "deepseek",
   "deepinfra",
   "cortecs",
@@ -104,6 +117,7 @@ export const iconNames = [
   "alibaba-coding-plan-cn",
   "alibaba-cn",
   "aihubmix",
+  "abliteration-ai", // kilocode_change
   "abacus",
   "302ai",
 ] as const

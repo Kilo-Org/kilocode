@@ -987,21 +987,25 @@ export function options(input: {
   if (input.model.api.id.includes("gpt-5") && !input.model.api.id.includes("gpt-5-chat")) {
     if (!input.model.api.id.includes("gpt-5-pro")) {
       result["reasoningEffort"] = "medium"
-      // Only inject reasoningSummary for providers that support it natively.
-      // @ai-sdk/openai-compatible proxies (e.g. LiteLLM) do not understand this
-      // parameter and return "Unknown parameter: 'reasoningSummary'".
       if (
         input.model.api.npm === "@ai-sdk/openai" ||
         input.model.api.npm === "@ai-sdk/azure" ||
-        input.model.api.npm === "@ai-sdk/github-copilot"
+        input.model.api.npm === "@ai-sdk/github-copilot" || // kilocode_change
+        input.model.api.npm === "@openrouter/ai-sdk-provider" || // kilocode_change
+        input.model.api.npm === "@kilocode/kilo-gateway" // kilocode_change
       ) {
         result["reasoningSummary"] = "auto"
       }
     }
 
-    // Only set textVerbosity for non-chat gpt-5.x models
-    // Chat models (e.g. gpt-5.2-chat-latest) only support "medium" verbosity
     if (
+      // kilocode_change start - gate textVerbosity to Responses-API providers
+      (input.model.api.npm === "@ai-sdk/openai" ||
+        input.model.api.npm === "@ai-sdk/azure" ||
+        input.model.api.npm === "@ai-sdk/github-copilot" ||
+        input.model.api.npm === "@openrouter/ai-sdk-provider" ||
+        input.model.api.npm === "@kilocode/kilo-gateway") &&
+      // kilocode_change end
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
       !input.model.api.id.includes("-chat") &&

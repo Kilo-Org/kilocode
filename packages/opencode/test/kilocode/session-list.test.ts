@@ -37,9 +37,7 @@ describe("Kilo Session.list", () => {
           db.update(SessionTable).set({ project_id: project }).where(eq(SessionTable.id, session.id)).run()
         })
 
-        const sessions = await AppRuntime.runPromise(
-          Session.Service.use((svc) => svc.list({ directory: tmp.path })),
-        )
+        const sessions = await AppRuntime.runPromise(Session.Service.use((svc) => svc.list({ directory: tmp.path })))
         const ids = sessions.map((item) => item.id)
 
         expect(ids).toContain(session.id)

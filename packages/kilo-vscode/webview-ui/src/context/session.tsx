@@ -39,6 +39,7 @@ import {
   computeStatus,
   calcContextUsage,
   buildFamilyCosts,
+  buildFamilyParents,
   buildFamilyLabels,
   buildCostBreakdown,
   childID,
@@ -48,8 +49,10 @@ import { resolveModelSelection } from "./model-selection"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
+import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { visibleMessages as filterVisibleMessages } from "./session-queue"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -107,6 +110,9 @@ interface SessionContextValue {
 
   // Messages for current session
   messages: Accessor<Message[]>
+
+  // Messages for current session with soft-reverted turns hidden
+  visibleMessages: Accessor<Message[]>
 
   // User messages for current session (role === "user")
   userMessages: Accessor<Message[]>
@@ -204,7 +210,7 @@ interface SessionContextValue {
   worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
 
   // Actions
-  revertSession: (messageID: string) => void
+  revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
   sendMessage: (
     text: string,
@@ -242,6 +248,7 @@ interface SessionContextValue {
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
+  exportSessionTranscript: (id: string) => void
   syncSession: (sessionID: string) => void
 
   // Cloud session preview
@@ -516,6 +523,25 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
+  function clearModeModelSelection(agentName: string, persist = false) {
+    setUserSetAgents((prev) => {
+      const next = { ...prev }
+      delete next[agentName]
+      return next
+    })
+    setStore(
+      "modelSelections",
+      produce((selections) => {
+        delete selections[agentName]
+      }),
+    )
+    if (persist) vscode.postMessage({ type: "clearModelSelection", agent: agentName })
+  }
+
+  function shouldClearModeModelSelection(agentName: string) {
+    return getModeModel(agentName) !== null && userSetAgents()[agentName] === true
+  }
+
   function clearHiddenErrors(ids: string[]) {
     if (ids.length === 0) return
     setHiddenErrors((prev) => {
@@ -542,6 +568,10 @@ export const SessionProvider: ParentComponent = (props) => {
   /** Clear the per-mode model override, falling back to config default. */
   function clearModelOverride(sessionID?: string) {
     const sid = sessionID ?? currentSessionID()
+    const agentName = sid ? agentForScope(sid) : selectedAgentName()
+    // Always clear the persisted per-mode model selection so the user's
+    // configured (or fallback) model becomes effective, not the last manual pick.
+    clearModeModelSelection(agentName, true)
     if (sid) {
       setStore(
         "sessionOverrides",
@@ -550,22 +580,7 @@ export const SessionProvider: ParentComponent = (props) => {
         }),
       )
       hideErrors(sid)
-      return
     }
-    const agentName = selectedAgentName()
-    setUserSetAgents((prev) => {
-      const next = { ...prev }
-      delete next[agentName]
-      return next
-    })
-    setStore(
-      "modelSelections",
-      produce((selections) => {
-        delete selections[agentName]
-      }),
-    )
-    // Clear from model.json via extension host
-    vscode.postMessage({ type: "clearModelSelection", agent: agentName })
   }
 
   // Handle agentsLoaded immediately (not in onMount) so we never miss
@@ -839,7 +854,7 @@ export const SessionProvider: ParentComponent = (props) => {
         break
 
       case "sessionUpdated":
-        setStore("sessions", message.session.id, message.session)
+        handleSessionUpdated(message.session)
         break
 
       case "sessionDeleted":
@@ -1102,6 +1117,8 @@ export const SessionProvider: ParentComponent = (props) => {
         })
       }
 
+      const revert = store.sessions[sessionID]?.revert ?? undefined
+      if (revert) resetTodos(sessionID, revert)
       recoverPrefs(sessionID, merged)
     })
     if (reset) requestAnimationFrame(() => patchPage(sessionID, { lastMutation: undefined }))
@@ -1192,8 +1209,13 @@ export const SessionProvider: ParentComponent = (props) => {
             // Append text delta to text or reasoning parts
             ;(existing as { text: string }).text += delta.textDelta
           } else {
-            // Replace entire part
-            parts[effectiveMessageID][existingIndex] = part
+            // Preserve the proxy identity so Solid does not remount tool UI
+            // during streaming updates and restart pending animations.
+            const target = existing as unknown as Record<string, unknown>
+            for (const key of Object.keys(target)) {
+              if (!(key in part)) delete target[key]
+            }
+            Object.assign(existing, part)
           }
         } else {
           // Add new part
@@ -1395,13 +1417,12 @@ export const SessionProvider: ParentComponent = (props) => {
    * family tree (self + subagents + sub-subagents). Reads directly from the
    * store so it's reactive — automatically updates when new parts arrive.
    */
-  function sessionFamily(rootID: string): Set<string> {
-    const family = new Set<string>([rootID])
+  function sessionIDs(rootID: string, source: (sessionID: string) => Message[]): Set<string> {
+    const ids = new Set<string>([rootID])
     const queue = [rootID]
     while (queue.length > 0) {
       const sid = queue.pop()!
-      const msgs = store.messages[sid]
-      if (!msgs) continue
+      const msgs = source(sid)
       for (const msg of msgs) {
         const parts = store.parts[msg.id]
         if (!parts) continue
@@ -1416,14 +1437,22 @@ export const SessionProvider: ParentComponent = (props) => {
               state?: { metadata?: { sessionId?: string } }
             },
           )
-          if (child && !family.has(child)) {
-            family.add(child)
+          if (child && !ids.has(child)) {
+            ids.add(child)
             queue.push(child)
           }
         }
       }
     }
-    return family
+    return ids
+  }
+
+  function sessionFamily(rootID: string): Set<string> {
+    return sessionIDs(rootID, (sid) => store.messages[sid] ?? [])
+  }
+
+  function visibleFamily(rootID: string): Set<string> {
+    return sessionIDs(rootID, visible)
   }
 
   /** Return permissions scoped to the given session's family (self + subagents). */
@@ -1448,6 +1477,23 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
     setStore("todos", sessionID, items)
+  }
+
+  function resetTodos(sessionID: string, revert?: NonNullable<SessionInfo["revert"]>) {
+    const items = todoState({
+      messages: store.messages[sessionID] ?? [],
+      parts: (messageID) => store.parts[messageID] ?? stash.peek(messageID),
+      revert,
+    })
+    setStore("todos", sessionID, items)
+  }
+
+  function handleSessionUpdated(session: SessionInfo) {
+    const prev = store.sessions[session.id]?.revert
+    const next = session.revert ?? undefined
+    setStore("sessions", session.id, session)
+    if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
+    resetTodos(session.id, next)
   }
 
   function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {
@@ -1692,8 +1738,15 @@ export const SessionProvider: ParentComponent = (props) => {
           delete overrides[id]
         }),
       )
+      if (shouldClearModeModelSelection(name)) {
+        clearModeModelSelection(name)
+      }
     } else {
       setPendingAgentSelection(name)
+      if (shouldClearModeModelSelection(name)) {
+        clearModeModelSelection(name)
+        return
+      }
       // When switching mode, initialize model for the new mode if the user
       // hasn't explicitly set one for it
       if (!userSetAgents()[name] && !store.modelSelections[name]) {
@@ -2089,6 +2142,18 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "renameSession", sessionID: id, title })
   }
 
+  function exportSessionTranscript(id: string) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot export session transcript: not connected")
+      return
+    }
+    if (id.startsWith("cloud:")) {
+      console.warn("[Kilo New] Cannot export cloud session transcript")
+      return
+    }
+    vscode.postMessage({ type: "exportSessionTranscript", sessionID: id })
+  }
+
   // Computed values
   const currentSession = () => {
     const id = currentSessionID()
@@ -2132,10 +2197,19 @@ export const SessionProvider: ParentComponent = (props) => {
 
   const userMessages = createMemo(() => messages().filter((m) => m.role === "user"))
 
+  function visible(sessionID: string) {
+    return filterVisibleMessages(store.messages[sessionID] ?? [], store.sessions[sessionID]?.revert?.messageID)
+  }
+
   const revert = createMemo(() => {
     const id = currentSessionID()
     // revert can be null (cleared by unrevert) or undefined (never set) — treat both as "no revert"
     return id ? (store.sessions[id]?.revert ?? undefined) : undefined
+  })
+
+  const visibleMessages = createMemo(() => {
+    const id = currentSessionID()
+    return id ? visible(id) : []
   })
 
   const revertedCount = createMemo(() => {
@@ -2149,7 +2223,7 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? (store.sessions[id]?.summary ?? undefined) : undefined
   })
 
-  function revertSession(messageID: string) {
+  function revertSession(messageID: string, partID?: string) {
     const id = currentSessionID()
     if (!id) return
     // Restore the reverted user message's prompt text into the input.
@@ -2162,7 +2236,7 @@ export const SessionProvider: ParentComponent = (props) => {
         .join("")
       if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
     }
-    vscode.postMessage({ type: "revertSession", sessionID: id, messageID })
+    vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
 
   function unrevertSession() {
@@ -2188,18 +2262,30 @@ export const SessionProvider: ParentComponent = (props) => {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  /** Per-session cost — only reads store.messages (not parts). */
+  /**
+   * Per-session **own cost** — reads `store.messages` for per-session
+   * propagated totals and task metadata as a fallback for parent links so each
+   * session's entry excludes the cost already propagated up from its
+   * descendants by the CLI backend.
+   */
   const familyCosts = createMemo<Map<string, number>>(() => {
     const id = currentSessionID()
     if (!id) return new Map()
-    return buildFamilyCosts(sessionFamily(id), store.messages)
+    const family = visibleFamily(id)
+    const msgs: Record<string, Message[]> = {}
+    for (const sid of family) msgs[sid] = visible(sid)
+    const parents = buildFamilyParents(family, msgs, store.parts)
+    return buildFamilyCosts(family, msgs, store.sessions, parents)
   })
 
   /** Child session labels — only reads store.parts (not message costs). */
   const familyLabels = createMemo<Map<string, string>>(() => {
     const id = currentSessionID()
     if (!id) return new Map()
-    return buildFamilyLabels(sessionFamily(id), store.messages as any, store.parts as any)
+    const family = visibleFamily(id)
+    const msgs: Record<string, Message[]> = {}
+    for (const sid of family) msgs[sid] = visible(sid)
+    return buildFamilyLabels(family, msgs, store.parts)
   })
 
   /** Combined cost breakdown with labels. */
@@ -2236,7 +2322,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   const contextUsage = createMemo<ContextUsage | undefined>(() => {
-    const msgs = messages()
+    const msgs = visibleMessages()
     for (let i = msgs.length - 1; i >= 0; i--) {
       const m = msgs[i]
       if (m.role !== "assistant" || !m.tokens) continue
@@ -2264,6 +2350,7 @@ export const SessionProvider: ParentComponent = (props) => {
     hasOlderMessages,
     messageMutation,
     messages,
+    visibleMessages,
     userMessages,
     getParts,
     isErrorHidden: (messageID: string) => hiddenErrors().has(messageID),
@@ -2355,6 +2442,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectSession,
     deleteSession,
     renameSession,
+    exportSessionTranscript,
     syncSession,
     cloudPreviewId,
     selectCloudSession,

@@ -50,10 +50,13 @@ import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
+import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { extractFilePathFromHref } from "../file-path"
-import { contents } from "./session-diff"
+import { normalize } from "./session-diff"
+import { deferredHighlight } from "../context/marked"
+import { escapeHtml } from "../util/escape-html"
 
 // Windows CLI tools (e.g. winget) use \r to overwrite progress bars in-place.
 // Without this, every progress frame renders as a separate visual line.
@@ -1117,6 +1120,9 @@ function McpTool(props: ToolProps) {
       <BasicTool
         icon="mcp"
         status={props.status}
+        tool={props.tool}
+        partID={props.partID}
+        callID={props.callID}
         trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
@@ -1339,7 +1345,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
           <div data-slot="assistant-copy-wrapper">
             <Tooltip
               value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
-              placement="right"
+              placement="top"
               gutter={4}
             >
               <IconButton
@@ -2028,6 +2034,112 @@ ToolRegistry.register({
   },
 })
 
+function BashCopyButton(props: { value: () => string; label: string }) {
+  const i18n = useI18n()
+  const [copied, setCopied] = createSignal(false)
+  const handler = async () => {
+    const text = props.value()
+    if (!text) return
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <Tooltip value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")} placement="bottom" gutter={4}>
+      <IconButton
+        icon={copied() ? "check" : "copy"}
+        size="small"
+        variant="ghost"
+        onClick={handler}
+        aria-label={props.label}
+      />
+    </Tooltip>
+  )
+}
+
+function BashHighlightedOutput(props: { cmd: string; output: string; outputPath?: string; active?: boolean }) {
+  const data = useData()
+  const i18n = useI18n()
+  const cmdState = { signal: { aborted: false } }
+  const outState = { signal: { aborted: false } }
+  let cmdRef: HTMLDivElement | undefined
+  let outRef: HTMLDivElement | undefined
+
+  createEffect(() => {
+    cmdState.signal.aborted = true
+    if (!props.active) return
+    const cmd = props.cmd
+    if (!cmdRef || !cmd) return
+    const signal = { aborted: false }
+    cmdState.signal = signal
+    cmdRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="shellscript">${escapeHtml(cmd)}</code></pre>`
+    void deferredHighlight(cmdRef, undefined, signal)
+  })
+
+  createEffect(() => {
+    outState.signal.aborted = true
+    if (!props.active) return
+    const out = props.output
+    if (!outRef || !out) return
+    const signal = { aborted: false }
+    outState.signal = signal
+    outRef.innerHTML = `<pre data-slot="bash-pre"><code data-lang="log">${escapeHtml(out)}</code></pre>`
+    void deferredHighlight(outRef, undefined, signal)
+  })
+
+  onCleanup(() => {
+    cmdState.signal.aborted = true
+    outState.signal.aborted = true
+  })
+
+  const openInEditor = () => {
+    // When output was truncated, open the full output file on disk
+    if (props.outputPath && data.openFile) {
+      data.openFile(props.outputPath)
+      return
+    }
+    if (!data.openContent) return
+    data.openContent(props.output, "log")
+  }
+
+  return (
+    <div data-component="bash-output">
+      <Show when={props.cmd}>
+        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.command")}</div>
+        <div data-slot="bash-section">
+          <div data-slot="bash-section-code" ref={cmdRef} />
+          <div data-slot="bash-section-actions">
+            <BashCopyButton value={() => props.cmd} label={i18n.t("ui.message.copy")} />
+          </div>
+        </div>
+      </Show>
+      <Show when={props.cmd && props.output}>
+        <div data-slot="bash-divider" />
+      </Show>
+      <Show when={props.output}>
+        <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.shell.output")}</div>
+        <div data-slot="bash-section">
+          <div data-slot="bash-section-code" data-scrollable ref={outRef} />
+          <div data-slot="bash-section-actions">
+            <Show when={data.openContent || (props.outputPath && data.openFile)}>
+              <Tooltip value={i18n.t("ui.messagePart.openInEditor")} placement="bottom" gutter={4}>
+                <IconButton
+                  icon="square-arrow-top-right"
+                  size="small"
+                  variant="ghost"
+                  onClick={openInEditor}
+                  aria-label={i18n.t("ui.messagePart.openInEditor")}
+                />
+              </Tooltip>
+            </Show>
+            <BashCopyButton value={() => props.output} label={i18n.t("ui.message.copy")} />
+          </div>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
 ToolRegistry.register({
   name: "bash",
   render(props) {
@@ -2035,6 +2147,8 @@ ToolRegistry.register({
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const subtitle = () => props.input.description ?? props.metadata.description
+    const key = () => toolOpenKey(props)
+    const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
 
     // also apply processCarriageReturns for Windows CLI tools
     const cmd = createMemo(() => {
@@ -2048,19 +2162,6 @@ ToolRegistry.register({
       return ""
     })
     const out = createMemo(() => processCarriageReturns(stripAnsi(rawOutput())))
-    const text = createMemo(() => `$ ${cmd()}${out() ? "\n\n" + out() : ""}`)
-
-    const hasOutput = createMemo(() => out().length > 0)
-    const [copied, setCopied] = createSignal(false)
-
-    const handleCopy = async () => {
-      const command = cmd()
-      if (!command) return
-      const content = out() ? `${command}\n\n${out()}` : command
-      await navigator.clipboard.writeText(content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
 
     return (
       <BasicTool
@@ -2068,6 +2169,7 @@ ToolRegistry.register({
         icon="console"
         animated
         defaultOpen={props.defaultOpen ?? true}
+        onOpenChange={setOpen}
         allowPendingToggle
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
@@ -2080,29 +2182,7 @@ ToolRegistry.register({
           </div>
         }
       >
-        <div data-component="bash-output">
-          <div data-slot="bash-copy">
-            <Tooltip
-              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
-              placement="top"
-              gutter={4}
-            >
-              <IconButton
-                icon={copied() ? "check" : "copy"}
-                size="small"
-                variant="secondary"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleCopy}
-                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copy")}
-              />
-            </Tooltip>
-          </div>
-          <div data-slot="bash-scroll" data-scrollable>
-            <pre data-slot="bash-pre">
-              <code>{text()}</code>
-            </pre>
-          </div>
-        </div>
+        <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
       </BasicTool>
     )
   },
@@ -2121,22 +2201,31 @@ ToolRegistry.register({
     const reveal = useToolReveal(pending, () => props.reveal !== false)
     const view = createMemo(() => {
       const diff = props.metadata?.filediff
-      if (!diff?.patch) return
-      return contents(diff)
+      if (diff?.patch) return normalize(diff)
+      // Pending state: tool-part metadata.filediff is written only after the
+      // permission ask completes, so render from the tool input in the meantime.
+      const before = props.input.oldString ?? ""
+      const after = props.input.newString ?? ""
+      if (!before && !after) return
+      return normalize({
+        file: diff?.file ?? path(),
+        before,
+        after,
+        additions: diff?.additions ?? 0,
+        deletions: diff?.deletions ?? 0,
+      })
     })
-    const before = () => view()?.before ?? props.metadata?.filediff?.before ?? props.input.oldString ?? ""
-    const after = () => view()?.after ?? props.metadata?.filediff?.after ?? props.input.newString ?? ""
-    const canOpenDiff = () => !!data.openDiff && !!path() && (before() !== "" || after() !== "")
+    const canOpenDiff = () => !!data.openDiff && !!path() && !!view()
     const canOpenFile = () => !!data.openFile && !!path()
 
     const openDiff = () => {
-      if (!canOpenDiff()) return
+      const v = view()
+      if (!canOpenDiff() || !v) return
       data.openDiff!({
         file: path(),
-        before: before(),
-        after: after(),
-        additions: props.metadata?.filediff?.additions ?? 0,
-        deletions: props.metadata?.filediff?.deletions ?? 0,
+        patch: v.patch,
+        additions: v.additions,
+        deletions: v.deletions,
       })
     }
 
@@ -2185,7 +2274,7 @@ ToolRegistry.register({
                 </div>
               </div>
               <Show when={canOpenDiff()}>
-                <span data-slot="edit-trigger-actions">
+                <span data-slot="tool-trigger-actions">
                   <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
                     <IconButton
                       icon="square-arrow-top-right"
@@ -2211,18 +2300,11 @@ ToolRegistry.register({
               }
             >
               <div data-component="edit-content">
-                <Dynamic
-                  component={fileComponent}
-                  mode="diff"
-                  before={{
-                    name: path(),
-                    contents: before(),
-                  }}
-                  after={{
-                    name: path(),
-                    contents: after(),
-                  }}
-                />
+                <Show when={view()}>
+                  {(v) => (
+                    <Dynamic component={fileComponent} mode="diff" hunkSeparators="simple" fileDiff={v().fileDiff} />
+                  )}
+                </Show>
               </div>
             </ToolFileAccordion>
           </Show>
@@ -2247,23 +2329,36 @@ ToolRegistry.register({
     const view = createMemo(() => {
       const diff = props.metadata?.filediff
       if (!diff?.patch) return
-      return contents(diff)
+      return normalize(diff)
     })
+    const canOpenDiff = () => !!data.openDiff && !!props.input.filePath && !!view()
+    const canOpenFile = () => !!data.openFile && !!props.input.filePath
+
+    const openDiff = () => {
+      const v = view()
+      if (!data.openDiff || !props.input.filePath || !v) return
+      data.openDiff({
+        file: props.metadata?.filediff?.file || props.input.filePath,
+        patch: v.patch,
+        additions: v.additions,
+        deletions: v.deletions,
+      })
+    }
 
     const handleFileClick = (e: MouseEvent) => {
       e.stopPropagation()
-      if (data.openDiff && view()) {
-        data.openDiff({
-          file: props.metadata?.filediff?.file || props.input.filePath,
-          before: view()!.before,
-          after: view()!.after,
-          additions: props.metadata?.filediff?.additions ?? 0,
-          deletions: props.metadata?.filediff?.deletions ?? 0,
-        })
+      if (canOpenDiff()) {
+        openDiff()
         return
       }
-      if (!data.openFile || !props.input.filePath) return
-      data.openFile(props.input.filePath)
+      if (canOpenFile()) {
+        data.openFile!(props.input.filePath!)
+      }
+    }
+
+    const handleOpenDiffClick = (e: MouseEvent) => {
+      e.stopPropagation()
+      openDiff()
     }
 
     return (
@@ -2286,16 +2381,26 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={
-                          (view() && data.openDiff) || (data.openFile && props.input.filePath)
-                            ? handleFileClick
-                            : undefined
-                        }
+                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
                 </div>
               </div>
+              <Show when={canOpenDiff()}>
+                <span data-slot="tool-trigger-actions">
+                  <Tooltip value={i18n.t("ui.messagePart.openInDiffViewer")} placement="top" gutter={4}>
+                    <IconButton
+                      icon="square-arrow-top-right"
+                      size="small"
+                      variant="ghost"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={handleOpenDiffClick}
+                      aria-label={i18n.t("ui.messagePart.openInDiffViewer")}
+                    />
+                  </Tooltip>
+                </span>
+              </Show>
             </div>
           }
         >
@@ -2325,12 +2430,7 @@ ToolRegistry.register({
                   }
                 >
                   {(diff) => (
-                    <Dynamic
-                      component={fileComponent}
-                      mode="diff"
-                      before={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().before }}
-                      after={{ name: props.metadata?.filediff?.file || props.input.filePath, contents: diff().after }}
-                    />
+                    <Dynamic component={fileComponent} mode="diff" hunkSeparators="simple" fileDiff={diff().fileDiff} />
                   )}
                 </Show>
               </div>
@@ -2349,8 +2449,6 @@ interface ApplyPatchFile {
   type: "add" | "update" | "delete" | "move"
   patch?: string
   diff: string
-  before?: string
-  after?: string
   additions: number
   deletions: number
   movePath?: string
@@ -2364,11 +2462,14 @@ ToolRegistry.register({
     const fileComponent = useFileComponent()
     const files = createMemo(() => (props.metadata.files ?? []) as ApplyPatchFile[])
     const view = (file: ApplyPatchFile) => {
-      if (file.patch)
-        return contents({ file: file.relativePath, patch: file.patch, additions: file.additions, deletions: file.deletions })
-      if (file.diff)
-        return contents({ file: file.relativePath, patch: file.diff, additions: file.additions, deletions: file.deletions })
-      if (file.before !== undefined || file.after !== undefined) return { before: file.before ?? "", after: file.after ?? "" }
+      const patch = file.patch ?? file.diff
+      if (!patch) return
+      return normalize({
+        file: file.relativePath,
+        patch,
+        additions: file.additions,
+        deletions: file.deletions,
+      })
     }
     const pending = createMemo(() => busy(props.status))
     const reveal = useToolReveal(pending, () => props.reveal !== false)
@@ -2513,8 +2614,8 @@ ToolRegistry.register({
                                   <Dynamic
                                     component={fileComponent}
                                     mode="diff"
-                                    before={{ name: file.filePath, contents: diff().before }}
-                                    after={{ name: file.movePath ?? file.filePath, contents: diff().after }}
+                                    hunkSeparators="simple"
+                                    fileDiff={diff().fileDiff}
                                   />
                                 </div>
                               )}
@@ -2563,8 +2664,8 @@ ToolRegistry.register({
                       <Dynamic
                         component={fileComponent}
                         mode="diff"
-                        before={{ name: file().filePath, contents: diff().before }}
-                        after={{ name: file().movePath ?? file().filePath, contents: diff().after }}
+                        hunkSeparators="simple"
+                        fileDiff={diff().fileDiff}
                       />
                     </div>
                   )}
