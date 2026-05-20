@@ -25,6 +25,7 @@ interface DiffVirtualFile {
   patch?: string
   additions: number
   deletions: number
+  status?: "added" | "modified" | "deleted"
 }
 
 const DiffVirtualContent: Component = () => {
@@ -119,7 +120,9 @@ const DiffVirtualContent: Component = () => {
                     when={markdown() && isMarkdownFile(d().file)}
                     fallback={<Diff fileDiff={v().fileDiff} diffStyle={style()} hunkSeparators="simple" />}
                   >
-                    <MarkdownDiffView diff={{ file: d().file, before: v().before, after: v().after }} />
+                    <MarkdownDiffView
+                      diff={{ file: d().file, before: v().before, after: v().after, status: d().status }}
+                    />
                   </Show>
                 )}
               </Show>

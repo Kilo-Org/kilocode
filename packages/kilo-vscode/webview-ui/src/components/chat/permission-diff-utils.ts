@@ -1,4 +1,4 @@
-import type { PermissionFileDiff, PermissionRequest } from "../../types/messages"
+import type { PermissionFileDiff, PermissionFileStatus, PermissionRequest } from "../../types/messages"
 
 type File = {
   filePath?: unknown
@@ -17,27 +17,39 @@ function text(value: unknown) {
   return typeof value === "string" ? value : undefined
 }
 
+function status(value: unknown): PermissionFileStatus | undefined {
+  if (value === "added" || value === "modified" || value === "deleted") return value
+  if (value === "add") return "added"
+  if (value === "delete") return "deleted"
+  if (value === "update" || value === "move") return "modified"
+  return undefined
+}
+
 function clean(diff: unknown): PermissionFileDiff | undefined {
   if (!diff || typeof diff !== "object") return
   const item = diff as Record<string, unknown>
   const file = text(item.file)
   if (!file) return
+  const fileStatus = status(item.status)
   return {
     file,
     ...(text(item.patch) !== undefined ? { patch: text(item.patch) } : {}),
     additions: num(item.additions),
     deletions: num(item.deletions),
+    ...(fileStatus !== undefined ? { status: fileStatus } : {}),
   }
 }
 
 function file(item: File): PermissionFileDiff | undefined {
   const name = text(item.relativePath) ?? text(item.filePath)
   if (!name) return
+  const fileStatus = status(item.type)
   return {
     file: name,
     ...(text(item.patch) !== undefined ? { patch: text(item.patch) } : {}),
     additions: num(item.additions),
     deletions: num(item.deletions),
+    ...(fileStatus !== undefined ? { status: fileStatus } : {}),
   }
 }
 

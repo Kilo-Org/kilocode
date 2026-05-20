@@ -2454,6 +2454,14 @@ interface ApplyPatchFile {
   movePath?: string
 }
 
+type ApplyPatchFileStatus = "added" | "modified" | "deleted"
+
+function applyPatchStatus(type: ApplyPatchFile["type"]): ApplyPatchFileStatus {
+  if (type === "add") return "added"
+  if (type === "delete") return "deleted"
+  return "modified"
+}
+
 ToolRegistry.register({
   name: "apply_patch",
   render(props) {
@@ -2469,6 +2477,7 @@ ToolRegistry.register({
         patch,
         additions: file.additions,
         deletions: file.deletions,
+        status: applyPatchStatus(file.type),
       })
     }
     const pending = createMemo(() => busy(props.status))

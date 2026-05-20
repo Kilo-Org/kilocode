@@ -28,13 +28,15 @@ describe("permissionDiffs", () => {
         files: [
           { relativePath: "src/a.ts", type: "update", patch: "a", additions: 1, deletions: 1 },
           { relativePath: "src/b.ts", type: "add", patch: "b", additions: 2, deletions: 0 },
+          { relativePath: "src/c.ts", type: "delete", patch: "c", additions: 0, deletions: 3 },
         ],
       }),
     )
 
     expect(diffs).toEqual([
-      { file: "src/a.ts", patch: "a", additions: 1, deletions: 1 },
-      { file: "src/b.ts", patch: "b", additions: 2, deletions: 0 },
+      { file: "src/a.ts", patch: "a", additions: 1, deletions: 1, status: "modified" },
+      { file: "src/b.ts", patch: "b", additions: 2, deletions: 0, status: "added" },
+      { file: "src/c.ts", patch: "c", additions: 0, deletions: 3, status: "deleted" },
     ])
   })
 

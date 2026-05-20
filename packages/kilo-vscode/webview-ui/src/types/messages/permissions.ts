@@ -13,11 +13,14 @@ export interface PermissionRuleItem {
 }
 
 // Permission request
+export type PermissionFileStatus = "added" | "modified" | "deleted"
+
 export interface PermissionFileDiff {
   file: string
   patch?: string
   additions: number
   deletions: number
+  status?: PermissionFileStatus
 }
 
 export interface PermissionPatchFile {
