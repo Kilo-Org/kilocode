@@ -2,13 +2,13 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { ConfigValidation } from "../../src/kilocode/config-validation"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Config } from "../../src/config/config"
 import { Filesystem } from "../../src/util/filesystem"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("ConfigValidation.check", () => {
@@ -17,7 +17,7 @@ describe("ConfigValidation.check", () => {
     const filepath = path.join(tmp.path, "src", "index.ts")
     await Filesystem.write(filepath, "export const x = 1")
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -29,7 +29,7 @@ describe("ConfigValidation.check", () => {
     const filepath = path.join(tmp.path, "kilo.json")
     await Filesystem.write(filepath, JSON.stringify({ model: "anthropic/claude-sonnet-4-20250514" }))
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -42,7 +42,7 @@ describe("ConfigValidation.check", () => {
     const filepath = path.join(tmp.path, "kilo.json")
     await Filesystem.write(filepath, '{ "model": "test/model" "extra": true }')
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -57,7 +57,7 @@ describe("ConfigValidation.check", () => {
     // Config.Info uses .strict() so unknown fields produce errors
     await Filesystem.write(filepath, JSON.stringify({ notAField: true }))
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -77,7 +77,7 @@ description: A test command
 Do something useful`,
     )
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -98,7 +98,7 @@ subtask: "not-a-boolean"
 Do something`,
     )
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -119,7 +119,7 @@ description: A helper agent
 You are a helpful agent.`,
     )
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -132,7 +132,7 @@ You are a helpful agent.`,
     const filepath = path.join(tmp.path, "AGENTS.md")
     await Filesystem.write(filepath, "# Project agents")
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -144,7 +144,7 @@ You are a helpful agent.`,
     const filepath = path.join(tmp.path, ".kilo", "plans", "plan.md")
     await Filesystem.write(filepath, "# Plan")
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: () => ConfigValidation.check(filepath),
     })
@@ -169,7 +169,7 @@ Broken agent`,
     const filepath = path.join(tmp.path, "kilo.json")
     await Filesystem.write(filepath, JSON.stringify({ model: "anthropic/claude-sonnet-4-20250514" }))
 
-    const result = await Instance.provide({
+    const result = await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         // Force config load to populate warnings

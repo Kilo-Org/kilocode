@@ -6,6 +6,7 @@ import {
   resolveCustomProviderAuth,
   sanitizeCustomProviderConfig,
   validateProviderID,
+  withCustomProviderDeletions,
 } from "../../src/shared/custom-provider"
 
 describe("validateProviderID", () => {
@@ -141,5 +142,55 @@ describe("sanitizeCustomProviderConfig", () => {
     })
 
     expect("error" in result ? result.error : "").toContain("mcpServer")
+  })
+})
+
+describe("withCustomProviderDeletions", () => {
+  const baseNext = {
+    npm: "@ai-sdk/openai-compatible" as const,
+    name: "My Provider",
+    options: { baseURL: "https://example.com/v1" },
+    models: { keep: { name: "Keep" } },
+  }
+
+  it("passes through unchanged when there is no prior config", () => {
+    expect(withCustomProviderDeletions(undefined, baseNext)).toEqual(baseNext)
+    expect(withCustomProviderDeletions({}, baseNext)).toEqual(baseNext)
+  })
+
+  it("emits null for models present in existing but absent in next", () => {
+    const existing = { models: { keep: { name: "Keep" }, gone: { name: "Gone" } } }
+    const result = withCustomProviderDeletions(existing, baseNext)
+    const models = result.models as Record<string, unknown>
+    expect(models.keep).toEqual({ name: "Keep" })
+    expect(models.gone).toBeNull()
+  })
+
+  it("emits null for variants removed from a surviving model", () => {
+    const existing = {
+      models: {
+        keep: {
+          name: "Keep",
+          variants: { high: { reasoningEffort: "high" }, low: { reasoningEffort: "low" } },
+        },
+      },
+    }
+    const next = {
+      ...baseNext,
+      models: {
+        keep: { name: "Keep", variants: { high: { reasoningEffort: "high" } } },
+      },
+    } as typeof baseNext
+    const result = withCustomProviderDeletions(existing, next)
+    const model = (result.models as Record<string, { variants: Record<string, unknown> }>).keep
+    expect(model.variants.high).toEqual({ reasoningEffort: "high" })
+    expect(model.variants.low).toBeNull()
+  })
+
+  it("does not touch variants on a model that is being deleted", () => {
+    const existing = { models: { gone: { name: "Gone", variants: { a: {} } } } }
+    const result = withCustomProviderDeletions(existing, baseNext)
+    const models = result.models as Record<string, unknown>
+    expect(models.gone).toBeNull()
   })
 })

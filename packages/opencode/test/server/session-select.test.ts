@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
-import { Session as SessionNs } from "../../src/session"
+import { Session as SessionNs } from "@/session/session"
 import type { SessionID } from "../../src/session/schema"
-import { Log } from "../../src/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
-Log.init({ print: false })
+void Log.init({ print: false })
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
   return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
@@ -24,13 +25,13 @@ const svc = {
 }
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("tui.selectSession endpoint", () => {
   test("should return 200 when called with valid session", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         // #given
@@ -56,7 +57,7 @@ describe("tui.selectSession endpoint", () => {
 
   test("should return 404 when session does not exist", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         // #given
@@ -78,7 +79,7 @@ describe("tui.selectSession endpoint", () => {
 
   test("should return 400 when session ID format is invalid", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         // #given

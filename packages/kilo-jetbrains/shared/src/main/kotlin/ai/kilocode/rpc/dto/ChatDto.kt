@@ -47,7 +47,7 @@ data class MessageWithPartsDto(
     val parts: List<PartDto>,
 )
 
-// --- Parts (simplified for basic chat) ---
+// --- Parts ---
 
 @Serializable
 data class PartDto(
@@ -57,8 +57,23 @@ data class PartDto(
     val type: String,
     val text: String? = null,
     val tool: String? = null,
+    val callID: String? = null,
     val state: String? = null,
     val title: String? = null,
+    val input: Map<String, String> = emptyMap(),
+    val metadata: Map<String, String> = emptyMap(),
+    val output: String? = null,
+    val error: String? = null,
+    val time: PartTimeDto? = null,
+    val reason: String? = null,
+    val cost: Double? = null,
+    val tokens: TokensDto? = null,
+)
+
+@Serializable
+data class PartTimeDto(
+    val start: Double? = null,
+    val end: Double? = null,
 )
 
 // --- Prompt Input ---
@@ -69,6 +84,7 @@ data class PromptDto(
     val providerID: String? = null,
     val modelID: String? = null,
     val agent: String? = null,
+    val variant: String? = null,
 )
 
 @Serializable
@@ -90,14 +106,14 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
-    @SerialName("part.updated")
+    @SerialName("message.part.updated")
     data class PartUpdated(
         val sessionID: String,
         val part: PartDto,
     ) : ChatEventDto()
 
     @Serializable
-    @SerialName("part.delta")
+    @SerialName("message.part.delta")
     data class PartDelta(
         val sessionID: String,
         val messageID: String,
@@ -107,20 +123,28 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
-    @SerialName("turn.open")
+    @SerialName("message.part.removed")
+    data class PartRemoved(
+        val sessionID: String,
+        val messageID: String,
+        val partID: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.turn.open")
     data class TurnOpen(
         val sessionID: String,
     ) : ChatEventDto()
 
     @Serializable
-    @SerialName("turn.close")
+    @SerialName("session.turn.close")
     data class TurnClose(
         val sessionID: String,
         val reason: String,
     ) : ChatEventDto()
 
     @Serializable
-    @SerialName("error")
+    @SerialName("session.error")
     data class Error(
         val sessionID: String?,
         val error: MessageErrorDto? = null,
@@ -132,7 +156,162 @@ sealed class ChatEventDto {
         val sessionID: String,
         val messageID: String,
     ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("permission.asked")
+    data class PermissionAsked(
+        val sessionID: String,
+        val request: PermissionRequestDto,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("permission.replied")
+    data class PermissionReplied(
+        val sessionID: String,
+        val requestID: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("question.asked")
+    data class QuestionAsked(
+        val sessionID: String,
+        val request: QuestionRequestDto,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("question.replied")
+    data class QuestionReplied(
+        val sessionID: String,
+        val requestID: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("question.rejected")
+    data class QuestionRejected(
+        val sessionID: String,
+        val requestID: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.status")
+    data class SessionStatusChanged(
+        val sessionID: String,
+        val status: SessionStatusDto,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.updated")
+    data class SessionUpdated(
+        val sessionID: String,
+        val session: SessionDto,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.idle")
+    data class SessionIdle(
+        val sessionID: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.compacted")
+    data class SessionCompacted(
+        val sessionID: String,
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("session.diff")
+    data class SessionDiffChanged(
+        val sessionID: String,
+        val diff: List<DiffFileDto> = emptyList(),
+    ) : ChatEventDto()
+
+    @Serializable
+    @SerialName("todo.updated")
+    data class TodoUpdated(
+        val sessionID: String,
+        val todos: List<TodoDto> = emptyList(),
+    ) : ChatEventDto()
 }
+
+// --- Permission DTOs ---
+
+@Serializable
+data class PermissionRequestDto(
+    val id: String,
+    val sessionID: String,
+    val permission: String,
+    val patterns: List<String>,
+    val metadata: Map<String, String> = emptyMap(),
+    val always: List<String> = emptyList(),
+    val tool: ToolRefDto? = null,
+)
+
+@Serializable
+data class ToolRefDto(
+    val messageID: String,
+    val callID: String,
+)
+
+@Serializable
+data class PermissionReplyDto(
+    val reply: String,
+    val message: String? = null,
+)
+
+@Serializable
+data class PermissionAlwaysRulesDto(
+    val approvedAlways: List<String> = emptyList(),
+    val deniedAlways: List<String> = emptyList(),
+)
+
+// --- Question DTOs ---
+
+@Serializable
+data class QuestionRequestDto(
+    val id: String,
+    val sessionID: String,
+    val questions: List<QuestionInfoDto>,
+    val tool: ToolRefDto? = null,
+)
+
+@Serializable
+data class QuestionInfoDto(
+    val question: String,
+    val header: String,
+    val options: List<QuestionOptionDto> = emptyList(),
+    val multiple: Boolean = false,
+    val custom: Boolean = true,
+)
+
+@Serializable
+data class QuestionOptionDto(
+    val label: String,
+    val description: String,
+)
+
+@Serializable
+data class QuestionReplyDto(
+    val answers: List<List<String>>,
+)
+
+// --- Todo DTO ---
+
+@Serializable
+data class TodoDto(
+    val content: String,
+    val status: String,
+    val priority: String,
+)
+
+// --- Diff DTO ---
+
+@Serializable
+data class DiffFileDto(
+    val file: String,
+    val additions: Int,
+    val deletions: Int,
+    val patch: String? = null,
+)
 
 // --- Config Update ---
 

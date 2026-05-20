@@ -1,18 +1,18 @@
 // kilocode_change - new file
 import { afterEach, test, expect } from "bun:test"
-import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { WithInstance } from "../../src/project/with-instance"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
-import { Global } from "../../src/global"
+import { Global } from "@opencode-ai/core/global"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 test("code agent allows global config directory reads by default", async () => {
   await using tmp = await tmpdir()
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const code = await Agent.get("code")

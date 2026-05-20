@@ -135,7 +135,7 @@ const CloudSessionList: Component<CloudSessionListProps> = (props) => {
         }}
         search={{
           placeholder: language.t("session.search.placeholder"),
-          autofocus: false,
+          autofocus: true,
           action:
             gitUrl() !== null ? (
               <div class="cloud-session-repo-filter">

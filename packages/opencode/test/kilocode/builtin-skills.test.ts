@@ -1,18 +1,18 @@
 import { afterEach, test, expect } from "bun:test"
 import path from "path"
 import { Skill } from "../../src/skill"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { BUILTIN_SKILLS } from "../../src/kilocode/skills/builtin"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 test("built-in skills are present in empty project", async () => {
   await using tmp = await tmpdir({ git: true })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const skills = await Skill.all()
@@ -30,7 +30,7 @@ test("built-in skills are present in empty project", async () => {
 test("built-in skill has correct metadata", async () => {
   await using tmp = await tmpdir({ git: true })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const skill = await Skill.get("kilo-config")
@@ -62,7 +62,7 @@ User-provided content.
     },
   })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const skill = await Skill.get("kilo-config")

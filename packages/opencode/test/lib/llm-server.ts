@@ -501,6 +501,16 @@ export class Reply {
     return this
   }
 
+  // kilocode_change start
+  finish(reason: string) {
+    this.#finish = reason
+    this.#hang = false
+    this.#error = undefined
+    this.#reset = false
+    return this
+  }
+  // kilocode_change end
+
   tool(name: string, input: unknown) {
     const id = this.#id()
     const args = JSON.stringify(input)
@@ -596,33 +606,9 @@ function hit(url: string, body: unknown) {
   } satisfies Hit
 }
 
-/** Auto-acknowledging tool-result follow-ups avoids requiring tests to queue two responses per tool call. */
-function isToolResultFollowUp(body: unknown): boolean {
-  if (!body || typeof body !== "object") return false
-  // OpenAI chat format: last message has role "tool"
-  if ("messages" in body && Array.isArray(body.messages)) {
-    const last = body.messages[body.messages.length - 1]
-    return last?.role === "tool"
-  }
-  // Responses API: input contains function_call_output
-  if ("input" in body && Array.isArray(body.input)) {
-    return body.input.some((item: Record<string, unknown>) => item?.type === "function_call_output")
-  }
-  return false
-}
-
 function isTitleRequest(body: unknown): boolean {
   if (!body || typeof body !== "object") return false
   return JSON.stringify(body).includes("Generate a title for this conversation")
-}
-
-function requestSummary(body: unknown): string {
-  if (!body || typeof body !== "object") return "empty body"
-  if ("messages" in body && Array.isArray(body.messages)) {
-    const roles = body.messages.map((m: Record<string, unknown>) => m.role).join(",")
-    return `messages=[${roles}]`
-  }
-  return `keys=[${Object.keys(body).join(",")}]`
 }
 
 namespace TestLLMServer {

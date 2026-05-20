@@ -1,12 +1,15 @@
 import { describe, expect, it } from "bun:test"
-import { fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import { connectProvider, disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
 
-function createCtx() {
+type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
+
+function createCtx(existing: ExistingGlobal = { disabled_providers: [] }, merged: ExistingGlobal = existing) {
   const calls = {
-    set: [] as Array<{ providerID: string; auth: { type: string; key: string } }>,
+    set: [] as Array<{ providerID: string; auth: { type: string; key: string; metadata?: Record<string, string> } }>,
     remove: [] as Array<{ providerID: string }>,
     posts: [] as unknown[],
-    config: [] as unknown[],
+    config: [] as Array<{ config: Record<string, unknown> }>,
+    project: [] as Array<{ config: Record<string, unknown> }>,
     cached: [] as unknown[],
     refresh: 0,
     dispose: 0,
@@ -15,7 +18,10 @@ function createCtx() {
   const ctx = {
     client: {
       auth: {
-        set: async (input: { providerID: string; auth: { type: string; key: string } }) => {
+        set: async (input: {
+          providerID: string
+          auth: { type: string; key: string; metadata?: Record<string, string> }
+        }) => {
           calls.set.push(input)
           return { data: true }
         },
@@ -24,13 +30,38 @@ function createCtx() {
           return { data: true }
         },
       },
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              {
+                id: "openai",
+                name: "OpenAI",
+                source: "custom",
+                env: [],
+                models: {},
+              },
+            ],
+            connected: ["openai"],
+            default: {},
+          },
+        }),
+        auth: async () => ({ data: {} }),
+      },
       global: {
         config: {
-          get: async () => ({ data: { disabled_providers: [] } }),
-          update: async (input: unknown) => {
+          get: async () => ({ data: existing }),
+          update: async (input: { config: Record<string, unknown> }) => {
             calls.config.push(input)
             return { data: input }
           },
+        },
+      },
+      config: {
+        get: async () => ({ data: merged }),
+        update: async (input: { config: Record<string, unknown> }) => {
+          calls.project.push(input)
+          return { data: input }
         },
       },
     },
@@ -62,6 +93,81 @@ function createProvider() {
   }
 }
 
+function createSavedProvider() {
+  return {
+    npm: "@ai-sdk/openai-compatible",
+    ...createProvider(),
+  }
+}
+
+describe("disconnectProvider", () => {
+  it("keeps configured provider enabled after disconnecting oauth override", async () => {
+    const existing = {
+      disabled_providers: ["openai", "groq"],
+      provider: {
+        openai: {
+          options: { apiKey: "sk-test" },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "openai", null, setCachedConfig)
+
+    expect(calls.remove).toEqual([{ providerID: "openai" }])
+    expect(calls.config).toEqual([{ config: { disabled_providers: ["groq"] } }])
+    expect(calls.refresh).toBe(1)
+  })
+})
+
+describe("connectProvider", () => {
+  it("stores api auth metadata from provider prompts", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "azure", "sk-test", {
+      resourceName: " my-resource ",
+      empty: "   ",
+    })
+
+    expect(calls.set).toEqual([
+      {
+        providerID: "azure",
+        auth: {
+          type: "api",
+          key: "sk-test",
+          metadata: { resourceName: "my-resource" },
+        },
+      },
+    ])
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toContainEqual({ type: "providerConnected", requestId: "req", providerID: "azure" })
+  })
+
+  it("stores azure endpoint URL metadata from provider prompts", async () => {
+    const { ctx, calls } = createCtx()
+
+    await connectProvider(ctx, "req", "azure", "sk-test", {
+      endpointType: "baseURL",
+      baseURL: " https://my-resource.openai.azure.com/openai ",
+      resourceName: "   ",
+    })
+
+    expect(calls.set).toEqual([
+      {
+        providerID: "azure",
+        auth: {
+          type: "api",
+          key: "sk-test",
+          metadata: {
+            endpointType: "baseURL",
+            baseURL: "https://my-resource.openai.azure.com/openai",
+          },
+        },
+      },
+    ])
+  })
+})
+
 describe("saveCustomProvider", () => {
   it("preserves auth when the api key field is unchanged", async () => {
     const { ctx, calls, setCachedConfig } = createCtx()
@@ -89,6 +195,219 @@ describe("saveCustomProvider", () => {
 
     expect(calls.remove).toHaveLength(0)
     expect(calls.set).toEqual([{ providerID: "myprovider", auth: { type: "api", key: "sk-test" } }])
+  })
+
+  // Regression tests for https://github.com/Kilo-Org/kilocode/issues/9186
+  //
+  // The CLI's config.update endpoint deep-merges its payload with the existing
+  // global config. When the user removes a model or variant from a custom
+  // provider and saves, the removed entry stays on disk because the save
+  // payload only lists the surviving entries. stripNulls in the merge layer
+  // will remove keys explicitly set to null — the save path must emit these
+  // sentinels for removed model ids and variant names.
+  it("emits null sentinels for models removed since last save", async () => {
+    const existing = {
+      disabled_providers: [],
+      provider: {
+        myprovider: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "My Provider",
+          options: { baseURL: "https://example.com/v1" },
+          models: {
+            "model-keep": { name: "Keep" },
+            "model-gone": { name: "Gone" },
+          },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    const next = {
+      name: "My Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-keep": { name: "Keep" },
+      },
+    }
+    await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const payload = calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>
+    expect(payload.myprovider.models["model-keep"]).toBeDefined()
+    expect(payload.myprovider.models["model-gone"]).toBeNull()
+  })
+
+  it("emits null sentinels for variants removed from a model that still exists", async () => {
+    const existing = {
+      disabled_providers: [],
+      provider: {
+        myprovider: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "My Provider",
+          options: { baseURL: "https://example.com/v1" },
+          models: {
+            "model-1": {
+              name: "Model One",
+              reasoning: true,
+              variants: {
+                high: { reasoningEffort: "high" },
+                low: { reasoningEffort: "low" },
+              },
+            },
+          },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    const next = {
+      name: "My Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          reasoning: true,
+          variants: { high: { reasoningEffort: "high" } },
+        },
+      },
+    }
+    await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const model = (
+      calls.config[0].config.provider as Record<
+        string,
+        { models: Record<string, { variants?: Record<string, unknown> }> }
+      >
+    ).myprovider.models["model-1"]
+    expect(model.variants).toBeDefined()
+    expect(model.variants?.high).toBeDefined()
+    expect(model.variants?.low).toBeNull()
+  })
+
+  it("does not emit sentinels when the provider is new", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const models = (calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>).myprovider
+      .models
+    expect(Object.values(models).every((v) => v !== null)).toBe(true)
+  })
+
+  it("removes saved custom providers from disabled_providers when reconnecting", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: ["myprovider", "openai"] })
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config.disabled_providers).toEqual(["openai"])
+  })
+})
+
+describe("disconnectProvider", () => {
+  it("adds configured providers to disabled_providers without deleting their config", async () => {
+    const existing = {
+      disabled_providers: ["openai"],
+      provider: {
+        myprovider: createProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config).toEqual({ disabled_providers: ["openai", "myprovider"] })
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toContainEqual({ type: "providerDisconnected", requestId: "req", providerID: "myprovider" })
+  })
+
+  it("does not duplicate configured providers already disabled", async () => {
+    const existing = {
+      disabled_providers: ["myprovider"],
+      provider: {
+        myprovider: createProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(0)
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes saved custom provider config when disconnecting", async () => {
+    const existing = {
+      disabled_providers: ["myprovider", "openai"],
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config).toEqual({
+      provider: { myprovider: null },
+      disabled_providers: ["openai"],
+    })
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes project custom provider config when it is not in global config", async () => {
+    const merged = {
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: [] }, merged)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(0)
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+  })
+
+  it("deletes both global and project custom provider config when project overrides global", async () => {
+    const global = {
+      disabled_providers: ["myprovider", "openai"],
+      provider: {
+        myprovider: createSavedProvider(),
+      },
+    }
+    const merged = {
+      ...global,
+      provider: {
+        myprovider: {
+          ...createSavedProvider(),
+          name: "Project Provider",
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(global, merged)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toEqual([
+      {
+        config: {
+          provider: { myprovider: null },
+          disabled_providers: ["openai"],
+        },
+      },
+    ])
+    expect(calls.project).toEqual([{ config: { provider: { myprovider: null } }, directory: "/tmp" }])
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
   })
 })
 

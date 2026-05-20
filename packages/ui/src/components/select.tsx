@@ -89,6 +89,9 @@ export function Select<T>(props: SelectProps<T> & Omit<ButtonProps, "children">)
       data-component="select"
       data-trigger-style={local.triggerVariant}
       placement={local.triggerVariant === "settings" ? "bottom-end" : "bottom-start"}
+      overlap={local.triggerVariant === "settings"} // kilocode_change
+      fitViewport={local.triggerVariant === "settings"} // kilocode_change
+      overflowPadding={local.triggerVariant === "settings" ? 12 : undefined} // kilocode_change
       gutter={4}
       value={local.current}
       options={grouped()}
@@ -104,7 +107,7 @@ export function Select<T>(props: SelectProps<T> & Omit<ButtonProps, "children">)
           {...itemProps}
           data-slot="select-select-item"
           classList={{
-            ...(local.classList ?? {}),
+            ...local.classList,
             [local.class ?? ""]: !!local.class,
           }}
           onPointerEnter={() => move(itemProps.item.rawValue)}
@@ -141,7 +144,7 @@ export function Select<T>(props: SelectProps<T> & Omit<ButtonProps, "children">)
         variant={props.variant}
         style={local.triggerStyle}
         classList={{
-          ...(local.classList ?? {}),
+          ...local.classList,
           [local.class ?? ""]: !!local.class,
         }}
       >
@@ -160,7 +163,7 @@ export function Select<T>(props: SelectProps<T> & Omit<ButtonProps, "children">)
       <Kobalte.Portal>
         <Kobalte.Content
           classList={{
-            ...(local.classList ?? {}),
+            ...local.classList,
             [local.class ?? ""]: !!local.class,
           }}
           data-component="select-content"

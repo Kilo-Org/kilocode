@@ -4,10 +4,12 @@ import {
   dirName,
   buildHighlightSegments,
   atEnd,
+  insertSpacedText,
   isPromptBlocked,
   isPromptBusy,
   isSuggesting,
   isQuestioning,
+  isPathMention,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
@@ -196,6 +198,29 @@ describe("isPromptBusy", () => {
   })
 })
 
+describe("insertSpacedText", () => {
+  it("inserts transcript into empty text", () => {
+    expect(insertSpacedText("", "hello", 0, 0)).toEqual({ text: "hello", pos: 5 })
+  })
+
+  it("adds spaces between surrounding words", () => {
+    expect(insertSpacedText("helloworld", "beautiful", 5, 5)).toEqual({ text: "hello beautiful world", pos: 16 })
+  })
+
+  it("does not duplicate existing spaces", () => {
+    expect(insertSpacedText("hello world", "beautiful", 6, 6)).toEqual({ text: "hello beautiful world", pos: 16 })
+  })
+
+  it("replaces selected text and keeps caret after transcript", () => {
+    expect(insertSpacedText("hello bad world", "beautiful", 6, 9)).toEqual({ text: "hello beautiful world", pos: 15 })
+  })
+
+  it("preserves leading and trailing insertion positions", () => {
+    expect(insertSpacedText("world", "hello", 0, 0)).toEqual({ text: "hello world", pos: 6 })
+    expect(insertSpacedText("hello", "world", 5, 5)).toEqual({ text: "hello world", pos: 11 })
+  })
+})
+
 describe("isSuggesting", () => {
   it("returns true when not blocked and suggestions > 0", () => {
     expect(isSuggesting(false, 1)).toBe(true)
@@ -223,5 +248,35 @@ describe("isQuestioning", () => {
 
   it("returns false when not blocked but no questions", () => {
     expect(isQuestioning(false, 0)).toBe(false)
+  })
+})
+
+describe("isPathMention", () => {
+  it("returns true for a file path", () => {
+    expect(isPathMention("@src/foo.ts")).toBe(true)
+  })
+
+  it("returns true for a simple filename", () => {
+    expect(isPathMention("@README.md")).toBe(true)
+  })
+
+  it("returns true for a folder path with trailing slash", () => {
+    expect(isPathMention("@src/components/")).toBe(true)
+  })
+
+  it("returns true for a folder path without trailing slash", () => {
+    expect(isPathMention("@src/components")).toBe(true)
+  })
+
+  it("returns false for terminal mention", () => {
+    expect(isPathMention("@terminal")).toBe(false)
+  })
+
+  it("returns false for git-changes mention", () => {
+    expect(isPathMention("@git-changes")).toBe(false)
+  })
+
+  it("handles text without @ prefix", () => {
+    expect(isPathMention("src/foo.ts")).toBe(true)
   })
 })

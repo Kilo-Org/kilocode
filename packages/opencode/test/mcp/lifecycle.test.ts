@@ -1,4 +1,5 @@
 import { test, expect, mock, beforeEach } from "bun:test"
+import { InstanceRuntime } from "../../src/project/instance-runtime"
 import { Effect } from "effect"
 import type { MCP as MCPNS } from "../../src/mcp/index"
 
@@ -53,6 +54,7 @@ function getOrCreateClientState(name?: string): MockClientState {
 class MockStdioTransport {
   stderr: null = null
   pid = 12345
+  // oxlint-disable-next-line no-useless-constructor
   constructor(_opts: any) {}
   async start() {
     if (connectShouldHang) return new Promise<void>(() => {}) // never resolves
@@ -64,6 +66,7 @@ class MockStdioTransport {
 }
 
 class MockStreamableHTTP {
+  // oxlint-disable-next-line no-useless-constructor
   constructor(_url: URL, _opts?: any) {}
   async start() {
     if (connectShouldHang) return new Promise<void>(() => {}) // never resolves
@@ -76,6 +79,7 @@ class MockStreamableHTTP {
 }
 
 class MockSSE {
+  // oxlint-disable-next-line no-useless-constructor
   constructor(_url: URL, _opts?: any) {}
   async start() {
     if (connectShouldHang) return new Promise<void>(() => {}) // never resolves
@@ -86,19 +90,19 @@ class MockSSE {
   }
 }
 
-mock.module("@modelcontextprotocol/sdk/client/stdio.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/stdio.js", () => ({
   StdioClientTransport: MockStdioTransport,
 }))
 
-mock.module("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
   StreamableHTTPClientTransport: MockStreamableHTTP,
 }))
 
-mock.module("@modelcontextprotocol/sdk/client/sse.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/sse.js", () => ({
   SSEClientTransport: MockSSE,
 }))
 
-mock.module("@modelcontextprotocol/sdk/client/auth.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/auth.js", () => ({
   UnauthorizedError: class extends Error {
     constructor() {
       super("Unauthorized")
@@ -107,7 +111,7 @@ mock.module("@modelcontextprotocol/sdk/client/auth.js", () => ({
 }))
 
 // Mock Client that delegates to per-name MockClientState
-mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
+void mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
   Client: class MockClient {
     _state!: MockClientState
     transport: any
@@ -168,6 +172,7 @@ beforeEach(() => {
 // Import after mocks
 const { MCP } = await import("../../src/mcp/index")
 const { Instance } = await import("../../src/project/instance")
+const { WithInstance } = await import("../../src/project/with-instance")
 const { tmpdir } = await import("../fixture/fixture")
 
 // --- Helper ---
@@ -189,12 +194,12 @@ function withInstance(
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Effect.runPromise(MCP.Service.use(fn).pipe(Effect.provide(MCP.defaultLayer)))
         // dispose instance to clean up state between tests
-        await Instance.dispose()
+        await InstanceRuntime.disposeInstance(Instance.current)
       },
     })
   }
@@ -649,9 +654,8 @@ test("McpOAuthCallback.cancelPending is keyed by mcpName but pendingAuths uses o
 
   // The callback should still be pending because cancelPending looked up
   // "my-mcp-server" in a map keyed by "abc123hexstate"
-  let resolved = false
   let rejected = false
-  callbackPromise.then(() => (resolved = true)).catch(() => (rejected = true))
+  callbackPromise.then(() => {}).catch(() => (rejected = true))
 
   // Give it a tick
   await new Promise((r) => setTimeout(r, 50))

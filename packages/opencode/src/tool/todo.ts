@@ -1,26 +1,42 @@
-import z from "zod"
-import { Effect } from "effect"
-import { Tool } from "./tool"
+import { Effect, Schema } from "effect"
+import * as Tool from "./tool"
 import DESCRIPTION_WRITE from "./todowrite.txt"
 import { Todo } from "../session/todo"
+// kilocode_change start
+import { TodoView } from "../kilocode/todo-view"
+// kilocode_change end
 
-const parameters = z.object({
-  todos: z.array(z.object(Todo.Info.shape)).describe("The updated todo list"),
+// Todo.Info is still a zod schema (session/todo.ts). Inline the field shape
+// here rather than referencing its `.shape` — the LLM-visible JSON Schema is
+// identical, and it removes the last zod dependency from this tool.
+const TodoItem = Schema.Struct({
+  content: Schema.String.annotate({ description: "Brief description of the task" }),
+  status: Schema.String.annotate({
+    description: "Current status of the task: pending, in_progress, completed, cancelled",
+  }),
+  priority: Schema.String.annotate({ description: "Priority level of the task: high, medium, low" }),
+})
+
+export const Parameters = Schema.Struct({
+  todos: Schema.mutable(Schema.Array(TodoItem)).annotate({ description: "The updated todo list" }),
 })
 
 type Metadata = {
   todos: Todo.Info[]
+  // kilocode_change start
+  view?: TodoView.Info
+  // kilocode_change end
 }
 
-export const TodoWriteTool = Tool.define<typeof parameters, Metadata, Todo.Service>(
+export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Service>(
   "todowrite",
   Effect.gen(function* () {
     const todo = yield* Todo.Service
 
     return {
       description: DESCRIPTION_WRITE,
-      parameters,
-      execute: (params: z.infer<typeof parameters>, ctx: Tool.Context<Metadata>) =>
+      parameters: Parameters,
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           yield* ctx.ask({
             permission: "todowrite",
@@ -28,6 +44,11 @@ export const TodoWriteTool = Tool.define<typeof parameters, Metadata, Todo.Servi
             always: ["*"],
             metadata: {},
           })
+
+          // kilocode_change start
+          const before = yield* todo.get(ctx.sessionID)
+          const view = TodoView.calculate(before, params.todos)
+          // kilocode_change end
 
           yield* todo.update({
             sessionID: ctx.sessionID,
@@ -39,9 +60,12 @@ export const TodoWriteTool = Tool.define<typeof parameters, Metadata, Todo.Servi
             output: JSON.stringify(params.todos, null, 2),
             metadata: {
               todos: params.todos,
+              // kilocode_change start
+              view,
+              // kilocode_change end
             },
           }
         }),
-    } satisfies Tool.DefWithoutID<typeof parameters, Metadata>
+    } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>
   }),
 )

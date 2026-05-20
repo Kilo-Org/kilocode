@@ -1,7 +1,6 @@
 import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
-import { Clipboard } from "@tui/util/clipboard"
-import { Selection } from "@tui/util/selection"
-import { Terminal } from "@tui/util/terminal"
+import * as Clipboard from "@tui/util/clipboard"
+import * as Selection from "@tui/util/selection"
 import { createCliRenderer, MouseButton, TextAttributes, type CliRendererConfig } from "@opentui/core" // kilocode_change
 import { RouteProvider, useRoute } from "@tui/context/route"
 import {
@@ -17,19 +16,22 @@ import {
   on,
 } from "solid-js"
 import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "./win32" // kilocode_change
-import { Flag } from "@/flag/flag"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import semver from "semver"
 import { DialogProvider, useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderList } from "@tui/component/dialog-provider"
-import { Installation } from "@/installation" // kilocode_change
+import { InstallationVersion } from "@opencode-ai/core/installation/version" // kilocode_change
 import { PluginRouteMissing } from "@tui/component/plugin-route-missing"
-import { ProjectProvider, useProject } from "@tui/context/project"
+import { ProjectProvider } from "@tui/context/project"
+import { EditorContextProvider } from "@tui/context/editor"
 import { useEvent } from "@tui/context/event"
 import { SDKProvider, useSDK } from "@tui/context/sdk"
 import { StartupLoading } from "@tui/component/startup-loading"
 import { SyncProvider, useSync } from "@tui/context/sync"
+import { SyncProviderV2 } from "@tui/context/sync-v2"
 import { LocalProvider, useLocal } from "@tui/context/local"
-import { DialogModel, useConnected } from "@tui/component/dialog-model"
+import { DialogModel } from "@tui/component/dialog-model"
+import { useConnected } from "@tui/component/use-connected"
 import { DialogMcp } from "@tui/component/dialog-mcp"
 import { DialogStatus } from "@tui/component/dialog-status"
 import { DialogThemeList } from "@tui/component/dialog-theme-list"
@@ -49,7 +51,7 @@ import { DialogAlert } from "./ui/dialog-alert"
 import { DialogConfirm } from "./ui/dialog-confirm"
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
-import { Session as SessionApi } from "@/session"
+import { Session as SessionApi } from "@/session/session"
 import { DialogSelect } from "./ui/dialog-select"
 import { Link } from "./ui/link"
 import { TuiEvent } from "./event"
@@ -60,10 +62,12 @@ import open from "open"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import * as KiloApp from "@/kilocode/cli/cmd/tui/app" // kilocode_change
 import { TuiConfigProvider, useTuiConfig } from "./context/tui-config"
-import { TuiConfig } from "@/config/tui"
-import { createTuiApi, TuiPluginRuntime, type RouteMap } from "./plugin"
+import { TuiConfig } from "@/cli/cmd/tui/config/tui"
+import { createTuiApi } from "@/cli/cmd/tui/plugin/api"
+import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
+import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
 import { FormatError, FormatUnknownError } from "@/cli/error"
-import { resetTerminalState } from "@tui/util/terminal" // kilocode_change
+import { resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
 
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
@@ -119,14 +123,9 @@ export function tui(input: {
   events?: EventSource
 }) {
   // promise to prevent immediate exit
+  // oxlint-disable-next-line no-async-promise-executor -- intentional: async executor used for sequential setup before resolve
   return new Promise<void>(async (resolve) => {
     const unguard = win32InstallCtrlCGuard()
-    win32DisableProcessedInput()
-
-    const mode = await Terminal.getTerminalBackgroundColor()
-
-    // Re-clear after getTerminalBackgroundColor() — setRawMode(false) restores
-    // the original console mode which re-enables ENABLE_PROCESSED_INPUT.
     win32DisableProcessedInput()
 
     const onExit = async () => {
@@ -142,6 +141,9 @@ export function tui(input: {
     process.on("exit", resetTerminalState) // kilocode_change
 
     const renderer = await createCliRenderer(rendererConfig(input.config))
+    // Prewarm palette before ThemeProvider mounts so `system` theme avoids a first-paint fallback flash.
+    void renderer.getPalette({ size: 16 }).catch(() => undefined)
+    const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
 
     await render(() => {
       return (
@@ -156,7 +158,16 @@ export function tui(input: {
             <ExitProvider onBeforeExit={onBeforeExit} onExit={onExit}>
               <KVProvider>
                 <ToastProvider>
-                  <RouteProvider>
+                  <RouteProvider
+                    initialRoute={
+                      input.args.continue
+                        ? {
+                            type: "session",
+                            sessionID: "dummy",
+                          }
+                        : undefined
+                    }
+                  >
                     <TuiConfigProvider config={input.config}>
                       <SDKProvider
                         url={input.url}
@@ -167,25 +178,29 @@ export function tui(input: {
                       >
                         <ProjectProvider>
                           <SyncProvider>
-                            <ThemeProvider mode={mode}>
-                              <LocalProvider>
-                                <KeybindProvider>
-                                  <PromptStashProvider>
-                                    <DialogProvider>
-                                      <CommandProvider>
-                                        <FrecencyProvider>
-                                          <PromptHistoryProvider>
-                                            <PromptRefProvider>
-                                              <App onSnapshot={input.onSnapshot} />
-                                            </PromptRefProvider>
-                                          </PromptHistoryProvider>
-                                        </FrecencyProvider>
-                                      </CommandProvider>
-                                    </DialogProvider>
-                                  </PromptStashProvider>
-                                </KeybindProvider>
-                              </LocalProvider>
-                            </ThemeProvider>
+                            <SyncProviderV2>
+                              <ThemeProvider mode={mode}>
+                                <LocalProvider>
+                                  <KeybindProvider>
+                                    <PromptStashProvider>
+                                      <DialogProvider>
+                                        <CommandProvider>
+                                          <FrecencyProvider>
+                                            <PromptHistoryProvider>
+                                              <PromptRefProvider>
+                                                <EditorContextProvider>
+                                                  <App onSnapshot={input.onSnapshot} />
+                                                </EditorContextProvider>
+                                              </PromptRefProvider>
+                                            </PromptHistoryProvider>
+                                          </FrecencyProvider>
+                                        </CommandProvider>
+                                      </DialogProvider>
+                                    </PromptStashProvider>
+                                  </KeybindProvider>
+                                </LocalProvider>
+                              </ThemeProvider>
+                            </SyncProviderV2>
                           </SyncProvider>
                         </ProjectProvider>
                       </SDKProvider>
@@ -243,7 +258,10 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     renderer,
   })
   const [ready, setReady] = createSignal(false)
-  TuiPluginRuntime.init(api)
+  TuiPluginRuntime.init({
+    api,
+    config: tuiConfig,
+  })
     .catch((error) => {
       console.error("Failed to load TUI plugins", error)
     })
@@ -297,6 +315,9 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     renderer.clearSelection()
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
+  const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
+    kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
+  )
 
   KiloApp.useSessionEffects({ route, sdk, sync }) // kilocode_change
 
@@ -347,7 +368,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
           })
         local.model.set({ providerID, modelID }, { recent: true })
       }
-      // Handle --session without --fork immediately (fork is handled in createEffect below)
       if (args.sessionID && !args.fork) {
         route.navigate({
           type: "session",
@@ -367,7 +387,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     if (match) {
       continued = true
       if (args.fork) {
-        sdk.client.session.fork({ sessionID: match }).then((result) => {
+        void sdk.client.session.fork({ sessionID: match }).then((result) => {
           if (result.data?.id) {
             route.navigate({ type: "session", sessionID: result.data.id })
           } else {
@@ -387,7 +407,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   createEffect(() => {
     if (forked || sync.status !== "complete" || !args.sessionID || !args.fork) return
     forked = true
-    sdk.client.session.fork({ sessionID: args.sessionID }).then((result) => {
+    void sdk.client.session.fork({ sessionID: args.sessionID }).then((result) => {
       if (result.data?.id) {
         route.navigate({ type: "session", sessionID: result.data.id })
       } else {
@@ -434,12 +454,8 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         aliases: ["clear"],
       },
       onSelect: () => {
-        const current = promptRef.current
-        // Don't require focus - if there's any text, preserve it
-        const currentPrompt = current?.current?.input ? current.current : undefined
         route.navigate({
           type: "home",
-          initialPrompt: currentPrompt,
         })
         dialog.clear()
       },
@@ -616,7 +632,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       category: "System",
     },
     {
-      title: "Toggle theme mode",
+      title: mode() === "dark" ? "Switch to light mode" : "Switch to dark mode",
       value: "theme.switch_mode",
       onSelect: (dialog) => {
         setMode(mode() === "dark" ? "light" : "dark")
@@ -747,6 +763,40 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       },
     },
     {
+      title: kv.get("file_context_enabled", true) ? "Disable file context" : "Enable file context",
+      value: "app.toggle.file_context",
+      category: "System",
+      onSelect: (dialog) => {
+        kv.set("file_context_enabled", !kv.get("file_context_enabled", true))
+        dialog.clear()
+      },
+    },
+    {
+      title: pasteSummaryEnabled() ? "Disable paste summary" : "Enable paste summary",
+      value: "app.toggle.paste_summary",
+      category: "System",
+      onSelect: (dialog) => {
+        setPasteSummaryEnabled((prev) => {
+          const next = !prev
+          kv.set("paste_summary_enabled", next)
+          return next
+        })
+        dialog.clear()
+      },
+    },
+    {
+      title: kv.get("session_directory_filter_enabled", true)
+        ? "Disable session directory filtering"
+        : "Enable session directory filtering",
+      value: "app.toggle.session_directory_filter",
+      category: "System",
+      onSelect: async (dialog) => {
+        kv.set("session_directory_filter_enabled", !kv.get("session_directory_filter_enabled", true))
+        await sync.session.refresh()
+        dialog.clear()
+      },
+    },
+    {
       title: kv.get("diff_wrap_mode", "word") === "word" ? "Disable diff wrapping" : "Enable diff wrapping",
       value: "app.toggle.diffwrap",
       category: "System",
@@ -848,7 +898,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       `Successfully updated to ${KiloApp.APP_NAME} v${result.data.version}. Please restart the application.`, // kilocode_change
     )
 
-    exit()
+    void exit()
   })
 
   const plugin = createMemo(() => {
@@ -977,7 +1027,7 @@ function ErrorComponent(props: {
     )
   }
 
-  issueURL.searchParams.set("opencode-version", Installation.VERSION)
+  issueURL.searchParams.set("opencode-version", InstallationVersion)
 
   const copyIssueURL = () => {
     Clipboard.copy(issueURL.toString()).then(() => {

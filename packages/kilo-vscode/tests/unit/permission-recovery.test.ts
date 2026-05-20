@@ -52,6 +52,7 @@ function ctx(opts: {
   const perms = opts.permsPerDir ?? {}
   const sdk = client(perms, queries)
 
+  const permDirs = new Map<string, string>()
   const fake: PermissionContext = {
     client: sdk,
     currentSessionId: undefined,
@@ -59,9 +60,19 @@ function ctx(opts: {
     sessionDirectories: opts.dirs ?? new Map(),
     postMessage: (msg) => messages.push(msg),
     getWorkspaceDirectory: () => opts.workspace ?? "/workspace",
+    recordPermissionDirectory: (id, dir) => permDirs.set(id, dir),
+    getPermissionDirectory: (id) => permDirs.get(id),
+    clearPermissionDirectory: (id) => {
+      permDirs.delete(id)
+    },
+    prunePermissionDirectories: (active) => {
+      for (const key of permDirs.keys()) {
+        if (!active.has(key)) permDirs.delete(key)
+      }
+    },
   }
 
-  return { fake, messages, queries }
+  return { fake, messages, queries, permDirs }
 }
 
 describe("recoveryDirs", () => {
@@ -165,6 +176,7 @@ describe("fetchAndSendPendingPermissions", () => {
 
   it("does nothing when client is null", async () => {
     const messages: unknown[] = []
+    const permDirs = new Map<string, string>()
     const fake: PermissionContext = {
       client: null,
       currentSessionId: undefined,
@@ -172,6 +184,16 @@ describe("fetchAndSendPendingPermissions", () => {
       sessionDirectories: new Map(),
       postMessage: (msg) => messages.push(msg),
       getWorkspaceDirectory: () => "/workspace",
+      recordPermissionDirectory: (id, dir) => permDirs.set(id, dir),
+      getPermissionDirectory: (id) => permDirs.get(id),
+      clearPermissionDirectory: (id) => {
+        permDirs.delete(id)
+      },
+      prunePermissionDirectories: (active) => {
+        for (const key of permDirs.keys()) {
+          if (!active.has(key)) permDirs.delete(key)
+        }
+      },
     }
     await fetchAndSendPendingPermissions(fake)
     expect(messages).toHaveLength(0)

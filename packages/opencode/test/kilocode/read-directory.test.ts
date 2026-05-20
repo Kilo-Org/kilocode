@@ -3,10 +3,9 @@ import { Effect, Layer } from "effect"
 import { symlink } from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { AppFileSystem } from "../../src/filesystem"
-import { FileTime } from "../../src/file/time"
-import { LSP } from "../../src/lsp"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { LSP } from "../../src/lsp/lsp"
 import { Instruction } from "../../src/session/instruction"
 import { Truncate } from "../../src/tool/truncate"
 import { MessageID, SessionID } from "../../src/session/schema"
@@ -33,7 +32,6 @@ const it = testEffect(
     Agent.defaultLayer,
     AppFileSystem.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
-    FileTime.defaultLayer,
     Instruction.defaultLayer,
     LSP.defaultLayer,
     Truncate.defaultLayer,

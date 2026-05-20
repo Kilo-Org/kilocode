@@ -37,7 +37,6 @@ import { type UiI18n, useI18n } from "../context/i18n"
 import { BasicTool, GenericTool } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
-import { Card } from "./card"
 import { Collapsible } from "./collapsible"
 import { FileIcon } from "./file-icon"
 import { Icon } from "./icon"
@@ -46,8 +45,8 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
-import { checksum } from "@opencode-ai/util/encode"
+import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/core/util/path"
+import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { Spinner } from "./spinner"
@@ -356,12 +355,6 @@ export function getToolInfo(tool: string, input: any = {}): ToolInfo {
       return {
         icon: "window-cursor",
         title: i18n.t("ui.tool.websearch"),
-        subtitle: input.query,
-      }
-    case "codesearch":
-      return {
-        icon: "code",
-        title: i18n.t("ui.tool.codesearch"),
         subtitle: input.query,
       }
     case "task": {
@@ -1179,7 +1172,7 @@ export function UserMessageDisplay(props: {
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={(event) => {
                   event.stopPropagation()
-                  handleCopy()
+                  void handleCopy()
                 }}
                 aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyMessage")}
               />
@@ -1290,7 +1283,7 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
     <Accordion
       multiple
       data-scope="apply-patch"
-      style={{ "--sticky-accordion-offset": "40px" }}
+      style={{ "--sticky-accordion-offset": "calc(32px + var(--tool-content-gap))" }}
       defaultValue={[value()]}
     >
       <Accordion.Item value={value()}>
@@ -1472,13 +1465,27 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
   )
   const text = () => (part().text ?? "").trim()
+  // kilocode_change start
+  // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo guard)
+  // are transient status indicators, not assistant output — they must never
+  // carry the copy button, and they must not "steal" last-part status from
+  // the actual assistant response that precedes them.
+  //
+  // On a clean turn the backend removes the part via `removePart` once the
+  // snapshot finishes, so it never reaches this branch. But if the host
+  // process is hard-killed mid-snapshot the part stays in storage and
+  // re-appears on session reload; hiding it when the owning message is no
+  // longer streaming keeps the scrollback clean in that edge case.
+  const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
+  // kilocode_change end
   const isLastTextPart = createMemo(() => {
     const last = (data.store.part?.[props.message.id] ?? [])
-      .filter((item): item is TextPart => item?.type === "text" && !!item.text?.trim())
+      .filter((item): item is TextPart => item?.type === "text" && !!item.text?.trim() && !item.synthetic) // kilocode_change
       .at(-1)
     return last?.id === part().id
   })
   const showCopy = createMemo(() => {
+    if (part().synthetic) return false // kilocode_change
     if (props.message.role !== "assistant") return isLastTextPart()
     if (props.showAssistantCopyPartID === null) return false
     if (typeof props.showAssistantCopyPartID === "string") return props.showAssistantCopyPartID === part().id
@@ -1495,7 +1502,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   return (
-    <Show when={text()}>
+    <Show when={text() && showSyntheticPart() /* kilocode_change */}>
       <div data-component="text-part">
         <div data-slot="text-part-body">
           <Show when={streaming()} fallback={<Markdown text={text()} cacheKey={part().id} streaming={false} />}>
@@ -1724,32 +1731,6 @@ ToolRegistry.register({
         icon="window-cursor"
         trigger={{
           title: i18n.t("ui.tool.websearch"),
-          subtitle: query(),
-          subtitleClass: "exa-tool-query",
-        }}
-      >
-        <ExaOutput output={props.output} />
-      </BasicTool>
-    )
-  },
-})
-
-ToolRegistry.register({
-  name: "codesearch",
-  render(props) {
-    const i18n = useI18n()
-    const query = createMemo(() => {
-      const value = props.input.query
-      if (typeof value !== "string") return ""
-      return value
-    })
-
-    return (
-      <BasicTool
-        {...props}
-        icon="code"
-        trigger={{
-          title: i18n.t("ui.tool.codesearch"),
           subtitle: query(),
           subtitleClass: "exa-tool-query",
         }}
@@ -2086,7 +2067,7 @@ ToolRegistry.register({
                 <Accordion
                   multiple
                   data-scope="apply-patch"
-                  style={{ "--sticky-accordion-offset": "40px" }}
+                  style={{ "--sticky-accordion-offset": "calc(32px + var(--tool-content-gap))" }}
                   value={expanded()}
                   onChange={(value) => setExpanded(Array.isArray(value) ? value : value ? [value] : [])}
                 >

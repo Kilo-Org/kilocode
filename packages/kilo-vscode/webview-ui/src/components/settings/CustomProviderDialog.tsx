@@ -7,7 +7,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
-import { createStore } from "solid-js/store"
+import { createStore, reconcile } from "solid-js/store"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
@@ -22,12 +22,10 @@ import type {
   ModelEntry,
   ReasoningEffortValue,
   ThinkingTypeValue,
-  Translator,
   VariantEntry,
 } from "./CustomProviderModelCard"
-
-const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
-const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
+import { validateCustomProvider } from "./CustomProviderValidation"
+import type { FormErrors, FormState, HeaderRow } from "./CustomProviderValidation"
 const DEBOUNCE_MS = 500
 const SEARCH_DEBOUNCE_MS = 150
 
@@ -42,182 +40,7 @@ function fuzzy(query: string, target: string) {
   return qi === q.length
 }
 
-type HeaderRow = {
-  key: string
-  value: string
-}
-
-type FormState = {
-  providerID: string
-  name: string
-  baseURL: string
-  apiKey: string
-  models: ModelEntry[]
-  headers: HeaderRow[]
-  saving: boolean
-}
-
-type FormErrors = {
-  providerID: string | undefined
-  name: string | undefined
-  baseURL: string | undefined
-  models: Array<{ id?: string; name?: string; variants?: Array<{ name?: string }> }>
-  headers: Array<{ key?: string; value?: string }>
-}
-
 type FetchedModel = { id: string; name: string }
-
-type ValidateArgs = {
-  form: FormState
-  t: Translator
-  editing: boolean
-  disabledProviders: string[]
-  existingProviderIDs: Set<string>
-  /** Preserved env vars from the existing provider config (edit mode only) */
-  existingEnv?: string[]
-}
-
-function validateCustomProvider(input: ValidateArgs) {
-  const providerID = input.form.providerID.trim()
-  const name = input.form.name.trim()
-  const baseURL = input.form.baseURL.trim()
-  const apiKey = input.form.apiKey.trim()
-
-  const env = apiKey.match(/^\{env:([^}]+)\}$/)?.[1]?.trim()
-  // When editing and apiKey is empty, preserve existing env from the original config
-  const existingEnv = input.editing && !apiKey ? input.existingEnv : undefined
-  const key = apiKey && !env ? apiKey : undefined
-
-  const idError = !providerID
-    ? input.t("provider.custom.error.providerID.required")
-    : !PROVIDER_ID.test(providerID)
-      ? input.t("provider.custom.error.providerID.format")
-      : undefined
-
-  const nameError = !name ? input.t("provider.custom.error.name.required") : undefined
-  const urlError = !baseURL
-    ? input.t("provider.custom.error.baseURL.required")
-    : !/^https?:\/\//.test(baseURL)
-      ? input.t("provider.custom.error.baseURL.format")
-      : undefined
-
-  const disabled = input.disabledProviders.includes(providerID)
-  const existsError = idError
-    ? undefined
-    : input.editing
-      ? undefined
-      : input.existingProviderIDs.has(providerID) && !disabled
-        ? input.t("provider.custom.error.providerID.exists")
-        : undefined
-
-  const seenModels = new Set<string>()
-  const modelErrors = input.form.models.map((m) => {
-    const id = m.id.trim()
-    const modelIdError = !id
-      ? input.t("provider.custom.error.required")
-      : seenModels.has(id)
-        ? input.t("provider.custom.error.duplicate")
-        : (() => {
-            seenModels.add(id)
-            return undefined
-          })()
-    const modelNameError = !m.name.trim() ? input.t("provider.custom.error.required") : undefined
-    const seen = new Set<string>()
-    const verrs = m.reasoning
-      ? m.variants.map((v) => {
-          const n = v.name.trim()
-          const nameError = !n
-            ? input.t("provider.custom.error.required")
-            : seen.has(n)
-              ? input.t("provider.custom.error.duplicate")
-              : (() => {
-                  seen.add(n)
-                  return undefined
-                })()
-          return { name: nameError }
-        })
-      : []
-    return { id: modelIdError, name: modelNameError, variants: verrs }
-  })
-  const modelsValid = modelErrors.every((m) => !m.id && !m.name && m.variants.every((v) => !v.name))
-  const models = Object.fromEntries(
-    input.form.models.map((m) => {
-      const ventries = m.reasoning
-        ? m.variants
-            .filter((v) => v.name.trim())
-            .map((v) => {
-              const cfg: Record<string, unknown> = {}
-              if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
-              if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }
-              if (v.reasoningEffort !== undefined) cfg.reasoningEffort = v.reasoningEffort
-              if (v.chatTemplateArgs !== undefined) cfg.chat_template_args = { enable_thinking: v.chatTemplateArgs }
-              return [v.name.trim(), cfg]
-            })
-        : []
-      const entry: Record<string, unknown> = { name: m.name.trim() }
-      if (m.reasoning) entry.reasoning = true
-      if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
-      return [m.id.trim(), entry]
-    }),
-  )
-
-  const seenHeaders = new Set<string>()
-  const headerErrors = input.form.headers.map((h) => {
-    const key = h.key.trim()
-    const value = h.value.trim()
-
-    if (!key && !value) return {}
-    const keyError = !key
-      ? input.t("provider.custom.error.required")
-      : seenHeaders.has(key.toLowerCase())
-        ? input.t("provider.custom.error.duplicate")
-        : (() => {
-            seenHeaders.add(key.toLowerCase())
-            return undefined
-          })()
-    const valueError = !value ? input.t("provider.custom.error.required") : undefined
-    return { key: keyError, value: valueError }
-  })
-  const headersValid = headerErrors.every((h) => !h.key && !h.value)
-  const headers = Object.fromEntries(
-    input.form.headers
-      .map((h) => ({ key: h.key.trim(), value: h.value.trim() }))
-      .filter((h) => !!h.key && !!h.value)
-      .map((h) => [h.key, h.value]),
-  )
-
-  const errors: FormErrors = {
-    providerID: idError ?? existsError,
-    name: nameError,
-    baseURL: urlError,
-    models: modelErrors,
-    headers: headerErrors,
-  }
-
-  const ok = !idError && !existsError && !nameError && !urlError && modelsValid && headersValid
-  if (!ok) return { errors }
-
-  const options = {
-    baseURL,
-    ...(Object.keys(headers).length ? { headers } : {}),
-  }
-
-  return {
-    errors,
-    result: {
-      providerID,
-      name,
-      key,
-      config: {
-        npm: OPENAI_COMPATIBLE,
-        name,
-        ...(env ? { env: [env] } : existingEnv ? { env: existingEnv } : {}),
-        options,
-        models,
-      },
-    },
-  }
-}
 
 export interface CustomProviderDialogProps {
   onBack?: () => void
@@ -545,7 +368,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       existingProviderIDs: new Set(Object.keys(provider.providers())),
       existingEnv: props.existing?.config?.env,
     })
-    setErrors(output.errors)
+    setErrors(reconcile(output.errors))
     return output.result
   }
 
@@ -612,7 +435,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       >
         <div style={{ padding: "0 10px", display: "flex", gap: "16px", "align-items": "center" }}>
           <ProviderIcon id="synthetic" width={20} height={20} />
-          <div style={{ "font-size": "16px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+          <div
+            style={{ "font-size": "var(--kilo-font-size-16)", "font-weight": "500", color: "var(--vscode-foreground)" }}
+          >
             {editing() ? language.t("provider.custom.edit.title") : language.t("provider.custom.title")}
           </div>
         </div>
@@ -621,15 +446,15 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           onSubmit={save}
           style={{ padding: "0 10px 24px 10px", display: "flex", "flex-direction": "column", gap: "24px" }}
         >
-          <div style={{ "font-size": "14px", color: "var(--text-base)" }}>
+          <div style={{ "font-size": "var(--kilo-font-size-14)", color: "var(--text-base)" }}>
             {language.t("provider.custom.description.prefix")}
             <a
-              href="https://kilo.ai/docs/providers/#custom-provider"
+              href="https://kilo.ai/docs/ai-providers#custom-provider"
               onClick={(e) => {
                 e.preventDefault()
                 vscode.postMessage({
                   type: "openExternal",
-                  url: "https://kilo.ai/docs/providers/#custom-provider",
+                  url: "https://kilo.ai/docs/ai-providers#custom-provider",
                 })
               }}
             >
@@ -687,7 +512,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           {/* Models */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
             <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
-              <label style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+              <label
+                style={{
+                  "font-size": "var(--kilo-font-size-12)",
+                  "font-weight": "500",
+                  color: "var(--text-weak-base)",
+                }}
+              >
                 {language.t("provider.custom.models.label")}
               </label>
               <Show when={fetching()}>
@@ -729,7 +560,11 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             {/* Fetch error */}
             <Show when={fetchError()}>
               {(err) => (
-                <span style={{ "font-size": "12px", color: "var(--vscode-errorForeground, #f14c4c)" }}>{err()}</span>
+                <span
+                  style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground, #f14c4c)" }}
+                >
+                  {err()}
+                </span>
               )}
             </Show>
 
@@ -738,7 +573,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
               {(status) => (
                 <span
                   style={{
-                    "font-size": "12px",
+                    "font-size": "var(--kilo-font-size-12)",
                     color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                   }}
                 >
@@ -768,7 +603,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                       "align-items": "center",
                     }}
                   >
-                    <span style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+                    <span
+                      style={{
+                        "font-size": "var(--kilo-font-size-12)",
+                        "font-weight": "500",
+                        color: "var(--text-weak-base)",
+                      }}
+                    >
                       <Show
                         when={debouncedSearch()}
                         fallback={language.t("provider.custom.models.fetch.found", {
@@ -821,7 +662,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                             gap: "8px",
                             padding: "4px 2px",
                             cursor: "pointer",
-                            "font-size": "13px",
+                            "font-size": "var(--kilo-font-size-13)",
                             color: "var(--text-base, var(--vscode-foreground))",
                           }}
                         >
@@ -853,7 +694,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
           {/* Headers */}
           <div style={{ display: "flex", "flex-direction": "column", gap: "12px" }}>
-            <label style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+            <label
+              style={{ "font-size": "var(--kilo-font-size-12)", "font-weight": "500", color: "var(--text-weak-base)" }}
+            >
               {language.t("provider.custom.headers.label")}
             </label>
             <For each={form.headers}>

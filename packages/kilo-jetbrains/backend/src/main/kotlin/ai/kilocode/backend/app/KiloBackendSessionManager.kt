@@ -1,9 +1,12 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.KiloCliDataParser
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
+import ai.kilocode.jetbrains.api.model.GlobalSession
 import ai.kilocode.jetbrains.api.model.SessionStatus
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -17,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -63,6 +68,7 @@ class KiloBackendSessionManager(
                     val pair = KiloCliDataParser.parseSessionStatus(event.data)
                     if (pair != null) {
                         _statuses.update { it + pair }
+                        log.debug { "${ChatLogSummary.sid(pair.first)} evt=session.status ${ChatLogSummary.status(pair.second)}" }
                     }
                 }
             }
@@ -87,7 +93,22 @@ class KiloBackendSessionManager(
 
     fun list(dir: String): SessionListDto {
         seed(dir)
-        val raw = requireClient().sessionList(directory = dir, roots = true)
+        val raw = requireClient().sessionList(directory = dir, roots = JsonPrimitive(true))
+        val mapped = raw.map(::dto)
+        val ids = mapped.map { it.id }.toSet()
+        val relevant = _statuses.value.filterKeys { it in ids }
+        return SessionListDto(mapped, relevant)
+    }
+
+    fun recent(dir: String, limit: Int): SessionListDto {
+        seed(dir)
+        val raw = requireClient().experimentalSessionList(
+            directory = dir,
+            worktrees = true,
+            roots = JsonPrimitive(true),
+            limit = limit.toDouble(),
+            archived = JsonPrimitive(false),
+        )
         val mapped = raw.map(::dto)
         val ids = mapped.map { it.id }.toSet()
         val relevant = _statuses.value.filterKeys { it in ids }
@@ -117,8 +138,10 @@ class KiloBackendSessionManager(
                 log.warn("Session create failed: HTTP ${response.code}, body=$raw")
                 throw RuntimeException("Session create failed: HTTP ${response.code} — $raw")
             }
-            log.info("Session created: HTTP ${response.code}")
-            return KiloCliDataParser.parseSession(raw!!)
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=session"
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session $meta created=true code=${response.code}")
+            return dto
         }
     }
 
@@ -134,14 +157,90 @@ class KiloBackendSessionManager(
         directories.remove(id)
     }
 
+    /**
+     * Rename a session by sending `PATCH /session/{id}?directory={dir}` with `{"title":"..."}`.
+     *
+     * Uses raw HTTP because the generated Kotlin client is build-time only and
+     * this repo already uses raw HTTP for session create and cloud operations.
+     */
+    fun rename(id: String, dir: String, title: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val json = """{"title":"${escape(title)}"}"""
+        val patch = url.toHttpUrl().newBuilder()
+            .addPathSegment("session")
+            .addPathSegment(id)
+            .addQueryParameter("directory", dir)
+            .build()
+        val request = Request.Builder()
+            .url(patch)
+            .method("PATCH", json.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session rename failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session rename failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseSession(raw!!)
+        }
+    }
+
+    fun cloudSessions(dir: String, cursor: String?, limit: Int, gitUrl: String?): CloudSessionListDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val params = listOfNotNull(
+            "directory=${encode(dir)}",
+            cursor?.let { "cursor=${encode(it)}" },
+            "limit=$limit",
+            gitUrl?.let { "gitUrl=${encode(it)}" },
+        ).joinToString("&")
+        val path = "$url/kilo/cloud-sessions?$params"
+
+        val request = Request.Builder()
+            .url(path)
+            .get()
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("Cloud sessions failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Cloud sessions failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseCloudSessions(raw)
+        }
+    }
+
+    fun importCloudSession(id: String, dir: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val json = """{"sessionId":"${escape(id)}"}"""
+        val request = Request.Builder()
+            .url("$url/kilo/cloud/session/import?directory=${encode(dir)}")
+            .post(json.toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                log.warn("Cloud session import failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Cloud session import failed: HTTP ${response.code} — $raw")
+            }
+            return KiloCliDataParser.parseSession(raw)
+        }
+    }
+
     fun seed(dir: String) {
         try {
             val raw = requireClient().sessionStatus(directory = dir)
             val mapped = raw.mapValues { (_, v) -> statusDto(v) }
             _statuses.update { it + mapped }
-            log.info("Seeded ${mapped.size} session statuses for $dir")
+            val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=status"
+            log.info("kind=status $meta seeded=${mapped.size}")
         } catch (e: Exception) {
-            log.warn("Session status seed failed: ${e.message}", e)
+            log.warn("kind=status dir=${ChatLogSummary.dir(dir)} seed=true failed message=${e.message}", e)
         }
     }
 
@@ -164,15 +263,36 @@ class KiloBackendSessionManager(
         title = s.title,
         version = s.version,
         time = SessionTimeDto(
-            created = s.time.created,
-            updated = s.time.updated,
+            created = s.time.created.toDouble(),
+            updated = s.time.updated.toDouble(),
             archived = s.time.archived,
         ),
         summary = s.summary?.let {
             SessionSummaryDto(
-                additions = it.additions.toInt(),
-                deletions = it.deletions.toInt(),
-                files = it.files.toInt(),
+                additions = it.additions.safeInt(),
+                deletions = it.deletions.safeInt(),
+                files = it.files.safeInt(),
+            )
+        },
+    )
+
+    private fun dto(s: GlobalSession) = SessionDto(
+        id = s.id,
+        projectID = s.projectID,
+        directory = s.directory,
+        parentID = s.parentID,
+        title = s.title,
+        version = s.version,
+        time = SessionTimeDto(
+            created = s.time.created.toDouble(),
+            updated = s.time.updated.toDouble(),
+            archived = s.time.archived,
+        ),
+        summary = s.summary?.let {
+            SessionSummaryDto(
+                additions = it.additions.safeInt(),
+                deletions = it.deletions.safeInt(),
+                files = it.files.safeInt(),
             )
         },
     )
@@ -180,5 +300,25 @@ class KiloBackendSessionManager(
     private fun statusDto(s: SessionStatus) = SessionStatusDto(
         type = s.type.value,
         message = s.message.ifBlank { null },
+        attempt = s.attempt.safeInt(),
+        next = s.next,
+        requestID = s.requestID.ifBlank { null },
     )
+
+    private fun encode(value: String) = java.net.URLEncoder.encode(value, Charsets.UTF_8)
+
+    private fun escape(value: String) = buildString {
+        for (c in value) {
+            when (c) {
+                '\\' -> append("\\\\")
+                '"' -> append("\\\"")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> if (c < '\u0020') append("\\u%04x".format(c.code)) else append(c)
+            }
+        }
+    }
+
+    private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 }

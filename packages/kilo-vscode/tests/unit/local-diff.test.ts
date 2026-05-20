@@ -2,11 +2,24 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs/promises"
 import * as os from "os"
 import * as path from "path"
-import { diffSummary, diffFile, generatedLike, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
+import { diffSummary, diffFile, generatedLike, resolveBase, MAX_DETAIL_BYTES } from "../../src/agent-manager/local-diff"
 import { GitOps } from "../../src/agent-manager/GitOps"
+import { WorktreeDiffReverter } from "../../src/diff/shared/reverter"
+import { resolveLocalDiffTarget } from "../../src/diff/shared/target"
 
 function git(): GitOps {
   return new GitOps({ log: () => undefined })
+}
+
+function reverter(ops: GitOps): WorktreeDiffReverter {
+  return new WorktreeDiffReverter(
+    ops,
+    async (target, file) => {
+      const entry = await diffFile(ops, target.directory, target.baseBranch, file)
+      return entry?.status
+    },
+    () => undefined,
+  )
 }
 
 function runSync(cwd: string, args: string[]): string {
@@ -51,7 +64,7 @@ async function withRepo(run: (dir: string, base: string) => Promise<void>): Prom
 describe("generatedLike", () => {
   it("matches files in ignored folders", () => {
     expect(generatedLike("node_modules/foo.js")).toBe(true)
-    expect(generatedLike("packages/app/node_modules/foo/index.js")).toBe(true)
+    expect(generatedLike("packages/opencode/node_modules/foo/index.js")).toBe(true)
     expect(generatedLike("dist/bundle.js")).toBe(true)
     expect(generatedLike("build/out.js")).toBe(true)
     expect(generatedLike(".git/HEAD")).toBe(true)
@@ -91,9 +104,47 @@ describe("generatedLike", () => {
 })
 
 describe("diffSummary", () => {
+  it("uses candidate local branch fallback when base is empty string and on a feature branch", async () => {
+    await withRepo(async (dir) => {
+      runSync(dir, ["checkout", "-b", "feature"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfeature\n")
+      runSync(dir, ["commit", "-am", "feature commit"])
+      const result = await diffSummary(git(), dir, "")
+      const entry = result.find((e) => e.file === "seed.txt")
+      expect(entry?.status).toBe("modified")
+      // Pin the export contract: resolveBase("HEAD") must resolve to a real
+      // candidate branch when one exists locally. If this regresses, the
+      // revert-file fix below also silently regresses.
+      expect(await resolveBase(git(), dir, "HEAD")).toBe("main")
+    })
+  })
+
+  it("uses HEAD as fallback when no candidate branches exist and base is empty", async () => {
+    await withRepo(async (dir) => {
+      // Rename main to something else so it doesn't match candidates
+      runSync(dir, ["branch", "-m", "main", "other"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nuncommitted\n")
+      const result = await diffSummary(git(), dir, "")
+      const entry = result.find((e) => e.file === "seed.txt")
+      expect(entry?.status).toBe("modified")
+    })
+  })
+
   it("returns empty array when ancestor cannot be resolved", async () => {
     await withRepo(async (dir) => {
       const result = await diffSummary(git(), dir, "nonexistent-branch")
+      expect(result).toEqual([])
+    })
+  })
+
+  it("does not silently fall back to a candidate when an explicit base is stale", async () => {
+    await withRepo(async (dir) => {
+      // main exists locally, but caller provided a misspelled explicit base.
+      // We must NOT diff against main — merge-base should fail loudly.
+      runSync(dir, ["checkout", "-b", "feature"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfeature\n")
+      runSync(dir, ["commit", "-am", "feature commit"])
+      const result = await diffSummary(git(), dir, "typo-main")
       expect(result).toEqual([])
     })
   })
@@ -269,6 +320,152 @@ describe("diffFile", () => {
       expect(result?.summarized).toBe(false)
       expect((result?.after ?? "").length).toBeGreaterThan(0)
       expect((result?.patch ?? "").length).toBeGreaterThan(0)
+    })
+  })
+})
+
+describe("resolveLocalDiffTarget + revertFile", () => {
+  it("resolves a real candidate branch so revertFile actually restores the file when there is no remote", async () => {
+    await withRepo(async (dir) => {
+      // No remote; `main` exists locally with the seed commit.
+      runSync(dir, ["checkout", "-b", "feature"])
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nfeature\n")
+      runSync(dir, ["commit", "-am", "feature commit"])
+
+      const target = await resolveLocalDiffTarget(git(), () => undefined, dir)
+      expect(target).toBeDefined()
+      // Before the fix this was "HEAD", which made revertFile a no-op.
+      expect(target?.baseBranch).toBe("main")
+
+      const revert = await git().revertFile(dir, target!.baseBranch, "seed.txt", "modified")
+      expect(revert.ok).toBe(true)
+
+      const restored = await fs.readFile(path.join(dir, "seed.txt"), "utf-8")
+      expect(restored).toBe("seed\n")
+    })
+  })
+
+  it("uses local diff status for reverting modified tracked files", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nchanged\n")
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "seed.txt")
+
+      expect(result.ok).toBe(true)
+      expect(await fs.readFile(path.join(dir, "seed.txt"), "utf-8")).toBe("seed\n")
+      ops.dispose()
+    })
+  })
+
+  it("uses local diff status for reverting staged modified files", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nstaged\n")
+      runSync(dir, ["add", "seed.txt"])
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "seed.txt")
+
+      expect(result.ok).toBe(true)
+      expect(await fs.readFile(path.join(dir, "seed.txt"), "utf-8")).toBe("seed\n")
+      expect(runSync(dir, ["status", "--short", "--", "seed.txt"])).toBe("")
+      ops.dispose()
+    })
+  })
+
+  it("uses local diff status for reverting deleted tracked files", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "seed.txt")
+      await fs.rm(file)
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "seed.txt")
+
+      expect(result.ok).toBe(true)
+      expect(await fs.readFile(file, "utf-8")).toBe("seed\n")
+      ops.dispose()
+    })
+  })
+
+  it("uses local diff status for reverting staged deleted files", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "seed.txt")
+      await fs.rm(file)
+      runSync(dir, ["add", "-A"])
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "seed.txt")
+
+      expect(result.ok).toBe(true)
+      expect(await fs.readFile(file, "utf-8")).toBe("seed\n")
+      expect(runSync(dir, ["status", "--short", "--", "seed.txt"])).toBe("")
+      ops.dispose()
+    })
+  })
+
+  it("uses local diff status for reverting tracked files added after base", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "tracked.txt")
+      await fs.writeFile(file, "tracked\n")
+      runSync(dir, ["add", "tracked.txt"])
+      runSync(dir, ["commit", "-m", "add tracked"])
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "tracked.txt")
+
+      expect(result.ok).toBe(true)
+      await expect(fs.stat(file)).rejects.toThrow()
+      ops.dispose()
+    })
+  })
+
+  it("uses local diff status for reverting staged added files", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "staged.txt")
+      await fs.writeFile(file, "staged\n")
+      runSync(dir, ["add", "staged.txt"])
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "staged.txt")
+
+      expect(result.ok).toBe(true)
+      await expect(fs.stat(file)).rejects.toThrow()
+      expect(runSync(dir, ["status", "--short", "--", "staged.txt"])).toBe("")
+      ops.dispose()
+    })
+  })
+
+  it("uses local diff status for reverting untracked files", async () => {
+    await withRepo(async (dir, base) => {
+      const file = path.join(dir, "fresh.txt")
+      await fs.writeFile(file, "fresh\n")
+
+      const ops = git()
+      const result = await reverter(ops).revertFile({ directory: dir, baseBranch: base }, "fresh.txt")
+
+      expect(result.ok).toBe(true)
+      await expect(fs.stat(file)).rejects.toThrow()
+      ops.dispose()
+    })
+  })
+
+  it("falls back to modified-file revert when local status lookup fails", async () => {
+    await withRepo(async (dir, base) => {
+      await fs.writeFile(path.join(dir, "seed.txt"), "seed\nchanged\n")
+      const ops = git()
+      const diff = new WorktreeDiffReverter(
+        ops,
+        async () => {
+          throw new Error("status failed")
+        },
+        () => undefined,
+      )
+
+      const result = await diff.revertFile({ directory: dir, baseBranch: base }, "seed.txt")
+
+      expect(result.ok).toBe(true)
+      expect(await fs.readFile(path.join(dir, "seed.txt"), "utf-8")).toBe("seed\n")
+      ops.dispose()
     })
   })
 })

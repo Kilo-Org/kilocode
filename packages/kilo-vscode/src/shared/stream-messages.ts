@@ -22,3 +22,10 @@ export type PartBatch<P = unknown> = {
   type: "partsUpdated"
   updates: PartUpdate<P>[]
 }
+
+export type PartRemove = {
+  type: "partRemoved"
+  sessionID: string
+  messageID: string
+  partID: string
+}

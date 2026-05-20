@@ -2,7 +2,7 @@ import { test, expect, describe } from "bun:test"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { getKiloProjectId } from "../../src/kilocode/project-id"
 
 describe("project-id", () => {
@@ -16,7 +16,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -33,7 +33,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -49,7 +49,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -65,7 +65,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -82,7 +82,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -112,7 +112,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -136,7 +136,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -158,7 +158,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -182,7 +182,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -208,7 +208,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -234,7 +234,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -258,7 +258,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -284,7 +284,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -297,7 +297,7 @@ describe("project-id", () => {
     test("returns undefined when no config and no git origin", async () => {
       await using tmp = await tmpdir({ git: true })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -308,7 +308,7 @@ describe("project-id", () => {
     test("returns undefined for non-git directory", async () => {
       await using tmp = await tmpdir()
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -327,7 +327,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -354,7 +354,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -373,12 +373,12 @@ describe("project-id", () => {
         },
       })
 
-      const id1 = await Instance.provide({
+      const id1 = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
 
-      const id2 = await Instance.provide({
+      const id2 = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -397,7 +397,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -420,7 +420,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })
@@ -444,7 +444,7 @@ describe("project-id", () => {
         },
       })
 
-      const id = await Instance.provide({
+      const id = await WithInstance.provide({
         directory: tmp.path,
         fn: () => getKiloProjectId(),
       })

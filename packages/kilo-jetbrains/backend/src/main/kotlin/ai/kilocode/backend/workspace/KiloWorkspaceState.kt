@@ -1,5 +1,7 @@
 package ai.kilocode.backend.workspace
 
+import ai.kilocode.backend.app.LoadError
+
 /**
  * Workspace data lifecycle state, combining connection readiness
  * with directory-scoped data loading progress.
@@ -17,7 +19,7 @@ sealed class KiloWorkspaceState {
         val commands: List<CommandInfo>,
         val skills: List<SkillInfo>,
     ) : KiloWorkspaceState()
-    data class Error(val message: String) : KiloWorkspaceState()
+    data class Error(val message: String, val errors: List<LoadError> = emptyList()) : KiloWorkspaceState()
 }
 
 /**
@@ -53,6 +55,15 @@ data class ModelInfo(
     val toolCall: Boolean,
     val free: Boolean,
     val status: String?,
+    val recommendedIndex: Double?,
+    val variants: List<String>,
+    val limit: ModelLimitInfo?,
+)
+
+data class ModelLimitInfo(
+    val context: Long = 0,
+    val input: Long? = null,
+    val output: Long = 0,
 )
 
 data class AgentData(

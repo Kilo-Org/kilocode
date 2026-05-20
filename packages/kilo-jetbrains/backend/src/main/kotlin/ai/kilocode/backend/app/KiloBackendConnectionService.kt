@@ -3,8 +3,8 @@ package ai.kilocode.backend.app
 import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.cli.CliServer
-import ai.kilocode.backend.util.IntellijLog
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +33,7 @@ sealed class ConnectionState {
     data object Disconnected : ConnectionState()
     data object Connecting : ConnectionState()
     data class Connected(val port: Int, val password: String) : ConnectionState()
-    data class Error(val message: String) : ConnectionState()
+    data class Error(val message: String, val details: String? = null) : ConnectionState()
 }
 
 data class SseEvent(val type: String, val data: String)
@@ -59,7 +59,7 @@ class KiloConnectionService(
   private val cs: CoroutineScope,
   private val server: CliServer,
   private val onReconnect: () -> Unit,
-  private val log: KiloLog = IntellijLog(KiloConnectionService::class.java),
+  private val log: KiloLog = KiloLog.create(KiloConnectionService::class.java),
 ) {
 
     companion object {
@@ -165,7 +165,7 @@ class KiloConnectionService(
         val result = server.init()
 
         if (result is CliServer.State.Error) {
-            setState(ConnectionState.Error(result.message))
+            setState(ConnectionState.Error(result.message, result.details))
             return
         }
 
@@ -220,6 +220,7 @@ class KiloConnectionService(
         override fun onEvent(src: EventSource, id: String?, type: String?, data: String) {
             lastEvent.set(System.currentTimeMillis())
             val kind = type ?: KiloCliDataParser.extractEventType(data)
+            log.debug { "evt=$kind bytes=${data.length} hasId=${id != null} ${ChatLogSummary.body(data)}" }
             cs.launch { _events.emit(SseEvent(type = kind, data = data)) }
         }
 
@@ -229,12 +230,17 @@ class KiloConnectionService(
         }
 
         override fun onFailure(src: EventSource, t: Throwable?, response: Response?) {
+            val detail = when {
+                t != null -> t.stackTraceToString()
+                response != null -> response.body?.string()
+                else -> null
+            }?.trim()?.ifEmpty { null }
             if (t != null) {
                 log.warn("SSE: failure (${t.message}) — scheduling reconnect")
             } else {
                 log.warn("SSE: failure (HTTP ${response?.code}) — scheduling reconnect")
             }
-            setState(ConnectionState.Error(t?.message ?: "SSE connection failed (HTTP ${response?.code})"))
+            setState(ConnectionState.Error(t?.message ?: "SSE connection failed (HTTP ${response?.code})", detail))
             scheduleReconnect()
         }
     }
@@ -303,7 +309,7 @@ class KiloConnectionService(
                 .build()
             http.newCall(req).execute().use { it.isSuccessful }
         } catch (e: Exception) {
-            log.info("Health check exception: ${e.message}")
+            log.warn("kind=health-check port=$port failed message=${e.message}", e)
             false
         }
     }

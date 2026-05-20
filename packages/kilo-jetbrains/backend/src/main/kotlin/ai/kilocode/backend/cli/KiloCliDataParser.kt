@@ -1,21 +1,40 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.CloudSessionDto
+import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.ModelSelectionDto
+import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionOptionDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
+import ai.kilocode.rpc.dto.ToolRefDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
@@ -39,6 +58,7 @@ import java.util.concurrent.ConcurrentHashMap
 object KiloCliDataParser {
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val pretty = Json { ignoreUnknownKeys = true; prettyPrint = true }
     private val TYPE_REGEX = Regex(""""type"\s*:\s*"([^"]+)"""")
     private val FIELD_RE = ConcurrentHashMap<String, Regex>()
 
@@ -112,6 +132,95 @@ object KiloCliDataParser {
                 ChatEventDto.Error(sid, err)
             }
 
+            "permission.asked" -> {
+                val sid = props.str("sessionID") ?: return null
+                val request = parsePermissionRequest(props) ?: return null
+                ChatEventDto.PermissionAsked(sid, request)
+            }
+
+            "permission.replied" -> {
+                val sid = props.str("sessionID") ?: return null
+                val rid = props.str("requestID") ?: return null
+                ChatEventDto.PermissionReplied(sid, rid)
+            }
+
+            "question.asked" -> {
+                val sid = props.str("sessionID") ?: return null
+                val request = parseQuestionRequest(props) ?: return null
+                ChatEventDto.QuestionAsked(sid, request)
+            }
+
+            "question.replied" -> {
+                val sid = props.str("sessionID") ?: return null
+                val rid = props.str("requestID") ?: return null
+                ChatEventDto.QuestionReplied(sid, rid)
+            }
+
+            "question.rejected" -> {
+                val sid = props.str("sessionID") ?: return null
+                val rid = props.str("requestID") ?: return null
+                ChatEventDto.QuestionRejected(sid, rid)
+            }
+
+            "message.part.removed" -> {
+                val sid = props.str("sessionID") ?: return null
+                val mid = props.str("messageID") ?: return null
+                val pid = props.str("partID") ?: return null
+                ChatEventDto.PartRemoved(sid, mid, pid)
+            }
+
+            "session.status" -> {
+                val sid = props.str("sessionID") ?: return null
+                val st = props["status"]?.jsonObject ?: return null
+                val dto = parseStatus(st)
+                ChatEventDto.SessionStatusChanged(sid, dto)
+            }
+
+            "session.updated" -> {
+                val info = props["info"]?.jsonObject ?: return null
+                val dto = parseSessionObject(info)
+                val sid = props.str("sessionID") ?: dto.id.takeIf { it.isNotBlank() } ?: return null
+                ChatEventDto.SessionUpdated(sid, dto)
+            }
+
+            "session.idle" -> {
+                val sid = props.str("sessionID") ?: return null
+                ChatEventDto.SessionIdle(sid)
+            }
+
+            "session.compacted" -> {
+                val sid = props.str("sessionID") ?: return null
+                ChatEventDto.SessionCompacted(sid)
+            }
+
+            "session.diff" -> {
+                val sid = props.str("sessionID") ?: return null
+                val diffs = props["diff"]?.jsonArray?.mapNotNull { elem ->
+                    val d = elem.jsonObject
+                    val file = d.str("file") ?: return@mapNotNull null
+                    DiffFileDto(
+                        file = file,
+                        additions = d.long("additions")?.safeInt() ?: 0,
+                        deletions = d.long("deletions")?.safeInt() ?: 0,
+                        patch = d.str("patch"),
+                    )
+                } ?: emptyList()
+                ChatEventDto.SessionDiffChanged(sid, diffs)
+            }
+
+            "todo.updated" -> {
+                val sid = props.str("sessionID") ?: return null
+                val todos = props["todos"]?.jsonArray?.map { elem ->
+                    val t = elem.jsonObject
+                    TodoDto(
+                        content = t.str("content") ?: "",
+                        status = t.str("status") ?: "pending",
+                        priority = t.str("priority") ?: "medium",
+                    )
+                } ?: emptyList()
+                ChatEventDto.TodoUpdated(sid, todos)
+            }
+
             else -> null
         }
     }
@@ -119,15 +228,14 @@ object KiloCliDataParser {
     /**
      * Parse an SSE `session.status` event into a (sessionID, [SessionStatusDto]) pair.
      * Returns null if the required fields are missing.
-     *
-     * Uses regex extraction (no full JSON parse) for consistency with
-     * the existing high-throughput status event handling.
      */
     fun parseSessionStatus(data: String): Pair<String, SessionStatusDto>? {
-        val id = extractField(data, "sessionID") ?: return null
-        val type = extractNested(data, "status", "type") ?: "idle"
-        val msg = extractNested(data, "status", "message")
-        return id to SessionStatusDto(type, msg)
+        val obj = tryParseObject(data) ?: return null
+        val payload = obj["payload"]?.jsonObject ?: obj
+        val props = payload["properties"]?.jsonObject ?: obj
+        val id = props.str("sessionID") ?: return null
+        val st = props["status"]?.jsonObject ?: return id to SessionStatusDto("idle")
+        return id to parseStatus(st)
     }
 
     // ================================================================
@@ -159,6 +267,53 @@ object KiloCliDataParser {
         }
     }
 
+    fun parseCloudSessions(raw: String): CloudSessionListDto {
+        val obj = tryParseObject(raw) ?: return CloudSessionListDto(emptyList())
+        val items = obj["cliSessions"]?.jsonArray ?: JsonArray(emptyList())
+        val sessions = items.mapNotNull { elem ->
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            CloudSessionDto(
+                id = item.str("session_id") ?: return@mapNotNull null,
+                title = item.str("title"),
+                createdAt = item.str("created_at") ?: return@mapNotNull null,
+                updatedAt = item.str("updated_at") ?: return@mapNotNull null,
+                version = item.num("version") ?: return@mapNotNull null,
+            )
+        }
+        return CloudSessionListDto(
+            sessions = sessions,
+            nextCursor = obj.str("nextCursor"),
+        )
+    }
+
+    fun parseModelState(raw: String): ModelStateDto {
+        val obj = tryParseObject(raw) ?: return ModelStateDto()
+        return ModelStateDto(
+            favorite = parseModelFavorites(obj["favorite"]),
+            model = parseModelSelections(obj["model"]),
+            variant = parseModelVariants(obj["variant"]),
+            recent = parseModelFavorites(obj["recent"]),
+        )
+    }
+
+    fun buildModelStateJson(raw: String?, favorite: List<ModelSelectionDto>): String {
+        val state = parseModelState(raw.orEmpty()).copy(favorite = favorite)
+        return buildModelStateJson(raw, state)
+    }
+
+    fun buildModelStateJson(raw: String?, state: ModelStateDto): String {
+        val data = raw
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::tryParseObject)
+            ?.toMutableMap()
+            ?: mutableMapOf()
+        data["favorite"] = JsonArray(state.favorite.map(::modelSelection))
+        data["model"] = JsonObject(state.model.mapValues { (_, value) -> modelSelection(value) })
+        data["variant"] = JsonObject(state.variant.mapValues { (_, value) -> JsonPrimitive(value) })
+        data["recent"] = JsonArray(state.recent.map(::modelSelection))
+        return pretty.encodeToString(JsonObject.serializer(), JsonObject(data))
+    }
+
     // ================================================================
     // JSON serialization (DTO → JSON for outgoing requests)
     // ================================================================
@@ -181,9 +336,19 @@ object KiloCliDataParser {
         if (ag != null) {
             sb.append(""","agent":${escape(ag)}""")
         }
+        val variant = prompt.variant
+        if (variant != null) {
+            sb.append(""","variant":${escape(variant)}""")
+        }
         sb.append("}")
         return sb.toString()
     }
+
+    /**
+     * Build the JSON body for `POST /session/{id}/summarize`.
+     */
+    fun buildSummarizeJson(model: ModelSelectionDto): String =
+        """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
 
     /**
      * Build the partial JSON body for `PATCH /global/config`.
@@ -232,22 +397,16 @@ object KiloCliDataParser {
             modelID = obj.str("modelID"),
             parentID = obj.str("parentID"),
             cost = obj.num("cost"),
-            tokens = tokens?.let {
-                val cache = it["cache"]?.jsonObject
-                TokensDto(
-                    input = it.long("input") ?: 0,
-                    output = it.long("output") ?: 0,
-                    reasoning = it.long("reasoning") ?: 0,
-                    cacheRead = cache?.long("read") ?: 0,
-                    cacheWrite = cache?.long("write") ?: 0,
-                )
-            },
+            tokens = tokens?.let(::parseTokens),
             error = error?.let { parseError(it) },
         )
     }
 
     internal fun parsePart(obj: JsonObject): PartDto {
         val state = obj["state"]?.jsonObject
+        val tokens = obj["tokens"]?.jsonObject
+        val top = obj.map("metadata")
+        val meta = state.map("metadata") + top
         return PartDto(
             id = obj.str("id") ?: "",
             sessionID = obj.str("sessionID") ?: "",
@@ -255,8 +414,28 @@ object KiloCliDataParser {
             type = obj.str("type") ?: "unknown",
             text = obj.str("text"),
             tool = obj.str("tool"),
+            callID = obj.str("callID"),
             state = state?.str("status"),
             title = state?.str("title"),
+            input = state.map("input"),
+            metadata = meta,
+            output = state?.str("output"),
+            error = state?.str("error"),
+            time = obj.time("time") ?: state.time("time"),
+            reason = obj.str("reason"),
+            cost = obj.num("cost"),
+            tokens = tokens?.let(::parseTokens),
+        )
+    }
+
+    private fun parseTokens(obj: JsonObject): TokensDto {
+        val cache = obj["cache"]?.jsonObject
+        return TokensDto(
+            input = obj.long("input") ?: 0,
+            output = obj.long("output") ?: 0,
+            reasoning = obj.long("reasoning") ?: 0,
+            cacheRead = cache?.long("read") ?: 0,
+            cacheWrite = cache?.long("write") ?: 0,
         )
     }
 
@@ -267,6 +446,79 @@ object KiloCliDataParser {
             ?: obj.str("error")
         return MessageErrorDto(type, msg)
     }
+
+    internal fun parsePermissionRequest(obj: JsonObject): PermissionRequestDto? {
+        val id = obj.str("id") ?: return null
+        val sid = obj.str("sessionID") ?: return null
+        val permission = obj.str("permission") ?: return null
+        val patterns = obj["patterns"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val always = obj["always"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val meta = obj["metadata"]?.jsonObject?.let { m ->
+            m.entries.associate { (k, v) -> k to (v.jsonPrimitive.contentOrNull ?: "") }
+        } ?: emptyMap()
+        val ref = toolRef(obj)
+        return PermissionRequestDto(id, sid, permission, patterns, meta, always, ref)
+    }
+
+    internal fun parseQuestionRequest(obj: JsonObject): QuestionRequestDto? {
+        val id = obj.str("id") ?: return null
+        val sid = obj.str("sessionID") ?: return null
+        val questions = obj["questions"]?.jsonArray?.map { q ->
+            val qo = q.jsonObject
+            val options = qo["options"]?.jsonArray?.map { o ->
+                val oo = o.jsonObject
+                QuestionOptionDto(oo.str("label") ?: "", oo.str("description") ?: "")
+            } ?: emptyList()
+            QuestionInfoDto(
+                question = qo.str("question") ?: "",
+                header = qo.str("header") ?: "",
+                options = options,
+                multiple = qo.str("multiple") == "true",
+                custom = qo.str("custom") != "false",
+            )
+        } ?: emptyList()
+        val ref = toolRef(obj)
+        return QuestionRequestDto(id, sid, questions, ref)
+    }
+
+    internal fun parseModelFavorites(raw: JsonElement?): List<ModelSelectionDto> {
+        val array = runCatching { raw?.jsonArray }.getOrNull() ?: return emptyList()
+        return array.mapNotNull { elem ->
+            val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val pid = obj.str("providerID") ?: return@mapNotNull null
+            val mid = obj.str("modelID") ?: return@mapNotNull null
+            ModelSelectionDto(pid, mid)
+        }
+    }
+
+    internal fun parseModelSelections(raw: JsonElement?): Map<String, ModelSelectionDto> {
+        val obj = runCatching { raw?.jsonObject }.getOrNull() ?: return emptyMap()
+        return obj.entries.mapNotNull { (name, elem) ->
+            if (name.isBlank()) return@mapNotNull null
+            val item = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val pid = item.str("providerID") ?: return@mapNotNull null
+            val mid = item.str("modelID") ?: return@mapNotNull null
+            name to ModelSelectionDto(pid, mid)
+        }.toMap()
+    }
+
+    internal fun parseModelVariants(raw: JsonElement?): Map<String, String> {
+        val obj = runCatching { raw?.jsonObject }.getOrNull() ?: return emptyMap()
+        return obj.entries.mapNotNull { (key, elem) ->
+            if (key.isBlank()) return@mapNotNull null
+            val prim = runCatching { elem.jsonPrimitive }.getOrNull() ?: return@mapNotNull null
+            if (!prim.isString) return@mapNotNull null
+            val value = prim.contentOrNull
+                ?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            key to value
+        }.toMap()
+    }
+
+    private fun modelSelection(item: ModelSelectionDto) = JsonObject(mapOf(
+        "providerID" to JsonPrimitive(item.providerID),
+        "modelID" to JsonPrimitive(item.modelID),
+    ))
 
     private fun parseSessionObject(obj: JsonObject): SessionDto {
         val time = obj["time"]?.jsonObject
@@ -285,12 +537,97 @@ object KiloCliDataParser {
             ),
             summary = summary?.let {
                 SessionSummaryDto(
-                    additions = it.long("additions")?.toInt() ?: 0,
-                    deletions = it.long("deletions")?.toInt() ?: 0,
-                    files = it.long("files")?.toInt() ?: 0,
+                    additions = it.long("additions")?.safeInt() ?: 0,
+                    deletions = it.long("deletions")?.safeInt() ?: 0,
+                    files = it.long("files")?.safeInt() ?: 0,
                 )
             },
         )
+    }
+
+    // ================================================================
+    // Internal — status parsing
+    // ================================================================
+
+    /** Safely parse an optional tool reference, handling `null` JSON values. */
+    private fun toolRef(obj: JsonObject): ToolRefDto? {
+        val elem = obj["tool"] ?: return null
+        if (elem is JsonNull) return null
+        val t = elem.jsonObject
+        val mid = t.str("messageID") ?: return null
+        val cid = t.str("callID") ?: return null
+        return ToolRefDto(mid, cid)
+    }
+
+    internal fun parseStatus(st: JsonObject): SessionStatusDto {
+        val type = st.str("type") ?: "idle"
+        return SessionStatusDto(
+            type = type,
+            message = st.str("message"),
+            attempt = st.long("attempt")?.safeInt(),
+            next = st.long("next"),
+            requestID = st.str("requestID"),
+        )
+    }
+
+    // ================================================================
+    // HTTP response parsing — lists
+    // ================================================================
+
+    /**
+     * Parse a list of pending permission requests (`GET /permission`).
+     */
+    fun parsePermissionRequests(raw: String): List<PermissionRequestDto> {
+        val arr = tryParseArray(raw) ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            parsePermissionRequest(elem.jsonObject)
+        }
+    }
+
+    /**
+     * Parse a list of pending question requests (`GET /question`).
+     */
+    fun parseQuestionRequests(raw: String): List<QuestionRequestDto> {
+        val arr = tryParseArray(raw) ?: return emptyList()
+        return arr.mapNotNull { elem ->
+            parseQuestionRequest(elem.jsonObject)
+        }
+    }
+
+    // ================================================================
+    // JSON serialization (DTO → JSON for outgoing permission/question requests)
+    // ================================================================
+
+    /**
+     * Build the JSON body for `POST /permission/{requestID}/reply`.
+     */
+    fun buildPermissionReplyJson(reply: PermissionReplyDto): String {
+        val sb = StringBuilder()
+        sb.append("""{"reply":${escape(reply.reply)}""")
+        val msg = reply.message
+        if (msg != null) sb.append(""","message":${escape(msg)}""")
+        sb.append("}")
+        return sb.toString()
+    }
+
+    /**
+     * Build the JSON body for `POST /permission/{requestID}/always-rules`.
+     */
+    fun buildPermissionAlwaysRulesJson(rules: PermissionAlwaysRulesDto): String {
+        val approved = rules.approvedAlways.joinToString(",") { escape(it) }
+        val denied = rules.deniedAlways.joinToString(",") { escape(it) }
+        return """{"approvedAlways":[$approved],"deniedAlways":[$denied]}"""
+    }
+
+    /**
+     * Build the JSON body for `POST /question/{requestID}/reply`.
+     */
+    fun buildQuestionReplyJson(reply: QuestionReplyDto): String {
+        val answers = reply.answers.joinToString(",") { inner ->
+            val items = inner.joinToString(",") { escape(it) }
+            "[$items]"
+        }
+        return """{"answers":[$answers]}"""
     }
 
     // ================================================================
@@ -341,3 +678,32 @@ private fun JsonObject.num(key: String): Double? =
 
 private fun JsonObject.long(key: String): Long? =
     this[key]?.jsonPrimitive?.longOrNull
+
+private fun Long.safeInt() = coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+
+private fun JsonObject?.map(key: String): Map<String, String> {
+    val obj = this?.get(key)?.jsonObject ?: return emptyMap()
+    return obj.entries.mapNotNull { (name, value) ->
+        val text = value.scalar() ?: return@mapNotNull null
+        name to text
+    }.toMap()
+}
+
+private fun JsonObject?.time(key: String): PartTimeDto? {
+    val obj = this?.get(key)?.jsonObject ?: return null
+    val start = obj.num("start")
+    val end = obj.num("end")
+    if (start == null && end == null) return null
+    return PartTimeDto(start = start, end = end)
+}
+
+private fun JsonElement.scalar(): String? {
+    if (this is JsonNull) return null
+    val prim = runCatching { jsonPrimitive }.getOrNull()
+    if (prim != null) {
+        prim.contentOrNull?.let { return it }
+        prim.booleanOrNull?.let { return it.toString() }
+        prim.doubleOrNull?.let { return it.toString() }
+    }
+    return toString()
+}

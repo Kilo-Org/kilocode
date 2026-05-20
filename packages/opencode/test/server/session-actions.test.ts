@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { Effect } from "effect"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
-import { Session as SessionNs } from "../../src/session"
+import { Session as SessionNs } from "@/session/session"
 import type { SessionID } from "../../src/session/schema"
-import { Log } from "../../src/util/log"
-import { tmpdir } from "../fixture/fixture"
+import * as Log from "@opencode-ai/core/util/log"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
-Log.init({ print: false })
+void Log.init({ print: false })
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionNs.Service>) {
   return Effect.runPromise(fx.pipe(Effect.provide(SessionNs.defaultLayer)))
@@ -25,13 +26,13 @@ const svc = {
 
 afterEach(async () => {
   mock.restore()
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("session action routes", () => {
   test("abort route returns success", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})

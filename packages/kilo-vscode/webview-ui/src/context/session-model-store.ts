@@ -86,9 +86,9 @@ export interface ApplyResult {
 /**
  * Apply a user-initiated model selection.
  *
- * When a session is active, writes ONLY to the per-session override so other
- * sessions are not affected. When no session is active (sidebar), writes to
- * the global modelSelections map.
+ * Session-scoped selections write only to the per-session override.
+ * No-session selections write to the global modelSelections map so sidebar
+ * default picks still mirror CLI TUI's model.json behavior.
  */
 export function applyModel(
   store: ModelStore,
@@ -96,17 +96,13 @@ export function applyModel(
   selection: ModelSelection,
   sessionID: string | undefined,
 ): ApplyResult {
-  const modelSelections = { ...store.modelSelections }
+  const modelSelections = sessionID
+    ? { ...store.modelSelections }
+    : { ...store.modelSelections, [agentName]: selection }
   const sessionOverrides = { ...store.sessionOverrides }
 
   if (sessionID) {
-    // Per-session only — do NOT mutate the global map.  Writing globally
-    // here would cause every other session (that hasn't set its own
-    // override) to inherit this session's model.
     sessionOverrides[sessionID] = selection
-  } else {
-    // No active session (sidebar) — write globally
-    modelSelections[agentName] = selection
   }
 
   return { modelSelections, sessionOverrides }

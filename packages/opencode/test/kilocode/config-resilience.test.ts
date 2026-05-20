@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { Config } from "../../src/config/config"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Filesystem } from "../../src/util/filesystem"
-import { tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
   await Config.invalidate()
 })
 
@@ -31,7 +31,7 @@ Valid agent prompt`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const cfg = await Config.get()
@@ -59,7 +59,7 @@ Broken agent prompt`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Config.get()
@@ -90,7 +90,7 @@ Valid command template`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const cfg = await Config.get()
@@ -117,7 +117,7 @@ Broken command template`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Config.get()
@@ -141,7 +141,7 @@ Broken agent`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Config.get()
@@ -165,7 +165,7 @@ Broken command`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Config.get()
@@ -183,7 +183,7 @@ Broken command`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const cfg = await Config.get()
@@ -204,7 +204,7 @@ Broken command`,
       },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const cfg = await Config.get()
@@ -221,7 +221,7 @@ Broken command`,
       config: { model: "test/model" },
     })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Config.get()

@@ -33,7 +33,9 @@ export interface BasicToolProps {
   defer?: boolean
   locked?: boolean
   animated?: boolean
+  allowPendingToggle?: boolean // kilocode_change
   onSubtitleClick?: () => void
+  onOpenChange?: (open: boolean) => void // kilocode_change
   onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
   triggerHref?: string
   clickable?: boolean
@@ -100,7 +102,7 @@ export function BasicTool(props: BasicToolProps) {
         if (isOpen) {
           contentRef.style.overflow = "hidden"
           heightAnim = animate(contentRef, { height: "auto" }, SPRING)
-          heightAnim.finished.then(() => {
+          void heightAnim.finished.then(() => {
             if (!contentRef || !open()) return
             contentRef.style.overflow = "visible"
             contentRef.style.height = "auto"
@@ -119,10 +121,11 @@ export function BasicTool(props: BasicToolProps) {
   })
 
   const handleOpenChange = (value: boolean) => {
-    if (pending()) return
+    if (pending() && !props.allowPendingToggle) return // kilocode_change
     if (props.hideDetails) return // kilocode_change
     if (props.locked && !value) return
     setState("open", value)
+    props.onOpenChange?.(value) // kilocode_change
   }
 
   const trigger = () => (
@@ -195,9 +198,11 @@ export function BasicTool(props: BasicToolProps) {
           </Switch>
         </div>
       </div>
-      <Show when={props.children && !props.hideDetails && !props.locked && !pending()}>
+      {/* kilocode_change start */}
+      <Show when={props.children && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
         <Collapsible.Arrow />
       </Show>
+      {/* kilocode_change end */}
     </div>
   )
 

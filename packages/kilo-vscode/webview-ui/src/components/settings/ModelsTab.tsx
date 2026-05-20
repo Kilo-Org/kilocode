@@ -4,13 +4,17 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { parseModelString } from "../../../../src/shared/provider-model"
+import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import SettingsRow from "./SettingsRow"
+import { AUTOCOMPLETE_PROVIDER_ID, AUTOCOMPLETE_SELECTOR_MODELS } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
   const session = useSession()
+
+  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.id)
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -34,6 +38,11 @@ const ModelsTab: Component = () => {
     }
   }
 
+  function handleAutocompleteModelSelect(providerID: string, modelID: string) {
+    if (providerID !== AUTOCOMPLETE_PROVIDER_ID || !modelID) return
+    updateSetting("autocomplete.model", modelID)
+  }
+
   return (
     <div>
       <Card>
@@ -52,7 +61,6 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.providers.smallModel.title")}
           description={language.t("settings.providers.smallModel.description")}
-          last
         >
           <ModelSelectorBase
             value={parseModelString(config().small_model ?? undefined)}
@@ -61,6 +69,19 @@ const ModelsTab: Component = () => {
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
             includeAutoSmall
+          />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.autocomplete.model.title")}
+          description={language.t("settings.autocomplete.model.description")}
+          last
+        >
+          <ModelSelectorBase
+            value={{ providerID: AUTOCOMPLETE_PROVIDER_ID, modelID: autocompleteModel() }}
+            onSelect={handleAutocompleteModelSelect}
+            placement="bottom-start"
+            models={AUTOCOMPLETE_SELECTOR_MODELS}
+            favorites={false}
           />
         </SettingsRow>
       </Card>

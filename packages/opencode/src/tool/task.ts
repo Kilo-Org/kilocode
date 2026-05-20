@@ -1,15 +1,15 @@
-import { Tool } from "./tool"
+import * as Tool from "./tool"
 import DESCRIPTION from "./task.txt"
-import z from "zod"
-import { Session } from "../session"
+import { Session } from "@/session/session"
 import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import type { SessionPrompt } from "../session/prompt"
-import { Config } from "../config/config"
-import { Effect } from "effect"
+import { Config } from "@/config/config"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
-import { Provider } from "../provider/provider" // kilocode_change — needed for variant validation
+import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
+import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
+import { Effect, Schema } from "effect"
 
 export interface TaskPromptOps {
   cancel(sessionID: SessionID): void
@@ -19,27 +19,25 @@ export interface TaskPromptOps {
 
 const id = "task"
 
-const parameters = z.object({
-  description: z.string().describe("A short (3-5 words) description of the task"),
-  prompt: z.string().describe("The task for the agent to perform"),
-  subagent_type: z.string().describe("The type of specialized agent to use for this task"),
-  task_id: z
-    .string()
-    .describe(
+export const Parameters = Schema.Struct({
+  description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
+  prompt: Schema.String.annotate({ description: "The task for the agent to perform" }),
+  subagent_type: Schema.String.annotate({ description: "The type of specialized agent to use for this task" }),
+  task_id: Schema.optional(Schema.String).annotate({
+    description:
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
-    )
-    .optional(),
-  command: z.string().describe("The command that triggered this task").optional(),
-  // kilocode_change start — optional per-subtask reasoning variant
-  variant: z
-    .string()
-    .describe(
-      "Optional reasoning level / variant to run this subtask at (e.g. 'low', 'medium', 'high', 'xhigh', 'max'). " +
+  }),
+  command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
+  // kilocode_change start - optional per-subtask reasoning variant
+  variant: Schema.optional(
+    Schema.String.annotate({
+      description:
+        "Optional reasoning level / variant to run this subtask at (e.g. 'low', 'medium', 'high', 'xhigh', 'max'). " +
         "Valid values depend on the subagent's model (Claude Opus 4.7 exposes 'low' / 'medium' / 'high' / 'xhigh' / 'max'; OpenAI reasoning models expose 'none' / 'minimal' / 'low' / 'medium' / 'high' / 'xhigh'). " +
         "Omit to use the subagent's configured variant or default reasoning. " +
         "Invalid values return an error listing the available variants for the target model.",
-    )
-    .optional(),
+    }),
+  ),
   // kilocode_change end
 })
 
@@ -50,7 +48,10 @@ export const TaskTool = Tool.define(
     const config = yield* Config.Service
     const sessions = yield* Session.Service
 
-    const run = Effect.fn("TaskTool.execute")(function* (params: z.infer<typeof parameters>, ctx: Tool.Context) {
+    const run = Effect.fn("TaskTool.execute")(function* (
+      params: Schema.Schema.Type<typeof Parameters>,
+      ctx: Tool.Context,
+    ) {
       const cfg = yield* config.get()
 
       if (!ctx.extra?.bypassAgentCheck) {
@@ -73,44 +74,13 @@ export const TaskTool = Tool.define(
       KiloTask.validate(next, params.subagent_type)
       // kilocode_change end
 
-      const canTask = next.permission.some((rule) => rule.permission === id)
+      const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
       const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
 
+      const parent = yield* sessions.get(ctx.sessionID)
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
       const caller = yield* agent.get(ctx.agent)
-      const parent = yield* Effect.promise(() => Session.get(SessionID.make(ctx.sessionID)))
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
-      // kilocode_change end
-
-      // kilocode_change start — read msg and resolve target model before any session side-effects
-      const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
-      if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
-
-      const model = next.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
-
-      // validate variant against the resolved target model
-      if (params.variant !== undefined) {
-        const full = yield* Effect.tryPromise({
-          try: () => Provider.getModel(model.providerID, model.modelID),
-          catch: (e) =>
-            new Error(
-              `Could not resolve model ${model.providerID}/${model.modelID} to validate variant: ${e instanceof Error ? e.message : String(e)}`,
-            ),
-        })
-        const available = full.variants ? Object.keys(full.variants) : []
-        if (!full.variants || !full.variants[params.variant]) {
-          return yield* Effect.fail(
-            new Error(
-              available.length === 0
-                ? `Model ${model.providerID}/${model.modelID} does not support variants; omit the \`variant\` parameter.`
-                : `Unknown variant "${params.variant}" for model ${model.providerID}/${model.modelID}. Available variants: ${available.join(", ")}.`,
-            ),
-          )
-        }
-      }
       // kilocode_change end
 
       const taskID = params.task_id
@@ -123,6 +93,9 @@ export const TaskTool = Tool.define(
           parentID: ctx.sessionID,
           title: params.description + ` (@${next.name} subagent)`,
           permission: [
+            ...(parent.permission ?? []).filter(
+              (rule) => rule.permission === "external_directory" || rule.action === "deny",
+            ),
             ...(canTodo
               ? []
               : [
@@ -155,22 +128,23 @@ export const TaskTool = Tool.define(
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
 
-      const model = next.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
+      // kilocode_change start — prefer user's CLI-saved pick for this subagent
+      const saved = yield* KiloTask.resolveModel(next.name)
+      const model = saved ??
+        next.model ?? {
+          modelID: msg.info.modelID,
+          providerID: msg.info.providerID,
+        }
+      const variant = params.variant ?? saved?.variant ?? (saved ? undefined : next.variant) // kilocode_change
+      // kilocode_change end
 
-      // kilocode_change start — validate variant against the resolved target model
+      // kilocode_change start - validate per-subtask variant against resolved target model
       if (params.variant !== undefined) {
-        const full = yield* Effect.tryPromise({
-          try: () => Provider.getModel(model.providerID, model.modelID),
-          catch: (e) =>
-            new Error(
-              `Could not resolve model ${model.providerID}/${model.modelID} to validate variant: ${e instanceof Error ? e.message : String(e)}`,
-            ),
-        })
-        const available = full.variants ? Object.keys(full.variants) : []
-        if (!full.variants || !full.variants[params.variant]) {
+        const providerID = model.providerID as string
+        const modelID = model.modelID as string
+        const full = cfg.provider?.[providerID]?.models?.[modelID]
+        const available = full?.variants ? Object.keys(full.variants) : []
+        if (!full?.variants || !full.variants[params.variant]) {
           return yield* Effect.fail(
             new Error(
               available.length === 0
@@ -187,6 +161,7 @@ export const TaskTool = Tool.define(
         metadata: {
           sessionId: nextSession.id,
           model,
+          variant, // kilocode_change
         },
       })
 
@@ -200,12 +175,16 @@ export const TaskTool = Tool.define(
       }
 
       return yield* Effect.acquireUseRelease(
-        Effect.sync(() => {
+        // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
+        Effect.gen(function* () {
           ctx.abort.addEventListener("abort", cancel)
+          return yield* KiloCostPropagation.childCost(sessions, nextSession.id)
         }),
+        // kilocode_change end
         () =>
           Effect.gen(function* () {
             const parts = yield* ops.resolvePromptParts(params.prompt)
+            KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
             const result = yield* ops.prompt({
               messageID,
               sessionID: nextSession.id,
@@ -213,7 +192,7 @@ export const TaskTool = Tool.define(
                 modelID: model.modelID,
                 providerID: model.providerID,
               },
-              variant: params.variant, // kilocode_change — per-subtask variant override
+              variant, // kilocode_change
               agent: next.name,
               tools: {
                 ...(canTodo ? {} : { todowrite: false }),
@@ -228,6 +207,7 @@ export const TaskTool = Tool.define(
               metadata: {
                 sessionId: nextSession.id,
                 model,
+                variant, // kilocode_change
               },
               output: [
                 `task_id: ${nextSession.id} (for resuming to continue this task if needed)`,
@@ -238,17 +218,22 @@ export const TaskTool = Tool.define(
               ].join("\n"),
             }
           }),
-        () =>
-          Effect.sync(() => {
+        // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)
+        (costBefore) =>
+          Effect.gen(function* () {
             ctx.abort.removeEventListener("abort", cancel)
+            const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
+            yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
           }),
+        // kilocode_change end
       )
     })
 
     return {
       description: DESCRIPTION,
-      parameters,
-      execute: (params: z.infer<typeof parameters>, ctx: Tool.Context) => run(params, ctx).pipe(Effect.orDie),
+      parameters: Parameters,
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        run(params, ctx).pipe(Effect.orDie),
     }
   }),
 )

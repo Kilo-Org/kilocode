@@ -6,7 +6,7 @@ import type { GitContext } from "@/kilocode/commit-message/types"
 // breaking other test files, we spread real exports and only override what
 // this test needs.
 
-const realLog = await import("@/util/log")
+const realLog = await import("@opencode-ai/core/util/log")
 const realProvider = await import("@/provider/provider")
 const realLLM = await import("@/session/llm")
 const realAgent = await import("@/agent/agent")
@@ -68,17 +68,14 @@ mock.module("@/agent/agent", () => ({
   Agent: {},
 }))
 
-mock.module("@/util/log", () => ({
+mock.module("@opencode-ai/core/util/log", () => ({
   ...realLog,
-  Log: {
-    ...realLog.Log,
-    create: () => ({
-      info: () => {},
-      error: () => {},
-      warn: () => {},
-      debug: () => {},
-    }),
-  },
+  create: () => ({
+    info: () => {},
+    error: () => {},
+    warn: () => {},
+    debug: () => {},
+  }),
 }))
 
 import { generateCommitMessage } from "../../../src/kilocode/commit-message/generate"

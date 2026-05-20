@@ -1,3 +1,4 @@
+export {}
 // TODO: UNCOMMENT WHEN GITLAB SUPPORT IS COMPLETED
 //
 //
@@ -8,9 +9,10 @@
 // import { ProviderID, ModelID } from "../../src/provider/schema"
 // import { tmpdir } from "../fixture/fixture"
 // import { Instance } from "../../src/project/instance"
-// import { Provider } from "../../src/provider/provider"
+import { WithInstance } from "../../src/project/with-instance"
+// import { Provider } from "@/provider/provider"
 // import { Env } from "../../src/env"
-// import { Global } from "../../src/global"
+// import { Global } from "@opencode-ai/core/global"
 // import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 
 // test("GitLab Duo: loads provider with API key from environment", async () => {
@@ -24,7 +26,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "test-gitlab-token")
@@ -55,7 +57,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "test-token")
@@ -94,7 +96,7 @@
 //     }),
 //   )
 
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "")
@@ -129,7 +131,7 @@
 //     }),
 //   )
 
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "")
@@ -161,7 +163,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_INSTANCE_URL", "https://gitlab.company.internal")
@@ -192,7 +194,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "env-token")
@@ -215,7 +217,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "test-token")
@@ -251,7 +253,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "test-token")
@@ -276,7 +278,7 @@
 //       )
 //     },
 //   })
-//   await Instance.provide({
+//   await WithInstance.provide({
 //     directory: tmp.path,
 //     init: async () => {
 //       Env.set("GITLAB_TOKEN", "test-token")
@@ -300,7 +302,7 @@
 //         await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ $schema: "https://opencode.ai/config.json" }))
 //       },
 //     })
-//     await Instance.provide({
+//     await WithInstance.provide({
 //       directory: tmp.path,
 //       init: async () => {
 //         Env.set("GITLAB_TOKEN", "test-token")
@@ -348,7 +350,7 @@
 //         await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ $schema: "https://opencode.ai/config.json" }))
 //       },
 //     })
-//     await Instance.provide({
+//     await WithInstance.provide({
 //       directory: tmp.path,
 //       init: async () => {
 //         Env.set("GITLAB_TOKEN", "test-token")
@@ -371,7 +373,7 @@
 //         await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ $schema: "https://opencode.ai/config.json" }))
 //       },
 //     })
-//     await Instance.provide({
+//     await WithInstance.provide({
 //       directory: tmp.path,
 //       init: async () => {
 //         Env.set("GITLAB_TOKEN", "test-token")
@@ -395,7 +397,7 @@
 //         await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ $schema: "https://opencode.ai/config.json" }))
 //       },
 //     })
-//     await Instance.provide({
+//     await WithInstance.provide({
 //       directory: tmp.path,
 //       init: async () => {
 //         Env.set("GITLAB_TOKEN", "test-token")

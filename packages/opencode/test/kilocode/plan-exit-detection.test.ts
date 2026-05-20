@@ -5,12 +5,13 @@ import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
 import { Question } from "../../src/question"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
-import { Log } from "../../src/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
@@ -22,7 +23,7 @@ const model = {
 
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
-  await Instance.provide({ directory: tmp.path, fn })
+  await WithInstance.provide({ directory: tmp.path, fn })
 }
 
 async function seed(input: {
@@ -369,7 +370,7 @@ describe("plan_exit detection", () => {
       })
 
       const session = await Session.get(seeded.sessionID)
-      const plan = Session.plan(session)
+      const plan = Session.plan(session, Instance.current)
       await fs.mkdir(path.dirname(plan), { recursive: true })
       await Bun.write(plan, "Do implementation step 1")
 

@@ -1,9 +1,12 @@
-import { Component } from "solid-js"
+import { type Component } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { useConfig } from "../../context/config"
+import { useDisplay } from "../../context/display"
 import { useLanguage } from "../../context/language"
+import type { TerminalCommandDisplay } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
 interface LayoutOption {
@@ -16,8 +19,14 @@ const LAYOUT_OPTIONS: LayoutOption[] = [
   { value: "stretch", labelKey: "settings.display.layout.stretch" },
 ]
 
+const TERMINAL_OPTIONS: LayoutOption[] = [
+  { value: "expanded", labelKey: "settings.display.terminalCommand.expanded" },
+  { value: "collapsed", labelKey: "settings.display.terminalCommand.collapsed" },
+]
+
 const DisplayTab: Component = () => {
   const { config, updateConfig } = useConfig()
+  const display = useDisplay()
   const language = useLanguage()
 
   return (
@@ -39,7 +48,6 @@ const DisplayTab: Component = () => {
         <SettingsRow
           title={language.t("settings.display.layout.title")}
           description={language.t("settings.display.layout.description")}
-          last
         >
           <Select
             options={LAYOUT_OPTIONS}
@@ -51,6 +59,61 @@ const DisplayTab: Component = () => {
               const next = o.value as "auto" | "stretch"
               if (next === (config().layout ?? "auto")) return
               updateConfig({ layout: next })
+            }}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.fontSize.title")}
+          description={language.t("settings.display.fontSize.description")}
+        >
+          <div class="settings-font-size-control">
+            <input
+              type="range"
+              min="10"
+              max="24"
+              step="1"
+              value={display.fontSize()}
+              onInput={(event) => display.setFontSize(Number(event.currentTarget.value))}
+              aria-label={language.t("settings.display.fontSize.title")}
+            />
+            <span>{display.fontSize()}px</span>
+          </div>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.reasoningAutoCollapse.title")}
+          description={language.t("settings.display.reasoningAutoCollapse.description")}
+        >
+          <Switch
+            checked={display.reasoningAutoCollapse()}
+            onChange={(checked: boolean) => {
+              display.setReasoningAutoCollapse(checked)
+            }}
+            hideLabel
+          >
+            {language.t("settings.display.reasoningAutoCollapse.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.display.terminalCommand.title")}
+          description={language.t("settings.display.terminalCommand.description")}
+          last
+        >
+          <Select
+            options={TERMINAL_OPTIONS}
+            current={TERMINAL_OPTIONS.find((o) => o.value === (config().terminal_command_display ?? "expanded"))}
+            value={(o) => o.value}
+            label={(o) => language.t(o.labelKey)}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as TerminalCommandDisplay
+              if (next === (config().terminal_command_display ?? "expanded")) return
+              updateConfig({ terminal_command_display: next })
             }}
             variant="secondary"
             size="small"

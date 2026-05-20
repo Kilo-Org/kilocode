@@ -2,7 +2,9 @@ import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
-import { DiffViewerProvider } from "./DiffViewerProvider"
+import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
+import { DiffViewerProvider } from "./diff/DiffViewerProvider"
+import { DiffSourceCatalog } from "./diff/sources/catalog"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
@@ -18,6 +20,21 @@ import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } 
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
+import { markWorkspace } from "./util/spotlight"
+
+let agentManager: AgentManagerProvider | undefined
+let shuttingDown = false
+
+const RESTORE_KEY = "kilo.workbench.restore"
+
+type RestoreState = {
+  sidebar?: boolean
+  agentManager?: boolean
+}
+
+const panelTitleHandler = (panel: vscode.WebviewPanel) => (title: string) => {
+  panel.title = title || EXTENSION_DISPLAY_NAME
+}
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -25,11 +42,21 @@ import { RemoteStatusService } from "./services/RemoteStatusService"
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
+  shuttingDown = false
 
   const telemetry = TelemetryProxy.getInstance()
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+  let restore = context.workspaceState.get<RestoreState>(RESTORE_KEY) ?? {}
+  const closeSidebar = restore.sidebar === false
+  const remember = (patch: RestoreState) => {
+    const next = { ...restore, ...patch }
+    if (shuttingDown && patch.sidebar === false) next.sidebar = restore.sidebar
+    if (shuttingDown && patch.agentManager === false) next.agentManager = restore.agentManager
+    restore = next
+    void context.workspaceState.update(RESTORE_KEY, restore)
+  }
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)
@@ -48,6 +75,11 @@ export function activate(context: vscode.ExtensionContext) {
       const config = connectionService.getServerConfig()
       if (config) {
         telemetry.configure(config.baseUrl, config.password)
+        // Sync the CLI's PostHog client with the current consent state. The
+        // CLI reads KILO_TELEMETRY_LEVEL once at spawn, so without this call
+        // a fresh CLI started while VS Code telemetry was off would stay
+        // opted out for the rest of the session.
+        telemetry.setEnabled(vscode.env.isTelemetryEnabled)
       }
       try {
         remoteService.setClient(connectionService.getClient())
@@ -63,6 +95,21 @@ export function activate(context: vscode.ExtensionContext) {
     }
   })
 
+  // Propagate runtime telemetry consent changes to the CLI subprocess so its
+  // PostHog client stays in sync with the user's VS Code telemetry setting.
+  context.subscriptions.push(
+    vscode.env.onDidChangeTelemetryEnabled((enabled) => {
+      telemetry.setEnabled(enabled)
+    }),
+  )
+
+  // Prewarm the CLI backend early so autocomplete is ready before first editor use.
+  ensureBackendForAutocomplete(connectionService)
+
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    void markWorkspace(folder.uri.fsPath, (msg) => console.warn(`[Kilo New] ${msg}`))
+  }
+
   // Track all open tab panel providers so toolbar button commands can target them.
   // NOTE: The editor/title toolbar for tab panels intentionally omits Agent Manager
   // and Marketplace buttons (unlike the sidebar). Too many icons causes VS Code to
@@ -76,7 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context, {
+    onSidebarVisibilityChange: (visible) => remember({ sidebar: visible }),
+  })
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -86,6 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   )
+  if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")
 
   // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
@@ -95,24 +145,71 @@ export function activate(context: vscode.ExtensionContext) {
   if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
   ensureCommandsSkipShell(skip)
 
+  // Create KiloClaw chat provider for editor panel
+  const kiloClawProvider = new KiloClawProvider(context.extensionUri, connectionService)
+  context.subscriptions.push(kiloClawProvider)
+
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
+  agentManagerProvider.onPanelVisibilityChange((visible) => remember({ agentManager: visible }))
+  agentManager = agentManagerProvider
   context.subscriptions.push(agentManagerProvider)
 
   // Wire "Continue in Worktree" from sidebar → Agent Manager
   provider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
+  provider.setCreateWorktreeHandler((baseBranch, branchName) =>
+    agentManagerProvider.createFromSidebar(baseBranch, branchName),
+  )
+
+  // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
+  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
+  const autoApprove = registerToggleAutoApprove(
+    context,
+    connectionService,
+    (sessionId) => {
+      if (sessionId) {
+        const dir =
+          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
+        if (dir) return dir
+      }
+      return defaultDir()
+    },
+    () => {
+      const dirs = new Set([defaultDir()])
+      for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
+      for (const dir of agentManagerProvider.getSessionDirectories().values()) dirs.add(dir)
+      return [...dirs]
+    },
+  )
+  provider.setAutoApproveController(autoApprove)
+  agentManagerHost.setAutoApproveController(autoApprove)
 
   // Register serializer so Agent Manager restores when VS Code restarts
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(AgentManagerProvider.viewType, {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        if (restore.agentManager === false) {
+          panel.dispose()
+          return Promise.resolve()
+        }
         const ctx = agentManagerHost.wrapExistingPanel(panel, {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
+          worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
         })
         agentManagerProvider.deserializePanel(ctx)
+        return Promise.resolve()
+      },
+    }),
+  )
+
+  // Register serializer so KiloClaw panel restores when VS Code restarts
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(KiloClawProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        kiloClawProvider.restorePanel(panel)
         return Promise.resolve()
       },
     }),
@@ -122,10 +219,16 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+          tabTitle: panelTitleHandler(panel),
+        })
         tabProvider.setRemoteService(remoteService)
+        tabProvider.setAutoApproveController(autoApprove)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
+        )
+        tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
+          agentManagerProvider.createFromSidebar(baseBranch, branchName),
         )
         tabProvider.setDiffVirtualProvider(diffVirtualProvider)
         tabProvider.resolveWebviewPanel(panel)
@@ -144,8 +247,11 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Create standalone diff viewer provider for the sidebar "Show Changes" action
-  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService)
+  const diffSourceCatalog = new DiffSourceCatalog(connectionService)
+  context.subscriptions.push(diffSourceCatalog)
+  const diffViewerProvider = new DiffViewerProvider(context.extensionUri, connectionService, diffSourceCatalog, {
+    sessionIdProvider: () => provider.getCurrentSessionId(),
+  })
   diffViewerProvider.setCommentHandler((comments, autoSend) => {
     void provider.appendReviewComments(comments, autoSend)
   })
@@ -212,6 +318,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string) => {
       settingsEditorProvider.openPanel("marketplace", undefined, directory)
     }),
+    vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
+      kiloClawProvider.openPanel()
+    }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       const tab = activeTabProvider()
       if (tab) tab.postMessage({ type: "action", action: "historyButtonClicked" })
@@ -234,6 +343,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
       settingsEditorProvider.openPanel("settings", tab)
+    }),
+    vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
+      settingsEditorProvider.openPanel("settings", "indexing")
     }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
@@ -261,11 +373,15 @@ export function activate(context: vscode.ExtensionContext) {
         tabPanels,
         diffVirtualProvider,
         remoteService,
+        autoApprove,
       )
     }),
-    vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
-      diffViewerProvider.openPanel()
-    }),
+    vscode.commands.registerCommand(
+      "kilo-code.new.showChanges",
+      (arg?: { sessionId?: string; turnId?: string; initialSourceId?: string }) => {
+        diffViewerProvider.openFromCommand(arg)
+      },
+    ),
     vscode.commands.registerCommand("kilo-code.new.openSubAgentViewer", (sessionID: string, title?: string) => {
       subAgentViewerProvider.openPanel(sessionID, title)
     }),
@@ -282,7 +398,9 @@ export function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
-      agentManagerProvider.showTerminalForCurrentSession()
+      // Route through the webview so it can reach into the active session
+      // state and open the VS Code integrated terminal for it.
+      agentManagerProvider.postMessage({ type: "action", action: "showTerminal" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.runScript", () => {
       agentManagerProvider.postMessage({ type: "action", action: "runScript" })
@@ -297,6 +415,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.newTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newTab" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.newTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "newTerminal" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeTab" })
     }),
@@ -309,9 +430,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeWorktree" })
     }),
-    vscode.commands.registerCommand("kilo-code.new.agentManager.advancedWorktree", () => {
-      agentManagerProvider.postMessage({ type: "action", action: "advancedWorktree" })
-    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.advancedWorktree", () =>
+      agentManagerProvider.openAdvancedWorktree(),
+    ),
     ...Array.from({ length: 9 }, (_, i) =>
       vscode.commands.registerCommand(`kilo-code.new.agentManager.jumpTo${i + 1}`, () => {
         agentManagerProvider.postMessage({ type: "action", action: `jumpTo${i + 1}` })
@@ -337,32 +458,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Register autocomplete provider
   registerAutocompleteProvider(context, connectionService)
 
-  // Start the CLI backend server eagerly so autocomplete works without opening a Kilo tab.
-  ensureBackendForAutocomplete(connectionService)
-
   // Register commit message generation
   registerCommitMessageService(context, connectionService)
-
-  // Register toggle auto-approve shortcut (Ctrl+Alt+A / Cmd+Alt+A)
-  const defaultDir = () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd()
-  registerToggleAutoApprove(
-    context,
-    connectionService,
-    (sessionId) => {
-      if (sessionId) {
-        const dir =
-          provider.getSessionDirectories().get(sessionId) ?? agentManagerProvider.getSessionDirectories().get(sessionId)
-        if (dir) return dir
-      }
-      return defaultDir()
-    },
-    () => {
-      const dirs = new Set([defaultDir()])
-      for (const dir of provider.getSessionDirectories().values()) dirs.add(dir)
-      for (const dir of agentManagerProvider.getSessionDirectories().values()) dirs.add(dir)
-      return [...dirs]
-    },
-  )
 
   registerHeapSnapshot(context, connectionService)
 
@@ -382,6 +479,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Dispose services when extension deactivates (kills the server)
   context.subscriptions.push({
     dispose: () => {
+      shuttingDown = true
       unsubscribeStateChange()
       browserAutomationService.dispose()
       provider.dispose()
@@ -390,7 +488,9 @@ export function activate(context: vscode.ExtensionContext) {
   })
 }
 
-export function deactivate() {
+export async function deactivate() {
+  shuttingDown = true
+  await agentManager?.shutdown()
   TelemetryProxy.getInstance().shutdown()
 }
 
@@ -401,6 +501,7 @@ async function openKiloInNewTab(
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   diffVirtualProvider: DiffVirtualProvider,
   remoteService: RemoteStatusService,
+  autoApprove: ReturnType<typeof registerToggleAutoApprove>,
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -422,10 +523,16 @@ async function openKiloInNewTab(
     dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
   }
 
-  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, {
+    tabTitle: panelTitleHandler(panel),
+  })
   tabProvider.setRemoteService(remoteService)
+  tabProvider.setAutoApproveController(autoApprove)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
+  )
+  tabProvider.setCreateWorktreeHandler((baseBranch, branchName) =>
+    agentManagerProvider.createFromSidebar(baseBranch, branchName),
   )
   tabProvider.setDiffVirtualProvider(diffVirtualProvider)
   tabProvider.resolveWebviewPanel(panel)

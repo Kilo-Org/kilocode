@@ -40,6 +40,12 @@ data class LoadError(
     val detail: String? = null,
 )
 
+data class ConfigWarning(
+    val path: String,
+    val message: String,
+    val detail: String? = null,
+)
+
 /**
  * All global data that has been successfully loaded.
  * Present only in [KiloAppState.Ready].
@@ -48,4 +54,5 @@ data class AppData(
     val profile: KiloProfile200Response?,
     val config: Config,
     val notifications: List<KiloNotifications200ResponseInner>,
+    val warnings: List<ConfigWarning> = emptyList(),
 )

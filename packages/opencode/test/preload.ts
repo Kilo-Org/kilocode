@@ -3,8 +3,8 @@
 import os from "os"
 import path from "path"
 import fs from "fs/promises"
-import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll } from "bun:test"
+import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 
 // Set XDG env vars FIRST, before any src/ imports
 const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
@@ -12,21 +12,7 @@ await fs.mkdir(dir, { recursive: true })
 afterAll(async () => {
   const { Database } = await import("../src/storage/db")
   Database.close()
-  const busy = (error: unknown) =>
-    typeof error === "object" && error !== null && "code" in error && error.code === "EBUSY"
-  const rm = async (left: number): Promise<void> => {
-    Bun.gc(true)
-    await sleep(100)
-    return fs.rm(dir, { recursive: true, force: true }).catch((error) => {
-      if (!busy(error)) throw error
-      if (left <= 1) throw error
-      return rm(left - 1)
-    })
-  }
-
-  // Windows can keep SQLite WAL handles alive until GC finalizers run, so we
-  // force GC and retry teardown to avoid flaky EBUSY in test cleanup.
-  await rm(30)
+  await cleanup(dir) // kilocode_change
 })
 
 process.env["XDG_DATA_HOME"] = path.join(dir, "share")
@@ -34,6 +20,7 @@ process.env["XDG_CACHE_HOME"] = path.join(dir, "cache")
 process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
+process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
@@ -62,6 +49,7 @@ delete process.env["AWS_PROFILE"]
 delete process.env["AWS_REGION"]
 delete process.env["AWS_BEARER_TOKEN_BEDROCK"]
 delete process.env["OPENROUTER_API_KEY"]
+delete process.env["LLM_GATEWAY_API_KEY"]
 delete process.env["GROQ_API_KEY"]
 delete process.env["MISTRAL_API_KEY"]
 delete process.env["PERPLEXITY_API_KEY"]
@@ -78,10 +66,10 @@ delete process.env["KILO_SERVER_USERNAME"]
 process.env["KILO_DB"] = ":memory:"
 
 // Now safe to import from src/
-const { Log } = await import("../src/util/log")
+const { Log } = await import("@opencode-ai/core/util/log")
 const { initProjectors } = await import("../src/server/projectors")
 
-Log.init({
+void Log.init({
   print: false,
   dev: true,
   level: "DEBUG",
