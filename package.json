@@ -21,7 +21,8 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "packages/sdk/js"
+      "packages/sdk/js",
+      "boxes"
     ],
     "catalog": {
       "@effect/opentelemetry": "4.0.0-beta.57",
