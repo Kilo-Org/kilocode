@@ -48,8 +48,7 @@ export const ServeCommand = effectCmd({
     const orphanWatch = setInterval(() => {
       if (abort.signal.aborted) return
       const orphaned = (() => {
-        if (process.ppid !== parentPid) return true
-        if (parentPid === 1) return false
+        if (process.ppid !== parentPid) return process.ppid !== 1
         try {
           process.kill(parentPid, 0)
           return false
