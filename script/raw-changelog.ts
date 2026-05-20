@@ -114,7 +114,7 @@ async function commits(from: string, to: string) {
   }
 
   const log =
-    await $`git log ${base}..${head} --format=%H -- packages/opencode packages/sdk packages/plugin sdks/vscode packages/extensions github`.text() // kilocode_change
+    await $`git log ${base}..${head} --format=%H -- packages/opencode packages/sdk packages/plugin packages/extensions github`.text() // kilocode_change
 
   const list: Commit[] = []
   for (const hash of log.split("\n").filter(Boolean)) {
@@ -130,7 +130,7 @@ async function commits(from: string, to: string) {
       else if (file.startsWith("packages/opencode/")) areas.add("core")
       else if (file.startsWith("packages/sdk/") || file.startsWith("packages/plugin/")) areas.add("sdk")
       else if (file.startsWith("packages/extensions/")) areas.add("extensions/zed")
-      else if (file.startsWith("sdks/vscode/") || file.startsWith("github/")) areas.add("extensions/vscode")
+      else if (file.startsWith("github/")) areas.add("extensions/vscode")
     }
 
     if (areas.size === 0) continue

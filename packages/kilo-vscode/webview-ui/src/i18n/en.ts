@@ -178,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Latest",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
+  "model.group.collapse": "Collapse {{group}}",
+  "model.group.expand": "Expand {{group}}",
   "model.favorite.add": "Add to favorites",
   "model.favorite.remove": "Remove from favorites",
   "model.provider.anthropic": "Anthropic",

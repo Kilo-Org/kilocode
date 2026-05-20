@@ -1480,6 +1480,7 @@ unix(
   30_000,
 )
 
+// kilocode_change start - cancel persists aborted shell result when shell ignores TERM
 unix(
   "cancel persists aborted shell result when shell ignores TERM",
   () =>
@@ -1487,12 +1488,32 @@ unix(
       provideTmpdirInstance(
         (_dir) =>
           Effect.gen(function* () {
-            const { prompt, chat } = yield* boot()
+            const { prompt, chat, sessions } = yield* boot()
 
             const sh = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "trap '' TERM; sleep 30" })
+              .shell({
+                sessionID: chat.id,
+                agent: "build",
+                command: "trap '' TERM; printf started; sleep 10; printf not-killed",
+              })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            yield* waitFor(
+              "shell start output",
+              sessions
+                .messages({ sessionID: chat.id })
+                .pipe(
+                  Effect.map((msgs) =>
+                    msgs
+                      .flatMap((msg) => msg.parts)
+                      .find(
+                        (part) =>
+                          part.type === "tool" &&
+                          part.state.status === "running" &&
+                          (part.state.metadata?.output ?? "").includes("started"),
+                      ),
+                  ),
+                ),
+            )
 
             yield* prompt.cancel(chat.id)
 
@@ -1502,7 +1523,9 @@ unix(
               expect(exit.value.info.role).toBe("assistant")
               const tool = completedTool(exit.value.parts)
               if (tool) {
+                expect(tool.state.output).toContain("started")
                 expect(tool.state.output).toContain("User aborted the command")
+                expect(tool.state.output).not.toContain("not-killed")
               }
             }
           }),
@@ -1511,6 +1534,7 @@ unix(
     ),
   30_000,
 )
+// kilocode_change end
 
 unix(
   "cancel finalizes interrupted bash tool output through normal truncation",

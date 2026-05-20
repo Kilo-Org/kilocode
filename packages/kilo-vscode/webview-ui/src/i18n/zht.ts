@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
+  "model.group.collapse": "折疊 {{group}}",
+  "model.group.expand": "展開 {{group}}",
   "model.favorite.add": "加入我的最愛",
   "model.favorite.remove": "從我的最愛中移除",
 

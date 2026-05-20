@@ -181,6 +181,8 @@ export const dict = {
   "model.tag.latest": "Neueste",
   "model.group.recommended": "Empfohlen",
   "model.group.favorites": "Favoriten",
+  "model.group.collapse": "{{group}} einklappen",
+  "model.group.expand": "{{group}} ausklappen",
   "model.favorite.add": "Zu Favoriten hinzufügen",
   "model.favorite.remove": "Aus Favoriten entfernen",
 

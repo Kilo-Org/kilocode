@@ -1,5 +1,27 @@
 # kilo-code
 
+## 7.3.1
+
+### Minor Changes
+
+- [#10382](https://github.com/Kilo-Org/kilocode/pull/10382) [`6ce2ded`](https://github.com/Kilo-Org/kilocode/commit/6ce2ded75c452326d1eec840d728a1616c7fb1db) - Make sections in the model picker collapsible. Click any section header (Favorites, Recommended, or a provider like Kilo Gateway) to hide its models. Collapse state resets each time the picker opens.
+
+- [#10274](https://github.com/Kilo-Org/kilocode/pull/10274) [`14a25b0`](https://github.com/Kilo-Org/kilocode/commit/14a25b037bbbd7596aea88729989511ffe4dfce6) - Support speech-to-text voice input in Agent Manager inline review comments.
+
+- [#10286](https://github.com/Kilo-Org/kilocode/pull/10286) [`6fcc3b6`](https://github.com/Kilo-Org/kilocode/commit/6fcc3b6a1e77e419482fe5c0377767b5500dbd51) - Export full VS Code session transcripts as Markdown files.
+
+### Patch Changes
+
+- [#10280](https://github.com/Kilo-Org/kilocode/pull/10280) [`3ac16c5`](https://github.com/Kilo-Org/kilocode/commit/3ac16c5be5c27ca35d46ca20da9475c606e048c5) - Keep long New Worktree prompts clear of selector controls and show inline model picker options without clipping.
+
+- [#10278](https://github.com/Kilo-Org/kilocode/pull/10278) [`3031de6`](https://github.com/Kilo-Org/kilocode/commit/3031de63028e2ba07e0d171bd671fb7ee5b10c50) - Keep continued Agent Manager sessions in the selected worktree instead of moving them to Local.
+
+- [#10287](https://github.com/Kilo-Org/kilocode/pull/10287) [`233da82`](https://github.com/Kilo-Org/kilocode/commit/233da827686f6dd38f908519b216eacc1cc8a012) - Keep inline review voice capture stable in rendered Markdown diffs.
+
+- [#10132](https://github.com/Kilo-Org/kilocode/pull/10132) [`b914576`](https://github.com/Kilo-Org/kilocode/commit/b91457673cd6a810e356f4f4cae0c6d0f257c6b2) - Restore only the Kilo Code sidebar, Agent Manager, or both on VS Code restart based on which views were open before shutdown.
+
+- [#10277](https://github.com/Kilo-Org/kilocode/pull/10277) [`4b816f6`](https://github.com/Kilo-Org/kilocode/commit/4b816f621baa163c8aaf3ec84ce15219d77bae19) - Send recorded voice prompts directly when the prompt send button is pressed.
+
 ## 7.3.0
 
 ## 7.2.54

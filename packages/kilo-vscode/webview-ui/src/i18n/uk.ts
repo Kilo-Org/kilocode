@@ -178,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Остання",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
+  "model.group.collapse": "Згорнути {{group}}",
+  "model.group.expand": "Розгорнути {{group}}",
   "model.favorite.add": "Додати до обраного",
   "model.favorite.remove": "Видалити з обраного",
   "model.provider.anthropic": "Anthropic",

@@ -44,12 +44,12 @@ describe("mergeFileSearchItems", () => {
   it("keeps active and open file results before prefix folder matches", () => {
     const result = mergeFileSearchItems({
       query: "e",
-      files: ["sdks/vscode/src/extension.ts"],
+      files: ["packages/kilo-vscode/src/extension.ts"],
       folders: ["packages/extensions/", "packages/example/", "packages/core/src/effect/"],
-      open: new Set(["sdks/vscode/src/extension.ts"]),
+      open: new Set(["packages/kilo-vscode/src/extension.ts"]),
     })
     expect(result).toEqual([
-      { path: "sdks/vscode/src/extension.ts", type: "opened-file" },
+      { path: "packages/kilo-vscode/src/extension.ts", type: "opened-file" },
       { path: "packages/extensions/", type: "folder" },
       { path: "packages/example/", type: "folder" },
       { path: "packages/core/src/effect/", type: "folder" },

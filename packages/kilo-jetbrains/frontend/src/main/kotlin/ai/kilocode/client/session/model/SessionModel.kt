@@ -352,6 +352,7 @@ class SessionModel {
             is Tool -> {
                 existing.kind = toolKind(dto.tool)
                 existing.state = parseToolState(dto.state)
+                existing.callId = dto.callID
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
@@ -383,6 +384,7 @@ class SessionModel {
             }
             "tool" -> Tool(dto.id, dto.tool ?: "unknown", toolKind(dto.tool)).apply {
                 state = parseToolState(dto.state)
+                callId = dto.callID
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata

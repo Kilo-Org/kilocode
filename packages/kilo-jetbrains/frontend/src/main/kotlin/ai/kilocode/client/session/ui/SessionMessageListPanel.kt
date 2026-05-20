@@ -2,10 +2,14 @@ package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.MessageView
+import ai.kilocode.client.session.views.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TurnView
 import com.intellij.openapi.Disposable
 import com.intellij.util.ui.JBUI
@@ -29,11 +33,17 @@ import com.intellij.util.ui.JBUI
  * bottom of the transcript inside the scroll pane and shows a spinner while
  * the session is busy.
  *
+ * Optional [question] and [permission] views are kept immediately before
+ * [progress] in component order and shown/hidden in response to
+ * [SessionModelEvent.StateChanged].
+ *
  * All method calls must happen on the EDT.
  */
 class SessionMessageListPanel(
     private val model: SessionModel,
     parent: Disposable,
+    private val question: QuestionView? = null,
+    private val permission: PermissionView? = null,
 ) : SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
     JBUI.insets(
@@ -48,6 +58,7 @@ class SessionMessageListPanel(
     private val msgToTurn = HashMap<String, TurnView>()
     private val msgToView = HashMap<String, MessageView>()
     private var style = SessionEditorStyle.current()
+    private var hiddenTool: ToolCallRef? = null
 
     /** Progress footer — always the last child inside the scroll. */
     val progress = ProgressPanel(model, parent)
@@ -90,12 +101,16 @@ class SessionMessageListPanel(
                 is SessionModelEvent.HistoryLoaded -> rebuild()
                 is SessionModelEvent.Cleared -> clear()
 
+                is SessionModelEvent.StateChanged -> {
+                    syncActive(event.state)
+                    anchorFooter()
+                    refresh()
+                }
+
                 // Message events: structural changes are handled via turn events above.
-                // State/diff/todos changes are handled by other panels in SessionUi.
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
-                is SessionModelEvent.StateChanged,
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
@@ -217,6 +232,7 @@ class SessionMessageListPanel(
             add(tv)
         }
 
+        syncActive(model.state)
         anchorFooter()
         refresh()
     }
@@ -226,19 +242,64 @@ class SessionMessageListPanel(
         msgToTurn.clear()
         msgToView.clear()
         removeAll()
+        syncActive(model.state)
         anchorFooter()
         refresh()
     }
 
-    /** Re-insert [progress] as the last child so it always renders after all turn views. */
+    /**
+     * Show or hide active question/permission views based on [state].
+     * Both views are always kept as children of this panel (added in [anchorFooter]),
+     * but visibility is controlled here.
+     */
+    private fun syncActive(state: SessionState = model.state) {
+        when (state) {
+            is SessionState.AwaitingQuestion -> {
+                setHiddenQuestionTool(state.question.tool)
+                permission?.hideView()
+                question?.show(state.question)
+            }
+            is SessionState.AwaitingPermission -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.show(state.permission)
+            }
+            else -> {
+                setHiddenQuestionTool(null)
+                question?.hideView()
+                permission?.hideView()
+            }
+        }
+    }
+
+    /** Fan out the hidden question tool ref to all registered [MessageView]s. */
+    private fun setHiddenQuestionTool(ref: ToolCallRef?) {
+        if (hiddenTool == ref) return
+        hiddenTool = ref
+        for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+    }
+
+    /**
+     * Re-insert [question], [permission], and [progress] as the last children
+     * so active views always render after all turn views, and progress is last.
+     *
+     * Both active views are added even when invisible — [SessionLayout] skips
+     * invisible children, so no extra space is consumed, and the component tree
+     * remains stable for tests.
+     */
     private fun anchorFooter() {
+        if (question != null) remove(question)
+        if (permission != null) remove(permission)
         remove(progress)
+        if (question != null) add(question)
+        if (permission != null) add(permission)
         add(progress)
     }
 
     private fun register(msgId: String, tv: TurnView, mv: MessageView) {
         msgToTurn[msgId] = tv
         msgToView[msgId] = mv
+        mv.setHiddenQuestionTool(hiddenTool)
     }
 
     private fun unregister(msgId: String) {
@@ -254,6 +315,8 @@ class SessionMessageListPanel(
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
         for (view in turnViews.values) view.applyStyle(style)
+        question?.applyStyle(style)
+        permission?.applyStyle(style)
         progress.applyStyle(style)
         refresh()
     }

@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
   "model.group.favorites": "รายการโปรด",
+  "model.group.collapse": "ย่อ {{group}}",
+  "model.group.expand": "ขยาย {{group}}",
   "model.favorite.add": "เพิ่มในรายการโปรด",
   "model.favorite.remove": "ลบออกจากรายการโปรด",
   "model.provider.anthropic": "Anthropic",
