@@ -195,6 +195,7 @@ function fail(queue: Queue.Queue<string, PlatformError | Error | Cause.Done>, er
 }
 
 function filesArgs(input: FilesInput) {
+  // kilocode_change start - let ripgrep use cwd implicitly so Windows CI does not duplicate the root path
   const args = ["--no-config", "--files", "--glob=!.git/*"]
   if (input.follow) args.push("--follow")
   if (input.hidden !== false) args.push("--hidden")
@@ -203,19 +204,21 @@ function filesArgs(input: FilesInput) {
   if (input.glob) {
     for (const glob of input.glob) args.push(`--glob=${glob}`)
   }
-  args.push(".")
   return args
+  // kilocode_change end
 }
 
 function searchArgs(input: SearchInput) {
+  // kilocode_change start - omit the fallback "." target; ripgrep already searches cwd
   const args = ["--no-config", "--json", "--hidden", "--glob=!.git/*", "--no-messages"]
   if (input.follow) args.push("--follow")
   if (input.glob) {
     for (const glob of input.glob) args.push(`--glob=${glob}`)
   }
   if (input.limit) args.push(`--max-count=${input.limit}`)
-  args.push("--", input.pattern, ...(input.file ?? ["."]))
+  args.push("--", input.pattern, ...(input.file ?? []))
   return args
+  // kilocode_change end
 }
 
 function raceAbort<A, E, R>(effect: Effect.Effect<A, E, R>, signal?: AbortSignal) {
