@@ -1,5 +1,6 @@
 {
   lib,
+  stdenv,
   stdenvNoCC,
   callPackage,
   bun,
@@ -41,6 +42,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   env.KILO_DISABLE_MODELS_FETCH = true;
   env.KILO_VERSION = finalAttrs.version;
   env.KILO_CHANNEL = "local";
+  env.KILO_LINUX_INTERPRETER = lib.optionalString stdenvNoCC.hostPlatform.isLinux stdenv.cc.bintools.dynamicLinker;
 
   buildPhase = ''
     runHook preBuild
