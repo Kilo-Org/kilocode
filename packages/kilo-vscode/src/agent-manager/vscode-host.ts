@@ -201,7 +201,7 @@ export class VscodeHost implements Host {
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
-    TelemetryProxy.capture(event as TelemetryEventName, properties)
+    TelemetryProxy.capture(event as TelemetryEventName, properties, { platform: "agent-manager" })
   }
 
   openExternal(url: string): void {

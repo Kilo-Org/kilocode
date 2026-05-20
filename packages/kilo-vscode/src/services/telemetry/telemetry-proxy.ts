@@ -19,9 +19,9 @@ export class TelemetryProxy {
     return (TelemetryProxy.singleton ??= new TelemetryProxy())
   }
 
-  static capture(event: TelemetryEventName, properties?: Record<string, unknown>) {
+  static capture(event: TelemetryEventName, properties?: Record<string, unknown>, overrides?: { platform?: string }) {
     console.log("[telemetry]", event, properties ?? "")
-    TelemetryProxy.getInstance().capture(event, properties)
+    TelemetryProxy.getInstance().capture(event, properties, overrides)
   }
 
   /**
@@ -43,11 +43,21 @@ export class TelemetryProxy {
   /**
    * Fire-and-forget capture. Enriches with provider properties, then POSTs to CLI.
    */
-  capture(event: TelemetryEventName, properties?: Record<string, unknown>) {
+  capture(event: TelemetryEventName, properties?: Record<string, unknown>, overrides?: { platform?: string }) {
     if (!this.isVSCodeTelemetryEnabled()) return
     if (!this.url || !this.password) return
 
-    const built = buildTelemetryPayload(event, properties, this.provider?.getTelemetryProperties())
+    const providerProps = this.provider?.getTelemetryProperties() ?? {}
+    const mergedProps = { ...providerProps, ...properties }
+    
+    if (overrides?.platform !== undefined) {
+      mergedProps.platform = overrides.platform
+    }
+
+    const built = {
+      event,
+      properties: mergedProps,
+    }
     const payload = JSON.stringify(built)
     const auth = buildTelemetryAuthHeader(this.password)
 
