@@ -9,6 +9,17 @@ const SAFETY = 2048
 const MIN_OUTPUT = 1024
 
 export namespace KiloLLM {
+  export function repairToolName(input: { name: string; tools: Record<string, unknown> }): string | undefined {
+    const trimmed = input.name.trim()
+    if (trimmed !== input.name && input.tools[trimmed]) return trimmed
+
+    const lower = input.name.toLowerCase()
+    if (lower !== input.name && input.tools[lower]) return lower
+
+    const normalized = trimmed.toLowerCase()
+    if (normalized !== input.name && input.tools[normalized]) return normalized
+  }
+
   /**
    * Caps `maxOutputTokens` to fit within the model's context window after
    * accounting for the actual estimated input tokens (messages + tool schemas).

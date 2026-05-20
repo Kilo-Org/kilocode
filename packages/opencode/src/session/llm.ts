@@ -389,17 +389,19 @@ const live: Layer.Layer<
           })
         },
         async experimental_repairToolCall(failed) {
-          const lower = failed.toolCall.toolName.toLowerCase()
-          if (lower !== failed.toolCall.toolName && tools[lower]) {
+          // kilocode_change start
+          const repaired = KiloLLM.repairToolName({ name: failed.toolCall.toolName, tools })
+          if (repaired) {
             l.info("repairing tool call", {
               tool: failed.toolCall.toolName,
-              repaired: lower,
+              repaired,
             })
             return {
               ...failed.toolCall,
-              toolName: lower,
+              toolName: repaired,
             }
           }
+          // kilocode_change end
           return {
             ...failed.toolCall,
             input: JSON.stringify({
