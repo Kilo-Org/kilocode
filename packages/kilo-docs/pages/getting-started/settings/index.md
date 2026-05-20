@@ -59,11 +59,11 @@ Reasoning blocks stay expanded by default in the VS Code chat UI. Enable **Auto-
 
 ### Terminal Command Blocks
 
-Terminal command blocks stay expanded by default in the VS Code chat UI. Choose **Collapsed** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to start them collapsed:
+Terminal command blocks start collapsed by default in the VS Code chat UI. Choose **Expanded** for **Terminal Command Blocks** in the Display tab, or set `terminal_command_display` in `kilo.jsonc`, to keep them expanded:
 
 ```json
 {
-  "terminal_command_display": "collapsed"
+  "terminal_command_display": "expanded"
 }
 ```
 

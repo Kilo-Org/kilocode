@@ -174,7 +174,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const session = useSession()
   const display = useDisplay()
   const { config } = useConfig()
-  const open = createMemo(() => config().terminal_command_display !== "collapsed")
+  const open = createMemo(() => config().terminal_command_display === "expanded")
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]

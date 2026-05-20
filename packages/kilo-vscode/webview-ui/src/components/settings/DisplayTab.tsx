@@ -106,13 +106,13 @@ const DisplayTab: Component = () => {
         >
           <Select
             options={TERMINAL_OPTIONS}
-            current={TERMINAL_OPTIONS.find((o) => o.value === (config().terminal_command_display ?? "expanded"))}
+            current={TERMINAL_OPTIONS.find((o) => o.value === (config().terminal_command_display ?? "collapsed"))}
             value={(o) => o.value}
             label={(o) => language.t(o.labelKey)}
             onSelect={(o) => {
               if (!o) return
               const next = o.value as TerminalCommandDisplay
-              if (next === (config().terminal_command_display ?? "expanded")) return
+              if (next === (config().terminal_command_display ?? "collapsed")) return
               updateConfig({ terminal_command_display: next })
             }}
             variant="secondary"
