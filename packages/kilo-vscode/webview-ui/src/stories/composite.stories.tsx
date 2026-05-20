@@ -762,10 +762,57 @@ const applyPatchPermission: PermissionRequest = {
   tool: { messageID: ASST_MSG_ID, callID: "call-patch-001" },
 }
 
+const bulkPermission: PermissionRequest = {
+  id: "perm-bulk-001",
+  sessionID: SESSION_ID,
+  toolName: "edit",
+  patterns: ["src/**/*"],
+  always: ["*"],
+  args: {
+    filepath: "src/features",
+    files: Array.from({ length: 14 }, (_, index) => ({
+      relativePath: `src/features/bulk-edit/file-${index + 1}.tsx`,
+      type: "update",
+      patch:
+        "===================================================================\n" +
+        `--- src/features/bulk-edit/file-${index + 1}.tsx\n` +
+        `+++ src/features/bulk-edit/file-${index + 1}.tsx\n` +
+        "@@ -1,3 +1,3 @@\n" +
+        " export function Item() {\n" +
+        "-  return null\n" +
+        "+  return <span>Updated</span>\n" +
+        " }\n",
+      additions: 1,
+      deletions: 1,
+    })),
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-bulk-001" },
+}
+
 export const PermissionDockEdit: Story = {
   name: "Permission Dock — edit",
   render: () => {
     const perms = [editPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const PermissionDockManyFiles: Story = {
+  name: "Permission Dock - many file diffs",
+  render: () => {
+    const perms = [bulkPermission]
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
       messages: () => [{ id: "msg-001" }] as any[],
