@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.3.2
+
+### Patch Changes
+
+- [#10288](https://github.com/Kilo-Org/kilocode/pull/10288) [`889d567`](https://github.com/Kilo-Org/kilocode/commit/889d56758f176ec8c80d695e758480076808e98b) - Focus session history search when it opens so the first result can be resumed immediately.
+
 ## 7.3.1
 
 ### Minor Changes
