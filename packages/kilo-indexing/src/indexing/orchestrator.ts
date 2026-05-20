@@ -100,22 +100,23 @@ export class CodeIndexOrchestrator {
             totalInBatch,
             currentFile ? path.basename(currentFile) : undefined,
           )
-          if (processedInBatch === totalInBatch) {
-            log.info("file watcher batch completed", {
-              workspacePath: this.workspacePath,
-              totalInBatch,
-            })
-            if (totalInBatch > 0) {
-              this.stateManager.setSystemState("Indexed", "File changes processed. Index up-to-date.")
-            } else if (this.stateManager.state === "Indexing") {
-              this.stateManager.setSystemState("Indexed", "Index up-to-date. File queue empty.")
-            }
-          }
         }),
         this.fileWatcher.onDidFinishBatchProcessing.on((summary: BatchProcessingSummary) => {
-          if (summary.batchError) {
-            log.error("batch processing failed", { err: summary.batchError })
+          const failed = summary.processedFiles.find(
+            (file) => file.status === "error" || file.status === "local_error",
+          )
+          const err = summary.batchError ?? failed?.error
+          if (err || failed) {
+            log.error("batch processing failed", { err })
+            this.stateManager.setSystemState("Error", "Failed to process file changes.")
+            return
           }
+
+          log.info("file watcher batch completed", {
+            workspacePath: this.workspacePath,
+            totalInBatch: summary.processedFiles.length,
+          })
+          this.stateManager.setSystemState("Indexed", "File changes processed. Index up-to-date.")
         }),
       ]
       this.fileWatcher.setCollecting(false)
@@ -309,6 +310,12 @@ export class CodeIndexOrchestrator {
           )
         }
       }
+    }
+
+    if (mode === "incremental" && batchErrors.length > 0) {
+      const first = batchErrors.at(0)
+      const msg = first ? first.message : "Unknown batch error"
+      throw new Error(`Incremental indexing failed: ${msg}`)
     }
 
     this.fileWatcher.setCollecting(true)

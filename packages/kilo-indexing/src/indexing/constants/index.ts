@@ -41,6 +41,7 @@ export const MAX_BATCH_RETRIES = 3
 export const INITIAL_RETRY_DELAY_MS = 500
 export const PARSING_CONCURRENCY = 10
 export const MAX_PENDING_BATCHES = 20 // Maximum number of batches to accumulate before waiting
+export const EMBEDDING_REQUEST_CONCURRENCY = 1
 
 /**Manager Recovery */
 export const MAX_MANAGER_RECOVERY_ATTEMPTS = 3

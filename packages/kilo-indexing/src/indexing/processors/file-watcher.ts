@@ -4,6 +4,7 @@ import { createHash } from "crypto"
 import path from "path"
 import { v5 as uuidv5 } from "uuid"
 import type { Ignore } from "ignore"
+import pLimit from "p-limit"
 import { Emitter, type Disposable } from "../runtime"
 import {
   QDRANT_CODE_BLOCK_NAMESPACE,
@@ -11,6 +12,7 @@ import {
   BATCH_SEGMENT_THRESHOLD,
   MAX_BATCH_RETRIES,
   INITIAL_RETRY_DELAY_MS,
+  EMBEDDING_REQUEST_CONCURRENCY,
 } from "../constants"
 import { scannerExtensions } from "../shared/supported-extensions"
 import {
@@ -48,6 +50,7 @@ export class FileWatcher implements IFileWatcher {
   private batchProcessDebounceTimer?: NodeJS.Timeout
   private readonly BATCH_DEBOUNCE_DELAY_MS = 500
   private readonly FILE_PROCESSING_CONCURRENCY_LIMIT = 10
+  private readonly embedLimit = pLimit(EMBEDDING_REQUEST_CONCURRENCY)
   private batchSegmentThreshold: number
   private maxBatchRetries: number
   private collecting = true
@@ -242,28 +245,20 @@ export class FileWatcher implements IFileWatcher {
   /**
    * Handles deletion phase of batch processing.
    *
-   * Deletes vector store points for explicitly deleted files and for files
-   * that changed (old points are cleared before re-upserting new ones).
+   * Deletes vector store points for explicitly deleted files. Changed files
+   * are cleared only after their replacement embeddings are ready.
    */
   private async _handleBatchDeletions(
     batchResults: FileProcessingResult[],
     processedCountInBatch: number,
     totalFilesInBatch: number,
     pathsToExplicitlyDelete: string[],
-    filesToUpsertDetails: Array<{ path: string; originalType: "create" | "change" }>,
-  ): Promise<{ overallBatchError?: Error; clearedPaths: Set<string>; processedCount: number }> {
+  ): Promise<{ overallBatchError?: Error; processedCount: number }> {
     let overallBatchError: Error | undefined
-    const allPathsToClearFromDB = new Set<string>(pathsToExplicitlyDelete)
 
-    for (const fileDetail of filesToUpsertDetails) {
-      if (fileDetail.originalType === "change") {
-        allPathsToClearFromDB.add(fileDetail.path)
-      }
-    }
-
-    if (allPathsToClearFromDB.size > 0 && this.vectorStore) {
+    if (pathsToExplicitlyDelete.length > 0 && this.vectorStore) {
       try {
-        await this.vectorStore.deletePointsByMultipleFilePaths(Array.from(allPathsToClearFromDB))
+        await this.vectorStore.deletePointsByMultipleFilePaths(pathsToExplicitlyDelete)
 
         for (const path of pathsToExplicitlyDelete) {
           this.cacheManager.deleteHash(path)
@@ -300,7 +295,29 @@ export class FileWatcher implements IFileWatcher {
       }
     }
 
-    return { overallBatchError, clearedPaths: allPathsToClearFromDB, processedCount: processedCountInBatch }
+    return { overallBatchError, processedCount: processedCountInBatch }
+  }
+
+  private async _clearBatchReplacements(paths: string[]): Promise<Error | undefined> {
+    if (paths.length === 0 || !this.vectorStore) return undefined
+
+    const unique = [...new Set(paths)]
+    try {
+      await this.vectorStore.deletePointsByMultipleFilePaths(unique)
+      return undefined
+    } catch (error: any) {
+      const errorStatus = error?.status || error?.response?.status || error?.statusCode
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      log.error("batch replacement deletion failed", {
+        error: sanitizeErrorMessage(errorMessage),
+        location: "deletePointsByMultipleFilePaths",
+        errorType: "replacement_deletion_error",
+        errorStatus,
+      })
+      this.emitError("file-watcher:deleteReplacementPoints", error)
+      return error as Error
+    }
   }
 
   /**
@@ -522,7 +539,6 @@ export class FileWatcher implements IFileWatcher {
       processedCountInBatch,
       totalFilesInBatch,
       pathsToExplicitlyDelete,
-      filesToUpsertDetails,
     )
     overallBatchError = deletionError
     processedCountInBatch = deletionCount
@@ -541,6 +557,16 @@ export class FileWatcher implements IFileWatcher {
     )
     processedCountInBatch = upsertCount
 
+    if (!overallBatchError) {
+      const changed = new Set(
+        filesToUpsertDetails.filter((file) => file.originalType === "change").map((file) => file.path),
+      )
+      const replacements = successfullyProcessedForUpsert
+        .map((file) => file.path)
+        .filter((path) => changed.has(path))
+      overallBatchError = await this._clearBatchReplacements(replacements)
+    }
+
     // Phase 3: Execute batch upsert
     overallBatchError = await this._executeBatchUpsertOperations(
       pointsForBatchUpsert,
@@ -550,11 +576,6 @@ export class FileWatcher implements IFileWatcher {
     )
 
     // Finalize
-    this.onDidFinishBatchProcessing.fire({
-      processedFiles: batchResults,
-      batchError: overallBatchError,
-    })
-
     const successCount = batchResults.filter((item) => item.status === "success").length
     const skippedCount = batchResults.filter((item) => item.status === "skipped").length
     const errorCount = batchResults.filter((item) => item.status === "error" || item.status === "local_error").length
@@ -580,6 +601,11 @@ export class FileWatcher implements IFileWatcher {
         currentFile: undefined,
       })
     }
+
+    this.onDidFinishBatchProcessing.fire({
+      processedFiles: batchResults,
+      batchError: overallBatchError,
+    })
   }
 
   /**
@@ -647,7 +673,7 @@ export class FileWatcher implements IFileWatcher {
       let pointsToUpsert: PointStruct[] = []
       if (this.embedder && blocks.length > 0) {
         const texts = blocks.map((block) => block.content)
-        const { embeddings } = await this.embedder.createEmbeddings(texts)
+        const { embeddings } = await this.embedLimit(() => this.embedder!.createEmbeddings(texts))
         if (embeddings.length !== blocks.length) {
           return {
             path: filePath,

@@ -23,6 +23,7 @@ import {
   PARSING_CONCURRENCY,
   BATCH_PROCESSING_CONCURRENCY,
   MAX_PENDING_BATCHES,
+  EMBEDDING_REQUEST_CONCURRENCY,
 } from "../constants"
 import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
@@ -33,6 +34,7 @@ const log = Log.create({ service: "indexing-scanner" })
 
 export class DirectoryScanner implements IDirectoryScanner {
   private _cancelled = false
+  private readonly embedLimit = pLimit(EMBEDDING_REQUEST_CONCURRENCY)
   private batchSegmentThreshold: number
   private maxBatchRetries: number
 
@@ -524,12 +526,59 @@ export class DirectoryScanner implements IDirectoryScanner {
     // Respect cooperative cancellation
     if (this._cancelled || batchBlocks.length === 0) return
 
-    if (batchBlocks.length === 0) {
-      log.debug("Skipping empty batch processing")
-      return
-    }
-
     log.debug(`Starting to process batch of ${batchBlocks.length} blocks in workspace ${scanWorkspace}`)
+
+    const points = await (async () => {
+      try {
+        if (this._cancelled) return undefined
+
+        log.debug(`Creating embeddings for ${batchTexts.length} texts`)
+        const { embeddings } = await this.embedLimit(() => this.embedder.createEmbeddings(batchTexts))
+        log.debug(`Successfully created ${embeddings.length} embeddings`)
+
+        log.debug("Preparing points for Qdrant upsert")
+        const ready = batchBlocks.map((block, index) => {
+          const vector = embeddings[index]
+          if (!vector) {
+            throw new Error(`Missing embedding for block at index ${index}`)
+          }
+
+          const normalizedAbsolutePath = generateNormalizedAbsolutePath(block.file_path, scanWorkspace)
+          const pointId = uuidv5(block.segmentHash, QDRANT_CODE_BLOCK_NAMESPACE)
+
+          return {
+            id: pointId,
+            vector,
+            payload: {
+              filePath: generateRelativeFilePath(normalizedAbsolutePath, scanWorkspace),
+              codeChunk: block.content,
+              startLine: block.start_line,
+              endLine: block.end_line,
+              segmentHash: block.segmentHash,
+            },
+          }
+        })
+        log.debug(`Prepared ${ready.length} points for Qdrant`)
+        return ready
+      } catch (error) {
+        const err = error as Error
+        log.error(`Error preparing batch in workspace ${scanWorkspace}`, {
+          error: sanitizeErrorMessage(err.message || String(error)),
+          stack: sanitizeErrorMessage(err.stack || ""),
+          location: "processBatch:prepare",
+          batchSize: batchBlocks.length,
+        })
+        this.emitError(mode, "scanner:processBatch", err)
+        onBatchFailed?.()
+        if (onError) {
+          const message = err.message || "Unknown error"
+          onError(new Error(`Failed to prepare batch: ${message}`))
+        }
+        return undefined
+      }
+    })()
+
+    if (!points) return
 
     let attempts = 0
     let success = false
@@ -582,41 +631,6 @@ export class DirectoryScanner implements IDirectoryScanner {
         }
         // --- End Deletion Step ---
 
-        // Create embeddings for batch
-        if (this._cancelled) return
-
-        log.debug(`Creating embeddings for ${batchTexts.length} texts`)
-
-        const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
-        log.debug(`Successfully created ${embeddings.length} embeddings`)
-
-        // Prepare points for Qdrant
-        log.debug("Preparing points for Qdrant upsert")
-        const points = batchBlocks.map((block, index) => {
-          const vector = embeddings[index]
-          if (!vector) {
-            throw new Error(`Missing embedding for block at index ${index}`)
-          }
-
-          const normalizedAbsolutePath = generateNormalizedAbsolutePath(block.file_path, scanWorkspace)
-
-          // Use segmentHash for unique ID generation to handle multiple segments from same line
-          const pointId = uuidv5(block.segmentHash, QDRANT_CODE_BLOCK_NAMESPACE)
-
-          return {
-            id: pointId,
-            vector,
-            payload: {
-              filePath: generateRelativeFilePath(normalizedAbsolutePath, scanWorkspace),
-              codeChunk: block.content,
-              startLine: block.start_line,
-              endLine: block.end_line,
-              segmentHash: block.segmentHash,
-            },
-          }
-        })
-        log.debug(`Prepared ${points.length} points for Qdrant`)
-
         // Upsert points to Qdrant
         if (this._cancelled) return
 
@@ -652,7 +666,6 @@ export class DirectoryScanner implements IDirectoryScanner {
       this.emitError(mode, "scanner:processBatch", lastError, this.maxBatchRetries)
       onBatchFailed?.()
       if (onError) {
-        // Preserve the original error message from embedders which now have detailed messages
         const errorMessage = lastError.message || "Unknown error"
 
         onError(new Error(`Failed to process batch after ${this.maxBatchRetries} retries: ${errorMessage}`))

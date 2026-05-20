@@ -6,6 +6,7 @@ import { v5 as uuidv5 } from "uuid"
 import { CacheManager } from "../../../../src/indexing/cache-manager"
 import { QDRANT_CODE_BLOCK_NAMESPACE } from "../../../../src/indexing/constants"
 import type {
+  BatchProcessingSummary,
   IEmbedder,
   IndexingTelemetryEvent,
   IVectorStore,
@@ -31,7 +32,41 @@ function createEmbedder(): IEmbedder {
   }
 }
 
+function createFailingEmbedder(): IEmbedder {
+  return {
+    ...createEmbedder(),
+    async createEmbeddings() {
+      throw new Error("watcher embedding failed")
+    },
+  }
+}
+
+class TrackEmbedder implements IEmbedder {
+  public active = 0
+  public max = 0
+
+  async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.active += 1
+    this.max = Math.max(this.max, this.active)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    this.active -= 1
+    return {
+      embeddings: texts.map((_, index) => [index + 1]),
+    }
+  }
+
+  async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
+    return { valid: true }
+  }
+
+  get embedderInfo() {
+    return { name: "openai" as const }
+  }
+}
+
 class RetryStore implements IVectorStore {
+  public deletes: string[][] = []
+
   constructor(private readonly fail: number) {}
 
   private calls = 0
@@ -57,7 +92,9 @@ class RetryStore implements IVectorStore {
   }
 
   async deletePointsByFilePath(_filePath: string): Promise<void> {}
-  async deletePointsByMultipleFilePaths(_filePaths: string[]): Promise<void> {}
+  async deletePointsByMultipleFilePaths(filePaths: string[]): Promise<void> {
+    this.deletes.push(filePaths)
+  }
   async clearCollection(): Promise<void> {}
   async deleteCollection(): Promise<void> {}
   async collectionExists(): Promise<boolean> {
@@ -103,6 +140,71 @@ describe("FileWatcher", () => {
       expect(point.payload.endLine).toBe(1)
       expect(point.id).toBe(uuidv5(point.payload.segmentHash, QDRANT_CODE_BLOCK_NAMESPACE))
     })
+  })
+
+  test("serializes embedding requests across concurrent file updates", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    const cacheDir = path.join(root, ".cache")
+    const first = path.join(root, "first.md")
+    const second = path.join(root, "second.md")
+
+    await mkdir(cacheDir, { recursive: true })
+    await writeFile(first, "x".repeat(5000))
+    await writeFile(second, "y".repeat(5000))
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+
+    const emb = new TrackEmbedder()
+    const watcher = new FileWatcher(root, cache, emb, new RetryStore(0))
+    const data = watcher as unknown as {
+      processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+    }
+
+    await data.processBatch(
+      new Map([
+        [first, { path: first, type: "create" }],
+        [second, { path: second, type: "create" }],
+      ]),
+    )
+
+    expect(emb.max).toBe(1)
+  })
+
+  test("keeps changed file vectors when replacement embeddings fail", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    const cacheDir = path.join(root, ".cache")
+    const file = path.join(root, "oversized.md")
+
+    await mkdir(cacheDir, { recursive: true })
+    await writeFile(file, "x".repeat(5000))
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(file, "old-hash")
+
+    const store = new RetryStore(0)
+    const watcher = new FileWatcher(root, cache, createFailingEmbedder(), store)
+    const summaries: BatchProcessingSummary[] = []
+    watcher.onDidFinishBatchProcessing.on((summary) => summaries.push(summary))
+    const data = watcher as unknown as {
+      processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+    }
+
+    await data.processBatch(
+      new Map([
+        [
+          file,
+          {
+            path: file,
+            type: "change",
+          },
+        ],
+      ]),
+    )
+
+    expect(store.deletes).toEqual([])
+    expect(summaries[0]?.processedFiles).toContainEqual(expect.objectContaining({ path: file, status: "local_error" }))
   })
 
   test("emits retry telemetry for watcher upsert retries", async () => {

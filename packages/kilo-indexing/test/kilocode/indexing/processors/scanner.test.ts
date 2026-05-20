@@ -33,6 +33,35 @@ class Emb implements IEmbedder {
   }
 }
 
+class CountEmb extends Emb {
+  public calls = 0
+
+  public override async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.calls += 1
+    return super.createEmbeddings(texts)
+  }
+}
+
+class FailEmb extends Emb {
+  public override async createEmbeddings(_texts: string[]): Promise<{ embeddings: number[][] }> {
+    throw new Error("embedding failed")
+  }
+}
+
+class TrackEmb extends Emb {
+  public active = 0
+  public max = 0
+
+  public override async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.active += 1
+    this.max = Math.max(this.max, this.active)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    const result = await super.createEmbeddings(texts)
+    this.active -= 1
+    return result
+  }
+}
+
 class Parser implements ICodeParser {
   public async parseFile(
     filePath: string,
@@ -197,6 +226,46 @@ describe("DirectoryScanner", () => {
     expect(cache.getHash(file)).toBe(hash)
   })
 
+  test("serializes embedding requests across queued scan batches", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    await Bun.write(file, "export const value = 2\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+
+    const emb = new TrackEmb()
+    const store = new Store()
+    const scan = new DirectoryScanner(emb, store, new ManyParser(), cache, ignore(), 1, 1)
+
+    await scan.scanDirectory(root)
+
+    expect(store.points).toBe(3)
+    expect(emb.max).toBe(1)
+  })
+
+  test("keeps prior vectors when replacement embeddings fail", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    await Bun.write(file, "export const value = 2\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(file, "old-hash")
+
+    const errors: Error[] = []
+    const store = new Store()
+    const scan = new DirectoryScanner(new FailEmb(), store, new Parser(), cache, ignore(), 1, 2)
+
+    await scan.scanDirectory(root, (error) => errors.push(error))
+
+    expect(errors).toHaveLength(1)
+    expect(store.multi).toEqual([])
+    expect(cache.getHash(file)).toBe("old-hash")
+  })
+
   test("does not mark hash current when a later batch fails for the same file", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
@@ -285,8 +354,9 @@ describe("DirectoryScanner", () => {
     await cache.initialize()
 
     const events: IndexingTelemetryEvent[] = []
+    const emb = new CountEmb()
     const scan = new DirectoryScanner(
-      new Emb(),
+      emb,
       new RetryStore(),
       new Parser(),
       cache,
@@ -310,5 +380,6 @@ describe("DirectoryScanner", () => {
     expect(retry?.attempt).toBe(1)
     expect(retry?.maxRetries).toBe(2)
     expect(retry?.error).toContain("[REDACTED_PATH]")
+    expect(emb.calls).toBe(1)
   })
 })

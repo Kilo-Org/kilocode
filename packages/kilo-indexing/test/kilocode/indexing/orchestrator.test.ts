@@ -17,6 +17,7 @@ import { Emitter } from "../../../src/indexing/runtime"
 
 class Store {
   public clearCount = 0
+  public completeCount = 0
   public deleteCount = 0
 
   constructor(
@@ -53,7 +54,9 @@ class Store {
   async hasIndexedData(): Promise<boolean> {
     return this.existing
   }
-  async markIndexingComplete(): Promise<void> {}
+  async markIndexingComplete(): Promise<void> {
+    this.completeCount += 1
+  }
   async markIndexingIncomplete(): Promise<void> {}
 }
 
@@ -82,6 +85,30 @@ class Scanner {
         skipped: 0,
       },
       totalBlockCount: this.blocks,
+    }
+  }
+
+  cancel(): void {}
+  updateBatchSegmentThreshold(_newThreshold: number): void {}
+}
+
+class BatchErrorScanner {
+  public readonly isCancelled = false
+
+  async scanDirectory(
+    _directory: string,
+    onError?: (error: Error) => void,
+    _onFilesIndexed?: (indexedCount: number) => void,
+    onFileParsed?: () => void,
+  ): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+    onFileParsed?.()
+    onError?.(new Error("incremental update batch failed"))
+    return {
+      stats: {
+        processed: 0,
+        skipped: 0,
+      },
+      totalBlockCount: 0,
     }
   }
 
@@ -193,6 +220,63 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(completed?.filesDiscovered).toBe(2)
     expect(completed?.filesIndexed).toBe(1)
     expect(completed?.totalBlocks).toBe(2)
+  })
+
+  test("does not complete incremental scans with failed update batches", async () => {
+    const events: IndexingTelemetryEvent[] = []
+    const store = new Store(true)
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      {
+        async clearCacheFile() {},
+      } as unknown as CacheManager,
+      store as unknown as IVectorStore,
+      new BatchErrorScanner() as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+      (event) => events.push(event),
+    )
+
+    await orchestrator.startIndexing("manual")
+
+    expect(orchestrator.state).toBe("Error")
+    expect(store.completeCount).toBe(0)
+    expect(events.some((event) => event.type === "completed")).toBe(false)
+  })
+
+  test("keeps watcher batches in error when file updates fail", async () => {
+    const watcher = new Watcher()
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/ws",
+      {
+        async clearCacheFile() {},
+      } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(1, 1, 1) as unknown as DirectoryScanner,
+      watcher as unknown as IFileWatcher,
+    )
+
+    await orchestrator.startIndexing("manual")
+    watcher.onDidStartBatchProcessing.fire(["/tmp/ws/main.ts"])
+    watcher.onBatchProgressUpdate.fire({
+      processedInBatch: 1,
+      totalInBatch: 1,
+      currentFile: "/tmp/ws/main.ts",
+    })
+    watcher.onDidFinishBatchProcessing.fire({
+      processedFiles: [
+        {
+          path: "/tmp/ws/main.ts",
+          status: "local_error",
+          error: new Error("watcher update failed"),
+        },
+      ],
+    })
+
+    expect(orchestrator.state).toBe("Error")
   })
 
   test("cancelIndexing prevents scan from running", async () => {

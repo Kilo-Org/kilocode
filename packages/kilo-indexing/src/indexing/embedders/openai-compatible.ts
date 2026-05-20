@@ -463,6 +463,10 @@ export class OpenAICompatibleEmbedder implements IEmbedder {
       const state = OpenAICompatibleEmbedder.globalRateLimitState
       const now = Date.now()
 
+      if (state.isRateLimited && state.rateLimitResetTime > now) {
+        return
+      }
+
       // Increment consecutive rate limit errors
       if (now - state.lastRateLimitError < 60000) {
         // Within 1 minute

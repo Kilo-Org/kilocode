@@ -364,6 +364,33 @@ describe("OpenAICompatibleEmbedder", () => {
         })
       })
 
+      test("coalesces overlapping rate-limit cooldown windows", async () => {
+        const error = new Error("Rate limit exceeded") as Error & { status?: number }
+        error.status = 429
+        const data = embedder as unknown as {
+          updateGlobalRateLimitState(error: Error & { status?: number }): Promise<void>
+          constructor: {
+            globalRateLimitState: {
+              consecutiveRateLimitErrors: number
+              rateLimitResetTime: number
+            }
+          }
+        }
+
+        await Promise.all([
+          data.updateGlobalRateLimitState(error),
+          data.updateGlobalRateLimitState(error),
+          data.updateGlobalRateLimitState(error),
+        ])
+
+        const state = data.constructor.globalRateLimitState
+        const reset = state.rateLimitResetTime
+        await data.updateGlobalRateLimitState(error)
+
+        expect(state.consecutiveRateLimitErrors).toBe(1)
+        expect(state.rateLimitResetTime).toBe(reset)
+      })
+
       test("should not retry on non-rate-limit errors", async () => {
         const testTexts = ["Hello world"]
         const authError = new Error("Unauthorized")
