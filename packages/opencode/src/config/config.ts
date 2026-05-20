@@ -498,6 +498,7 @@ export const layer = Layer.effect(
 
     const loadGlobal = Effect.fnUntraced(function* () {
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
+      yield* Effect.promise(() => KilocodeConfig.migrateEditPermission()) // kilocode_change
       let result: Info = {}
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
       // kilocode_change start

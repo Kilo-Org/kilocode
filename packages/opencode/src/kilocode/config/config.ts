@@ -313,7 +313,7 @@ export namespace KilocodeConfig {
     return { agents: {}, warnings }
   }
 
-  // ── Bash permission migration ────────────────────────────────────────
+  // ── Permission migrations ────────────────────────────────────────────
 
   const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
 
@@ -368,6 +368,59 @@ export namespace KilocodeConfig {
     const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
     await Bun.write(target, JSON.stringify(merged, null, 2))
     log.info("migrated bash permission to allow for existing user", { path: target })
+  }
+
+  /**
+   * Migrate edit permission for existing users before config is consumed.
+   *
+   * Existing users (those with at least one global config file or the legacy TOML
+   * config) who have no explicit `permission.edit` setting get `edit: "allow"`
+   * written to their highest-precedence config file. This preserves their current
+   * behavior now that the new default is `edit: "ask"`.
+   */
+  export async function migrateEditPermission() {
+    const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
+    const legacy = path.join(Global.Path.config, "config")
+    const existing = files.filter((f) => existsSync(f))
+    const hasLegacy = existsSync(legacy)
+
+    // no global config → new user, they'll get the new edit:ask default
+    if (existing.length === 0 && !hasLegacy) return
+
+    // check if any config file already has an explicit edit permission
+    for (const file of existing) {
+      const text = await Bun.file(file)
+        .text()
+        .catch(() => "")
+      const data = parseJsonc(text) ?? {}
+      if (data.permission?.edit) return
+    }
+
+    // also check legacy TOML config for edit permission
+    if (hasLegacy) {
+      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
+      if (toml?.default?.permission?.edit) return
+    }
+
+    // existing user without edit permission → write edit:allow to highest-precedence file
+    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
+    const text = await Bun.file(target)
+      .text()
+      .catch(() => "{}")
+
+    if (target.endsWith(".jsonc")) {
+      const edits = modify(text, ["permission", "edit"], "allow", {
+        formattingOptions: { insertSpaces: true, tabSize: 2 },
+      })
+      await Bun.write(target, applyEdits(text, edits))
+      log.info("migrated edit permission to allow for existing user", { path: target })
+      return
+    }
+
+    const data = parseJsonc(text) ?? {}
+    const merged = { ...data, permission: { ...data.permission, edit: "allow" } }
+    await Bun.write(target, JSON.stringify(merged, null, 2))
+    log.info("migrated edit permission to allow for existing user", { path: target })
   }
 
   // ── Config merge utilities ───────────────────────────────────────────

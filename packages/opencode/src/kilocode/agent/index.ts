@@ -229,9 +229,9 @@ export interface KiloData {
 // Prepare kilo-specific data derived from config. Call once per state initialization.
 export function prepare(cfg: Config.Info): KiloData {
   const mcpRules = getMcpRules(cfg)
-  // Default ask for edit and bash ensures fresh installs always prompt before
-  // risky actions, so VS Code and JetBrains receive permission.asked events.
-  // User/project config merged after defaults still overrides these.
+  // Fresh installs ask before edits and all bash commands, including commands
+  // covered by the safe-bash allowlist, so editor clients always receive
+  // permission.asked events. User/project config still overrides these rules.
   const defaultsPatch = Permission.merge(
     Permission.fromConfig({ bash, recall: "ask" }),
     Permission.fromConfig({ edit: "ask", bash: "ask" }),

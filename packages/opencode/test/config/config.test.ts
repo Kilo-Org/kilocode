@@ -1777,6 +1777,61 @@ test("Effect config parser preserves permission order while rejecting unknown to
   }
 })
 
+// kilocode_change start
+test("migrates edit permission to allow for existing global config users", async () => {
+  await using globalTmp = await tmpdir()
+  await using tmp = await tmpdir()
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = globalTmp.path
+  await clear(true)
+  try {
+    const file = path.join(globalTmp.path, "kilo.json")
+    await fs.mkdir(globalTmp.path, { recursive: true })
+    await fs.writeFile(file, JSON.stringify({ permission: { bash: "allow" } }, null, 2))
+
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.permission?.edit).toBe("allow")
+        expect(config.permission?.bash).toBe("allow")
+      },
+    })
+
+    const written = JSON.parse(await fs.readFile(file, "utf8"))
+    expect(written.permission.edit).toBe("allow")
+    expect(written.permission.bash).toBe("allow")
+  } finally {
+    ;(Global.Path as { config: string }).config = prev
+    await clear(true)
+  }
+})
+
+test("does not migrate edit permission for fresh users without global config", async () => {
+  await using globalTmp = await tmpdir()
+  await using tmp = await tmpdir()
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = globalTmp.path
+  await fs.rm(globalTmp.path, { force: true, recursive: true })
+  await clear(true)
+  try {
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.permission?.edit).toBeUndefined()
+      },
+    })
+
+    expect(await Bun.file(path.join(globalTmp.path, "kilo.json")).exists()).toBe(false)
+    expect(await Bun.file(path.join(globalTmp.path, "config.json")).exists()).toBe(false)
+  } finally {
+    ;(Global.Path as { config: string }).config = prev
+    await clear(true)
+  }
+})
+// kilocode_change end
+
 // MCP config merging tests
 
 test("project config can override MCP server enabled status", async () => {
