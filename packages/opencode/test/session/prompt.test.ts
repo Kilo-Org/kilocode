@@ -328,7 +328,12 @@ const seed = Effect.fn("test.seed")(function* (sessionID: SessionID, opts?: { fi
   return { user: msg, assistant }
 })
 
-const addSubtask = (sessionID: SessionID, messageID: MessageID, model = ref, variant?: string) => // kilocode_change
+const addSubtask = (
+  sessionID: SessionID,
+  messageID: MessageID,
+  model = ref,
+  variant?: string, // kilocode_change
+) =>
   Effect.gen(function* () {
     const session = yield* Session.Service
     yield* session.updatePart({
@@ -2133,6 +2138,61 @@ it.live(
       { git: true, config: providerCfg },
     ),
   30_000,
+)
+// kilocode_change end
+
+// kilocode_change start - command subtask variant propagation
+it.live(
+  "command subtask variant is threaded into tool-part state.input",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Command variant" })
+        yield* llm.hang
+
+        const fiber = yield* prompt
+          .command({
+            sessionID: chat.id,
+            command: "variant-probe",
+            arguments: "cache path",
+            agent: "build",
+            variant: "high",
+          })
+          .pipe(Effect.forkChild)
+
+        const tool = yield* waitFor(
+          "command subtask tool part with variant",
+          Effect.gen(function* () {
+            const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+            const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
+            return taskMsg?.parts.find((part): part is MessageV2.ToolPart => part.type === "tool")
+          }),
+        )
+
+        expect(tool.state.input?.variant).toBe("high")
+
+        yield* prompt.cancel(chat.id)
+        yield* Fiber.await(fiber)
+      }),
+      {
+        git: true,
+        config: (url) => ({
+          ...providerCfg(url),
+          command: {
+            "variant-probe": {
+              template: "Inspect $ARGUMENTS",
+              description: "variant probe",
+              agent: "general",
+              model: "test/test-model",
+              subtask: true,
+            },
+          },
+        }),
+      },
+    ),
+  5_000,
 )
 // kilocode_change end
 

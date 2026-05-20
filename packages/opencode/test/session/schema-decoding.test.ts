@@ -10,6 +10,7 @@ import { Todo } from "../../src/session/todo"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProjectID } from "../../src/project/schema"
 import { WorkspaceID } from "../../src/control-plane/schema"
+import { ModelID, ProviderID } from "../../src/provider/schema" // kilocode_change - branded subtask model input
 
 // Covers the session-domain Effect Schema migration. For each migrated
 // schema we assert:
@@ -287,6 +288,27 @@ describe("SessionPrompt input schemas", () => {
     const viaZod = SessionPrompt.PromptInput.zod.parse(input)
     expect(viaZod.parts).toHaveLength(2)
   })
+
+  // kilocode_change start - preserve subtask variants through API prompt input decoding
+  test("PromptInput accepts subtask part variant", () => {
+    const decode = decodeUnknown(SessionPrompt.PromptInput)
+    const input = {
+      sessionID,
+      parts: [
+        {
+          type: "subtask" as const,
+          prompt: "inspect cache key path",
+          description: "inspect bug",
+          agent: "general",
+          model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test-model") },
+          variant: "high",
+        },
+      ],
+    }
+    expect(decode(input)).toEqual(input)
+    expect(SessionPrompt.PromptInput.zod.parse(input)).toEqual(input)
+  })
+  // kilocode_change end
 
   test("PromptInput rejects unknown part type", () => {
     const decode = decodeUnknown(SessionPrompt.PromptInput)

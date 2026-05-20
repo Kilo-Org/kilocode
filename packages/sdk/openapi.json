@@ -12136,6 +12136,24 @@
             "$ref": "#/components/schemas/EventGlobalConfigUpdated"
           },
           {
+            "$ref": "#/components/schemas/Event.tui.prompt.append"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.command.execute"
+          },
+          {
+            "$ref": "#/components/schemas/EventTuiToastShow1"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.session.select"
+          },
+          {
+            "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+          },
+          {
+            "$ref": "#/components/schemas/EventIndexingStatus"
+          },
+          {
             "$ref": "#/components/schemas/EventServerInstanceDisposed"
           },
           {
@@ -12152,18 +12170,6 @@
           },
           {
             "$ref": "#/components/schemas/EventQuestionRejected"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.prompt.append"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.command.execute"
-          },
-          {
-            "$ref": "#/components/schemas/EventTuiToastShow1"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.session.select"
           },
           {
             "$ref": "#/components/schemas/EventMcpToolsChanged"
@@ -12242,9 +12248,6 @@
           },
           {
             "$ref": "#/components/schemas/EventProjectUpdated"
-          },
-          {
-            "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
           },
           {
             "$ref": "#/components/schemas/EventVcsBranchUpdated"
@@ -12380,9 +12383,6 @@
           },
           {
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
-          },
-          {
-            "$ref": "#/components/schemas/EventIndexingStatus"
           }
         ]
       },
@@ -12462,6 +12462,169 @@
             "$ref": "#/components/schemas/WellKnownAuth"
           }
         ]
+      },
+      "Event.tui.prompt.append": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.append"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": ["text"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "Event.tui.command.execute": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.command.execute"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "session.list",
+                      "session.new",
+                      "session.share",
+                      "session.interrupt",
+                      "session.compact",
+                      "session.page.up",
+                      "session.page.down",
+                      "session.line.up",
+                      "session.line.down",
+                      "session.half.page.up",
+                      "session.half.page.down",
+                      "session.first",
+                      "session.last",
+                      "prompt.clear",
+                      "prompt.submit",
+                      "agent.cycle"
+                    ]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": ["command"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "Event.tui.toast.show": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.toast.show"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "variant": {
+                "type": "string",
+                "enum": ["info", "success", "warning", "error"]
+              },
+              "duration": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": ["message", "variant"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "Event.tui.session.select": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.session.select"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "description": "Session ID to navigate to"
+              }
+            },
+            "required": ["sessionID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "IndexingStatusState": {
+        "type": "string",
+        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
+      },
+      "IndexingStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/IndexingStatusState"
+          },
+          "message": {
+            "type": "string"
+          },
+          "processedFiles": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalFiles": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["state", "message", "processedFiles", "totalFiles", "percent"],
+        "additionalProperties": false
       },
       "QuestionOption": {
         "type": "object",
@@ -12596,139 +12759,6 @@
           }
         },
         "required": ["sessionID", "requestID"],
-        "additionalProperties": false
-      },
-      "Event.tui.prompt.append": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["tui.prompt.append"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "text": {
-                "type": "string"
-              }
-            },
-            "required": ["text"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "Event.tui.command.execute": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["tui.command.execute"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "command": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "session.list",
-                      "session.new",
-                      "session.share",
-                      "session.interrupt",
-                      "session.compact",
-                      "session.page.up",
-                      "session.page.down",
-                      "session.line.up",
-                      "session.line.down",
-                      "session.half.page.up",
-                      "session.half.page.down",
-                      "session.first",
-                      "session.last",
-                      "prompt.clear",
-                      "prompt.submit",
-                      "agent.cycle"
-                    ]
-                  },
-                  {
-                    "type": "string"
-                  }
-                ]
-              }
-            },
-            "required": ["command"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "Event.tui.toast.show": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["tui.toast.show"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "title": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "variant": {
-                "type": "string",
-                "enum": ["info", "success", "warning", "error"]
-              },
-              "duration": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              }
-            },
-            "required": ["message", "variant"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "Event.tui.session.select": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["tui.session.select"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "description": "Session ID to navigate to"
-              }
-            },
-            "required": ["sessionID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
       "SessionNetworkWait": {
@@ -13637,6 +13667,9 @@
           },
           "command": {
             "type": "string"
+          },
+          "variant": {
+            "type": "string"
           }
         },
         "required": ["id", "sessionID", "messageID", "type", "prompt", "description", "agent"],
@@ -14518,36 +14551,6 @@
         "required": ["text"],
         "additionalProperties": false
       },
-      "IndexingStatusState": {
-        "type": "string",
-        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
-      },
-      "IndexingStatus": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "$ref": "#/components/schemas/IndexingStatusState"
-          },
-          "message": {
-            "type": "string"
-          },
-          "processedFiles": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "totalFiles": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "percent": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          }
-        },
-        "required": ["state", "message", "processedFiles", "totalFiles", "percent"],
-        "additionalProperties": false
-      },
       "GlobalEvent": {
         "type": "object",
         "properties": {
@@ -14572,6 +14575,24 @@
                 "$ref": "#/components/schemas/EventGlobalConfigUpdated"
               },
               {
+                "$ref": "#/components/schemas/Event.tui.prompt.append"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.command.execute"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.toast.show"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.session.select"
+              },
+              {
+                "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
+              },
+              {
+                "$ref": "#/components/schemas/EventIndexingStatus"
+              },
+              {
                 "$ref": "#/components/schemas/EventServerInstanceDisposed"
               },
               {
@@ -14588,18 +14609,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventQuestionRejected"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.prompt.append"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.command.execute"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.toast.show"
-              },
-              {
-                "$ref": "#/components/schemas/Event.tui.session.select"
               },
               {
                 "$ref": "#/components/schemas/EventMcpToolsChanged"
@@ -14678,9 +14687,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventProjectUpdated"
-              },
-              {
-                "$ref": "#/components/schemas/EventKilocodeAgent_managerStart"
               },
               {
                 "$ref": "#/components/schemas/EventVcsBranchUpdated"
@@ -14816,9 +14822,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
-              },
-              {
-                "$ref": "#/components/schemas/EventIndexingStatus"
               },
               {
                 "$ref": "#/components/schemas/SyncEventMessageUpdated"
@@ -17424,6 +17427,9 @@
           },
           "command": {
             "type": "string"
+          },
+          "variant": {
+            "type": "string"
           }
         },
         "required": ["type", "prompt", "description", "agent"],
@@ -19528,6 +19534,84 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventKilocodeAgent_managerStart": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["kilocode.agent_manager.start"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "requestID": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["worktree", "local"]
+              },
+              "versions": {
+                "type": "boolean"
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "prompt": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "branchName": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "required": ["requestID", "sessionID", "mode", "tasks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventIndexingStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["indexing.status"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/IndexingStatus"
+              }
+            },
+            "required": ["status"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventServerInstanceDisposed": {
         "type": "object",
         "properties": {
@@ -20357,60 +20441,6 @@
           },
           "properties": {
             "$ref": "#/components/schemas/Project"
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventKilocodeAgent_managerStart": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["kilocode.agent_manager.start"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "requestID": {
-                "type": "string"
-              },
-              "sessionID": {
-                "type": "string"
-              },
-              "mode": {
-                "type": "string",
-                "enum": ["worktree", "local"]
-              },
-              "versions": {
-                "type": "boolean"
-              },
-              "tasks": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "prompt": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "branchName": {
-                      "type": "string"
-                    }
-                  },
-                  "additionalProperties": false
-                },
-                "minItems": 1,
-                "maxItems": 20
-              }
-            },
-            "required": ["requestID", "sessionID", "mode", "tasks"],
-            "additionalProperties": false
           }
         },
         "required": ["id", "type", "properties"],
@@ -22006,30 +22036,6 @@
               }
             },
             "required": ["enabled", "connected"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventIndexingStatus": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["indexing.status"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "status": {
-                "$ref": "#/components/schemas/IndexingStatus"
-              }
-            },
-            "required": ["status"],
             "additionalProperties": false
           }
         },

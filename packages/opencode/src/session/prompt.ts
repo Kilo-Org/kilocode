@@ -1951,6 +1951,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               description: cmd.description ?? "",
               command: input.command,
               model: { providerID: taskModel.providerID, modelID: taskModel.modelID },
+              variant: input.variant, // kilocode_change
               prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
             },
           ]
