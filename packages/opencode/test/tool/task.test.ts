@@ -9,10 +9,12 @@ import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { ModelID, ProviderID } from "../../src/provider/schema"
+import { Provider } from "@/provider/provider" // kilocode_change - resolved model variant validation tests
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "@/tool/truncate"
 import { ToolRegistry } from "@/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
+import { ProviderTest } from "../fake/provider" // kilocode_change - resolved model variant validation tests
 import { testEffect } from "../lib/effect"
 
 afterEach(async () => {
@@ -94,12 +96,35 @@ const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
     Config.defaultLayer,
+    Provider.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Session.defaultLayer,
     Truncate.defaultLayer,
     ToolRegistry.defaultLayer,
   ),
 )
+
+// kilocode_change start - runtime with provider data that is not present in raw config
+const resolvedModel = ProviderTest.model({
+  providerID: ProviderID.make("resolved"),
+  id: ModelID.make("remote-model"),
+  variants: {
+    low: { reasoningEffort: "low" },
+    high: { reasoningEffort: "high" },
+  },
+})
+const resolvedProvider = ProviderTest.fake({ model: resolvedModel })
+const resolvedIt = testEffect(
+  Layer.mergeAll(
+    Agent.defaultLayer,
+    Config.defaultLayer,
+    resolvedProvider.layer,
+    CrossSpawnSpawner.defaultLayer,
+    Session.defaultLayer,
+    Truncate.defaultLayer,
+  ),
+)
+// kilocode_change end
 
 const seed = Effect.fn("TaskToolTest.seed")(function* (title = "Pinned") {
   const session = yield* Session.Service
@@ -506,6 +531,52 @@ describe("tool.task", () => {
           expect(seen?.variant).toBe("high")
         }),
       { config: variantProviderConfig },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - validate against Provider.Service instead of raw config
+  resolvedIt.live("execute accepts variants from resolved provider model data", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let seen: SessionPrompt.PromptInput | undefined
+          const promptOps = stubOps({ text: "done", onPrompt: (input) => (seen = input) })
+
+          yield* def.execute(
+            {
+              description: "remote model",
+              prompt: "use resolved provider variants",
+              subagent_type: "general",
+              variant: "high",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          expect(seen?.model).toEqual({ providerID: resolvedModel.providerID, modelID: resolvedModel.id })
+          expect(seen?.variant).toBe("high")
+        }),
+      {
+        config: {
+          agent: {
+            general: {
+              model: `${resolvedModel.providerID}/${resolvedModel.id}`,
+            },
+          },
+        },
+      },
     ),
   )
   // kilocode_change end

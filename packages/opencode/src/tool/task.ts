@@ -6,6 +6,7 @@ import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
+import { Provider } from "@/provider/provider" // kilocode_change - validate variants against resolved model data
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
@@ -46,6 +47,7 @@ export const TaskTool = Tool.define(
   Effect.gen(function* () {
     const agent = yield* Agent.Service
     const config = yield* Config.Service
+    const provider = yield* Provider.Service // kilocode_change
     const sessions = yield* Session.Service
 
     const run = Effect.fn("TaskTool.execute")(function* (
@@ -140,11 +142,9 @@ export const TaskTool = Tool.define(
 
       // kilocode_change start - validate per-subtask variant against resolved target model
       if (params.variant !== undefined) {
-        const providerID = model.providerID as string
-        const modelID = model.modelID as string
-        const full = cfg.provider?.[providerID]?.models?.[modelID]
-        const available = full?.variants ? Object.keys(full.variants) : []
-        if (!full?.variants || !full.variants[params.variant]) {
+        const full = yield* provider.getModel(model.providerID, model.modelID)
+        const available = full.variants ? Object.keys(full.variants) : []
+        if (!full.variants || !full.variants[params.variant]) {
           return yield* Effect.fail(
             new Error(
               available.length === 0
