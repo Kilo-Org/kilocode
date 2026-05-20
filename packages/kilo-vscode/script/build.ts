@@ -2,6 +2,7 @@
 import { $ } from "bun"
 import { join } from "node:path"
 import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
+import { copyCliSidecarAssets } from "./cli-sidecars"
 import { ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
@@ -78,6 +79,12 @@ for (const config of targets) {
 
   if (config.binary !== "kilo.exe") {
     chmodSync(targetBinary, 0o755)
+  }
+
+  if (copyCliSidecarAssets(sourceBinary, binDir)) {
+    console.log(`  ✅ Tree-sitter WASM assets copied from ${config.cliDir}/bin/tree-sitter`)
+  } else {
+    console.warn(`  ⚠️ Tree-sitter WASM assets not found in ${config.cliDir}/bin/tree-sitter`)
   }
 
   console.log(`  ✅ Binary ready at ${targetBinary}`)

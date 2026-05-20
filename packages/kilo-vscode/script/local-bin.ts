@@ -2,6 +2,7 @@
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
+import { copyCliSidecarAssets } from "./cli-sidecars"
 import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
@@ -183,6 +184,13 @@ async function main() {
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
   chmodSync(targetBinPath, 0o755)
+
+  if (copyCliSidecarAssets(sourceBinPath, targetBinDir)) {
+    log(`Copied tree-sitter WASM assets -> ${relative(kiloVscodeDir, join(targetBinDir, "tree-sitter"))}`)
+  } else {
+    log(`Tree-sitter WASM assets not found next to CLI binary at ${relative(packagesDir, dirname(sourceBinPath))}`)
+  }
+
   await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 
   // Record the CLI source version so future runs detect when a rebuild is needed
