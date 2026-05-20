@@ -22,8 +22,10 @@ import {
 import { DeferredPopover as Popover } from "./DeferredPopover"
 import type { DeferredPopoverProps as PopoverProps } from "./DeferredPopover"
 
-export interface PopupSelectorProps<T extends ValidComponent = ValidComponent>
-  extends Omit<PopoverProps<T>, "style" | "children"> {
+export interface PopupSelectorProps<T extends ValidComponent = ValidComponent> extends Omit<
+  PopoverProps<T>,
+  "style" | "children"
+> {
   /** Whether the selector is in expanded mode (wider + taller). */
   expanded: boolean
   /** Preferred width when collapsed. Default: 250 */

@@ -49,7 +49,7 @@ export class TelemetryProxy {
 
     const providerProps = this.provider?.getTelemetryProperties() ?? {}
     const mergedProps = { ...providerProps, ...properties }
-    
+
     if (overrides?.platform !== undefined) {
       mergedProps.platform = overrides.platform
     }
