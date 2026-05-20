@@ -42,7 +42,7 @@ import { transformConflictedScripts, transformAllScripts } from "./transforms/tr
 import { transformConflictedExtensions, transformAllExtensions } from "./transforms/transform-extensions"
 import { transformConflictedWeb, transformAllWeb } from "./transforms/transform-web"
 import { resolveLockFileConflicts, regenerateLockFiles } from "./transforms/lock-files"
-import { writeVersion } from "./utils/upstream"
+import { versionFile, writeVersion } from "./utils/upstream"
 
 interface MergeOptions {
   version?: string
@@ -515,8 +515,8 @@ async function main() {
 
   // 6k. Record the last merged upstream tag so future automation can find it
   // without walking ls-remote + isAncestor for every tag.
-  const versionFile = await writeVersion(targetVersion.tag)
-  logger.success(`Recorded ${targetVersion.tag} in ${versionFile.split("/").pop()}`)
+  const written = await writeVersion(targetVersion.tag)
+  logger.success(`Recorded ${targetVersion.tag} in ${written.split("/").pop()}`)
 
   // Clean untracked build artifacts from Kilo-specific directories.
   // These packages don't exist in upstream, so their .gitignore files are absent
@@ -578,6 +578,13 @@ async function main() {
     const autoResolved = resolved.filter((r) => r.action === "kept")
     if (autoResolved.length > 0) {
       logger.success(`Auto-resolved ${autoResolved.length} conflicts (kept Kilo's version)`)
+    }
+
+    const versionConflicted = (await git.getConflictedFiles()).includes(versionFile)
+    if (versionConflicted) {
+      await git.checkoutTheirs([versionFile])
+      await git.stageFiles([versionFile])
+      logger.success(`Auto-resolved ${versionFile} conflict (accepted recorded upstream tag)`)
     }
 
     // Step 7c: Try to auto-resolve remaining conflicts with post-merge transforms
