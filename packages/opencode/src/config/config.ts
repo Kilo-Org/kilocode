@@ -185,6 +185,10 @@ export const Info = Schema.Struct({
   terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
     description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",
   }),
+  plan_followup: Schema.optional(Schema.Literals(["ask", "current", "new"])).annotate({
+    description:
+      "Controls what happens after plan mode finishes: ask for confirmation, continue in the current session, or start a new session.",
+  }),
   // kilocode_change end
   // kilocode_change start - nullable for delete sentinel
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({

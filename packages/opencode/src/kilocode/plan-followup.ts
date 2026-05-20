@@ -15,6 +15,7 @@ import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
+import { Config } from "@/config/config"
 import { makeRuntime } from "@/effect/run-service"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
@@ -161,6 +162,10 @@ export namespace PlanFollowup {
   export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+  const ConfigAnswer = {
+    new: ANSWER_NEW_SESSION,
+    current: ANSWER_CONTINUE,
+  }
 
   export function abort(sessionID: SessionID) {
     const ctl = pending.get(sessionID)
@@ -465,13 +470,14 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort })
-    if (!answers) {
-      Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
-      return "break"
-    }
+    const cfg = await Config.get()
+    const answer =
+      cfg.plan_followup === "new" || cfg.plan_followup === "current"
+        ? ConfigAnswer[cfg.plan_followup]
+        : (await prompt({ sessionID: input.sessionID, abort: input.abort }))?.[0]?.[0]?.trim()
 
-    const answer = answers[0]?.[0]?.trim()
+    if (input.abort.aborted) return "break"
+
     if (!answer) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"
