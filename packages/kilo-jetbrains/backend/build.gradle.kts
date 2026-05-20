@@ -1,3 +1,5 @@
+import normalization.NormalizeOpenApiSpecTask
+
 plugins {
     alias(libs.plugins.rpc)
     alias(libs.plugins.kotlin)
