@@ -35,9 +35,13 @@ export const ServeCommand = effectCmd({
         abort.abort()
       }
     }
-    process.on("SIGTERM", () => shutdown("sigterm"))
-    process.on("SIGINT", () => shutdown("sigint"))
-    process.on("SIGHUP", () => shutdown("sighup"))
+    const onSignal = (reason: string) => shutdown(reason).catch((err) => {
+      log.error("signal shutdown failed", { err })
+      process.exit(1)
+    })
+    process.on("SIGTERM", () => onSignal("sigterm"))
+    process.on("SIGINT", () => onSignal("sigint"))
+    process.on("SIGHUP", () => onSignal("sighup"))
 
     // Orphan detection: exit if parent dies without sending a signal
     const parentPid = process.ppid
@@ -60,7 +64,9 @@ export const ServeCommand = effectCmd({
         }
       })()
       if (!orphaned) return
-      shutdown("parent-exit")
+      shutdown("parent-exit").catch((err) => {
+        log.error("orphan shutdown failed", { err })
+      })
     }, 1000)
     orphanWatch.unref()
     // kilocode_change end
