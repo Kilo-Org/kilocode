@@ -508,6 +508,8 @@ export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
   const result = new Set<string>()
   for (const tool of tools) {
     const permission = EDIT_TOOLS.includes(tool) ? "edit" : tool
+    // kilocode_change — only blanket pattern === "*" deny rules disable tools in UI;
+    // path-specific denies keep the tool enabled but block at execution time.
     const rule = ruleset.findLast(
       (rule) => Wildcard.match(permission, rule.permission) && rule.pattern === "*",
     )

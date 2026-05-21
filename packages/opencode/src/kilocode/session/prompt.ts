@@ -109,13 +109,11 @@ export namespace KiloSessionPrompt {
     const rules = input.session.permission ?? []
     const agentDenies = input.agent.permission.filter((rule) => rule.action === "deny")
     if (!modes.includes(input.agent.name)) return Permission.merge(rules, agentDenies)
-    return Permission.merge(
-      rules,
-      input.agent.permission,
-      rules.filter((rule) => rule.action === "deny"),
-    )
+    return Permission.merge(rules, input.agent.permission)
   }
 
+  /** Acts as a hard veto for all agents, not just ask/plan — agent-level denies
+   *  cannot be overridden by session-level approvals for any agent type. */
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
     return input.agent.permission
   }
