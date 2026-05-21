@@ -1,5 +1,4 @@
 import { test, expect, describe } from "bun:test"
-import { Permission } from "../../src/permission"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 
 const { guardPermissions } = KiloSessionPrompt
@@ -47,12 +46,11 @@ describe("guardPermissions", () => {
       })
 
       test(`${name} does not duplicate agent deny rules`, () => {
-        const session = { permission: [readAllow] }
+        const session = { permission: [grepAllow] }
         const agent = { name, permission: [bashDeny, readAllow] }
         const result = guardPermissions({ agent, session })
-        // agent allow rules are in result, not duplicated
         expect(result.filter((r) => r.permission === "bash" && r.action === "deny")).toHaveLength(1)
-        expect(result.filter((r) => r.permission === "read" && r.action === "allow")).toHaveLength(1)
+        expect(result).toEqual([grepAllow, bashDeny, readAllow])
       })
     }
   })
