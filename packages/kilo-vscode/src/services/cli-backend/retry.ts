@@ -1,5 +1,5 @@
-// Replicated from packages/core/src/util/retry.ts to avoid adding @opencode-ai/core
-// as a dependency of the extension. Keep in sync with the original.
+// retry() is replicated from packages/core/src/util/retry.ts to avoid adding @opencode-ai/core
+// as a dependency of the extension. Keep retry() in sync with the original.
 
 const TRANSIENT = [
   "load failed",
@@ -31,4 +31,20 @@ export async function retry<T>(fn: () => Promise<T>, attempts = 3, delay = 500):
     }
   }
   throw last
+}
+
+export function deadline<T>(task: Promise<T>, delay: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), delay)
+    task.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err) => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
 }

@@ -53,7 +53,7 @@ import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
-import { retry } from "./services/cli-backend/retry"
+import { deadline, retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
@@ -190,6 +190,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private cachedMcpStatusMessage: unknown = null
   /** Ref-count of in-flight handleUpdateConfig calls; prevents fetchAndSendConfig from sending stale data */
   private pending = 0
+  private refreshWait = 5_000
   private configWarningsShown = false
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
@@ -2425,8 +2426,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-      const { data: global } = await this.client.global.config.get({ throwOnError: true })
+      const refreshed = await deadline(
+        (async () => {
+          const { data: merged } = await retry(() =>
+            this.client!.config.get({ directory: dir }, { throwOnError: true }),
+          )
+          const { data: global } = await this.client!.global.config.get({ throwOnError: true })
+          return { merged, global }
+        })(),
+        this.refreshWait,
+        "Timed out refreshing saved config",
+      )
+      const merged = refreshed.merged
+      const global = refreshed.global
       this.cachedGlobalConfig = global ?? null
       this.cachedConfigMessage = {
         type: "configLoaded",

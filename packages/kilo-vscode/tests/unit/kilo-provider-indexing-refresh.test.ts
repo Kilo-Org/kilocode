@@ -8,9 +8,12 @@ type Internals = {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   currentSession: { id: string } | null
   cachedIndexingStatusMessage: unknown
+  pending: number
+  refreshWait: number
+  postMessage: (message: unknown) => void
   handleEvent: (event: unknown, directory?: string) => void
   reloadAfterAuthChange: () => Promise<void>
-  handleUpdateConfig: (partial: Partial<Config>) => Promise<void>
+  handleUpdateConfig: (partial: Partial<Config>, project?: Partial<Config>) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendAgents: () => Promise<void>
@@ -36,6 +39,7 @@ function createConnection() {
   }
 
   return {
+    client,
     drains: () => drains,
     service: {
       drainPendingPrompts: async () => {
@@ -95,6 +99,23 @@ describe("KiloProvider indexing refresh", () => {
 
     expect(conn.drains()).toBe(1)
     expect(indexing).toBe(0)
+  })
+
+  it("confirms saved config when the post-write refresh stalls", async () => {
+    const conn = createConnection()
+    conn.client.config.get = async () => new Promise<never>(() => {})
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    const messages: Array<{ type?: string }> = []
+
+    internal.connectionState = "connected"
+    internal.refreshWait = 0
+    internal.postMessage = (message) => messages.push(message as { type?: string })
+
+    await internal.handleUpdateConfig({ indexing: { provider: "kilo" } })
+
+    expect(messages.some((message) => message.type === "configUpdated")).toBe(true)
+    expect(internal.pending).toBe(0)
   })
 
   it("fetchAndSendIndexingStatus uses current session directory header", async () => {
