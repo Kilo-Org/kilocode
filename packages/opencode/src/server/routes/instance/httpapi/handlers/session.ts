@@ -18,7 +18,7 @@ import { Todo } from "@/session/todo"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { NotFoundError } from "@/storage/storage"
 import { NamedError } from "@opencode-ai/core/util/error"
-import { Cause, Effect, Schema, Scope } from "effect"
+import { Cause, Effect, Option, Schema, Scope } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError, HttpApiSchema } from "effect/unstable/httpapi"
@@ -36,6 +36,7 @@ import {
   ShellPayload,
   SummarizePayload,
   UpdatePayload,
+  ViewedPayload,
 } from "../groups/session"
 
 const mapNotFound = <A, E, R>(self: Effect.Effect<A, E, R>) =>
@@ -125,7 +126,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           if (!page.cursor) return page.items
 
           const request = yield* HttpServerRequest.HttpServerRequest
-          const url = new URL(request.url, "http://localhost")
+          // toURL() honors the Host + x-forwarded-proto headers, so the Link
+          // header echoes the real origin instead of a hard-coded localhost.
+          const url = Option.getOrElse(HttpServerRequest.toURL(request), () => new URL(request.url, "http://localhost"))
           url.searchParams.set("limit", ctx.query.limit.toString())
           url.searchParams.set("before", page.cursor)
           return HttpServerResponse.jsonUnsafe(page.items, {
@@ -358,6 +361,14 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return yield* session.updatePart(payload)
     })
 
+    // kilocode_change start
+    const viewed = Effect.fn("SessionHttpApi.viewed")(function* (ctx: { payload: typeof ViewedPayload.Type }) {
+      const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
+      KiloSessions.setViewedSessions({ focused: ctx.payload.focused ?? [], open: ctx.payload.open ?? [] })
+      return true
+    })
+    // kilocode_change end
+
     return handlers
       .handle("list", list)
       .handle("status", status)
@@ -386,5 +397,6 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handle("deleteMessage", deleteMessage)
       .handle("deletePart", deletePart)
       .handle("updatePart", updatePart)
+      .handle("viewed", viewed) // kilocode_change
   }),
 )

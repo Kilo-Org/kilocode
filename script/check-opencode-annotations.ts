@@ -35,7 +35,6 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dir, "..")
 const SOURCE_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".yml", ".yaml", ".toml", ".sh", ".bash", ".zsh"])
 const SCOPES = [
-  "sdks/vscode",
   "packages/opencode",
   "packages/extensions",
   "packages/ui",

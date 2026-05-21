@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Udostępnij tę sesję i skopiuj URL do schowka",
   "command.session.unshare": "Przestań udostępniać sesję",
   "command.session.unshare.description": "Zatrzymaj udostępnianie tej sesji",
+  "command.session.export": "Eksportuj transkrypcję sesji",
 
   "palette.search.placeholder": "Szukaj plików, poleceń i sesji",
   "palette.empty": "Brak wyników",
@@ -176,6 +177,8 @@ export const dict = {
   "model.tag.latest": "Najnowszy",
   "model.group.recommended": "Zalecane",
   "model.group.favorites": "Ulubione",
+  "model.group.collapse": "Zwiń {{group}}",
+  "model.group.expand": "Rozwiń {{group}}",
   "model.favorite.add": "Dodaj do ulubionych",
   "model.favorite.remove": "Usuń z ulubionych",
   "model.provider.anthropic": "Anthropic",
@@ -269,6 +272,7 @@ export const dict = {
   "prompt.attachment.remove": "Usuń załącznik",
   "prompt.action.send": "Wyślij",
   "prompt.action.send.blocked": "Najpierw odpowiedz na oczekujące pytanie lub je odrzuć",
+  "prompt.action.send.recording": "Transkrybuj i wyślij",
   "prompt.action.stop": "Zatrzymaj",
   "prompt.action.enhance": "Ulepsz prompt",
   "prompt.action.autoApprove.enable": "Włącz automatyczne zatwierdzanie",
@@ -1617,4 +1621,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan jest gotowy:",
 }

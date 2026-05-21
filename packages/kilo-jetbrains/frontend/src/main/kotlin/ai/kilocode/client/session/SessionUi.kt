@@ -5,15 +5,14 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.scroll.SessionScroll
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
-import ai.kilocode.client.session.ui.PermissionPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.ui.QuestionPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
@@ -22,6 +21,8 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.views.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.ui.LafManagerListener
@@ -34,7 +35,6 @@ import com.intellij.openapi.util.registry.Registry
 import kotlinx.coroutines.CoroutineScope
 import java.awt.BorderLayout
 import javax.swing.BoxLayout
-import javax.swing.BoxLayout.Y_AXIS
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -96,8 +96,8 @@ class SessionUi(
 
     internal lateinit var scroll: SessionScroll
 
-    private lateinit var question: QuestionPanel
-    private lateinit var permission: PermissionPanel
+    private lateinit var question: QuestionView
+    private lateinit var permission: PermissionView
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
@@ -145,12 +145,18 @@ class SessionUi(
 
         load = LoadingPanel()
         progressBody = load
-        messageBody = SessionMessageListPanel(controller.model, this)
+        question = QuestionView(
+            reply = { id, dto -> controller.replyQuestion(id, dto) },
+            reject = { id -> controller.rejectQuestion(id) },
+            scroll = { scroll.followBottom(true) },
+        )
+        permission = PermissionView(
+            reply = { id, dto -> controller.replyPermission(id, dto) },
+        )
+        messageBody = SessionMessageListPanel(controller.model, this, question, permission)
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
-        question = QuestionPanel(controller)
-        permission = PermissionPanel(controller)
         connection = ConnectionPanel(this, controller)
 
         prompt = PromptPanel(
@@ -162,12 +168,8 @@ class SessionUi(
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        // Dock panels stay in normal flow so each visible state takes layout space
-        // above the prompt.
         root.content.add(JPanel().apply {
-            this.layout = BoxLayout(this, Y_AXIS)
-            add(question)
-            add(permission)
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
             add(connection)
             add(prompt)
         }, BorderLayout.SOUTH)
@@ -320,22 +322,6 @@ class SessionUi(
 
     private fun onStateChanged(state: SessionState) {
         prompt.setBusy(state.isBusy())
-        when (state) {
-            is SessionState.AwaitingQuestion -> {
-                permission.hidePanel()
-                question.show(state.question)
-            }
-
-            is SessionState.AwaitingPermission -> {
-                question.hidePanel()
-                permission.show(state.permission)
-            }
-
-            else -> {
-                question.hidePanel()
-                permission.hidePanel()
-            }
-        }
         refresh()
     }
 

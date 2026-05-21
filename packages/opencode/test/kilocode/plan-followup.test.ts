@@ -7,6 +7,7 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -71,7 +72,7 @@ const savedKey = `${saved.providerID}/${saved.modelID}`
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
   await fs.rm(statePath, { force: true }).catch(() => {})
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       await fs.rm(statePath, { force: true }).catch(() => {})
@@ -701,12 +702,12 @@ describe("plan follow-up", () => {
 
       const dir = other.path
 
-      const seeded = await Instance.provide({
+      const seeded = await WithInstance.provide({
         directory: dir,
         fn: async () => seed({ text: "1. Add API\n2. Add tests" }),
       })
 
-      const before = await Instance.provide({
+      const before = await WithInstance.provide({
         directory: dir,
         fn: async () => sessions(),
       })
@@ -726,7 +727,7 @@ describe("plan follow-up", () => {
       })
 
       await expect(pending).resolves.toBe("break")
-      const after = await Instance.provide({
+      const after = await WithInstance.provide({
         directory: dir,
         fn: async () => sessions(),
       })
@@ -740,7 +741,7 @@ describe("plan follow-up", () => {
       expect(next?.parentID).toBeUndefined()
 
       if (next) {
-        const planPath = await Instance.provide({
+        const planPath = await WithInstance.provide({
           directory: dir,
           fn: async () => Session.plan(await Session.get(seeded.sessionID), Instance.current),
         })

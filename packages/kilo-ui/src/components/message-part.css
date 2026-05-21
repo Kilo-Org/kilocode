@@ -187,6 +187,25 @@
   }
 }
 
+/* File mention chips in sent user messages */
+[data-slot="user-message-text"] [data-highlight="file"] {
+  color: var(--vscode-textLink-foreground, var(--syntax-property));
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground, var(--syntax-property)) 15%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, var(--syntax-property)) 25%, transparent);
+}
+
+[data-slot="user-message-text"] [data-highlight="file"][data-clickable] {
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+[data-slot="user-message-text"] [data-highlight="file"][data-clickable]:hover {
+  background-color: color-mix(in srgb, var(--vscode-textLink-foreground, var(--syntax-property)) 25%, transparent);
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-textLink-foreground, var(--syntax-property)) 40%, transparent);
+  text-decoration: underline;
+}
+
 html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   border-radius: 0;
   background: var(--vscode-terminal-background, var(--vscode-panel-background));
@@ -402,9 +421,17 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="reasoning-label"] {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  [data-slot="reasoning-title"] {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--text-weak);
+    font-weight: var(--font-weight-regular);
   }
 
   [data-slot="reasoning-content"] {

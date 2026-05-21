@@ -28,6 +28,11 @@ import { Question } from "@/question"
 import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
 
+async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
+  const { WithInstance } = await import("@/project/with-instance")
+  return WithInstance.provide(input)
+}
+
 export namespace KiloSessions {
   export const Event = {
     RemoteStatusChanged: BusEvent.define(
@@ -363,7 +368,7 @@ export namespace KiloSessions {
       const conn = RemoteWS.connect({
         url,
         getToken: kilocodeToken,
-        withContext: (fn) => Instance.provide({ directory, fn }),
+        withContext: (fn) => provide({ directory, fn }),
         getSessions,
         log,
         onOpen: () => {
@@ -375,7 +380,7 @@ export namespace KiloSessions {
         onMessage: (msg) => {
           // Must run inside Instance.provide so Bus.subscribeAll can access
           // the instance-scoped subscription map via Instance.state().
-          void Instance.provide({ directory, fn: () => sender.handle(msg) })
+          void provide({ directory, fn: () => sender.handle(msg) })
         },
         onClose: () => disableRemote(),
       })
@@ -434,7 +439,7 @@ export namespace KiloSessions {
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSessions(input: { focused: string[]; open?: string[] }) {
+  export function setViewedSessions(input: { focused: readonly string[]; open?: readonly string[] }) {
     focused.clear()
     opened.clear()
     for (const id of input.focused) {
@@ -691,7 +696,7 @@ export namespace KiloSessions {
   }
 
   async function meta(sessionId?: string) {
-    const override = sessionId ? KiloSession.getPlatformOverride(sessionId) : undefined
+    const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)

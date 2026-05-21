@@ -48,6 +48,7 @@ export const iconNames = [
   "nvidia",
   "novita-ai",
   "nova",
+  "neuralwatt", // kilocode_change
   "nebius",
   "nano-gpt",
   "morph",
@@ -67,6 +68,7 @@ export const iconNames = [
   "llmgateway", // kilocode_change
   "llama",
   "kuae-cloud-coding-plan",
+  "kiro", // kilocode_change
   "kimi-for-coding",
   "kilo",
   "jiekou",
@@ -84,6 +86,7 @@ export const iconNames = [
   "gitlab",
   "github-models",
   "github-copilot",
+  "frogbot", // kilocode_change
   "friendli",
   "firmware",
   "fireworks-ai",

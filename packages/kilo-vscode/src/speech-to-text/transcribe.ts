@@ -3,6 +3,8 @@ import { getErrorMessage } from "../kilo-provider-utils"
 import { getSpeechToTextModel } from "./models"
 
 const PATH = "/kilo/audio/transcriptions"
+const PROMPT =
+  "Transcribe exactly what is spoken. Do not paraphrase, summarize, infer intent, or rewrite for clarity. Preserve the speaker's original wording as closely as possible, including incomplete phrases and unusual wording when audible."
 
 type Req = {
   model?: string
@@ -39,6 +41,8 @@ export async function transcribeSpeech(
 
   const auth = Buffer.from(`kilo:${cfg.password}`).toString("base64")
   const url = new URL(PATH, cfg.baseUrl)
+  const model = getSpeechToTextModel(input.model)
+  const prompt = model.verbatim ? PROMPT : undefined
   if (dir) url.searchParams.set("directory", dir)
 
   try {
@@ -50,12 +54,13 @@ export async function transcribeSpeech(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: getSpeechToTextModel(input.model).id,
+        model: model.id,
         input_audio: {
           data: input.data,
           format: input.format,
         },
         ...(input.language ? { language: input.language } : {}),
+        ...(prompt ? { prompt } : {}),
       }),
     })
 

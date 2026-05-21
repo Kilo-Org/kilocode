@@ -15,8 +15,24 @@ import z from "zod"
 
 export namespace SessionNetwork {
   const log = Log.create({ service: "session.network" })
-  const codes = new Set(["ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "ETIMEDOUT", "ENETUNREACH"])
+  const codes = new Set([
+    "ECONNRESET",
+    "ECONNREFUSED",
+    "ENOTFOUND",
+    "EAI_AGAIN",
+    "ETIMEDOUT",
+    "ENETUNREACH",
+    "EHOSTUNREACH",
+    "ENETDOWN",
+    "UND_ERR_CONNECT_TIMEOUT",
+    "UND_ERR_HEADERS_TIMEOUT",
+    "UND_ERR_SOCKET",
+    "ERR_SOCKET_CONNECTION_TIMEOUT",
+  ])
+  const urls = ["https://kilo.ai", "https://example.com", "https://cloudflare.com/cdn-cgi/trace"]
   const POLL_MS = 3_000
+  const PROBE_MS = 5_000
+  const RESUME_MS = 10_000
 
   function chain(err: unknown, seen = new Set<unknown>()): unknown[] {
     if (err === undefined) return []
@@ -25,7 +41,11 @@ export namespace SessionNetwork {
       seen.add(err)
     }
     const cause = typeof err === "object" && err !== null ? (err as { cause?: unknown }).cause : undefined
-    return [err, ...chain(cause, seen)]
+    const kids =
+      typeof err === "object" && err !== null && Array.isArray((err as { errors?: unknown }).errors)
+        ? ((err as { errors: unknown[] }).errors ?? [])
+        : []
+    return [err, ...chain(cause, seen), ...kids.flatMap((item) => chain(item, seen))]
   }
 
   function msgs(err: unknown) {
@@ -48,7 +68,8 @@ export namespace SessionNetwork {
     message: Schema.String,
     restored: Schema.Boolean,
     time: Schema.Struct({
-      created: Schema.Number,
+      created: Schema.Finite,
+      restored: Schema.optional(Schema.Finite),
     }),
   })
     .annotate({ identifier: "SessionNetworkWait" })
@@ -76,6 +97,7 @@ export namespace SessionNetwork {
       Schema.Struct({
         sessionID: SessionID,
         requestID: QuestionID,
+        time: Schema.Finite,
       }),
     ),
   }
@@ -85,6 +107,7 @@ export namespace SessionNetwork {
       QuestionID,
       {
         info: Types.Mutable<Wait>
+        abort: AbortSignal
         resolve: () => void
         reject: (e: unknown) => void
       }
@@ -120,17 +143,26 @@ export namespace SessionNetwork {
   }
 
   export function disconnected(err: unknown) {
-    const match = code(err)
-    if (match && codes.has(match)) return true
+    for (const item of chain(err)) {
+      const match = (item as { code?: unknown })?.code
+      if (typeof match === "string" && codes.has(match)) return true
+    }
     // kilocode_change - recognize AbortSignal.timeout() errors
     for (const item of chain(err)) {
       if (item instanceof DOMException && item.name === "TimeoutError") return true
     }
     return msgs(err).some((item) => {
       const msg = item.toLowerCase()
+      if (msg.includes("load failed")) return true
+      if (msg.includes("failed to fetch")) return true
       if (msg.includes("fetch failed")) return true
+      if (msg.includes("network connection was lost")) return true
       if (msg.includes("network is unreachable")) return true
       if (msg.includes("socket connection")) return true
+      if (msg.includes("socket hang up")) return true
+      if (msg.includes("connection timed out")) return true
+      if (msg.includes("connection terminated")) return true
+      if (msg.includes("connect timeout")) return true
       if (msg.includes("unable to connect") && msg.includes("access the url")) return true
       return false
     })
@@ -148,18 +180,64 @@ export namespace SessionNetwork {
     if (match === "EAI_AGAIN") return "DNS lookup failed"
     if (match === "ETIMEDOUT") return "Connection timed out"
     if (match === "ENETUNREACH") return "Network is unreachable"
+    if (match === "EHOSTUNREACH") return "Host is unreachable"
+    if (match === "ENETDOWN") return "Network is down"
+    if (match === "UND_ERR_CONNECT_TIMEOUT") return "Connection timed out"
+    if (match === "UND_ERR_HEADERS_TIMEOUT") return "Request timed out"
+    if (match === "UND_ERR_SOCKET") return "Network socket failed"
+    if (match === "ERR_SOCKET_CONNECTION_TIMEOUT") return "Connection timed out"
     const matchMsg = msgs(err).find((item) => {
       const msg = item.toLowerCase()
       return msg.includes("unable to connect") && msg.includes("access the url")
     })
     if (matchMsg) return matchMsg
+    if (msgs(err).some((item) => item.toLowerCase().includes("failed to fetch"))) return "Network request failed"
     if (msgs(err).some((item) => item.toLowerCase().includes("fetch failed"))) return "Network request failed"
     return "Network connection failed"
   }
 
+  async function check(url: string) {
+    const ctl = new AbortController()
+    const timer = setTimeout(() => ctl.abort(), PROBE_MS)
+    return fetch(url, {
+      method: "HEAD",
+      signal: ctl.signal,
+    })
+      .then((res) => res.status < 500)
+      .catch(() => false)
+      .finally(() => clearTimeout(timer))
+  }
+
   async function probe() {
-    const info = await Bun.dns.lookup("dns.google")
-    return info.length > 0
+    return Promise.any(
+      urls.map(async (url) => {
+        if (await check(url)) return true
+        throw new Error("network probe failed")
+      }),
+    ).catch(() => false)
+  }
+
+  async function delay(abort: AbortSignal) {
+    if (abort.aborted) return false
+    return new Promise<boolean>((resolve) => {
+      const timer = setTimeout(() => {
+        abort.removeEventListener("abort", onAbort)
+        resolve(true)
+      }, RESUME_MS)
+      function onAbort() {
+        clearTimeout(timer)
+        resolve(false)
+      }
+      abort.addEventListener("abort", onAbort, { once: true })
+    })
+  }
+
+  async function resume(input: { requestID: QuestionID; abort: AbortSignal }) {
+    if (!(await delay(input.abort))) return
+    const s = await state()
+    const req = s.pending.get(input.requestID)
+    if (!req || !req.info.restored) return
+    await reply({ requestID: input.requestID })
   }
 
   async function watch(input: { requestID: QuestionID; abort: AbortSignal }) {
@@ -202,6 +280,7 @@ export namespace SessionNetwork {
       }
       s.pending.set(id, {
         info,
+        abort: input.abort,
         resolve: () => {
           input.abort.removeEventListener("abort", onAbort)
           resolve()
@@ -234,11 +313,17 @@ export namespace SessionNetwork {
       const requestID = input.requestID as QuestionID
       const req = s.pending.get(requestID)
       if (!req || req.info.restored) return
+      const time = Date.now()
       req.info.restored = true
+      req.info.time = { ...req.info.time, restored: time }
       log.info("network restored", { sessionID: req.info.sessionID, requestID })
       Bus.publish(Event.Restored, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,
+        time,
+      })
+      void resume({ requestID, abort: req.abort }).catch((err) => {
+        log.error("auto resume failed", { err, requestID })
       })
     },
   )

@@ -1,4 +1,5 @@
 import { OpenApi } from "effect/unstable/httpapi"
+import { matchLegacyKiloOpenApi } from "@/kilocode/server/httpapi/public" // kilocode_change
 import { OpenCodeHttpApi } from "./api"
 
 type OpenApiParameter = {
@@ -75,6 +76,8 @@ const QueryNumberParameters = new Set(["start", "cursor", "limit", "method"])
 const QueryBooleanParameters = new Set(["roots", "archived"])
 const QueryParameterSchemas = {
   "GET /find/file limit": { type: "integer", minimum: 1, maximum: 200 },
+  "GET /experimental/session worktrees": { type: "boolean" }, // kilocode_change
+  "GET /kilo/cloud-sessions cursor": { type: "string" }, // kilocode_change
   "GET /session/{sessionID}/diff messageID": { type: "string", pattern: "^msg.*" },
   "GET /session/{sessionID}/message limit": { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
 } satisfies Record<string, OpenApiSchema>
@@ -183,6 +186,7 @@ function matchLegacyOpenApi(input: Record<string, unknown>) {
       for (const param of operation.parameters) normalizeParameter(param, `${method.toUpperCase()} ${path}`)
     }
   }
+  matchLegacyKiloOpenApi(input) // kilocode_change
   return input
 }
 
@@ -522,6 +526,8 @@ function pathParameterSchema(route: string, name: string) {
   if (name === "id" && route.startsWith("POST /experimental/workspace/")) return { type: "string", pattern: "^wrk.*" }
   if (name === "requestID" && route.startsWith("POST /permission/")) return { type: "string", pattern: "^per.*" }
   if (name === "requestID" && route.startsWith("POST /question/")) return { type: "string", pattern: "^que.*" }
+  // /network/* reuses QuestionID (prefix "que"), not a separate brand. // kilocode_change
+  if (name === "requestID" && route.startsWith("POST /network/")) return { type: "string", pattern: "^que.*" } // kilocode_change
   return undefined
 }
 

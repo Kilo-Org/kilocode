@@ -5,8 +5,8 @@ import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ui.CollectionListModel
-import com.intellij.ui.ExperimentalUI
 import com.intellij.ui.GroupHeaderSeparator
+import com.intellij.ui.NewUI
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
@@ -23,7 +23,7 @@ import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.RenderingHints
-import java.awt.Toolkit
+import java.awt.font.FontRenderContext
 import javax.swing.Icon
 import javax.swing.JList
 import javax.swing.JPanel
@@ -53,7 +53,7 @@ internal class ModelPickerRenderer(
         }
 
         private fun favoriteInset(list: JList<*>): Int {
-            if (!ExperimentalUI.isNewUI()) return 0
+            if (!NewUI.isEnabled()) return 0
             val inner = JBUI.CurrentTheme.Popup.Selection.innerInsets()
             val edge = JBUI.CurrentTheme.Popup.Selection.LEFT_RIGHT_INSET.get()
             return edge + if (list.componentOrientation.isLeftToRight) inner.right else inner.left
@@ -162,11 +162,9 @@ internal class ModelPickerRenderer(
         private val text = KiloBundle.message("model.picker.free")
 
         override fun getIconWidth(): Int {
-            val fm = JBFont.small().let { font ->
-                @Suppress("DEPRECATION")
-                Toolkit.getDefaultToolkit().getFontMetrics(font)
-            }
-            return fm.stringWidth(text) + JBUI.scale(12)
+            val font = JBFont.small()
+            val w = font.getStringBounds(text, FontRenderContext(null, true, true)).width.toInt()
+            return w + JBUI.scale(12)
         }
 
         override fun getIconHeight(): Int = JBUI.scale(16)

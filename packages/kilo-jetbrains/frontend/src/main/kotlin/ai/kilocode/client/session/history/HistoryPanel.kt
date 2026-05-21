@@ -5,6 +5,8 @@ import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.iconButton
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.application.ApplicationManager
@@ -12,11 +14,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataProvider
-import com.intellij.openapi.actionSystem.Presentation
-import com.intellij.openapi.actionSystem.impl.ActionButton
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.PopupHandler
@@ -180,12 +178,12 @@ class HistoryPanel(
 
     private fun back(): BorderLayoutPanel {
         val label = KiloBundle.message("history.back")
-        val action = object : AnAction(label, null, AllIcons.Actions.Back) {
-            override fun actionPerformed(e: AnActionEvent) = nav()
-        }
-        val presentation = Presentation(label).apply { icon = AllIcons.Actions.Back }
-        val btn = ActionButton(action, presentation, ActionPlaces.TOOLBAR, JBUI.size(16)).apply {
+        val btn = HoverIcon().apply {
+            icon = AllIcons.Actions.Back
+            toolTipText = label
+            accessibleContext.accessibleName = label
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            addActionListener { nav() }
         }
         return BorderLayoutPanel().apply {
             add(btn, BorderLayout.WEST)
@@ -379,17 +377,17 @@ class HistoryPanel(
 
     internal fun backText(): String? {
         val view = activeInfo().foreSideComponent ?: return null
-        return UIUtil.uiTraverser(view).filter(ActionButton::class.java).firstOrNull()?.presentation?.text
+        return UIUtil.uiTraverser(view).filter(HoverIcon::class.java).firstOrNull()?.toolTipText
     }
 
     internal fun backCursor(): Int? {
         val view = activeInfo().foreSideComponent ?: return null
-        return UIUtil.uiTraverser(view).filter(ActionButton::class.java).firstOrNull()?.cursor?.type
+        return UIUtil.uiTraverser(view).filter(HoverIcon::class.java).firstOrNull()?.cursor?.type
     }
 
     internal fun clickBack() {
         val view = activeInfo().foreSideComponent ?: return
-        UIUtil.uiTraverser(view).filter(ActionButton::class.java).firstOrNull()?.click()
+        UIUtil.uiTraverser(view).filter(HoverIcon::class.java).firstOrNull()?.doClick()
     }
 
     internal fun clickDelete() {

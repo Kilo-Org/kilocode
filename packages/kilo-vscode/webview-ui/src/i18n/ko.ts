@@ -96,6 +96,7 @@ export const dict = {
   "command.session.share.description": "이 세션을 공유하고 URL을 클립보드에 복사",
   "command.session.unshare": "세션 공유 중지",
   "command.session.unshare.description": "이 세션 공유 중지",
+  "command.session.export": "세션 기록 내보내기",
 
   "palette.search.placeholder": "파일, 명령어 및 세션 검색",
   "palette.empty": "결과 없음",
@@ -179,6 +180,8 @@ export const dict = {
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
+  "model.group.collapse": "{{group}} 접기",
+  "model.group.expand": "{{group}} 펼치기",
   "model.favorite.add": "즐겨찾기에 추가",
   "model.favorite.remove": "즐겨찾기에서 제거",
 
@@ -271,6 +274,7 @@ export const dict = {
   "prompt.attachment.remove": "첨부 파일 제거",
   "prompt.action.send": "전송",
   "prompt.action.send.blocked": "먼저 대기 중인 질문에 답하거나 닫아주세요",
+  "prompt.action.send.recording": "텍스트 변환 및 전송",
   "prompt.action.stop": "중지",
   "prompt.action.enhance": "프롬프트 개선",
   "prompt.action.autoApprove.enable": "자동 승인 사용",
@@ -1591,4 +1595,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "일치하는 브랜치 없음",
   "diffViewer.baseBranch.loading": "브랜치 로딩 중…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "계획이 준비되었습니다:",
 }

@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"

@@ -49,6 +49,7 @@ import { resolveModelSelection } from "./model-selection"
 import { resolveMessagePrefs } from "./session-preferences"
 import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
+import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
@@ -248,6 +249,7 @@ interface SessionContextValue {
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
   renameSession: (id: string, title: string) => void
+  exportSessionTranscript: (id: string) => void
   syncSession: (sessionID: string) => void
 
   // Cloud session preview
@@ -812,6 +814,7 @@ export const SessionProvider: ParentComponent = (props) => {
           mode: message.mode,
           cursor: message.cursor,
           hasMore: message.hasMore,
+          since: message.since,
         })
         break
 
@@ -1029,17 +1032,15 @@ export const SessionProvider: ParentComponent = (props) => {
     return [...messages, ...orphans]
   }
 
-  // Cheap shape check: same ids in same order AND same part counts per message.
-  // Short-circuits reconcile when the server snapshot matches local state
-  // (the common case — SSE didn't actually miss anything), avoiding the
-  // 80 setStore("parts", ...) calls per session switch.
+  // Cheap tail check: same ids in the same order and no visible streamed-part
+  // correction to apply. It skips store churn when SSE already matches the
+  // snapshot, but lets reconcile heal part removals and finalized text.
   function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
     if (current.length !== incoming.length) return false
-    for (let i = 0; i < incoming.length; i++) {
+    for (const [i, n] of incoming.entries()) {
       const c = current[i]!
-      const n = incoming[i]!
       if (c.id !== n.id) return false
-      if ((c.parts?.length ?? 0) !== (n.parts?.length ?? 0)) return false
+      if (!sameParts(store.parts[c.id] ?? c.parts, n.parts)) return false
     }
     return true
   }
@@ -1047,7 +1048,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleMessagesLoaded(
     sessionID: string,
     messages: Message[],
-    input: { mode?: Exclude<MessageLoadMode, "focus">; cursor?: string; hasMore?: boolean } = {},
+    input: { mode?: Exclude<MessageLoadMode, "focus">; cursor?: string; hasMore?: boolean; since?: number } = {},
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
@@ -1085,19 +1086,23 @@ export const SessionProvider: ParentComponent = (props) => {
       }
 
       for (const msg of messages) {
-        if (!msg.parts || msg.parts.length === 0) continue
+        const parts = msg.parts ?? []
         if (mode === "reconcile" && store.parts[msg.id]) {
           // Reconcile on a message already hydrated into the reactive store:
-          // write parts directly so visible turns pick up the server-
-          // authoritative state immediately instead of waiting for the
-          // virtualizer to re-render.
-          setStore("parts", msg.id, reconcile(msg.parts, { key: "id" }))
+          // write parts directly so visible turns pick up server corrections,
+          // but do not erase proven newer streamed text absent from a stale snapshot.
+          const merged = mergeParts(store.parts[msg.id], parts, input.since ?? Number.POSITIVE_INFINITY)
+          setStore("parts", msg.id, reconcile(merged, { key: "id" }))
           stash.remove(msg.id)
-        } else {
-          // Stash parts outside the reactive store — they'll be hydrated
-          // on demand when the virtualizer renders the corresponding turn.
-          stash.put(msg.id, msg.parts)
+          continue
         }
+        if (parts.length > 0) {
+          // Stash parts outside the reactive store. They hydrate on demand
+          // when the virtualizer renders the corresponding turn.
+          stash.put(msg.id, parts)
+          continue
+        }
+        if (mode === "reconcile") stash.remove(msg.id)
       }
 
       // "reconcile" is a background tail refresh, not a page navigation —
@@ -2141,6 +2146,18 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "renameSession", sessionID: id, title })
   }
 
+  function exportSessionTranscript(id: string) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot export session transcript: not connected")
+      return
+    }
+    if (id.startsWith("cloud:")) {
+      console.warn("[Kilo New] Cannot export cloud session transcript")
+      return
+    }
+    vscode.postMessage({ type: "exportSessionTranscript", sessionID: id })
+  }
+
   // Computed values
   const currentSession = () => {
     const id = currentSessionID()
@@ -2429,6 +2446,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectSession,
     deleteSession,
     renameSession,
+    exportSessionTranscript,
     syncSession,
     cloudPreviewId,
     selectCloudSession,

@@ -9,6 +9,7 @@ import {
   isPromptBusy,
   isSuggesting,
   isQuestioning,
+  isPathMention,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
@@ -247,5 +248,35 @@ describe("isQuestioning", () => {
 
   it("returns false when not blocked but no questions", () => {
     expect(isQuestioning(false, 0)).toBe(false)
+  })
+})
+
+describe("isPathMention", () => {
+  it("returns true for a file path", () => {
+    expect(isPathMention("@src/foo.ts")).toBe(true)
+  })
+
+  it("returns true for a simple filename", () => {
+    expect(isPathMention("@README.md")).toBe(true)
+  })
+
+  it("returns true for a folder path with trailing slash", () => {
+    expect(isPathMention("@src/components/")).toBe(true)
+  })
+
+  it("returns true for a folder path without trailing slash", () => {
+    expect(isPathMention("@src/components")).toBe(true)
+  })
+
+  it("returns false for terminal mention", () => {
+    expect(isPathMention("@terminal")).toBe(false)
+  })
+
+  it("returns false for git-changes mention", () => {
+    expect(isPathMention("@git-changes")).toBe(false)
+  })
+
+  it("handles text without @ prefix", () => {
+    expect(isPathMention("src/foo.ts")).toBe(true)
   })
 })

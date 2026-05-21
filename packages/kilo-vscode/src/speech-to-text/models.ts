@@ -2,6 +2,7 @@ export interface SpeechToTextModelDef {
   readonly id: string
   readonly label: string
   readonly provider: string
+  readonly verbatim?: boolean
 }
 
 const models: SpeechToTextModelDef[] = [
@@ -9,11 +10,13 @@ const models: SpeechToTextModelDef[] = [
     id: "openai/gpt-4o-mini-transcribe",
     label: "GPT-4o Mini Transcribe",
     provider: "OpenAI",
+    verbatim: true,
   },
   {
     id: "openai/gpt-4o-transcribe",
     label: "GPT-4o Transcribe",
     provider: "OpenAI",
+    verbatim: true,
   },
   {
     id: "openai/whisper-1",

@@ -348,6 +348,7 @@ interface OpenLocallyIn {
 interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 interface CloseSessionIn {
@@ -606,6 +607,7 @@ interface SendMessageIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface SendCommandIn {
@@ -621,6 +623,7 @@ interface SendCommandIn {
   variant?: string
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 interface RequestTerminalContextIn {

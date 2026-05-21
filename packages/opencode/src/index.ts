@@ -39,7 +39,7 @@ import { RollCallCommand } from "./kilocode/cli/cmd/roll-call" // kilocode_chang
 import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
-import { InstanceStore } from "./project/instance-store" // kilocode_change
+import { InstanceRuntime } from "./project/instance-runtime" // kilocode_change
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
@@ -321,7 +321,7 @@ try {
   await Telemetry.shutdown()
   // kilocode_change end
 
-  await InstanceStore.disposeAllInstances() // kilocode_change - safety net disposal (no-op if already disposed)
+  await InstanceRuntime.disposeAllInstances() // kilocode_change - safety net disposal (no-op if already disposed)
 
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless

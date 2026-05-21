@@ -31,7 +31,8 @@ import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
 import type { ReadTool } from "@/tool/read"
 import type { WriteTool } from "@/tool/write"
-import { BashTool } from "@/tool/bash"
+import { ShellTool } from "@/tool/shell"
+import { ShellID } from "@/tool/shell/id"
 import type { GlobTool } from "@/tool/glob"
 import { TodoWriteTool } from "@/tool/todo"
 import type { GrepTool } from "@/tool/grep"
@@ -84,6 +85,7 @@ import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
 import { splitDiffHunks } from "@/kilocode/tui/diff" // kilocode_change
+import { session as banner } from "@/kilocode/cli/logo" // kilocode_change
 
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
 import { bell } from "@/kilocode/bell" // kilocode_change
@@ -357,19 +359,12 @@ export function Session() {
   // Allow exit when in child session (prompt is hidden)
   const exit = useExit()
 
+  // kilocode_change start
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
-    // kilocode_change start
-    return exit.message.set(
-      [
-        ``,
-        `  ██ ▄█▀ ██ ██     ▄████▄  ${UI.Style.TEXT_DIM}${title}${UI.Style.TEXT_NORMAL}`,
-        `  ████   ██ ██     ██  ██  ${UI.Style.TEXT_DIM}kilo -s ${session()?.id}${UI.Style.TEXT_NORMAL}`,
-        `  ██ ▀█▄ ██ ██████ ▀████▀  `,
-      ].join("\n"),
-    )
-    // kilocode_change end
+    return exit.message.set(banner(title, session()?.id, UI.Style.TEXT_DIM, UI.Style.TEXT_NORMAL))
   })
+  // kilocode_change end
 
   // kilocode_change start - double ctrl+c to exit for child sessions
   const [exitPress, setExitPress] = createSignal(0)
@@ -1699,8 +1694,8 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
   return (
     <Show when={!shouldHide()}>
       <Switch>
-        <Match when={props.part.tool === "bash"}>
-          <Bash {...toolprops} />
+        <Match when={props.part.tool === ShellID.ToolID}>
+          <Shell {...toolprops} />
         </Match>
         <Match when={props.part.tool === "glob"}>
           <Glob {...toolprops} />
@@ -1952,7 +1947,7 @@ function BlockTool(props: {
   )
 }
 
-function Bash(props: ToolProps<typeof BashTool>) {
+function Shell(props: ToolProps<typeof ShellTool>) {
   const { theme } = useTheme()
   const sync = useSync()
   const isRunning = createMemo(() => props.part.state.status === "running")

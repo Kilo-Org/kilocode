@@ -29,6 +29,7 @@ export interface SendMessageRequest {
   variant?: string
   files?: FileAttachment[]
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 export interface AbortRequest {
@@ -240,6 +241,7 @@ export interface SendCommandRequest {
   variant?: string
   files?: FileAttachment[]
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 export interface RemoveSkillMessage {
@@ -318,12 +320,13 @@ export interface RenameSessionRequest {
   title: string
 }
 
-export interface RequestAutocompleteSettingsMessage {
-  type: "requestAutocompleteSettings"
+export interface ExportSessionTranscriptRequest {
+  type: "exportSessionTranscript"
+  sessionID: string
 }
 
-export interface RequestSpeechToTextSettingsMessage {
-  type: "requestSpeechToTextSettings"
+export interface RequestAutocompleteSettingsMessage {
+  type: "requestAutocompleteSettings"
 }
 
 export interface RequestChatCompletionMessage {
@@ -500,6 +503,7 @@ export interface OpenLocallyRequest {
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 // Fork an existing session (copies conversation history)
@@ -1097,8 +1101,8 @@ export type WebviewMessage =
   | SuggestionDismissRequest
   | DeleteSessionRequest
   | RenameSessionRequest
+  | ExportSessionTranscriptRequest
   | RequestAutocompleteSettingsMessage
-  | RequestSpeechToTextSettingsMessage
   | RequestChatCompletionMessage
   | SpeechToTextStartMessage
   | SpeechToTextStopMessage

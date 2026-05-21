@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { Instance } from "../../../src/project/instance"
+import { WithInstance } from "../../../src/project/with-instance"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { tmpdir } from "../../fixture/fixture"
 
 describe("suggestion", () => {
   test("show adds pending request with blocking flag", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const pending = Suggestion.show({
@@ -29,7 +29,7 @@ describe("suggestion", () => {
 
   test("accept resolves selected action and removes pending request", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const ask = Suggestion.show({
@@ -56,7 +56,7 @@ describe("suggestion", () => {
 
   test("dismiss rejects pending request and removes it", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const ask = Suggestion.show({
@@ -76,7 +76,7 @@ describe("suggestion", () => {
 
   test("dismissAll clears all pending suggestions for the target session", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         // Two suggestions for session A
@@ -133,7 +133,7 @@ describe("suggestion", () => {
 
   test("dismissAll is a no-op when no suggestions exist", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         // Should not throw

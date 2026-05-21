@@ -68,6 +68,7 @@ class Reasoning(id: String) : Content(id) {
 /** Tool invocation with lifecycle state. */
 class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var state: ToolExecState = ToolExecState.PENDING
+    var callId: String? = null
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()

@@ -22,9 +22,16 @@ import { Auth } from "@/auth"
 // kilocode_change start
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { getKiloProjectId } from "@/kilocode/project-id"
-import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
+import {
+  HEADER_FEATURE,
+  HEADER_PARENT_TASKID,
+  HEADER_PROJECTID,
+  HEADER_MACHINEID,
+  HEADER_TASKID,
+} from "@kilocode/kilo-gateway"
 import { Identity } from "@kilocode/kilo-telemetry"
 import { makeRuntime } from "@/effect/run-service"
+import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 // kilocode_change end
 import { Installation } from "@/installation"
@@ -105,6 +112,9 @@ const live: Layer.Layer<
         ],
         { concurrency: "unbounded" },
       )
+      // kilocode_change start - attribute Kilo gateway usage to the root product session
+      const attr = KiloSession.attribution(input.sessionID)
+      // kilocode_change end
 
       // TODO: move this to a proper hook
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
@@ -427,6 +437,8 @@ const live: Layer.Layer<
           ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
           ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
           ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
+          ...(isKilo && input.parentSessionID ? { [HEADER_PARENT_TASKID]: input.parentSessionID } : {}),
+          ...(isKilo && attr.feature ? { [HEADER_FEATURE]: attr.feature } : {}),
           // kilocode_change end
           ...input.model.headers,
           ...headers,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.2.52",
+  "version": "7.3.6",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -38,6 +38,11 @@
       "bun": "./src/server/adapter.bun.ts",
       "node": "./src/server/adapter.node.ts",
       "default": "./src/server/adapter.bun.ts"
+    },
+    "#httpapi-server": {
+      "bun": "./src/server/httpapi-server.node.ts",
+      "node": "./src/server/httpapi-server.node.ts",
+      "default": "./src/server/httpapi-server.node.ts"
     }
   },
   "devDependencies": {

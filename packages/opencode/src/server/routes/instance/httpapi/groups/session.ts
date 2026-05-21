@@ -66,6 +66,12 @@ export const RevertPayload = Schema.Struct(Struct.omit(SessionRevert.RevertInput
 export const PermissionResponsePayload = Schema.Struct({
   response: Permission.Reply,
 })
+// kilocode_change start
+export const ViewedPayload = Schema.Struct({
+  focused: Schema.optional(Schema.Array(Schema.String)),
+  open: Schema.optional(Schema.Array(Schema.String)),
+})
+// kilocode_change end
 
 export const SessionPaths = {
   list: root,
@@ -94,6 +100,7 @@ export const SessionPaths = {
   deleteMessage: `${root}/:sessionID/message/:messageID`,
   deletePart: `${root}/:sessionID/message/:messageID/part/:partID`,
   updatePart: `${root}/:sessionID/message/:messageID/part/:partID`,
+  viewed: `${root}/viewed`, // kilocode_change
 } as const
 
 export const SessionApi = HttpApi.make("session")
@@ -409,6 +416,18 @@ export const SessionApi = HttpApi.make("session")
             description: "Update a part in a message.",
           }),
         ),
+        // kilocode_change start
+        HttpApiEndpoint.post("viewed", SessionPaths.viewed, {
+          payload: ViewedPayload,
+          success: described(Schema.Boolean, "Viewed sessions updated"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "session.viewed",
+            summary: "Set viewed sessions",
+            description: "Notify the server which sessions the user is currently viewing, or clear all.",
+          }),
+        ),
+        // kilocode_change end
       )
       .annotateMerge(
         OpenApi.annotations({
