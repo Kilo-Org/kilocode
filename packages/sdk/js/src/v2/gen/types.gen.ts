@@ -1357,6 +1357,7 @@ export type Config = {
   enabled_providers?: Array<string>
   remote_control?: boolean
   auto_collapse_reasoning?: boolean
+  auto_expand_history?: boolean
   indexing?: IndexingConfig
   terminal_command_display?: "expanded" | "collapsed"
   model?: string

@@ -100,6 +100,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.autoExpandHistory.title")}
+          description={language.t("settings.display.autoExpandHistory.description")}
+        >
+          <Switch
+            checked={config().auto_expand_history !== false}
+            onChange={(checked: boolean) => updateConfig({ auto_expand_history: checked ? undefined : false })}
+            hideLabel
+          >
+            {language.t("settings.display.autoExpandHistory.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.terminalCommand.title")}
           description={language.t("settings.display.terminalCommand.description")}
           last

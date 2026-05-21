@@ -1455,6 +1455,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "ขยายประวัติข้อความอัตโนมัติ",
+  "settings.display.autoExpandHistory.description": "โหลดข้อความก่อนหน้าโดยอัตโนมัติเมื่อเลื่อนขึ้น",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",

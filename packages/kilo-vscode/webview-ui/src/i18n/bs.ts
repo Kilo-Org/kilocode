@@ -1487,6 +1487,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "Automatsko proširivanje historije poruka",
+  "settings.display.autoExpandHistory.description": "Automatski učitaj ranije poruke pri pomicanju nagore",
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",

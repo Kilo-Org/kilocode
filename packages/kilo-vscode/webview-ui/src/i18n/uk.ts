@@ -1441,6 +1441,9 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "Автоматично розгортати історію повідомлень",
+  "settings.display.autoExpandHistory.description":
+    "Автоматично завантажувати попередні повідомлення під час прокручування вгору",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",

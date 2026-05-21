@@ -1448,6 +1448,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "تمديد سجل الرسائل تلقائيًا",
+  "settings.display.autoExpandHistory.description": "تحميل الرسائل السابقة تلقائيًا عند التمرير للأعلى",
   "settings.providers.defaultModel.title": "النموذج الافتراضي",
   "settings.providers.defaultModel.description": "النموذج الأساسي للمحادثات",
   "settings.providers.smallModel.title": "نموذج صغير",

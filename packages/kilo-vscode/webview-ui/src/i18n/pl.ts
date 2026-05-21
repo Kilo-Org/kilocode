@@ -1482,6 +1482,9 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "Automatyczne rozwijanie historii wiadomości",
+  "settings.display.autoExpandHistory.description":
+    "Automatycznie ładuj wcześniejsze wiadomości podczas przewijania w górę",
   "settings.providers.defaultModel.title": "Domyślny model",
   "settings.providers.defaultModel.description": "Główny model do rozmów",
   "settings.providers.smallModel.title": "Mały model",

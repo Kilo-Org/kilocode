@@ -60,6 +60,7 @@ import { state as todoState } from "./todo-revert"
 import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
+import { deleteDraftsForSession } from "../utils/draft-store"
 
 const RECENT_LIMIT = 5
 const MESSAGE_PAGE_LIMIT = 80
@@ -1700,6 +1701,8 @@ export const SessionProvider: ParentComponent = (props) => {
         setLoading(false)
       }
     })
+    deleteDraftsForSession(sessionID)
+    window.dispatchEvent(new CustomEvent("sessionDeleted", { detail: { sessionID } }))
   }
 
   // Splices the message from the store and deletes its parts.
@@ -2190,7 +2193,47 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
       return
     }
+    const oldID = currentSessionID()
     const ready = loaded().has(id)
+    if (oldID && oldID !== id) {
+      const msgs = store.messages[oldID] ?? []
+      const msgIds = msgs.map((m) => m.id)
+      queueMicrotask(() => {
+        setStore(
+          "messages",
+          produce((messages) => {
+            delete messages[oldID]
+          }),
+        )
+        setStore(
+          "parts",
+          produce((parts) => {
+            for (const mid of msgIds) {
+              delete parts[mid]
+            }
+          }),
+        )
+        setStore(
+          "todos",
+          produce((todos) => {
+            delete todos[oldID]
+          }),
+        )
+        setStore(
+          "agentSelections",
+          produce((selections) => {
+            delete selections[oldID]
+          }),
+        )
+        setLoaded((prev) => {
+          if (!prev.has(oldID)) return prev
+          const next = new Set(prev)
+          next.delete(oldID)
+          return next
+        })
+        window.dispatchEvent(new CustomEvent("sessionDeleted", { detail: { sessionID: oldID } }))
+      })
+    }
     setCurrentSessionID(id)
     setDraftSessionID(id)
     setLoading(!ready)

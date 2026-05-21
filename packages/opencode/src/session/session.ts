@@ -643,7 +643,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
             () =>
               SyncEvent.run(MessageV2.Event.PartUpdated, {
                 sessionID: part.sessionID,
-                part: structuredClone(part),
+                part: structuredClone(MessageV2.stripPartMetadata(part)),
                 time: Date.now(),
               }),
             { type: "part update", id: part.id, sessionID: part.sessionID },

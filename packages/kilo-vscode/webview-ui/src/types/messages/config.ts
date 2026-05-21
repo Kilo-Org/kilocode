@@ -139,6 +139,7 @@ export interface Config {
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   auto_collapse_reasoning?: boolean
+  auto_expand_history?: boolean
   experimental?: ExperimentalConfig
   indexing?: IndexingConfig
 }

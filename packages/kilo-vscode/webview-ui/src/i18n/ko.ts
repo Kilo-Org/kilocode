@@ -1456,6 +1456,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "메시지 기록 자동 펴치기",
+  "settings.display.autoExpandHistory.description": "위로 스크롤 시 이전 메시지 자동 로드",
   "settings.providers.defaultModel.title": "기본 모델",
   "settings.providers.defaultModel.description": "대화의 기본 모델",
   "settings.providers.smallModel.title": "소형 모델",

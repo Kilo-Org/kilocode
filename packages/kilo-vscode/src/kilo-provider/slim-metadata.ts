@@ -182,6 +182,66 @@ function slimBash(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
+/** websearch: preserve only query/count metadata, strip results/output. */
+function slimWebsearch(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const meta = state.metadata
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (typeof meta.query === "string") slim.query = meta.query
+    if (typeof meta.count === "number") slim.count = meta.count
+    next.metadata = slim
+  }
+  return next
+}
+
+/** webfetch: preserve only url/title from input, strip response content. */
+function slimWebfetch(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const input = state.input
+  if (isObj(input)) {
+    const slim: Record<string, unknown> = {}
+    if (typeof input.url === "string") slim.url = input.url
+    if (typeof input.title === "string") slim.title = input.title
+    next.input = slim
+  }
+  return next
+}
+
+/** codesearch: preserve query/limit from input, strip results. */
+function slimCodesearch(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const input = state.input
+  if (isObj(input)) {
+    const slim: Record<string, unknown> = {}
+    if (typeof input.query === "string") slim.query = input.query
+    if (typeof input.limit === "number") slim.limit = input.limit
+    if (typeof input.type === "string") slim.type = input.type
+    next.input = slim
+  }
+  return next
+}
+
+/** task: preserve sessionId for sub-agent linking, strip heavy input/output. */
+function slimTask(state: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...state }
+  const input = state.input
+  if (isObj(input)) {
+    const slim: Record<string, unknown> = {}
+    if (typeof input.subagent_type === "string") slim.subagent_type = input.subagent_type
+    if (typeof input.prompt === "string") slim.prompt = input.prompt
+    if (typeof input.sessionId === "string") slim.sessionId = input.sessionId
+    next.input = slim
+  }
+  const meta = state.metadata
+  if (isObj(meta) && typeof meta.sessionId === "string") {
+    next.metadata = { sessionId: meta.sessionId }
+  } else {
+    delete next.metadata
+  }
+  return next
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -214,6 +274,10 @@ const slimmers: Record<string, (state: Record<string, unknown>) => Record<string
   multiedit: slimMultiedit,
   write: slimWrite,
   bash: slimBash,
+  websearch: slimWebsearch,
+  webfetch: slimWebfetch,
+  codesearch: slimCodesearch,
+  task: slimTask,
 }
 
 /** Strip provider metadata that the webview never reads from reasoning parts. */

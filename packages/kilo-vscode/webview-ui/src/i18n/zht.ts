@@ -1390,6 +1390,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "自動展開訊息紀錄",
+  "settings.display.autoExpandHistory.description": "向上捲動時自動載入較早的訊息",
   "settings.providers.defaultModel.title": "預設模型",
   "settings.providers.defaultModel.description": "對話的主要模型",
   "settings.providers.smallModel.title": "小模型",

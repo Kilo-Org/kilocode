@@ -1471,6 +1471,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "メッセージ履歴を自動展開",
+  "settings.display.autoExpandHistory.description": "上にスクロール時に以前のメッセージを自動読み込み",
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",

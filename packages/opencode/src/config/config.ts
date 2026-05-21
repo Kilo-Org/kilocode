@@ -218,6 +218,11 @@ export const Info = Schema.Struct({
   auto_collapse_reasoning: Schema.optional(Schema.Boolean).annotate({
     description: "Automatically collapse reasoning blocks after the agent finishes writing them",
   }),
+  // kilocode_change start
+  auto_expand_history: Schema.optional(Schema.Boolean).annotate({
+    description: "Auto-expand message history when scrolling up. Defaults to true.",
+  }),
+  // kilocode_change end
   indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }), // kilocode_change
   terminal_command_display: Schema.optional(Schema.Literals(["expanded", "collapsed"])).annotate({
     description: "Controls whether terminal command blocks are expanded or collapsed by default in the VS Code chat UI",

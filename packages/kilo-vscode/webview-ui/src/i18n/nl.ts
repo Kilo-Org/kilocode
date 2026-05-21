@@ -1452,6 +1452,8 @@ export const dict = {
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
   "settings.display.terminalCommand.collapsed": "Collapsed",
+  "settings.display.autoExpandHistory.title": "Berichtgeschiedenis automatisch uitvouwen",
+  "settings.display.autoExpandHistory.description": "Eerdere berichten automatisch laden bij het omhoog scrollen",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",
