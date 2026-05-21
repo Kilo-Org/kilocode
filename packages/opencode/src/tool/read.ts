@@ -381,6 +381,22 @@ export const ReadTool = Tool.define(
   }),
 )
 
+// kilocode_change start - JS strings are UTF-16. `String.prototype.substring` cuts on
+// code-unit boundaries, which can split a surrogate pair when the slice ends inside
+// one — leaving a lone high surrogate that JSON encoders downstream reject (e.g.
+// llama-server's "surrogate U+D800..U+DBFF must be followed by U+DC00..U+DFFF").
+// Snap the end back by one so we always end on a complete code point.
+function surrogateSafeSlice(text: string, end: number): string {
+  if (end <= 0) return ""
+  if (end >= text.length) return text
+  const last = text.charCodeAt(end - 1)
+  if (last >= 0xd800 && last <= 0xdbff) {
+    return text.slice(0, end - 1)
+  }
+  return text.slice(0, end)
+}
+// kilocode_change end
+
 // kilocode_change start - extracted formats use native readers; ordinary text is supplied by AppFileSystem above
 async function collect(stream: Readable, opts: { limit: number; offset: number }) {
   // kilocode_change end
@@ -399,7 +415,7 @@ async function collect(stream: Readable, opts: { limit: number; offset: number }
         more = true
         continue
       }
-      const line = text.length > MAX_LINE_LENGTH ? text.substring(0, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
+      const line = text.length > MAX_LINE_LENGTH ? surrogateSafeSlice(text, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
       const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
       if (bytes + size > MAX_BYTES) {
         cut = true

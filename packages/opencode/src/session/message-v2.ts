@@ -283,8 +283,14 @@ export type ToolStateCompleted = Types.DeepMutable<Schema.Schema.Type<typeof Too
 
 function truncateToolOutput(text: string, maxChars?: number) {
   if (!maxChars || text.length <= maxChars) return text
-  const omitted = text.length - maxChars
-  return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
+  // Snap back if the cut would land between a surrogate pair; JS strings are
+  // UTF-16 and a lone high surrogate at the end gets rejected by downstream
+  // JSON encoders (e.g. llama-server).
+  let cut = maxChars
+  const last = text.charCodeAt(cut - 1)
+  if (last >= 0xd800 && last <= 0xdbff) cut -= 1
+  const omitted = text.length - cut
+  return `${text.slice(0, cut)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
 }
 
 export const ToolStateError = Schema.Struct({

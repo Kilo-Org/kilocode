@@ -504,6 +504,26 @@ describe("tool.read truncation", () => {
     }),
   )
 
+  it.live("long-line truncation does not split a surrogate pair", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      // 📁 (U+1F4C1) is two UTF-16 code units. Placing it at code-unit
+      // index 1999 means the naive `substring(0, 2000)` cut lands between
+      // the high and low surrogate.
+      const emoji = "\u{1F4C1}"
+      const line = "x".repeat(1999) + emoji + "x".repeat(1500)
+      yield* put(path.join(dir, "emoji-line.txt"), line)
+
+      const result = yield* exec(dir, { filePath: path.join(dir, "emoji-line.txt") })
+      // Output must be encodable as JSON; a lone surrogate would throw.
+      expect(() => JSON.stringify(result.output)).not.toThrow()
+      // And it must not actually contain one.
+      const isolated = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+      expect(isolated.test(result.output)).toBe(false)
+      expect(result.output).toContain("(line truncated to 2000 chars)")
+    }),
+  )
+
   it.live("image files set truncated to false", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
