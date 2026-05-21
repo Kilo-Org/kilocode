@@ -88,14 +88,9 @@ export const TaskTool = Tool.define(
             ...(parent.permission ?? []).filter(
               (rule) => rule.permission === "external_directory" || rule.action === "deny",
             ),
-            // kilocode_change start — unconditional deny; flat two-level model
+            // kilocode_change start — unconditional todowrite deny; flat two-level model
             {
               permission: "todowrite" as const,
-              pattern: "*" as const,
-              action: "deny" as const,
-            },
-            {
-              permission: id,
               pattern: "*" as const,
               action: "deny" as const,
             },
