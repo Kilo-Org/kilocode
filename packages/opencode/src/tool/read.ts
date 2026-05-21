@@ -19,7 +19,12 @@ import * as Extract from "../kilocode/tool/read-extract"
 
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
-const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
+// kilocode_change start
+// Dynamic so the suffix reflects the actual slice length when
+// surrogateSafeSlice snaps the cut back by one to avoid splitting a
+// surrogate pair.
+const lineTruncatedSuffix = (n: number) => `... (line truncated to ${n} chars)`
+// kilocode_change end
 const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
@@ -415,7 +420,13 @@ async function collect(stream: Readable, opts: { limit: number; offset: number }
         more = true
         continue
       }
-      const line = text.length > MAX_LINE_LENGTH ? surrogateSafeSlice(text, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text // kilocode_change
+      // kilocode_change start
+      let line = text
+      if (text.length > MAX_LINE_LENGTH) {
+        const sliced = surrogateSafeSlice(text, MAX_LINE_LENGTH)
+        line = `${sliced}${lineTruncatedSuffix(sliced.length)}`
+      }
+      // kilocode_change end
       const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
       if (bytes + size > MAX_BYTES) {
         cut = true

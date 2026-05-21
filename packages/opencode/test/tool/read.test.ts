@@ -521,7 +521,9 @@ describe("tool.read truncation", () => {
       // And it must not actually contain one.
       const isolated = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
       expect(isolated.test(result.output)).toBe(false)
-      expect(result.output).toContain("(line truncated to 2000 chars)")
+      // Suffix reports the actual slice length: 1999 here because the
+      // surrogate snap-back drops the high half of the boundary emoji.
+      expect(result.output).toContain("(line truncated to 1999 chars)")
     }),
   )
   // kilocode_change end

@@ -286,10 +286,13 @@ function truncateToolOutput(text: string, maxChars?: number) {
   // kilocode_change start
   // Snap back if the cut would land between a surrogate pair; JS strings are
   // UTF-16 and a lone high surrogate at the end gets rejected by downstream
-  // JSON encoders (e.g. llama-server).
+  // JSON encoders (e.g. llama-server). Mirrors surrogateSafeSlice in
+  // tool/read.ts.
   let cut = maxChars
-  const last = text.charCodeAt(cut - 1)
-  if (last >= 0xd800 && last <= 0xdbff) cut -= 1
+  if (cut > 0) {
+    const last = text.charCodeAt(cut - 1)
+    if (last >= 0xd800 && last <= 0xdbff) cut -= 1
+  }
   const omitted = text.length - cut
   return `${text.slice(0, cut)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
   // kilocode_change end
