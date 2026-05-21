@@ -143,9 +143,10 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
     // so the webview merges without tearing down existing reactive proxies.
     const loaded = sent.find(
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
-    ) as { mode?: string; messages: { id: string }[] } | undefined
+    ) as { mode?: string; since?: number; messages: { id: string }[] } | undefined
     expect(loaded).toBeDefined()
     expect(loaded!.mode).toBe("reconcile")
+    expect(typeof loaded!.since).toBe("number")
     expect(loaded!.messages.map((m) => m.id)).toContain("m3")
   })
 

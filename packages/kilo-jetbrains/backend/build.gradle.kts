@@ -1,3 +1,5 @@
+import normalization.NormalizeOpenApiSpecTask
+
 plugins {
     alias(libs.plugins.rpc)
     alias(libs.plugins.kotlin)
@@ -11,6 +13,7 @@ kotlin {
 }
 
 val generatedApi = layout.buildDirectory.dir("generated/openapi/src/main/kotlin")
+val rawSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.raw.json")
 val generatedSpec = layout.buildDirectory.file("generated/openapi-spec/openapi.json")
 
 sourceSets {
@@ -24,6 +27,13 @@ val generateOpenApiSpec by tasks.registering(GenerateOpenApiSpecTask::class) {
     description = "Generate CLI OpenAPI spec into the build directory"
     opencodeDir.set(rootProject.layout.projectDirectory.dir("../opencode"))
     serverSrcDir.set(rootProject.layout.projectDirectory.dir("../opencode/src/server"))
+    spec.set(rawSpec)
+}
+
+val normalizeOpenApiSpec by tasks.registering(NormalizeOpenApiSpecTask::class) {
+    description = "Normalize upstream CLI OpenAPI metadata before Kotlin client generation"
+    dependsOn(generateOpenApiSpec)
+    input.set(rawSpec)
     spec.set(generatedSpec)
 }
 
@@ -64,7 +74,7 @@ openApiGenerate {
 }
 
 tasks.named("openApiGenerate") {
-    dependsOn(generateOpenApiSpec)
+    dependsOn(normalizeOpenApiSpec)
 }
 
 val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
@@ -78,6 +88,16 @@ tasks.named("compileKotlin") {
 
 val cliDir = layout.buildDirectory.dir("generated/cli/cli")
 val production = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false)
+
+val prepareLocalCli by tasks.registering(PrepareLocalCliTask::class) {
+    description = "Prepare the local-platform CLI binary for JetBrains backend runs"
+    root.set(rootProject.layout.projectDirectory)
+    dir.set(cliDir)
+    bunPath.convention(
+        providers.gradleProperty("kilo.bun.path")
+            .orElse(providers.environmentVariable("BUN_EXE"))
+    )
+}
 
 val requiredPlatforms = listOf(
     "darwin-arm64",

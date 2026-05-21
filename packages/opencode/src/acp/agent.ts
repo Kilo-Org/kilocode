@@ -51,6 +51,7 @@ import { LoadAPIKeyError } from "ai"
 import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import { ShellID } from "@/tool/shell/id"
 
 import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
 
@@ -131,7 +132,7 @@ async function sendUsageUpdate(
     })
 }
 
-export async function init({ sdk: _sdk }: { sdk: KiloClient }) {
+export function init({ sdk: _sdk }: { sdk: KiloClient }) {
   return {
     create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
       return new Agent(connection, fullConfig)
@@ -146,7 +147,7 @@ export class Agent implements ACPAgent {
   private sessionManager: ACPSessionManager
   private eventAbort = new AbortController()
   private eventStarted = false
-  private bashSnapshots = new Map<string, string>()
+  private shellSnapshots = new Map<string, string>()
   private toolStarts = new Set<string>()
   private permissionQueues = new Map<string, Promise<void>>()
   private permissionOptions: PermissionOption[] = [
@@ -285,16 +286,16 @@ export class Agent implements ACPAgent {
 
           switch (part.state.status) {
             case "pending":
-              this.bashSnapshots.delete(part.callID)
+              this.shellSnapshots.delete(part.callID)
               return
 
             case "running":
-              const output = this.bashOutput(part)
+              const output = this.shellOutput(part)
               const content: ToolCallContent[] = []
               if (output) {
                 const hash = Hash.fast(output)
-                if (part.tool === "bash") {
-                  if (this.bashSnapshots.get(part.callID) === hash) {
+                if (part.tool === ShellID.ToolID) {
+                  if (this.shellSnapshots.get(part.callID) === hash) {
                     await this.connection
                       .sessionUpdate({
                         sessionId,
@@ -313,7 +314,7 @@ export class Agent implements ACPAgent {
                       })
                     return
                   }
-                  this.bashSnapshots.set(part.callID, hash)
+                  this.shellSnapshots.set(part.callID, hash)
                 }
                 content.push({
                   type: "content",
@@ -344,7 +345,7 @@ export class Agent implements ACPAgent {
 
             case "completed": {
               this.toolStarts.delete(part.callID)
-              this.bashSnapshots.delete(part.callID)
+              this.shellSnapshots.delete(part.callID)
               const kind = toToolKind(part.tool)
               const content: ToolCallContent[] = [
                 {
@@ -425,7 +426,7 @@ export class Agent implements ACPAgent {
             }
             case "error":
               this.toolStarts.delete(part.callID)
-              this.bashSnapshots.delete(part.callID)
+              this.shellSnapshots.delete(part.callID)
               await this.connection
                 .sessionUpdate({
                   sessionId,
@@ -841,10 +842,10 @@ export class Agent implements ACPAgent {
         await this.toolStart(sessionId, part)
         switch (part.state.status) {
           case "pending":
-            this.bashSnapshots.delete(part.callID)
+            this.shellSnapshots.delete(part.callID)
             break
           case "running":
-            const output = this.bashOutput(part)
+            const output = this.shellOutput(part)
             const runningContent: ToolCallContent[] = []
             if (output) {
               runningContent.push({
@@ -875,7 +876,7 @@ export class Agent implements ACPAgent {
             break
           case "completed":
             this.toolStarts.delete(part.callID)
-            this.bashSnapshots.delete(part.callID)
+            this.shellSnapshots.delete(part.callID)
             const kind = toToolKind(part.tool)
             const content: ToolCallContent[] = [
               {
@@ -955,7 +956,7 @@ export class Agent implements ACPAgent {
             break
           case "error":
             this.toolStarts.delete(part.callID)
-            this.bashSnapshots.delete(part.callID)
+            this.shellSnapshots.delete(part.callID)
             await this.connection
               .sessionUpdate({
                 sessionId,
@@ -1109,8 +1110,8 @@ export class Agent implements ACPAgent {
     }
   }
 
-  private bashOutput(part: ToolPart) {
-    if (part.tool !== "bash") return
+  private shellOutput(part: ToolPart) {
+    if (part.tool !== ShellID.ToolID) return
     if (!("metadata" in part.state) || !part.state.metadata || typeof part.state.metadata !== "object") return
     const output = part.state.metadata["output"]
     if (typeof output !== "string") return
@@ -1553,9 +1554,11 @@ export class Agent implements ACPAgent {
 
 function toToolKind(toolName: string): ToolKind {
   const tool = toolName.toLocaleLowerCase()
+
   switch (tool) {
-    case "bash":
+    case ShellID.ToolID:
       return "execute"
+
     case "webfetch":
       return "fetch"
 
@@ -1580,6 +1583,7 @@ function toToolKind(toolName: string): ToolKind {
 
 function toLocations(toolName: string, input: Record<string, any>): { path: string }[] {
   const tool = toolName.toLocaleLowerCase()
+
   switch (tool) {
     case "read":
     case "edit":
@@ -1588,7 +1592,7 @@ function toLocations(toolName: string, input: Record<string, any>): { path: stri
     case "glob":
     case "grep":
       return input["path"] ? [{ path: input["path"] }] : []
-    case "bash":
+    case ShellID.ToolID:
       return []
     default:
       return []

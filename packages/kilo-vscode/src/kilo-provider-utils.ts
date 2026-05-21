@@ -3,6 +3,7 @@ import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
 import type { PartRemove } from "./shared/stream-messages"
+import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
 
@@ -361,6 +362,17 @@ export function resolveNewSessionDirectory(input: {
     workspaceDirectory: input.workspaceDirectory,
     forceWorkspaceRoot: input.agentManagerContext === "local",
   })
+}
+
+export function sameDirectory(a: string, b: string): boolean {
+  if (!a || !b) return false
+
+  const left = path.resolve(a)
+  const right = path.resolve(b)
+  if (path.relative(left, right) === "") return true
+
+  if (process.platform !== "win32") return false
+  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
 }
 
 export type WebviewMessage =

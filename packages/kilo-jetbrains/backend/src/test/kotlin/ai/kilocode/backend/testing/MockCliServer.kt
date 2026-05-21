@@ -81,6 +81,9 @@ class MockCliServer : AutoCloseable {
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
 
+    /** Optional gate for REST responses; SSE stays unblocked so the app can enter Loading. */
+    @Volatile var responseGate: CountDownLatch? = null
+
     /** Request counts by bare path (e.g. "/session" or "/global/config"). Thread-safe. */
     private val counts = ConcurrentHashMap<String, AtomicInteger>()
 
@@ -209,6 +212,7 @@ class MockCliServer : AutoCloseable {
             // Optional delay for race condition testing
             val delay = responseDelay
             if (delay > 0) Thread.sleep(delay)
+            if (bare != "/global/event") responseGate?.await()
 
             when {
                 path == "/global/health" -> respond(output, 200, health)

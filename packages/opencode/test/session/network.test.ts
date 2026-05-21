@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import { afterEach, describe, expect, test } from "bun:test"
 import { Bus } from "../../src/bus"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { tmpdir } from "../fixture/fixture"
 import { SessionNetwork } from "../../src/session/network"
 import { SessionID } from "../../src/session/schema"
@@ -88,7 +88,7 @@ describe("session.network", () => {
 
   test("reply resolves pending request", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const { promise } = await SessionNetwork.ask({
@@ -107,7 +107,7 @@ describe("session.network", () => {
 
   test("restore auto-resumes pending request after cancellation window", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const run = manual()
@@ -130,7 +130,7 @@ describe("session.network", () => {
 
   test("reject wins before restored auto-resume fires", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const run = manual()
@@ -151,7 +151,7 @@ describe("session.network", () => {
 
   test("abort cancels restored auto-resume timer", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const run = manual()
@@ -173,7 +173,7 @@ describe("session.network", () => {
 
   test("reject rejects pending request", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const { promise } = await SessionNetwork.ask({
@@ -192,7 +192,7 @@ describe("session.network", () => {
 
   test("aborted signal rejects without publishing asked", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const abort = new AbortController()
@@ -223,7 +223,7 @@ describe("session.network", () => {
 
   test("abort during pending ask rejects with AbortError and cleans up", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const abort = new AbortController()

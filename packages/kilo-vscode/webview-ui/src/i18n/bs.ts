@@ -178,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.collapse": "Sakrij {{group}}",
+  "model.group.expand": "Prikaži {{group}}",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.provider.anthropic": "Anthropic",

@@ -90,6 +90,7 @@ class KiloBackendWorkspace(
                 coroutineScope {
                     launch {
                         val result = fetchWithRetry("providers") { fetchProviders() }
+                        ensureActive()
                         if (result.value != null) {
                             prov = result.value
                             progress.updateAndGet { it.copy(providers = true) }
@@ -102,6 +103,7 @@ class KiloBackendWorkspace(
                     }
                     launch {
                         val result = fetchWithRetry("agents") { fetchAgents() }
+                        ensureActive()
                         if (result.value != null) {
                             ag = result.value
                             progress.updateAndGet { it.copy(agents = true) }
@@ -114,6 +116,7 @@ class KiloBackendWorkspace(
                     }
                     launch {
                         val result = fetchWithRetry("commands") { fetchCommands() }
+                        ensureActive()
                         if (result.value != null) {
                             cmd = result.value
                             progress.updateAndGet { it.copy(commands = true) }
@@ -126,6 +129,7 @@ class KiloBackendWorkspace(
                     }
                     launch {
                         val result = fetchWithRetry("skills") { fetchSkills() }
+                        ensureActive()
                         if (result.value != null) {
                             sk = result.value
                             progress.updateAndGet { it.copy(skills = true) }
@@ -138,6 +142,7 @@ class KiloBackendWorkspace(
                     }
                 }
 
+                ensureActive()
                 _state.value = KiloWorkspaceState.Ready(
                     providers = prov!!,
                     agents = ag!!,
@@ -145,7 +150,6 @@ class KiloBackendWorkspace(
                     skills = sk!!,
                 )
                 log.info("Workspace data loaded for $directory")
-                ensureActive()
                 startWatchingGlobalSseEvents()
             } catch (e: CancellationException) {
                 throw e

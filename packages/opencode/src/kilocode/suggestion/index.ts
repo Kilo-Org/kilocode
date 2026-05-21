@@ -68,7 +68,7 @@ export namespace Suggestion {
     })
   export type Request = z.infer<typeof Request>
 
-  const RequestSchema = Schema.Struct({
+  export const RequestSchema = Schema.Struct({
     id: SuggestionIDSchema,
     sessionID: SessionID,
     text: Schema.String,
@@ -80,7 +80,7 @@ export namespace Suggestion {
         callID: Schema.String,
       }),
     ),
-  })
+  }).annotate({ identifier: "SuggestionRequest" })
 
   export const Accept = z.object({
     index: z.number().int().nonnegative().describe("Zero-based action index to accept"),

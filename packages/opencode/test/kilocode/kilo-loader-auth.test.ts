@@ -36,7 +36,7 @@ mock.module("@kilocode/kilo-gateway", () => ({
 
 import { tmpdir } from "../fixture/fixture"
 import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Filesystem } from "../../src/util/filesystem"
@@ -68,7 +68,7 @@ test("kilo loader keeps paid models without auth and when config apiKey is prese
     },
   })
 
-  const none = await Instance.provide({
+  const none = await WithInstance.provide({
     directory: base.path,
     fn: async () => paid(await Provider.list()),
   })
@@ -91,7 +91,7 @@ test("kilo loader keeps paid models without auth and when config apiKey is prese
     },
   })
 
-  const count = await Instance.provide({
+  const count = await WithInstance.provide({
     directory: keyed.path,
     fn: async () => paid(await Provider.list()),
   })
@@ -115,7 +115,7 @@ test("kilo loader keeps paid models without auth and when auth exists", async ()
     },
   })
 
-  const none = await Instance.provide({
+  const none = await WithInstance.provide({
     directory: base.path,
     fn: async () => paid(await Provider.list()),
   })
@@ -149,7 +149,7 @@ test("kilo loader keeps paid models without auth and when auth exists", async ()
       }),
     )
 
-    const count = await Instance.provide({
+    const count = await WithInstance.provide({
       directory: keyed.path,
       fn: async () => paid(await Provider.list()),
     })

@@ -35,16 +35,16 @@ describe("useFileMention", () => {
         type: "fileSearchResult",
         requestId: "file-search-1",
         dir: "/repo",
-        paths: ["sdks/vscode/src/extension.ts"],
-        items: [{ path: "sdks/vscode/src/extension.ts", type: "opened-file" }],
+        paths: ["packages/kilo-vscode/src/extension.ts"],
+        items: [{ path: "packages/kilo-vscode/src/extension.ts", type: "opened-file" }],
       })
     }
 
-    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "sdks/vscode/src/extension.ts" }])
+    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" }])
 
     mention.onInput("@ex", 3)
 
-    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "sdks/vscode/src/extension.ts" }])
+    expect(mention.mentionResults()).toEqual([{ type: "opened-file", value: "packages/kilo-vscode/src/extension.ts" }])
 
     dispose.fn?.()
   })
@@ -82,6 +82,67 @@ describe("useFileMention", () => {
     mention.onInput("@zz", 3)
 
     expect(mention.mentionResults()).toEqual([])
+
+    dispose.fn?.()
+  })
+
+  it("seedFromText populates knownPaths so mentions are recognized in pre-filled text", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // Before seeding, no paths are known
+    expect(mention.mentionedPaths().size).toBe(0)
+
+    // Seed from text containing @mentions (simulates setChatBoxMessage after revert)
+    mention.seedFromText("Say hi to @packages/plugin/tsconfig.json !")
+
+    expect(mention.mentionedPaths().has("packages/plugin/tsconfig.json")).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromText handles multiple @mentions in one string", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromText("check @src/a.ts and @src/b.tsx")
+
+    expect(mention.mentionedPaths().has("src/a.ts")).toBe(true)
+    expect(mention.mentionedPaths().has("src/b.tsx")).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromText ignores text without @mentions", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromText("no mentions here")
+    expect(mention.mentionedPaths().size).toBe(0)
 
     dispose.fn?.()
   })

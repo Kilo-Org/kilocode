@@ -5,6 +5,7 @@ import { HttpRouter } from "effect/unstable/http"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ExperimentalHttpApiServer } from "../../src/server/routes/instance/httpapi/server"
 import { Server } from "../../src/server/server"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
@@ -241,7 +242,7 @@ function seedMessage(directory: string, sessionID: string) {
   const id = SessionID.make(sessionID)
   return call(
     async () =>
-      await Instance.provide({
+      await WithInstance.provide({
         directory,
         fn: () =>
           Effect.runPromise(

@@ -9,6 +9,7 @@ import { AppRuntime } from "../../src/effect/app-runtime"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Session as SessionNs } from "@/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, type SessionID } from "../../src/session/schema"
@@ -178,7 +179,7 @@ describe.skip("Workspace.sessionRestore", () => {
     )
 
     try {
-      const setup = await Instance.provide({
+      const setup = await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           registerAdapter(Instance.project.id, "worktree", remote(dir, "https://workspace.test/base"))
@@ -259,7 +260,7 @@ describe.skip("Workspace.sessionRestore", () => {
     const replayAll = spyOn(SyncEvent, "replayAll")
 
     try {
-      const setup = await Instance.provide({
+      const setup = await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           registerAdapter(Instance.project.id, "local-restore", local(dir))

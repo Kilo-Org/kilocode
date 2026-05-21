@@ -295,6 +295,16 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         assertEquals(expected.trimIndent().trim(), act)
     }
 
+    protected fun assertQuestionReply(expected: String, replies: List<Triple<String, String, ai.kilocode.rpc.dto.QuestionReplyDto>>) {
+        val act = replies.joinToString("\n") { (id, dir, reply) ->
+            val answers = reply.answers.joinToString(",", "[", "]") { inner ->
+                inner.joinToString(",", "[", "]")
+            }
+            "$id $dir $answers"
+        }
+        assertEquals(expected.trimIndent().trim(), act)
+    }
+
     protected fun snapshot(c: SessionController) = Snapshot(
         body = c.model.toString().trim(),
         turns = c.model.toTurnsString().trim(),

@@ -85,7 +85,8 @@ export const WebFetchTool = Tool.define(
                 err.reason.response.headers["cf-mitigated"] === "challenge",
               () =>
                 httpOk.execute(
-                  HttpClientRequest.get(url).pipe( // kilocode_change
+                  HttpClientRequest.get(url).pipe(
+                    // kilocode_change
                     HttpClientRequest.setHeaders({ ...headers, "User-Agent": "kilo" }), // kilocode_change
                   ),
                 ),

@@ -1,5 +1,17 @@
 # @kilocode/cli
 
+## 7.3.2
+
+## 7.3.1
+
+### Patch Changes
+
+- [#10285](https://github.com/Kilo-Org/kilocode/pull/10285) [`d23e162`](https://github.com/Kilo-Org/kilocode/commit/d23e162051f118beb993f84cebad1002d974ad79) - Capture aggregate usage telemetry for experimental Morph-backed codebase search.
+
+- [#10358](https://github.com/Kilo-Org/kilocode/pull/10358) [`413222f`](https://github.com/Kilo-Org/kilocode/commit/413222f0137a29c5cf09666ea3b515032c81f9b8) - Resume interrupted CLI turns automatically after network recovery while giving users 10 seconds to cancel.
+
+- [#10293](https://github.com/Kilo-Org/kilocode/pull/10293) [`af115af`](https://github.com/Kilo-Org/kilocode/commit/af115afe20893f4d24d22a40411ebdbd398781d7) - Harden Mermaid diagram rendering with upstream security fixes.
+
 ## 7.3.0
 
 ### Patch Changes

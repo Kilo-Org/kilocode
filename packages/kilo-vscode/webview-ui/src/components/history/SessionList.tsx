@@ -144,7 +144,7 @@ const SessionList: Component<SessionListProps> = (props) => {
             props.onSelectSession(s.id)
           }
         }}
-        search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
+        search={{ placeholder: language.t("session.search.placeholder"), autofocus: true }}
         emptyMessage={language.t("session.empty")}
         groupBy={(s) => language.t(dateGroupKey(s.updatedAt))}
         sortGroupsBy={(a, b) => {

@@ -4,6 +4,7 @@ import path from "path"
 import { Effect, Fiber, Layer } from "effect"
 import { Bus } from "../../../src/bus"
 import * as Config from "../../../src/config/config"
+import { InstanceRuntime } from "../../../src/project/instance-runtime"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
 import { Permission } from "../../../src/permission"
@@ -21,7 +22,8 @@ afterAll(async () => {
   for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
-  await Config.invalidate(true)
+  await Config.invalidate()
+  await InstanceRuntime.disposeAllInstances()
 })
 
 const ask = (input: Parameters<Permission.Interface["ask"]>[0]) =>

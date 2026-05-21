@@ -11,8 +11,6 @@ import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "ef
 // kilocode_change start
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { ModelCache } from "./model-cache"
-import { Instance } from "@/project/instance"
-import { InstanceStore } from "@/project/instance-store"
 // kilocode_change end
 
 const When = Schema.Struct({
@@ -234,7 +232,6 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
       }
       Telemetry.trackAuthSuccess(input.providerID)
       ModelCache.clear(input.providerID)
-      yield* Effect.promise(() => InstanceStore.disposeAllInstances())
       // kilocode_change end
     })
 

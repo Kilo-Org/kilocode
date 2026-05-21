@@ -2,6 +2,7 @@
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
+import { copyTreeSitterResources, hasTreeSitterResources } from "../src/services/cli-backend/cli-resources"
 import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
@@ -83,6 +84,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
   try {
     statSync(preferred)
+    if (!hasTreeSitterResources(preferred)) return null
     return preferred
   } catch {
     // fall through to generic search
@@ -108,6 +110,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         continue
       }
       if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
+        if (!hasTreeSitterResources(p)) continue
         return p
       }
     }
@@ -182,6 +185,7 @@ async function main() {
   const sourceBinPath = await ensureBuiltBinary()
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
+  await copyTreeSitterResources(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
   await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 

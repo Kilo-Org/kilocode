@@ -75,7 +75,7 @@ export const Model = Schema.Struct({
     }),
   ),
   // kilocode_change start
-  recommendedIndex: Schema.optional(Schema.Number),
+  recommendedIndex: Schema.optional(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),
