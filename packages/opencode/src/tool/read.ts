@@ -415,7 +415,7 @@ async function collect(stream: Readable, opts: { limit: number; offset: number }
         more = true
         continue
       }
-      const line = text.length > MAX_LINE_LENGTH ? surrogateSafeSlice(text, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
+      const line = text.length > MAX_LINE_LENGTH ? surrogateSafeSlice(text, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text // kilocode_change
       const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
       if (bytes + size > MAX_BYTES) {
         cut = true

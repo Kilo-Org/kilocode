@@ -504,6 +504,7 @@ describe("tool.read truncation", () => {
     }),
   )
 
+  // kilocode_change start
   it.live("long-line truncation does not split a surrogate pair", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -523,6 +524,7 @@ describe("tool.read truncation", () => {
       expect(result.output).toContain("(line truncated to 2000 chars)")
     }),
   )
+  // kilocode_change end
 
   it.live("image files set truncated to false", () =>
     Effect.gen(function* () {
