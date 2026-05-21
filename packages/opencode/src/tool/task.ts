@@ -63,9 +63,6 @@ export const TaskTool = Tool.define(
       KiloTask.validate(next, params.subagent_type)
       // kilocode_change end
 
-      const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
-      const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
-
       const parent = yield* sessions.get(ctx.sessionID)
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
       const caller = yield* agent.get(ctx.agent)
@@ -85,24 +82,18 @@ export const TaskTool = Tool.define(
             ...(parent.permission ?? []).filter(
               (rule) => rule.permission === "external_directory" || rule.action === "deny",
             ),
-            ...(canTodo
-              ? []
-              : [
-                  {
-                    permission: "todowrite" as const,
-                    pattern: "*" as const,
-                    action: "deny" as const,
-                  },
-                ]),
-            ...(canTask
-              ? []
-              : [
-                  {
-                    permission: id,
-                    pattern: "*" as const,
-                    action: "deny" as const,
-                  },
-                ]),
+            // kilocode_change start — unconditional deny; flat two-level model
+            {
+              permission: "todowrite" as const,
+              pattern: "*" as const,
+              action: "deny" as const,
+            },
+            {
+              permission: id,
+              pattern: "*" as const,
+              action: "deny" as const,
+            },
+            // kilocode_change end
             ...(cfg.experimental?.primary_tools?.map((item) => ({
               pattern: "*",
               action: "allow" as const,
@@ -166,9 +157,11 @@ export const TaskTool = Tool.define(
               variant, // kilocode_change
               agent: next.name,
               tools: {
-                ...(canTodo ? {} : { todowrite: false }),
-                ...(canTask ? {} : { task: false }),
+                // kilocode_change start — flat two-level model: subagents cannot call task/todowrite
+                todowrite: false,
+                task: false,
                 ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
+                // kilocode_change end
               },
               parts,
             })

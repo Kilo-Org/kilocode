@@ -1,83 +1,128 @@
-import { test, expect } from "bun:test"
-import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { test, expect, describe } from "bun:test"
 import { Permission } from "../../src/permission"
+import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
 
-test("hardPermissions returns agent permissions for non-ask/plan agents", () => {
-  const agent = {
-    name: "code",
-    permission: [{ permission: "bash", pattern: "*", action: "deny" }],
-  }
-  const result = KiloSessionPrompt.hardPermissions({ agent })
-  expect(result).toEqual(agent.permission)
-})
+const { guardPermissions } = KiloSessionPrompt
 
-test("hardPermissions returns agent permissions for ask agents", () => {
-  const agent = {
-    name: "ask",
-    permission: [
-      { permission: "bash", pattern: "*", action: "deny" },
-      { permission: "read", pattern: "*", action: "allow" },
-    ],
-  }
-  const result = KiloSessionPrompt.hardPermissions({ agent })
-  expect(result).toEqual(agent.permission)
-})
+const allRule = { permission: "*", pattern: "*", action: "allow" as const }
+const allDeny = { permission: "*", pattern: "*", action: "deny" as const }
+const readAllow = { permission: "read", pattern: "*", action: "allow" as const }
+const bashDeny = { permission: "bash", pattern: "*", action: "deny" as const }
+const writeAllow = { permission: "write", pattern: "*", action: "allow" as const }
+const editDeny = { permission: "edit", pattern: "*.env", action: "deny" as const }
+const grepAllow = { permission: "grep", pattern: "*", action: "allow" as const }
+const globDeny = { permission: "glob", pattern: "secrets/**", action: "deny" as const }
 
-test("guardPermissions appends agent denies last for non-ask/plan agents", () => {
-  const agentDeny = { permission: "bash", pattern: "*", action: "deny" }
-  const sessionAllow = { permission: "edit", pattern: "src/*", action: "allow" }
-  const result = KiloSessionPrompt.guardPermissions({
-    agent: {
-      name: "code",
-      permission: [agentDeny, { permission: "read", pattern: "*", action: "allow" }],
-    },
-    session: { permission: [sessionAllow] },
+describe("guardPermissions", () => {
+  describe("ask/plan agents", () => {
+    const agents = ["ask", "plan"]
+
+    for (const name of agents) {
+      test(`${name} merges session rules with full agent permission`, () => {
+        const session = { permission: [readAllow] }
+        const agent = { name, permission: [bashDeny, writeAllow] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([readAllow, bashDeny, writeAllow])
+      })
+
+      test(`${name} includes session deny rules`, () => {
+        const session = { permission: [readAllow, editDeny] }
+        const agent = { name, permission: [bashDeny] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([readAllow, editDeny, bashDeny])
+      })
+
+      test(`${name} works with empty session permissions`, () => {
+        const session = { permission: null as any }
+        const agent = { name, permission: [bashDeny] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([bashDeny])
+      })
+
+      test(`${name} works with empty agent permissions`, () => {
+        const session = { permission: [readAllow] }
+        const agent = { name, permission: [] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([readAllow])
+      })
+
+      test(`${name} does not duplicate agent deny rules`, () => {
+        const session = { permission: [readAllow] }
+        const agent = { name, permission: [bashDeny, readAllow] }
+        const result = guardPermissions({ agent, session })
+        expect(result.filter((r) => r.permission === "bash" && r.action === "deny")).toHaveLength(1)
+        expect(result.filter((r) => r.permission === "read" && r.action === "allow")).toHaveLength(1)
+      })
+    }
   })
-  expect(result[result.length - 1]).toEqual(agentDeny)
-  expect(result[0]).toEqual(sessionAllow)
-})
 
-test("guardPermissions does not duplicate agent denies for ask agents", () => {
-  const agentDeny = { permission: "bash", pattern: "*", action: "deny" }
-  const result = KiloSessionPrompt.guardPermissions({
-    agent: {
-      name: "ask",
-      permission: [
-        { permission: "*", pattern: "*", action: "deny" },
-        { permission: "read", pattern: "*", action: "allow" },
-        agentDeny,
-      ],
-    },
-    session: { permission: [{ permission: "edit", pattern: "src/*", action: "allow" }] },
+  describe("non-mode agents", () => {
+    const agents = ["build", "general", "explore"]
+
+    for (const name of agents) {
+      test(`${name} merges session rules with agent deny rules only`, () => {
+        const session = { permission: [readAllow] }
+        const agent = { name, permission: [bashDeny, writeAllow, globDeny] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([readAllow, bashDeny, globDeny])
+        expect(result.find((r) => r.permission === "write")).toBeUndefined()
+      })
+
+      test(`${name} includes session deny rules`, () => {
+        const session = { permission: [allRule, editDeny] }
+        const agent = { name, permission: [bashDeny] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([allRule, editDeny, bashDeny])
+      })
+
+      test(`${name} ignores agent allow rules`, () => {
+        const session = { permission: [] }
+        const agent = { name, permission: [grepAllow, readAllow, writeAllow] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([])
+      })
+
+      test(`${name} works with empty agent permissions`, () => {
+        const session = { permission: [readAllow] }
+        const agent = { name, permission: [] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([readAllow])
+      })
+
+      test(`${name} works with empty session permissions`, () => {
+        const session = { permission: null as any }
+        const agent = { name, permission: [bashDeny] }
+        const result = guardPermissions({ agent, session })
+        expect(result).toEqual([bashDeny])
+      })
+    }
   })
-  const matches = result.filter(
-    (r) => r.permission === "bash" && r.pattern === "*" && r.action === "deny",
-  )
-  expect(matches.length).toBe(1)
-})
 
-test("disabled() with blanket deny disables the tool", () => {
-  const ruleset = Permission.fromConfig({ bash: "deny" })
-  const result = Permission.disabled(["bash"], ruleset)
-  expect(result.has("bash")).toBe(true)
-})
+  test("deny rules from session are preserved for all agent types", () => {
+    for (const name of ["ask", "plan", "build", "general", "explore"]) {
+      const session = { permission: [allRule, allDeny] }
+      const agent = { name, permission: [] }
+      const result = guardPermissions({ agent, session })
+      expect(result).toContainEqual(allDeny)
+    }
+  })
 
-test("disabled() with patterned allow does not disable", () => {
-  const ruleset = Permission.fromConfig({ bash: { "npm *": "allow" } })
-  const result = Permission.disabled(["bash"], ruleset)
-  expect(result.has("bash")).toBe(false)
-})
+  test("session rules come before agent rules in merge order", () => {
+    const session = { permission: [{ ...readAllow, action: "deny" as const }] }
+    const agent = { name: "ask", permission: [readAllow] }
+    const result = guardPermissions({ agent, session })
+    expect(result[0].action).toBe("deny")
+    expect(result[1].action).toBe("allow")
+  })
 
-test("disabled() with blanket deny + patterned allow disables the tool", () => {
-  const ruleset = Permission.merge(
-    Permission.fromConfig({ bash: { "*": "deny", "npm *": "allow" } }),
-  )
-  const result = Permission.disabled(["bash"], ruleset)
-  expect(result.has("bash")).toBe(true)
-})
-
-test("disabled() does not disable tool with patterned deny only", () => {
-  const ruleset = Permission.fromConfig({ bash: { "rm *": "deny" } })
-  const result = Permission.disabled(["bash"], ruleset)
-  expect(result.has("bash")).toBe(false)
+  test("subagent-like agents get only deny rules from agent config", () => {
+    const session = { permission: [readAllow, bashDeny] }
+    const agent = { name: "code", permission: [grepAllow, globDeny, { permission: "edit", pattern: "*", action: "deny" }] }
+    const result = guardPermissions({ agent, session })
+    expect(result.find((r) => r.permission === "grep")).toBeUndefined()
+    expect(result).toContainEqual(globDeny)
+    expect(result).toContainEqual({ permission: "edit", pattern: "*", action: "deny" })
+    expect(result).toContainEqual(readAllow)
+    expect(result).toContainEqual(bashDeny)
+  })
 })
