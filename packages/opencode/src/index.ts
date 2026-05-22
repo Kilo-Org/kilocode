@@ -41,6 +41,7 @@ import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // k
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { InstanceRuntime } from "./project/instance-runtime" // kilocode_change
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
+import { SessionExport } from "./kilocode/session-export" // kilocode_change
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
 // (extension, cloud) which set their own KILOCODE_FEATURE env var. Direct CLI use
@@ -318,6 +319,7 @@ try {
   // kilocode_change start - Track CLI exit and shutdown telemetry
   const exitCode = typeof process.exitCode === "number" ? process.exitCode : undefined
   Telemetry.trackCliExit(exitCode)
+  await SessionExport.shutdown()
   await Telemetry.shutdown()
   // kilocode_change end
 
