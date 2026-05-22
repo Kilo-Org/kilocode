@@ -1779,6 +1779,73 @@ test("Effect config parser preserves permission order while rejecting unknown to
 
 // MCP config merging tests
 
+// kilocode_change start - regression for `env` alias on local MCP entries
+test("local mcp accepts `env` as an alias for `environment`", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          mcp: {
+            context7: {
+              type: "local",
+              command: ["npx", "-y", "@upstash/context7-mcp"],
+              env: { CONTEXT7_API_KEY: "test-key" },
+              enabled: true,
+            },
+          },
+        }),
+      )
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(config.mcp?.context7).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@upstash/context7-mcp"],
+        environment: { CONTEXT7_API_KEY: "test-key" },
+        enabled: true,
+      })
+    },
+  })
+})
+
+test("local mcp prefers `environment` over `env` when both are present", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          mcp: {
+            context7: {
+              type: "local",
+              command: ["npx", "-y", "@upstash/context7-mcp"],
+              environment: { CONTEXT7_API_KEY: "from-environment" },
+              env: { CONTEXT7_API_KEY: "from-env" },
+            },
+          },
+        }),
+      )
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await load()
+      expect(config.mcp?.context7).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@upstash/context7-mcp"],
+        environment: { CONTEXT7_API_KEY: "from-environment" },
+      })
+    },
+  })
+})
+// kilocode_change end
+
 test("project config can override MCP server enabled status", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
