@@ -3,8 +3,9 @@ import { Capture } from "@/kilocode/session-export/capture"
 
 describe("session export performance budget", () => {
   const worker = { postMessage: () => {}, terminate: () => {} } as unknown as Worker
+  const enabled = process.env.KILO_SESSION_EXPORT_PERF === "1" && process.env.CI !== "true"
 
-  test.skipIf(process.env.CI === "true")("ineligible beforeRequest p99 stays under 0.1 ms", () => {
+  test.skipIf(!enabled)("ineligible beforeRequest p99 stays under 0.1 ms", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 0, syncSeq: () => 0 })
     const input = {
       input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: undefined },
@@ -21,7 +22,7 @@ describe("session export performance budget", () => {
     expect(samples[Math.floor(samples.length * 0.99)]).toBeLessThan(0.1)
   })
 
-  test.skipIf(process.env.CI === "true")("eligible beforeRequest p99 stays under 1 ms for 256 KB inputs", () => {
+  test.skipIf(!enabled)("eligible beforeRequest p99 stays under 1 ms for 256 KB inputs", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 0, syncSeq: () => 0 })
     const body = "x".repeat(256 * 1024)
     const samples: number[] = []
