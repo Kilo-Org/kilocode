@@ -110,6 +110,7 @@ export const iconNames = [
   "bailing",
   "azure",
   "azure-cognitive-services",
+  "atomic-chat",
   "anthropic",
   "amazon-bedrock",
   "alibaba",

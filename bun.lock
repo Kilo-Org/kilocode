@@ -409,6 +409,7 @@
         "@kilocode/kilo-indexing": "workspace:*",
         "@kilocode/kilo-telemetry": "workspace:*",
         "@kilocode/plugin": "workspace:*",
+        "@kilocode/plugin-atomic-chat": "workspace:*",
         "@kilocode/sdk": "workspace:*",
         "@lydell/node-pty": "catalog:",
         "@modelcontextprotocol/sdk": "1.29.0",
@@ -555,6 +556,20 @@
         "@opentui/keymap",
         "@opentui/solid",
       ],
+    },
+    "packages/plugin-atomic-chat": {
+      "name": "@kilocode/plugin-atomic-chat",
+      "version": "0.1.0",
+      "dependencies": {
+        "@kilocode/plugin": "workspace:*",
+      },
+      "devDependencies": {
+        "@tsconfig/node22": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "^4.0.16",
+      },
     },
     "packages/script": {
       "name": "@opencode-ai/script",
@@ -1328,6 +1343,8 @@
     "@kilocode/kilo-web-ui": ["@kilocode/kilo-web-ui@workspace:packages/kilo-web-ui"],
 
     "@kilocode/plugin": ["@kilocode/plugin@workspace:packages/plugin"],
+
+    "@kilocode/plugin-atomic-chat": ["@kilocode/plugin-atomic-chat@workspace:packages/plugin-atomic-chat"],
 
     "@kilocode/sdk": ["@kilocode/sdk@workspace:packages/sdk/js"],
 

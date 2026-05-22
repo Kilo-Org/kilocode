@@ -114,6 +114,7 @@
     "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-telemetry": "workspace:*",
     "@kilocode/plugin": "workspace:*",
+    "@kilocode/plugin-atomic-chat": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lydell/node-pty": "catalog:",
     "@modelcontextprotocol/sdk": "1.29.0",
