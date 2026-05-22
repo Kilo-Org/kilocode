@@ -634,7 +634,7 @@ object KiloCliDataParser {
             reasoning = cap.bool("reasoning"),
             temperature = cap.bool("temperature"),
             toolCall = cap.bool("toolcall"),
-            free = obj.bool("isFree"),
+            free = obj.bool("isFree") ?: false,
             status = obj.str("status"),
             recommendedIndex = obj.num("recommendedIndex"),
             variants = parseVariants(obj),
