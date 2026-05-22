@@ -1,19 +1,28 @@
 import type { ToWorker } from "./worker/ipc"
+import { Config } from "./config"
 import { ulid } from "./ulid"
 import { isEligible, type EligibilityInput } from "./eligibility"
 import type {
+  DeltaEntry,
   ExportEvent,
+  FileEntry,
   LlmRequestCompleted,
   LlmRequestStarted,
   SessionDegraded,
   WorkspaceBaselineStarted,
 } from "./events"
+import { startBaselineFiber, startDeltaFiber } from "./workspace-fiber"
 
 export type CaptureDeps = {
   worker: { postMessage: (msg: ToWorker | { kind: string; [key: string]: unknown }) => void; terminate: () => void }
   agentVersion: string
   nowMs: () => number
   syncSeq: () => number
+  snapshotProvider?: {
+    baseline: () => Promise<{ snapshotId: string; files: FileEntry[] }>
+    diff: (prevSnapshotHash: string) => Promise<{ snapshotHash: string; diff: DeltaEntry[] }>
+  }
+  baselineTimeoutMs?: number
 }
 
 export type RequestMeta = {
@@ -33,6 +42,8 @@ export class Capture {
   private firstEligible = new Set<string>()
   private degradedAnnounced = new Set<string>()
   private degraded = new Set<string>()
+  private roots = new Map<string, string>()
+  private snapshots = new Map<string, string>()
 
   constructor(private readonly deps: CaptureDeps) {}
 
@@ -66,6 +77,7 @@ export class Capture {
 
     if (!this.firstEligible.has(meta.sessionId)) {
       this.firstEligible.add(meta.sessionId)
+      this.roots.set(meta.sessionId, meta.rootSessionId)
       const baseline: WorkspaceBaselineStarted = {
         id: ulid(),
         schemaVersion: 1,
@@ -79,6 +91,7 @@ export class Capture {
         requestedAt: this.deps.nowMs(),
       }
       this.dispatch(baseline)
+      this.startBaseline(meta)
     }
 
     const env: LlmRequestStarted = {
@@ -143,6 +156,27 @@ export class Capture {
     this.dispatch(envelope)
   }
 
+  async onSessionClose(sessionId: string): Promise<void> {
+    if (!this.firstEligible.has(sessionId)) return
+    if (this.degraded.has(sessionId)) return
+    const provider = this.deps.snapshotProvider
+    if (!provider) return
+    const root = this.roots.get(sessionId) ?? sessionId
+    const previous = this.snapshots.get(sessionId) ?? ""
+    const next = await startDeltaFiber({
+      sessionId,
+      rootSessionId: root,
+      trigger: "session_close",
+      prevSnapshotHash: previous,
+      now: () => this.deps.nowMs(),
+      syncSeq: () => this.deps.syncSeq(),
+      agentVersion: this.deps.agentVersion,
+      requestDiff: provider.diff,
+      dispatch: (event) => this.dispatchRaw(event),
+    })
+    if (next) this.snapshots.set(sessionId, next)
+  }
+
   private announceDegraded(meta: RequestMeta): void {
     if (this.degradedAnnounced.has(meta.sessionId)) return
     this.degradedAnnounced.add(meta.sessionId)
@@ -159,6 +193,23 @@ export class Capture {
       reason: "ring_buffer_overflow",
     }
     this.dispatch(env)
+  }
+
+  private startBaseline(meta: RequestMeta): void {
+    const provider = this.deps.snapshotProvider
+    if (!provider) return
+    void startBaselineFiber({
+      sessionId: meta.sessionId,
+      rootSessionId: meta.rootSessionId,
+      timeoutMs: this.deps.baselineTimeoutMs ?? Config.baselineWaitMs,
+      now: () => this.deps.nowMs(),
+      syncSeq: () => this.deps.syncSeq(),
+      agentVersion: this.deps.agentVersion,
+      requestSnapshot: provider.baseline,
+      dispatch: (event) => this.dispatchRaw(event),
+    }).then((hash) => {
+      if (hash) this.snapshots.set(meta.sessionId, hash)
+    })
   }
 
   private dispatch(envelope: ExportEvent): void {

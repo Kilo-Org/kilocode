@@ -63,6 +63,29 @@ describe("Capture", () => {
     expect(types).toContain("session_degraded")
     expect(types.filter((type) => type === "llm_request_started").length).toBe(0)
   })
+
+  test("onSessionClose spawns a delta fiber for sessions that had eligible requests", async () => {
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "h0", files: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [] }),
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    posted.length = 0
+    await cap.onSessionClose("s1")
+    const types = posted.map((item) => (item as { envelope?: { type?: string } }).envelope?.type)
+    expect(types).toContain("workspace_delta_captured")
+  })
 })
 
 function meta(sessionId: string) {
