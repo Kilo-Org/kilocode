@@ -2,6 +2,7 @@
 .DS_Store
 .secrets/
 node_modules
+__pycache__/
 .worktrees
 .sst
 .env

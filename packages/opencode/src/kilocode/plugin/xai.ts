@@ -1,6 +1,6 @@
 import type { Hooks, PluginInput } from "@kilocode/plugin"
 import * as Log from "@opencode-ai/core/util/log"
-import { OAUTH_DUMMY_KEY } from "../auth"
+import { OAUTH_DUMMY_KEY } from "@/auth"
 import { createServer } from "http"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
@@ -309,7 +309,7 @@ export async function pollDeviceCodeToken(
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
-    <title>OpenCode - xAI Authorization Successful</title>
+    <title>Kilo - xAI Authorization Successful</title>
     <style>
       body {
         font-family:
@@ -340,7 +340,7 @@ const HTML_SUCCESS = `<!doctype html>
   <body>
     <div class="container">
       <h1>Authorization Successful</h1>
-      <p>You can close this window and return to OpenCode.</p>
+      <p>You can close this window and return to Kilo.</p>
     </div>
     <script>
       setTimeout(() => window.close(), 2000)
@@ -351,7 +351,7 @@ const HTML_SUCCESS = `<!doctype html>
 const HTML_ERROR = (error: string) => `<!doctype html>
 <html>
   <head>
-    <title>OpenCode - xAI Authorization Failed</title>
+    <title>Kilo - xAI Authorization Failed</title>
     <style>
       body {
         font-family:
@@ -405,6 +405,7 @@ const CORS_ALLOWED_ORIGINS = new Set(["https://accounts.x.ai", "https://auth.x.a
 interface PendingOAuth {
   pkce: PkceCodes
   state: string
+  options: XaiAuthPluginOptions
   resolve: (tokens: TokenResponse) => void
   reject: (error: Error) => void
 }
@@ -471,7 +472,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
       const current = pendingOAuth
       pendingOAuth = undefined
 
-      exchangeCodeForTokens(code, current.pkce)
+      exchangeCodeForTokens(code, current.pkce, current.options)
         .then((tokens) => current.resolve(tokens))
         .catch((err) => current.reject(err))
 
@@ -527,7 +528,11 @@ function stopOAuthServer() {
   }
 }
 
-function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResponse> {
+function waitForOAuthCallback(
+  pkce: PkceCodes,
+  state: string,
+  options: XaiAuthPluginOptions = {},
+): Promise<TokenResponse> {
   // A previous in-flight authorize() that the user abandoned (or that is
   // being superseded by a fresh attempt) still owns `pendingOAuth`. Reject
   // it eagerly so its caller stops waiting on a state value that can never
@@ -550,6 +555,7 @@ function waitForOAuthCallback(pkce: PkceCodes, state: string): Promise<TokenResp
     pendingOAuth = {
       pkce,
       state,
+      options,
       resolve: (tokens) => {
         clearTimeout(timeout)
         resolve(tokens)
@@ -672,7 +678,7 @@ export async function XaiAuthPlugin(input: PluginInput, options: XaiAuthPluginOp
             const nonce = generateState()
             const authUrl = buildAuthorizeUrl(pkce, state, nonce, options)
 
-            const callbackPromise = waitForOAuthCallback(pkce, state)
+            const callbackPromise = waitForOAuthCallback(pkce, state, options)
 
             return {
               url: authUrl,

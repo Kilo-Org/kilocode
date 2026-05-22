@@ -6,8 +6,8 @@ import {
   pollDeviceCodeToken,
   requestDeviceCode,
   XaiAuthPlugin,
-} from "../../src/plugin/xai"
-import { OAUTH_DUMMY_KEY } from "../../src/auth"
+} from "../../../src/kilocode/plugin/xai"
+import { OAUTH_DUMMY_KEY } from "../../../src/auth"
 
 function makeJwt(payload: object): string {
   const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url")
@@ -416,6 +416,31 @@ describe("plugin.xai", () => {
       ).auth!.loader!(async () => ({ type: "oauth", access: "old", refresh: "rt", expires: 0 }), {} as any)
 
       await expect(opts.fetch!("https://api.x.ai/v1/chat/completions", { headers: {} })).rejects.toThrow()
+    })
+  })
+
+  describe("browser oauth flow", () => {
+    test("uses injected token endpoint for callback exchange", async () => {
+      const bodies: string[] = []
+      using server = makeServer(async (request, url) => {
+        expect(url.pathname).toBe("/oauth2/token")
+        bodies.push(await request.text())
+        return Response.json({ access_token: "AT", refresh_token: "RT", expires_in: 3600 })
+      })
+      const browser = (await XaiAuthPlugin({} as any, serverOptions(server))).auth!.methods.find(
+        (m): m is Extract<typeof m, { type: "oauth" }> =>
+          m.type === "oauth" && m.label === "xAI Grok OAuth (SuperGrok Subscription)",
+      )!
+      const result = await browser.authorize!()
+      const url = new URL(result.url)
+      const state = url.searchParams.get("state")!
+      const callback = (result as any).callback()
+      const response = await fetch(`http://127.0.0.1:56121/callback?code=CODE&state=${encodeURIComponent(state)}`)
+
+      expect(url.origin + url.pathname).toBe(new URL("/oauth2/authorize", server.url).toString().replace(/\/$/, ""))
+      expect(await response.text()).toContain("return to Kilo")
+      await expect(callback).resolves.toMatchObject({ type: "success", refresh: "RT", access: "AT" })
+      expect(new URLSearchParams(bodies[0]).get("code")).toBe("CODE")
     })
   })
 
