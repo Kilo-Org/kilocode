@@ -409,7 +409,7 @@ const live: Layer.Layer<
       })
       // kilocode_change end
 
-      const result = streamText({
+      const result = streamText({ // kilocode_change
         onError(error) {
           l.error("stream error", {
             error,

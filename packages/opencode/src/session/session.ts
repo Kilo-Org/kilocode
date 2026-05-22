@@ -615,7 +615,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
         // kilocode_change end
         yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
         // kilocode_change - capture final session-export workspace delta on close/delete
-        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID))
+        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID)) // kilocode_change
         yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)
