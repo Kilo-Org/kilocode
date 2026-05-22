@@ -84,6 +84,7 @@
   <h2>On this page</h2>
   <ul>
     <li><a href="#what">What is Mercury Next Edit?</a></li>
+    <li><a href="#install">Install the PR locally</a> — 3 minutes from clone to running Dev Host</li>
     <li><a href="#setup">Enabling the feature</a></li>
     <li><a href="#flow">How the integration works</a></li>
     <li><a href="#tests">Test cases</a> — 20 scenarios across Python, TS, Go, Rust, JS, SQL, MD</li>
@@ -101,7 +102,63 @@
   <li>After any accept, the integration immediately re-triggers Mercury so the user can walk a refactor with repeated <kbd>Tab</kbd> presses ("Tab-Tab-Tab").</li>
 </ul>
 
-<h2 id="setup">Enabling the feature</h2>
+<h2 id="install">Install the PR locally</h2>
+<p>You'll need to pull this PR's branch and run the extension in a development VSCode window ("Extension Development Host"). The whole loop is about 3 minutes once you have the prerequisites.</p>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><strong>VSCode</strong> ≥ 1.105.1 (matches kilocode's <code>engines.vscode</code>)</li>
+  <li><strong>Bun</strong> ≥ 1.3.13 (the build script checks the version) &mdash; install via <code>brew install bun</code> or <a href="https://bun.sh">bun.sh</a></li>
+  <li><strong>GitHub CLI</strong> (<code>gh</code>) &mdash; optional but makes the PR checkout one command</li>
+  <li><strong>An Inception API key</strong> &mdash; create one at <a href="https://platform.inceptionlabs.ai">platform.inceptionlabs.ai</a> if you don't already have one</li>
+</ul>
+
+<h3>1. Check out the PR branch</h3>
+<p>From an empty directory:</p>
+<pre><code>gh repo clone Kilo-Org/kilocode
+cd kilocode
+gh pr checkout 10536</code></pre>
+<p>Or without <code>gh</code>:</p>
+<pre><code>git clone https://github.com/Kilo-Org/kilocode.git
+cd kilocode
+git fetch origin pull/10536/head:mercury-next-edit-integration
+git checkout mercury-next-edit-integration</code></pre>
+
+<h3>2. Install dependencies</h3>
+<pre><code>bun install</code></pre>
+<p>(First install pulls the full monorepo &mdash; takes 30–60 seconds.)</p>
+
+<h3>3. Start the dev build</h3>
+<pre><code>cd packages/kilo-vscode
+bun run watch</code></pre>
+<p>Leave that terminal running. It rebuilds the extension on every save and runs the TypeScript compiler in watch mode.</p>
+
+<h3>4. Open kilocode in VSCode and launch the Extension Development Host</h3>
+<p>From a separate terminal (or your IDE launcher):</p>
+<pre><code>code /path/to/kilocode</code></pre>
+<p>Inside that VSCode window, press <kbd>F5</kbd> (or <strong>Run → Start Debugging</strong>). A second VSCode window opens, titled <strong>[Extension Development Host]</strong>. That window has this PR's build of the kilocode extension loaded.</p>
+
+<blockquote class="warn">
+  <p>Pre-push <code>turbo typecheck</code> may fail on packages that need Java (JetBrains plugin). That's environment, not code &mdash; not relevant to the NES feature. Use <code>--no-verify</code> on any local pushes if you hit it.</p>
+</blockquote>
+
+<h3>5. Open the test playground</h3>
+<p>In the Dev Host window: <strong>File → Open Folder…</strong> → choose <code>packages/kilo-vscode/docs/nes-examples/</code> inside this same repo. That gives you the 20 self-contained test files described below.</p>
+
+<h3>6. Configure NES</h3>
+<p>Settings (<kbd>Cmd</kbd>+<kbd>,</kbd>) in the Dev Host, search <code>kilo-code.new.autocomplete</code>:</p>
+<ul>
+  <li><code>model</code> → <strong>Mercury Next Edit (Inception)</strong> &mdash; <em>not</em> "Mercury Edit 2", which is the classic FIM-via-gateway option</li>
+  <li><code>nextEdit.apiKey</code> → paste your <code>sk_…</code> Inception API key (or set <code>INCEPTION_API_KEY</code> env before launching)</li>
+  <li><code>enableAutoTrigger</code> → ✓ (already the default)</li>
+</ul>
+
+<h3>7. Watch the pipeline live</h3>
+<p>In the Dev Host: <strong>View → Output</strong> → in the dropdown, select <strong>"Kilo Code · Next Edit"</strong>. Every request, response, and render decision is logged here with timestamps. Keep this panel visible while testing &mdash; it's the single best diagnostic.</p>
+
+<p>You're set. Skip to the <a href="#tests">test cases</a> below.</p>
+
+<h2 id="setup">Enabling the feature (settings reference)</h2>
 <p>In VSCode Settings (<kbd>Cmd</kbd>+<kbd>,</kbd>), search <code>kilo-code.new.autocomplete</code>:</p>
 <table>
   <tr><th>Setting</th><th>Value</th></tr>
@@ -129,7 +186,8 @@
 </ol>
 
 <h2 id="tests">Test cases</h2>
-<p>Each test below is a self-contained file in <code>nes-test-examples/</code>. Place your cursor where indicated, wait ~300 ms idle, and observe.</p>
+<p>Each test below is a self-contained file at <code>packages/kilo-vscode/docs/nes-examples/</code> in this repo. Open that folder in the Extension Development Host (step 5 above), then work through the cases. Place your cursor where indicated, wait ~300 ms idle, and observe.</p>
+<p>Tip: keep this page open in a separate window from the Dev Host &mdash; the descriptions below would otherwise leak into Mercury's prompt context and bias the test.</p>
 
 <p>Render-path legend:</p>
 <p>
