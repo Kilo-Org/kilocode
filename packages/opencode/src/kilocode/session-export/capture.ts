@@ -133,6 +133,7 @@ export class Capture {
     durationMs: number
     retryCount: number
   }): void {
+    if (!this.firstEligible.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return
     const env: LlmRequestCompleted = {
       id: ulid(),

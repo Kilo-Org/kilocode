@@ -58,8 +58,8 @@ export const compaction = (args: Parameters<Capture["compaction"]>[0]): void => 
   capture?.compaction(args)
 }
 
-export const onSessionClose = (sessionId: string): void => {
-  void capture?.onSessionClose(sessionId)
+export const onSessionClose = async (sessionId: string): Promise<void> => {
+  await capture?.onSessionClose(sessionId)
 }
 
 export const shutdown = async (): Promise<void> => {

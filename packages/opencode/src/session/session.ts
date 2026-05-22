@@ -32,6 +32,7 @@ import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - legacy promise helpers + kilocode extensions
 import { makeRuntime } from "@/effect/run-service"
 import { KiloSession, kiloSessionFork } from "@/kilocode/session"
+import { SessionExport } from "@/kilocode/session-export"
 import { fn } from "@/util/fn"
 import { z } from "zod"
 // kilocode_change end
@@ -613,6 +614,8 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
         }
         // kilocode_change end
         yield* sync.run(Event.Deleted, { sessionID, info: session }, { publish: hasInstance })
+        // kilocode_change - capture final session-export workspace delta on close/delete
+        yield* Effect.promise(() => SessionExport.onSessionClose(sessionID))
         yield* sync.remove(sessionID)
       } catch (e) {
         log.error(e)

@@ -22,6 +22,7 @@ import { fn } from "@/util/fn"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks" // kilocode_change
+import { SessionExport } from "@/kilocode/session-export" // kilocode_change
 import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
 
@@ -630,6 +631,30 @@ export const layer: Layer.Layer<
           text: summary ?? "",
           include: selected.tail_start_id,
         })
+        // kilocode_change start - export self-contained compaction capture
+        SessionExport.compaction({
+          sessionId: input.sessionID,
+          rootSessionId: input.sessionID,
+          requestId: msg.id,
+          input: {
+            inputMessagesSnapshot: modelMessages,
+            selectedContext: selected.head,
+            previousSummary,
+            prompt: nextPrompt,
+            tailStartId: selected.tail_start_id,
+          },
+          output: {
+            summary: summary ?? "",
+            assistantMessageId: msg.id,
+          },
+          modelId: model.id,
+          durationMs: Math.max(0, Date.now() - msg.time.created),
+          usage: {
+            inputTokens: processor.message.tokens.input,
+            outputTokens: processor.message.tokens.output,
+          },
+        })
+        // kilocode_change end
         yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })
         yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
       }

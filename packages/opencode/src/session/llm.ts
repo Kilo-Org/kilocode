@@ -33,6 +33,8 @@ import { Identity } from "@kilocode/kilo-telemetry"
 import { makeRuntime } from "@/effect/run-service"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { SessionExport } from "@/kilocode/session-export"
+import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 // kilocode_change end
 import { Installation } from "@/installation"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -382,7 +384,32 @@ const live: Layer.Layer<
         ? (yield* InstanceState.context).project.id
         : undefined
 
-      return streamText({
+      // kilocode_change start - capture eligible session export request start
+      const org = yield* isKilo && input.model.isFree === true ? Effect.promise(() => getActiveOrg()) : Effect.succeed(undefined)
+      const started = Date.now()
+      SessionExport.beforeRequest({
+        input: { model: input.model, org },
+        requestMeta: {
+          sessionId: input.sessionID,
+          rootSessionId: input.sessionID,
+          parentSessionId: input.parentSessionID,
+          requestId: input.user.id,
+          userMessageId: input.user.id,
+          agent: input.agent.name,
+          modeId: input.agent.mode,
+        },
+        assembled: {
+          system,
+          messages,
+          tools,
+          permissions: input.permission ?? [],
+          toolChoice: input.toolChoice,
+          params,
+        },
+      })
+      // kilocode_change end
+
+      const result = streamText({
         onError(error) {
           l.error("stream error", {
             error,
@@ -463,6 +490,19 @@ const live: Layer.Layer<
         // kilocode_change - disable AI SDK span recording (ai.* / gen_ai.*)
         experimental_telemetry: { isEnabled: false },
       })
+      // kilocode_change start - capture eligible session export request completion off the stream path
+      return {
+        ...result,
+        fullStream: observeFullStream(result.fullStream, {
+          sessionId: input.sessionID,
+          rootSessionId: input.sessionID,
+          parentSessionId: input.parentSessionID,
+          requestId: input.user.id,
+          started,
+          retries: input.retries ?? 0,
+        }),
+      }
+      // kilocode_change end
     })
 
     const stream: Interface["stream"] = (input) =>
@@ -501,6 +541,90 @@ export const defaultLayer = Layer.suspend(() =>
 const runtime = makeRuntime(Service, defaultLayer)
 export async function stream(input: StreamRequest) {
   return runtime.runPromise((svc) => svc.raw(input), { signal: input.abort })
+}
+// kilocode_change end
+
+// kilocode_change start - session export stream observer
+function observeFullStream(
+  stream: Result["fullStream"],
+  meta: {
+    sessionId: string
+    rootSessionId: string
+    parentSessionId?: string
+    requestId: string
+    started: number
+    retries: number
+  },
+): Result["fullStream"] {
+  const textParts: string[] = []
+  const reasoningParts: string[] = []
+  const toolCalls: unknown[] = []
+  const rawParts: unknown[] = []
+  let finishReason: string | undefined
+  let usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined
+  const done = (error?: unknown) => {
+    SessionExport.afterRequest({
+      sessionId: meta.sessionId,
+      rootSessionId: meta.rootSessionId,
+      parentSessionId: meta.parentSessionId,
+      requestId: meta.requestId,
+      output: { textParts, reasoningParts, toolCalls, rawParts, finishReason, error, usage },
+      durationMs: Date.now() - meta.started,
+      retryCount: meta.retries,
+    })
+  }
+  return stream.pipeThrough(
+    new TransformStream({
+      transform(part, controller) {
+        rawParts.push(part)
+        collectPart(part, {
+          textParts,
+          reasoningParts,
+          toolCalls,
+          setFinish: (val) => (finishReason = val),
+          setUsage: (val) => (usage = val),
+        })
+        controller.enqueue(part)
+      },
+      flush() {
+        done()
+      },
+    }),
+  ) as Result["fullStream"]
+}
+
+function collectPart(
+  part: unknown,
+  out: {
+    textParts: string[]
+    reasoningParts: string[]
+    toolCalls: unknown[]
+    setFinish: (value: string | undefined) => void
+    setUsage: (value: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined) => void
+  },
+): void {
+  if (!part || typeof part !== "object") return
+  const item = part as Record<string, unknown>
+  const type = typeof item.type === "string" ? item.type : undefined
+  const text = typeof item.text === "string" ? item.text : typeof item.textDelta === "string" ? item.textDelta : undefined
+  if (type?.includes("text") && text) out.textParts.push(text)
+  const reasoning = typeof item.reasoning === "string" ? item.reasoning : typeof item.reasoningDelta === "string" ? item.reasoningDelta : undefined
+  if (type?.includes("reasoning") && reasoning) out.reasoningParts.push(reasoning)
+  if (type?.includes("tool")) out.toolCalls.push(item)
+  if (typeof item.finishReason === "string") out.setFinish(item.finishReason)
+  const usage = normalizeUsage(item.usage)
+  if (usage) out.setUsage(usage)
+}
+
+function normalizeUsage(value: unknown) {
+  if (!value || typeof value !== "object") return undefined
+  const item = value as Record<string, unknown>
+  const inputTokens = typeof item.inputTokens === "number" ? item.inputTokens : typeof item.promptTokens === "number" ? item.promptTokens : 0
+  const outputTokens =
+    typeof item.outputTokens === "number" ? item.outputTokens : typeof item.completionTokens === "number" ? item.completionTokens : 0
+  const cacheReadTokens = typeof item.cacheReadTokens === "number" ? item.cacheReadTokens : undefined
+  const cacheWriteTokens = typeof item.cacheWriteTokens === "number" ? item.cacheWriteTokens : undefined
+  return { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }
 }
 // kilocode_change end
 
