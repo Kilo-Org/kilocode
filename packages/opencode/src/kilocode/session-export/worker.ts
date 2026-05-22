@@ -5,6 +5,8 @@ import { Inbox } from "./worker/inbox"
 import type { FromWorker, ToWorker } from "./worker/ipc"
 import { Scrubber } from "./worker/scrub"
 import { Storage } from "./worker/storage"
+import { Uploader } from "./worker/uploader"
+import { checkBufferCap } from "./worker/buffer-cap"
 
 type Scope = {
   onmessage: (event: MessageEvent<ToWorker>) => void
@@ -17,7 +19,9 @@ let storage: Storage | undefined
 let chunker: Chunker | undefined
 let scrubber: Scrubber | undefined
 let inbox: Inbox | undefined
+let uploader: Uploader | undefined
 let draining = false
+let tripped = false
 
 async function drain(): Promise<void> {
   if (draining) return
@@ -35,6 +39,7 @@ async function drain(): Promise<void> {
             inlineThresholdBytes: Config.inlineThresholdBytes,
             maxPayloadBytes: Config.maxPayloadBytes,
           })
+          uploader?.scheduleFlush("event_persisted")
         } catch (err) {
           scope.postMessage({ kind: "telemetry", name: "session_export.handler_error", props: { message: String(err) } })
         }
@@ -54,9 +59,18 @@ scope.onmessage = (event) => {
       chunker = new Chunker(storage, { chunkBytes: Config.chunkBytes })
       scrubber = new Scrubber()
       inbox = new Inbox({ capacityBytes: Config.ringBufferBytes })
+      uploader = new Uploader({
+        storage,
+        endpoint: msg.endpoint ?? process.env.KILO_SESSION_EXPORT_INGEST ?? "https://ingest.kilosessions.ai/session-export/batch",
+        fetch: globalThis.fetch,
+        reportTelemetry: (item) => scope.postMessage(item),
+        agentVersion: msg.agentVersion ?? "unknown",
+      })
+      tripped = false
       scope.postMessage({ kind: "ready" })
       return
     case "event": {
+      if (tripped) return
       if (!inbox) return
       const result = inbox.enqueue(msg.envelope.sessionId, msg.approxBytes, msg.envelope)
       if (!result.accepted && result.sessionFirstOverflow) {
@@ -75,12 +89,24 @@ scope.onmessage = (event) => {
     case "shutdown":
       void (async () => {
         await drain()
+        await uploader?.flush("shutdown")
         storage?.close()
         storage = undefined
+        uploader = undefined
         scope.postMessage({ kind: "shutdown_done" })
       })()
       return
     case "network_reconnect":
+      uploader?.scheduleFlush("network_reconnect")
       return
   }
 }
+
+setInterval(() => {
+  if (!storage || tripped) return
+  const result = checkBufferCap(storage, { capacityBytes: Config.bufferCapBytes })
+  if (!result.tripped) return
+  tripped = true
+  scope.postMessage({ kind: "telemetry", name: "session_export.buffer_overflow", props: { dbSize: result.dbSize } })
+  scope.postMessage({ kind: "kill_switch", reason: "buffer_cap_50gb" })
+}, 60_000)

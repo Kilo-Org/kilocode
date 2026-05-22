@@ -41,6 +41,7 @@ type ChunkRecord = {
   id: string
   bytes: Uint8Array
   size: number
+  encoding?: string
   ref_count: number
 }
 
@@ -180,6 +181,18 @@ export class Storage {
     this.sqlite.query(`UPDATE chunk SET ref_count = ref_count - 1 WHERE id IN (${vars})`).run(...ids)
   }
 
+  chunksForEvents(ids: string[]): ChunkRow[] {
+    if (ids.length === 0) return []
+    const vars = ids.map(() => "?").join(",")
+    const rows = this.sqlite.query(`SELECT data_json FROM event WHERE id IN (${vars})`).all(...ids) as { data_json: string }[]
+    const chunkIds = new Set<string>()
+    for (const row of rows) collectChunkIds(JSON.parse(row.data_json), chunkIds)
+    if (chunkIds.size === 0) return []
+    const chunkVars = [...chunkIds].map(() => "?").join(",")
+    const chunks = this.sqlite.query(`SELECT id, bytes, size, encoding, ref_count FROM chunk WHERE id IN (${chunkVars})`).all(...chunkIds) as ChunkRecord[]
+    return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: row.encoding === "zstd" ? "zstd" : "zstd" }))
+  }
+
   dbSize(): number {
     const row = this.sqlite.query("SELECT page_count * page_size AS size FROM pragma_page_count(), pragma_page_size()").get() as
       | { size: number }
@@ -190,4 +203,29 @@ export class Storage {
   close(): void {
     this.sqlite.close()
   }
+}
+
+function collectChunkIds(node: unknown, out: Set<string>): void {
+  if (!node || typeof node !== "object") return
+  if (Array.isArray(node)) {
+    for (const item of node) collectChunkIds(item, out)
+    return
+  }
+  const record = node as Record<string, unknown>
+  if (record.__chunked === true && Array.isArray(record.chunkIds)) {
+    for (const id of record.chunkIds) {
+      if (typeof id === "string") out.add(id)
+    }
+  }
+  if (Array.isArray(record.inputChunkIds)) {
+    for (const id of record.inputChunkIds) {
+      if (typeof id === "string") out.add(id)
+    }
+  }
+  if (Array.isArray(record.outputChunkIds)) {
+    for (const id of record.outputChunkIds) {
+      if (typeof id === "string") out.add(id)
+    }
+  }
+  for (const val of Object.values(record)) collectChunkIds(val, out)
 }
