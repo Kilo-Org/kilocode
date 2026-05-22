@@ -242,6 +242,7 @@ test("custom agent from config creates new agent", async () => {
       expect(custom?.topP).toBe(0.9)
       expect(custom?.native).toBe(false)
       expect(custom?.mode).toBe("all")
+      expect(evalPerm(custom, "question")).toBe("allow")
     },
   })
 })

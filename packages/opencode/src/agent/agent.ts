@@ -267,7 +267,7 @@ export const layer = Layer.effect(
             item = agents[key] = {
               name: key,
               mode: "all",
-              permission: Permission.merge(defaults, user),
+              permission: Permission.merge(defaults, Permission.fromConfig({ question: "allow" }), user), // kilocode_change
               options: {},
               native: false,
             }
