@@ -14,7 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { collapseCostBreakdown } from "../../context/session-utils"
+import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -66,18 +66,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  // Token breakdown from the last assistant message — only return if at least one value is > 0
-  const tokens = createMemo(() => {
-    const msgs = session.visibleMessages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const m = msgs[i]
-      if (m.role !== "assistant" || !m.tokens) continue
-      const tk = m.tokens
-      const has = tk.input > 0 || tk.output > 0 || (tk.cache?.write ?? 0) > 0 || (tk.cache?.read ?? 0) > 0
-      if (has) return tk
-    }
-    return undefined
-  })
+  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
 
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
@@ -207,16 +196,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     {fmtNum(tk().output)}
                   </span>
                 </Show>
-                <Show when={tk().cache?.write && tk().cache!.write > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-up" size="small" />
-                    cache {fmtNum(tk().cache!.write)}
-                  </span>
-                </Show>
-                <Show when={tk().cache?.read && tk().cache!.read > 0}>
+                <Show when={tk().cached > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-down-to-line" size="small" />
-                    cache {fmtNum(tk().cache!.read)}
+                    cache {fmtNum(tk().cached)}
                   </span>
                 </Show>
               </div>
