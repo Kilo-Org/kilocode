@@ -3,6 +3,12 @@ import { Config } from "./config"
 import { setKillSwitch } from "./eligibility"
 import { SyncSubscriber } from "./sync-subscriber"
 
+declare global {
+  const KILO_SESSION_EXPORT_WORKER_PATH: string
+}
+
+type WorkerTarget = string | URL
+
 let worker: Worker | undefined
 let capture: Capture | undefined
 let subscriber: SyncSubscriber | undefined
@@ -16,7 +22,7 @@ let options:
       endpoint?: string
       syncSeq: () => number
       subscribeAll: (cb: (event: unknown) => void) => () => void
-      createWorker: (url: URL) => Worker
+      createWorker: (url: WorkerTarget) => Worker
     }
   | undefined
 
@@ -28,10 +34,10 @@ export const init = (opts: {
   endpoint?: string
   syncSeq?: () => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
-  createWorker?: (url: URL) => Worker
+  createWorker?: (url: WorkerTarget) => Worker
 }): void => {
   if (worker) return
-  const url = new URL("./worker.ts", import.meta.url)
+  const url = target()
   try {
     const syncSeq = opts.syncSeq ?? (() => seq++)
     options = {
@@ -40,7 +46,7 @@ export const init = (opts: {
       endpoint: opts.endpoint,
       syncSeq,
       subscribeAll: opts.subscribeAll,
-      createWorker: opts.createWorker ?? ((target) => new Worker(target)),
+      createWorker: opts.createWorker ?? ((file) => new Worker(file)),
     }
     spawn(url)
     unsubscribe = opts.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
@@ -95,7 +101,12 @@ export const shutdown = async (): Promise<void> => {
   attempts = 0
 }
 
-function spawn(url = new URL("./worker.ts", import.meta.url)): void {
+function target(): WorkerTarget {
+  if (typeof KILO_SESSION_EXPORT_WORKER_PATH !== "undefined") return KILO_SESSION_EXPORT_WORKER_PATH
+  return new URL("./worker.ts", import.meta.url)
+}
+
+function spawn(url = target()): void {
   if (!options) return
   worker = options.createWorker(url)
   worker.postMessage({
