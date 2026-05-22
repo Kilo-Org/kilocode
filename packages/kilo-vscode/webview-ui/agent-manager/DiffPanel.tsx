@@ -71,10 +71,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   const vscode = useVSCode()
   const server = useServer()
   const provider = useProvider()
-  const { config, settings } = useConfig()
+  const { config } = useConfig()
   const speech = useSpeechToText(vscode, server, { t })
-  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
-  const speechModel = () => selectedSpeechToTextModel(settings())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
   const sendAllKeybind = () =>
     isMac ? t("agentManager.review.sendAllShortcut.mac") : t("agentManager.review.sendAllShortcut.other")

@@ -48,11 +48,24 @@ export {
   type OrganizationModeConfig,
 } from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
+export { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "./cloud-sessions.js"
 
 // ============================================================================
 // Server Routes (optional - requires hono and OpenCode dependencies)
 // ============================================================================
 export { createKiloRoutes } from "./server/routes.js"
+export {
+  GatewayError,
+  UnauthorizedError,
+  getOrganizationId,
+  getClawChatCredentials,
+  getClawStatus,
+  getCloudSessions,
+  getNotifications,
+  getProfile,
+  getToken,
+  setOrganization,
+} from "./server/handlers.js"
 
 // ============================================================================
 // Note: TUI exports moved to separate entry point
@@ -88,6 +101,8 @@ export {
   ENV_KILO_API_URL,
   DEFAULT_KILO_API_URL,
   KILO_API_BASE,
+  KILO_CHAT_URL,
+  KILO_EVENT_SERVICE_URL,
   KILO_OPENROUTER_BASE,
   POLL_INTERVAL_MS,
   DEFAULT_MODEL,

@@ -4,6 +4,7 @@ import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
+import { isRecord } from "@/util/record"
 import * as Log from "@opencode-ai/core/util/log"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -12,6 +13,7 @@ export type ReviewTelemetry = {
   mode: "review"
   feature: "code_reviews"
   command: "review" | "local-review" | "local-review-uncommitted"
+  tool?: "suggest"
 }
 
 export namespace KiloSessionProcessor {
@@ -26,6 +28,13 @@ export namespace KiloSessionProcessor {
     if (command === "review" || command === "local-review" || command === "local-review-uncommitted") {
       return { mode: "review", feature: "code_reviews", command }
     }
+  }
+
+  function command(prompt: string | undefined) {
+    if (!prompt?.startsWith("/")) return
+    const name = prompt.slice(1).split(/\s/, 1)[0]
+    if (!name) return
+    return name
   }
 
   /**
@@ -55,6 +64,25 @@ export namespace KiloSessionProcessor {
       if (meta.mode !== "review") continue
       if (meta.feature !== "code_reviews") continue
       const tel = reviewTelemetry(typeof meta.command === "string" ? meta.command : undefined)
+      if (tel) return tel
+    }
+  }
+
+  export function suggestionReviewTelemetry(metadata: unknown): ReviewTelemetry | undefined {
+    if (!isRecord(metadata)) return
+    if (!isRecord(metadata.accepted)) return
+    const prompt = typeof metadata.accepted.prompt === "string" ? metadata.accepted.prompt : undefined
+    const tel = reviewTelemetry(command(prompt))
+    if (!tel) return
+    return { ...tel, tool: "suggest" }
+  }
+
+  export function extractSuggestionReviewTelemetry(parts: MessageV2.Part[]): ReviewTelemetry | undefined {
+    for (const part of parts) {
+      if (part.type !== "tool") continue
+      if (part.tool !== "suggest") continue
+      if (part.state.status !== "completed") continue
+      const tel = suggestionReviewTelemetry(part.state.metadata)
       if (tel) return tel
     }
   }

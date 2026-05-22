@@ -13,6 +13,9 @@ import ai.kilocode.jetbrains.api.model.Config
 import ai.kilocode.jetbrains.api.model.ConfigWarnings200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloNotifications200ResponseInner
 import ai.kilocode.jetbrains.api.model.KiloProfile200Response
+import ai.kilocode.jetbrains.api.model.ProviderOauthAuthorizeRequest
+import ai.kilocode.jetbrains.api.model.ProviderOauthCallbackRequest
+import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
@@ -27,10 +30,18 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import okhttp3.OkHttpClient
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
@@ -548,6 +559,89 @@ class KiloBackendAppService private constructor(
         notifications = emptyList()
         warnings = emptyList()
         _appState.value = KiloAppState.Disconnected
+    }
+
+    /**
+     * Refresh the user profile from the CLI backend.
+     * Returns the latest profile data, or null when not logged in.
+     * Updates the current [KiloAppState.Ready] profile in-place if the app is ready.
+     */
+    suspend fun refreshProfile(): KiloProfile200Response? {
+        val result = fetchProfile()
+        val fresh = result.value
+        val current = _appState.value
+        if (current is KiloAppState.Ready) {
+            setAppReady(current.data.copy(profile = fresh))
+        }
+        profile = fresh
+        return fresh
+    }
+
+    /**
+     * Start the Kilo device auth login flow.
+     * Returns [DeviceAuthDto] containing the verification URL and code for display in the UI.
+     */
+    suspend fun startLogin(directory: String?): DeviceAuthDto {
+        val client = connection.api ?: throw IllegalStateException("Not connected")
+        val body = ProviderOauthAuthorizeRequest(method = 0.0)
+        val response = client.providerOauthAuthorize(providerID = "kilo", directory = directory, providerOauthAuthorizeRequest = body)
+        val match = response.instructions.let { Regex("""code:\s*(\S+)""", RegexOption.IGNORE_CASE).find(it) }
+        return DeviceAuthDto(
+            code = match?.groupValues?.get(1),
+            verificationUrl = response.url,
+            expiresIn = 900,
+        )
+    }
+
+    /**
+     * Complete the Kilo device auth login flow.
+     * Blocks until the user completes authentication on the browser side.
+     * Returns the user profile on success, or null if the login could not be completed.
+     */
+    suspend fun completeLogin(directory: String?): KiloProfile200Response? {
+        val client = connection.api ?: throw IllegalStateException("Not connected")
+        client.providerOauthCallback(providerID = "kilo", directory = directory, providerOauthCallbackRequest = ProviderOauthCallbackRequest(method = 0.0))
+        return refreshProfile()
+    }
+
+    /**
+     * Log out from Kilo Gateway.
+     * Removes credentials and clears the profile from app state.
+     */
+    suspend fun logout(): Boolean {
+        val client = connection.api ?: throw IllegalStateException("Not connected")
+        val result = client.authRemove(providerID = "kilo")
+        val current = _appState.value
+        if (current is KiloAppState.Ready) {
+            profile = null
+            setAppReady(current.data.copy(profile = null))
+        }
+        return result
+    }
+
+    /**
+     * Switch the active account context.
+     * Pass null for personal account, an organization ID for org context.
+     * Returns the updated profile after the switch.
+     */
+    suspend fun setOrganization(organizationId: String?): KiloProfile200Response? {
+        val http = connection.apiClient ?: throw IllegalStateException("Not connected")
+        val body = JsonObject(
+            mapOf("organizationId" to (organizationId?.let { JsonPrimitive(it) } ?: JsonNull)),
+        ).toString()
+        val request = Request.Builder()
+            .url("http://127.0.0.1:$port/kilo/organization")
+            .header("Accept", "application/json")
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .build()
+        withContext(Dispatchers.IO) {
+            http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IllegalStateException("Organization switch failed: HTTP ${response.code} ${response.message}")
+                }
+            }
+        }
+        return refreshProfile()
     }
 
     override fun dispose() {

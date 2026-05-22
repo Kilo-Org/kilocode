@@ -40,6 +40,16 @@ class MockCliServer : AutoCloseable {
     @Volatile var warningsStatus = 200
     @Volatile var notificationsStatus = 200
 
+    // Auth / OAuth responses
+    @Volatile var authorizeResponse = """{"url":"https://auth.kilo.ai/device","method":"code","instructions":"Open URL and enter code: TEST-1234"}"""
+    @Volatile var authorizeStatus = 200
+    @Volatile var callbackStatus = 200
+    @Volatile var authRemoveStatus = 200
+    @Volatile var organizationSetStatus = 200
+    @Volatile var lastAuthorizeBody: String? = null
+    @Volatile var lastCallbackBody: String? = null
+    @Volatile var lastOrganizationSetBody: String? = null
+
     // Project-scoped REST responses
     @Volatile var providers = """{"all":[],"default":{},"connected":[],"failed":[]}"""
     @Volatile var agents = "[]"
@@ -219,12 +229,27 @@ class MockCliServer : AutoCloseable {
                 path == "/global/config" -> respond(output, configStatus, config)
                 path.startsWith("/config/warnings") -> respond(output, warningsStatus, warnings)
                 path.startsWith("/kilo/notifications") -> respond(output, notificationsStatus, notifications)
-                path.startsWith("/kilo/profile") -> {
+                path.startsWith("/kilo/profile") && method == "GET" -> {
                     if (profileStatus == 401) {
                         respond(output, 401, """{"message":"Unauthorized"}""")
                     } else {
                         respond(output, profileStatus, profile)
                     }
+                }
+                path.matches(Regex("/provider/[^/]+/oauth/authorize.*")) && method == "POST" -> {
+                    lastAuthorizeBody = body
+                    respond(output, authorizeStatus, authorizeResponse)
+                }
+                path.matches(Regex("/provider/[^/]+/oauth/callback.*")) && method == "POST" -> {
+                    lastCallbackBody = body
+                    respond(output, callbackStatus, "true")
+                }
+                bare.matches(Regex("/auth/[^/]+")) && method == "DELETE" -> {
+                    respond(output, authRemoveStatus, "true")
+                }
+                bare == "/kilo/organization" && method == "POST" -> {
+                    lastOrganizationSetBody = body
+                    respond(output, organizationSetStatus, "true")
                 }
                 path == "/global/event" -> handleSse(output)
                 path == "/path" -> respond(output, 200, this.path)

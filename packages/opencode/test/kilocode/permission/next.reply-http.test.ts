@@ -1,24 +1,28 @@
 import { afterEach, describe, expect, test } from "bun:test"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { Instance } from "../../../src/project/instance"
+import { WithInstance } from "../../../src/project/with-instance"
 import { Session } from "../../../src/session/session"
 import { tmpdir } from "../../fixture/fixture"
 
+const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
+
 afterEach(() => {
-  delete process.env["KILO_EXPERIMENTAL_HTTPAPI"]
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = original
 })
 
-async function app() {
+async function app(experimental = false) {
   const { Server } = await import("../../../src/server/server")
-  return Server.Default().app
+  Flag.KILO_EXPERIMENTAL_HTTPAPI = experimental
+  return experimental ? Server.Default().app : Server.Legacy().app
 }
 
 describe("POST /permission/:requestID/reply", () => {
   test("returns 404 when requestID is not pending", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -40,7 +44,7 @@ describe("POST /permission/:requestID/reply", () => {
   test("returns 200 for an accepted reply", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -78,7 +82,7 @@ describe("POST /permission/:requestID/reply", () => {
   test("returns 404 when replying to an already-answered request (double-reply)", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -119,13 +123,12 @@ describe("POST /permission/:requestID/reply", () => {
   })
 
   test("returns 404 for unknown replies when experimental HttpApi is enabled", async () => {
-    process.env["KILO_EXPERIMENTAL_HTTPAPI"] = "1"
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const server = await app()
+        const server = await app(true)
 
         const response = await server.request("/permission/permission_missing/reply", {
           method: "POST",
@@ -143,7 +146,7 @@ describe("POST /permission/:requestID/always-rules", () => {
   test("returns 404 when requestID is not pending", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const server = await app()
@@ -164,7 +167,7 @@ describe("POST /permission/:requestID/always-rules", () => {
   test("returns 200 for an accepted save", async () => {
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const server = await app()

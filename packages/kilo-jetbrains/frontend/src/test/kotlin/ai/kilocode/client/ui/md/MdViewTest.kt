@@ -243,6 +243,7 @@ class MdViewTest : BasePlatformTestCase() {
         view.set("```\ncode\n```")
         val sheet = view.overrideSheet()
         assertTrue(sheet.contains("#0a0b0c"))
+        assertTrue(sheet.contains("div.code-block"))
         assertTrue(sheet.contains("#d0e0f0"))
     }
 

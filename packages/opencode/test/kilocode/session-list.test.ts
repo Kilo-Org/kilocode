@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ProjectTable } from "../../src/project/project.sql"
 import { ProjectID } from "../../src/project/schema"
 import { AppRuntime } from "../../src/effect/app-runtime"
@@ -18,7 +18,7 @@ afterEach(async () => {
 describe("Kilo Session.list", () => {
   test("includes directory matches from legacy project ids", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await Session.create({ title: "legacy-session" })

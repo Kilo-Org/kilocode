@@ -6,7 +6,7 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { Question } from "../../src/question"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionCompaction } from "../../src/session/compaction"
@@ -246,7 +246,7 @@ describe("session prompt queue", () => {
     // scope() hides that marker, runLoop never processes the compaction task and
     // instead retries the same oversized request until compaction is exhausted.
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await Session.create({ title: "Queued compaction regression" })
@@ -412,7 +412,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const session = await Session.create({ title: "Queued prompt regression" })
@@ -529,7 +529,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const session = await Session.create({ title: "Queued cancel regression" })
@@ -588,7 +588,7 @@ describe("session prompt queue", () => {
     const dismissed = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await Session.create({ title: "Suggestion unblock regression" })
@@ -633,7 +633,7 @@ describe("session prompt queue", () => {
     const rejected = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await Session.create({ title: "Question unblock regression" })
@@ -687,7 +687,7 @@ describe("session prompt queue", () => {
     // hasFollowup=true and reject synchronously, before any pending entry or
     // Shown event is published.
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_suggestion")
@@ -748,7 +748,7 @@ describe("session prompt queue", () => {
 
   test("auto-dismisses a question shown after a queued prompt", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_question")

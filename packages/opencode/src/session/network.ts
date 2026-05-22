@@ -68,8 +68,8 @@ export namespace SessionNetwork {
     message: Schema.String,
     restored: Schema.Boolean,
     time: Schema.Struct({
-      created: Schema.Number,
-      restored: Schema.optional(Schema.Number),
+      created: Schema.Finite,
+      restored: Schema.optional(Schema.Finite),
     }),
   })
     .annotate({ identifier: "SessionNetworkWait" })
@@ -97,7 +97,7 @@ export namespace SessionNetwork {
       Schema.Struct({
         sessionID: SessionID,
         requestID: QuestionID,
-        time: Schema.Number,
+        time: Schema.Finite,
       }),
     ),
   }

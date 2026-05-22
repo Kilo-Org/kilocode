@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-indexing",
-  "version": "7.3.1",
+  "version": "7.3.8",
   "type": "module",
   "license": "MIT",
   "description": "Standalone indexing engine and host helpers for Kilo Code",
@@ -40,6 +40,7 @@
     "@qdrant/js-client-rest": "1.17.0",
     "async-mutex": "0.5.0",
     "chokidar": "4.0.3",
+    "effect": "catalog:",
     "glob": "13.0.6",
     "hono": "catalog:",
     "hono-openapi": "catalog:",
@@ -57,5 +58,6 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "typescript": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

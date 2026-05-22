@@ -14,3 +14,40 @@
 [data-component="tool-output"][data-scrollable]:has([data-component="task-tools"]) {
   max-height: 200px;
 }
+
+/* ============================================
+   Background Process Tool
+   ============================================ */
+
+[data-component="background-process-fields"] {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+}
+
+[data-slot="background-process-field"] {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: var(--kilo-font-size-12);
+}
+
+[data-slot="background-process-label"] {
+  color: var(--text-dimmed);
+}
+
+[data-slot="background-process-value"] {
+  color: var(--text-base);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+[data-slot="background-process-output"] {
+  margin: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

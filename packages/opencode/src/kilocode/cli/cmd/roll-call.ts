@@ -1,5 +1,5 @@
 import type { Argv } from "yargs"
-import { Instance } from "../../../project/instance"
+import { WithInstance } from "../../../project/with-instance"
 import { Provider } from "../../../provider/provider"
 import { ProviderTransform } from "../../../provider/transform"
 import { cmd } from "../../../cli/cmd/cmd"
@@ -158,7 +158,7 @@ export async function handle(args: ArgumentsCamelCase) {
     )
   }
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: process.cwd(),
     async fn() {
       const providers = await list()

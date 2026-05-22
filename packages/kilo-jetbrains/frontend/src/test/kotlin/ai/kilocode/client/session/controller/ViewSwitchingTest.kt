@@ -2,6 +2,11 @@ package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.ProfileBalanceDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import kotlinx.coroutines.CompletableDeferred
 
 class ViewSwitchingTest : SessionControllerTestBase() {
@@ -62,6 +67,8 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(rpc.recentCalls.contains("/test" to SessionController.RECENT_LIMIT))
         assertControllerEvents("""
+            AccountOverlayChanged hide
+            AccountOverlayChanged show loggedIn=false
             AppChanged
             WorkspaceChanged
             WorkspaceReady
@@ -79,6 +86,8 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(rpc.recentCalls.contains("/test" to SessionController.RECENT_LIMIT))
         assertControllerEvents("""
+            AccountOverlayChanged hide
+            AccountOverlayChanged show loggedIn=false
             AppChanged
             WorkspaceChanged
             WorkspaceReady
@@ -95,6 +104,7 @@ class ViewSwitchingTest : SessionControllerTestBase() {
 
         assertTrue(rpc.recentCalls.isEmpty())
         assertControllerEvents("""
+            AccountOverlayChanged hide
             AppChanged
             WorkspaceChanged
             ViewChanged progress
@@ -347,4 +357,133 @@ class ViewSwitchingTest : SessionControllerTestBase() {
         version = "1",
         time = ai.kilocode.rpc.dto.SessionTimeDto(created = 1.0, updated = 2.0),
     )
+
+    // --- account overlay controller tests ---
+
+    fun `test empty session with workspace ready emits account overlay show`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        val events = collect(m)
+
+        flush()
+
+        assertTrue(events.any { it is SessionControllerEvent.AccountOverlayChanged.Show })
+        val show = events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>().last()
+        assertEquals("AccountOverlayChanged show loggedIn=false", show.toString())
+    }
+
+    fun `test empty session overlay show includes logged in profile`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val prof = ProfileDto(
+            email = "user@example.com",
+            name = "Test User",
+            balance = ProfileBalanceDto(10.0),
+        )
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = prof)
+        val m = controller()
+        val events = collect(m)
+
+        flush()
+
+        val show = events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>().last()
+        assertEquals("AccountOverlayChanged show loggedIn=true", show.toString())
+        assertEquals(prof.email, show.account.profile?.email)
+    }
+
+    fun `test first prompt hides overlay`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        flush()
+        val events = collect(m)
+
+        edt { m.prompt("hello") }
+        flush()
+
+        assertTrue(events.any { it is SessionControllerEvent.AccountOverlayChanged.Hide })
+        assertFalse(events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>().any { it.account.profile != null })
+    }
+
+    fun `test explicit local session load never shows overlay`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller("ses_test")
+        val events = collect(m)
+
+        flush()
+
+        assertFalse(events.any { it is SessionControllerEvent.AccountOverlayChanged.Show })
+    }
+
+    fun `test explicit cloud import never shows overlay`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.importedCloudSession = session("ses_imported")
+        rpc.recent.add(session("ses_1"))
+        val m = controller("cloud:cloud_1")
+        val events = collect(m)
+
+        flush()
+
+        assertFalse(events.any { it is SessionControllerEvent.AccountOverlayChanged.Show })
+    }
+
+    fun `test app profile change refreshes overlay while allowed`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        val events = collect(m)
+        flush()
+
+        val prof = ProfileDto(email = "user@example.com", balance = ProfileBalanceDto(20.0))
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = prof)
+        flush()
+
+        val shows = events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>()
+        assertTrue(shows.isNotEmpty())
+        assertTrue(shows.last().account.profile?.email == "user@example.com")
+    }
+
+    fun `test selecting personal account emits switching overlay`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            profile = ProfileDto(
+                email = "user@example.com",
+                currentOrgId = "org_1",
+                organizations = listOf(ProfileOrganizationDto("org_1", "Kilo", "OWNER")),
+            ),
+        )
+        val m = controller()
+        val events = collect(m)
+        flush()
+        events.clear()
+
+        edt { m.selectOrganization(null) }
+        flush()
+
+        val show = events.filterIsInstance<SessionControllerEvent.AccountOverlayChanged.Show>()
+            .first { it.account.switching }
+        assertTrue(show.account.switching)
+        assertNull(show.account.targetOrgId)
+        assertEquals(null, appRpc.orgSelections.last())
+    }
+
+    fun `test replay includes current overlay event`() {
+        projectRpc.state.value = workspaceReady()
+        rpc.recent.add(session("ses_1"))
+        val m = controller()
+        flush()
+
+        // Add a new listener after initial events are done
+        val replayed = collect(m)
+
+        assertTrue(replayed.any { it is SessionControllerEvent.AccountOverlayChanged.Show })
+    }
+
+    fun `test overlay hide event has correct string`() {
+        assertEquals("AccountOverlayChanged hide", SessionControllerEvent.AccountOverlayChanged.Hide.toString())
+    }
 }

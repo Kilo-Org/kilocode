@@ -32,4 +32,21 @@ describe("splitConfigByScope", () => {
     expect({ ...split.global, ...draft }).toEqual({ username: "marius", indexing: { enabled: true } })
     expect(split.project).toEqual({})
   })
+
+  it("writes speech-to-text experimental settings to global config", () => {
+    const split = splitConfigByScope({
+      experimental: {
+        speech_to_text: true,
+        speech_to_text_model: "openai/gpt-4o-mini-transcribe",
+      },
+    })
+
+    expect(split.global).toEqual({
+      experimental: {
+        speech_to_text: true,
+        speech_to_text_model: "openai/gpt-4o-mini-transcribe",
+      },
+    })
+    expect(split.project).toEqual({})
+  })
 })

@@ -77,6 +77,34 @@ async function copyTreeSitterWasms(outputDir: string) {
 }
 // kilocode_change end
 
+// kilocode_change start - upstream's createEmbeddedWebUIBundle is intentionally removed because
+// Kilo dropped the packages/app web UI. Kept here as a commented reference so future upstream merges
+// can see the deliberate divergence rather than treating a re-add as a clean re-introduction.
+// const createEmbeddedWebUIBundle = async () => {
+//   console.log(`Building Web UI to embed in the binary`)
+//   const appDir = path.join(import.meta.dirname, "../../app")
+//   const dist = path.join(appDir, "dist")
+//   await $`bun run --cwd ${appDir} build`
+//   const files = (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: dist })))
+//     .map((file) => file.replaceAll("\\", "/"))
+//     .filter((file) => !file.endsWith(".map"))
+//     .sort()
+//   const imports = files.map((file, i) => {
+//     const spec = path.relative(dir, path.join(dist, file)).replaceAll("\\", "/")
+//     return `import file_${i} from ${JSON.stringify(spec.startsWith(".") ? spec : `./${spec}`)} with { type: "file" };`
+//   })
+//   const entries = files.map((file, i) => `  ${JSON.stringify(file)}: file_${i},`)
+//   return [
+//     `// Import all files as file_$i with type: "file"`,
+//     ...imports,
+//     `// Export with original mappings`,
+//     `export default {`,
+//     ...entries,
+//     `}`,
+//   ].join("\n")
+// }
+// kilocode_change end
+
 const allTargets: {
   os: string
   arch: "arm64" | "x64"

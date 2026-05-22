@@ -5,7 +5,17 @@ const fs = require("fs")
 const path = require("path")
 const os = require("os")
 
+// kilocode_change start - point packaged binaries at co-located tree-sitter WASM resources
+function configureTreeSitterResources(target) {
+  const wasmDir = path.join(path.dirname(target), "tree-sitter")
+  if (!process.env.KILO_TREE_SITTER_WASM_DIR && fs.existsSync(path.join(wasmDir, "tree-sitter.wasm"))) {
+    process.env.KILO_TREE_SITTER_WASM_DIR = wasmDir
+  }
+}
+// kilocode_change end
+
 function run(target) {
+  configureTreeSitterResources(target) // kilocode_change
   const result = childProcess.spawnSync(target, process.argv.slice(2), {
     stdio: "inherit",
   })
@@ -28,6 +38,7 @@ const scriptDir = path.dirname(scriptPath)
 // kilocode_change start - fall through to findBinary() if cached binary fails
 const cached = path.join(scriptDir, ".kilo")
 if (fs.existsSync(cached)) {
+  configureTreeSitterResources(cached)
   const result = childProcess.spawnSync(cached, process.argv.slice(2), {
     stdio: "inherit",
   })

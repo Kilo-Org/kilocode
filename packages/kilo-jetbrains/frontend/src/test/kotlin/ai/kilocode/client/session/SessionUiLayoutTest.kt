@@ -11,11 +11,18 @@ import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
+import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
-import ai.kilocode.client.session.views.PermissionView
+import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.rpc.dto.KiloAppStatusDto
+import ai.kilocode.rpc.dto.ProfileDto
+import com.intellij.util.ui.JBUI
+import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
@@ -42,7 +49,7 @@ class SessionUiLayoutTest : SessionUiTestBase() {
 
         assertSame(root.content, stack.parent)
         assertSame(stack, connection.parent)
-        assertEquals(1, root.overlay.componentCount)
+        assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
         assertEquals(listOf(connection, prompt), stack.components.toList())
     }
 
@@ -349,4 +356,79 @@ class SessionUiLayoutTest : SessionUiTestBase() {
             meta = PermissionMeta(raw = emptyMap()),
         )
     )
+
+    // --- account overlay layout tests ---
+
+    fun `test account overlay is registered in root overlay layer`() {
+        val root = find<SessionRootPanel>(ui)
+        val overlay = find<SessionAccountOverlay>(ui)
+
+        assertSame(root.overlay, overlay.parent)
+    }
+
+    fun `test account overlay hidden before recents complete`() {
+        rpc.recentGate = kotlinx.coroutines.CompletableDeferred()
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+
+        settleShort(100)
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertFalse(overlay.isVisible)
+
+        rpc.recentGate!!.complete(Unit)
+    }
+
+    fun `test account overlay shows after recents complete`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertTrue(overlay.isVisible)
+    }
+
+    fun `test account overlay hides after first prompt`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertTrue(overlay.isVisible)
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().prompt("hello")
+        }
+        settle()
+
+        assertFalse(overlay.isVisible)
+    }
+
+    fun `test explicit session does not show overlay`() {
+        ui = newUi(id = "ses_test")
+        settle()
+
+        val overlay = find<SessionAccountOverlay>(ui)
+        assertFalse(overlay.isVisible)
+    }
+
+    fun `test account overlay uses prompt panel top and right insets`() {
+        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, profile = ProfileDto(email = "user@example.com"))
+        rpc.recent.add(session("ses_1"))
+        ui = newUi(displayMs = 1_000)
+        settle()
+        layout()
+
+        val root = find<SessionRootPanel>(ui)
+        val overlay = find<SessionAccountOverlay>(ui)
+        val top = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING)
+        val right = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING)
+
+        assertTrue(overlay.isVisible)
+        assertEquals(top, overlay.y)
+        assertEquals(root.overlay.width - overlay.width - right, overlay.x)
+    }
 }

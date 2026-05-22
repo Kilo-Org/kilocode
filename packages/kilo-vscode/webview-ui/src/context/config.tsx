@@ -80,13 +80,6 @@ export const ConfigProvider: ParentComponent = (props) => {
       })
       return
     }
-    if (message.type === "speechToTextSettingsLoaded") {
-      mergeSettings({
-        "speechToText.enabled": message.settings.enabled,
-        "speechToText.model": message.settings.model,
-      })
-      return
-    }
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
@@ -155,7 +148,6 @@ export const ConfigProvider: ParentComponent = (props) => {
   const requestInitialData = () => {
     vscode.postMessage({ type: "requestConfig" })
     vscode.postMessage({ type: "requestAutocompleteSettings" })
-    vscode.postMessage({ type: "requestSpeechToTextSettings" })
   }
 
   // Request config immediately; if the extension's httpClient is not yet ready,
