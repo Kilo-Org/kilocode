@@ -79,6 +79,36 @@ describe("handlers", () => {
     expect(data.output.textParts[0].truncated).toBe(true)
     expect(data.output.textParts[0].originalSize).toBe(150_000)
   })
+
+  test("tool I/O fields are converted to chunk id arrays when present", async () => {
+    await handleEvent(
+      {
+        id: "01T",
+        schemaVersion: 1,
+        type: "tool_executed",
+        sessionId: "s1",
+        rootSessionId: "s1",
+        seq: 0,
+        ts: 100,
+        agentVersion: "v0",
+        toolCallId: "c1",
+        toolName: "read_file",
+        source: "builtin",
+        inputChunkIds: [],
+        outputChunkIds: [],
+        toolInput: { path: "a.ts" },
+        toolOutput: "z".repeat(100_000),
+        durationMs: 1,
+        retryCount: 0,
+      },
+      { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 },
+    )
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 5_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as { inputChunkIds: string[]; outputChunkIds: string[]; toolOutput?: string }
+    expect(data.inputChunkIds.length).toBeGreaterThan(0)
+    expect(data.outputChunkIds.length).toBeGreaterThan(0)
+    expect(data.toolOutput).toBeUndefined()
+  })
 })
 
 function started(id: string, input: Partial<LlmRequestStarted["input"]>): LlmRequestStarted {

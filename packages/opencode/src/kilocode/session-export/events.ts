@@ -94,6 +94,8 @@ export type ToolExecuted = ExportEnvelope & {
   mcpServer?: string
   inputChunkIds: string[]
   outputChunkIds: string[]
+  toolInput?: unknown
+  toolOutput?: string
   errorCode?: string
   durationMs: number
   retryCount: number

@@ -26,7 +26,7 @@ const ENVELOPE = new Set([
 
 export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promise<void> {
   const result = ctx.scrubber.scrubEvent(envelope)
-  const payload = stripEnvelopeFields(result.data)
+  const payload = await normalizeToolIo(result.data, ctx)
   const chunked = await chunkLargeStrings(payload, ctx)
   const dataJson = JSON.stringify(chunked)
 
@@ -44,6 +44,21 @@ export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promi
     dataJson,
     clientScrubbed: result.success ? 1 : 0,
   })
+}
+
+async function normalizeToolIo(envelope: ExportEvent, ctx: HandlerCtx): Promise<unknown> {
+  const payload = stripEnvelopeFields(envelope)
+  if (envelope.type !== "tool_executed") return payload
+  const out = { ...(payload as Record<string, unknown>) }
+  if (envelope.toolInput !== undefined) {
+    out.inputChunkIds = await ctx.chunker.write(Buffer.from(JSON.stringify(envelope.toolInput), "utf8"))
+    delete out.toolInput
+  }
+  if (envelope.toolOutput !== undefined) {
+    out.outputChunkIds = await ctx.chunker.write(Buffer.from(envelope.toolOutput, "utf8"))
+    delete out.toolOutput
+  }
+  return out
 }
 
 function stripEnvelopeFields(input: unknown): unknown {
