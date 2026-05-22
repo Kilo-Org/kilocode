@@ -1,6 +1,13 @@
 import * as vscode from "vscode"
 import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import { ensureBackendForAutocomplete } from "./ensure-backend"
+import { nesLog } from "./next-edit/log"
+import { INLINE_COMPLETION_ACCEPTED_COMMAND as NEXT_EDIT_ACCEPTED_COMMAND } from "./next-edit/NextEditInlineCompletionProvider"
+import {
+  NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND,
+  NEXT_EDIT_DISMISS_COMMAND,
+  chainNextPrediction,
+} from "./next-edit/NextEditSuggestionManager"
 import type { KiloConnectionService } from "../cli-backend"
 
 export const registerAutocompleteProvider = (
@@ -40,6 +47,31 @@ export const registerAutocompleteProvider = (
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.autocomplete.disable", async () => {
       await autocompleteManager.disable()
+    }),
+  )
+  // Fired by VSCode when the user accepts a Next Edit suggestion. The provider
+  // attaches this command to its InlineCompletionItem so VSCode invokes it on Tab.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(NEXT_EDIT_ACCEPTED_COMMAND, () => {
+      nesLog("suggestion accepted")
+      // Chain: re-trigger immediately so Mercury can surface the next edit
+      // without the user needing to type. The mode check guards against
+      // chaining when Mercury isn't the active model.
+      const mgr = AutocompleteServiceManager.getInstance()
+      if (mgr && mgr.currentMode === "next-edit") chainNextPrediction()
+    }),
+  )
+  // Tab handler for off-cursor suggestions: jump cursor to the predicted edit
+  // location; second Tab (or Tab while cursor is already there) applies the edit.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND, async () => {
+      await autocompleteManager.nextEditSuggestionManager.acceptOrJump()
+    }),
+  )
+  // Esc handler: dismiss the pending suggestion without applying it.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(NEXT_EDIT_DISMISS_COMMAND, () => {
+      autocompleteManager.nextEditSuggestionManager.clear()
     }),
   )
 

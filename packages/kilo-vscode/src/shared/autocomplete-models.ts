@@ -30,6 +30,15 @@ const models: AutocompleteModelDef[] = [
     provider: "Inception",
     temperature: 0,
   },
+  {
+    // Same wire-level model as `inception/mercury-edit-2`, but routed
+    // through the Next Edit pipeline (decoration-based jump-to-edit UX,
+    // /v1/edit/completions endpoint) instead of the classic FIM provider.
+    id: "inception/mercury-next-edit",
+    label: "Mercury Next Edit (Inception)",
+    provider: "Inception",
+    temperature: 0,
+  },
 ]
 
 export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models

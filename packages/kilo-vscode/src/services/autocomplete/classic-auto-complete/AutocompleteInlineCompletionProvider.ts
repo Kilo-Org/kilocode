@@ -111,7 +111,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
   private connectionService: KiloConnectionService
   private costTrackingCallback: CostTrackingCallback
   private getSettings: () => AutocompleteServiceSettings | null
-  private recentlyVisitedRangesService: RecentlyVisitedRangesService
+  public readonly recentlyVisitedRangesService: RecentlyVisitedRangesService
   private recentlyEditedTracker: RecentlyEditedTracker
   private debounceTimer: NodeJS.Timeout | null = null
   /** The pending request associated with the current debounce timer (if any) */

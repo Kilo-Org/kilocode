@@ -756,6 +756,16 @@
         "key": "ctrl+l",
         "mac": "cmd+l",
         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+      },
+      {
+        "command": "kilo-code.next-edit.acceptOrJump",
+        "key": "tab",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && kilo-code.nextEdit.hasPendingSuggestion"
+      },
+      {
+        "command": "kilo-code.next-edit.dismiss",
+        "key": "escape",
+        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.nextEdit.hasPendingSuggestion"
       }
     ],
     "configuration": {
@@ -824,13 +834,30 @@
           "type": "string",
           "enum": [
             "mistralai/codestral-2508",
-            "inception/mercury-edit-2"
+            "inception/mercury-edit-2",
+            "inception/mercury-next-edit"
           ],
           "enumDescriptions": [
-            "Codestral by Mistral AI (default)",
-            "Mercury Edit 2 by Inception"
+            "Codestral by Mistral AI (FIM autocomplete, default)",
+            "Mercury Edit 2 by Inception (FIM autocomplete via the Kilo gateway)",
+            "Mercury Next Edit by Inception (multi-line next-edit prediction with jump-to-edit UX, calls Inception API directly)"
           ],
-          "description": "Model to use for inline autocomplete suggestions"
+          "description": "Model to use for inline autocomplete suggestions. Mercury Next Edit uses a separate decoration-based render pipeline; everything else runs through the classic FIM provider."
+        },
+        "kilo-code.new.autocomplete.nextEdit.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Inception API key used when Mercury Edit 2 is selected. Falls back to the INCEPTION_API_KEY environment variable. Get a key at https://platform.inceptionlabs.ai."
+        },
+        "kilo-code.new.autocomplete.nextEdit.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Override the base URL for Mercury Edit 2 requests (default: https://api.inceptionlabs.ai/v1). Use this to route through a self-hosted gateway."
+        },
+        "kilo-code.new.autocomplete.nextEdit.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Mirror Next Edit log lines to the Developer Tools console in addition to the 'Kilo Code · Next Edit' output channel. Enable while debugging."
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",
