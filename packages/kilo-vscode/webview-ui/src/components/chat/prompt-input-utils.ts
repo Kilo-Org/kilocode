@@ -49,3 +49,70 @@ export function buildHighlightSegments(val: string, paths: Set<string>): { text:
 export function atEnd(start: number, end: number, len: number): boolean {
   return start === end && end === len
 }
+
+export function insertSpacedText(
+  text: string,
+  value: string,
+  start: number,
+  end: number,
+): { text: string; pos: number } {
+  const before = text.slice(0, start)
+  const after = text.slice(end)
+  const prefix = before && !/\s$/.test(before) ? " " : ""
+  const suffix = after && !/^\s/.test(after) ? " " : ""
+  const inserted = `${prefix}${value}${suffix}`
+  return {
+    text: `${before}${inserted}${after}`,
+    pos: before.length + inserted.length,
+  }
+}
+
+/**
+ * Whether the input prompt should be blocked.
+ *
+ * Only permission requests block the prompt in the VS Code webview. Questions
+ * and suggestions never block — they are dismissed automatically when a new
+ * message is sent (see session.tsx sendMessage/sendCommand).
+ *
+ * The single-parameter signature is intentional: taking question-count would
+ * structurally allow a future regression to re-couple the prompt to pending
+ * questions. Keep this function at one argument.
+ */
+export function isPromptBlocked(permissions: number): boolean {
+  return permissions > 0
+}
+
+/**
+ * Whether the session is busy from the prompt's perspective.
+ * Returns false (idle-like) when the session is busy only because
+ * a suggestion or question tool call is pending.
+ */
+export function isPromptBusy(status: string, suggesting: boolean, questioning: boolean): boolean {
+  return status !== "idle" && !suggesting && !questioning
+}
+
+/**
+ * Whether the session is busy only because a suggestion is pending.
+ * True when no permission request is blocking the prompt and at least one
+ * suggestion is active. The `!blocked` gate keeps the Stop button available
+ * when permissions block input — it does NOT mean suggestions block.
+ */
+export function isSuggesting(blocked: boolean, suggestions: number): boolean {
+  return !blocked && suggestions > 0
+}
+
+/**
+ * Whether the session is busy only because a question is pending.
+ * True when no permission request is blocking the prompt and at least one
+ * question is active. The `!blocked` gate keeps the Stop button available
+ * when permissions block input — it does NOT mean questions block.
+ */
+export function isQuestioning(blocked: boolean, questions: number): boolean {
+  return !blocked && questions > 0
+}
+
+/** Whether a mention token refers to a file or folder path (not a special mention like terminal/git-changes). */
+export function isPathMention(text: string): boolean {
+  const path = text.replace(/^@/, "")
+  return path !== "terminal" && path !== "git-changes"
+}

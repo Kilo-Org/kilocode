@@ -131,16 +131,16 @@ opik harbor run -d terminal-bench@head -a kilo -m anthropic/claude-opus-4
 
 Opik adds value beyond what the tbench.ai dashboard provides:
 
-| Capability                    | tbench.ai Dashboard | Opik |
-| ----------------------------- | ------------------- | ---- |
-| Task-level pass/fail          | Yes                 | Yes  |
-| Aggregate leaderboard         | Yes                 | No   |
-| Asciinema replay              | Yes                 | No   |
-| Step-level trace view         | No                  | Yes  |
-| Step-level LLM judge          | No                  | Yes  |
-| Cost attribution per step     | No                  | Yes  |
-| Side-by-side trace comparison | No                  | Yes  |
-| Root cause analysis           | No                  | Yes  |
+| Capability | tbench.ai Dashboard | Opik |
+|---|---|---|
+| Task-level pass/fail | Yes | Yes |
+| Aggregate leaderboard | Yes | No |
+| Asciinema replay | Yes | No |
+| Step-level trace view | No | Yes |
+| Step-level LLM judge | No | Yes |
+| Cost attribution per step | No | Yes |
+| Side-by-side trace comparison | No | Yes |
+| Root cause analysis | No | Yes |
 
 The two dashboards are complementary: tbench.ai for high-level leaderboard comparisons, Opik for drilling into why a specific run succeeded or failed.
 
@@ -148,12 +148,12 @@ The two dashboards are complementary: tbench.ai for high-level leaderboard compa
 
 Harbor's registry provides access to established benchmark datasets. The choice of dataset can vary depending on what you are evaluating:
 
-| Dataset            | Focus                            | Use Case                                           |
-| ------------------ | -------------------------------- | -------------------------------------------------- |
-| Terminal-Bench 2.0 | CLI/terminal tasks (89 tasks)    | General agent capability on hard, realistic tasks  |
-| SWE-bench          | Real GitHub issues in real repos | Software engineering task completion               |
-| LiveCodeBench      | Competitive programming problems | Code generation quality                            |
-| Custom task sets   | Whatever you define              | Targeted evaluation, marketing, regression testing |
+| Dataset | Focus | Use Case |
+|---|---|---|
+| Terminal-Bench 2.0 | CLI/terminal tasks (89 tasks) | General agent capability on hard, realistic tasks |
+| SWE-bench | Real GitHub issues in real repos | Software engineering task completion |
+| LiveCodeBench | Competitive programming problems | Code generation quality |
+| Custom task sets | Whatever you define | Targeted evaluation, marketing, regression testing |
 
 #### Creating Custom Task Sets
 
@@ -277,10 +277,10 @@ opik harbor run -d kilo-refactoring@1.0 -a kilo -m anthropic/claude-opus-4
 
 Harbor provides task-level judging (did the agent solve the task?). Opik adds step-level evaluation:
 
-| Level          | Tool   | What It Tells You                                                                                                                                  |
-| -------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Task-level** | Harbor | Pass/fail, score, total time, total cost                                                                                                           |
-| **Step-level** | Opik   | At step N, the agent chose tool X when it should have used tool Y. The reasoning was flawed because of Z. This step cost $0.03 and took 4 seconds. |
+| Level | Tool | What It Tells You |
+|---|---|---|
+| **Task-level** | Harbor | Pass/fail, score, total time, total cost |
+| **Step-level** | Opik | At step N, the agent chose tool X when it should have used tool Y. The reasoning was flawed because of Z. This step cost $0.03 and took 4 seconds. |
 
 Step-level evaluation is where root cause debugging happens. When a benchmark score drops between versions, you can trace back to the exact decision point that caused the regression.
 
@@ -288,13 +288,13 @@ Step-level evaluation is where root cause debugging happens. When a benchmark sc
 
 This benchmarking system is complementary to, but separate from, the [Agent Observability](/docs/contributing/architecture/agent-observability) system:
 
-| Concern         | Benchmarking                          | Production Observability              |
-| --------------- | ------------------------------------- | ------------------------------------- |
-| **Purpose**     | Offline evaluation of agent quality   | Real-time monitoring of user sessions |
-| **Data source** | Controlled benchmark tasks            | Real user interactions                |
-| **Tools**       | Harbor, Opik, tbench.ai               | PostHog, custom metrics               |
-| **When**        | Before release, on-demand             | Continuously in production            |
-| **Output**      | Leaderboard scores, trace comparisons | Alerts, dashboards, SLO tracking      |
+| Concern | Benchmarking | Production Observability |
+|---|---|---|
+| **Purpose** | Offline evaluation of agent quality | Real-time monitoring of user sessions |
+| **Data source** | Controlled benchmark tasks | Real user interactions |
+| **Tools** | Harbor, Opik, tbench.ai | PostHog, custom metrics |
+| **When** | Before release, on-demand | Continuously in production |
+| **Output** | Leaderboard scores, trace comparisons | Alerts, dashboards, SLO tracking |
 
 ## References
 

@@ -9,7 +9,7 @@ description: "Track and manage tasks with AI-generated todo lists"
 
 **Why it matters**: Complex workflows have lots of moving parts. Without structure, it's easy to miss steps, duplicate work, or forget what comes next.
 
-{% image src="/docs/img/task-todo-list/task-todo-list-1.png" alt="Task Todo List overview showing interactive checklist in Kilo Code" width="500" /%}
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/composite-webview/todo-write-docs-overview-chromium-linux.png" alt="Task Todo List overview showing interactive checklist in Kilo Code" width="420" /%}
 
 ## How to trigger todo lists
 
@@ -53,7 +53,7 @@ Kilo updates the list when:
 **1. Task Header Summary**
 Quick progress overview with your next important item
 
-{% image src="/docs/img/task-todo-list/task-header.png" alt="Task header summary showing todo list progress" width="500" /%}
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/task-header-with-todos-chromium-linux.png" alt="Task header summary showing todo list progress" width="420" /%}
 
 Click the task header summary to expand the full list inline and jump to the current item.
 

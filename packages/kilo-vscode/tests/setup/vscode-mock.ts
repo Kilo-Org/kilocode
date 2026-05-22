@@ -50,7 +50,10 @@ const mockVscode = {
       get: <T>(_key: string, value?: T) => value,
       update: async () => {},
     }),
-    asRelativePath: (pathOrUri: string) => pathOrUri,
+    asRelativePath: (pathOrUri: string | { fsPath?: string }) => {
+      const value = typeof pathOrUri === "string" ? pathOrUri : (pathOrUri.fsPath ?? "")
+      return value.startsWith("/repo/") ? value.slice("/repo/".length) : value
+    },
     fs: {
       createDirectory: async () => {},
       writeFile: async () => {},
@@ -60,6 +63,10 @@ const mockVscode = {
       stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
     },
   },
+  StatusBarAlignment: { Left: 1, Right: 2 },
+  ThemeColor: class {
+    constructor(public id: string) {}
+  },
   window: {
     activeTextEditor: undefined,
     visibleTextEditors: [],
@@ -67,10 +74,33 @@ const mockVscode = {
     showTextDocument: async () => {},
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
+    createOutputChannel: () => ({
+      name: "",
+      append: noop,
+      appendLine: noop,
+      replace: noop,
+      clear: noop,
+      show: noop,
+      hide: noop,
+      dispose: noop,
+    }),
+    createStatusBarItem: () => ({
+      text: "",
+      tooltip: "",
+      color: undefined as unknown,
+      command: undefined as string | undefined,
+      show: noop,
+      hide: noop,
+      dispose: noop,
+    }),
   },
   commands: {
     registerCommand: () => ({ dispose: noop }),
     executeCommand: async () => {},
+  },
+  languages: {
+    getDiagnostics: () => [],
+    registerCodeActionsProvider: () => ({ dispose: noop }),
   },
   CodeAction: class {
     command?: { command: string; title: string }

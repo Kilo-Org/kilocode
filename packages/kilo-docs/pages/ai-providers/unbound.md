@@ -1,4 +1,6 @@
 ---
+title: "Using Unbound with Kilo Code"
+description: "Access Claude, GPT, and other leading models through the Unbound proxy in Kilo Code. Setup guide for VS Code and the CLI."
 sidebar_label: Unbound
 ---
 

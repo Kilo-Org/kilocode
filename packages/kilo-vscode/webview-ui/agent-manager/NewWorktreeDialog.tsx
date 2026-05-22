@@ -1,19 +1,26 @@
 // New Worktree dialog — prompt, versions, model, mode, import tab
 
-import { Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
+/** @jsxImportSource solid-js */
+
+import { type Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
 import type { AgentManagerBranchesMessage, AgentManagerImportResultMessage, BranchInfo } from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { DeferredPopover } from "../src/components/shared/DeferredPopover"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
 import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
+import { useProvider } from "../src/context/provider"
+import { useConfig } from "../src/context/config"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
+import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
+import { canUseSpeechToText, selectedSpeechToTextModel } from "../src/components/speech-to-text/availability"
+import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import {
   MultiModelSelector,
   type ModelAllocations,
@@ -23,8 +30,10 @@ import {
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
 import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
+import { useSpeechToText } from "../src/components/speech-to-text/useSpeechToText"
 import { convertToMentionPath } from "../src/utils/path-mentions"
-import { BranchSelect } from "./BranchSelect"
+import { insertSpacedText } from "../src/components/chat/prompt-input-utils"
+import { BranchSelect, BranchSelectPopover } from "../src/components/shared/BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -60,6 +69,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const vscode = useVSCode()
   const server = useServer()
   const session = useSession()
+  const provider = useProvider()
+  const { config } = useConfig()
 
   const [tab, setTab] = createSignal<DialogTab>("new")
 
@@ -74,7 +85,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
+  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.selected())
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
@@ -85,6 +96,46 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
+  const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
+  const speech = useSpeechToText(vscode, server, { t })
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
+
+  // Variant list for the currently selected model
+  const variants = createMemo(() => {
+    const sel = model()
+    if (!sel) return []
+    const found = provider.findModel(sel)
+    if (!found?.variants) return []
+    return Object.keys(found.variants)
+  })
+
+  // Current effective variant — falls back to first available if stored value is invalid
+  const effectiveVariant = createMemo(() => {
+    const list = variants()
+    if (list.length === 0) return undefined
+    const stored = variant()
+    return stored && list.includes(stored) ? stored : list[0]
+  })
+
+  // True when the user has changed the model from the session/config default
+  const overridden = createMemo(() => {
+    const sel = model()
+    const cfg = session.selected()
+    if (!sel || !cfg) return false
+    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
+  })
+
+  // Reset variant when model changes and stored variant is not in new list
+  createEffect(() => {
+    const list = variants()
+    if (list.length === 0) {
+      setVariant(undefined)
+      return
+    }
+    const stored = variant()
+    if (!stored || !list.includes(stored)) setVariant(list[0])
+  })
 
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
@@ -131,6 +182,17 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     vscode.postMessage({ type: "agentManager.requestBranches" })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
+    const focus = () => {
+      textareaRef?.focus({ preventScroll: true })
+      const end = textareaRef?.value.length ?? 0
+      textareaRef?.setSelectionRange(end, end)
+    }
+    requestAnimationFrame(() => {
+      focus()
+      requestAnimationFrame(focus)
+      setTimeout(focus, 0)
+      setTimeout(focus, 50)
+    })
   })
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
@@ -143,6 +205,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   const canSubmit = () => {
     if (starting()) return false
+    if (speech.active()) return false
     if (compareMode() && totalAllocations(modelAllocations()) === 0) return false
     return true
   }
@@ -172,6 +235,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       providerID: sel?.providerID,
       modelID: sel?.modelID,
       agent: selectedAgent,
+      variant: isCompare ? undefined : effectiveVariant(),
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
       modelAllocations: allocations,
@@ -194,6 +258,26 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     if (!textareaRef) return
     textareaRef.style.height = "auto"
     textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+  }
+
+  const insertSpeechText = (value: string) => {
+    const ref = textareaRef
+    const current = prompt()
+    const start = ref?.selectionStart ?? current.length
+    const end = ref?.selectionEnd ?? start
+    const result = insertSpacedText(current, value, start, end)
+
+    setPrompt(result.text)
+    persistPrompt(result.text)
+    if (!ref) return
+    ref.value = result.text
+    ref.setSelectionRange(result.pos, result.pos)
+    ref.focus()
+    adjustHeight()
+  }
+
+  const startSpeech = () => {
+    speech.start({ model: speechModel(), insert: insertSpeechText })
   }
 
   // --- Import tab state ---
@@ -333,20 +417,46 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               </div>
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
+                  <Show when={session.agents().length > 1}>
+                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} deferDismiss />
+                  </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
-                      onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                      onSelect={(pid, mid) => {
+                        if (pid && mid) setModel({ providerID: pid, modelID: mid })
+                      }}
                       placement="top-start"
-                      allowClear
-                      clearLabel="Default"
+                      portal={false}
+                      deferDismiss
                     />
-                  </Show>
-                  <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                    <ThinkingSelectorBase
+                      variants={variants()}
+                      value={effectiveVariant()}
+                      onSelect={setVariant}
+                      deferDismiss
+                    />
+                    <Show when={overridden()}>
+                      <Tooltip value={t("prompt.action.resetModel")} placement="top">
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() => setModel(session.selected())}
+                          aria-label={t("prompt.action.resetModel")}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
+                          </svg>
+                        </Button>
+                      </Tooltip>
+                    </Show>
                   </Show>
                 </div>
-                <div class="prompt-input-hint-actions" />
+                <div class="prompt-input-hint-actions">
+                  <Show when={canUseSpeech()}>
+                    <SpeechToTextButton speech={speech} disabled={starting()} start={startSpeech} label={t} />
+                  </Show>
+                </div>
               </div>
             </div>
 
@@ -371,7 +481,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="am-advanced-field">
                   <span class="am-nv-config-label">{t("agentManager.dialog.baseBranch")}</span>
                   <div class="am-selector-wrapper">
-                    <Popover
+                    <BranchSelectPopover
                       open={baseBranchOpen()}
                       onOpenChange={(open) => {
                         setBaseBranchOpen(open)
@@ -380,9 +490,6 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                           setHighlightedIndex(0)
                         }
                       }}
-                      placement="bottom-start"
-                      sameWidth
-                      class="am-dropdown"
                       trigger={
                         <button class="am-selector-trigger" type="button">
                           <span class="am-selector-left">
@@ -461,7 +568,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         remoteLabel={t("agentManager.dialog.branchBadge.remote")}
                         defaultName={defaultBranch()}
                       />
-                    </Popover>
+                    </BranchSelectPopover>
                   </div>
                 </div>
               </div>
@@ -525,12 +632,14 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     <Icon name="close-small" size="small" />
                   </button>
                 </div>
-                <Popover
+                <DeferredPopover
                   open={compareOpen()}
                   onOpenChange={setCompareOpen}
                   placement="top-start"
                   flip={false}
                   sameWidth
+                  portal={false}
+                  deferDismiss
                   class="am-compare-popover"
                   trigger={
                     <button class="am-selector-trigger" type="button">
@@ -556,7 +665,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   }
                 >
                   <MultiModelSelector allocations={modelAllocations()} onChange={setModelAllocations} />
-                </Popover>
+                </DeferredPopover>
               </div>
             </Show>
           </div>
@@ -622,12 +731,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
           <div class="am-import-section">
             <span class="am-nv-config-label">{t("agentManager.import.branches")}</span>
             <div class="am-selector-wrapper">
-              <Popover
+              <BranchSelectPopover
                 open={branchOpen()}
                 onOpenChange={setBranchOpen}
-                placement="bottom-start"
-                sameWidth
-                class="am-dropdown"
                 trigger={
                   <button class="am-selector-trigger" disabled={isPending()} type="button">
                     <span class="am-selector-left">
@@ -654,7 +760,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   defaultLabel={t("agentManager.dialog.branchBadge.default")}
                   remoteLabel={t("agentManager.dialog.branchBadge.remote")}
                 />
-              </Popover>
+              </BranchSelectPopover>
             </div>
           </div>
 

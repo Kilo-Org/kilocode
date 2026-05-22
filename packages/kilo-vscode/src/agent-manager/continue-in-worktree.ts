@@ -99,8 +99,12 @@ export function registerSession(
   const state = ctx.getStateManager()
   if (state) state.addSession(session.id, worktreeId)
   ctx.registerWorktreeSession(session.id, result.path)
-  ctx.registerSession(session)
+  // Push state before registerSession so the webview knows this is a worktree
+  // session before receiving the sessionCreated message. Without this ordering,
+  // the sessionCreated handler would add the session to the local tab because
+  // managedSessions (and thus worktreeSessionIds) hadn't been updated yet.
   ctx.notifyReady(session.id, result, worktreeId)
+  ctx.registerSession(session)
   ctx.capture("Continue in Worktree", { source: PLATFORM, sessionId: session.id, worktreeId })
   ctx.log(`Continued sidebar session ${sourceId} → worktree ${worktreeId} (session ${session.id})`)
 }

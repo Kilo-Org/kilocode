@@ -1,4 +1,6 @@
 ---
+title: "Using xAI Grok with Kilo Code"
+description: "Connect xAI's Grok models to Kilo Code. Guide to getting an API key and configuring Grok in VS Code and the CLI."
 sidebar_label: xAI (Grok)
 ---
 

@@ -7,6 +7,9 @@ import {
   mapSSEEventToWebviewMessage,
   isEventFromForeignProject,
   mapCloudSessionMessageToWebviewMessage,
+  MessageConfirmation,
+  getErrorMessage,
+  getConfigErrorDetails,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -24,6 +27,9 @@ import type {
   EventQuestionAsked,
   EventQuestionReplied,
   EventQuestionRejected,
+  EventSuggestionShown,
+  EventSuggestionAccepted,
+  EventSuggestionDismissed,
   EventSessionCreated,
   EventSessionUpdated,
   EventServerConnected,
@@ -92,6 +98,44 @@ function makeAssistantMessage(overrides: Partial<AssistantMessage> = {}): Assist
     ...overrides,
   }
 }
+
+describe("MessageConfirmation", () => {
+  it("reports tracked confirmed messages", async () => {
+    const state = new MessageConfirmation()
+    state.track("msg-1")
+    state.confirm("msg-1")
+
+    expect(state.has("msg-1")).toBe(true)
+    expect(await state.wait("msg-1", 1)).toBe(true)
+  })
+
+  it("resolves waiters when a message is confirmed", async () => {
+    const state = new MessageConfirmation()
+    state.track("msg-1")
+    const wait = state.wait("msg-1", 50)
+
+    state.confirm("msg-1")
+
+    expect(await wait).toBe(true)
+  })
+
+  it("returns false when confirmation does not arrive", async () => {
+    const state = new MessageConfirmation()
+    state.track("msg-1")
+
+    expect(await state.wait("msg-1", 1)).toBe(false)
+  })
+
+  it("forgets confirmations after release", () => {
+    const state = new MessageConfirmation()
+    const release = state.track("msg-1")
+    state.confirm("msg-1")
+
+    release()
+
+    expect(state.has("msg-1")).toBe(false)
+  })
+})
 
 describe("sessionToWebview", () => {
   it("converts epoch timestamps to ISO strings", () => {
@@ -363,11 +407,21 @@ describe("mapSSEEventToWebviewMessage", () => {
       properties: {
         id: "q1",
         sessionID: "sess-1",
-        questions: [],
+        questions: [
+          {
+            question: "Ready to implement?",
+            header: "Implement",
+            options: [{ label: "Implement", description: "Switch to code", mode: "code" }],
+          },
+        ],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
     expect(msg?.type).toBe("questionRequest")
+    if (msg?.type === "questionRequest") {
+      const questions = msg.question.questions as Array<{ options?: Array<{ mode?: string }> }>
+      expect(questions[0]?.options?.[0]?.mode).toBe("code")
+    }
   })
 
   it("maps question.replied to questionResolved", () => {
@@ -392,6 +446,43 @@ describe("mapSSEEventToWebviewMessage", () => {
     if (msg?.type === "questionResolved") {
       expect(msg.requestID).toBe("req-2")
     }
+  })
+
+  it("maps suggestion.shown to suggestionRequest", () => {
+    const event: EventSuggestionShown = {
+      type: "suggestion.shown",
+      properties: {
+        id: "sug-1",
+        sessionID: "sess-1",
+        text: "Review changes?",
+        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionRequest")
+  })
+
+  it("maps suggestion.accepted to suggestionResolved", () => {
+    const event: EventSuggestionAccepted = {
+      type: "suggestion.accepted",
+      properties: {
+        sessionID: "sess-1",
+        requestID: "sug-1",
+        index: 0,
+        action: { label: "Start", prompt: "/local-review-uncommitted" },
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionResolved")
+  })
+
+  it("maps suggestion.dismissed to suggestionResolved", () => {
+    const event: EventSuggestionDismissed = {
+      type: "suggestion.dismissed",
+      properties: { sessionID: "sess-1", requestID: "sug-2" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionResolved")
   })
 
   it("maps session.created to sessionCreated with ISO dates", () => {
@@ -511,5 +602,143 @@ describe("mapCloudSessionMessage", () => {
   it("maps user role correctly", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
+  })
+})
+
+describe("getErrorMessage", () => {
+  it("extracts message from an Error instance", () => {
+    expect(getErrorMessage(new Error("boom"))).toBe("boom")
+  })
+
+  it("returns the string as-is", () => {
+    expect(getErrorMessage("plain text failure")).toBe("plain text failure")
+  })
+
+  it("reads a direct .message field", () => {
+    expect(getErrorMessage({ message: "bad input" })).toBe("bad input")
+  })
+
+  it("reads a direct .error string field", () => {
+    expect(getErrorMessage({ error: "nope" })).toBe("nope")
+  })
+
+  it("reads SDK throwOnError shape { error: { message } }", () => {
+    expect(getErrorMessage({ error: { message: "sdk said no" } })).toBe("sdk said no")
+  })
+
+  it("reads NotFoundError shape { data: { message } }", () => {
+    expect(getErrorMessage({ name: "NotFoundError", data: { message: "not found" } })).toBe("not found")
+  })
+
+  it("reads the first Zod issue message from ConfigInvalidError", () => {
+    const err = {
+      name: "ConfigInvalidError",
+      data: {
+        path: "/Users/me/.config/kilo/kilo.json",
+        issues: [
+          { code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' },
+          { code: "invalid_type", path: ["timeout"], message: "Expected number" },
+        ],
+      },
+    }
+    expect(getErrorMessage(err)).toBe('Unrecognized key: "indexing"')
+  })
+
+  it("reads Hono validator shape { data: { error: [{ message }] } }", () => {
+    const err = { data: { error: [{ message: "required" }] }, success: false }
+    expect(getErrorMessage(err)).toBe("required")
+  })
+
+  it("reads Hono validator shape with string errors", () => {
+    expect(getErrorMessage({ data: { error: ["bad field"] } })).toBe("bad field")
+  })
+
+  it("reads BadRequestError shape { errors: [{ message }] }", () => {
+    expect(getErrorMessage({ errors: [{ message: "first error" }, { message: "second" }] })).toBe("first error")
+  })
+
+  it("reads BadRequestError shape with string errors", () => {
+    expect(getErrorMessage({ errors: ["boom"] })).toBe("boom")
+  })
+
+  it("falls back to JSON for unknown object shapes", () => {
+    expect(getErrorMessage({ weird: true, code: 42 })).toBe('{"weird":true,"code":42}')
+  })
+
+  it("falls back to String() for non-serializable values", () => {
+    expect(getErrorMessage(undefined)).toBe("undefined")
+    expect(getErrorMessage(null)).toBe("null")
+    expect(getErrorMessage(42)).toBe("42")
+  })
+
+  it("skips JSON fallback for empty objects", () => {
+    expect(getErrorMessage({})).toBe("[object Object]")
+  })
+
+  it("prefers .message over nested shapes", () => {
+    const err = { message: "outer", data: { issues: [{ message: "inner" }] } }
+    expect(getErrorMessage(err)).toBe("outer")
+  })
+
+  it("falls through when the first issue has no message", () => {
+    // firstMessage only inspects index 0, so an invalid first entry causes the
+    // branch to skip and the JSON fallback kicks in.
+    const err = { data: { issues: [{ code: "bad" }] } }
+    expect(getErrorMessage(err)).toBe('{"data":{"issues":[{"code":"bad"}]}}')
+  })
+})
+
+describe("getConfigErrorDetails", () => {
+  it("returns undefined for non-object errors", () => {
+    expect(getConfigErrorDetails("oops")).toBeUndefined()
+    expect(getConfigErrorDetails(undefined)).toBeUndefined()
+    expect(getConfigErrorDetails(null)).toBeUndefined()
+    expect(getConfigErrorDetails(42)).toBeUndefined()
+  })
+
+  it("returns undefined when .data is missing", () => {
+    expect(getConfigErrorDetails({ message: "hi" })).toBeUndefined()
+  })
+
+  it("returns undefined when .data has no path or issues", () => {
+    expect(getConfigErrorDetails({ data: { unrelated: true } })).toBeUndefined()
+  })
+
+  it("formats a single-issue ConfigInvalidError", () => {
+    const err = {
+      data: {
+        path: "/home/me/.config/kilo/kilo.json",
+        issues: [{ code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' }],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe('File: /home/me/.config/kilo/kilo.json\n\n✖ Unrecognized key: "indexing"')
+  })
+
+  it("formats a multi-issue ConfigInvalidError with paths (including array indices)", () => {
+    const err = {
+      data: {
+        path: "/cfg.json",
+        issues: [
+          { path: ["timeout"], message: "Expected number" },
+          { path: ["agents", 0, "name"], message: "Required" },
+        ],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /cfg.json\n\n✖ Expected number\n  → at timeout\n✖ Required\n  → at agents[0].name",
+    )
+  })
+
+  it("omits the path line when only issues are present", () => {
+    const err = { data: { issues: [{ path: [], message: "something" }] } }
+    expect(getConfigErrorDetails(err)).toBe("✖ something")
+  })
+
+  it("omits the issues section when only the path is present", () => {
+    expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("returns undefined when issues array is empty and no path", () => {
+    expect(getConfigErrorDetails({ data: { issues: [] } })).toBeUndefined()
   })
 })

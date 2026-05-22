@@ -40,6 +40,33 @@ export function applyTabOrder<T extends { id: string }>(items: T[], order: strin
 }
 
 /**
+ * Replace `oldId` with `newId` in `order`, preserving its position.
+ * Returns a new array, or undefined if `oldId` isn't in `order`.
+ * Used when a pending session tab is promoted to a real session id.
+ */
+export function replaceInTabOrder(order: string[] | undefined, oldId: string, newId: string): string[] | undefined {
+  if (!order) return undefined
+  const i = order.indexOf(oldId)
+  if (i === -1) return undefined
+  const next = [...order]
+  next[i] = newId
+  return next
+}
+
+/**
+ * Insert `id` into `order` directly after `afterId`.
+ * If `afterId` is missing from `order`, appends `id` at the end.
+ * Returns a new array, or undefined if `id` is already present.
+ */
+export function insertInTabOrderAfter(order: string[] | undefined, afterId: string, id: string): string[] {
+  const base = order ?? []
+  if (base.includes(id)) return base
+  const i = base.indexOf(afterId)
+  if (i === -1) return [...base, id]
+  return [...base.slice(0, i + 1), id, ...base.slice(i + 1)]
+}
+
+/**
  * Find the title of the first item according to a custom order.
  *
  * Falls back to the first titled item in `items` if the order

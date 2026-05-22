@@ -17,21 +17,31 @@ Approvals are enforced locally on the execution host and sit on top of tool poli
 
 ## Security Policies
 
-| Policy      | Behavior                                       |
-| ----------- | ---------------------------------------------- |
-| `deny`      | Block all host exec requests (default)         |
-| `allowlist` | Allow only commands matching the allowlist     |
-| `full`      | Allow everything (equivalent to elevated mode) |
+| Policy | Behavior |
+|---|---|
+| `deny` | Block all host exec requests (default) |
+| `allowlist` | Allow only commands matching the allowlist |
+| `full` | Allow everything (equivalent to elevated mode) |
+
+## Allow Everything from Settings
+
+If you want to skip per-command approvals entirely, you can set the security policy to **Allow Everything** directly from the [KiloClaw Settings dashboard](https://app.kilo.ai/claw/settings). This applies the `full` policy globally, allowing your agent to execute any host command without prompts — equivalent to elevated mode.
+
+{% callout type="warning" %}
+Enabling **Allow Everything** removes all exec safety checks. Only use this in trusted environments where you are comfortable with your agent running arbitrary commands.
+{% /callout %}
+
+{% image src="/docs/img/kiloclaw/allow-everything-settings.png" alt="Allow Everything setting in KiloClaw Settings Dashboard" width="800" caption="The Allow Everything toggle in KiloClaw Settings" /%}
 
 ## Ask Behavior
 
 The `ask` setting controls when the user is prompted for approval:
 
-| Setting   | Behavior                                                |
-| --------- | ------------------------------------------------------- |
-| `off`     | Never prompt                                            |
+| Setting | Behavior |
+|---|---|
+| `off` | Never prompt |
 | `on-miss` | Prompt only when the allowlist does not match (default) |
-| `always`  | Prompt on every command                                 |
+| `always` | Prompt on every command |
 
 If a prompt is required but no UI is reachable, the `askFallback` setting decides the outcome (`deny` by default).
 

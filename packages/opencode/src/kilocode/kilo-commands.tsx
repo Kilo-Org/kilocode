@@ -17,6 +17,8 @@ import { DialogKiloTeamSelect } from "./components/dialog-kilo-team-select.js"
 import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
 import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
+import { DialogIndexing } from "./components/dialog-indexing.js"
+import { indexingEnabled } from "./indexing-feature"
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
@@ -40,6 +42,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
   const isKiloConnected = createMemo(() => {
     return sync.data.provider_next.connected.includes("kilo")
   })
+  const indexing = createMemo(() => indexingEnabled(sync.data.config))
 
   command.register(() => [
     // /kiloclaw command
@@ -153,6 +156,21 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         }
       },
     },
+
+    ...(indexing()
+      ? [
+          {
+            value: "kilo.indexing",
+            title: "Indexing",
+            description: "Configure codebase indexing",
+            category: "Kilo",
+            slash: { name: "indexing", aliases: ["index", "embedding"] },
+            onSelect: () => {
+              dialog.replace(() => <DialogIndexing useSDK={useSDK} />)
+            },
+          },
+        ]
+      : []),
 
     // /teams command
     {

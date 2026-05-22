@@ -1,8 +1,7 @@
 // @ts-nocheck
-import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { createMemo, onCleanup } from "solid-js" // kilocode_change
+import { createStore } from "solid-js/store"
 import type { Todo } from "@kilocode/sdk/v2"
-import { useGlobalSync } from "@/context/global-sync"
-import { SessionComposerRegion, createSessionComposerState } from "@/pages/session/composer"
 
 export default {
   title: "UI/Todo Panel Motion",
@@ -11,17 +10,10 @@ export default {
   parameters: {
     docs: {
       description: {
+        // kilocode_change start
         component: `### Overview
-This playground renders the real session composer region from app code.
-
-### Source path
-- \`packages/app/src/pages/session/composer/session-composer-region.tsx\`
-
-### Includes
-- \`SessionTodoDock\` (real)
-- \`PromptInput\` (real)
-
-No visual reimplementation layer is used for the dock/input stack.`,
+This playground isolates the todo dock motion controls without depending on the removed app package.`,
+        // kilocode_change end
       },
     },
   },
@@ -128,28 +120,46 @@ const css = `
 
 export const Playground = {
   render: () => {
-    const global = useGlobalSync()
-    const [open, setOpen] = createSignal(true)
-    const [step, setStep] = createSignal(1)
-    const [dockOpenDuration, setDockOpenDuration] = createSignal(0.3)
-    const [dockOpenBounce, setDockOpenBounce] = createSignal(0)
-    const [dockCloseDuration, setDockCloseDuration] = createSignal(0.3)
-    const [dockCloseBounce, setDockCloseBounce] = createSignal(0)
-    const [drawerExpandDuration, setDrawerExpandDuration] = createSignal(0.3)
-    const [drawerExpandBounce, setDrawerExpandBounce] = createSignal(0)
-    const [drawerCollapseDuration, setDrawerCollapseDuration] = createSignal(0.3)
-    const [drawerCollapseBounce, setDrawerCollapseBounce] = createSignal(0)
-    const [subtitleDuration, setSubtitleDuration] = createSignal(600)
-    const [subtitleAuto, setSubtitleAuto] = createSignal(true)
-    const [subtitleTravel, setSubtitleTravel] = createSignal(25)
-    const [subtitleEdge, setSubtitleEdge] = createSignal(17)
-    const [countDuration, setCountDuration] = createSignal(600)
-    const [countMask, setCountMask] = createSignal(18)
-    const [countMaskHeight, setCountMaskHeight] = createSignal(0)
-    const [countWidthDuration, setCountWidthDuration] = createSignal(560)
-    const state = createSessionComposerState({ closeMs: () => Math.round(dockCloseDuration() * 1000) })
+    const [cfg, setCfg] = createStore({
+      open: true,
+      step: 1,
+      dockOpenDuration: 0.3,
+      dockOpenBounce: 0,
+      dockCloseDuration: 0.3,
+      dockCloseBounce: 0,
+      drawerExpandDuration: 0.3,
+      drawerExpandBounce: 0,
+      drawerCollapseDuration: 0.3,
+      drawerCollapseBounce: 0,
+      subtitleDuration: 600,
+      subtitleAuto: true,
+      subtitleTravel: 25,
+      subtitleEdge: 17,
+      countDuration: 600,
+      countMask: 18,
+      countMaskHeight: 0,
+      countWidthDuration: 560,
+      collapsed: false, // kilocode_change
+    })
+    const open = () => cfg.open
+    const step = () => cfg.step
+    const dockOpenDuration = () => cfg.dockOpenDuration
+    const dockOpenBounce = () => cfg.dockOpenBounce
+    const dockCloseDuration = () => cfg.dockCloseDuration
+    const dockCloseBounce = () => cfg.dockCloseBounce
+    const drawerExpandDuration = () => cfg.drawerExpandDuration
+    const drawerExpandBounce = () => cfg.drawerExpandBounce
+    const drawerCollapseDuration = () => cfg.drawerCollapseDuration
+    const drawerCollapseBounce = () => cfg.drawerCollapseBounce
+    const subtitleDuration = () => cfg.subtitleDuration
+    const subtitleAuto = () => cfg.subtitleAuto
+    const subtitleTravel = () => cfg.subtitleTravel
+    const subtitleEdge = () => cfg.subtitleEdge
+    const countDuration = () => cfg.countDuration
+    const countMask = () => cfg.countMask
+    const countMaskHeight = () => cfg.countMaskHeight
+    const countWidthDuration = () => cfg.countWidthDuration
     let frame
-    let composerRef
     let scrollRef
 
     const todos = createMemo<Todo[]>(() => {
@@ -159,10 +169,6 @@ export const Playground = {
         content,
         status: i < done ? "completed" : i === done && done < 3 ? "in_progress" : "pending",
       }))
-    })
-
-    createEffect(() => {
-      global.todo.set("story-session", todos())
     })
 
     const clear = () => {
@@ -175,19 +181,18 @@ export const Playground = {
       scrollRef.scrollTop = scrollRef.scrollHeight
     }
 
-    const collapsed = () =>
-      !!composerRef?.querySelector('[data-action="session-todo-toggle-button"][data-collapsed="true"]')
+    // kilocode_change start
+    const collapsed = () => !open() || cfg.collapsed
 
     const setCollapsed = (value: boolean) => {
-      const button = composerRef?.querySelector('[data-action="session-todo-toggle-button"]')
-      if (!(button instanceof HTMLButtonElement)) return
       if (collapsed() === value) return
-      button.click()
+      setCfg("collapsed", value)
     }
+    // kilocode_change end
 
     const openDock = () => {
       clear()
-      setOpen(true)
+      setCfg("open", true)
       frame = requestAnimationFrame(() => {
         pin()
         frame = undefined
@@ -196,7 +201,7 @@ export const Playground = {
 
     const closeDock = () => {
       clear()
-      setOpen(false)
+      setCfg("open", false)
     }
 
     const dockOpen = () => open()
@@ -223,7 +228,7 @@ export const Playground = {
     }
 
     const cycle = () => {
-      setStep((value) => (value + 1) % 4)
+      setCfg("step", (value) => (value + 1) % 4)
     }
 
     onCleanup(clear)
@@ -246,33 +251,33 @@ export const Playground = {
                   </div>
                 </div>
 
-                <div ref={composerRef}>
-                  <SessionComposerRegion
-                    state={state}
-                    centered={false}
-                    inputRef={() => {}}
-                    newSessionWorktree=""
-                    onNewSessionWorktreeReset={() => {}}
-                    onSubmit={() => {}}
-                    onResponseSubmit={pin}
-                    setPromptDockRef={() => {}}
-                    dockOpenVisualDuration={dockOpenDuration()}
-                    dockOpenBounce={dockOpenBounce()}
-                    dockCloseVisualDuration={dockCloseDuration()}
-                    dockCloseBounce={dockCloseBounce()}
-                    drawerExpandVisualDuration={drawerExpandDuration()}
-                    drawerExpandBounce={drawerExpandBounce()}
-                    drawerCollapseVisualDuration={drawerCollapseDuration()}
-                    drawerCollapseBounce={drawerCollapseBounce()}
-                    subtitleDuration={subtitleDuration()}
-                    subtitleTravel={subtitleAuto() ? undefined : subtitleTravel()}
-                    subtitleEdge={subtitleAuto() ? undefined : subtitleEdge()}
-                    countDuration={countDuration()}
-                    countMask={countMask()}
-                    countMaskHeight={countMaskHeight()}
-                    countWidthDuration={countWidthDuration()}
-                  />
+                {/* kilocode_change start */}
+                <div data-component="todo-motion-dock" data-open={dockOpen()} data-collapsed={collapsed()}>
+                  <button
+                    type="button"
+                    data-action="session-todo-toggle-button"
+                    data-collapsed={collapsed() ? "true" : undefined}
+                    onClick={toggleDrawer}
+                  >
+                    {collapsed() ? "Show todos" : "Hide todos"}
+                  </button>
+                  <div data-slot="todo-motion-panel">
+                    <div data-slot="todo-motion-header">
+                      <span>Todos</span>
+                      <span>{todos().filter((todo) => todo.status === "completed").length}/3 done</span>
+                    </div>
+                    <div data-slot="todo-motion-list">
+                      {todos().map((todo) => (
+                        <div data-slot="todo-motion-item" data-status={todo.status}>
+                          <span data-slot="todo-motion-check">{todo.status === "completed" ? "✓" : ""}</span>
+                          <span>{todo.content}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea placeholder="Ask Kilo to keep working..." />
                 </div>
+                {/* kilocode_change end */}
               </div>
             </div>
           </div>
@@ -289,7 +294,7 @@ export const Playground = {
             Cycle progress ({step()}/3 done)
           </button>
           {[0, 1, 2, 3].map((value) => (
-            <button onClick={() => setStep(value)} style={btn(step() === value)}>
+            <button onClick={() => setCfg("step", value)} style={btn(step() === value)}>
               {value} done
             </button>
           ))}
@@ -307,7 +312,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={dockOpenDuration()}
-              onInput={(event) => setDockOpenDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("dockOpenDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -324,7 +329,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={dockOpenBounce()}
-              onInput={(event) => setDockOpenBounce(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("dockOpenBounce", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -345,7 +350,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={dockCloseDuration()}
-              onInput={(event) => setDockCloseDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("dockCloseDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -362,7 +367,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={dockCloseBounce()}
-              onInput={(event) => setDockCloseBounce(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("dockCloseBounce", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -383,7 +388,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={drawerExpandDuration()}
-              onInput={(event) => setDrawerExpandDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("drawerExpandDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -400,7 +405,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={drawerExpandBounce()}
-              onInput={(event) => setDrawerExpandBounce(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("drawerExpandBounce", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -421,7 +426,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={drawerCollapseDuration()}
-              onInput={(event) => setDrawerCollapseDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("drawerCollapseDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -438,7 +443,7 @@ export const Playground = {
               max="1"
               step="0.01"
               value={drawerCollapseBounce()}
-              onInput={(event) => setDrawerCollapseBounce(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("drawerCollapseBounce", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -459,7 +464,7 @@ export const Playground = {
               max="1400"
               step="10"
               value={subtitleDuration()}
-              onInput={(event) => setSubtitleDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("subtitleDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -473,7 +478,7 @@ export const Playground = {
             <input
               type="checkbox"
               checked={subtitleAuto()}
-              onInput={(event) => setSubtitleAuto(event.currentTarget.checked)}
+              onInput={(event) => setCfg("subtitleAuto", event.currentTarget.checked)}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
               {subtitleAuto() ? "on" : "off"}
@@ -489,7 +494,7 @@ export const Playground = {
               max="40"
               step="1"
               value={subtitleTravel()}
-              onInput={(event) => setSubtitleTravel(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("subtitleTravel", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>{subtitleTravel()}px</span>
@@ -504,7 +509,7 @@ export const Playground = {
               max="40"
               step="1"
               value={subtitleEdge()}
-              onInput={(event) => setSubtitleEdge(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("subtitleEdge", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>{subtitleEdge()}%</span>
@@ -523,7 +528,7 @@ export const Playground = {
               max="1400"
               step="10"
               value={countDuration()}
-              onInput={(event) => setCountDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("countDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>
@@ -540,7 +545,7 @@ export const Playground = {
               max="40"
               step="1"
               value={countMask()}
-              onInput={(event) => setCountMask(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("countMask", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>{countMask()}%</span>
@@ -555,7 +560,7 @@ export const Playground = {
               max="14"
               step="1"
               value={countMaskHeight()}
-              onInput={(event) => setCountMaskHeight(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("countMaskHeight", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>{countMaskHeight()}px</span>
@@ -570,7 +575,7 @@ export const Playground = {
               max="1200"
               step="10"
               value={countWidthDuration()}
-              onInput={(event) => setCountWidthDuration(event.currentTarget.valueAsNumber)}
+              onInput={(event) => setCfg("countWidthDuration", event.currentTarget.valueAsNumber)}
               style={{ flex: 1 }}
             />
             <span style={{ width: "64px", "text-align": "right", "font-size": "13px" }}>

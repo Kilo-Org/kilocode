@@ -29,34 +29,36 @@ bun run merge.ts --version v1.1.50 --base-branch catrielmuller/kilo-opencode-v1.
 
 ### Main Scripts
 
-| Script             | Description                                   |
-| ------------------ | --------------------------------------------- |
-| `merge.ts`         | Main orchestration script for upstream merges |
-| `list-versions.ts` | List available upstream versions              |
-| `analyze.ts`       | Analyze changes without merging               |
+| Script | Description |
+|---|---|
+| `merge.ts` | Main orchestration script for upstream merges |
+| `list-versions.ts` | List available upstream versions |
+| `analyze.ts` | Analyze changes without merging |
+| `fix-kilocode-markers.ts` | Rebuild `kilocode_change` markers for one file against the last merged upstream |
+| `reset-to-upstream.ts` | Reset one file to the transformed last merged upstream version |
+| `find-reset-candidates.ts` | Bulk-find files that have drifted insignificantly from upstream and (optionally) reset them |
 
 ### Transform Scripts
 
-| Script                                 | Description                                                 |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `transforms/package-names.ts`          | Transform opencode package names to kilo                    |
-| `transforms/preserve-versions.ts`      | Preserve Kilo's package versions                            |
-| `transforms/keep-ours.ts`              | Keep Kilo's version of specific files                       |
-| `transforms/skip-files.ts`             | Skip/remove files that shouldn't exist in Kilo              |
-| `transforms/transform-i18n.ts`         | Transform i18n files with Kilo branding                     |
-| `transforms/transform-take-theirs.ts`  | Take upstream + apply Kilo branding for branding-only files |
-| `transforms/transform-tauri.ts`        | Transform Tauri/Desktop config files                        |
-| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection        |
-| `transforms/transform-scripts.ts`      | Transform script files with GitHub API references           |
-| `transforms/transform-extensions.ts`   | Transform extension files (Zed, etc.)                       |
-| `transforms/transform-web.ts`          | Transform web/docs files (.mdx)                             |
+| Script | Description |
+|---|---|
+| `transforms/package-names.ts` | Transform opencode package names to kilo |
+| `transforms/preserve-versions.ts` | Preserve Kilo's package versions |
+| `transforms/keep-ours.ts` | Keep Kilo's version of specific files |
+| `transforms/skip-files.ts` | Skip/remove files that shouldn't exist in Kilo |
+| `transforms/transform-i18n.ts` | Transform i18n files with Kilo branding |
+| `transforms/transform-take-theirs.ts` | Take upstream + apply Kilo branding for branding-only files |
+| `transforms/transform-package-json.ts` | Enhanced package.json with Kilo dependency injection |
+| `transforms/transform-scripts.ts` | Transform script files with GitHub API references |
+| `transforms/transform-extensions.ts` | Transform extension files (Zed, etc.) |
+| `transforms/transform-web.ts` | Transform web/docs files (.mdx) |
 
 ### Codemods (AST-based)
 
-| Script                          | Description                                |
-| ------------------------------- | ------------------------------------------ |
+| Script | Description |
+|---|---|
 | `codemods/transform-imports.ts` | Transform import statements using ts-morph |
-| `codemods/transform-strings.ts` | Transform string literals                  |
+| `codemods/transform-strings.ts` | Transform string literals |
 
 ## Merge Process
 
@@ -76,11 +78,11 @@ The merge automation follows this process, applying **all transformations BEFORE
    - `<author>/opencode-<version>` - Transformed upstream branch
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
+   - Remove files that should not exist in Kilo (`skipFiles`)
    - Transform package names (opencode-ai -> @kilocode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
    - Transform branding-only files (UI components, configs)
-   - Transform Tauri/Desktop config files
    - Transform package.json files (names, deps, Kilo injections)
    - Transform script files (GitHub API references)
    - Transform extension files (Zed, etc.)
@@ -130,16 +132,7 @@ Configuration is defined in `utils/config.ts`:
 
   // Files to take upstream + apply Kilo branding transforms
   takeTheirsAndTransform: [
-    "packages/app/src/components/**/*.tsx",
-    "packages/app/src/context/**/*.tsx",
     "packages/ui/src/**/*.tsx",
-    // ...
-  ],
-
-  // Tauri/Desktop config files
-  tauriFiles: [
-    "packages/desktop/src-tauri/*.json",
-    "packages/desktop/src-tauri/src/*.rs",
     // ...
   ],
 
@@ -161,11 +154,11 @@ Configuration is defined in `utils/config.ts`:
 
 The following transforms are applied to the opencode branch before merging:
 
-1. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
-2. **Versions** - Preserve Kilo's version numbers
-3. **i18n files** - OpenCode -> Kilo in user-visible strings
-4. **Branding files** - UI components, configs with branding only
-5. **Tauri configs** - Desktop app identifiers, names
+1. **Skip files** - Remove upstream-only packages/files that should not exist in Kilo
+2. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
+3. **Versions** - Preserve Kilo's version numbers
+4. **i18n files** - OpenCode -> Kilo in user-visible strings
+5. **Branding files** - UI components, configs with branding only
 6. **package.json** - Names, dependencies, Kilo injections
 7. **Scripts** - GitHub API references
 8. **Extensions** - Zed, etc.
@@ -175,18 +168,17 @@ The following transforms are applied to the opencode branch before merging:
 
 After merging, any remaining conflicts are handled based on file type:
 
-| File Type         | Strategy                | Description                                      |
-| ----------------- | ----------------------- | ------------------------------------------------ |
-| i18n files        | `i18n-transform`        | Take upstream, apply Kilo branding               |
-| App components    | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
-| Tauri configs     | `tauri-transform`       | Take upstream, transform identifiers/names       |
-| package.json      | `package-transform`     | Take upstream, transform names, inject Kilo deps |
-| Script files      | `script-transform`      | Take upstream, transform GitHub references       |
-| Extensions        | `extension-transform`   | Take upstream, apply branding                    |
-| Web/docs          | `web-transform`         | Take upstream, apply branding                    |
-| README/docs       | `keep-ours`             | Keep Kilo's version                              |
-| GitHub workflows  | `keep-ours`             | Keep Kilo's version (manual review)              |
-| Code with markers | `manual`                | Has `kilocode_change` markers, needs review      |
+| File Type | Strategy | Description |
+|---|---|---|
+| i18n files | `i18n-transform` | Take upstream, apply Kilo branding |
+| UI components | `take-theirs-transform` | Take upstream, apply branding (no logic changes) |
+| package.json | `package-transform` | Take upstream, transform names, inject Kilo deps |
+| Script files | `script-transform` | Take upstream, transform GitHub references |
+| Extensions | `extension-transform` | Take upstream, apply branding |
+| Web/docs | `web-transform` | Take upstream, apply branding |
+| README/docs | `keep-ours` | Keep Kilo's version |
+| GitHub workflows | `keep-ours` | Keep Kilo's version (manual review) |
+| Code with markers | `manual` | Has `kilocode_change` markers, needs review |
 
 ### Why This Reduces Conflicts
 
@@ -212,13 +204,24 @@ The only remaining conflicts are files with **actual code differences** - files 
 Options:
   --version <version>    Target upstream version (e.g., v1.1.49)
   --commit <hash>        Target upstream commit hash
-  --base-branch <name>   Base branch to merge into (default: main)
+  --base-branch <name>   Base branch to merge into; use HEAD for current branch (default: main)
   --dry-run              Preview changes without applying them
   --no-push              Don't push branches to remote
+  --no-worktrees         Don't create reference worktrees
   --report-only          Only generate conflict report
   --verbose              Enable verbose logging
   --author <name>        Author name for branch prefix
 ```
+
+By default, `merge.ts` also prepares prompt-friendly reference worktrees under `.worktrees/opencode-merge/`:
+
+| Path | Snapshot |
+|---|---|
+| `.worktrees/opencode-merge/opencode` | Pristine upstream opencode at the requested version or commit |
+| `.worktrees/opencode-merge/kilo-main` | The Kilo base branch snapshot used for the merge |
+| `.worktrees/opencode-merge/auto-merge` | The automated merge result before final lockfile or SDK regeneration |
+
+If conflicts remain after automation, `auto-merge` is a committed local snapshot branch that may intentionally contain conflict markers as normal file content. The real merge branch remains unresolved so manual resolution can continue with accurate git conflict state.
 
 ### analyze.ts
 
@@ -230,9 +233,81 @@ Options:
   --output <file>        Output file for report
 ```
 
+### fix-kilocode-markers.ts
+
+```
+Usage:
+  bun run script/upstream/fix-kilocode-markers.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD` (read from `.opencode-version` at the repo root, falling back to an `ls-remote` + `merge-base --is-ancestor` walk), reads that upstream version of the file, applies the same branding transforms used by upstream merge automation, strips existing `kilocode_change` markers from the current file, and adds fresh markers around the remaining lines that differ from upstream.
+
+The `.opencode-version` file is a single-line tag (e.g. `v1.14.33`) recorded by `merge.ts` after every successful upstream merge. Editing it by hand pins the "last merged" tag for the per-file commands above; delete it to fall back to the slower automatic discovery.
+
+### reset-to-upstream.ts
+
+```
+Usage:
+  bun run script/upstream/reset-to-upstream.ts <repo-relative-file> [--dry-run]
+
+Options:
+  --dry-run              Show what would change without writing the file
+```
+
+The command finds the newest upstream tag already merged into `HEAD`, reads that upstream version of the file, applies the same branding transforms used by upstream merge automation for text files, and writes the result to the working tree. Binary files are restored as raw upstream bytes without text transforms. If the file does not exist upstream, the local file is deleted.
+
+### find-reset-candidates.ts
+
+```
+Usage:
+  bun run script/upstream/find-reset-candidates.ts [path] [options]
+
+Arguments:
+  path                     Optional repo-relative subdirectory to scope to.
+                           Defaults to all tracked shared paths.
+
+Options:
+  --review-limit <n>       Max non-marker, non-whitespace diff lines that
+                           still auto-resets (default: 5).
+  --dry-run                Classify and report only; do not write any files.
+  --concurrency <n>        Parallel classifications (default: 8).
+```
+
+The command pre-filters with `git diff --name-only <last-merged-upstream>..HEAD` and drops:
+
+- Kilo-only paths: anything under `packages/kilo-*/`, any `**/kilocode/**` subdir, `script/upstream/`.
+- Non-code assets: SVG, PNG, fonts, archives, lock files, etc. (see `SKIP_EXTENSIONS` / `SKIP_FILENAMES` in the script).
+- Files covered by the merge config's `keepOurs` or `skipFiles` lists in `utils/config.ts` — these are intentionally preserved or removed in Kilo and must not be bulk-reset.
+
+It then issues one `git cat-file --batch-check` for all remaining paths to grab upstream blob sizes in a single subprocess. Files absent upstream land in `upstream-missing` immediately; files above 256 KB land in `too-large` (generated manifests, giant snapshots). Only the survivors get fetched via `git show` and classified:
+
+| Bucket | Meaning | Action |
+|---|---|---|
+| `identical` | Local bytes already match transformed upstream (branding-only drift in raw git diff) | none |
+| `markers-only` | Stripping `kilocode_change` markers makes local match upstream | reset |
+| `cosmetic-only` | Non-marker diff is only whitespace or reordered lines (the line multiset is identical) | reset |
+| `small-diff` | ≤ `--review-limit` non-marker, non-cosmetic diff lines | reset |
+| `large-diff` | > `--review-limit` non-marker, non-cosmetic diff lines | skipped |
+| `upstream-missing` | File does not exist upstream (kilo-only, intentional) | skipped |
+| `local-missing` | File tracked but missing locally (deleted in Kilo) | skipped |
+| `binary-diff` | Binary file differs | skipped (use `reset-to-upstream.ts` per file) |
+| `binary-identical` | Binary file already matches | none |
+| `too-large` | Upstream blob > 256 KB | skipped (use `reset-to-upstream.ts` per file) |
+
+Line counting uses an in-process multiset diff (pure JS, no subprocess) for speed and robustness against concurrent git output stalls on big files. Moved/reordered lines therefore count as zero drift, which is usually what you want for "is this file meaningfully different from upstream".
+
+`markers-only`, `cosmetic-only`, and `small-diff` buckets are auto-reset unless `--dry-run` is passed. A markdown summary is printed to stdout so you can review what happened and spot-check the resulting `git diff`. All resets land as uncommitted working-tree changes; `git diff` / `git checkout` is your safety net.
+
+Tighten the blast radius with `--review-limit 0` (only `markers-only` and `cosmetic-only`) or by scoping with a `path` argument (e.g. `packages/opencode/src/mcp`).
+
 ## Using Custom Base Branches
 
 By default, upstream merges start from the `main` branch. However, you can use `--base-branch` to start from a different branch. This is useful for:
+
+Passing `--base-branch HEAD` targets the currently checked-out branch without typing its full name.
 
 ### Incremental Merges
 

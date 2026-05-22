@@ -1,3 +1,8 @@
+---
+title: Ask Followup Question Tool | Kilo Code Docs
+description: Learn how the ask_followup_question tool enables Kilo Code to gather additional information needed to complete tasks through interactive communication.
+---
+
 # ask_followup_question
 
 The `ask_followup_question` tool enables interactive communication by asking specific questions to gather additional information needed to complete tasks effectively.

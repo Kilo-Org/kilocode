@@ -16,6 +16,7 @@
 
 // Max chars to keep for truncated output fields (bash metadata.output etc.)
 const OUTPUT_CAP = 4000
+const PATCH_CAP = 64_000
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,11 +33,22 @@ function cap(v: unknown, limit = OUTPUT_CAP): string | undefined {
   return v.slice(0, limit) + `\n… (truncated, ${v.length - limit} chars omitted)`
 }
 
+function patch(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined
+  if (v.length > PATCH_CAP) return undefined
+  return v
+}
+
+function withPatch(v: unknown): { patch: string } | {} {
+  const kept = patch(v)
+  return kept ? { patch: kept } : {}
+}
+
 // ---------------------------------------------------------------------------
 // Per-tool slimmers
 // ---------------------------------------------------------------------------
 
-/** edit: strip filediff.before/after (webview falls back to input.oldString/newString). */
+/** edit: strip filediff.before/after while preserving bounded patches for inline diffs. */
 function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
@@ -50,6 +62,7 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   if (isObj(fd)) {
     result.filediff = {
       ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+      ...withPatch(fd.patch),
       additions: typeof fd.additions === "number" ? fd.additions : 0,
       deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
     }
@@ -59,25 +72,28 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** apply_patch: strip files[].before/after/diff + input.patchText. */
+/** apply_patch: strip full file contents and input patch text while preserving bounded rendered patches. */
 function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
-  if (isObj(meta) && Array.isArray(meta.files)) {
-    next.metadata = {
-      ...meta,
-      files: (meta.files as Record<string, unknown>[]).map((f) => ({
-        filePath: f.filePath,
-        relativePath: f.relativePath,
-        type: f.type,
-        additions: f.additions,
-        deletions: f.deletions,
-        movePath: f.movePath,
-      })),
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (Array.isArray(meta.files)) {
+      slim.files = (meta.files as Record<string, unknown>[]).map((f) => {
+        const diff = patch(f.patch) ?? patch(f.diff)
+        return {
+          filePath: f.filePath,
+          relativePath: f.relativePath,
+          type: f.type,
+          ...withPatch(diff),
+          additions: f.additions,
+          deletions: f.deletions,
+          movePath: f.movePath,
+        }
+      })
     }
-    if (isObj(meta) && meta.diagnostics) {
-      ;(next.metadata as Record<string, unknown>).diagnostics = meta.diagnostics
-    }
+    next.metadata = slim
   }
   // Strip the full patch text from input — only keep files count for title
   const input = state.input
@@ -87,50 +103,76 @@ function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** multiedit: strip nested results (each is a full edit metadata object). */
+/** multiedit: strip nested results (each is a full edit metadata object) and top-level diff. */
 function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
-  if (isObj(meta) && Array.isArray(meta.results)) {
-    next.metadata = {
-      ...meta,
-      results: (meta.results as Record<string, unknown>[]).map((r) => {
-        const slim: Record<string, unknown> = {}
-        if (r.diagnostics) slim.diagnostics = r.diagnostics
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (Array.isArray(meta.results)) {
+      slim.results = (meta.results as Record<string, unknown>[]).map((r) => {
+        const rs: Record<string, unknown> = {}
+        if (r.diagnostics) rs.diagnostics = r.diagnostics
         const fd = r.filediff
         if (isObj(fd)) {
-          slim.filediff = {
+          rs.filediff = {
             ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+            ...withPatch(fd.patch),
             additions: typeof fd.additions === "number" ? fd.additions : 0,
             deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
           }
         }
-        return slim
-      }),
+        return rs
+      })
     }
+    next.metadata = slim
   }
   return next
 }
 
-/** write: strip input.content (entire file). Keep filePath + diagnostics. */
+/** write: strip input.content, raw diff text, and filediff.before/after. Keep filepath + exists + diagnostics. */
 function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const input = state.input
   if (isObj(input) && typeof input.content === "string") {
     next.input = { ...input, content: undefined }
   }
+  const meta = state.metadata
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.filepath) slim.filepath = meta.filepath
+    if (meta.exists !== undefined) slim.exists = meta.exists
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    const fd = meta.filediff
+    if (isObj(fd)) {
+      slim.filediff = {
+        ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+        ...withPatch(fd.patch),
+        additions: typeof fd.additions === "number" ? fd.additions : 0,
+        deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
+      }
+    }
+    next.metadata = slim
+  }
   return next
 }
 
-/** bash: truncate metadata.output (up to 30KB) and state.output (up to 50KB). */
-function slimBash(state: Record<string, unknown>): Record<string, unknown> {
+/** read/list/search: keep the rendered tool details lightweight on historical loads. */
+function slimOutput(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
+  if (typeof state.output === "string" && state.output.length > OUTPUT_CAP) {
+    next.output = cap(state.output)
+  }
+  return next
+}
+
+/** bash: truncate metadata.output and state.output. */
+function slimBash(state: Record<string, unknown>): Record<string, unknown> {
+  const next = slimOutput(state)
   const meta = state.metadata
   if (isObj(meta) && typeof meta.output === "string" && meta.output.length > OUTPUT_CAP) {
     next.metadata = { ...meta, output: cap(meta.output) }
-  }
-  if (typeof state.output === "string" && (state.output as string).length > OUTPUT_CAP) {
-    next.output = cap(state.output)
   }
   return next
 }
@@ -140,6 +182,10 @@ function slimBash(state: Record<string, unknown>): Record<string, unknown> {
 // ---------------------------------------------------------------------------
 
 const slimmers: Record<string, (state: Record<string, unknown>) => Record<string, unknown>> = {
+  read: slimOutput,
+  list: slimOutput,
+  glob: slimOutput,
+  grep: slimOutput,
   edit: slimEdit,
   apply_patch: slimPatch,
   multiedit: slimMultiedit,

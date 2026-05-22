@@ -7,11 +7,11 @@ description: "Smart model routing that automatically selects the optimal AI mode
 
 Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
 
-| Tier                 | Best For                                          | Pricing |
-| -------------------- | ------------------------------------------------- | ------- |
-| `kilo-auto/frontier` | Maximum capability with the best available models | Paid    |
-| `kilo-auto/balanced` | Strong performance at a lower cost                | Paid    |
-| `kilo-auto/free`     | The best free models available                    | Free    |
+| Tier | Best For | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
+| `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
+| `kilo-auto/free` | The best free models available | Free |
 
 ## How It Works
 
@@ -21,71 +21,35 @@ Auto Model is a smart model routing system that automatically selects the optima
 
 That's it. No configuration needed.
 
-## Auto Frontier
+You can see which underlying models are used, as well as the cost, in the expanded model picker. Model mapping information is also available on the [Gateway Model page](/docs/gateway/models-and-providers#kilo-autofrontier).
 
-`kilo-auto/frontier` routes to the latest and most capable paid models available, optimizing for performance, capability, and cost.
+{% callout type="info" title="Models can change" %}
+The underlying models behind each Auto Model tier are updated server-side as better options become available or as providers change pricing and availability. The tier you select stays the same; the model it routes to may change over time.
+{% /callout %}
 
-### Mode-to-Model Mapping
+## Tiers
 
-| Mode           | Model Used        | Best For                     |
-| -------------- | ----------------- | ---------------------------- |
-| `architect`    | Claude Opus 4.6   | System design, planning      |
-| `orchestrator` | Claude Opus 4.6   | Multi-step task coordination |
-| `ask`          | Claude Opus 4.6   | Questions, explanations      |
-| `plan`         | Claude Opus 4.6   | Planning, reasoning          |
-| `general`      | Claude Opus 4.6   | General assistance           |
-| `debug`        | Claude Opus 4.6   | Debugging and fixing issues  |
-| `code`         | Claude Sonnet 4.6 | Writing and editing code     |
-| `build`        | Claude Sonnet 4.6 | Implementation tasks         |
-| `explore`      | Claude Sonnet 4.6 | Codebase exploration         |
+- **Frontier** — Routes to the latest and most capable paid models. Uses different models for reasoning-heavy tasks (planning, architecture, debugging) versus implementation tasks (coding, building, exploring), pairing the right capability to each type of work.
+- **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
+- **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
 
-**Planning and reasoning tasks** use Claude Opus 4.6, which excels at complex reasoning, architectural decisions, and breaking down problems.
-
-**Implementation tasks** use Claude Sonnet 4.6, which is optimized for fast, accurate code generation and editing.
-
-## Auto Balanced
-
-`kilo-auto/balanced` follows the same mode-based routing structure as Frontier but uses more cost-effective models — Kimi K2.5 for reasoning-heavy modes and Minimax M2.7 for implementation modes.
-
-### Mode-to-Model Mapping
-
-| Mode           | Model Used   | Best For                     |
-| -------------- | ------------ | ---------------------------- |
-| `architect`    | Kimi K2.5    | System design, planning      |
-| `orchestrator` | Kimi K2.5    | Multi-step task coordination |
-| `ask`          | Kimi K2.5    | Questions, explanations      |
-| `plan`         | Kimi K2.5    | Planning, reasoning          |
-| `general`      | Kimi K2.5    | General assistance           |
-| `debug`        | Kimi K2.5    | Debugging and fixing issues  |
-| `code`         | Minimax M2.7 | Writing and editing code     |
-| `build`        | Minimax M2.7 | Implementation tasks         |
-| `explore`      | Minimax M2.7 | Codebase exploration         |
-
-**Planning and reasoning tasks** use Kimi K2.5, a strong open-weight reasoning model from Moonshot AI.
-
-**Implementation tasks** use Minimax M2.7, which provides fast, capable code generation at a fraction of frontier model costs.
-
-{% callout type="info" title="Image support" %}
-Auto Balanced does not support image inputs, since Minimax M2.7 does not have vision capabilities.
+{% callout type="warning" title="Data handling for Auto Free" %}
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. In particular, it may route to NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) — trial use only, not for production or sensitive data. Do not submit personal or confidential data when using Auto Free.
 {% /callout %}
 
 ## Benefits
 
-### Simplified Setup
-
-No need to manually switch models when changing modes. Auto Model handles the routing transparently in the background.
-
 ### Cost Optimization
 
-Uses the more economical models for implementation tasks where speed matters, while reserving stronger reasoning models for planning tasks. You get optimal cost-to-capability ratio without thinking about it.
+Automatically uses the best model for a given task, selecting the best balance of cost and capability for a given task. Uses the more economical models for more straight forward tasks, while reserving stronger reasoning models for planning tasks. You get optimal cost-to-capability ratio without thinking about it.
 
-### Best-in-Class Models
+### No Configuration Required
 
-Auto Model routes to capable models matched to your task:
+No need to manually switch models when changing modes. Auto Model handles routing transparently in the background.
 
-- **Auto Frontier** uses the latest and most effective models across all modes
-- **Auto Balanced** uses more cost-effective models while still providing strong capabilities
-- **Auto Free** uses the best available free models
+### Flexible Cost Control
+
+Pick the tier that fits your budget. Frontier gives you the best models for demanding work; Balanced offers capable models at a fraction of the cost; Free costs nothing.
 
 ## Requirements
 
@@ -132,4 +96,4 @@ Auto Model is actively being improved. We'd love to hear how it's working for yo
 
 - [Model Selection Guide](/docs/code-with-ai/agents/model-selection) - General guidance on choosing models
 - [Using Agents](/docs/code-with-ai/agents/using-agents) - Learn about different Kilo Code agents
-- [Free & Budget Models](/docs/code-with-ai/agents/free-and-budget-models) - Cost-effective alternatives
+- [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) - Cost-effective alternatives

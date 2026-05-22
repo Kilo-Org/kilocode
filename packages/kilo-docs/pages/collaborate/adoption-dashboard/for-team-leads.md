@@ -32,12 +32,12 @@ Use these panels to diagnose specific issues and identify targeted actions.
 
 Switch between time filters to understand different patterns:
 
-| Filter         | Best For                                         |
-| -------------- | ------------------------------------------------ |
-| **Past Week**  | Recent changes, sprint-level trends              |
+| Filter | Best For |
+|---|---|
+| **Past Week** | Recent changes, sprint-level trends |
 | **Past Month** | Adoption initiative tracking, onboarding results |
-| **Past Year**  | Long-term trends, seasonal patterns              |
-| **All**        | Historical baseline, major milestones            |
+| **Past Year** | Long-term trends, seasonal patterns |
+| **All** | Historical baseline, major milestones |
 
 ---
 
@@ -99,12 +99,12 @@ Low Frequency suggests AI hasn't become a daily habit.
 
 Use the score tiers as milestones:
 
-| Current Tier    | Reasonable Next Goal         |
-| --------------- | ---------------------------- |
-| 0–20 (Minimal)  | Reach 30–40 within 4–6 weeks |
-| 21–50 (Early)   | Reach 55–65 within 4–6 weeks |
+| Current Tier | Reasonable Next Goal |
+|---|---|
+| 0–20 (Minimal) | Reach 30–40 within 4–6 weeks |
+| 21–50 (Early) | Reach 55–65 within 4–6 weeks |
 | 51–75 (Growing) | Reach 75–80 within 6–8 weeks |
-| 76–90 (Strong)  | Maintain and optimize        |
+| 76–90 (Strong) | Maintain and optimize |
 
 **Tip:** Focus on one dimension at a time rather than trying to improve everything at once.
 
@@ -224,14 +224,14 @@ Additional views for comparing multiple teams within an organization are planned
 
 ## Quick Reference: Dashboard Actions
 
-| What You Want to Know        | Where to Look                               |
-| ---------------------------- | ------------------------------------------- |
-| Overall adoption level       | Main score display                          |
-| Which dimension needs work   | Trend indicators (look for negative trends) |
-| Specific improvement actions | Click dimension → detail panel              |
-| Historical patterns          | Timeline chart with time filter             |
-| Your personal usage          | Toggle "Only my usage"                      |
-| Week-over-week change        | Metric cards at bottom                      |
+| What You Want to Know | Where to Look |
+|---|---|
+| Overall adoption level | Main score display |
+| Which dimension needs work | Trend indicators (look for negative trends) |
+| Specific improvement actions | Click dimension → detail panel |
+| Historical patterns | Timeline chart with time filter |
+| Your personal usage | Toggle "Only my usage" |
+| Week-over-week change | Metric cards at bottom |
 
 ## Next Steps
 

@@ -7,7 +7,8 @@ import {
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
 import { getTemplateForModel } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
-import { AutocompleteModel } from "../AutocompleteModel"
+import { generateFim } from "../fim"
+import type { KiloConnectionService } from "../../cli-backend"
 
 export type { FimAutocompletePrompt, FimCompletionResult }
 
@@ -22,7 +23,7 @@ export class FimPromptBuilder {
       autocompleteInput,
       autocompleteInput.filepath,
       this.contextProvider.contextService,
-      this.contextProvider.model,
+      this.contextProvider.modelId,
       this.contextProvider.ide,
       this.contextProvider.ignoreController,
     )
@@ -57,7 +58,8 @@ export class FimPromptBuilder {
    * Execute FIM-based completion using the model
    */
   async getFromFIM(
-    model: AutocompleteModel,
+    connection: KiloConnectionService,
+    modelId: string,
     prompt: FimAutocompletePrompt,
     processSuggestion: (text: string) => FillInAtCursorSuggestion,
     signal?: AbortSignal,
@@ -82,7 +84,7 @@ export class FimPromptBuilder {
       response += text
     }
     logtime("prep fim")
-    const usageInfo = await model.generateFimResponse(formattedPrefix, prunedSuffix, onChunk, signal)
+    const usageInfo = await generateFim(connection, modelId, formattedPrefix, prunedSuffix, onChunk, signal)
     logtime("fim network")
     console.log("[FIM] response:", response)
 

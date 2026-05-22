@@ -2,16 +2,47 @@
  * Provider action handlers extracted from KiloProvider to stay under max-lines.
  * These are pure async functions that operate on the SDK client — no vscode dependency.
  */
-import type { KiloClient } from "@kilocode/sdk/v2"
+import type { Config, KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
-import { resolveCustomProviderAuth, sanitizeCustomProviderConfig } from "./shared/custom-provider"
-import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+import {
+  resolveCustomProviderAuth,
+  sanitizeCustomProviderConfig,
+  withCustomProviderDeletions,
+} from "./shared/custom-provider"
+import { CUSTOM_PROVIDER_PACKAGE, KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { configFeatures } from "./features"
 
 /**
  * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
  * Pure function — takes cachedConfig and vscode settings as parameters.
  */
 type AuthState = "api" | "oauth" | "wellknown"
+
+function disabledWithout(list: string[] | undefined, id: string) {
+  return (list ?? []).filter((item) => item !== id)
+}
+
+function record(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+function customProvider(config: unknown) {
+  return record(config) && config.npm === CUSTOM_PROVIDER_PACKAGE
+}
+
+function same(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false
+    if (a.length !== b.length) return false
+    return a.every((value, index) => same(value, b[index]))
+  }
+  if (!record(a) || !record(b)) return false
+  const akeys = Object.keys(a).sort()
+  const bkeys = Object.keys(b).sort()
+  if (akeys.length !== bkeys.length) return false
+  return akeys.every((key, index) => key === bkeys[index] && same(a[key], b[key]))
+}
 
 /** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
 export async function fetchProviderData(client: KiloClient, dir: string) {
@@ -89,6 +120,18 @@ export function validateFavorites(raw: unknown): Array<{ providerID: string; mod
   return raw.filter(isModelSelection).map((r) => ({ providerID: r.providerID, modelID: r.modelID }))
 }
 
+/** Validate and sanitize per-mode model selections from untrusted sources. */
+export function validateModelSelections(raw: unknown): Record<string, { providerID: string; modelID: string }> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
+  const result: Record<string, { providerID: string; modelID: string }> = {}
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    if (isModelSelection(val)) {
+      result[key] = { providerID: val.providerID, modelID: val.modelID }
+    }
+  }
+  return result
+}
+
 export function computeDefaultSelection(
   cachedConfig: { config?: { model?: string } } | null,
   vscodePID: string,
@@ -102,6 +145,8 @@ export function computeDefaultSelection(
 
 type PostMessage = (message: unknown) => void
 type GetErrorMessage = (error: unknown) => string
+type SetCachedConfig = (msg: unknown) => void
+type AuthMetadata = Record<string, string>
 
 interface ActionContext {
   client: KiloClient
@@ -134,11 +179,93 @@ function validateID(
   return null
 }
 
-export async function connectProvider(ctx: ActionContext, requestId: string, providerID: string, apiKey: string) {
+function cleanMetadata(input?: Record<string, unknown>): AuthMetadata | undefined {
+  const entries = Object.entries(input ?? {})
+    .map(([key, value]) => [key, typeof value === "string" ? value.trim() : ""] as const)
+    .filter(([key, value]) => key !== "" && value !== "")
+  if (entries.length === 0) return undefined
+  return Object.fromEntries(entries)
+}
+
+async function configs(ctx: ActionContext) {
+  const [{ data: global }, { data: merged }] = await Promise.all([
+    ctx.client.global.config.get({ throwOnError: true }),
+    ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+  ])
+  return { global: global ?? {}, merged: merged ?? {} }
+}
+
+async function refreshConfig(ctx: ActionContext, setCachedConfig: SetCachedConfig) {
+  const [{ data: config }, { data: global }] = await Promise.all([
+    ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true }),
+    ctx.client.global.config.get({ throwOnError: true }),
+  ])
+  if (!config) return
+  const features = configFeatures(config)
+  setCachedConfig({ type: "configLoaded", config, globalConfig: global, features })
+  ctx.postMessage({ type: "configUpdated", config, globalConfig: global, features })
+}
+
+async function saveGlobal(ctx: ActionContext, config: Config) {
+  await ctx.client.global.config.update({ config }, { throwOnError: true })
+}
+
+async function saveProject(ctx: ActionContext, config: Config) {
+  await ctx.client.config.update({ config, directory: ctx.workspaceDir }, { throwOnError: true })
+}
+
+async function removeAuth(ctx: ActionContext, id: string, configured: boolean) {
+  try {
+    await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
+  } catch (err) {
+    if (!configured) throw err
+    console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
+  }
+}
+
+async function removeCustom(ctx: ActionContext, id: string, global: Config, merged: Config) {
+  const cfg = global.provider?.[id]
+  const effective = merged.provider?.[id]
+  const tasks = []
+  if (customProvider(cfg)) {
+    tasks.push(
+      saveGlobal(ctx, {
+        provider: { [id]: null },
+        disabled_providers: disabledWithout(global.disabled_providers, id),
+      }),
+    )
+  }
+  if (customProvider(effective)) {
+    tasks.push(saveProject(ctx, { provider: { [id]: null } }))
+  }
+  await Promise.all(tasks)
+}
+
+async function disableConfigured(ctx: ActionContext, id: string, config: Config) {
+  const disabled = config.disabled_providers ?? []
+  if (disabled.includes(id)) return
+  await saveGlobal(ctx, { disabled_providers: [...disabled, id] })
+}
+
+async function enableConfigured(ctx: ActionContext, id: string, config: Config) {
+  const disabled = disabledWithout(config.disabled_providers, id)
+  if (disabled.length === (config.disabled_providers ?? []).length) return
+  await saveGlobal(ctx, { disabled_providers: disabled })
+}
+
+export async function connectProvider(
+  ctx: ActionContext,
+  requestId: string,
+  providerID: string,
+  apiKey: string,
+  metadata?: Record<string, unknown>,
+) {
   const id = validateID(ctx, requestId, providerID, "connect")
   if (!id) return
   try {
-    await ctx.client.auth.set({ providerID: id, auth: { type: "api", key: apiKey } }, { throwOnError: true })
+    const meta = cleanMetadata(metadata)
+    const auth = meta ? { type: "api" as const, key: apiKey, metadata: meta } : { type: "api" as const, key: apiKey }
+    await ctx.client.auth.set({ providerID: id, auth }, { throwOnError: true })
     await ctx.disposeGlobal(`provider connect (${id})`)
     await ctx.fetchAndSendProviders()
     ctx.postMessage({ type: "providerConnected", requestId, providerID: id })
@@ -209,47 +336,44 @@ export async function disconnectProvider(
   requestId: string,
   providerID: string,
   cachedConfigMessage: unknown,
-  setCachedConfig: (msg: unknown) => void,
+  setCachedConfig: SetCachedConfig,
 ) {
   const id = validateID(ctx, requestId, providerID, "disconnect")
   if (!id) return
   try {
-    const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
-    const configured = !!globalConfig.provider?.[id]
+    const config = await configs(ctx)
+    const cfg = config.global.provider?.[id]
+    const effective = config.merged.provider?.[id]
+    const configured = !!cfg || !!effective
+    const custom = customProvider(cfg) || customProvider(effective)
+    const { response } = await fetchProviderData(ctx.client, ctx.workspaceDir)
+    const active = response.all.find((item) => item.id === id)
+    const oauth = active?.source === "custom" && configured && !custom
 
-    // Remove auth store entry. Config-sourced providers may not have an auth
-    // store entry (credentials come from config or env), so failure is non-fatal.
-    // For auth-only providers, failure means disconnect failed.
-    try {
-      await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
-    } catch (err) {
-      if (!configured) throw err
-      console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
-    }
+    // Config-sourced providers may not have auth store entries because
+    // credentials can come from config or env, so auth removal is non-fatal.
+    await removeAuth(ctx, id, configured)
 
     if (id === "kilo") {
       ctx.postMessage({ type: "profileData", data: null })
     }
 
-    // Config-sourced providers stay "connected" after auth.remove because the
-    // server rebuilds state from config. Add to disabled_providers so the server
-    // excludes them. The config entry is preserved (user may re-enable later).
-    // This matches the desktop app's disableProvider() pattern.
-    if (configured) {
-      const disabled = globalConfig.disabled_providers ?? []
-      if (!disabled.includes(id)) {
-        const merged = (
-          await ctx.client.global.config.update(
-            { config: { disabled_providers: [...disabled, id] } },
-            { throwOnError: true },
-          )
-        ).data
-        if (merged) {
-          setCachedConfig({ type: "configLoaded", config: merged })
-          ctx.postMessage({ type: "configUpdated", config: merged })
-        }
-      }
+    if (custom) {
+      await removeCustom(ctx, id, config.global, config.merged)
     }
+
+    // Config-sourced built-in providers stay "connected" after auth.remove
+    // because the server rebuilds state from config. Add to disabled_providers
+    // so the server excludes them while preserving config for re-enable.
+    if (configured && !oauth && !custom) {
+      await disableConfigured(ctx, id, config.global)
+    }
+
+    if (oauth) {
+      await enableConfigured(ctx, id, config.global)
+    }
+
+    if (configured) await refreshConfig(ctx, setCachedConfig)
 
     await ctx.disposeGlobal(`provider disconnect (${id})`)
     await ctx.fetchAndSendProviders()
@@ -287,19 +411,23 @@ export async function saveCustomProvider(
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const disabled = globalConfig.disabled_providers ?? []
     const nextDisabled = disabled.filter((item: string) => item !== id)
+    const existing = (globalConfig.provider as Record<string, unknown> | undefined)?.[id]
+    const patch = withCustomProviderDeletions(existing, sanitized.value)
     const { data: updated } = await ctx.client.global.config.update(
       {
         config: {
-          provider: { [id]: sanitized.value },
+          provider: { [id]: patch },
           disabled_providers: nextDisabled,
         },
       },
       { throwOnError: true },
     )
 
-    const msg = { type: "configLoaded", config: updated }
+    const merged = await ctx.client.config.get({ directory: ctx.workspaceDir }, { throwOnError: true })
+    const config = merged.data ?? updated
+    const msg = { type: "configLoaded", config, globalConfig: updated, features: configFeatures(config) }
     setCachedConfig(msg)
-    ctx.postMessage({ type: "configUpdated", config: updated })
+    ctx.postMessage({ type: "configUpdated", config, globalConfig: updated, features: configFeatures(config) })
 
     const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
 

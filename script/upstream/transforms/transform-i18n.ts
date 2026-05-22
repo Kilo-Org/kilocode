@@ -10,7 +10,6 @@
  * String replacement rules:
  * - opencode.ai -> kilo.ai (domain)
  * - app.opencode.ai -> app.kilo.ai (app domain)
- * - OpenCode Desktop -> Kilo Desktop (desktop app name)
  * - OpenCode -> Kilo (product name in user-visible text)
  * - opencode upgrade -> kilo upgrade (CLI commands)
  * - npx opencode -> npx kilo (CLI invocation)
@@ -72,13 +71,6 @@ const I18N_REPLACEMENTS: StringReplacement[] = [
     pattern: /opencode\.ai(?!\/zen)/g,
     replacement: "kilo.ai",
     description: "Main domain (excluding zen)",
-  },
-
-  // Product name (specific phrases first)
-  {
-    pattern: /OpenCode Desktop/g,
-    replacement: "Kilo Desktop",
-    description: "Desktop app name",
   },
 
   // CLI commands (be careful with order)

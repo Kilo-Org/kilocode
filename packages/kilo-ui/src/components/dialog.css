@@ -13,7 +13,7 @@
   }
 
   [data-slot="dialog-header"] {
-    font-size: 14px;
+    font-size: var(--kilo-font-size-14);
   }
 
   [data-slot="dialog-title"] {

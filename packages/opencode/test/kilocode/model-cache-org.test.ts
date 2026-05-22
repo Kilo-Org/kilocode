@@ -4,6 +4,9 @@
 
 import { test, expect, mock } from "bun:test"
 import path from "path"
+import * as Log from "@opencode-ai/core/util/log"
+
+Log.init({ print: false })
 
 // Capture the options passed to fetchKiloModels
 let captured: any = undefined
@@ -12,39 +15,27 @@ mock.module("@kilocode/kilo-gateway", () => ({
   fetchKiloModels: async (options: any) => {
     captured = options
     return {
-      "test-model": {
-        id: "test-model",
-        name: "Test Model",
-        cost: { input: 0.001, output: 0.002 },
-        limit: { context: 128000, output: 4096 },
+      models: {
+        "test-model": {
+          id: "test-model",
+          name: "Test Model",
+          cost: { input: 0.001, output: 0.002 },
+          limit: { context: 128000, output: 4096 },
+        },
       },
     }
   },
   KILO_OPENROUTER_BASE: "https://api.kilo.ai/api/openrouter",
 }))
 
-// Mock BunProc and default plugins to prevent actual installations during tests
-mock.module("../../src/bun/index", () => ({
-  BunProc: {
-    install: async (pkg: string) => {
-      const lastAtIndex = pkg.lastIndexOf("@")
-      return lastAtIndex > 0 ? pkg.substring(0, lastAtIndex) : pkg
-    },
-    run: async () => {
-      throw new Error("BunProc.run should not be called in tests")
-    },
-    which: () => process.execPath,
-    InstallFailedError: class extends Error {},
-  },
-}))
-
+// Mock default plugins to prevent actual installations during tests
 const mockPlugin = () => ({})
 mock.module("opencode-copilot-auth", () => ({ default: mockPlugin }))
 mock.module("opencode-anthropic-auth", () => ({ default: mockPlugin }))
 mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: mockPlugin }))
 
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
 
@@ -59,18 +50,17 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
       )
     },
   })
-  await Instance.provide({
+  // Simulate an OAuth login where user selected an enterprise organization
+  await Auth.set("kilo", {
+    type: "oauth",
+    access: "test-oauth-token",
+    refresh: "test-refresh-token",
+    expires: Date.now() + 3600000,
+    accountId: "org-enterprise-123",
+  })
+
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      // Simulate an OAuth login where user selected an enterprise organization
-      await Auth.set("kilo", {
-        type: "oauth",
-        access: "test-oauth-token",
-        refresh: "test-refresh-token",
-        expires: Date.now() + 3600000,
-        accountId: "org-enterprise-123",
-      })
-    },
     fn: async () => {
       // Reset captured and cache
       captured = undefined
@@ -98,17 +88,16 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
       )
     },
   })
-  await Instance.provide({
+  // Simulate an OAuth login for a personal account (no accountId)
+  await Auth.set("kilo", {
+    type: "oauth",
+    access: "test-personal-token",
+    refresh: "test-refresh-token",
+    expires: Date.now() + 3600000,
+  })
+
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      // Simulate an OAuth login for a personal account (no accountId)
-      await Auth.set("kilo", {
-        type: "oauth",
-        access: "test-personal-token",
-        refresh: "test-refresh-token",
-        expires: Date.now() + 3600000,
-      })
-    },
     fn: async () => {
       captured = undefined
       ModelCache.clear("kilo")
@@ -133,17 +122,16 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
       )
     },
   })
-  await Instance.provide({
+  await Auth.set("kilo", {
+    type: "oauth",
+    access: "token-clear-test",
+    refresh: "refresh-clear",
+    expires: Date.now() + 3600000,
+    accountId: "org-clear",
+  })
+
+  await WithInstance.provide({
     directory: tmp.path,
-    init: async () => {
-      await Auth.set("kilo", {
-        type: "oauth",
-        access: "token-clear-test",
-        refresh: "refresh-clear",
-        expires: Date.now() + 3600000,
-        accountId: "org-clear",
-      })
-    },
     fn: async () => {
       // Populate cache
       captured = undefined

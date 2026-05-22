@@ -1,13 +1,15 @@
+/** @jsxImportSource solid-js */
+
 /**
  * MessageList component
- * Scrollable turn-based message list.
+ * Scrollable turn-based message list with virtualization.
  * Each user message is rendered as a VscodeSessionTurn — a custom component that
  * renders all assistant parts as a flat, verbose list with no context grouping,
  * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
+import { type Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -22,7 +24,17 @@ import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
-import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
+import { QuestionDock } from "./QuestionDock"
+import { Virtualizer } from "virtua/solid"
+import { SuggestBar } from "./SuggestBar"
+import {
+  activeUserMessageID as getActiveUserMessageID,
+  messageTurns,
+  queuedUserMessageIDs,
+  stableMessageTurns,
+  type MessageTurn,
+} from "../../context/session-queue"
+import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -40,6 +52,13 @@ const KiloLogo = (): JSX.Element => {
 interface MessageListProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
+  onForkMessage?: (sessionId: string, messageId: string) => void
+  /** Non-tool question requests to render inline at the bottom of the message list */
+  questions?: () => QuestionRequest[]
+  /** Non-tool suggestion requests to render inline at the bottom of the message list */
+  suggestions?: () => SuggestionRequest[]
+  /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
+  readonly?: boolean
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -65,14 +84,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
   })
 
-  const allUserMessages = () => session.userMessages()
+  const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
+  const positions = new Map<string, { top: number; userScrolled: boolean }>()
+
   const boundary = () => session.revert()?.messageID
-  const userMessages = createMemo(() => {
-    const b = boundary()
-    if (!b) return allUserMessages()
-    return allUserMessages().filter((m) => m.id < b)
-  })
-  const isEmpty = () => userMessages().length === 0 && !session.loading() && !boundary()
+  const turns = createMemo((prev: MessageTurn[] | undefined) =>
+    stableMessageTurns(messageTurns(session.messages(), boundary()), prev),
+  )
+  const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>
     [...session.sessions()]
@@ -81,12 +100,73 @@ export const MessageList: Component<MessageListProps> = (props) => {
   )
 
   const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
+  const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
+  const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
+  const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
 
   const activeUserIndex = createMemo(() => {
     const active = activeUserID()
     if (!active) return -1
-    return userMessages().findIndex((msg) => msg.id === active)
+    return visibleTurns().findIndex((turn) => turn.user.id === active)
   })
+
+  const save = (id: string | undefined) => {
+    const el = scrollEl()
+    if (!id || !el) return
+    positions.set(id, { top: el.scrollTop, userScrolled: autoScroll.userScrolled() })
+  }
+
+  const maybeLoadOlder = () => {
+    const el = scrollEl()
+    if (!el || el.scrollTop > 600) return
+    session.loadOlderMessages()
+  }
+
+  const handleScroll = () => {
+    autoScroll.handleScroll()
+    maybeLoadOlder()
+  }
+
+  const setScrollRef = (el: HTMLElement | undefined) => {
+    setScrollEl(el)
+    autoScroll.scrollRef(el)
+  }
+
+  const [pendingRestore, setPendingRestore] = createSignal<string>()
+
+  createEffect(
+    on(session.currentSessionID, (id, prev) => {
+      save(prev)
+      setPendingRestore(id)
+    }),
+  )
+
+  createEffect(() => {
+    const id = pendingRestore()
+    if (!id || session.loading()) return
+    turns().length
+    // Double-rAF: the first frame lets the browser paint the new DOM from
+    // the messagesLoaded batch. The second frame restores scroll position
+    // without forcing a synchronous layout reflow mid-paint.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (pendingRestore() !== id) return
+        const el = scrollEl()
+        if (!el) return
+        const pos = positions.get(id)
+        if (pos?.userScrolled) {
+          el.scrollTop = pos.top
+          autoScroll.pause()
+          maybeLoadOlder()
+        } else {
+          autoScroll.forceScrollToBottom()
+        }
+        setPendingRestore(undefined)
+      })
+    })
+  })
+
+  onCleanup(() => save(session.currentSessionID()))
 
   return (
     <div class="message-list-container">
@@ -96,21 +176,20 @@ export const MessageList: Component<MessageListProps> = (props) => {
           <KiloNotifications />
         </div>
       </Show>
-      <div
-        ref={autoScroll.scrollRef}
-        onScroll={autoScroll.handleScroll}
-        class="message-list"
-        role="log"
-        aria-live="polite"
-      >
-        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : undefined}>
+      <div ref={setScrollRef} onScroll={handleScroll} class="message-list" role="log" aria-live="polite">
+        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
               <Spinner />
               <span>{language.t("session.messages.loading")}</span>
             </div>
           </Show>
-          <Show when={isEmpty()}>
+          <Show when={isEmpty() && props.readonly}>
+            <div class="message-list-empty">
+              <p class="kilo-about-text">{language.t("session.messages.initializing")}</p>
+            </div>
+          </Show>
+          <Show when={isEmpty() && !props.readonly}>
             <div class="message-list-empty">
               <KiloLogo />
               <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
@@ -139,28 +218,44 @@ export const MessageList: Component<MessageListProps> = (props) => {
               </button>
             </div>
           </Show>
-          <Show when={!session.loading()}>
-            <For each={userMessages()}>
-              {(msg, index) => {
-                const queued = createMemo(() => {
-                  const active = activeUserIndex()
-                  if (active === -1) return false
-                  return index() > active
-                })
+          <Show when={!session.loading() && !isEmpty()}>
+            <Show when={session.loadingOlderMessages()}>
+              <div class="message-list-page-loader" role="status">
+                <Spinner />
+                <span>{language.t("session.messages.loadingEarlier")}</span>
+              </div>
+            </Show>
+            <Show when={session.hasOlderMessages() && !session.loadingOlderMessages()}>
+              <button class="message-list-load-older" onClick={() => session.loadOlderMessages()}>
+                {language.t("session.messages.loadEarlier")}
+              </button>
+            </Show>
+            <Show when={scrollEl()}>
+              <Virtualizer
+                data={visibleTurns()}
+                scrollRef={scrollEl()}
+                shift={session.messageMutation() === "prepend"}
+                overscan={6}
+                itemSize={260}
+              >
+                {(turn, index) => {
+                  const queued = createMemo(() => {
+                    const active = activeUserIndex()
+                    if (active === -1) return false
+                    return index() > active
+                  })
 
-                return (
-                  <VscodeSessionTurn
-                    sessionID={session.currentSessionID() ?? ""}
-                    messageID={msg.id}
-                    queued={queued()}
-                  />
-                )
-              }}
-            </For>
+                  return <VscodeSessionTurn turn={turn} queued={queued()} onForkMessage={props.onForkMessage} />
+                }}
+              </Virtualizer>
+            </Show>
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
+            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
             <WorkingIndicator />
+            <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
+            <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
           </Show>
         </div>
       </div>

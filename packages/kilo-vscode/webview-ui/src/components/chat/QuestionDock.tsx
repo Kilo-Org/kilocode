@@ -4,14 +4,21 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { Component, For, Show, createMemo, createEffect } from "solid-js"
+import { For, Show, createMemo, createEffect } from "solid-js"
+import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
-import { toggleAnswer } from "./question-dock-utils"
+import {
+  pickOutcome,
+  resolveOptimisticQuestionAgent,
+  resolveSelectedQuestionMode,
+  toggleAnswer,
+  tr,
+} from "./question-dock-utils"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -24,17 +31,23 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     tab: 0,
     answers: [] as string[][],
     custom: [] as string[],
+    kinds: [] as Record<string, "option" | "custom">[],
     editing: false,
     sending: false,
     collapsed: false,
   })
 
   let root!: HTMLDivElement
+  let prevAgent: string | undefined
 
-  // Reset sending state when an error occurs for this question
+  // Reset sending state and roll back the optimistic agent change on error
   createEffect(() => {
     if (session.questionErrors().has(props.request.id)) {
       setStore("sending", false)
+      if (prevAgent !== undefined) {
+        session.selectAgent(prevAgent)
+        prevAgent = undefined
+      }
     }
   })
 
@@ -57,6 +70,25 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     return language.t("question.summary", { n, total: total() })
   })
 
+  // Localized view of the current question. The wire-format `label` is preserved for reply
+  // matching; only the display text goes through `tr()`.
+  //
+  // translateOption returns accessor functions, not plain strings. SolidJS runs the <For>
+  // child callback in an untracked scope (via mapArray), so reading `language.t(...)` once
+  // at construction would freeze translations at the first render. Accessors force every
+  // JSX read to happen inside the binding's tracking scope, so switching the sidebar
+  // language while a question dock is visible re-renders the option labels.
+  const questionText = createMemo(() => tr(language.t, question()?.questionKey, question()?.question ?? ""))
+  const translateOption = (opt: {
+    label: string
+    description?: string
+    labelKey?: string
+    descriptionKey?: string
+  }) => ({
+    label: () => tr(language.t, opt.labelKey, opt.label),
+    description: () => (opt.description ? tr(language.t, opt.descriptionKey, opt.description) : ""),
+  })
+
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
   const reply = (answers: string[][]) => {
@@ -64,10 +96,16 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("sending", true)
     session.replyToQuestion(props.request.id, answers)
     focusPrompt()
+    // prevAgent is intentionally left set until either questionError (rollback)
+    // or the question is dismissed (success — the question unmounts, so no cleanup needed)
   }
 
   const reject = () => {
     if (store.sending) return
+    if (prevAgent !== undefined) {
+      session.selectAgent(prevAgent)
+      prevAgent = undefined
+    }
     setStore("sending", true)
     session.rejectQuestion(props.request.id)
     focusPrompt()
@@ -83,10 +121,24 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("editing", false)
   }
 
+  const syncAgent = (answers: string[][], kinds: Record<string, "option" | "custom">[] = store.kinds) => {
+    const mode = resolveSelectedQuestionMode(questions(), answers, kinds)
+    const next = resolveOptimisticQuestionAgent(prevAgent, session.selectedAgent(), mode)
+
+    prevAgent = next.base
+    if (!next.agent) return
+    if (next.agent === session.selectedAgent()) return
+    session.selectAgent(next.agent)
+  }
+
   const pick = (answer: string, custom = false) => {
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
+
+    const kinds = [...store.kinds]
+    kinds[store.tab] = { [answer]: custom ? "custom" : "option" }
+    setStore("kinds", kinds)
 
     if (custom) {
       const inputs = [...store.custom]
@@ -94,7 +146,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       setStore("custom", inputs)
     }
 
-    if (!single() && !multi()) {
+    syncAgent(answers, kinds)
+
+    const outcome = pickOutcome({ single: single(), multi: multi(), custom })
+    if (outcome.kind === "advance") {
       setStore("tab", store.tab + 1)
     }
   }
@@ -104,6 +159,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     const answers = [...store.answers]
     answers[store.tab] = next
     setStore("answers", answers)
+    const kinds = [...store.kinds]
+    const current = { ...(kinds[store.tab] ?? {}) }
+    if (next.includes(answer)) current[answer] = "option"
+    else delete current[answer]
+    kinds[store.tab] = current
+    setStore("kinds", kinds)
+    syncAgent(answers, kinds)
   }
 
   const selectTab = (index: number) => {
@@ -167,6 +229,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       const answers = [...store.answers]
       answers[store.tab] = next
       setStore("answers", answers)
+      const kinds = [...store.kinds]
+      const current = { ...(kinds[store.tab] ?? {}) }
+      current[value] = "custom"
+      kinds[store.tab] = current
+      setStore("kinds", kinds)
+      syncAgent(answers, kinds)
       setStore("editing", false)
       return
     }
@@ -176,7 +244,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     if (single()) submit()
   }
 
-  const toggleCollapse = () => setStore("collapsed", !store.collapsed)
+  const toggleCollapse = () => {
+    const collapsing = !store.collapsed
+    setStore("collapsed", collapsing)
+    // When collapsing inline, the content shrinks and can leave an empty gap
+    // below the viewport. Scroll the dock into view so the gap is eliminated.
+    if (collapsing) {
+      requestAnimationFrame(() => root?.scrollIntoView({ block: "nearest", behavior: "smooth" }))
+    }
+  }
 
   const onRoot = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -199,13 +275,18 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
   }
 
-  // Auto-focus first option when dock appears, tab changes, or editing ends
+  // Keep keyboard navigation when the webview already has focus, but do not
+  // steal focus from the editor, terminal, or other VS Code surfaces.
+  // preventScroll avoids the browser's focus-into-view behavior fighting
+  // createAutoScroll (and yanking the viewport back to the dock while the
+  // user has scrolled up to read earlier context).
   createEffect(() => {
     void store.tab
     if (store.collapsed || store.editing || confirm()) return
     requestAnimationFrame(() => {
+      if (!document.hasFocus()) return
       const btn = root?.querySelector<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)")
-      btn?.focus()
+      btn?.focus({ preventScroll: true })
     })
   })
 
@@ -222,7 +303,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
         <div data-slot="question-dock-header-content">
           <div data-slot="question-header-title">{summary()}</div>
           <Show when={store.collapsed}>
-            <div data-slot="question-collapsed-preview">{question()?.question}</div>
+            <div data-slot="question-collapsed-preview">{questionText()}</div>
           </Show>
         </div>
         <div data-slot="question-header-actions" onClick={(e: MouseEvent) => e.stopPropagation()}>
@@ -265,7 +346,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       <div data-slot="question-dock-body" inert={store.collapsed || undefined}>
         <div data-slot="question-dock-body-inner">
           <Show when={!confirm()}>
-            <div data-slot="question-text">{question()?.question}</div>
+            <div data-slot="question-text">{questionText()}</div>
             <Show when={multi()} fallback={<div data-slot="question-hint">{language.t("ui.question.singleHint")}</div>}>
               <div data-slot="question-hint">{language.t("ui.question.multiHint")}</div>
             </Show>
@@ -273,6 +354,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
               <For each={options()}>
                 {(opt, i) => {
                   const picked = () => store.answers[store.tab]?.includes(opt.label) ?? false
+                  const localized = translateOption(opt)
                   return (
                     <button
                       data-slot="question-option"
@@ -292,9 +374,9 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                         </span>
                       </span>
                       <span data-slot="question-option-main">
-                        <span data-slot="option-label">{opt.label}</span>
-                        <Show when={opt.description}>
-                          <span data-slot="option-description">{opt.description}</span>
+                        <span data-slot="option-label">{localized.label()}</span>
+                        <Show when={localized.description()}>
+                          <span data-slot="option-description">{localized.description()}</span>
                         </Show>
                       </span>
                     </button>
@@ -322,15 +404,22 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   </span>
                   <span data-slot="question-option-main">
                     <span data-slot="option-label">{language.t("ui.messagePart.option.typeOwnAnswer")}</span>
-                    <span data-slot="option-description" data-placeholder={!input()}>
-                      {input() || language.t("ui.question.custom.placeholder")}
-                    </span>
+                    <Show when={!store.editing}>
+                      <span data-slot="option-description" data-placeholder={!input()}>
+                        {input() || language.t("ui.question.custom.placeholder")}
+                      </span>
+                    </Show>
                   </span>
                 </button>
                 <Show when={store.editing}>
                   <form data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
                     <input
-                      ref={(el) => setTimeout(() => el.focus(), 0)}
+                      ref={(el) => {
+                        setTimeout(() => {
+                          if (!document.hasFocus()) return
+                          el.focus()
+                        }, 0)
+                      }}
                       type="text"
                       data-slot="custom-input"
                       placeholder={language.t("ui.question.custom.placeholder")}
@@ -369,7 +458,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                   const answered = () => Boolean(value())
                   return (
                     <div data-slot="review-item">
-                      <span data-slot="review-label">{q.question}</span>
+                      <span data-slot="review-label">{tr(language.t, q.questionKey, q.question)}</span>
                       <span data-slot="review-value" data-answered={answered()}>
                         {answered() ? value() : language.t("ui.question.review.notAnswered")}
                       </span>

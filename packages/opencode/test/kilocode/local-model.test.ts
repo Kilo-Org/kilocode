@@ -1,11 +1,9 @@
 // kilocode_change - new file
 // Tests for per-agent model persistence in local.tsx (model.json read/write)
 //
-// NOTE: Bun test uses solid-js/dist/server.js (SSR build) where createMemo
-// evaluates once and never re-evaluates. The @opentui/solid preload plugin
-// that swaps server→client build is only in the top-level bunfig preload,
-// not the [test] section. Assertions therefore verify persistence via
-// model.json file contents rather than model.current() reactive state.
+// NOTE: The package test preload swaps Solid to the client build so effects
+// and memos re-run. Tests assert both in-memory current model state and the
+// persisted model.json contents.
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
 import { createRoot } from "solid-js"
@@ -59,17 +57,28 @@ let mockAgents = [
 
 let mockConfig: { model?: string } = {}
 let mockArgs: { model?: string } = {}
+let mockWorkspace: string | undefined
+let mockDirectory = "mock-project"
 let toastMessages: Array<{ variant: string; message: string }> = []
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-// Only mock TUI context modules that are specific to the CLI layer and not
-// used by other test files. Do NOT mock widely-used modules like @/global,
-// @/provider/provider, or @opentui/core — they persist process-wide in Bun
-// and would break other test files.
+// Bun's mock.module() is process-wide and permanent — it replaces the module
+// for ALL test files in the same runner process. To avoid breaking other tests
+// that import these modules, we spread the real exports and only override the
+// specific hooks this test needs.
+
+const realHelper = await import("@tui/context/helper")
+const realSync = await import("@tui/context/sync")
+const realTheme = await import("@tui/context/theme")
+const realArgs = await import("@tui/context/args")
+const realSdk = await import("@tui/context/sdk")
+const realProject = await import("@tui/context/project")
+const realToast = await import("@tui/ui/toast")
 
 let capturedInit: (() => any) | undefined
 
 mock.module("@tui/context/helper", () => ({
+  ...realHelper,
   createSimpleContext: (input: { name: string; init: () => any }) => {
     capturedInit = input.init
     return { use: () => {}, provider: () => {} }
@@ -77,6 +86,7 @@ mock.module("@tui/context/helper", () => ({
 }))
 
 mock.module("@tui/context/sync", () => ({
+  ...realSync,
   useSync: () => ({
     data: {
       provider: mockProviders,
@@ -89,6 +99,7 @@ mock.module("@tui/context/sync", () => ({
 }))
 
 mock.module("@tui/context/theme", () => ({
+  ...realTheme,
   useTheme: () => ({
     theme: {
       primary: { buffer: new Float32Array(4) },
@@ -103,10 +114,12 @@ mock.module("@tui/context/theme", () => ({
 }))
 
 mock.module("@tui/context/args", () => ({
+  ...realArgs,
   useArgs: () => mockArgs,
 }))
 
 mock.module("@tui/context/sdk", () => ({
+  ...realSdk,
   useSDK: () => ({
     client: {
       mcp: {
@@ -117,12 +130,25 @@ mock.module("@tui/context/sdk", () => ({
   }),
 }))
 
+mock.module("@tui/context/project", () => ({
+  ...realProject,
+  useProject: () => ({
+    workspace: {
+      current: () => mockWorkspace,
+    },
+    instance: {
+      directory: () => mockDirectory,
+    },
+  }),
+}))
+
 const toastMock = {
   show: (opts: { variant: string; message: string; duration?: number }) => {
     toastMessages.push({ variant: opts.variant, message: opts.message })
   },
 }
 mock.module("@tui/ui/toast", () => ({
+  ...realToast,
   useToast: () => toastMock,
 }))
 
@@ -131,7 +157,7 @@ mock.module("@tui/ui/toast", () => ({
 await import("@tui/context/local")
 
 // Import the real Global to get the state path (set by test preload via XDG_STATE_HOME)
-const { Global } = await import("@/global")
+const { Global } = await import("@opencode-ai/core/global")
 const modelJsonPath = path.join(Global.Path.state, "model.json")
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -143,6 +169,8 @@ function resetMockState() {
   ]
   mockConfig = {}
   mockArgs = {}
+  mockWorkspace = undefined
+  mockDirectory = "mock-project"
   toastMessages = []
 }
 
@@ -176,8 +204,27 @@ async function initLocal(options?: { prewrite?: Record<string, any> }): Promise<
 }
 
 async function readModelJson(): Promise<any> {
-  const text = await fs.readFile(modelJsonPath, "utf-8")
-  return JSON.parse(text)
+  const until = Date.now() + 2000
+  while (true) {
+    try {
+      const text = await fs.readFile(modelJsonPath, "utf-8")
+      return JSON.parse(text)
+    } catch (err) {
+      if (Date.now() >= until) throw err
+      await Bun.sleep(10)
+    }
+  }
+}
+
+async function readModelJsonMaybe(): Promise<any | undefined> {
+  try {
+    const text = await fs.readFile(modelJsonPath, "utf-8")
+    return JSON.parse(text)
+  } catch (err) {
+    const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+    if (code === "ENOENT") return undefined
+    throw err
+  }
 }
 
 async function removeModelJson() {
@@ -205,7 +252,7 @@ describe("model.set persists per-agent model", () => {
     const { local, dispose } = await initLocal()
     try {
       local.model.set(OPUS, { recent: true })
-      await Bun.sleep(50)
+      await local.model.flush()
 
       const data = await readModelJson()
       expect(data.model.code).toEqual(OPUS)
@@ -222,7 +269,7 @@ describe("model.set persists per-agent model", () => {
       local.model.set(SONNET, { recent: true })
       local.agent.set("plan")
       local.model.set(OPUS, { recent: true })
-      await Bun.sleep(50)
+      await local.model.flush()
 
       const data = await readModelJson()
       expect(data.model.code).toEqual(SONNET)
@@ -239,7 +286,7 @@ describe("model.set persists per-agent model", () => {
       const deadline = Date.now() + 2000
       while (!local.model.ready && Date.now() < deadline) await Bun.sleep(10)
       local.model.set(OPUS, { recent: true })
-      await Bun.sleep(50)
+      await local.model.flush()
       dispose()
     }
 
@@ -259,7 +306,7 @@ describe("model.set persists per-agent model", () => {
 
       // Setting a new model on top of loaded data should produce correct file
       local.model.set(SONNET, { recent: true })
-      await Bun.sleep(50)
+      await local.model.flush()
       const data2 = await readModelJson()
       expect(data2.model.code).toEqual(SONNET)
       expect(data2.recent[0]).toEqual(SONNET)
@@ -281,7 +328,7 @@ describe("model.cycle and model.cycleFavorite", () => {
     })
     try {
       local.model.cycle(1)
-      await Bun.sleep(50)
+      await local.model.flush()
 
       const data = await readModelJson()
       expect(data.model.code).toEqual(OPUS)
@@ -301,7 +348,7 @@ describe("model.cycle and model.cycleFavorite", () => {
     })
     try {
       local.model.cycleFavorite(1)
-      await Bun.sleep(50)
+      await local.model.flush()
 
       const data = await readModelJson()
       expect(data.model.code).toEqual(OPUS)
@@ -380,7 +427,7 @@ describe("edge cases and error handling", () => {
     // Wait for ready
     const deadline = Date.now() + 2000
     while (!local.model.ready && Date.now() < deadline) await Bun.sleep(10)
-    await Bun.sleep(50)
+    await local.model.flush()
 
     try {
       expect(wasReadyBefore).toBe(false)
@@ -392,31 +439,30 @@ describe("edge cases and error handling", () => {
     }
   })
 
-  test("10: agent with config model persists when applied", async () => {
-    // NOTE: In production, a createEffect in local.tsx auto-applies agent config
-    // models when switching agents. In bun test, createEffect is a no-op (SSR build).
-    // This test verifies the underlying persistence: when an agent has a config model,
-    // model.set (what the effect would call) correctly persists it.
+  test("10: model.set for configured agent is in-process only", async () => {
     mockAgents = [
       { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
     ]
     const { local, dispose } = await initLocal()
     try {
-      // Switch to "plan" agent which has config model OPUS
       local.agent.set("plan")
-      // Simulate what createEffect would do: apply the agent's config model
-      local.model.set(OPUS)
       await Bun.sleep(50)
 
+      local.model.set(SONNET, { recent: true })
+      await local.model.flush()
+
+      expect(local.model.current()).toEqual(SONNET)
+      expect(local.model.saved("plan")).toBeUndefined()
       const data = await readModelJson()
-      expect(data.model.plan).toEqual(OPUS)
+      expect(data.model.plan).toBeUndefined()
+      expect(data.recent[0]).toEqual(SONNET)
     } finally {
       dispose()
     }
   })
 
-  test("11: user override from file is retained after load", async () => {
+  test("11: stale persisted model is ignored when agent has config model", async () => {
     mockAgents = [
       { name: "code", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
       { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
@@ -430,16 +476,14 @@ describe("edge cases and error handling", () => {
       },
     })
     try {
-      // The file had model.code = SONNET, recent = [SONNET, OPUS]
-      // Verify file data was loaded into the store
       expect(local.model.recent()).toEqual([SONNET, OPUS])
+      expect(local.model.current()).toEqual(OPUS)
 
-      // Setting a new model should layer on top of the loaded state
       local.model.set(OPUS, { recent: true })
-      await Bun.sleep(50)
+      await local.model.flush()
       const data = await readModelJson()
-      // model.code should now be OPUS (the new set)
-      expect(data.model.code).toEqual(OPUS)
+      expect(data.model.code).toBeUndefined()
+      expect(data.recent[0]).toEqual(OPUS)
     } finally {
       dispose()
     }
@@ -455,6 +499,122 @@ describe("edge cases and error handling", () => {
 
       const warnings = toastMessages.filter((t) => t.message.includes("configured model"))
       expect(warnings).toHaveLength(0)
+    } finally {
+      dispose()
+    }
+  })
+})
+
+// ── Regression tests for #9050 follow-up ────────────────────────────────────
+// Configured agent defaults should win on restart/project switch, while manual
+// selections for those agents remain active only in the current process.
+
+describe("#9050: configured agent defaults beat stale persisted picks", () => {
+  test("13: fresh start - config model resolves without persistence", async () => {
+    mockAgents = [
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      await Bun.sleep(50)
+
+      expect(local.model.current()).toEqual(OPUS)
+      expect(local.model.saved("plan")).toBeUndefined()
+      const data = await readModelJsonMaybe()
+      expect(data?.model?.plan).toBeUndefined()
+    } finally {
+      dispose()
+    }
+  })
+
+  test("14: configured model wins over stale persisted model", async () => {
+    mockAgents = [
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        model: { plan: SONNET },
+        favorite: [],
+        variant: {},
+      },
+    })
+    try {
+      expect(local.model.saved("plan")).toEqual(SONNET)
+      expect(local.model.current()).toEqual(OPUS)
+      const data = await readModelJson()
+      expect(data.model.plan).toEqual(SONNET)
+    } finally {
+      dispose()
+    }
+  })
+
+  test("15: user override of a config-model agent resets after re-init", async () => {
+    mockAgents = [
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+
+    {
+      const { local, dispose } = await initLocal()
+      try {
+        expect(local.model.current()).toEqual(OPUS)
+
+        local.model.set(SONNET, { recent: true })
+        await local.model.flush()
+        expect(local.model.current()).toEqual(SONNET)
+        expect(local.model.saved("plan")).toBeUndefined()
+
+        local.agent.set("code")
+        await Bun.sleep(50)
+        local.agent.set("plan")
+        await local.model.flush()
+        expect(local.model.current()).toEqual(SONNET)
+
+        const data = await readModelJson()
+        expect(data.model.plan).toBeUndefined()
+        expect(data.recent[0]).toEqual(SONNET)
+      } finally {
+        dispose()
+      }
+    }
+
+    {
+      const { local, dispose } = await initLocal()
+      try {
+        expect(local.model.current()).toEqual(OPUS)
+        expect(local.model.saved("plan")).toBeUndefined()
+      } finally {
+        dispose()
+      }
+    }
+  })
+
+  test("16: invalid config model still emits a warning toast", async () => {
+    mockAgents = [
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+      {
+        name: "plan",
+        mode: "primary",
+        hidden: false,
+        model: { providerID: "nonexistent", modelID: "fake-model" },
+        color: undefined,
+        permission: {},
+      },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      toastMessages = []
+      local.agent.set("plan")
+      await Bun.sleep(50)
+
+      const warnings = toastMessages.filter((t) => t.variant === "warning" && t.message.includes("not valid"))
+      expect(warnings.length).toBeGreaterThan(0)
+      expect(local.model.saved("plan")).toBeUndefined()
+      const data = await readModelJsonMaybe()
+      expect(data?.model?.plan).toBeUndefined()
     } finally {
       dispose()
     }

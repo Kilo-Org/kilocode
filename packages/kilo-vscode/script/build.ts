@@ -2,12 +2,15 @@
 import { $ } from "bun"
 import { join } from "node:path"
 import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
+import { copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import { ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
 const packageJson = await Bun.file(packageJsonPath).json()
 const version = process.env.KILO_VERSION ? process.env.KILO_VERSION : packageJson.version
+const prerelease = process.env.KILO_PRE_RELEASE === "true"
 
-console.log(`Building VSCode extension version: ${version}`)
+console.log(`Building VSCode extension version: ${version}${prerelease ? " (pre-release)" : ""}`)
 
 if (packageJson.version !== version) {
   console.log(`Updating package.json version from ${packageJson.version} to ${version}`)
@@ -73,6 +76,7 @@ for (const config of targets) {
 
   console.log(`  📥 Copying binary from ${config.cliDir}/bin/${config.binary}...`)
   await $`cp ${sourceBinary} ${targetBinary}`
+  await copyTreeSitterResources(sourceBinary, targetBinary)
 
   if (config.binary !== "kilo.exe") {
     chmodSync(targetBinary, 0o755)
@@ -80,9 +84,14 @@ for (const config of targets) {
 
   console.log(`  ✅ Binary ready at ${targetBinary}`)
 
-  console.log(`  📦 Packaging .vsix for ${config.target}...`)
+  console.log("Adding bundled FFmpeg helper...")
+  await ensureFfmpegForTarget(config.target, binDir)
+
+  console.log(`  📦 Packaging .vsix for ${config.target}${prerelease ? " (pre-release)" : ""}...`)
   const vsixPath = join(outDir, `kilo-vscode-${config.target}.vsix`)
-  await $`vsce package --no-dependencies --skip-license --target ${config.target} -o ${vsixPath}`.env({
+  const args = ["--no-dependencies", "--skip-license", "--target", config.target, "-o", vsixPath]
+  if (prerelease) args.push("--pre-release")
+  await $`vsce package ${args}`.env({
     ...process.env,
     npm_config_ignore_scripts: "true",
   })

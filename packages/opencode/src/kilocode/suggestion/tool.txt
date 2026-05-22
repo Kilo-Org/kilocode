@@ -1,0 +1,30 @@
+Use this tool to suggest a local code review to the user after completing implementation work.
+
+This tool is ONLY for suggesting code review. Do NOT use it to suggest running tests, committing, pushing, or any other action.
+
+Guidelines:
+- Before calling this tool, write the normal final response summarizing what changed, validation, and any caveats
+- Call this tool only after that final response text, as the final action in the turn
+- Never use this tool as a replacement for the final response summary
+- Only suggest review when you are at least 90% confident the user's request is fully addressed
+- Do not suggest review after every edit or partial implementation turn
+- Do not repeat a review suggestion when one has already been made in the current session
+- Keep the suggestion text concise and actionable
+- Provide 1-2 actions maximum
+- Make each action prompt self-contained so it can be injected as a synthetic user message
+- If you need a real answer from the user, use the `question` tool instead
+
+When to suggest a review:
+- Suggest review after completed, non-trivial file-changing work when another independent pass could meaningfully catch issues
+- Do not withhold review solely because the work was reactive, fixed CI/lint failures, touched docs/config, or happened around commit/push work
+
+Do NOT suggest a review when:
+- No files or implementation-relevant content changed
+- The changes are small or trivial, such as typo-only, comment-only, formatting-only, or tiny single-line tweaks
+- The coding session is fixing another local or remote code review
+- A local code review suggestion has already been made in the current session
+
+Choosing the right review command for the action prompt:
+- Use `/local-review-uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
+- Use `/local-review` as the action prompt for committed branch-level changes
+- Prefer `/local-review-uncommitted` when the work you just did has not been committed yet

@@ -1,0 +1,136 @@
+/* Settings save bar */
+.settings-save-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.settings-save-bar-label {
+  font-size: var(--font-size-small);
+  color: var(--foreground-secondary);
+  margin-right: auto;
+}
+
+/* Save error — mirrors the startup-error-banner style */
+.settings-save-bar-error {
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  margin: 8px 16px 0 16px;
+  font-size: var(--font-size-small);
+}
+
+.settings-save-bar-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.settings-save-bar-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.settings-save-bar-error-firstline {
+  font-weight: 400;
+}
+
+.settings-save-bar-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.settings-save-bar-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.settings-save-bar-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+[data-slot="settings-row"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  [data-slot="settings-row-label"] {
+    flex: 1 1 0%;
+    min-width: 150px;
+
+    [data-slot="settings-row-label-title"] {
+      font-size: var(--font-size-base);
+      font-weight: 500;
+      min-height: var(--kilo-font-size-16);
+      margin-bottom: 4px;
+    }
+
+    [data-slot="settings-row-label-subtitle"] {
+      font-size: var(--font-size-small);
+      min-height: var(--kilo-font-size-14);
+      color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    }
+  }
+
+  [data-slot="settings-row-input"] {
+    flex: 0 0 auto;
+    max-width: 160px;
+
+    & > * {
+      max-width: 100%;
+    }
+  }
+}
+
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
+}
+
+.settings-font-size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 160px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  span {
+    min-width: 34px;
+    color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    font-size: var(--font-size-small);
+    text-align: right;
+  }
+}

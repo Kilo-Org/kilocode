@@ -17,6 +17,10 @@ on:
       - "patches/**"
       - ".github/workflows/nix-hashes.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Native runners required: bun install cross-compilation flags (--os/--cpu)
   # do not produce byte-identical node_modules as native installs.
@@ -57,7 +61,7 @@ jobs:
           nix build ".#packages.${SYSTEM}.node_modules_updater" --no-link 2>&1 | tee "$BUILD_LOG" || true
 
           # Extract hash from build log with portability
-          HASH="$(grep -oE 'sha256-[A-Za-z0-9+/=]+' "$BUILD_LOG" | tail -n1 || true)"
+          HASH="$(nix run --inputs-from . nixpkgs#gnugrep -- -oP 'got:\s*\Ksha256-[A-Za-z0-9+/=]+' "$BUILD_LOG" | tail -n1 || true)"
 
           if [ -z "$HASH" ]; then
             echo "::error::Failed to compute hash for ${SYSTEM}"
@@ -69,7 +73,7 @@ jobs:
           echo "Computed hash for ${SYSTEM}: $HASH"
 
       - name: Upload hash
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: hash-${{ matrix.system }}
           path: hash.txt
@@ -82,7 +86,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -102,7 +106,7 @@ jobs:
           git pull --rebase --autostash origin "$GITHUB_REF_NAME"
 
       - name: Download hash artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8 # kilocode_change
         with:
           path: hashes
           pattern: hash-*

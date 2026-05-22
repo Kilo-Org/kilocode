@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
  * Stories for Agent Manager components:
- * FileTree, DiffPanel, FullScreenDiffView, WorktreeItem
+ * FileTree, DiffPanel, FullScreenDiffView, WorktreeItem, TabBar
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
@@ -10,7 +10,13 @@ import { FileTree } from "../../agent-manager/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
-import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats } from "../types/messages"
+import { Button } from "@kilocode/kilo-ui/button"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
+import type { JSX } from "solid-js"
+import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -101,6 +107,75 @@ export const DiffPanelWithDiffs: Story = {
           onClose={() => {}}
           onExpand={() => {}}
         />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+const buttonFixtureStyle: JSX.CSSProperties = {
+  display: "inline-flex",
+  "align-items": "center",
+  gap: "10px",
+  padding: "8px",
+  background: "var(--surface-base)",
+  border: "1px solid var(--border-weak-base)",
+  "border-radius": "6px",
+}
+
+const buttonFixtureLabelStyle: JSX.CSSProperties = {
+  color: "var(--text-weak)",
+  "font-size": "var(--font-size-small)",
+}
+
+export const InlineDiffBulkActionExpandAllButton: Story = {
+  name: "Inline Diff — expand all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Inline diff action</span>
+        <IconButton icon="files-expand" size="small" variant="ghost" label="Expand All" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const InlineDiffBulkActionCollapseAllButton: Story = {
+  name: "Inline Diff — collapse all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Inline diff action</span>
+        <IconButton icon="files-collapse" size="small" variant="ghost" label="Collapse All" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffBulkActionExpandAllButton: Story = {
+  name: "Full-screen Diff — expand all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Full-screen diff action</span>
+        <Button size="small" variant="ghost">
+          <Icon name="chevron-grabber-vertical" size="small" />
+          Expand All
+        </Button>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffBulkActionCollapseAllButton: Story = {
+  name: "Full-screen Diff — collapse all button",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={buttonFixtureStyle}>
+        <span style={buttonFixtureLabelStyle}>Full-screen diff action</span>
+        <Button size="small" variant="ghost">
+          <Icon name="chevron-grabber-vertical" size="small" />
+          Collapse All
+        </Button>
       </div>
     </StoryProviders>
   ),
@@ -252,6 +327,152 @@ export const WorktreeItemWithStats: Story = {
   ),
 }
 
+// ---------------------------------------------------------------------------
+// PR badge mock helpers
+// ---------------------------------------------------------------------------
+
+const basePR: PRStatus = {
+  number: 8594,
+  title: "feat: add inline delete",
+  url: "https://github.com/org/repo/pull/8594",
+  state: "open",
+  review: null,
+  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+  additions: 978,
+  deletions: 202,
+  files: 12,
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — PR badge stories
+// ---------------------------------------------------------------------------
+
+export const PRBadgeApproved: Story = {
+  name: "PR Badge — approved + checks pass",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "approved" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgePending: Story = {
+  name: "PR Badge — pending review",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "pending" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChangesRequested: Story = {
+  name: "PR Badge — changes requested",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "changes_requested" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChecksFailing: Story = {
+  name: "PR Badge — checks failing",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, checks: { ...basePR.checks, status: "failure", passed: 3, failed: 2 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChecksPending: Story = {
+  name: "PR Badge — checks pending",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, checks: { ...basePR.checks, status: "pending", passed: 2, pending: 3 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeDraft: Story = {
+  name: "PR Badge — draft",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "draft" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeMerged: Story = {
+  name: "PR Badge — merged",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "merged" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeClosed: Story = {
+  name: "PR Badge — closed",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "closed" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeNoReview: Story = {
+  name: "PR Badge — open, no review decision",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={basePR} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeApprovedChecksFailing: Story = {
+  name: "PR Badge — approved but checks failing",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, review: "approved", checks: { ...basePR.checks, status: "failure", passed: 3, failed: 2 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — grouped
+// ---------------------------------------------------------------------------
+
 export const WorktreeItemGrouped: Story = {
   name: "WorktreeItem — grouped (3 versions)",
   render: () => {
@@ -297,4 +518,159 @@ export const WorktreeItemGrouped: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// TabBar — renders tab bar structure matching SortableTab / SortableReviewTab
+// DOM to verify the tooltip-trigger height chain is correct.
+// ---------------------------------------------------------------------------
+
+/**
+ * Mock tab matching the real SortableTab DOM:
+ *   .am-tab-sortable > [context-menu-trigger] > [tooltip-trigger] > .am-tab
+ */
+const MockTab = (props: { title: string; active?: boolean }) => (
+  <div class="am-tab-sortable">
+    <ContextMenu>
+      <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+        <TooltipKeybind title={props.title} keybind="⌘1" placement="bottom" inactive={props.active}>
+          <div class={`am-tab ${props.active ? "am-tab-active" : ""}`}>
+            <span class="am-tab-label">{props.title}</span>
+            <TooltipKeybind title="Close" keybind="⌘W" placement="bottom" class="am-tab-close-wrap">
+              <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
+            </TooltipKeybind>
+          </div>
+        </TooltipKeybind>
+      </ContextMenu.Trigger>
+    </ContextMenu>
+  </div>
+)
+
+/** Mock review tab matching SortableReviewTab DOM (no ContextMenu wrapper). */
+const MockReviewTab = (props: { active?: boolean }) => (
+  <div class="am-tab-sortable">
+    <TooltipKeybind title="Toggle review" keybind="⌘⇧R" placement="bottom" inactive={props.active}>
+      <div class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}>
+        <span class="am-tab-icon">
+          <Icon name="layers" size="small" />
+        </span>
+        <span class="am-tab-label">Review</span>
+        <TooltipKeybind title="Close" keybind="⌘W" placement="bottom" class="am-tab-close-wrap">
+          <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
+        </TooltipKeybind>
+      </div>
+    </TooltipKeybind>
+  </div>
+)
+
+const MockTabsSearchButton = () => (
+  <button class="am-tabs-menu-trigger" type="button" aria-label="Search open tabs">
+    <svg class="am-tabs-search-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="6.8" cy="6.8" r="4.3" />
+      <path d="M10.2 10.2L13.5 13.5" />
+    </svg>
+  </button>
+)
+
+const MockTabLeading = () => (
+  <div class="am-tab-leading">
+    <MockTabsSearchButton />
+  </div>
+)
+
+const MockTabAdd = () => (
+  <div class="am-tab-add-wrap">
+    <div class="am-tab-add-separator" />
+    <div class="am-split-button am-tab-add-split">
+      <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+        <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+      </TooltipKeybind>
+    </div>
+  </div>
+)
+
+export const TabBarMultipleTabs: Story = {
+  name: "TabBar — multiple tabs with active",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "3" } as JSX.CSSProperties}>
+              <MockTab title="Implement auth" active />
+              <MockTab title="Fix button styles" />
+              <MockTab title="Add unit tests" />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <div class="am-tab-actions">
+          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
+            <Icon name="layers" size="small" />
+            <span class="am-diff-toggle-stats">
+              <span class="am-stat-files">4f</span>
+              <span class="am-stat-additions">+32</span>
+              <span class="am-stat-deletions">−8</span>
+            </span>
+          </button>
+          <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
+        </div>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const TabBarWithReviewTab: Story = {
+  name: "TabBar — with review tab",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "2" } as JSX.CSSProperties}>
+              <MockTab title="Implement auth" />
+              <MockReviewTab active />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <div class="am-tab-actions">
+          <IconButton icon="expand" size="small" variant="ghost" label="Review" class="am-tab-diff-btn-active" />
+          <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
+        </div>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const TabBarSingleTab: Story = {
+  name: "TabBar — single active tab",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <MockTabLeading />
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list-wrap">
+            <div class="am-tab-list" style={{ "--tab-count": "1" } as JSX.CSSProperties}>
+              <MockTab title="PR #6966 worktree checkout" active />
+            </div>
+          </div>
+        </div>
+        <MockTabAdd />
+        <div class="am-tab-actions">
+          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
+            <Icon name="layers" size="small" />
+            <span class="am-diff-toggle-stats">
+              <span class="am-stat-files">188f</span>
+              <span class="am-stat-additions">+23625</span>
+              <span class="am-stat-deletions">−359</span>
+            </span>
+          </button>
+          <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
+        </div>
+      </div>
+    </StoryProviders>
+  ),
 }

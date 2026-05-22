@@ -19,13 +19,11 @@ import {
   splitProps,
   type ValidComponent,
 } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
-import type { PopoverProps } from "@kilocode/kilo-ui/popover"
+import { DeferredPopover as Popover } from "./DeferredPopover"
+import type { DeferredPopoverProps as PopoverProps } from "./DeferredPopover"
 
-export interface PopupSelectorProps<T extends ValidComponent = ValidComponent> extends Omit<
-  PopoverProps<T>,
-  "style" | "children"
-> {
+export interface PopupSelectorProps<T extends ValidComponent = ValidComponent>
+  extends Omit<PopoverProps<T>, "style" | "children"> {
   /** Whether the selector is in expanded mode (wider + taller). */
   expanded: boolean
   /** Preferred width when collapsed. Default: 250 */
@@ -42,6 +40,8 @@ export interface PopupSelectorProps<T extends ValidComponent = ValidComponent> e
   minWidth?: number
   /** Minimum popup height — never shrinks below this. Default: 100 */
   minHeight?: number
+  /** Delay outside dismissal while portal content and dialog focus settle. */
+  deferDismiss?: boolean
   /** Render prop — receives a reactive `bodyH` accessor (undefined when no preferred height set). */
   children: (bodyH: Accessor<number | undefined>) => JSXElement
 }
@@ -56,6 +56,7 @@ export function PopupSelector<T extends ValidComponent = ValidComponent>(props: 
     "padding",
     "minWidth",
     "minHeight",
+    "deferDismiss",
     "children",
   ])
 
@@ -110,6 +111,7 @@ export function PopupSelector<T extends ValidComponent = ValidComponent>(props: 
       placement="top-start"
       slide={true}
       overflowPadding={local.padding ?? 8}
+      deferDismiss={local.deferDismiss}
       {...(rest as PopoverProps)}
       style={
         popoverW().width !== undefined

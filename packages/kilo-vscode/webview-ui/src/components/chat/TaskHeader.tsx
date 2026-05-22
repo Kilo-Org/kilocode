@@ -3,16 +3,24 @@
  * Sticky header above the chat messages showing session title,
  * cost, context usage, and a compact button.
  * Also shows todo progress when the session has todos.
+ *
+ * When expanded, shows the task timeline (colored bars representing
+ * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
+import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
-import type { TodoItem } from "../../types/messages"
+import { useVSCode } from "../../context/vscode"
+import { TaskTimeline } from "./TaskTimeline"
+import { ContextProgress } from "./ContextProgress"
+import { target as todoTarget } from "../../context/todo-revert"
+import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -25,7 +33,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const hasMessages = createMemo(() => session.messages().length > 0)
   const busy = createMemo(() => session.status() === "busy")
-  const canCompact = createMemo(() => !busy() && hasMessages() && !!session.selected())
+  const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -40,9 +48,12 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const costTooltip = createMemo(() => {
     const items = breakdown()
     if (items.length <= 1) return <span>{language.t("context.usage.sessionCost")}</span>
+    const collapsed = collapseCostBreakdown(items, (n) =>
+      language.t("context.usage.olderSessions", { count: String(n) }),
+    )
     return (
       <div style={{ "text-align": "left", "white-space": "nowrap" }}>
-        <For each={items}>{(e) => <div>{`${e.label}: ${fmt(e.cost)}`}</div>}</For>
+        <For each={collapsed}>{(e) => <div>{`${e.label}: ${fmt(e.cost)}`}</div>}</For>
       </div>
     )
   })
@@ -54,6 +65,39 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     const pct = usage.percentage !== null ? `${usage.percentage}%` : undefined
     return { tokens, pct }
   })
+
+  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
+
+  const hasTimeline = createMemo(() => {
+    for (const m of session.visibleMessages()) {
+      if (m.role !== "assistant") continue
+      if (session.getParts(m.id).some((p) => p.type !== "step-start")) return true
+    }
+    return false
+  })
+
+  const fmtNum = (n: number): string => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+    return String(n)
+  }
+
+  const vscode = useVSCode()
+  const [expanded, setExpanded] = createSignal(true)
+
+  // Read initial value from VS Code settings
+  onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
+  const handler = (e: MessageEvent<ExtensionMessage>) => {
+    if (e.data.type === "timelineSettingLoaded") setExpanded(e.data.visible)
+  }
+  window.addEventListener("message", handler)
+  onCleanup(() => window.removeEventListener("message", handler))
+
+  const toggle = () => {
+    const next = !expanded()
+    setExpanded(next)
+    vscode.postMessage({ type: "updateSetting", key: "showTaskTimeline", value: next })
+  }
 
   const todos = createMemo(() => session.todos())
   const hasTodos = createMemo(() => todos().length > 0)
@@ -70,6 +114,16 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const [todosOpen, setTodosOpen] = createSignal(false)
+
+  const donePart = (idx: number): Part | undefined =>
+    todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
+
+  const revertTodo = (part: Part | undefined) => {
+    if (session.status() !== "idle") return
+    if (part?.type !== "tool") return
+    if (!part.messageID) return
+    session.revertSession(part.messageID, part.id)
+  }
 
   return (
     <Show when={hasMessages()}>
@@ -107,8 +161,52 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               />
             </Tooltip>
           </Show>
+          <Show when={hasMessages()}>
+            <button
+              data-slot="task-header-expand"
+              onClick={toggle}
+              aria-expanded={expanded()}
+              aria-label="Toggle timeline"
+            >
+              <Icon name="chevron-down" size="small" style={expanded() ? { transform: "rotate(180deg)" } : undefined} />
+            </button>
+          </Show>
         </div>
       </div>
+      {/* Expanded graph section: timeline + context bar + token breakdown */}
+      <Show when={expanded() && hasTimeline()}>
+        <div data-component="task-header-graph">
+          <TaskTimeline />
+          <div data-slot="task-header-graph-row">
+            <ContextProgress />
+          </div>
+          <Show when={tokens()}>
+            {(tk) => (
+              <div class="task-header-tokens">
+                <span class="task-header-tokens-label">Tokens</span>
+                <Show when={tk().input > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-up" size="small" />
+                    {fmtNum(tk().input)}
+                  </span>
+                </Show>
+                <Show when={tk().output > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-down-to-line" size="small" />
+                    {fmtNum(tk().output)}
+                  </span>
+                </Show>
+                <Show when={tk().cached > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-down-to-line" size="small" />
+                    cache {fmtNum(tk().cached)}
+                  </span>
+                </Show>
+              </div>
+            )}
+          </Show>
+        </div>
+      </Show>
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">
           <button
@@ -130,16 +228,21 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={todosOpen()}>
             <div data-slot="task-header-todos-list">
               <For each={todos()}>
-                {(todo: TodoItem) => (
-                  <Checkbox readOnly checked={todo.status === "completed"}>
-                    <span
-                      data-slot="task-header-todo-content"
-                      data-completed={todo.status === "completed" ? "" : undefined}
-                    >
-                      {todo.content}
-                    </span>
-                  </Checkbox>
-                )}
+                {(todo: TodoItem, idx) => {
+                  const part = createMemo(() => (todo.status === "completed" ? donePart(idx()) : undefined))
+                  return (
+                    <Tooltip value={part() ? language.t("settings.checkpoints.title") : undefined} placement="bottom">
+                      <Checkbox readOnly checked={todo.status === "completed"} onClick={() => revertTodo(part())}>
+                        <span
+                          data-slot="task-header-todo-content"
+                          data-completed={todo.status === "completed" ? "" : undefined}
+                        >
+                          {todo.content}
+                        </span>
+                      </Checkbox>
+                    </Tooltip>
+                  )
+                }}
               </For>
             </div>
           </Show>

@@ -2,7 +2,9 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
 import type { Config } from "../config/config"
+import type { ConfigCommand } from "../config/command"
 import { Filesystem } from "../util/filesystem"
+import { KilocodeMarkdown } from "./config/markdown"
 import { KilocodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {
@@ -23,7 +25,7 @@ export namespace WorkflowsMigrator {
   }
 
   export interface MigrationResult {
-    commands: Record<string, Config.Command>
+    commands: Record<string, ConfigCommand.Info>
     warnings: string[]
   }
 
@@ -58,7 +60,7 @@ export namespace WorkflowsMigrator {
     const files = await findWorkflowFiles(dir)
     const workflows: KilocodeWorkflow[] = []
     for (const file of files) {
-      const content = await fs.readFile(file, "utf-8")
+      const content = await KilocodeMarkdown.substitute(await fs.readFile(file, "utf-8"), file)
       workflows.push({
         name: extractNameFromFilename(file),
         path: file,
@@ -91,7 +93,7 @@ export namespace WorkflowsMigrator {
     return workflows
   }
 
-  export function convertToCommand(workflow: KilocodeWorkflow): Config.Command {
+  export function convertToCommand(workflow: KilocodeWorkflow): ConfigCommand.Info {
     return {
       template: workflow.content,
       description: extractDescription(workflow.content) ?? `Workflow: ${workflow.name}`,
@@ -104,7 +106,7 @@ export namespace WorkflowsMigrator {
     skipGlobalPaths?: boolean
   }): Promise<MigrationResult> {
     const warnings: string[] = []
-    const commands: Record<string, Config.Command> = {}
+    const commands: Record<string, ConfigCommand.Info> = {}
 
     const workflows = await discoverWorkflows(options.projectDir, options.skipGlobalPaths)
 

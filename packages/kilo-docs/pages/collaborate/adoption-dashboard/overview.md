@@ -72,23 +72,23 @@ Each card displays the percentage change (e.g., "+2.3%" or "-1.5%") with a direc
 
 The AI Adoption Score is composed of three weighted dimensions:
 
-| Dimension     | Weight | Question It Answers                              |
-| ------------- | ------ | ------------------------------------------------ |
-| **Frequency** | 40%    | How often do developers use AI?                  |
-| **Depth**     | 40%    | How integrated is AI into actual development?    |
-| **Coverage**  | 20%    | How broadly is AI being adopted across the team? |
+| Dimension | Weight | Question It Answers |
+|---|---|---|
+| **Frequency** | 40% | How often do developers use AI? |
+| **Depth** | 40% | How integrated is AI into actual development? |
+| **Coverage** | 20% | How broadly is AI being adopted across the team? |
 
 Click on any dimension card to view detailed analysis and improvement suggestions specific to that dimension.
 
 ## Quick Reference: Score Tiers
 
-| Score Range | Tier                     | Description                              |
-| ----------- | ------------------------ | ---------------------------------------- |
-| 0–20        | Minimal adoption         | AI usage is sporadic or experimental     |
-| 21–50       | Early adoption           | Some developers are using AI regularly   |
-| 51–75       | Growing adoption         | AI is becoming part of team workflows    |
-| 76–90       | Strong adoption          | AI is deeply integrated into development |
-| 91–100      | AI-first engineering org | AI is central to how the team ships code |
+| Score Range | Tier | Description |
+|---|---|---|
+| 0–20 | Minimal adoption | AI usage is sporadic or experimental |
+| 21–50 | Early adoption | Some developers are using AI regularly |
+| 51–75 | Growing adoption | AI is becoming part of team workflows |
+| 76–90 | Strong adoption | AI is deeply integrated into development |
+| 91–100 | AI-first engineering org | AI is central to how the team ships code |
 
 ## Next Steps
 

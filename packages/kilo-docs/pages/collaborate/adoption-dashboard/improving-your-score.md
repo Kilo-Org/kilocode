@@ -100,12 +100,12 @@ Most teams start with Code mode and stop there. But Kilo's other modes unlock ad
 
 **Action:** Introduce your team to specialized modes:
 
-| Mode             | Use Case                                                 |
-| ---------------- | -------------------------------------------------------- |
+| Mode | Use Case |
+|---|---|
 | **Orchestrator** | Delegate and execute subtasks over long-horizon projects |
-| **Architect**    | Design and plan before implementation                    |
-| **Debug**        | Systematic error diagnosis                               |
-| **Ask**          | Quick questions and explanations                         |
+| **Architect** | Design and plan before implementation |
+| **Debug** | Systematic error diagnosis |
+| **Ask** | Quick questions and explanations |
 
 This increases efficacy and improves trust in AI-facilitated tasking.
 
@@ -138,23 +138,23 @@ Other ways to spread usage:
 
 ### Patterns That Drive Adoption
 
-| Pattern                          | Why It Works                                       |
-| -------------------------------- | -------------------------------------------------- |
-| **Pair AI with existing tools**  | Developers don't have to learn new workflows       |
-| **Start with quick wins**        | Autocomplete and commit messages build confidence  |
-| **Champion-led adoption**        | Enthusiastic team members model effective usage    |
-| **Weekly check-ins on AI usage** | Keeps AI top-of-mind without being prescriptive    |
-| **Celebrate retained code**      | Recognize when AI contributions ship to production |
+| Pattern | Why It Works |
+|---|---|
+| **Pair AI with existing tools** | Developers don't have to learn new workflows |
+| **Start with quick wins** | Autocomplete and commit messages build confidence |
+| **Champion-led adoption** | Enthusiastic team members model effective usage |
+| **Weekly check-ins on AI usage** | Keeps AI top-of-mind without being prescriptive |
+| **Celebrate retained code** | Recognize when AI contributions ship to production |
 
 ### Anti-Patterns to Avoid
 
-| Anti-Pattern                        | Why It Fails                                  |
-| ----------------------------------- | --------------------------------------------- |
-| **Mandating specific usage levels** | Creates resentment without changing habits    |
-| **Focusing only on power users**    | Neglects the majority who need onboarding     |
-| **Ignoring context quality**        | Leads to poor suggestions and abandoned usage |
-| **Measuring without acting**        | Scores drop when no one addresses gaps        |
-| **All-or-nothing adoption**         | Teams need gradual, sustainable change        |
+| Anti-Pattern | Why It Fails |
+|---|---|
+| **Mandating specific usage levels** | Creates resentment without changing habits |
+| **Focusing only on power users** | Neglects the majority who need onboarding |
+| **Ignoring context quality** | Leads to poor suggestions and abandoned usage |
+| **Measuring without acting** | Scores drop when no one addresses gaps |
+| **All-or-nothing adoption** | Teams need gradual, sustainable change |
 
 ---
 

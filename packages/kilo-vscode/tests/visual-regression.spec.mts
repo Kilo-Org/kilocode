@@ -53,6 +53,27 @@ const SKIP = new Set<string>([
   "composite-webview--permission-dock-config-preloaded",
 ])
 
+const DOCS = new Map<string, string[]>([
+  [
+    "chat--task-header-with-todos",
+    [
+      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/task-header-with-todos-chromium-linux.png",
+    ],
+  ],
+  [
+    "composite-webview--todo-write-docs-overview",
+    [
+      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/composite-webview/todo-write-docs-overview-chromium-linux.png",
+    ],
+  ],
+  [
+    "settings--agent-behaviour-workflows",
+    [
+      "packages/kilo-docs/pages/customize/workflows.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-workflows-chromium-linux.png",
+    ],
+  ],
+])
+
 // Generate one test() per story so Playwright's scheduler can distribute
 // them freely across workers — no manual sharding needed.
 // Skip fetching stories on macOS since test.skip() above already marks the file skipped.
@@ -60,6 +81,10 @@ const stories = IS_DARWIN ? [] : (await fetchStories()).filter((s) => !SKIP.has(
 
 for (const story of stories) {
   test(`${story.title} / ${story.name}`, async ({ page }) => {
+    for (const ref of DOCS.get(story.id) ?? []) {
+      test.info().annotations.push({ type: "docs", description: ref })
+    }
+
     // Narrow stories (IDs ending in "-200") use a 200px viewport
     // The "-200" suffix comes from the export name convention (e.g. Default200, WithThinking200)
     const narrow = story.id.endsWith("-200")
@@ -74,6 +99,6 @@ for (const story of stories) {
 
     const [component, variant] = story.id.split("--")
     const root = page.locator("#storybook-root")
-    await expect(root).toHaveScreenshot([component!, `${variant}.png`])
+    await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant}-chromium-linux.png`])
   })
 }

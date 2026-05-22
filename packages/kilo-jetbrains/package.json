@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "build": "bun script/build.ts",
-    "build:production": "bun script/build.ts --production"
+    "build:production": "bun script/build.ts --production",
+    "typecheck": "./gradlew typecheck",
+    "test": "./gradlew test",
+    "test:ci": "bun script/test-ci.ts"
   }
 }

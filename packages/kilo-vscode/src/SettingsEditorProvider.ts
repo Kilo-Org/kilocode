@@ -2,13 +2,15 @@ import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
+import type { RemoteStatusService } from "./services/RemoteStatusService"
 
-type PanelView = "settings" | "profile" | "marketplace"
+type PanelView = "settings" | "profile" | "marketplace" | "indexing"
 
 const PANEL_TITLES: Record<PanelView, string> = {
   settings: "Kilo Settings",
   profile: "Kilo Profile",
   marketplace: "Kilo Marketplace",
+  indexing: "Codebase Indexing",
 }
 
 /**
@@ -26,6 +28,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
   private providers = new Map<PanelView, KiloProvider>()
   private tabs = new Map<PanelView, string>()
+  private remoteService: RemoteStatusService | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -63,6 +66,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
         provider?.postMessage({ type: "navigate", view, tab })
       }
       existing.reveal(vscode.ViewColumn.One)
+      this.providers.get(view)?.postMessage({ type: "navigate", view, ...(tab ? { tab } : {}) })
       return
     }
 
@@ -101,6 +105,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
     const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
       projectDirectory,
     })
+    if (this.remoteService) {
+      provider.setRemoteService(this.remoteService)
+    }
     provider.resolveWebviewPanel(panel)
 
     // Listen for closePanel from the webview (back button in panel mode)
@@ -144,11 +151,20 @@ export class SettingsEditorProvider implements vscode.Disposable {
     })
   }
 
+  setRemoteService(service: RemoteStatusService): void {
+    this.remoteService = service
+    // Apply to any existing providers
+    for (const [, provider] of this.providers) {
+      provider.setRemoteService(service)
+    }
+  }
+
   dispose(): void {
     for (const [, panel] of this.panels) {
       panel.dispose()
     }
     this.panels.clear()
     this.providers.clear()
+    this.tabs.clear()
   }
 }

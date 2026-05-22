@@ -4,6 +4,12 @@ import {
   dirName,
   buildHighlightSegments,
   atEnd,
+  insertSpacedText,
+  isPromptBlocked,
+  isPromptBusy,
+  isSuggesting,
+  isQuestioning,
+  isPathMention,
 } from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
@@ -143,5 +149,134 @@ describe("atEnd", () => {
 
   it("returns false when caret is at start of non-empty input", () => {
     expect(atEnd(0, 0, 10)).toBe(false)
+  })
+})
+
+describe("isPromptBlocked", () => {
+  it("returns false when zero permissions", () => {
+    expect(isPromptBlocked(0)).toBe(false)
+  })
+
+  it("returns true when permissions exist", () => {
+    expect(isPromptBlocked(1)).toBe(true)
+    expect(isPromptBlocked(3)).toBe(true)
+  })
+
+  it("accepts exactly one argument (locks the API against regression)", () => {
+    // Prevents a future change from reintroducing the question/blocking coupling.
+    // See prompt-send-contract.test.ts for the source-level complement.
+    expect(isPromptBlocked.length).toBe(1)
+  })
+})
+
+describe("isPromptBusy", () => {
+  it("returns true when busy and neither suggesting nor questioning", () => {
+    expect(isPromptBusy("busy", false, false)).toBe(true)
+  })
+
+  it("returns false when idle regardless of suggesting/questioning", () => {
+    expect(isPromptBusy("idle", false, false)).toBe(false)
+    expect(isPromptBusy("idle", true, false)).toBe(false)
+    expect(isPromptBusy("idle", false, true)).toBe(false)
+    expect(isPromptBusy("idle", true, true)).toBe(false)
+  })
+
+  it("returns false when busy but suggesting is true (suggestion decoupling)", () => {
+    expect(isPromptBusy("busy", true, false)).toBe(false)
+  })
+
+  it("returns false when busy but questioning is true (question decoupling)", () => {
+    expect(isPromptBusy("busy", false, true)).toBe(false)
+  })
+
+  it("returns false when busy and both suggesting and questioning", () => {
+    expect(isPromptBusy("busy", true, true)).toBe(false)
+  })
+
+  it("returns true for non-idle non-busy status when not suggesting/questioning", () => {
+    expect(isPromptBusy("retry", false, false)).toBe(true)
+  })
+})
+
+describe("insertSpacedText", () => {
+  it("inserts transcript into empty text", () => {
+    expect(insertSpacedText("", "hello", 0, 0)).toEqual({ text: "hello", pos: 5 })
+  })
+
+  it("adds spaces between surrounding words", () => {
+    expect(insertSpacedText("helloworld", "beautiful", 5, 5)).toEqual({ text: "hello beautiful world", pos: 16 })
+  })
+
+  it("does not duplicate existing spaces", () => {
+    expect(insertSpacedText("hello world", "beautiful", 6, 6)).toEqual({ text: "hello beautiful world", pos: 16 })
+  })
+
+  it("replaces selected text and keeps caret after transcript", () => {
+    expect(insertSpacedText("hello bad world", "beautiful", 6, 9)).toEqual({ text: "hello beautiful world", pos: 15 })
+  })
+
+  it("preserves leading and trailing insertion positions", () => {
+    expect(insertSpacedText("world", "hello", 0, 0)).toEqual({ text: "hello world", pos: 6 })
+    expect(insertSpacedText("hello", "world", 5, 5)).toEqual({ text: "hello world", pos: 11 })
+  })
+})
+
+describe("isSuggesting", () => {
+  it("returns true when not blocked and suggestions > 0", () => {
+    expect(isSuggesting(false, 1)).toBe(true)
+    expect(isSuggesting(false, 3)).toBe(true)
+  })
+
+  it("returns false when blocked even with suggestions", () => {
+    expect(isSuggesting(true, 2)).toBe(false)
+  })
+
+  it("returns false when not blocked but no suggestions", () => {
+    expect(isSuggesting(false, 0)).toBe(false)
+  })
+})
+
+describe("isQuestioning", () => {
+  it("returns true when not blocked and questions > 0", () => {
+    expect(isQuestioning(false, 1)).toBe(true)
+    expect(isQuestioning(false, 5)).toBe(true)
+  })
+
+  it("returns false when blocked even with questions", () => {
+    expect(isQuestioning(true, 2)).toBe(false)
+  })
+
+  it("returns false when not blocked but no questions", () => {
+    expect(isQuestioning(false, 0)).toBe(false)
+  })
+})
+
+describe("isPathMention", () => {
+  it("returns true for a file path", () => {
+    expect(isPathMention("@src/foo.ts")).toBe(true)
+  })
+
+  it("returns true for a simple filename", () => {
+    expect(isPathMention("@README.md")).toBe(true)
+  })
+
+  it("returns true for a folder path with trailing slash", () => {
+    expect(isPathMention("@src/components/")).toBe(true)
+  })
+
+  it("returns true for a folder path without trailing slash", () => {
+    expect(isPathMention("@src/components")).toBe(true)
+  })
+
+  it("returns false for terminal mention", () => {
+    expect(isPathMention("@terminal")).toBe(false)
+  })
+
+  it("returns false for git-changes mention", () => {
+    expect(isPathMention("@git-changes")).toBe(false)
+  })
+
+  it("handles text without @ prefix", () => {
+    expect(isPathMention("src/foo.ts")).toBe(true)
   })
 })

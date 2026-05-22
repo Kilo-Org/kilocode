@@ -46,6 +46,12 @@ Before configuring, take these preflight steps:
 
 1. **Create a Google Account for your Claw** — Go to [google.com](https://www.google.com/) and create a new Google/Gmail account dedicated to your KiloClaw. Something like `yourname.bot@gmail.com` works well.
 
+{% callout type="tip" title="Google Workspace users" %}
+If your organization uses Google Workspace, create the dedicated bot account inside your Workspace domain (e.g., `claw@yourcompany.com`) rather than as a standalone `@gmail.com` account.
+
+A Workspace-managed account benefits from your organization's admin policies, making configuration easier.
+{% /callout %}
+
 2. **Set up Google Cloud** — Visit [console.cloud.google.com](https://console.cloud.google.com). Accept the terms of service and click "Start my free tier". You may need to add a credit card for identity verification.
 
    {% callout type="info" %}
@@ -108,11 +114,11 @@ After sending that, redeploy from the dashboard to pick up the changes.
 
 After OAuth is set up, decide how much access to give your Claw to your personal accounts.
 
-| Option                  | What it does                                                          | Best for                                   | Configured from                                         |
-| ----------------------- | --------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
-| Forward select emails   | A Gmail filter forwards specific senders or labels to the bot account | Targeted use cases like newsletter digests | Your personal account                                   |
-| Forward all email       | Forwards your full inbox to the bot                                   | Simpler setups where noise is acceptable   | Bot account (destination)                               |
-| Full account delegation | Gives the bot direct read/write access to your personal account       | Maximum capability                         | Your personal account — Gmail Settings → Add a delegate |
+| Option | What it does | Best for | Configured from |
+|---|---|---|---|
+| Forward select emails | A Gmail filter forwards specific senders or labels to the bot account | Targeted use cases like newsletter digests | Your personal account |
+| Forward all email | Forwards your full inbox to the bot | Simpler setups where noise is acceptable | Bot account (destination) |
+| Full account delegation | Gives the bot direct read/write access to your personal account | Maximum capability | Your personal account — Gmail Settings → Add a delegate |
 
 {% callout type="info" %}
 Email forwarding is configured from the **destination** (bot) account. Account delegation is configured from the **source** (personal) account.

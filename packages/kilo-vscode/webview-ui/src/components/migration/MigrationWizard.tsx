@@ -643,6 +643,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
             <a href="https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live">
               {language.t("migration.whatsNew.blogLink")} <span>&rarr;</span>
             </a>
+            <a href="https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new">
+              {language.t("migration.whatsNew.docsLink")} <span>&rarr;</span>
+            </a>
           </div>
 
           <div class="migration-wizard__footer">

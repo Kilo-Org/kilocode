@@ -1,12 +1,14 @@
 import type { Argv } from "yargs"
+import { Effect } from "effect"
 import { cmd } from "./cmd"
-import { Session } from "../../session"
-import { bootstrap } from "../bootstrap"
+import { effectCmd, fail } from "../effect-cmd"
+import { Session } from "@/session/session"
+import { SessionID } from "../../session/schema"
 import { UI } from "../ui"
-import { Locale } from "../../util/locale"
-import { Flag } from "../../flag/flag"
-import { Filesystem } from "../../util/filesystem"
-import { Process } from "../../util/process"
+import { Locale } from "@/util/locale"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Filesystem } from "@/util/filesystem"
+import { Process } from "@/util/process"
 import { EOL } from "os"
 import path from "path"
 import { which } from "../../util/which"
@@ -45,35 +47,30 @@ export const SessionCommand = cmd({
   async handler() {},
 })
 
-export const SessionDeleteCommand = cmd({
+export const SessionDeleteCommand = effectCmd({
   command: "delete <sessionID>",
   describe: "delete a session",
-  builder: (yargs: Argv) => {
-    return yargs.positional("sessionID", {
+  builder: (yargs) =>
+    yargs.positional("sessionID", {
       describe: "session ID to delete",
       type: "string",
       demandOption: true,
-    })
-  },
-  handler: async (args) => {
-    await bootstrap(process.cwd(), async () => {
-      try {
-        await Session.get(args.sessionID)
-      } catch {
-        UI.error(`Session not found: ${args.sessionID}`)
-        process.exit(1)
-      }
-      await Session.remove(args.sessionID)
-      UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Session ${args.sessionID} deleted` + UI.Style.TEXT_NORMAL)
-    })
-  },
+    }),
+  handler: Effect.fn("Cli.session.delete")(function* (args) {
+    const svc = yield* Session.Service
+    const sessionID = SessionID.make(args.sessionID)
+    // Match legacy try/catch — Session.get surfaces NotFoundError as a defect.
+    yield* svc.get(sessionID).pipe(Effect.catchCause(() => fail(`Session not found: ${args.sessionID}`)))
+    yield* svc.remove(sessionID)
+    UI.println(UI.Style.TEXT_SUCCESS_BOLD + `Session ${args.sessionID} deleted` + UI.Style.TEXT_NORMAL)
+  }),
 })
 
-export const SessionListCommand = cmd({
+export const SessionListCommand = effectCmd({
   command: "list",
   describe: "list sessions",
-  builder: (yargs: Argv) => {
-    return yargs
+  builder: (yargs) =>
+    yargs
       .option("max-count", {
         alias: "n",
         describe: "limit to N most recent sessions",
@@ -85,25 +82,43 @@ export const SessionListCommand = cmd({
         choices: ["table", "json"],
         default: "table",
       })
-  },
-  handler: async (args) => {
-    await bootstrap(process.cwd(), async () => {
-      const sessions = [...Session.list({ roots: true, limit: args.maxCount })]
+      // kilocode_change start
+      .option("all", {
+        alias: "a",
+        describe: "list sessions from all projects",
+        type: "boolean",
+        default: false,
+      })
+      .option("search", {
+        alias: "s",
+        describe: "filter sessions by title",
+        type: "string",
+      }),
+  // kilocode_change end
+  handler: Effect.fn("Cli.session.list")(function* (args) {
+    // kilocode_change start
+    const sessions = args.all
+      ? [...Session.listGlobal({ roots: true, limit: args.maxCount, search: args.search })]
+      : yield* Session.Service.use((svc) => svc.list({ roots: true, limit: args.maxCount, search: args.search }))
+    // kilocode_change end
 
-      if (sessions.length === 0) {
-        return
-      }
+    if (sessions.length === 0) return
 
-      let output: string
-      if (args.format === "json") {
-        output = formatSessionJSON(sessions)
-      } else {
-        output = formatSessionTable(sessions)
-      }
+    // kilocode_change start
+    const output =
+      args.format === "json"
+        ? args.all
+          ? formatGlobalSessionJSON(sessions as Session.GlobalInfo[])
+          : formatSessionJSON(sessions as Session.Info[])
+        : args.all
+          ? formatGlobalSessionTable(sessions as Session.GlobalInfo[])
+          : formatSessionTable(sessions as Session.Info[])
+    // kilocode_change end
 
-      const shouldPaginate = process.stdout.isTTY && !args.maxCount && args.format === "table"
+    const shouldPaginate = process.stdout.isTTY && !args.maxCount && args.format === "table"
 
-      if (shouldPaginate) {
+    if (shouldPaginate) {
+      yield* Effect.promise(async () => {
         const proc = Process.spawn(pagerCmd(), {
           stdin: "pipe",
           stdout: "inherit",
@@ -118,11 +133,11 @@ export const SessionListCommand = cmd({
         proc.stdin.write(output)
         proc.stdin.end()
         await proc.exited
-      } else {
-        console.log(output)
-      }
-    })
-  },
+      })
+    } else {
+      console.log(output)
+    }
+  }),
 })
 
 function formatSessionTable(sessions: Session.Info[]): string {
@@ -144,6 +159,7 @@ function formatSessionTable(sessions: Session.Info[]): string {
   return lines.join(EOL)
 }
 
+// kilocode_change start
 function formatSessionJSON(sessions: Session.Info[]): string {
   const jsonData = sessions.map((session) => ({
     id: session.id,
@@ -155,3 +171,45 @@ function formatSessionJSON(sessions: Session.Info[]): string {
   }))
   return JSON.stringify(jsonData, null, 2)
 }
+// kilocode_change end
+
+// kilocode_change start
+function formatGlobalSessionTable(sessions: Session.GlobalInfo[]): string {
+  const lines: string[] = []
+
+  const maxIdWidth = Math.max(20, ...sessions.map((s) => s.id.length))
+  const maxTitleWidth = Math.max(25, ...sessions.map((s) => s.title.length))
+  const maxProjectWidth = Math.max(
+    10,
+    ...sessions.map((s) => (s.project?.name ?? s.project?.worktree ?? "unknown").length),
+  )
+
+  const header = `Session ID${" ".repeat(maxIdWidth - 10)}  Title${" ".repeat(maxTitleWidth - 5)}  Project${" ".repeat(maxProjectWidth - 7)}  Updated`
+  lines.push(header)
+  lines.push("─".repeat(header.length))
+  for (const session of sessions) {
+    const truncatedTitle = Locale.truncate(session.title, maxTitleWidth)
+    const project = Locale.truncate(session.project?.name ?? session.project?.worktree ?? "unknown", maxProjectWidth)
+    const timeStr = Locale.todayTimeOrDateTime(session.time.updated)
+    const line = `${session.id.padEnd(maxIdWidth)}  ${truncatedTitle.padEnd(maxTitleWidth)}  ${project.padEnd(maxProjectWidth)}  ${timeStr}`
+    lines.push(line)
+  }
+
+  return lines.join(EOL)
+}
+
+function formatGlobalSessionJSON(sessions: Session.GlobalInfo[]): string {
+  const jsonData = sessions.map((session) => ({
+    id: session.id,
+    title: session.title,
+    updated: session.time.updated,
+    created: session.time.created,
+    projectId: session.projectID,
+    directory: session.directory,
+    project: session.project
+      ? { id: session.project.id, name: session.project.name, worktree: session.project.worktree }
+      : null,
+  }))
+  return JSON.stringify(jsonData, null, 2)
+}
+// kilocode_change end

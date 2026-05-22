@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { reorderTabs, applyTabOrder, firstOrderedTitle } from "../../webview-ui/agent-manager/tab-order"
+import {
+  reorderTabs,
+  applyTabOrder,
+  firstOrderedTitle,
+  replaceInTabOrder,
+  insertInTabOrderAfter,
+} from "../../webview-ui/agent-manager/tab-order"
 
 describe("reorderTabs", () => {
   const tabs = ["a", "b", "c", "d"]
@@ -143,6 +149,63 @@ describe("firstOrderedTitle", () => {
 
   it("returns fallback for empty items", () => {
     expect(firstOrderedTitle([], ["a"], "fallback")).toBe("fallback")
+  })
+})
+
+describe("replaceInTabOrder", () => {
+  it("replaces an id while preserving position", () => {
+    expect(replaceInTabOrder(["a", "b", "c"], "b", "B")).toEqual(["a", "B", "c"])
+  })
+
+  it("replaces at the head", () => {
+    expect(replaceInTabOrder(["a", "b"], "a", "A")).toEqual(["A", "b"])
+  })
+
+  it("replaces at the tail", () => {
+    expect(replaceInTabOrder(["a", "b"], "b", "B")).toEqual(["a", "B"])
+  })
+
+  it("returns undefined when oldId is not in order", () => {
+    expect(replaceInTabOrder(["a", "b"], "x", "X")).toBeUndefined()
+  })
+
+  it("returns undefined when order is undefined", () => {
+    expect(replaceInTabOrder(undefined, "a", "A")).toBeUndefined()
+  })
+
+  it("does not mutate the original array", () => {
+    const order = ["a", "b"]
+    replaceInTabOrder(order, "a", "A")
+    expect(order).toEqual(["a", "b"])
+  })
+})
+
+describe("insertInTabOrderAfter", () => {
+  it("inserts directly after the anchor", () => {
+    expect(insertInTabOrderAfter(["a", "b", "c"], "b", "B2")).toEqual(["a", "b", "B2", "c"])
+  })
+
+  it("inserts after the last item", () => {
+    expect(insertInTabOrderAfter(["a", "b"], "b", "c")).toEqual(["a", "b", "c"])
+  })
+
+  it("appends when anchor is missing", () => {
+    expect(insertInTabOrderAfter(["a", "b"], "x", "c")).toEqual(["a", "b", "c"])
+  })
+
+  it("appends when order is undefined", () => {
+    expect(insertInTabOrderAfter(undefined, "x", "c")).toEqual(["c"])
+  })
+
+  it("returns the base unchanged when id is already present", () => {
+    const order = ["a", "b"]
+    expect(insertInTabOrderAfter(order, "a", "b")).toBe(order)
+  })
+
+  it("does not mutate the original array", () => {
+    const order = ["a", "b"]
+    insertInTabOrderAfter(order, "a", "c")
+    expect(order).toEqual(["a", "b"])
   })
 })
 

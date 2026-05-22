@@ -1,4 +1,6 @@
 ---
+title: "Using Anthropic Claude with Kilo Code"
+description: "Configure Anthropic's Claude models in Kilo Code. Guide to getting an API key, setting up Claude Sonnet and Opus in VS Code and the CLI."
 sidebar_label: Anthropic
 ---
 

@@ -1,11 +1,18 @@
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
+import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
+import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
+import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
+import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
+import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
 
 interface ShareOption {
   value: string
@@ -21,8 +28,26 @@ const SHARE_OPTIONS: ShareOption[] = [
 const ExperimentalTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const language = useLanguage()
+  const provider = useProvider()
+  const server = useServer()
+  const vscode = useVSCode()
+  const [active, setActive] = createSignal(false)
+
+  const handler = (msg: ExtensionMessage) => {
+    if (msg.type === "remoteStatus") {
+      setActive(msg.enabled)
+    }
+  }
+
+  onMount(() => {
+    const unsub = vscode.onMessage(handler)
+    vscode.postMessage({ type: "requestRemoteStatus" })
+    onCleanup(unsub)
+  })
 
   const experimental = createMemo(() => config().experimental ?? {})
+  const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.connected(), server.profileData()))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
 
   const updateExperimental = (key: string, value: unknown) => {
     updateConfig({
@@ -33,6 +58,37 @@ const ExperimentalTab: Component = () => {
   return (
     <div>
       <Card>
+        {/* Remote control */}
+        <div data-component="remote-settings">
+          <div data-slot="remote-settings-header">
+            <div data-slot="settings-row-label-title">{language.t("settings.experimental.remote.title")}</div>
+            <div data-slot="settings-row-label-subtitle">{language.t("settings.experimental.remote.description")}</div>
+          </div>
+          <div data-slot="remote-settings-block">
+            <div data-slot="remote-settings-row">
+              <span data-slot="remote-settings-label">{language.t("settings.experimental.remote.current")}</span>
+              <span data-slot="remote-settings-status" data-active={active()}>
+                {active()
+                  ? language.t("settings.experimental.remote.active")
+                  : language.t("settings.experimental.remote.inactive")}
+              </span>
+            </div>
+            <div data-slot="remote-settings-hint">{language.t("settings.experimental.remote.hint")}</div>
+          </div>
+          <div data-slot="remote-settings-row">
+            <span data-slot="remote-settings-label">{language.t("settings.experimental.remote.startup")}</span>
+            <Switch
+              checked={config().remote_control ?? false}
+              onChange={(checked) => {
+                updateConfig({ remote_control: checked })
+              }}
+              hideLabel
+            >
+              {language.t("settings.experimental.remote.startup")}
+            </Switch>
+          </div>
+        </div>
+
         {/* Share mode */}
         <SettingsRow
           title={language.t("settings.experimental.share.title")}
@@ -108,6 +164,19 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.experimental.semanticIndexing.title")}
+          description={language.t("settings.experimental.semanticIndexing.description")}
+        >
+          <Switch
+            checked={experimental().semantic_indexing ?? false}
+            onChange={(checked) => updateExperimental("semantic_indexing", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.semanticIndexing.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.experimental.codebaseSearch.title")}
           description={language.t("settings.experimental.codebaseSearch.description")}
         >
@@ -118,6 +187,57 @@ const ExperimentalTab: Component = () => {
           >
             {language.t("settings.experimental.codebaseSearch.title")}
           </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.agentManagerTool.title")}
+          description={language.t("settings.experimental.agentManagerTool.description")}
+        >
+          <Switch
+            checked={experimental().agent_manager_tool ?? false}
+            onChange={(checked) => updateExperimental("agent_manager_tool", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.agentManagerTool.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.speechToText.title")}
+          description={
+            kiloReady()
+              ? language.t("settings.experimental.speechToText.description")
+              : language.t("settings.experimental.speechToText.disabledDescription")
+          }
+        >
+          <Switch
+            checked={experimental().speech_to_text ?? false}
+            onChange={(checked) => updateExperimental("speech_to_text", checked)}
+            disabled={!kiloReady()}
+            hideLabel
+          >
+            {language.t("settings.experimental.speechToText.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.speechToTextModel.title")}
+          description={language.t("settings.experimental.speechToTextModel.description")}
+        >
+          <Select
+            options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+            current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
+            value={(item) => item.value}
+            label={(item) => `${item.label} (${item.provider})`}
+            onSelect={(item) =>
+              updateExperimental("speech_to_text_model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)
+            }
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+            disabled={!kiloReady()}
+            placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
+          />
         </SettingsRow>
 
         <SettingsRow

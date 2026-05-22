@@ -12,6 +12,18 @@ export const LOCAL = "local" as const
 
 type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
 
+type SessionLike = { id: string; parentID?: string | null; createdAt: string }
+
+export function filterUnassignedSessions<T extends SessionLike>(
+  sessions: T[],
+  worktree: Set<string>,
+  local: Set<string>,
+): T[] {
+  return [...sessions]
+    .filter((s) => (s.parentID === undefined || s.parentID === null) && !worktree.has(s.id) && !local.has(s.id))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
+
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index
   if (!current) {
@@ -72,6 +84,90 @@ export function adjacentHint(
   if (diff === -1) return prev
   if (diff === 1) return next
   return ""
+}
+
+/**
+ * Compute which session IDs should populate the "local" tab on state restore.
+ *
+ * Managed sessions with `worktreeId === null` are non-worktree sessions that
+ * were persisted to agent-manager.json.  On restore we use them as the local
+ * tab list, optionally applying a persisted tab order.
+ *
+ * @param sessions   - All managed sessions from agent-manager.json
+ * @param current    - The webview's current localSessionIDs (may contain pending tabs)
+ * @param tabOrder   - Persisted tab order for the "local" key, if any
+ * @param isPending  - Predicate to identify pending (not-yet-created) tab IDs
+ * @param applyOrder - Reorder helper: (items, order) → ordered items
+ */
+export function restoreLocalSessions(
+  sessions: { id: string; worktreeId: string | null }[],
+  current: string[],
+  tabOrder: string[] | undefined,
+  isPending: (id: string) => boolean,
+  applyOrder: (items: { id: string }[], order: string[]) => { id: string }[],
+): string[] | undefined {
+  const locals = sessions.filter((s) => !s.worktreeId).map((s) => s.id)
+  // Sessions assigned to a worktree must never appear in the local tab. A race
+  // where sessionCreated (SSE) arrives before agentManager.state can incorrectly
+  // add a worktree session to localSessionIDs; evict them here on every state push.
+  const worktree = new Set(sessions.filter((s) => s.worktreeId).map((s) => s.id))
+  const evict = (ids: string[]) => (worktree.size > 0 ? ids.filter((id) => !worktree.has(id)) : ids)
+  const real = current.filter((id) => !isPending(id))
+
+  // First restore: current has no real sessions but disk has some
+  if (locals.length > 0 && real.length === 0) {
+    if (!tabOrder) return locals
+    return applyOrder(
+      locals.map((id) => ({ id })),
+      tabOrder,
+    ).map((item) => item.id)
+  }
+
+  // Merge any disk-persisted sessions missing from current (e.g. vscode.setState
+  // debounce didn't fire before close, but persistSession already wrote to disk)
+  const missing = locals.filter((id) => !current.includes(id))
+  const base = missing.length > 0 ? [...current, ...missing] : current
+  const merged = evict(base)
+  const changed = missing.length > 0 || merged.length !== base.length
+
+  // Apply tab order if present
+  if (tabOrder && merged.length > 0) {
+    return applyOrder(
+      merged.map((id) => ({ id })),
+      tabOrder,
+    ).map((item) => item.id)
+  }
+
+  return changed ? merged : undefined
+}
+
+export function reconcileLocalSessions(
+  current: string[],
+  loaded: string[],
+  managed: { id: string; worktreeId: string | null }[],
+  isPending: (id: string) => boolean,
+): { ids: string[]; forget: string[] } | undefined {
+  const seen = new Set(loaded)
+  const local = new Set(managed.filter((s) => !s.worktreeId).map((s) => s.id))
+  const worktree = new Set(managed.filter((s) => s.worktreeId).map((s) => s.id))
+  const ids: string[] = []
+  const forget: string[] = []
+
+  for (const id of current) {
+    if (isPending(id)) {
+      ids.push(id)
+      continue
+    }
+    if (worktree.has(id)) continue
+    if (seen.has(id) || local.has(id)) {
+      ids.push(id)
+      continue
+    }
+    forget.push(id)
+  }
+
+  if (ids.length === current.length && forget.length === 0) return undefined
+  return { ids, forget }
 }
 
 /**

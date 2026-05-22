@@ -1,5 +1,6 @@
 ---
-title: Fireworks AI with Kilo Code
+title: "Using Fireworks AI with Kilo Code | Fast Inference"
+description: "Run open-source and proprietary models on Fireworks AI's high-performance platform in Kilo Code. Setup guide for VS Code and the CLI."
 ---
 
 # Using Fireworks AI With Kilo Code

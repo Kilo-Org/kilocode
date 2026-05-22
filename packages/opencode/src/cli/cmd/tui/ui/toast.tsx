@@ -4,10 +4,13 @@ import { useTheme } from "@tui/context/theme"
 import { useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "../component/border"
 import { TextAttributes } from "@opentui/core"
-import z from "zod"
+import { Schema } from "effect"
 import { TuiEvent } from "../event"
 
-export type ToastOptions = z.infer<typeof TuiEvent.ToastShow.properties>
+type ToastInput = Schema.Codec.Encoded<typeof TuiEvent.ToastShow.properties>
+export type ToastOptions = Schema.Schema.Type<typeof TuiEvent.ToastShow.properties>
+
+const decodeToastOptions = Schema.decodeUnknownSync(TuiEvent.ToastShow.properties)
 
 export function Toast() {
   const toast = useToast()
@@ -55,15 +58,25 @@ function init() {
   let timeoutHandle: NodeJS.Timeout | null = null
 
   const toast = {
-    show(options: ToastOptions) {
-      const parsedOptions = TuiEvent.ToastShow.properties.parse(options)
-      const { duration, ...currentToast } = parsedOptions
-      setStore("currentToast", currentToast)
+    show(options: ToastInput) {
+      const toastOptions = decodeToastOptions(options)
+      setStore("currentToast", toastOptions)
       if (timeoutHandle) clearTimeout(timeoutHandle)
-      timeoutHandle = setTimeout(() => {
-        setStore("currentToast", null)
-      }, duration).unref()
+      // kilocode_change start
+      timeoutHandle = null
+      if (toastOptions.duration && toastOptions.duration > 0) {
+        timeoutHandle = setTimeout(() => {
+          setStore("currentToast", null)
+          timeoutHandle = null
+        }, toastOptions.duration).unref()
+      }
     },
+    dismiss() {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+      timeoutHandle = null
+      setStore("currentToast", null)
+    },
+    // kilocode_change end
     error: (err: any) => {
       if (err instanceof Error)
         return toast.show({
