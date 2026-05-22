@@ -53,6 +53,11 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/api\.releases\.hashicorp\.com/,
   /^https?:\/\/auth\.openai\.com/,
   /^https?:\/\/chatgpt\.com\/backend-api/,
+  // kilocode_change start
+  /^https?:\/\/accounts\.x\.ai/,
+  /^https?:\/\/api\.x\.ai/,
+  /^https?:\/\/auth\.x\.ai/,
+  // kilocode_change end
   /^https?:\/\/mcp\.exa\.ai/,
   /^https?:\/\/registry\.npmjs\.org/,
   /^https?:\/\/formulae\.brew\.sh\/api/,
