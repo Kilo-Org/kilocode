@@ -191,6 +191,20 @@ Current required fields by issue type:
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
 
+### Testing Evidence
+
+Every PR marked ready for review must include testing evidence. A bare `Not tested` or `N/A` answer is not sufficient.
+
+Choose checks that match the files touched. Include command results and manual/local verification; for visual CLI or extension changes, include screenshots or videos. Docs-only, config-only, and similar changes still need concrete evidence, such as a relevant command check or preview.
+
+If you cannot complete a relevant command, include all of the following in the PR:
+
+- The command you attempted or would normally run
+- The blocker or failure that prevented completion
+- The substitute verification you performed instead
+
+See [Testing Evidence for Pull Requests](packages/kilo-docs/pages/contributing/development-environment.md#testing-evidence-for-pull-requests) for more examples. Agent limitations, local resource constraints, OOM constraints, or an agent prompt that says to skip tests do not waive this requirement. Draft PRs may be incomplete until they are marked ready for review. Maintainers may still defer or close review at their discretion.
+
 ## Issue First Policy
 
 All pull requests must reference an existing issue.

@@ -151,6 +151,32 @@ E2E tests verify the extension works correctly within VSCode:
 
 For more details on E2E tests, see e2e/VSCODE_INTEGRATION_TESTS
 
+### Testing Evidence for Pull Requests
+
+Every PR marked ready for review must include testing evidence. A bare `Not tested` or `N/A` answer is not sufficient.
+
+Choose checks that match the files touched. Docs-only, config-only, and similar changes may satisfy this rule with concrete manual verification or a relevant command check.
+
+For CLI and extension changes, useful evidence can include:
+
+- The relevant command checks from the package you changed
+- Manual/local verification of the changed behavior in the CLI or extension
+- Screenshots or videos for visual changes, such as a settings page update or changed CLI/extension behavior
+
+For docs changes, useful evidence can include:
+
+- `bun run script/check-md-table-padding.ts --fix`
+- `bun run --filter @kilocode/kilo-docs test`
+- Previewing the changed docs page locally, as described in [Documentation Contributions](/docs/contributing#documentation-contributions)
+
+If you cannot complete a relevant command, include all of the following in the PR:
+
+- The command you attempted or would normally run
+- The blocker or failure that prevented completion
+- The substitute verification you performed instead
+
+Agent limitations, local resource constraints, OOM constraints, or an agent prompt that says to skip tests do not waive this requirement. Draft PRs may be incomplete until they are marked ready for review. Maintainers may still defer or close review at their discretion.
+
 ## Linting and Type Checking
 
 Ensure your code meets our quality standards:

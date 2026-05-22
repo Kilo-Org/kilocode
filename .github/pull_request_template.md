@@ -18,16 +18,50 @@ Some description of HOW you achieved it. Perhaps give a high level description o
 
 ## How to Test
 
+### Command evidence
+
 <!--
+List commands you ran and results. Examples:
+- `bun run typecheck` — passed
+- `bun run test:unit -- <affected unit test>` — passed
+- `bun run extension` — launched successfully
+-->
 
-A straightforward scenario of how to test your changes will help reviewers that are not familiar with the part of the code that you are changing but want to see it in action. This section can include a description or step-by-step instructions of how to get to the state of v2 that your change affects.
+-
 
-A "How To Test" section can look something like this:
+### Manual/local verification
 
-- Sign in with a user with tracks
-- Activate `show_awesome_cat_gifs` feature (add `?feature.show_awesome_cat_gifs=1` to your URL)
-- You should see a GIF with cats dancing
+<!--
+Describe local CLI, extension, or docs verification. Example:
+- Opened the updated settings page and confirmed the new copy appears
+-->
 
+-
+
+### Reviewer test steps
+
+<!--
+Provide steps reviewers can retrace. Example:
+1. Sign in with a user with tracks
+2. Activate `show_awesome_cat_gifs` feature by adding `?feature.show_awesome_cat_gifs=1` to your URL
+3. Confirm you see a GIF with cats dancing
+-->
+
+-
+
+### Blocked checks and substitute verification
+
+<!--
+If a relevant command could not be completed, name the command, explain the blocker or failure, and describe the substitute verification performed. Example:
+- `bun run test:integration` could not complete because the required API key is unavailable; substitute verification was testing the affected flow manually in the development extension
+-->
+
+-
+
+<!--
+Every PR marked ready for review must include testing evidence. A bare "Not tested" or "N/A" answer is not sufficient.
+
+Docs-only, config-only, and similar changes still need concrete evidence. For examples, see [Testing Evidence for Pull Requests](https://kilo.ai/docs/contributing/development-environment#testing-evidence-for-pull-requests). Draft PRs may be incomplete until marked ready for review.
 -->
 
 ## Get in Touch
