@@ -8,49 +8,50 @@ let capture: Capture | undefined
 let subscriber: SyncSubscriber | undefined
 let unsubscribe: (() => void) | undefined
 let seq = 0
+let attempts = 0
+let options:
+  | {
+      agentVersion: string
+      dbPath: string
+      endpoint?: string
+      syncSeq: () => number
+      subscribeAll: (cb: (event: unknown) => void) => () => void
+      createWorker: (url: URL) => Worker
+    }
+  | undefined
+
+const maxRespawns = 3
 
 export const init = (opts: {
   agentVersion: string
   dbPath: string
+  endpoint?: string
   syncSeq?: () => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
+  createWorker?: (url: URL) => Worker
 }): void => {
   if (worker) return
   const url = new URL("./worker.ts", import.meta.url)
   try {
-    worker = new Worker(url)
-    worker.postMessage({ kind: "init", dbPath: opts.dbPath, agentVersion: opts.agentVersion })
-
     const syncSeq = opts.syncSeq ?? (() => seq++)
-    capture = new Capture({
-      worker,
+    options = {
       agentVersion: opts.agentVersion,
-      nowMs: () => Date.now(),
+      dbPath: opts.dbPath,
+      endpoint: opts.endpoint,
       syncSeq,
-    })
-    subscriber = new SyncSubscriber({
-      isEligibleSession: (sessionId) => capture?.hasEligibleSession(sessionId) ?? false,
-      dispatch: (event) => capture?.dispatchRaw(event),
-      agentVersion: opts.agentVersion,
-      now: () => Date.now(),
-      syncSeq,
-    })
+      subscribeAll: opts.subscribeAll,
+      createWorker: opts.createWorker ?? ((target) => new Worker(target)),
+    }
+    spawn(url)
     unsubscribe = opts.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
-
-    worker.onmessage = (event: MessageEvent) => {
-      const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
-      if (msg.kind === "pressure" && msg.sessionId) capture?.markDegraded(msg.sessionId)
-      if (msg.kind === "kill_switch") setKillSwitch(true, msg.reason ?? "worker")
-    }
-    worker.onerror = (event: ErrorEvent) => {
-      console.warn("[session-export] worker error", event.message)
-    }
   } catch (err) {
-    worker?.terminate()
+    const current = worker as unknown as Worker | undefined
+    if (current) current.terminate()
     worker = undefined
     capture = undefined
     subscriber = undefined
     unsubscribe = undefined
+    options = undefined
     throw err
   }
 }
@@ -90,4 +91,54 @@ export const shutdown = async (): Promise<void> => {
   capture = undefined
   subscriber = undefined
   unsubscribe = undefined
+  options = undefined
+  attempts = 0
+}
+
+function spawn(url = new URL("./worker.ts", import.meta.url)): void {
+  if (!options) return
+  worker = options.createWorker(url)
+  worker.postMessage({
+    kind: "init",
+    dbPath: options.dbPath,
+    agentVersion: options.agentVersion,
+    endpoint: options.endpoint,
+  })
+  capture = new Capture({
+    worker,
+    agentVersion: options.agentVersion,
+    nowMs: () => Date.now(),
+    syncSeq: options.syncSeq,
+    onPostError: respawn,
+  })
+  subscriber = new SyncSubscriber({
+    isEligibleSession: (sessionId) => capture?.hasEligibleSession(sessionId) ?? false,
+    dispatch: (event) => capture?.dispatchRaw(event),
+    agentVersion: options.agentVersion,
+    now: () => Date.now(),
+    syncSeq: options.syncSeq,
+  })
+  worker.onmessage = (event: MessageEvent) => {
+    const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
+    if (msg.kind === "pressure" && msg.sessionId) capture?.markDegraded(msg.sessionId)
+    if (msg.kind === "kill_switch") setKillSwitch(true, msg.reason ?? "worker")
+  }
+  worker.onerror = (event: ErrorEvent) => {
+    console.warn("[session-export] worker error", event.message)
+    respawn(event.error ?? event.message)
+  }
+}
+
+function respawn(err: unknown): void {
+  console.warn("[session-export] worker respawn", err)
+  worker?.terminate()
+  worker = undefined
+  capture = undefined
+  subscriber = undefined
+  attempts++
+  if (attempts > maxRespawns) {
+    setKillSwitch(true, "worker_respawn_failed")
+    return
+  }
+  spawn()
 }

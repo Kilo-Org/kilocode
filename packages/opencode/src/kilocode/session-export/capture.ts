@@ -19,6 +19,7 @@ export type CaptureDeps = {
   agentVersion: string
   nowMs: () => number
   syncSeq: () => number
+  onPostError?: (err: unknown) => void
   snapshotProvider?: {
     baseline: () => Promise<{ snapshotId: string; files: FileEntry[] }>
     diff: (prevSnapshotHash: string) => Promise<{ snapshotHash: string; diff: DeltaEntry[] }>
@@ -248,6 +249,10 @@ export class Capture {
   }
 
   private dispatch(envelope: ExportEvent): void {
-    this.deps.worker.postMessage({ kind: "event", envelope, approxBytes: JSON.stringify(envelope).length })
+    try {
+      this.deps.worker.postMessage({ kind: "event", envelope, approxBytes: JSON.stringify(envelope).length })
+    } catch (err) {
+      this.deps.onPostError?.(err)
+    }
   }
 }
