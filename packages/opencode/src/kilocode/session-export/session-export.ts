@@ -17,32 +17,41 @@ export const init = (opts: {
 }): void => {
   if (worker) return
   const url = new URL("./worker.ts", import.meta.url)
-  worker = new Worker(url)
-  worker.postMessage({ kind: "init", dbPath: opts.dbPath, agentVersion: opts.agentVersion })
+  try {
+    worker = new Worker(url)
+    worker.postMessage({ kind: "init", dbPath: opts.dbPath, agentVersion: opts.agentVersion })
 
-  const syncSeq = opts.syncSeq ?? (() => seq++)
-  capture = new Capture({
-    worker,
-    agentVersion: opts.agentVersion,
-    nowMs: () => Date.now(),
-    syncSeq,
-  })
-  subscriber = new SyncSubscriber({
-    isEligibleSession: (sessionId) => capture?.hasEligibleSession(sessionId) ?? false,
-    dispatch: (event) => capture?.dispatchRaw(event),
-    agentVersion: opts.agentVersion,
-    now: () => Date.now(),
-    syncSeq,
-  })
-  unsubscribe = opts.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
+    const syncSeq = opts.syncSeq ?? (() => seq++)
+    capture = new Capture({
+      worker,
+      agentVersion: opts.agentVersion,
+      nowMs: () => Date.now(),
+      syncSeq,
+    })
+    subscriber = new SyncSubscriber({
+      isEligibleSession: (sessionId) => capture?.hasEligibleSession(sessionId) ?? false,
+      dispatch: (event) => capture?.dispatchRaw(event),
+      agentVersion: opts.agentVersion,
+      now: () => Date.now(),
+      syncSeq,
+    })
+    unsubscribe = opts.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
 
-  worker.onmessage = (event: MessageEvent) => {
-    const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
-    if (msg.kind === "pressure" && msg.sessionId) capture?.markDegraded(msg.sessionId)
-    if (msg.kind === "kill_switch") setKillSwitch(true, msg.reason ?? "worker")
-  }
-  worker.onerror = (event: ErrorEvent) => {
-    console.warn("[session-export] worker error", event.message)
+    worker.onmessage = (event: MessageEvent) => {
+      const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
+      if (msg.kind === "pressure" && msg.sessionId) capture?.markDegraded(msg.sessionId)
+      if (msg.kind === "kill_switch") setKillSwitch(true, msg.reason ?? "worker")
+    }
+    worker.onerror = (event: ErrorEvent) => {
+      console.warn("[session-export] worker error", event.message)
+    }
+  } catch (err) {
+    worker?.terminate()
+    worker = undefined
+    capture = undefined
+    subscriber = undefined
+    unsubscribe = undefined
+    throw err
   }
 }
 
