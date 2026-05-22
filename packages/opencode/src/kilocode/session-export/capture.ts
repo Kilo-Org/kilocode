@@ -250,9 +250,31 @@ export class Capture {
 
   private dispatch(envelope: ExportEvent): void {
     try {
-      this.deps.worker.postMessage({ kind: "event", envelope, approxBytes: JSON.stringify(envelope).length })
+      const safe = cloneable(envelope) as ExportEvent
+      this.deps.worker.postMessage({ kind: "event", envelope: safe, approxBytes: JSON.stringify(safe).length })
     } catch (err) {
       this.deps.onPostError?.(err)
     }
   }
+}
+
+function cloneable(node: unknown): unknown {
+  if (node === null) return null
+  if (node === undefined) return undefined
+  if (typeof node === "string" || typeof node === "number" || typeof node === "boolean") return node
+  if (typeof node === "bigint") return String(node)
+  if (typeof node === "function" || typeof node === "symbol") return undefined
+  if (node instanceof Error) return { name: node.name, message: node.message, stack: node.stack }
+  if (Array.isArray(node)) return node.map(cloneable)
+  if (node instanceof Uint8Array) return node
+  if (node instanceof ArrayBuffer) return node
+  if (node && typeof node === "object") {
+    const out: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(node)) {
+      const next = cloneable(val)
+      if (next !== undefined) out[key] = next
+    }
+    return out
+  }
+  return String(node)
 }

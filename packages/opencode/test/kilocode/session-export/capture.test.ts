@@ -40,6 +40,34 @@ describe("Capture", () => {
     expect(msg.envelope.agentVersion).toBe("v0")
   })
 
+  test("dispatch projects non-cloneable tool functions out of envelopes", () => {
+    const cloneWorker = {
+      postMessage: (msg: unknown) => {
+        structuredClone(msg)
+        posted.push(msg)
+      },
+      terminate: () => {},
+    } as unknown as Worker
+    const cap = new Capture({ worker: cloneWorker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
+    cap.beforeRequest({
+      input: {
+        model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerId: "kilo", modelId: "free-1" },
+        org: undefined,
+      },
+      requestMeta: meta("s1"),
+      assembled: {
+        system: [],
+        messages: [],
+        tools: { shell: { description: "run", execute: () => "ok" } },
+        permissions: {},
+        params: {},
+      },
+    })
+    const msg = posted[1] as { envelope: { input: { tools: { shell: { execute?: unknown; description: string } } } } }
+    expect(msg.envelope.input.tools.shell.description).toBe("run")
+    expect(msg.envelope.input.tools.shell.execute).toBeUndefined()
+  })
+
   test("first eligible request of a session emits workspace_baseline_started before llm_request_started", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
