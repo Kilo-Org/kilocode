@@ -1,6 +1,6 @@
 import type { ExportEvent } from "../events"
 import type { Chunker } from "./chunks"
-import type { Scrubber } from "./scrub"
+import { isHighRiskPath, type Scrubber } from "./scrub"
 import type { Storage } from "./storage"
 
 export type HandlerCtx = {
@@ -24,9 +24,11 @@ const ENVELOPE = new Set([
   "agentVersion",
 ])
 
+const IDENTITY = new Set(["accountid", "email", "org", "orgid", "organizationid", "kilo_org_id"])
+
 export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promise<void> {
   const result = ctx.scrubber.scrubEvent(envelope)
-  const payload = await normalizeToolIo(result.data, ctx)
+  const payload = await normalizePayload(result.data, ctx)
   const chunked = await chunkLargeStrings(payload, ctx)
   const dataJson = JSON.stringify(chunked)
 
@@ -46,8 +48,9 @@ export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promi
   })
 }
 
-async function normalizeToolIo(envelope: ExportEvent, ctx: HandlerCtx): Promise<unknown> {
-  const payload = stripEnvelopeFields(envelope)
+async function normalizePayload(envelope: ExportEvent, ctx: HandlerCtx): Promise<unknown> {
+  const payload = stripIdentity(stripEnvelopeFields(envelope))
+  if (envelope.type === "workspace_baseline_completed") return normalizeBaseline(payload)
   if (envelope.type !== "tool_executed") return payload
   const out = { ...(payload as Record<string, unknown>) }
   if (envelope.toolInput !== undefined) {
@@ -61,11 +64,35 @@ async function normalizeToolIo(envelope: ExportEvent, ctx: HandlerCtx): Promise<
   return out
 }
 
+function normalizeBaseline(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload
+  const out = { ...(payload as Record<string, unknown>) }
+  if (!Array.isArray(out.files)) return out
+  out.files = out.files.map((file) => {
+    if (!file || typeof file !== "object" || Array.isArray(file)) return file
+    const item = file as Record<string, unknown>
+    if (typeof item.path !== "string" || !isHighRiskPath(item.path)) return file
+    return { path: item.path, kind: item.kind, omitted: { reason: "high_risk_path" } }
+  })
+  return out
+}
+
 function stripEnvelopeFields(input: unknown): unknown {
   if (!input || typeof input !== "object" || Array.isArray(input)) return input
   const out: Record<string, unknown> = {}
   for (const [key, val] of Object.entries(input)) {
     if (!ENVELOPE.has(key)) out[key] = val
+  }
+  return out
+}
+
+function stripIdentity(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(stripIdentity)
+  if (!node || typeof node !== "object") return node
+  const out: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(node)) {
+    if (IDENTITY.has(key.toLowerCase())) continue
+    out[key] = stripIdentity(val)
   }
   return out
 }

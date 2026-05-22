@@ -6,7 +6,7 @@ import { Storage } from "@/kilocode/session-export/worker/storage"
 import { Chunker } from "@/kilocode/session-export/worker/chunks"
 import { Scrubber } from "@/kilocode/session-export/worker/scrub"
 import { handleEvent } from "@/kilocode/session-export/worker/handlers"
-import type { LlmRequestCompleted, LlmRequestStarted } from "@/kilocode/session-export/events"
+import type { LlmRequestCompleted, LlmRequestStarted, WorkspaceBaselineCompleted } from "@/kilocode/session-export/events"
 
 describe("handlers", () => {
   let dir: string
@@ -108,6 +108,50 @@ describe("handlers", () => {
     expect(data.inputChunkIds.length).toBeGreaterThan(0)
     expect(data.outputChunkIds.length).toBeGreaterThan(0)
     expect(data.toolOutput).toBeUndefined()
+  })
+
+  test("drops identity fields before writing data_json", async () => {
+    const env = started("01I", {
+      messages: [
+        {
+          role: "user",
+          content: "hello",
+          accountId: "acct_123",
+          email: "user@example.com",
+          organizationId: "org_123",
+        },
+      ],
+    })
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    expect(rows[0].dataJson).not.toContain("acct_123")
+    expect(rows[0].dataJson).not.toContain("user@example.com")
+    expect(rows[0].dataJson).not.toContain("org_123")
+  })
+
+  test("omits high-risk workspace baseline paths", async () => {
+    const env: WorkspaceBaselineCompleted = {
+      id: "01W",
+      schemaVersion: 1,
+      type: "workspace_baseline_completed",
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      ts: 100,
+      agentVersion: "v0",
+      consistency: "stable",
+      files: [
+        { path: ".env", kind: "file", size: 10, hash: "secret-hash" },
+        { path: "src/index.ts", kind: "file", size: 20, hash: "public-hash" },
+      ],
+    }
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as {
+      files: Array<{ path: string; kind?: string; hash?: string; omitted?: { reason: string } }>
+    }
+    expect(data.files[0]).toEqual({ path: ".env", kind: "file", omitted: { reason: "high_risk_path" } })
+    expect(data.files[1].hash).toBe("public-hash")
   })
 })
 
