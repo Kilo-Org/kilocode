@@ -3,6 +3,7 @@ import { Config } from "./config"
 import { ulid } from "./ulid"
 import { isEligible, type EligibilityInput } from "./eligibility"
 import type {
+  CompactionCaptured,
   DeltaEntry,
   ExportEvent,
   FileEntry,
@@ -154,6 +155,39 @@ export class Capture {
 
   dispatchRaw(envelope: ExportEvent): void {
     this.dispatch(envelope)
+  }
+
+  compaction(args: {
+    sessionId: string
+    rootSessionId: string
+    parentSessionId?: string
+    requestId: string
+    input: CompactionCaptured["input"]
+    output: CompactionCaptured["output"]
+    modelId: string
+    durationMs: number
+    usage?: { inputTokens: number; outputTokens: number }
+  }): void {
+    if (!this.firstEligible.has(args.sessionId)) return
+    if (this.degraded.has(args.sessionId)) return
+    const env: CompactionCaptured = {
+      id: ulid(),
+      schemaVersion: 1,
+      type: "compaction_captured",
+      sessionId: args.sessionId,
+      rootSessionId: args.rootSessionId,
+      parentSessionId: args.parentSessionId,
+      requestId: args.requestId,
+      seq: this.deps.syncSeq(),
+      ts: this.deps.nowMs(),
+      agentVersion: this.deps.agentVersion,
+      input: args.input,
+      output: args.output,
+      modelId: args.modelId,
+      durationMs: args.durationMs,
+      usage: args.usage,
+    }
+    this.dispatch(env)
   }
 
   async onSessionClose(sessionId: string): Promise<void> {
