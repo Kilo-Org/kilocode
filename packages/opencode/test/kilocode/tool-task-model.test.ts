@@ -11,6 +11,7 @@ import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID } from "../../src/session/schema"
+import { Provider } from "../../src/provider/provider" // kilocode_change - TaskTool resolves Provider.Service
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "../../src/tool/truncate"
@@ -53,6 +54,7 @@ const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
     Config.defaultLayer,
+    Provider.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Session.defaultLayer,
     Truncate.defaultLayer,

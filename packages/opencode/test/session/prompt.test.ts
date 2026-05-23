@@ -248,6 +248,12 @@ const cfg = {
           limit: { context: 100000, output: 10000 },
           cost: { input: 0, output: 0 },
           options: {},
+          // kilocode_change start - variants for subtask variant threading test
+          variants: {
+            low: { reasoningEffort: "low" },
+            high: { reasoningEffort: "high" },
+          },
+          // kilocode_change end
         },
       },
       options: {
@@ -323,7 +329,12 @@ const seed = Effect.fn("test.seed")(function* (sessionID: SessionID, opts?: { fi
   return { user: msg, assistant }
 })
 
-const addSubtask = (sessionID: SessionID, messageID: MessageID, model = ref) =>
+const addSubtask = (
+  sessionID: SessionID,
+  messageID: MessageID,
+  model = ref,
+  variant?: string, // kilocode_change
+) =>
   Effect.gen(function* () {
     const session = yield* Session.Service
     yield* session.updatePart({
@@ -335,6 +346,7 @@ const addSubtask = (sessionID: SessionID, messageID: MessageID, model = ref) =>
       description: "inspect bug",
       agent: "general",
       model,
+      variant, // kilocode_change
     })
   })
 
@@ -697,6 +709,40 @@ it.live(
     ),
   5_000,
 )
+
+// kilocode_change start - assert SubtaskPart.variant reaches tool-call input
+it.live(
+  "subtask variant is threaded into tool-part state.input",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Pinned" })
+        yield* llm.hang
+        const msg = yield* user(chat.id, "hello")
+        yield* addSubtask(chat.id, msg.id, ref, "high")
+
+        const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        const tool = yield* waitFor(
+          "subtask tool part with sessionId metadata",
+          Effect.gen(function* () {
+            const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+            const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
+            return taskMsg?.parts.find((part): part is MessageV2.ToolPart => part.type === "tool")
+          }),
+        )
+
+        expect(tool.state.input?.variant).toBe("high")
+
+        yield* prompt.cancel(chat.id)
+        yield* Fiber.await(fiber)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  5_000,
+)
+// kilocode_change end
 
 it.live(
   "running task tool preserves metadata after tool-call transition",
@@ -2196,6 +2242,61 @@ it.live(
       { git: true, config: providerCfg },
     ),
   30_000,
+)
+// kilocode_change end
+
+// kilocode_change start - command subtask variant propagation
+it.live(
+  "command subtask variant is threaded into tool-part state.input",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Command variant" })
+        yield* llm.hang
+
+        const fiber = yield* prompt
+          .command({
+            sessionID: chat.id,
+            command: "variant-probe",
+            arguments: "cache path",
+            agent: "build",
+            variant: "high",
+          })
+          .pipe(Effect.forkChild)
+
+        const tool = yield* waitFor(
+          "command subtask tool part with variant",
+          Effect.gen(function* () {
+            const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+            const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
+            return taskMsg?.parts.find((part): part is MessageV2.ToolPart => part.type === "tool")
+          }),
+        )
+
+        expect(tool.state.input?.variant).toBe("high")
+
+        yield* prompt.cancel(chat.id)
+        yield* Fiber.await(fiber)
+      }),
+      {
+        git: true,
+        config: (url) => ({
+          ...providerCfg(url),
+          command: {
+            "variant-probe": {
+              template: "Inspect $ARGUMENTS",
+              description: "variant probe",
+              agent: "general",
+              model: "test/test-model",
+              subtask: true,
+            },
+          },
+        }),
+      },
+    ),
+  5_000,
 )
 // kilocode_change end
 

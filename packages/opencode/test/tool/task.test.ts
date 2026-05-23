@@ -1,5 +1,5 @@
 import { afterEach, describe, expect } from "bun:test"
-import { Effect, Exit, Fiber, Layer } from "effect"
+import { Cause, Effect, Exit, Fiber, Layer } from "effect" // kilocode_change - Cause and Exit used by variant rejection tests
 import { Agent } from "../../src/agent/agent"
 import { Config } from "@/config/config"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -8,10 +8,12 @@ import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { ModelID, ProviderID } from "../../src/provider/schema"
+import { Provider } from "@/provider/provider" // kilocode_change - resolved model variant validation tests
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "@/tool/truncate"
 import { ToolRegistry } from "@/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
+import { ProviderTest } from "../fake/provider" // kilocode_change - resolved model variant validation tests
 import { testEffect } from "../lib/effect"
 
 afterEach(async () => {
@@ -23,10 +25,77 @@ const ref = {
   modelID: ModelID.make("test-model"),
 }
 
+// kilocode_change start — config with a test provider whose model exposes variants
+const variantProviderConfig = {
+  provider: {
+    test: {
+      name: "Test",
+      id: "test",
+      env: [],
+      npm: "@ai-sdk/openai-compatible",
+      models: {
+        "test-model": {
+          id: "test-model",
+          name: "Test Model",
+          attachment: false,
+          reasoning: true,
+          temperature: false,
+          tool_call: true,
+          release_date: "2025-01-01",
+          limit: { context: 100000, output: 10000 },
+          cost: { input: 0, output: 0 },
+          options: {},
+          variants: {
+            low: { reasoningEffort: "low" },
+            high: { reasoningEffort: "high" },
+          },
+        },
+      },
+      options: {
+        apiKey: "test-key",
+        baseURL: "http://localhost:1/v1",
+      },
+    },
+  },
+}
+// kilocode_change end
+
+// kilocode_change start — config with a test provider whose model has no variants
+const noVariantProviderConfig = {
+  provider: {
+    test: {
+      name: "Test",
+      id: "test",
+      env: [],
+      npm: "@ai-sdk/openai-compatible",
+      models: {
+        "test-model": {
+          id: "test-model",
+          name: "Test Model",
+          attachment: false,
+          reasoning: false,
+          temperature: false,
+          tool_call: true,
+          release_date: "2025-01-01",
+          limit: { context: 100000, output: 10000 },
+          cost: { input: 0, output: 0 },
+          options: {},
+        },
+      },
+      options: {
+        apiKey: "test-key",
+        baseURL: "http://localhost:1/v1",
+      },
+    },
+  },
+}
+// kilocode_change end
+
 const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
     Config.defaultLayer,
+    Provider.defaultLayer, // kilocode_change - TaskTool resolves Provider.Service
     CrossSpawnSpawner.defaultLayer,
     Session.defaultLayer,
     Truncate.defaultLayer,
@@ -41,6 +110,28 @@ function defer<T>() {
   })
   return { promise, resolve }
 }
+
+// kilocode_change start - runtime with provider data that is not present in raw config
+const resolvedModel = ProviderTest.model({
+  providerID: ProviderID.make("resolved"),
+  id: ModelID.make("remote-model"),
+  variants: {
+    low: { reasoningEffort: "low" },
+    high: { reasoningEffort: "high" },
+  },
+})
+const resolvedProvider = ProviderTest.fake({ model: resolvedModel })
+const resolvedIt = testEffect(
+  Layer.mergeAll(
+    Agent.defaultLayer,
+    Config.defaultLayer,
+    resolvedProvider.layer,
+    CrossSpawnSpawner.defaultLayer,
+    Session.defaultLayer,
+    Truncate.defaultLayer,
+  ),
+)
+// kilocode_change end
 
 const seed = Effect.fn("TaskToolTest.seed")(function* (title = "Pinned") {
   const session = yield* Session.Service
@@ -454,6 +545,250 @@ describe("tool.task", () => {
       },
     },
   )
+
+  // kilocode_change start — per-subtask variant override tests
+  it.live("execute forwards a valid variant to SessionPrompt.prompt", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let seen: SessionPrompt.PromptInput | undefined
+          const promptOps = stubOps({ text: "done", onPrompt: (input) => (seen = input) })
+
+          yield* def.execute(
+            {
+              description: "hard task",
+              prompt: "think hard about this",
+              subagent_type: "general",
+              variant: "high",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          expect(seen?.variant).toBe("high")
+        }),
+      { config: variantProviderConfig },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start - validate against Provider.Service instead of raw config
+  resolvedIt.live("execute accepts variants from resolved provider model data", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let seen: SessionPrompt.PromptInput | undefined
+          const promptOps = stubOps({ text: "done", onPrompt: (input) => (seen = input) })
+
+          yield* def.execute(
+            {
+              description: "remote model",
+              prompt: "use resolved provider variants",
+              subagent_type: "general",
+              variant: "high",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          expect(seen?.model).toEqual({ providerID: resolvedModel.providerID, modelID: resolvedModel.id })
+          expect(seen?.variant).toBe("high")
+        }),
+      {
+        config: {
+          agent: {
+            general: {
+              model: `${resolvedModel.providerID}/${resolvedModel.id}`,
+            },
+          },
+        },
+      },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start — invalid variant rejection
+  it.live("execute rejects an unknown variant with a helpful error", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          const promptOps = stubOps({ text: "should not be reached" })
+          const exit = yield* def
+            .execute(
+              {
+                description: "bad variant",
+                prompt: "doesn't matter",
+                subagent_type: "general",
+                variant: "turbo",
+              },
+              {
+                sessionID: chat.id,
+                messageID: assistant.id,
+                agent: "build",
+                abort: new AbortController().signal,
+                extra: { promptOps },
+                messages: [],
+                metadata: () => Effect.void,
+                ask: () => Effect.void,
+              },
+            )
+            .pipe(Effect.exit)
+
+          const cause = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+          const message = cause instanceof Error ? cause.message : undefined
+
+          expect(Exit.isFailure(exit)).toBe(true)
+          expect(message).toBeDefined()
+          expect(message).toContain("turbo")
+          expect(message).toContain("Available variants:")
+          expect(message).toMatch(/\b(low|high)\b/)
+        }),
+      { config: variantProviderConfig },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start — model without variants
+  it.live("execute rejects any variant when the target model has no variants", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const { chat, assistant } = yield* seed()
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          const promptOps = stubOps({ text: "should not be reached" })
+          const exit = yield* def
+            .execute(
+              {
+                description: "no variants",
+                prompt: "anything",
+                subagent_type: "general",
+                variant: "high",
+              },
+              {
+                sessionID: chat.id,
+                messageID: assistant.id,
+                agent: "build",
+                abort: new AbortController().signal,
+                extra: { promptOps },
+                messages: [],
+                metadata: () => Effect.void,
+                ask: () => Effect.void,
+              },
+            )
+            .pipe(Effect.exit)
+
+          const cause = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+          const message = cause instanceof Error ? cause.message : undefined
+
+          expect(Exit.isFailure(exit)).toBe(true)
+          expect(message).toBeDefined()
+          expect(message).toContain("does not support variants")
+        }),
+      { config: noVariantProviderConfig },
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start — regression guard for omitted variant
+  it.live("execute does not inject variant when omitted", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        let seen: SessionPrompt.PromptInput | undefined
+        const promptOps = stubOps({ text: "done", onPrompt: (input) => (seen = input) })
+
+        yield* def.execute(
+          {
+            description: "default",
+            prompt: "default prompt",
+            subagent_type: "general",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+
+        expect(seen?.variant).toBeUndefined()
+      }),
+    ),
+  )
+  // kilocode_change end
+
+  // kilocode_change start — resume + variant
+  it.live("execute forwards variant when resuming an existing task_id", () =>
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const { chat, assistant } = yield* seed()
+          const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
+          let seen: SessionPrompt.PromptInput | undefined
+          const promptOps = stubOps({ text: "resumed", onPrompt: (input) => (seen = input) })
+
+          yield* def.execute(
+            {
+              description: "keep going",
+              prompt: "continue but think lighter",
+              subagent_type: "general",
+              task_id: child.id,
+              variant: "low",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+
+          expect(seen?.sessionID).toBe(child.id)
+          expect(seen?.variant).toBe("low")
+        }),
+      { config: variantProviderConfig },
+    ),
+  )
+  // kilocode_change end
 })
 
 // kilocode_change start - subagent cost propagation coverage (#6321)

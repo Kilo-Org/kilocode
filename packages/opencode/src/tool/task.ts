@@ -6,6 +6,7 @@ import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
+import { Provider } from "@/provider/provider" // kilocode_change - validate variants against resolved model data
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
@@ -29,6 +30,17 @@ export const Parameters = Schema.Struct({
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
   }),
   command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
+  // kilocode_change start - optional per-subtask reasoning variant
+  variant: Schema.optional(
+    Schema.String.annotate({
+      description:
+        "Optional reasoning level / variant to run this subtask at (e.g. 'low', 'medium', 'high', 'xhigh', 'max'). " +
+        "Valid values depend on the subagent's model (Claude Opus 4.7 exposes 'low' / 'medium' / 'high' / 'xhigh' / 'max'; OpenAI reasoning models expose 'none' / 'minimal' / 'low' / 'medium' / 'high' / 'xhigh'). " +
+        "Omit to use the subagent's configured variant or default reasoning. " +
+        "Invalid values return an error listing the available variants for the target model.",
+    }),
+  ),
+  // kilocode_change end
 })
 
 export const TaskTool = Tool.define(
@@ -36,6 +48,7 @@ export const TaskTool = Tool.define(
   Effect.gen(function* () {
     const agent = yield* Agent.Service
     const config = yield* Config.Service
+    const provider = yield* Provider.Service // kilocode_change
     const sessions = yield* Session.Service
 
     const run = Effect.fn("TaskTool.execute")(function* (
@@ -125,7 +138,23 @@ export const TaskTool = Tool.define(
           modelID: msg.info.modelID,
           providerID: msg.info.providerID,
         }
-      const variant = saved?.variant ?? (saved ? undefined : next.variant)
+      const variant = params.variant ?? saved?.variant ?? (saved ? undefined : next.variant) // kilocode_change
+      // kilocode_change end
+
+      // kilocode_change start - validate per-subtask variant against resolved target model
+      if (params.variant !== undefined) {
+        const full = yield* provider.getModel(model.providerID, model.modelID)
+        const available = full.variants ? Object.keys(full.variants) : []
+        if (!full.variants || !full.variants[params.variant]) {
+          return yield* Effect.fail(
+            new Error(
+              available.length === 0
+                ? `Model ${model.providerID}/${model.modelID} does not support variants; omit the \`variant\` parameter.`
+                : `Unknown variant "${params.variant}" for model ${model.providerID}/${model.modelID}. Available variants: ${available.join(", ")}.`,
+            ),
+          )
+        }
+      }
       // kilocode_change end
 
       yield* ctx.metadata({

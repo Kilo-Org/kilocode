@@ -236,6 +236,7 @@ export const SubtaskPart = Schema.Struct({
     }),
   ),
   command: Schema.optional(Schema.String),
+  variant: Schema.optional(Schema.String), // kilocode_change - optional per-subtask variant
 })
   .annotate({ identifier: "SubtaskPart" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -553,6 +554,7 @@ export const SubtaskPartInput = Schema.Struct({
     }),
   ),
   command: Schema.optional(Schema.String),
+  variant: Schema.optional(Schema.String), // kilocode_change - optional per-subtask variant
 })
   .annotate({ identifier: "SubtaskPartInput" })
   .pipe(withStatics((s) => ({ zod: zod(s) })))
