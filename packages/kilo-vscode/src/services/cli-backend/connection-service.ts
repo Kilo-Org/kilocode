@@ -68,6 +68,7 @@ export class KiloConnectionService {
   private connectPromise: Promise<void> | null = null
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
   private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
+  private disposed = false
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
@@ -84,6 +85,8 @@ export class KiloConnectionService {
    * Used primarily for message.part.updated where only messageID may be present.
    */
   private readonly messageSessionIdsByMessageId: Map<string, string> = new Map()
+  private readonly notifiedEvents: Set<string> = new Set()
+  private readonly notifiedEventTimers: Map<string, NodeJS.Timeout> = new Map()
 
   /** Provider key → single focused session ID. */
   private readonly focused: Map<string, string> = new Map()
@@ -303,6 +306,29 @@ export class KiloConnectionService {
   }
 
   /**
+   * Check-and-mark deduplication for OS notifications.
+   * Returns true the first time a given sessionID + eventType (+ optional requestID) combination is seen,
+   * and false for all subsequent calls until the entry expires (TTL).
+   * This prevents multiple KiloProvider instances from emitting duplicate
+   * OS notifications for the same backend event.
+   * When requestID is provided, distinct requests in the same session are not suppressed.
+   */
+  shouldNotify(sessionID: string, eventType: string, requestID?: string): boolean {
+    if (this.disposed) return false
+    const key = requestID ? `${sessionID}:${eventType}:${requestID}` : `${sessionID}:${eventType}`
+    if (this.notifiedEvents.has(key)) return false
+    this.notifiedEvents.add(key)
+    const existing = this.notifiedEventTimers.get(key)
+    if (existing) clearTimeout(existing)
+    const timer = setTimeout(() => {
+      this.notifiedEvents.delete(key)
+      this.notifiedEventTimers.delete(key)
+    }, 5_000)
+    this.notifiedEventTimers.set(key, timer)
+    return true
+  }
+
+  /**
    * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
    */
   onMigrationComplete(listener: MigrationCompleteListener): () => void {
@@ -478,6 +504,7 @@ export class KiloConnectionService {
    * Clean up everything: kill server, close SSE, clear listeners.
    */
   dispose(): void {
+    this.disposed = true
     this.stopHealthPoll()
     this.sseClient?.dispose()
     this.serverManager.dispose()
@@ -490,6 +517,11 @@ export class KiloConnectionService {
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
+    this.notifiedEvents.clear()
+    for (const timer of this.notifiedEventTimers.values()) {
+      clearTimeout(timer)
+    }
+    this.notifiedEventTimers.clear()
     this.focused.clear()
     this.opened.clear()
     if (this.debounceTimer) {

@@ -1246,6 +1246,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Звук при ошибках",
   "settings.notifications.sound.default": "По умолчанию",
   "settings.notifications.sound.none": "Нет",
+  "settings.notifications.sound.system": "Система",
+  "settings.notifications.testSound": "Тест",
   "settings.experimental.share.title": "Режим обмена",
   "settings.experimental.share.description": "Поведение обмена сессиями",
   "settings.experimental.share.manual": "Вручную",

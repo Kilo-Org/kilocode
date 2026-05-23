@@ -1229,6 +1229,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "เสียงเมื่อเกิดข้อผิดพลาด",
   "settings.notifications.sound.default": "ค่าเริ่มต้น",
   "settings.notifications.sound.none": "ไม่มี",
+  "settings.notifications.sound.system": "ระบบ",
+  "settings.notifications.testSound": "ทดสอบ",
   "settings.experimental.share.title": "โหมดแชร์",
   "settings.experimental.share.description": "พฤติกรรมการแชร์เซสชัน",
   "settings.experimental.share.manual": "ด้วยตนเอง",

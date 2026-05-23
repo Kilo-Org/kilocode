@@ -1179,6 +1179,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "發生錯誤時播放的聲音",
   "settings.notifications.sound.default": "預設",
   "settings.notifications.sound.none": "無",
+  "settings.notifications.sound.system": "系統",
+  "settings.notifications.testSound": "測試",
   "settings.experimental.share.title": "分享模式",
   "settings.experimental.share.description": "工作階段分享行為",
   "settings.experimental.share.manual": "手動",

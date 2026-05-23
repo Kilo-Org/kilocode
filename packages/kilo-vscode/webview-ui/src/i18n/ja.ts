@@ -1238,6 +1238,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "エラー発生時に再生するサウンド",
   "settings.notifications.sound.default": "デフォルト",
   "settings.notifications.sound.none": "なし",
+  "settings.notifications.sound.system": "システム",
+  "settings.notifications.testSound": "テスト",
   "settings.experimental.share.title": "共有モード",
   "settings.experimental.share.description": "セッション共有の動作",
   "settings.experimental.share.manual": "手動",

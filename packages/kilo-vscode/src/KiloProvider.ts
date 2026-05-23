@@ -68,6 +68,7 @@ import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { getTerminalContents } from "./services/terminal/context"
 import { disposeGitChangesTarget } from "./kilo-provider/git-changes-target"
 import { interceptMessage } from "./kilo-provider/git-changes-request"
+import { SoundNotificationService } from "./util/sound-notification"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
@@ -160,7 +161,6 @@ const mapAgent = (a: Agent) => ({
   model: a.model,
 })
 
-// message.part.* events are always session-scoped; drop them when the session is unknown.
 const SESSION_SCOPED_PART_EVENTS = new Set(["message.part.updated", "message.part.delta", "message.part.removed"])
 const isSessionScopedPartEvent = (type: string) => SESSION_SCOPED_PART_EVENTS.has(type)
 
@@ -244,7 +244,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private chatAutocomplete: ChatTextAreaAutocomplete | null = null
   private projectDirectory: string | null | undefined
   private slimEditMetadata = true
-
   private pendingFollowup: Followup | null = null
   private followupListeners: Array<(session: Session, directory: string) => void> = []
   private statsPoller: GitStatsPoller | null = null
@@ -263,6 +262,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
+  private soundService: SoundNotificationService
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -272,7 +272,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = opts.projectDirectory
     this.slimEditMetadata = opts.slimEditMetadata ?? true
-
+    this.soundService = new SoundNotificationService(connectionService)
+    this.soundService.setupFocusTracking()
     TelemetryProxy.getInstance().setProvider(this)
   }
 
@@ -443,7 +444,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     // legacy-migration end
   }
-
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
@@ -972,6 +972,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
+        case "testNotification":
+          this.soundService.handleTestNotification(message.settingType)
+          break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
@@ -1104,17 +1107,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleFetchMarketplaceData()
           break
         }
-        case "filterMarketplaceItems": {
-          // Client-side filtering — no server action needed
+        case "filterMarketplaceItems":
           break
-        }
         case "installMarketplaceItem": {
           const workspace = this.getProjectDirectory(this.currentSession?.id)
           const scope = message.mpInstallOptions?.target ?? "project"
           const result = await this.getMarketplace().install(message.mpItem, message.mpInstallOptions, workspace)
-          if (result.success) {
-            await this.invalidateAfterMarketplaceChange(scope)
-          }
+          if (result.success) await this.invalidateAfterMarketplaceChange(scope)
           this.postMessage({
             type: "marketplaceInstallResult",
             success: result.success,
@@ -2387,9 +2386,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifyAgent: notifications.get<boolean>("agent", true),
         notifyPermissions: notifications.get<boolean>("permissions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
-        soundAgent: sounds.get<string>("agent", "default"),
-        soundPermissions: sounds.get<string>("permissions", "default"),
-        soundErrors: sounds.get<string>("errors", "default"),
+        soundAgent: sounds.get<string>("agent", "system"),
+        soundPermissions: sounds.get<string>("permissions", "system"),
+        soundErrors: sounds.get<string>("errors", "system"),
       },
     })
   }
@@ -2401,7 +2400,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       visible: config.get<boolean>("showTaskTimeline", true),
     })
   }
-
   /** Returns the number of sessions currently in "busy" state. */
   private getBusySessionCount(): number {
     return getBusySessionCount(this.sessionStatusMap)
@@ -3178,6 +3176,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.streams.flush(sid)
         this.postMessage(msg)
       }
+      this.soundService.playSoundForEvent(event, sid, this.trackedSessionIds)
       return
     }
 
@@ -3254,7 +3253,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (event.type === "indexing.status" && directory) {
       if (!sameDirectory(directory, this.getWorkspaceDirectory(this.currentSession?.id))) return
     }
-
+    this.soundService.playSoundForEvent(event, sessionID, this.trackedSessionIds)
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (!msg) return
     if (msg.type === "partUpdated") {
@@ -3587,6 +3586,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
+    this.soundService.dispose()
     this.streams.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false

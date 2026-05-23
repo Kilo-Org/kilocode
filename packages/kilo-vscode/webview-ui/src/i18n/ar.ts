@@ -1221,6 +1221,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "الصوت عند الأخطاء",
   "settings.notifications.sound.default": "افتراضي",
   "settings.notifications.sound.none": "بدون",
+  "settings.notifications.sound.system": "النظام",
+  "settings.notifications.testSound": "اختبار",
   "settings.experimental.share.title": "وضع المشاركة",
   "settings.experimental.share.description": "سلوك مشاركة الجلسة",
   "settings.experimental.share.manual": "يدوي",

@@ -25,3 +25,6 @@ AGENTS.md
 
 # Include bin/ directory for CLI binary (production)
 !bin/**
+
+# Include audio files for sound notifications
+!audio-wav/**
