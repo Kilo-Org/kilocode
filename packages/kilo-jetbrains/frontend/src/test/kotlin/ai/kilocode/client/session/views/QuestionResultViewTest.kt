@@ -166,7 +166,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
 
     // ------ applyStyle ------
 
-    fun `test applyStyle updates fonts`() {
+    fun `test applyStyle updates body fonts to UI font family`() {
         val tool = completedTool(
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
@@ -177,8 +177,25 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         view.applyStyle(style)
         view.toggle()
 
-        assertTrue(view.bodyFonts().contains(style.transcriptFont))
-        assertTrue(view.bodyFonts().contains(style.boldEditorFont))
+        assertTrue(view.bodyFonts().contains(style.regularFont))
+        assertTrue(view.bodyFonts().contains(style.boldFont))
+        assertFalse("Body should not use editor transcript font", view.bodyFonts().any { it.name == "Courier New" })
+    }
+
+    fun `test applyStyle updates header label fonts to UI font family`() {
+        val tool = completedTool(
+            input = mapOf("questions" to """[{"question":"Q1"}]"""),
+            metadata = mapOf("answers" to """[["A1"]]"""),
+        )
+        val view = QuestionResultView(tool)
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+
+        view.applyStyle(style)
+
+        assertEquals("Title should use boldFont", style.boldFont, view.titleFont())
+        assertEquals("Subtitle should use smallFont", style.smallFont, view.subFont())
+        assertFalse("Title should not use editor font family", view.titleFont().name == "Courier New")
+        assertFalse("Subtitle should not use editor font family", view.subFont().name == "Courier New")
     }
 
     // ------ update ------

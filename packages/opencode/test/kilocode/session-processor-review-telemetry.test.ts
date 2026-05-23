@@ -81,3 +81,45 @@ describe("KiloSessionProcessor.extractReviewTelemetry", () => {
     expect(KiloSessionProcessor.extractReviewTelemetry(parts as unknown as MessageV2.Part[])).toBeUndefined()
   })
 })
+
+describe("KiloSessionProcessor.suggestionReviewTelemetry", () => {
+  test("returns suggest-sourced telemetry for accepted review commands", () => {
+    expect(
+      KiloSessionProcessor.suggestionReviewTelemetry({
+        accepted: { prompt: "/local-review-uncommitted --focus telemetry" },
+      }),
+    ).toEqual({ ...expected("local-review-uncommitted"), tool: "suggest" })
+  })
+
+  test("returns undefined for accepted non-review commands", () => {
+    expect(KiloSessionProcessor.suggestionReviewTelemetry({ accepted: { prompt: "/test" } })).toBeUndefined()
+  })
+
+  test("returns undefined when accepted prompt is not a slash command", () => {
+    expect(KiloSessionProcessor.suggestionReviewTelemetry({ accepted: { prompt: "Run tests" } })).toBeUndefined()
+  })
+
+  test("returns undefined when accepted metadata is missing", () => {
+    expect(KiloSessionProcessor.suggestionReviewTelemetry({ dismissed: true })).toBeUndefined()
+  })
+})
+
+describe("KiloSessionProcessor.extractSuggestionReviewTelemetry", () => {
+  test("recovers review telemetry from completed suggest tool metadata", () => {
+    const parts = [
+      {
+        type: "tool",
+        tool: "suggest",
+        state: {
+          status: "completed",
+          metadata: { accepted: { prompt: "/local-review" } },
+        },
+      },
+    ]
+
+    expect(KiloSessionProcessor.extractSuggestionReviewTelemetry(parts as unknown as MessageV2.Part[])).toEqual({
+      ...expected("local-review"),
+      tool: "suggest",
+    })
+  })
+})

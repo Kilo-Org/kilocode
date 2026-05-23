@@ -12,6 +12,20 @@
                     icon="/icons/kilo.svg"
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
 
+        <applicationConfigurable
+                parentId="tools"
+                id="ai.kilocode.jetbrains.settings"
+                instance="ai.kilocode.client.settings.KiloSettingsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.kilo.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.profile"
+                instance="ai.kilocode.client.settings.profile.UserProfileConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.profile.displayName"/>
+
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"
@@ -40,8 +54,22 @@
                 class="ai.kilocode.client.actions.KiloSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
 
+        <action id="Kilo.NewSession"
+                class="ai.kilocode.client.actions.NewSessionAction"/>
+
         <action id="Kilo.History"
                 class="ai.kilocode.client.actions.HistoryAction"/>
+
+        <action id="Kilo.ShowProfile"
+                class="ai.kilocode.client.actions.ShowProfileAction"/>
+
+        <!-- Declarative toolbar group for the Kilo tool window title bar -->
+        <group id="Kilo.ToolWindowToolbar">
+            <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.History"/>
+            <reference ref="Kilo.ShowProfile"/>
+            <reference ref="Kilo.Settings"/>
+        </group>
 
         <action id="Kilo.SendPrompt"
                 class="ai.kilocode.client.actions.SendPromptAction"

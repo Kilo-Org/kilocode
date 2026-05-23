@@ -278,7 +278,7 @@ export const RunCommand = effectCmd({
       })
       .option("attach", {
         type: "string",
-        describe: "attach to a running opencode server (e.g., http://localhost:4096)",
+        describe: "attach to a running kilo server (e.g., http://localhost:4096)", // kilocode_change
       })
       .option("password", {
         alias: ["p"],

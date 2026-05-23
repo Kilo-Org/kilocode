@@ -1,6 +1,7 @@
 package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -9,6 +10,8 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.ProfileDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -101,5 +104,80 @@ class FakeAppRpcApi : KiloAppRpcApi {
         variants.add(update)
         models = models.copy(variant = models.variant + (update.key to update.value))
         return models
+    }
+
+    var fakeProfile: ProfileDto? = null
+    var fakeDeviceAuth = DeviceAuthDto(code = "TEST-1234", verificationUrl = "https://auth.kilo.ai/device")
+    val orgProfiles = mutableMapOf<String?, ProfileDto?>()
+    val orgSelections = mutableListOf<String?>()
+
+    /** When set, [completeLogin] will await this deferred before returning. */
+    var completeGate: CompletableDeferred<Unit>? = null
+
+    /** When set, [completeLogin] will throw this exception (after awaiting [completeGate] if set). */
+    var completeError: Exception? = null
+
+    /** When set, [startLogin] will throw this exception. */
+    var startError: Exception? = null
+
+    /** When set, [logout] will throw this exception instead of returning [logoutResult]. */
+    var logoutError: Exception? = null
+
+    /** Result returned by [logout] when [logoutError] is null. */
+    var logoutResult = true
+
+    /** When set, [refreshProfile] will throw this exception. */
+    var refreshError: Exception? = null
+
+    /** When set, [setOrganization] will throw this exception. */
+    var organizationError: Exception? = null
+
+    /** Directories passed to [startLogin] in order. */
+    val startDirectories = mutableListOf<String?>()
+
+    /** Directories passed to [completeLogin] in order. */
+    val completeDirectories = mutableListOf<String?>()
+
+    var starts = 0
+        private set
+    var completes = 0
+        private set
+
+    override suspend fun refreshProfile(): ProfileDto? {
+        assertNotEdt("refreshProfile")
+        refreshError?.let { throw it }
+        return fakeProfile
+    }
+
+    override suspend fun startLogin(directory: String?): DeviceAuthDto {
+        assertNotEdt("startLogin")
+        starts++
+        startDirectories.add(directory)
+        startError?.let { throw it }
+        return fakeDeviceAuth
+    }
+
+    override suspend fun completeLogin(directory: String?): ProfileDto? {
+        assertNotEdt("completeLogin")
+        completes++
+        completeDirectories.add(directory)
+        completeGate?.await()
+        completeError?.let { throw it }
+        return fakeProfile
+    }
+
+    override suspend fun logout(): Boolean {
+        assertNotEdt("logout")
+        logoutError?.let { throw it }
+        if (logoutResult) fakeProfile = null
+        return logoutResult
+    }
+
+    override suspend fun setOrganization(organizationId: String?): ProfileDto? {
+        assertNotEdt("setOrganization")
+        organizationError?.let { throw it }
+        orgSelections.add(organizationId)
+        if (orgProfiles.containsKey(organizationId)) fakeProfile = orgProfiles[organizationId]
+        return fakeProfile
     }
 }

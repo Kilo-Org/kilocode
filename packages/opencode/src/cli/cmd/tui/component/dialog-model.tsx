@@ -135,11 +135,14 @@ export function DialogModel(props: { providerID?: string }) {
             },
           })),
           filter((x) => {
-            // kilocode_change: always dedupe favorites/recents (upstream only did this when showSections was true)
-            if (favorites.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
-              return false
-            if (recents.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
-              return false
+            // kilocode_change start - only dedupe favorites/recents when those sections are visible
+            if (showExtra()) {
+              if (favorites.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
+                return false
+              if (recents.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
+                return false
+            }
+            // kilocode_change end
             return true
           }),
           sortBy(

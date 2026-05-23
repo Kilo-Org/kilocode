@@ -35,6 +35,7 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         // ViewChanged progress fires immediately on controller construction (step 3 of plan).
         // ViewChanged session fires after non-empty history is loaded.
         assertControllerEvents("""
+            AccountOverlayChanged hide
             AppChanged
             WorkspaceChanged
             ViewChanged progress
@@ -62,6 +63,7 @@ class HistoryLoadingTest : SessionControllerTestBase() {
         assertTrue(rpc.recentCalls.isEmpty())
         assertModelEvents("HistoryLoaded", modelEvents)
         assertControllerEvents("""
+            AccountOverlayChanged hide
             AppChanged
             WorkspaceChanged
             ViewChanged progress

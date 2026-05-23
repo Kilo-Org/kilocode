@@ -1,5 +1,7 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.views.base.GenericView
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.model.Compaction
 import ai.kilocode.client.session.model.Content

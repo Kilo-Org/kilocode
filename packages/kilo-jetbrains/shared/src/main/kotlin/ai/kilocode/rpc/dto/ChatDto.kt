@@ -39,6 +39,8 @@ data class TokensDto(
 data class MessageErrorDto(
     val type: String,
     val message: String? = null,
+    val statusCode: Int? = null,
+    val responseBody: String? = null,
 )
 
 @Serializable
@@ -81,10 +83,12 @@ data class PartTimeDto(
 @Serializable
 data class PromptDto(
     val parts: List<PromptPartDto>,
+    val messageID: String? = null,
     val providerID: String? = null,
     val modelID: String? = null,
     val agent: String? = null,
     val variant: String? = null,
+    val noReply: Boolean? = null,
 )
 
 @Serializable
@@ -236,6 +240,16 @@ sealed class ChatEventDto {
 // --- Permission DTOs ---
 
 @Serializable
+data class PermissionFileDiffDto(
+    val file: String,
+    val patch: String? = null,
+    val before: String? = null,
+    val after: String? = null,
+    val additions: Int = 0,
+    val deletions: Int = 0,
+)
+
+@Serializable
 data class PermissionRequestDto(
     val id: String,
     val sessionID: String,
@@ -244,6 +258,11 @@ data class PermissionRequestDto(
     val metadata: Map<String, String> = emptyMap(),
     val always: List<String> = emptyList(),
     val tool: ToolRefDto? = null,
+    val message: String? = null,
+    val command: String? = null,
+    val rules: List<String> = emptyList(),
+    val filePath: String? = null,
+    val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
 )
 
 @Serializable

@@ -86,6 +86,10 @@ tasks.named("compileKotlin") {
     dependsOn(fixGeneratedApi)
 }
 
+tasks.named("compileTestKotlin") {
+    dependsOn(fixGeneratedApi)
+}
+
 val cliDir = layout.buildDirectory.dir("generated/cli/cli")
 val production = providers.gradleProperty("production").map { it.toBoolean() }.orElse(false)
 

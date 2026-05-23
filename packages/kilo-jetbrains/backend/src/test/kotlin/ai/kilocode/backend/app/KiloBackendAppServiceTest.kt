@@ -165,6 +165,22 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `set organization sends explicit null body for personal account`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        svc.setOrganization("org_1")
+        assertEquals("""{"organizationId":"org_1"}""", mock.lastOrganizationSetBody)
+
+        svc.setOrganization(null)
+        assertEquals("""{"organizationId":null}""", mock.lastOrganizationSetBody)
+    }
+
+    @Test
     fun `profile 401 does not prevent Ready`() = runBlocking {
         mock.profileStatus = 401
         val svc = create()
@@ -440,6 +456,41 @@ class KiloBackendAppServiceTest {
         assertTrue((svc.appState.value as KiloAppState.Ready).data.warnings.isEmpty())
     }
 
+    // ------ Auth mapping tests ------
+
+    @Test
+    fun `start login maps device auth response`() = runBlocking<Unit> {
+        // Default authorizeResponse: url=https://auth.kilo.ai/device, code=TEST-1234
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val auth = svc.startLogin(null)
+        assertEquals("https://auth.kilo.ai/device", auth.verificationUrl)
+        assertEquals("TEST-1234", auth.code)
+        assertEquals(900, auth.expiresIn)
+        assertNotNull(mock.lastAuthorizeBody)
+    }
+
+    @Test
+    fun `complete login calls callback and refreshes profile`() = runBlocking<Unit> {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val profile = svc.completeLogin(null)
+        assertNotNull(profile)
+        assertEquals("alice@test.com", profile.profile.email)
+        assertNotNull(mock.lastCallbackBody)
+    }
+
     // ------ Concurrency & lifecycle tests ------
 
     @Test
@@ -518,5 +569,151 @@ class KiloBackendAppServiceTest {
         }
 
         assertIs<KiloAppState.Ready>(svc.appState.value)
+    }
+
+    // ------ Profile DTO mapping tests ------
+
+    @Test
+    fun `ready dto maps profile fields`() = runBlocking {
+        mock.profile = """{
+            "profile":{
+                "email":"alice@test.com",
+                "name":"Alice",
+                "organizations":[{"id":"org_1","name":"Acme","role":"ADMIN"}]
+            },
+            "balance":{"balance":42.5},
+            "currentOrgId":"org_1"
+        }""".trimIndent()
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val dto = appStateDto(svc.appState.value)
+        assertEquals("alice@test.com", dto.profile?.email)
+        assertEquals("Alice", dto.profile?.name)
+        assertEquals("ADMIN", dto.profile?.organizations?.firstOrNull()?.role)
+        assertEquals(42.5, dto.profile?.balance?.balance)
+        assertEquals("org_1", dto.profile?.currentOrgId)
+    }
+
+    @Test
+    fun `refresh profile updates ready dto profile`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        // Update mock to return different profile
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Updated Alice"},"balance":{"balance":99.0},"currentOrgId":null}"""
+
+        val fresh = svc.refreshProfile()
+        assertNotNull(fresh)
+        assertEquals("Updated Alice", fresh.profile.name)
+        assertEquals("Updated Alice", appStateDto(svc.appState.value).profile?.name)
+        assertEquals(99.0, appStateDto(svc.appState.value).profile?.balance?.balance)
+    }
+
+    @Test
+    fun `logout clears ready profile on success`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        assertNotNull(svc.profile)
+        mock.authRemoveStatus = 200
+        val ok = svc.logout()
+
+        assertTrue(ok)
+        assertNull(svc.profile)
+        assertNull(appStateDto(svc.appState.value).profile)
+    }
+
+    @Test
+    fun `set organization failure leaves profile unchanged`() = runBlocking {
+        mock.profile = """{"profile":{"email":"alice@test.com","name":"Alice"},"balance":null,"currentOrgId":null}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val before = svc.profile
+        assertNotNull(before)
+
+        mock.organizationSetStatus = 500
+        var thrown = false
+        try {
+            svc.setOrganization("org_1")
+        } catch (_: Exception) {
+            thrown = true
+        }
+        assertTrue(thrown, "setOrganization with 500 should throw")
+        // Profile should remain unchanged because organization switch failed before refreshProfile
+        assertEquals(before.profile.email, svc.profile?.profile?.email)
+    }
+
+    @Test
+    fun `start login failure propagates`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        mock.authorizeStatus = 500
+        var thrown = false
+        try {
+            svc.startLogin(null)
+        } catch (_: Exception) {
+            thrown = true
+        }
+        assertTrue(thrown, "startLogin with 500 status should throw")
+    }
+
+    @Test
+    fun `start login without code returns null code but url present`() = runBlocking {
+        // Instructions without 'code:' — the regex match should return null
+        mock.authorizeResponse = """{"url":"https://auth.kilo.ai/device","method":"code","instructions":"Open the URL in your browser to sign in"}"""
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        val auth = svc.startLogin(null)
+        assertNull(auth.code, "code should be null when instructions have no code: prefix")
+        assertEquals("https://auth.kilo.ai/device", auth.verificationUrl)
+    }
+
+    @Test
+    fun `complete login callback failure propagates`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        mock.callbackStatus = 500
+        var thrown = false
+        try {
+            svc.completeLogin(null)
+        } catch (_: Exception) {
+            thrown = true
+        }
+        assertTrue(thrown, "completeLogin with 500 callback status should throw")
     }
 }

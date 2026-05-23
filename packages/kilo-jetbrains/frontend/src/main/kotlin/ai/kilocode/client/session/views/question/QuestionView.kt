@@ -5,14 +5,15 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.ui.SessionView
+import ai.kilocode.client.session.ui.editor.SessionEditorTextField
+import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import com.intellij.icons.AllIcons
-import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -20,21 +21,27 @@ import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import javax.swing.ScrollPaneConstants
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.GridBagLayout
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.AbstractButton
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.ButtonGroup
-import javax.swing.JButton
 import javax.swing.JPanel
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
 
 /** Question tool form rendered inside the session transcript. */
 class QuestionView(
+    private val project: Project,
     private val reply: (String, QuestionReplyDto) -> Unit,
     private val reject: (String) -> Unit,
     private val scroll: () -> Unit = {},
@@ -45,27 +52,18 @@ class QuestionView(
     private var question: Question? = null
     private var idx = 0
     private var selections = emptyList<MutableSet<String>>()
+    // Per-question custom text state — survives navigation.
+    private var customTexts = emptyList<String>()
+    // Per-question: whether the custom row is currently selected/open.
+    private var customOpen = emptyList<Boolean>()
     private var style = SessionEditorStyle.current()
     private val texts = mutableListOf<Pair<JBTextArea, Boolean>>()
+    // The custom editor for the currently shown question; null when not shown.
+    private var customEditor: SessionEditorTextField? = null
+    private var customFocus: FocusAdapter? = null
 
-    private val card = object : BorderLayoutPanel() {
-        override fun updateUI() {
-            super.updateUI()
-            isOpaque = true
-            background = SessionUiStyle.View.surface()
-            border = SessionUiStyle.View.card()
-        }
-    }
-    private val root = JPanel().apply {
-        isOpaque = false
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad(), UiStyle.Gap.lg(), UiStyle.Gap.pad())
-    }
-    private val header = JPanel(BorderLayout()).apply {
-        isOpaque = false
-        border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
-        alignmentX = Component.LEFT_ALIGNMENT
-    }
+    private val card = BaseQuestionView()
+
     private val summary = JBLabel()
     private val nav = JPanel().apply {
         isOpaque = false
@@ -85,23 +83,21 @@ class QuestionView(
         toolTipText = KiloBundle.message("session.question.next")
         addActionListener { goForward() }
     }
+    private val topPanel = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
+        alignmentX = Component.LEFT_ALIGNMENT
+    }
     private val body = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         alignmentX = Component.LEFT_ALIGNMENT
     }
-    private val footer = JPanel(BorderLayout()).apply {
-        isOpaque = false
-        border = JBUI.Borders.emptyTop(UiStyle.Gap.lg())
-        alignmentX = Component.LEFT_ALIGNMENT
-    }
-    private val dismiss = JButton(KiloBundle.message("session.question.dismiss")).apply {
-        addActionListener { doReject() }
-    }
-    private val right = JPanel().apply {
-        isOpaque = false
-        layout = BoxLayout(this, BoxLayout.X_AXIS)
-    }
+
+    // Stable action ids for setActionEnabled calls
+    private val ID_DISMISS = "dismiss"
+    private val ID_BACK = "back"
+    private val ID_MAIN = "main"  // next / review / submit
 
     init {
         isOpaque = false
@@ -109,14 +105,11 @@ class QuestionView(
 
         nav.add(back)
         nav.add(fwd)
-        header.add(summary, BorderLayout.WEST)
-        header.add(nav, BorderLayout.EAST)
-        footer.add(dismiss, BorderLayout.WEST)
-        footer.add(right, BorderLayout.EAST)
-        root.add(header)
-        root.add(body)
-        root.add(footer)
-        card.add(root, BorderLayout.CENTER)
+        topPanel.add(summary, BorderLayout.WEST)
+        topPanel.add(nav, BorderLayout.EAST)
+
+        card.setTopPanel(topPanel)
+        card.setContent(body)
         add(card, BorderLayout.CENTER)
     }
 
@@ -129,6 +122,8 @@ class QuestionView(
         question = q
         idx = 0
         selections = List(q.items.size) { mutableSetOf() }
+        customTexts = List(q.items.size) { "" }
+        customOpen = List(q.items.size) { false }
         isVisible = true
         syncPage()
     }
@@ -138,15 +133,25 @@ class QuestionView(
         question = null
         idx = 0
         selections = emptyList()
+        customTexts = emptyList()
+        customOpen = emptyList()
+        customEditor = null
+        customFocus = null
         texts.clear()
         body.removeAll()
-        right.removeAll()
+        card.setActions(emptyList())
         isVisible = false
         refresh()
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
+        card.applyStyle(style)
+        customEditor?.let { ed ->
+            ed.font = style.transcriptFont
+            ed.getEditor(false)?.let(style::applyToEditor)
+            ed.background = style.editorScheme.defaultBackground
+        }
         val changed = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
         if (!changed) return
         refresh()
@@ -155,8 +160,20 @@ class QuestionView(
     private fun syncPage() {
         val q = question ?: return
         texts.clear()
+        customEditor = null
+        customFocus = null
         body.removeAll()
-        if (review(q)) addReview(q) else addContent(q.items[idx], selections[idx])
+        if (review(q)) {
+            card.setHeader(KiloBundle.message("session.question.review.title"))
+            addReview(q)
+        } else {
+            val item = q.items[idx]
+            val hint = KiloBundle.message(
+                if (item.multiple) "session.question.hint.multi" else "session.question.hint.single"
+            )
+            card.setHeader(item.question, hint)
+            addContent(item, selections[idx])
+        }
         syncHeader(q)
         syncFooter(q)
         syncControls(q)
@@ -172,80 +189,86 @@ class QuestionView(
     }
 
     private fun syncFooter(q: Question) {
-        right.removeAll()
-        if (review(q)) {
-            val back = JButton(KiloBundle.message("session.question.back")).apply {
-                addActionListener { goBack() }
-            }
-            val submit = JButton(KiloBundle.message("session.question.submit")).apply {
-                putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, true)
-                addActionListener { doReply() }
-            }
-            right.add(back)
-            right.add(Box.createHorizontalStrut(JBUI.scale(UiStyle.Gap.sm())))
-            right.add(submit)
-            return
-        }
+        val actions = mutableListOf<BaseQuestionView.Action>()
+        actions.add(BaseQuestionView.Action(ID_DISMISS, KiloBundle.message("session.question.dismiss"), primary = false) { doReject() })
 
-        val label = when {
-            direct(q) -> KiloBundle.message("session.question.submit")
-            lastItem(q) -> KiloBundle.message("session.question.review")
-            else -> KiloBundle.message("session.question.next")
-        }
-        val button = JButton(label).apply {
-            putClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY, direct(q) || lastItem(q))
-            addActionListener {
+        if (review(q)) {
+            actions.add(BaseQuestionView.Action(ID_BACK, KiloBundle.message("session.question.back"), primary = false) { goBack() })
+            actions.add(BaseQuestionView.Action(ID_MAIN, KiloBundle.message("session.question.submit"), primary = true) { doReply() })
+        } else {
+            val label = when {
+                direct(q) -> KiloBundle.message("session.question.submit")
+                lastItem(q) -> KiloBundle.message("session.question.review")
+                else -> KiloBundle.message("session.question.next")
+            }
+            val isPrimary = direct(q) || lastItem(q)
+            actions.add(BaseQuestionView.Action(ID_MAIN, label, isPrimary) {
                 when {
                     direct(q) -> doReply()
                     lastItem(q) -> goReview()
                     else -> goForward()
                 }
-            }
+            })
         }
-        right.add(button)
+        card.setActions(actions)
     }
 
     private fun syncControls(q: Question) {
-        val ready = selections.getOrNull(idx)?.isNotEmpty() == true
+        val ready = isReady(idx)
         back.isEnabled = idx > 0
         fwd.isEnabled = idx < q.items.size && ready
-        for (node in right.components) {
-            if (node is JButton && node.text != KiloBundle.message("session.question.back")) {
-                node.isEnabled = review(q) || ready
-            }
+        card.setActionEnabled(ID_MAIN, review(q) || ready)
+    }
+
+    /**
+     * Computes whether the question at [i] has an effective (non-blank) answer.
+     * For a question with custom=true and custom row selected, the custom text
+     * must be non-blank. For option-only answers the selection set must be non-empty.
+     */
+    private fun isReady(i: Int): Boolean {
+        val open = customOpen.getOrElse(i) { false }
+        val txt = customTexts.getOrElse(i) { "" }.trim()
+        val sel = selections.getOrNull(i)
+        return if (open) txt.isNotEmpty() else sel?.isNotEmpty() == true
+    }
+
+    /**
+     * Returns the effective answers for question at index [i] — what will be sent
+     * in the reply payload. Custom text is included when non-blank and the custom
+     * row is selected (single-select) or active (multi-select).
+     */
+    private fun effectiveAnswers(i: Int): List<String> {
+        val q = question ?: return emptyList()
+        val item = q.items.getOrNull(i) ?: return emptyList()
+        val txt = customTexts.getOrElse(i) { "" }.trim()
+        val open = customOpen.getOrElse(i) { false }
+        val sel = selections.getOrNull(i) ?: emptySet()
+
+        return if (item.multiple) {
+            val result = sel.toMutableList()
+            if (open && txt.isNotEmpty() && txt !in result) result.add(txt)
+            result
+        } else {
+            // single-select: if custom is open, use custom text; otherwise use selection
+            if (open && txt.isNotEmpty()) listOf(txt)
+            else sel.toList()
         }
     }
 
     private fun addContent(item: QuestionItem, set: MutableSet<String>) {
-        val title = text(item.question, UiStyle.Colors.fg(), true)
-        title.border = JBUI.Borders.emptyBottom(UiStyle.Gap.xs())
-        title.alignmentX = Component.LEFT_ALIGNMENT
-        body.add(title)
-
-        val hint = text(
-            KiloBundle.message(if (item.multiple) "session.question.hint.multi" else "session.question.hint.single"),
-            UiStyle.Colors.weak(),
-        )
-        hint.border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
-        hint.alignmentX = Component.LEFT_ALIGNMENT
-        body.add(hint)
-
         val opts = optionList(item, set)
         opts.alignmentX = Component.LEFT_ALIGNMENT
         body.add(opts)
     }
 
     private fun addReview(q: Question) {
-        val title = text(KiloBundle.message("session.question.review.title"), UiStyle.Colors.fg(), true)
-        title.border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
-        title.alignmentX = Component.LEFT_ALIGNMENT
-        body.add(title)
-
         for ((i, item) in q.items.withIndex()) {
             val row = reviewRow(item, i)
             row.alignmentX = Component.LEFT_ALIGNMENT
             body.add(row)
         }
+        // Remove bottom padding on the last review row to match the top gap.
+        (body.components.lastOrNull() as? JPanel)?.border = JBUI.Borders.empty()
     }
 
     private fun reviewRow(item: QuestionItem, i: Int): JPanel {
@@ -254,11 +277,12 @@ class QuestionView(
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
         }
-        val question = text(item.question, UiStyle.Colors.weak())
-        question.alignmentX = Component.LEFT_ALIGNMENT
-        row.add(question)
+        val qText = text(item.question, UiStyle.Colors.weak())
+        qText.alignmentX = Component.LEFT_ALIGNMENT
+        row.add(qText)
 
-        val joined = selections.getOrNull(i)?.joinToString(", ").orEmpty()
+        val answers = effectiveAnswers(i)
+        val joined = answers.joinToString(", ")
         val answer = text(
             joined.ifBlank { KiloBundle.message("session.question.review.notAnswered") },
             UiStyle.Colors.fg(),
@@ -276,11 +300,243 @@ class QuestionView(
         }
         if (item.multiple) {
             for (opt in item.options) panel.add(checkboxRow(opt, set))
-            return panel
+        } else {
+            val group = ButtonGroup()
+            for (opt in item.options) panel.add(radioRow(opt, set, group))
         }
-        val group = ButtonGroup()
-        for (opt in item.options) panel.add(radioRow(opt, set, group))
+
+        if (item.custom) {
+            panel.add(customRow(item, set))
+        } else {
+            // Remove bottom padding on the last option so the gap before the action
+            // footer matches the gap above the options (both use Gap.lg).
+            (panel.components.lastOrNull() as? JPanel)?.border = JBUI.Borders.empty()
+        }
         return panel
+    }
+
+    private fun customRow(item: QuestionItem, set: MutableSet<String>): JPanel {
+        val open = customOpen.getOrElse(idx) { false }
+        val existing = customTexts.getOrElse(idx) { "" }.trim()
+        val showEditor = open || existing.isNotEmpty()
+        val row = JPanel().apply {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            // No bottom padding — it's the last row
+            border = JBUI.Borders.empty()
+        }
+
+        val toggle: AbstractButton = if (item.multiple) {
+            JBCheckBox().apply {
+                actionCommand = ""
+                isSelected = open
+                isOpaque = false
+            }
+        } else {
+            JBRadioButton().apply {
+                actionCommand = ""
+                isSelected = open
+                isOpaque = false
+            }
+        }
+
+        val toggleListener = {
+            val wasOpen = customOpen.getOrElse(idx) { false }
+            if (!wasOpen) {
+                // Opening custom row
+                if (!item.multiple) {
+                    // Single-select: clear option selection
+                    set.clear()
+                }
+                customOpen = customOpen.toMutableList().also { it[idx] = true }
+            } else {
+                // Closing custom row
+                customOpen = customOpen.toMutableList().also { it[idx] = false }
+            }
+            refreshCustomRow()
+        }
+
+        if (item.multiple) {
+            (toggle as JBCheckBox).addActionListener { toggleListener() }
+        } else {
+            (toggle as JBRadioButton).addActionListener {
+                // When the custom radio is selected, deselect any option radio
+                set.clear()
+                customOpen = customOpen.toMutableList().also { it[idx] = true }
+                refreshCustomRow()
+            }
+        }
+
+        val press = object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (toggle.isEnabled) toggle.doClick()
+            }
+        }
+
+        val icon = JPanel(GridBagLayout()).apply {
+            isOpaque = false
+            border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
+            add(toggle)
+            addMouseListener(press)
+        }
+
+        val col = JPanel().apply {
+            isOpaque = false
+            layout = GridBagLayout()
+            addMouseListener(press)
+        }
+
+        val label = text(KiloBundle.message("session.question.custom.label"), UiStyle.Colors.fg(), true)
+        label.alignmentX = Component.LEFT_ALIGNMENT
+        label.addMouseListener(press)
+        col.add(label)
+
+        val header = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = JBUI.Borders.emptyBottom(UiStyle.Gap.lg())
+            toolTipText = null
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
+        header.addMouseListener(press)
+        header.add(icon, BorderLayout.WEST)
+        header.add(col, BorderLayout.CENTER)
+        row.add(header)
+
+        if (showEditor) {
+            val ed = buildCustomEditor()
+            customEditor = ed
+            val focus = object : FocusAdapter() {
+                override fun focusGained(e: FocusEvent) = selectCustom(item, set)
+            }
+            customFocus = focus
+            ed.addFocusListener(focus)
+            ed.addSettingsProvider { ex ->
+                ex.contentComponent.addFocusListener(focus)
+                ex.component.addFocusListener(focus)
+            }
+            val edWrapper = JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = JBUI.Borders.empty(0, UiStyle.Gap.lg() + JBUI.scale(20), UiStyle.Gap.lg(), 0)
+                alignmentX = Component.LEFT_ALIGNMENT
+                add(ed, BorderLayout.CENTER)
+            }
+            row.add(edWrapper)
+        }
+
+        return row
+    }
+
+    internal fun testFocusCustomEditor() {
+        val ed = customEditor ?: return
+        val focus = customFocus ?: return
+        focus.focusGained(FocusEvent(ed, FocusEvent.FOCUS_GAINED))
+    }
+
+    private fun selectCustom(item: QuestionItem, set: MutableSet<String>) {
+        if (customOpen.getOrElse(idx) { false }) return
+        if (!item.multiple) set.clear()
+        customOpen = customOpen.toMutableList().also { it[idx] = true }
+        refreshCustomRow()
+    }
+
+    /**
+     * Builds and wires a custom-answer [SessionEditorTextField].
+     *
+     * The component is created on the EDT (as required for all Swing components).
+     * [SessionEditorTextField] extends [com.intellij.ui.EditorTextField] which
+     * lazily initialises its IntelliJ editor via [com.intellij.openapi.editor.EditorThreading]
+     * the first time the component becomes visible, satisfying the platform's
+     * read-context requirement without any additional wrapping here.
+     */
+    private fun buildCustomEditor(): SessionEditorTextField {
+        val ed = SessionEditorTextField(project)
+        ed.border = JBUI.Borders.empty()
+        ed.setFontInheritedFromLAF(false)
+        ed.setPlaceholder(KiloBundle.message("session.question.custom.placeholder"))
+        ed.setShowPlaceholderWhenFocused(true)
+        ed.setOneLineMode(false)
+        ed.addSettingsProvider { ex ->
+            style.applyToEditor(ex)
+            ex.setBorder(JBUI.Borders.empty())
+            ex.scrollPane.border = JBUI.Borders.empty()
+            ex.scrollPane.viewportBorder = JBUI.Borders.empty()
+            ex.backgroundColor = style.editorScheme.defaultBackground
+            ex.scrollPane.background = style.editorScheme.defaultBackground
+            ex.scrollPane.viewport.background = style.editorScheme.defaultBackground
+            ex.settings.isUseSoftWraps = true
+            ex.settings.isAdditionalPageAtBottom = false
+            ex.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        }
+        ed.font = style.transcriptFont
+        ed.background = style.editorScheme.defaultBackground
+
+        // Pre-fill with saved text. This call also forces lazy document creation so
+        // that addDocumentListener can install on a non-null document immediately.
+        val saved = customTexts.getOrElse(idx) { "" }
+        ed.text = saved
+
+        // Sync preferred height to line count; update stored text on edits.
+        // EditorTextField.addDocumentListener is the preferred (non-deprecated) API.
+        // The document was already created above (ed.text = saved ensures getDocument()
+        // was called), so installDocumentListener succeeds.
+        ed.addDocumentListener(object : DocumentListener {
+            override fun documentChanged(e: DocumentEvent) {
+                val txt = ed.text
+                customTexts = customTexts.toMutableList().also { it[idx] = txt }
+                syncEditorHeight(ed)
+                question?.let(::syncControls)
+                refresh()
+                scroll()
+            }
+        })
+
+        syncEditorHeight(ed)
+        return ed
+    }
+
+    private fun syncEditorHeight(ed: SessionEditorTextField) {
+        val editor = ed.getEditor(false)
+        val estimated = estimatedLines(ed)
+        val lines = maxOf(editor?.offsetToVisualPosition(editor.document.textLength)?.line?.plus(1) ?: estimated, estimated)
+        val line = editor?.lineHeight ?: ed.getFontMetrics(ed.font).height
+        val height = line * lines.coerceAtLeast(1) + JBUI.scale(16)
+        ed.preferredSize = Dimension(0, height)
+        ed.minimumSize = Dimension(0, height)
+    }
+
+    private fun estimatedLines(ed: SessionEditorTextField): Int {
+        val width = space(ed)
+        if (width <= 0) return (ed.text.count { it == '\n' } + 1).coerceAtLeast(1)
+        val metrics = ed.getFontMetrics(ed.font)
+        val columns = (width / metrics.charWidth('m').coerceAtLeast(1)).coerceAtLeast(1)
+        return ed.text.lineSequence().sumOf { line ->
+            ((line.length + columns - 1) / columns).coerceAtLeast(1)
+        }.coerceAtLeast(1)
+    }
+
+    private fun space(component: Component): Int {
+        if (component.width > 0) return component.width
+        var node = component.parent
+        while (node != null) {
+            if (node.width > 0) {
+                val ins = node.insets
+                return (node.width - ins.left - ins.right).coerceAtLeast(0)
+            }
+            node = node.parent
+        }
+        return 0
+    }
+
+    /** Re-syncs the current page after the custom row toggle changes. */
+    private fun refreshCustomRow() {
+        val q = question ?: return
+        syncPage()
+        // Request focus on the editor when opening
+        if (customOpen.getOrElse(idx) { false }) {
+            customEditor?.requestFocusInWindow()
+        }
+        syncControls(q)
+        scroll()
     }
 
     private fun radioRow(opt: QuestionOption, set: MutableSet<String>, group: ButtonGroup): JPanel {
@@ -293,7 +549,13 @@ class QuestionView(
         radio.addActionListener {
             set.clear()
             set.add(opt.label)
-            refreshSelection()
+            // Selecting a normal option closes the custom row
+            customOpen = customOpen.toMutableList().also { it[idx] = false }
+            if (customEditor == null) {
+                refreshSelection()
+                return@addActionListener
+            }
+            refreshCustomRow()
         }
         return optionRow(radio, opt)
     }
@@ -323,15 +585,16 @@ class QuestionView(
                 if (toggle.isEnabled) toggle.doClick()
             }
         }
-        val icon = JPanel(BorderLayout()).apply {
+        val center = opt.description.isBlank()
+        val icon = JPanel(if (center) GridBagLayout() else BorderLayout()).apply {
             isOpaque = false
             border = JBUI.Borders.emptyRight(UiStyle.Gap.sm())
-            add(toggle, BorderLayout.NORTH)
+            if (center) add(toggle) else add(toggle, BorderLayout.NORTH)
             addMouseListener(press)
         }
         val col = JPanel().apply {
             isOpaque = false
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            layout = if (center) GridBagLayout() else BoxLayout(this, BoxLayout.Y_AXIS)
             addMouseListener(press)
         }
         val label = text(opt.label, UiStyle.Colors.fg(), true)
@@ -415,12 +678,12 @@ class QuestionView(
 
     private fun goForward() {
         val q = question ?: return
-        if (idx >= q.items.size || selections.getOrNull(idx)?.isEmpty() != false) return
-        val review = idx == q.items.size - 1 && !direct(q)
-        if (review) {
+        if (idx >= q.items.size || !isReady(idx)) return
+        val toReview = idx == q.items.size - 1 && !direct(q)
+        if (toReview) {
             goReview()
         }
-        if (!review) {
+        if (!toReview) {
             idx++
             syncPage()
             scroll()
@@ -429,7 +692,7 @@ class QuestionView(
 
     private fun goReview() {
         val q = question ?: return
-        if (idx == q.items.size - 1 && selections[idx].isNotEmpty()) {
+        if (idx == q.items.size - 1 && isReady(idx)) {
             idx = q.items.size
             syncPage()
             scroll()
@@ -444,8 +707,9 @@ class QuestionView(
 
     private fun doReply() {
         val id = request ?: return
-        if (selections.any { it.isEmpty() }) return
-        reply(id, QuestionReplyDto(selections.map { it.toList() }))
+        if ((question?.items?.indices ?: return).any { !isReady(it) }) return
+        val answers = (question?.items?.indices ?: return).map { effectiveAnswers(it) }
+        reply(id, QuestionReplyDto(answers))
         hideView()
     }
 
@@ -456,7 +720,7 @@ class QuestionView(
     }
 
     private fun setFont(area: JBTextArea, bold: Boolean): Boolean {
-        val font = if (bold) style.boldEditorFont else style.transcriptFont
+        val font = if (bold) style.boldFont else style.regularFont
         if (area.font == font) return false
         area.font = font
         return true
