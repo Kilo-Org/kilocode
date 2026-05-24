@@ -1,3 +1,4 @@
+import * as vscode from "vscode"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { transcribeSpeech } from "./transcribe"
 import { cancelSpeechCapture, startSpeechCapture, stopSpeechCapture } from "./capture"
@@ -20,7 +21,7 @@ export function handleSpeechToTextStart(message: Msg, post: Post): void {
   const task = startSpeechCapture({
     requestId: message.requestId,
     model: message.model || "",
-    language: message.language,
+    language: message.language ?? vscode.env.language,
   })
 
   starts.set(message.requestId, task)
