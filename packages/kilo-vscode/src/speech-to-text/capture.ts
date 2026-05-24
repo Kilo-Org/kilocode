@@ -313,7 +313,24 @@ async function listDshowAudioDevices(bin: string): Promise<string[]> {
 
 export function parseDshowAudioDevices(raw: string): string[] {
   const devices = new Set<string>()
-  for (const match of raw.matchAll(/"([^"]+)"\s+\(audio\)/g)) devices.add(match[1]!)
+  let inAudio = false
+  for (const line of raw.split(/\r?\n/)) {
+    if (/DirectShow\s+audio\s+devices/i.test(line)) {
+      inAudio = true
+      continue
+    }
+    if (inAudio && /DirectShow\s+video/i.test(line)) break
+    // Skip "Alternative name" lines — they are long device paths, not display names
+    if (/Alternative name/i.test(line)) continue
+    if (!inAudio) {
+      // Some FFmpeg versions mark audio devices inline: "Device Name" (audio)
+      for (const match of line.matchAll(/"([^"]+)"\s+\(audio\)/g)) devices.add(match[1]!)
+      continue
+    }
+    // Under "DirectShow audio devices" section, capture all quoted names
+    const match = line.match(/"([^"]+)"/)
+    if (match) devices.add(match[1]!)
+  }
   return [...devices]
 }
 
