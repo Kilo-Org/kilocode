@@ -19,6 +19,26 @@ describe("parseDshowAudioDevices", () => {
 
     expect(parseDshowAudioDevices(raw)).toEqual(["Microphone"])
   })
+
+  it("extracts devices from DirectShow audio section when no (audio) suffix", () => {
+    const raw = `
+[dshow @ 000001] DirectShow video devices (some may be both video and audio devices)
+[dshow @ 000001]  "HP HD Camera"
+[dshow @ 000001]     Alternative name "@device_pnp_...\\global"
+[dshow @ 000001] DirectShow audio devices
+[dshow @ 000001]  "Microphone (Realtek Audio)"
+[dshow @ 000001]     Alternative name "@device_cm_...\\wave_{...}"
+[dshow @ 000001]  "Yeti Stereo Microphone"
+dummy: Immediate exit requested
+`
+
+    expect(parseDshowAudioDevices(raw)).toEqual(["Microphone (Realtek Audio)", "Yeti Stereo Microphone"])
+  })
+
+  it("returns empty array when no audio devices found", () => {
+    expect(parseDshowAudioDevices("")).toEqual([])
+    expect(parseDshowAudioDevices("DirectShow video devices\n  \"Camera\"")).toEqual([])
+  })
 })
 
 describe("cleanOutput", () => {
