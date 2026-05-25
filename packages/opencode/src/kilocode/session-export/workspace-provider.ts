@@ -29,7 +29,7 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
     snapshots.set(id, files)
     state.snapshots[id] = [...files.values()]
     save(opts.statePath, state)
-    return { id, files, capture: metadata(opts.root, result.mode, files) }
+    return { id, files, capture: metadata(result.mode, files) }
   }
 
   return {
@@ -171,9 +171,8 @@ function entry(file: File): FileEntry {
   }
 }
 
-function metadata(root: string, mode: CaptureMetadata["mode"], files: Map<string, File>): CaptureMetadata {
+function metadata(mode: CaptureMetadata["mode"], files: Map<string, File>): CaptureMetadata {
   return {
-    root,
     mode,
     fileCount: files.size,
     totalBytes: [...files.values()].reduce((sum, file) => sum + file.size, 0),

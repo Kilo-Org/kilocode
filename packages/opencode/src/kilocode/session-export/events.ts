@@ -62,7 +62,6 @@ export type FileEntry = {
 }
 
 export type CaptureMetadata = {
-  root: string
   mode: "git-tracked-and-untracked" | "filesystem-walk"
   fileCount: number
   totalBytes: number

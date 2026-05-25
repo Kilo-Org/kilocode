@@ -34,13 +34,25 @@ describe("workspace provider", () => {
     const baseline = await provider.baseline()
 
     expect(baseline.capture).toEqual({
-      root: tmp.path,
       mode: "git-tracked-and-untracked",
       fileCount: 2,
       totalBytes: 32,
       omittedCountsByReason: { high_risk_path: 1 },
       truncated: false,
     })
+  })
+
+  test("baseline capture metadata never embeds the absolute workspace root", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 1\n")
+    await $`git add src.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path })
+    const baseline = await provider.baseline()
+
+    expect(JSON.stringify(baseline.capture)).not.toContain(tmp.path)
+    expect(JSON.stringify(baseline.files)).not.toContain(tmp.path)
   })
 
   test("omits high-risk file contents before persistence", async () => {
