@@ -14,6 +14,7 @@ import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { Auth } from "@/auth"
+import { AppRuntime } from "@/effect/app-runtime"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
@@ -64,7 +65,7 @@ function pending(): z.infer<typeof IndexingStatus> {
 }
 
 async function kiloAuth(cfg: Awaited<ReturnType<typeof Config.get>>): Promise<KiloIndexingAuth> {
-  const auth = await Auth.get("kilo")
+  const auth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
   return resolveKiloIndexingAuth({ config: cfg, auth })
 }
 

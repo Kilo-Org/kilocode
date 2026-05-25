@@ -123,10 +123,11 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ModelsDev") {}
 
-export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClient.HttpClient> = Layer.effect(
+export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClient.HttpClient | Auth.Service> = Layer.effect( // kilocode_change
   Service,
   Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
+    const auth = yield* Auth.Service // kilocode_change
     const http = HttpClient.filterStatusOk(withTransientReadRetry(yield* HttpClient.HttpClient))
 
     const source = Flag.KILO_MODELS_URL || "https://models.dev"
@@ -206,8 +207,9 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
 
       if (kiloAllowed) {
         const opts = config.provider?.kilo?.options
-        const auth = yield* Effect.promise(() => Auth.get("kilo"))
-        const org = opts?.kilocodeOrganizationId ?? (auth?.type === "oauth" ? auth.accountId : undefined)
+        const info = yield* auth.get("kilo").pipe(Effect.orDie)
+        const org = opts?.kilocodeOrganizationId ?? (info?.type === "oauth" ? info.accountId : undefined)
+
         const base = normalizeKiloBaseURL(opts?.baseURL, org)
         const fetch = {
           ...(base ? { baseURL: base } : {}),
@@ -297,6 +299,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
 export const defaultLayer: Layer.Layer<Service> = layer.pipe(
   Layer.provide(FetchHttpClient.layer),
   Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(Auth.defaultLayer), // kilocode_change
 )
 
 export * as ModelsDev from "./models"
