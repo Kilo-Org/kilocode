@@ -1422,7 +1422,7 @@ const MIME_BADGE: Record<string, string> = {
 
 // kilocode_change start - hide synthetic-only context turns from the transcript UI
 function renderableMessage(thinking: boolean, map: Record<string, Part[]>) {
-  return (message: Message) => {
+  return (message: UserMessage | AssistantMessage) => {
     const parts = map[message.id] ?? []
     if (message.role === "user") {
       return parts.some((part) => {

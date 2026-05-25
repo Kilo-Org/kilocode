@@ -310,6 +310,7 @@ describe("tool.task", () => {
             ready.resolve(input)
             return cancelled.promise
           }).pipe(Effect.as(reply(input, "cancelled"))),
+        background: () => Effect.void,
       }
 
       const fiber = yield* def

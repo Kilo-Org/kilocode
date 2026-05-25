@@ -48,6 +48,7 @@ import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
 import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+import { KiloSession } from "../../src/kilocode/session" // kilocode_change
 import { reply, TestLLMServer } from "../lib/llm-server"
 
 void Log.init({ print: false })
