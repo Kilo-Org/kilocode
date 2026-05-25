@@ -70,18 +70,20 @@ describe("workspace fiber", () => {
 
   test("delta fiber skips empty diffs while returning snapshot", async () => {
     const dispatched: unknown[] = []
+    let seq = 0
     const snapshot = await startDeltaFiber({
       sessionId: "s1",
       rootSessionId: "s1",
       trigger: "turn_end",
       prevSnapshotHash: "h0",
       now: () => 0,
-      syncSeq: () => 1,
+      syncSeq: () => seq++,
       agentVersion: "v0",
       requestDiff: async () => ({ snapshotHash: "h1", diff: [] }),
       dispatch: (event) => dispatched.push(event),
     })
     expect(snapshot).toBe("h1")
     expect(dispatched.length).toBe(0)
+    expect(seq).toBe(0)
   })
 })

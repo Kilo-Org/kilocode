@@ -25,50 +25,92 @@ export class Uploader {
   async flush(_reason: string): Promise<void> {
     if (this.flushing) return
     this.flushing = true
+    let rows: ReturnType<Storage["pendingEvents"]> = []
     try {
-      const now = Date.now()
-      const rows = this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes })
-      if (rows.length === 0) return
-      const batchId = crypto.randomUUID()
-      const body = JSON.stringify({
-        schemaVersion: 1,
-        agentVersion: this.deps.agentVersion,
-        batchId,
-        events: rows.map((row) => ({
-          ...JSON.parse(row.dataJson),
-          id: row.id,
-          type: row.type,
-          sessionId: row.sessionId,
-          rootSessionId: row.rootSessionId,
-          seq: row.seq,
-          ts: row.ts,
-        })),
-        chunks: this.deps.storage.chunksForEvents(rows.map((row) => row.id)),
-      })
-      const res = await this.deps.fetch(this.deps.endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body,
-      })
-      if (res.ok) {
-        this.deps.storage.markUploaded(rows.map((row) => row.id))
-        const deleted = this.deps.storage.deleteUploaded()
-        this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
+      while (true) {
+        const now = Date.now()
+        rows = sessionRows(this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes }))
+        if (rows.length === 0) return
+        const batchId = await sha256Hex(rows.map((row) => row.id).join("\n"))
+        const body = JSON.stringify({
+          schemaVersion: 1,
+          agentVersion: this.deps.agentVersion,
+          batchId,
+          events: rows.map((row) => ({
+            ...JSON.parse(row.dataJson),
+            id: row.id,
+            type: row.type,
+            sessionId: row.sessionId,
+            rootSessionId: row.rootSessionId,
+            seq: row.seq,
+            ts: row.ts,
+          })),
+          chunks: this.deps.storage.chunksForEvents(rows.map((row) => row.id)),
+        })
+        const res = await this.deps.fetch(this.deps.endpoint, {
+          method: "POST",
+          headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion }),
+          body,
+        })
+        if (res.ok) {
+          this.deps.storage.markUploaded(rows.map((row) => row.id))
+          const deleted = this.deps.storage.deleteUploaded()
+          this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
+          continue
+        }
+        if (res.status >= 400 && res.status < 500) {
+          this.deps.storage.markUploaded(rows.map((row) => row.id))
+          this.deps.storage.deleteUploaded()
+          this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
+          continue
+        }
+        for (const row of rows) this.deps.storage.markRetry(row.id, Date.now() + Config.retryBackoffMinMs)
         return
       }
-      if (res.status >= 400 && res.status < 500) {
-        this.deps.storage.markUploaded(rows.map((row) => row.id))
-        this.deps.storage.deleteUploaded()
-        this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
-        return
-      }
-      for (const row of rows) this.deps.storage.markRetry(row.id, Date.now() + Config.retryBackoffMinMs)
     } catch (err) {
-      const rows = this.deps.storage.pendingEvents({ now: Date.now(), limitBytes: Config.flushSizeBytes })
       for (const row of rows) this.deps.storage.markRetry(row.id, Date.now() + Config.retryBackoffMinMs)
       this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_network_error", props: { message: String(err) } })
     } finally {
       this.flushing = false
     }
   }
+}
+
+type HeaderArgs = {
+  rows: ReturnType<Storage["pendingEvents"]>
+  body: string
+  batchId: string
+  agentVersion: string
+}
+
+async function headers(args: HeaderArgs): Promise<Headers> {
+  const seqs = args.rows.map((row) => row.seq)
+  const first = args.rows[0]
+  return new Headers({
+    "content-type": "application/json",
+    "x-kilo-export-api-version": "1",
+    "x-kilo-export-schema-version": "1",
+    "x-kilo-export-agent-version": args.agentVersion,
+    "x-kilo-export-root-session-id": first.rootSessionId,
+    "x-kilo-export-session-id": first.sessionId,
+    "x-kilo-export-batch-id": args.batchId,
+    "x-kilo-export-seq-start": String(Math.min(...seqs)),
+    "x-kilo-export-seq-end": String(Math.max(...seqs)),
+    "x-kilo-export-event-count": String(args.rows.length),
+    "x-kilo-export-payload-sha256": await sha256Hex(args.body),
+    "x-kilo-export-client-sent-at": new Date().toISOString(),
+    "x-kilo-export-content-encoding": "identity",
+  })
+}
+
+function sessionRows(rows: ReturnType<Storage["pendingEvents"]>): ReturnType<Storage["pendingEvents"]> {
+  const first = rows[0]
+  if (!first) return []
+  return rows.filter((row) => row.rootSessionId === first.rootSessionId && row.sessionId === first.sessionId)
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value)
+  const hash = await crypto.subtle.digest("SHA-256", bytes)
+  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
 }

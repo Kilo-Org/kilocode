@@ -61,7 +61,7 @@ scope.onmessage = (event) => {
       inbox = new Inbox({ capacityBytes: Config.ringBufferBytes })
       uploader = new Uploader({
         storage,
-        endpoint: msg.endpoint ?? process.env.KILO_SESSION_EXPORT_INGEST ?? "https://ingest.kilosessions.ai/session-export/batch",
+        endpoint: msg.endpoint ?? process.env.KILO_SESSION_EXPORT_INGEST ?? "https://supermassive-black-hole.kiloapps.io/v1/session-export/batch",
         fetch: globalThis.fetch,
         reportTelemetry: (item) => scope.postMessage(item),
         agentVersion: msg.agentVersion ?? "unknown",
