@@ -107,6 +107,10 @@ Before marking a PR ready for review, include testing evidence in the PR templat
 
 ### Creating a Pull Request
 
+Contributor guidance exists to protect maintainer review time and keep reviews focused on work that is ready to evaluate.
+
+Follow the issue-first policy by linking the relevant issue when you open a PR. Use `Fixes #123`, `Closes #123`, or equivalent linked issue wording so reviewers can see the problem statement, discussion, and intended scope before reviewing the code change.
+
 1. Push your changes to your fork:
 
    ```bash
@@ -120,12 +124,19 @@ Before marking a PR ready for review, include testing evidence in the PR templat
 4. Select your fork and branch
 
 5. Fill out the PR template with:
-   - A clear description of the changes
-   - Any related issues
+   - Related issue link, or an explanation for why there is no existing issue
+   - What problem is being solved and why the change is needed
+   - Important implementation choices or tradeoffs reviewers cannot infer from the diff
    - Testing evidence, including commands run and results
    - Manual/local verification performed
    - Any command blocker plus substitute verification
-   - Screenshots (if applicable)
+   - Screenshots or video for visual UI changes, showing the relevant before/after or resulting state
+
+Keep the description focused on context reviewers cannot infer from the diff. Skip file-by-file summaries, placeholders, and other filler.
+
+Maintainers may close or decline review of PRs presented as review-ready at their discretion when they lack linked issue context, a clear what/why explanation, credible testing evidence, or relevant UI proof for visual UI changes.
+
+When a PR is close to this bar, addresses important work, or would benefit from further shaping, maintainers may ask for specific fixes instead of closing or declining review. Contributors may reopen or resubmit once the PR meets the documented bar.
 
 ## Contributing to the Kilo Marketplace
 

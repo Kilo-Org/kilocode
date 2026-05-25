@@ -248,6 +248,8 @@ Current required fields by issue type:
 
 ## Pull Request Expectations
 
+Contributor guidance exists to protect maintainer review time and keep reviews focused on work that is ready to evaluate.
+
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
 
@@ -265,11 +267,27 @@ If you cannot complete a relevant command, include all of the following in the P
 
 See [Testing Evidence for Pull Requests](packages/kilo-docs/pages/contributing/development-environment.md#testing-evidence-for-pull-requests) for more examples. Agent limitations, local resource constraints, OOM constraints, or an agent prompt that says to skip tests do not waive this requirement. Draft PRs may be incomplete until they are marked ready for review. Maintainers may still defer or close review at their discretion.
 
-## Issue First Policy
+Our issue-first policy asks contributors to reference an existing issue when opening a PR. This helps reviewers understand the problem statement, discussion, and intended scope before reviewing the code change.
 
-All pull requests must reference an existing issue.
+A review-ready PR description should explain:
 
-This helps reviewers understand the problem statement, discussion, and intended scope before reviewing the code change.
+- What problem is being solved
+- Why the change is needed
+- Important implementation choices or tradeoffs reviewers cannot infer from the diff
+- How the change was tested or verified
+
+Keep the description focused on context reviewers cannot infer from the diff. Skip file-by-file summaries, placeholders, and other filler.
+
+For visual UI changes, include screenshots or video showing the relevant before/after or resulting state.
+
+Maintainers may close or decline review of PRs presented as review-ready at their discretion when they lack:
+
+- Linked issue context
+- A clear what/why explanation
+- Credible testing evidence
+- Relevant UI proof for visual UI changes
+
+When a PR is close to this bar, addresses important work, or would benefit from further shaping, maintainers may ask for specific fixes instead of closing or declining review. Contributors may reopen or resubmit once the PR meets the documented bar.
 
 ## PR Titles
 
