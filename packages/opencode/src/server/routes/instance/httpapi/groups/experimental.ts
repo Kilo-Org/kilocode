@@ -1,7 +1,9 @@
 import { AccountID, OrgID } from "@/account/schema"
+import { Snapshot } from "@/snapshot" // kilocode_change
 import { MCP } from "@/mcp"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Session } from "@/session/session"
+import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_change
 import { Worktree } from "@/worktree"
 import { NonNegativeInt } from "@/util/schema"
 import { Schema, SchemaGetter } from "effect"
@@ -55,7 +57,11 @@ const QueryBoolean = Schema.Literals(["true", "false"]).pipe(
 )
 const WorktreeList = Schema.Array(Schema.String)
 export const SessionListQuery = Schema.Struct({
+  // kilocode_change start
+  projectID: Schema.optional(Schema.String),
   directory: Schema.optional(Schema.String),
+  worktrees: Schema.optional(QueryBoolean),
+  // kilocode_change end
   roots: Schema.optional(QueryBoolean),
   start: Schema.optional(Schema.NumberFromString),
   cursor: Schema.optional(Schema.NumberFromString),
@@ -63,6 +69,15 @@ export const SessionListQuery = Schema.Struct({
   limit: Schema.optional(Schema.NumberFromString),
   archived: Schema.optional(QueryBoolean),
 })
+// kilocode_change start
+export const WorktreeDiffQuery = Schema.Struct({
+  base: Schema.optional(Schema.String),
+})
+export const WorktreeDiffFileQuery = Schema.Struct({
+  base: Schema.optional(Schema.String),
+  file: Schema.String,
+})
+// kilocode_change end
 
 export const ExperimentalPaths = {
   console: "/experimental/console",
@@ -71,6 +86,9 @@ export const ExperimentalPaths = {
   tool: "/experimental/tool",
   toolIDs: "/experimental/tool/ids",
   worktree: "/experimental/worktree",
+  worktreeDiff: "/experimental/worktree/diff", // kilocode_change
+  worktreeDiffFile: "/experimental/worktree/diff/file", // kilocode_change
+  worktreeDiffSummary: "/experimental/worktree/diff/summary", // kilocode_change
   worktreeReset: "/experimental/worktree/reset",
   session: "/experimental/session",
   resource: "/experimental/resource",
@@ -174,6 +192,41 @@ export const ExperimentalApi = HttpApi.make("experimental")
             description: "Reset a worktree branch to the primary default branch.",
           }),
         ),
+        // kilocode_change start - worktree diff endpoints for agent manager
+        HttpApiEndpoint.get("worktreeDiff", ExperimentalPaths.worktreeDiff, {
+          query: WorktreeDiffQuery,
+          success: described(Schema.Array(Snapshot.FileDiff), "File diffs"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "worktree.diff",
+            summary: "Get worktree diff",
+            description: "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.",
+          }),
+        ),
+        HttpApiEndpoint.get("worktreeDiffSummary", ExperimentalPaths.worktreeDiffSummary, {
+          query: WorktreeDiffQuery,
+          success: described(Schema.Array(WorktreeDiff.Item), "Diff summary items"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "worktree.diffSummary",
+            summary: "Get worktree diff summary",
+            description: "Get lightweight file diff metadata for a worktree compared to its base branch.",
+          }),
+        ),
+        HttpApiEndpoint.get("worktreeDiffFile", ExperimentalPaths.worktreeDiffFile, {
+          query: WorktreeDiffFileQuery,
+          success: described(Schema.NullOr(WorktreeDiff.Item), "Diff detail item"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "worktree.diffFile",
+            summary: "Get worktree diff detail",
+            description: "Get full diff contents for one worktree file compared to its base branch.",
+          }),
+        ),
+        // kilocode_change end
         HttpApiEndpoint.get("session", ExperimentalPaths.session, {
           query: SessionListQuery,
           success: described(Schema.Array(Session.GlobalInfo), "List of sessions"),

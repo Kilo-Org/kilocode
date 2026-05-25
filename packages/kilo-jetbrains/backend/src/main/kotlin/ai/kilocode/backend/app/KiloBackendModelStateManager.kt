@@ -9,10 +9,6 @@ import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.nio.file.Files
@@ -29,7 +25,6 @@ class KiloBackendModelStateManager(
         private val DEFAULT_DIR = Path.of(System.getProperty("user.home"), ".local", "state", "kilo")
     }
 
-    private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
 
     private var client: OkHttpClient? = null
@@ -122,8 +117,7 @@ class KiloBackendModelStateManager(
                     return null
                 }
                 val raw = response.body?.string() ?: return null
-                val state = json.parseToJsonElement(raw).jsonObject["state"]?.jsonPrimitive?.contentOrNull
-                val dir = state?.let(Path::of) ?: DEFAULT_DIR
+                val dir = KiloCliDataParser.parsePathState(raw)?.let(Path::of) ?: DEFAULT_DIR
                 Files.createDirectories(dir)
                 dir.resolve("model.json").also { file = it }
             }

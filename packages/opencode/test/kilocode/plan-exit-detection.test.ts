@@ -5,6 +5,7 @@ import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -22,7 +23,7 @@ const model = {
 
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
-  await Instance.provide({ directory: tmp.path, fn })
+  await WithInstance.provide({ directory: tmp.path, fn })
 }
 
 async function seed(input: {

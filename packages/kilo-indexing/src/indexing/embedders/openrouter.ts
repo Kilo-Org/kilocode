@@ -25,7 +25,8 @@ interface EmbeddingItem {
 }
 
 interface OpenRouterEmbeddingResponse {
-  data: EmbeddingItem[]
+  data?: EmbeddingItem[]
+  error?: string | { code?: string | number; message?: string }
   usage?: {
     prompt_tokens?: number
     total_tokens?: number
@@ -193,10 +194,7 @@ export class OpenRouterEmbedder implements IEmbedder {
         const requestParams: any = {
           input: batchTexts,
           model: model,
-          // OpenAI package (as of v4.78.1) has a parsing issue that truncates embedding dimensions to 256
-          // when processing numeric arrays, which breaks compatibility with models using larger dimensions.
-          // By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
-          encoding_format: "base64",
+          encoding_format: "float",
         }
 
         if (this.dimensions !== undefined) {
@@ -213,8 +211,24 @@ export class OpenRouterEmbedder implements IEmbedder {
         }
 
         const response = (await this.embeddingsClient.embeddings.create(requestParams)) as OpenRouterEmbeddingResponse
+        const err = response.error
+        const msg = typeof err === "string" ? err : err?.message
+        const code = typeof err === "object" && err ? err.code : undefined
+        if (!response.data || response.data.length === 0) {
+          log.warn("OpenRouter embedder batch returned invalid response", {
+            location: "OpenRouterEmbedder:_embedBatchWithRetries",
+            model,
+            dimensions: this.dimensions,
+            provider: this.specificProvider,
+            code,
+            err: msg,
+          })
+          const invalid = new Error(msg ?? "Invalid response from OpenRouter embedding endpoint") as HttpError
+          invalid.status = typeof code === "number" ? code : 422
+          throw invalid
+        }
 
-        // Convert base64 embeddings to float32 arrays
+        // Normalize base64 embeddings if OpenRouter returns them despite the float request.
         const processedEmbeddings = response.data.map((item: EmbeddingItem) => {
           if (typeof item.embedding === "string") {
             const buffer = Buffer.from(item.embedding, "base64")
@@ -292,7 +306,7 @@ export class OpenRouterEmbedder implements IEmbedder {
         const requestParams: any = {
           input: testTexts,
           model: modelToUse,
-          encoding_format: "base64",
+          encoding_format: "float",
         }
 
         if (this.dimensions !== undefined) {
@@ -315,6 +329,18 @@ export class OpenRouterEmbedder implements IEmbedder {
 
         // Check if we got a valid response
         if (!response?.data || response.data.length === 0) {
+          const err = response?.error
+          const msg = typeof err === "string" ? err : err?.message
+          const code = typeof err === "object" && err ? err.code : undefined
+          log.warn("OpenRouter embedder validation returned invalid response", {
+            location: "OpenRouterEmbedder:validateConfiguration",
+            model: modelToUse,
+            dimensions: this.dimensions,
+            provider: this.specificProvider,
+            dataCount: response?.data?.length ?? 0,
+            code,
+            err: msg,
+          })
           return {
             valid: false,
             error: "Invalid response from OpenRouter embedding endpoint",

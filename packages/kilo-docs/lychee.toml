@@ -29,6 +29,10 @@ exclude = [
   '^https?://ai-gateway\.vercel\.sh/v1/?$',
   '^https?://api\.voyageai\.com/v1/embeddings/?$',
   '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
+  # xAI API and OAuth endpoints require request parameters or non-GET methods.
+  '^https?://api\.x\.ai/v1/?$',
+  '^https?://auth\.x\.ai/?$',
+  '^https?://auth\.x\.ai/oauth2/(authorize|device/code|token)/?$',
   'https://opencode.ai/pages/config',
   '^localhost:3000/',
   'https://tbench.ai/',

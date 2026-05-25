@@ -54,7 +54,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val style = SessionEditorStyle.current()
 
         assertTrue(panel.isVisible)
-        assertTrue(panel.isExpanded())
+        assertFalse(panel.isExpanded())
         assertEquals("Generated title", panel.titleText())
         assertEquals("$0.07", panel.costText())
         assertEquals("1%", panel.contextText())
@@ -134,6 +134,9 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val body = panel.bodyPanel()
         val timeline = panel.timelinePanel()
         val bar = panel.contextBar()
+
+        assertFalse(panel.isExpanded())
+        panel.expandButton().doClick()
 
         assertTrue(panel.isExpanded())
         assertSame(body, panel.bodyPanel())
@@ -244,26 +247,27 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
 
-        assertTrue(panel.isExpanded())
-        assertEquals("Hide session metrics", panel.expandTip())
-
-        panel.expandButton().doClick()
-        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
-
         assertFalse(panel.isExpanded())
         assertEquals("Show session metrics", panel.expandTip())
 
         panel.expandButton().doClick()
-        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2)))
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test", title = "New title")))
 
         assertTrue(panel.isExpanded())
         assertEquals("Hide session metrics", panel.expandTip())
+
+        panel.expandButton().doClick()
+        emit(ChatEventDto.MessageUpdated("ses_test", assistant(cost = 0.2)))
+
+        assertFalse(panel.isExpanded())
+        assertEquals("Show session metrics", panel.expandTip())
     }
 
     fun `test collapse persists and new header starts collapsed`() {
         val c = promptedHeader()
         val panel = SessionHeaderPanel(c, parent)
 
+        panel.expandButton().doClick()
         panel.expandButton().doClick()
 
         assertFalse(panel.isExpanded())
@@ -294,6 +298,7 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
     }
 
     fun `test hidden empty header collapse keeps saved expansion preference`() {
+        PropertiesComponent.getInstance().setValue(SessionHeaderPanel.EXPANDED_KEY, "true")
         appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
         projectRpc.state.value = workspaceReady()
         val c = controller()

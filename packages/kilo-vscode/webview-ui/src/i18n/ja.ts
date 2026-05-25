@@ -176,6 +176,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
   "model.group.favorites": "お気に入り",
+  "model.group.collapse": "{{group}} を折りたたむ",
+  "model.group.expand": "{{group}} を展開",
   "model.favorite.add": "お気に入りに追加",
   "model.favorite.remove": "お気に入りから削除",
 

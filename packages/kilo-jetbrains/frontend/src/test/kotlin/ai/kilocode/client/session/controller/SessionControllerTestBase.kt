@@ -248,6 +248,13 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         ApplicationManager.getApplication().invokeAndWait(block)
     }
 
+    protected fun <T> edt(block: () -> T): T {
+        var result: T? = null
+        ApplicationManager.getApplication().invokeAndWait { result = block() }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
+    }
+
     /** Emit a chat event into the fake RPC flow. */
     protected fun emit(event: ChatEventDto, flush: Boolean = true) {
         runBlocking { rpc.events.emit(event) }
@@ -292,6 +299,16 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             .filter { it !is SessionModelEvent.HeaderUpdated }
             .filter { it !is SessionModelEvent.SessionUpdated }
             .joinToString("\n")
+        assertEquals(expected.trimIndent().trim(), act)
+    }
+
+    protected fun assertQuestionReply(expected: String, replies: List<Triple<String, String, ai.kilocode.rpc.dto.QuestionReplyDto>>) {
+        val act = replies.joinToString("\n") { (id, dir, reply) ->
+            val answers = reply.answers.joinToString(",", "[", "]") { inner ->
+                inner.joinToString(",", "[", "]")
+            }
+            "$id $dir $answers"
+        }
         assertEquals(expected.trimIndent().trim(), act)
     }
 

@@ -1,18 +1,31 @@
 import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
+import { EffectBridge } from "@/effect/bridge" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { MCP } from "@/mcp"
 import { Project } from "@/project/project"
 import { Session } from "@/session/session"
 import { ToolRegistry } from "@/tool/registry"
 import * as EffectZod from "@/util/effect-zod"
+import { Filesystem } from "@/util/filesystem" // kilocode_change
+import { Review } from "@/kilocode/review/review" // kilocode_change
+import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_change
+import { WorktreeFamily } from "@/kilocode/worktree-family" // kilocode_change
 import { Worktree } from "@/worktree"
 import { Effect, Option } from "effect"
 import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+import path from "path" // kilocode_change
 import { InstanceHttpApi } from "../api"
-import { ConsoleSwitchPayload, SessionListQuery, ToolListQuery } from "../groups/experimental"
+import {
+  ConsoleSwitchPayload,
+  SessionListQuery,
+  ToolListQuery,
+  WorktreeDiffFileQuery,
+  WorktreeDiffQuery,
+} from "../groups/experimental"
 
 export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "experimental", (handlers) =>
   Effect.gen(function* () {
@@ -113,11 +126,67 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       return true
     })
 
+    // kilocode_change start - worktree diff endpoints for agent manager
+    const base = Effect.fn("ExperimentalHttpApi.worktreeDiffBase")(function* (input: { base?: string }) {
+      if (input.base) return input.base
+      return yield* EffectBridge.fromPromise(() => Review.getBaseBranch())
+    })
+
+    const worktreeDiff = Effect.fn("ExperimentalHttpApi.worktreeDiff")(function* (ctx: {
+      query: typeof WorktreeDiffQuery.Type
+    }) {
+      const log = Log.create({ service: "worktree-diff" })
+      const ref = yield* base(ctx.query)
+      const dir = yield* InstanceState.directory
+      log.info("computing diff", { dir, base: ref })
+      const diffs = yield* Effect.promise(() => WorktreeDiff.full({ dir, base: ref, log }))
+      return diffs.map((diff) => ({
+        file: diff.file,
+        before: diff.before,
+        after: diff.after,
+        patch: diff.patch,
+        additions: diff.additions,
+        deletions: diff.deletions,
+        status: diff.status,
+      }))
+    })
+
+    const worktreeDiffSummary = Effect.fn("ExperimentalHttpApi.worktreeDiffSummary")(function* (ctx: {
+      query: typeof WorktreeDiffQuery.Type
+    }) {
+      const log = Log.create({ service: "worktree-diff" })
+      const ref = yield* base(ctx.query)
+      const dir = yield* InstanceState.directory
+      log.info("computing diff summary", { dir, base: ref })
+      return yield* Effect.promise(() => WorktreeDiff.summary({ dir, base: ref, log }))
+    })
+
+    const worktreeDiffFile = Effect.fn("ExperimentalHttpApi.worktreeDiffFile")(function* (ctx: {
+      query: typeof WorktreeDiffFileQuery.Type
+    }) {
+      const log = Log.create({ service: "worktree-diff" })
+      const ref = yield* base(ctx.query)
+      const dir = yield* InstanceState.directory
+      log.info("computing diff detail", { dir, base: ref, file: ctx.query.file })
+      return yield* Effect.promise(() => WorktreeDiff.detail({ dir, base: ref, file: ctx.query.file, log })).pipe(
+        Effect.map((item) => item ?? null),
+      )
+    })
+    // kilocode_change end
+
     const session = Effect.fn("ExperimentalHttpApi.session")(function* (ctx: { query: typeof SessionListQuery.Type }) {
       const limit = ctx.query.limit ?? 100
+      // kilocode_change start
+      const state = yield* InstanceState.context
+      const projectID = ctx.query.worktrees && !ctx.query.projectID ? state.project.id : ctx.query.projectID
+      const directories = ctx.query.worktrees ? yield* EffectBridge.fromPromise(() => WorktreeFamily.list()) : undefined
+      const sorted = directories ? [...directories].sort((a, b) => b.length - a.length) : undefined
+      // kilocode_change end
       const sessions = Array.from(
         Session.listGlobal({
-          directory: ctx.query.directory,
+          projectID, // kilocode_change
+          directory: ctx.query.worktrees ? undefined : ctx.query.directory, // kilocode_change
+          directories, // kilocode_change
           roots: ctx.query.roots,
           start: ctx.query.start,
           cursor: ctx.query.cursor,
@@ -126,10 +195,18 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
           archived: ctx.query.archived,
         }),
       )
-      const list = sessions.length > limit ? sessions.slice(0, limit) : sessions
+      // kilocode_change start - resolve worktree folder name for each session
+      const result = sorted
+        ? sessions.map((session) => {
+            const root = sorted.find((dir) => Filesystem.contains(dir, session.directory))
+            return { ...session, worktreeName: path.basename(root ?? session.directory) }
+          })
+        : sessions
+      const list = result.length > limit ? result.slice(0, limit) : result
+      // kilocode_change end
       return HttpServerResponse.jsonUnsafe(list, {
         headers:
-          sessions.length > limit && list.length > 0
+          result.length > limit && list.length > 0 // kilocode_change
             ? { "x-next-cursor": String(list[list.length - 1].time.updated) }
             : undefined,
       })
@@ -139,17 +216,24 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       return yield* mcp.resources()
     })
 
-    return handlers
-      .handle("console", getConsole)
-      .handle("consoleOrgs", listConsoleOrgs)
-      .handle("consoleSwitch", switchConsole)
-      .handle("tool", tool)
-      .handle("toolIDs", toolIDs)
-      .handle("worktree", worktree)
-      .handle("worktreeCreate", worktreeCreate)
-      .handle("worktreeRemove", worktreeRemove)
-      .handle("worktreeReset", worktreeReset)
-      .handle("session", session)
-      .handle("resource", resource)
+    return (
+      handlers
+        .handle("console", getConsole)
+        .handle("consoleOrgs", listConsoleOrgs)
+        .handle("consoleSwitch", switchConsole)
+        .handle("tool", tool)
+        .handle("toolIDs", toolIDs)
+        .handle("worktree", worktree)
+        .handle("worktreeCreate", worktreeCreate)
+        .handle("worktreeRemove", worktreeRemove)
+        .handle("worktreeReset", worktreeReset)
+        // kilocode_change start
+        .handle("worktreeDiff", worktreeDiff)
+        .handle("worktreeDiffSummary", worktreeDiffSummary)
+        .handle("worktreeDiffFile", worktreeDiffFile)
+        // kilocode_change end
+        .handle("session", session)
+        .handle("resource", resource)
+    )
   }),
 )

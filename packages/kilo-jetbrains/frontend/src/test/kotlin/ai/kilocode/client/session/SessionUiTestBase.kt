@@ -43,6 +43,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
     protected lateinit var app: KiloAppService
     protected lateinit var workspaces: KiloWorkspaceService
     protected lateinit var rpc: FakeSessionRpcApi
+    protected lateinit var appRpc: FakeAppRpcApi
     protected lateinit var workspace: Workspace
     protected lateinit var ui: SessionUi
 
@@ -51,7 +52,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         scope = CoroutineScope(SupervisorJob())
 
         rpc = FakeSessionRpcApi()
-        val appRpc = FakeAppRpcApi().also {
+        appRpc = FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         }
         val workspaceRpc = FakeWorkspaceRpcApi().also {

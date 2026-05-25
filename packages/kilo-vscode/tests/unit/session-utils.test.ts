@@ -3,6 +3,7 @@ import {
   computeStatus,
   calcTotalCost,
   calcContextUsage,
+  calcTokenUsage,
   buildFamilyCosts,
   buildFamilyParents,
   buildFamilyLabels,
@@ -138,6 +139,35 @@ describe("calcContextUsage", () => {
     const result = calcContextUsage({ input: 100, output: 0 }, 1000)
     expect(result.tokens).toBe(100)
     expect(result.percentage).toBe(10)
+  })
+})
+
+describe("calcTokenUsage", () => {
+  it("sums assistant message input, output, and cache read tokens", () => {
+    const result = calcTokenUsage([
+      { role: "assistant", tokens: { input: 100, output: 40, reasoning: 8, cache: { read: 10, write: 5 } } },
+      { role: "assistant", tokens: { input: 25, output: 15, cache: { read: 7, write: 3 } } },
+    ])
+
+    expect(result).toEqual({ input: 125, output: 55, cached: 17 })
+  })
+
+  it("ignores user messages, missing tokens, reasoning tokens, and cache writes", () => {
+    const result = calcTokenUsage([
+      { role: "user", tokens: { input: 999, output: 999, cache: { read: 999, write: 999 } } },
+      { role: "assistant" },
+      { role: "assistant", tokens: { input: 10, output: 4, reasoning: 30, cache: { read: 2, write: 20 } } },
+    ])
+
+    expect(result).toEqual({ input: 10, output: 4, cached: 2 })
+  })
+
+  it("returns undefined when there are no displayed token counts", () => {
+    const result = calcTokenUsage([
+      { role: "assistant", tokens: { input: 0, output: 0, reasoning: 12, cache: { read: 0, write: 6 } } },
+    ])
+
+    expect(result).toBeUndefined()
   })
 })
 

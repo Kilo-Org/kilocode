@@ -1,4 +1,4 @@
-import type { IndexingStatus } from "../types/messages"
+import type { ExtensionMessage, IndexingStatus } from "../types/messages"
 
 export function formatIndexingLabel(status: IndexingStatus): string {
   if (status.state === "In Progress") {
@@ -23,4 +23,15 @@ export function indexingTone(status: IndexingStatus): "muted" | "warning" | "suc
   if (status.state === "In Progress") return "warning"
   if (status.state === "Standby") return "muted"
   return "muted"
+}
+
+export function applyIndexingStatusMessage(
+  message: ExtensionMessage,
+  setStatus: (status: IndexingStatus) => void,
+  setLoading: (value: boolean) => void,
+): boolean {
+  if (message.type !== "indexingStatusLoaded") return false
+  setStatus(message.status)
+  setLoading(false)
+  return true
 }

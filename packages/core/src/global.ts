@@ -87,6 +87,8 @@ export const layer = Layer.effect(
   Effect.sync(() => Service.of(make())),
 )
 
+export const defaultLayer = layer
+
 export const layerWith = (input: Partial<Interface>) =>
   Layer.effect(
     Service,

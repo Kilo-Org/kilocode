@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "Последняя",
   "model.group.recommended": "Рекомендуемые",
   "model.group.favorites": "Избранное",
+  "model.group.collapse": "Свернуть {{group}}",
+  "model.group.expand": "Развернуть {{group}}",
   "model.favorite.add": "Добавить в избранное",
   "model.favorite.remove": "Удалить из избранного",
   "model.provider.anthropic": "Anthropic",

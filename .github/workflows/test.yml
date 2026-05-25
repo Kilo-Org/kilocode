@@ -81,6 +81,13 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
 
+      # kilocode_change start
+      - name: Warm up Gradle wrapper
+        if: runner.os == 'Linux'
+        run: ./gradlew --version
+        working-directory: packages/kilo-jetbrains
+      # kilocode_change end
+
       - name: Run unit tests
         run: bun turbo test:ci
         env:

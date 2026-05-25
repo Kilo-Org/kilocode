@@ -8,7 +8,8 @@ import * as launch from "../../src/lsp/launch" // kilocode_change - spy on spawn
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import { Instance, type InstanceContext } from "../../src/project/instance"
+import { type InstanceContext } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { TsCheck } from "../../src/kilocode/ts-check" // kilocode_change
 
@@ -135,7 +136,7 @@ describe("lsp.spawn", () => {
     const tsgoSpy = spyOn(TsCheck, "native_tsgo").mockResolvedValue("/fake/tsgo")
 
     try {
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const result = await LSPServer.Typescript.spawn(tmp.path, fakeCtx)

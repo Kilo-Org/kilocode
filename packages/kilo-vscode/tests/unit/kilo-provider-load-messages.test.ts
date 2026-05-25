@@ -41,13 +41,20 @@ function createClient(options?: {
   messagesDeferred?: Deferred<{ data: unknown[]; response: { headers: Headers } }>
   messagesData?: unknown[]
   deleteDeferred?: Deferred<unknown>
+  sessionData?: unknown
+  sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
 }) {
   const calls: { before?: string; limit?: number }[] = []
+  const stopped: { sessionID: string; directory?: string }[] = []
   return {
     calls,
+    stopped,
     session: {
       list: async () => ({ data: [] }),
-      get: async () => ({ data: null }),
+      get: async (params: { sessionID: string; directory?: string }) => {
+        if (options?.sessionGet) return options.sessionGet(params)
+        return { data: options?.sessionData ?? null }
+      },
       status: async () => ({ data: {} }),
       messages: async (params: { before?: string; limit?: number }) => {
         calls.push({ before: params.before, limit: params.limit })
@@ -56,6 +63,12 @@ function createClient(options?: {
       },
       delete: async () => {
         if (options?.deleteDeferred) return options.deleteDeferred.promise
+        return { data: {} }
+      },
+    },
+    backgroundProcess: {
+      stopSession: async (params: { sessionID: string; directory?: string }) => {
+        stopped.push(params)
         return { data: {} }
       },
     },
@@ -97,7 +110,11 @@ function createConnection(client: ReturnType<typeof createClient>) {
 type ProviderInternals = {
   connectionState: State
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
+  currentSession: { id: string; directory?: string } | null
+  contextSessionID: string | undefined
+  sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
+  stopCurrentSessionProcesses: (next?: string) => void
   handleLoadMessages: (sid: string, opts?: { mode?: string; before?: string; limit?: number }) => Promise<void>
   handleDeleteSession: (sid: string) => Promise<void>
 }
@@ -117,6 +134,90 @@ function makeProvider(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
+  it("stops background processes for the previous session when switching sessions", async () => {
+    const client = createClient({
+      sessionData: { id: "s2", directory: "/repo/worktree", time: { created: 1, updated: 1 } },
+    })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/old" }
+
+    await internal.handleLoadMessages("s2")
+
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/old" }])
+  })
+
+  it("does not stop background processes twice for focus-mode reconcile", async () => {
+    const client = createClient({ messagesData: [mkMessage("m1", "user", 1)] })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/old" }
+
+    await internal.handleLoadMessages("s2", { mode: "focus" })
+
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/old" }])
+  })
+
+  it("ignores stale focus refreshes after switching sessions", async () => {
+    const s1 = defer<{ data: unknown }>()
+    const s2 = defer<{ data: unknown }>()
+    const client = createClient({
+      sessionGet: async (params) => {
+        if (params.sessionID === "s1") return s1.promise
+        if (params.sessionID === "s2") return s2.promise
+        return { data: null }
+      },
+    })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/old" }
+    internal.trackedSessionIds.add("s1")
+
+    await internal.handleLoadMessages("s1", { mode: "focus" })
+    const load = internal.handleLoadMessages("s2")
+    s2.resolve({ data: { id: "s2", directory: "/repo/new", time: { created: 2, updated: 2 } } })
+    await load
+    await Promise.resolve()
+    expect(internal.currentSession?.id).toBe("s2")
+
+    s1.resolve({ data: { id: "s1", directory: "/repo/old", time: { created: 1, updated: 1 } } })
+    await Promise.resolve()
+
+    expect(internal.currentSession?.id).toBe("s2")
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/old" }])
+  })
+
+  it("stops each synchronously selected session during rapid switches", async () => {
+    const messages = defer<{ data: unknown[]; response: { headers: Headers } }>()
+    const client = createClient({ messagesDeferred: messages })
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/s1" }
+    internal.contextSessionID = "s1"
+    internal.sessionDirectories.set("s2", "/repo/s2")
+
+    const s2 = internal.handleLoadMessages("s2")
+    const s3 = internal.handleLoadMessages("s3")
+
+    expect(client.stopped).toEqual([
+      { sessionID: "s1", directory: "/repo/s1" },
+      { sessionID: "s2", directory: "/repo/s2" },
+    ])
+
+    messages.resolve(mkResult([]))
+    await Promise.all([s2, s3])
+  })
+
+  it("stops the selected visible session when clearSession runs with stale currentSession", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    internal.currentSession = { id: "s1", directory: "/repo/s1" }
+    internal.contextSessionID = "s2"
+    internal.sessionDirectories.set("s2", "/repo/s2")
+
+    internal.stopCurrentSessionProcesses()
+    internal.contextSessionID = undefined
+    internal.currentSession = null
+
+    expect(client.stopped).toEqual([{ sessionID: "s2", directory: "/repo/s2" }])
+  })
+
   it("refetches the tail page on focus-mode reselection and posts a reconcile snapshot", async () => {
     // Regression: switching to an already-loaded session sent mode: "focus"
     // which only refreshed session metadata and status — not messages. If
@@ -143,9 +244,10 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
     // so the webview merges without tearing down existing reactive proxies.
     const loaded = sent.find(
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
-    ) as { mode?: string; messages: { id: string }[] } | undefined
+    ) as { mode?: string; since?: number; messages: { id: string }[] } | undefined
     expect(loaded).toBeDefined()
     expect(loaded!.mode).toBe("reconcile")
+    expect(typeof loaded!.since).toBe("number")
     expect(loaded!.messages.map((m) => m.id)).toContain("m3")
   })
 
@@ -183,6 +285,19 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
       (msg) => typeof msg === "object" && msg && (msg as { type?: unknown }).type === "messagesLoaded",
     )
     expect(loaded).toEqual([])
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo" }])
+  })
+})
+
+describe("KiloProvider.handleDeleteSession / background processes", () => {
+  it("stops session background processes in the session directory before deletion", async () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+    internal.sessionDirectories.set("s1", "/repo/worktree")
+
+    await internal.handleDeleteSession("s1")
+
+    expect(client.stopped).toEqual([{ sessionID: "s1", directory: "/repo/worktree" }])
   })
 })
 

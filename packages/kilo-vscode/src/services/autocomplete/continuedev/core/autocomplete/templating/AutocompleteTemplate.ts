@@ -1,6 +1,6 @@
 // Fill in the middle prompts
 //
-// We only expose Codestral and Mercury Edit as autocomplete models — every
+// We only expose Codestral and Mercury Edit 2 as autocomplete models — every
 // other FIM template in the upstream continuedev list is unreachable.
 
 import { CompletionOptions } from "../../index.js"

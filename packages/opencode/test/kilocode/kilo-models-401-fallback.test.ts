@@ -23,7 +23,7 @@ mock.module("opencode-anthropic-auth", () => ({ default: () => ({}) }))
 mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: () => ({}) }))
 
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ModelCache } from "../../src/provider/model-cache"
 
 const CONFIG = JSON.stringify({ $schema: "https://app.kilo.ai/config.json" })
@@ -34,7 +34,7 @@ async function withInstance<T>(fn: () => Promise<T>): Promise<T> {
       await Bun.write(path.join(dir, "kilo.json"), CONFIG)
     },
   })
-  return Instance.provide({ directory: tmp.path, fn })
+  return WithInstance.provide({ directory: tmp.path, fn })
 }
 
 test("401 from gateway sets provider as failed in ModelCache", async () => {

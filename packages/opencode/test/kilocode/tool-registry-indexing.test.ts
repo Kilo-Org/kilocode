@@ -189,24 +189,35 @@ describe("kilocode tool registry indexing", () => {
       semantic: def("semantic_search"),
       recall: def("recall"),
       manager: def("agent_manager"),
+      process: def("background_process"),
     }
 
     try {
       process.env["KILO_CLIENT"] = "cli"
-      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual(["semantic_search", "recall"])
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual([
+        "semantic_search",
+        "recall",
+        "background_process",
+      ])
       expect(
         KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, agent_manager_tool: true } }).map(
           (tool) => tool.id,
         ),
-      ).toEqual(["codebase_search", "semantic_search", "recall"])
+      ).toEqual(["codebase_search", "semantic_search", "recall", "background_process"])
 
       process.env["KILO_CLIENT"] = "vscode"
       expect(
         KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, agent_manager_tool: true } }).map(
           (tool) => tool.id,
         ),
-      ).toEqual(["codebase_search", "semantic_search", "recall", "agent_manager"])
-      expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual(["recall"])
+      ).toEqual(["codebase_search", "semantic_search", "recall", "background_process", "agent_manager"])
+      expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
+        "recall",
+        "background_process",
+      ])
+
+      process.env["KILO_CLIENT"] = "desktop"
+      expect(KiloToolRegistry.extra(tools, {}).map((tool) => tool.id)).toEqual(["semantic_search", "recall"])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
       if (prev !== undefined) process.env["KILO_CLIENT"] = prev

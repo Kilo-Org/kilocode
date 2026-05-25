@@ -18,39 +18,40 @@ import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
 
-const agents = makeRuntime(Agent.Service, Agent.defaultLayer)
-const providers = makeRuntime(Provider.Service, Provider.defaultLayer)
-const questions = makeRuntime(Question.Service, Question.defaultLayer)
-const todo = makeRuntime(Todo.Service, Todo.defaultLayer)
+const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
+const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
+const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
+const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
 
 export const PlanFollowupRuntime = {
   agent(name: string): Promise<Agent.Info | undefined> {
-    return agents.runPromise((svc) => svc.get(name))
+    return agents().runPromise((svc) => svc.get(name))
   },
   model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
-    return providers.runPromise((svc) => svc.getModel(providerID, modelID))
+    return providers().runPromise((svc) => svc.getModel(providerID, modelID))
   },
   question: {
     ask(input: Parameters<Question.Interface["ask"]>[0]) {
-      return questions.runPromise((svc) => svc.ask(input))
+      return questions().runPromise((svc) => svc.ask(input))
     },
     list() {
-      return questions.runPromise((svc) => svc.list())
+      return questions().runPromise((svc) => svc.list())
     },
     reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-      return questions.runPromise((svc) => svc.reject(requestID))
+      return questions().runPromise((svc) => svc.reject(requestID))
     },
   },
   todo: {
     get(sessionID: SessionID) {
-      return todo.runPromise((svc) => svc.get(sessionID))
+      return todo().runPromise((svc) => svc.get(sessionID))
     },
     update(input: Parameters<Todo.Interface["update"]>[0]) {
-      return todo.runPromise((svc) => svc.update(input))
+      return todo().runPromise((svc) => svc.update(input))
     },
   },
   async loop(sessionID: SessionID) {
@@ -332,8 +333,9 @@ export namespace PlanFollowup {
       model: input.model,
     })
     const session = await Session.get(input.sessionID)
+    const { WithInstance } = await import("@/project/with-instance")
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: session.directory,
       fn: async () => {
         // Create the session FIRST so session.created fires immediately while the
@@ -420,7 +422,7 @@ export namespace PlanFollowup {
             return
           }
 
-          const queue = Instance.provide({
+          const queue = WithInstance.provide({
             directory: next.directory,
             fn: async () => {
               if (ctl.signal.aborted) {

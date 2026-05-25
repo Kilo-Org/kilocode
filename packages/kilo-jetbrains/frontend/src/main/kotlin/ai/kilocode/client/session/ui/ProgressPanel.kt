@@ -62,7 +62,7 @@ class ProgressPanel(
     }
 
     override fun applyStyle(style: SessionEditorStyle) {
-        label.font = style.uiFont
+        label.font = style.regularFont
         revalidate()
         repaint()
     }

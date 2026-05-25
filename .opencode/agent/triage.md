@@ -1,7 +1,7 @@
 ---
 mode: primary
 hidden: true
-model: kilo/minimax/minimax-m2.5
+model: openai/gpt-5-nano
 color: "#44BA81"
 tools:
   "*": false
@@ -14,95 +14,38 @@ Use your github-triage tool to triage issues.
 
 This file is the source of truth for ownership/routing rules.
 
-## Labels
+Assign issues by choosing the team with the strongest overlap. The github-triage tool will assign a random member from that team.
 
-### windows
+Do not add labels to issues. Only assign an owner.
 
-Use for any issue that mentions Windows (the OS). Be sure they are saying that they are on Windows.
+When calling github-triage, pass one of these team values: tui, desktop_web, core, inference, windows, jetbrains, extension
 
-- Use if they mention WSL too
+## Teams
 
-#### perf
+### TUI
 
-Performance-related issues:
+Terminal UI issues, including rendering, keybindings, scrolling, terminal compatibility, SSH behavior, crashes in the TUI, and low-level TUI performance.
 
-- Slow performance
-- High RAM usage
-- High CPU usage
+### Desktop / Web
 
-**Only** add if it's likely a RAM or CPU issue. **Do not** add for LLM slowness.
+Desktop application and browser-based app issues, including `opencode web`, desktop-specific UI behavior, packaging, and web view problems.
 
-#### nix
+### Core
 
-**Only** add if the issue explicitly mentions nix.
+Core opencode server and harness issues, including sqlite, snapshots, memory, API behavior, agent context construction, tool execution, provider integrations, model behavior, documentation, and larger architectural features.
 
-If the issue does not mention nix, do not add nix.
+### Inference
 
-If the issue mentions nix, assign to `catrielmuller`.
+Kilo Provider, Provider implementation, and billing issues.
 
-#### core
+### Windows
 
-Use for core server issues in `packages/opencode/`, excluding `packages/opencode/src/cli/cmd/tui/`.
+Windows-specific issues, including native Windows behavior, WSL interactions, path handling, shell compatibility, and installation or runtime problems that only happen on Windows.
 
-Examples:
+### Jetbrains
 
-- LSP server behavior
-- Harness behavior (agent + tools)
-- Feature requests for server behavior
-- Agent context construction
-- API endpoints
-- Provider integration issues
-- New, broken, or poor-quality models
+Jetbrains extension related issues.
 
-#### vscode
+### Extension
 
-Use for issues related to the VS Code extension in `packages/kilo-vscode/`.
-
-#### gateway
-
-Use for issues related to the Kilo Gateway in `packages/kilo-gateway/`.
-
-When assigning to people here are the following rules:
-
-Nix:
-ONLY assign if the issue will have the "nix" label.
-
-- catrielmuller
-
-Models / Providers:
-Use for issues about model quality, provider integrations, or broken/new models.
-
-- chrarnoldus
-
-Cloud Agents:
-Use for issues about cloud agent behavior or infrastructure.
-
-- pandemicsyn
-- eshurakov
-
-Core (`packages/opencode/...`):
-
-- kevinvandijk
-- marius-kilocode
-- catrielmuller
-
-VSCode Extension (`packages/kilo-vscode/...`):
-
-- markijbema
-
-Kilo Gateway (`packages/kilo-gateway/...`):
-
-- jrf0110
-
-Windows:
-
-- catrielmuller (assign any issue that mentions Windows or is likely Windows-specific)
-
-Determinism rules:
-
-- If "nix" label is added but title + body does not mention nix/nixos, the tool will drop "nix"
-- If title + body mentions nix/nixos, assign to `catrielmuller`
-- If "vscode" label is added, assign to `markijbema`
-- If "gateway" label is added, assign to `jrf0110`
-
-In all other cases, choose the team/section with the most overlap with the issue and assign a member from that team at random.
+VSCode Extension related issues.
