@@ -18,17 +18,6 @@ Some description of HOW you achieved it. Perhaps give a high level description o
 
 ## How to Test
 
-### Command evidence
-
-<!--
-List commands you ran and results. Examples:
-- `bun run typecheck` — passed
-- `bun run test:unit -- <affected unit test>` — passed
-- `bun run extension` — launched successfully
--->
-
--
-
 ### Manual/local verification
 
 <!--
