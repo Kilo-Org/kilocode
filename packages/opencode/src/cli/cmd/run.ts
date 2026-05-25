@@ -317,7 +317,14 @@ export const RunCommand = effectCmd({
         type: "boolean",
         describe: "auto-approve all permissions (for autonomous/pipeline usage)",
         default: false,
+      })
+      // kilocode_change start - yolo mode: approve ALL permissions including subagents
+      .option("auto-approve", {
+        type: "boolean",
+        describe: "allow tools to run without permission prompts",
+        default: false,
       }),
+      // kilocode_change end
   // kilocode_change end
   handler: Effect.fn("Cli.run")(function* (args) {
     const agentSvc = yield* Agent.Service

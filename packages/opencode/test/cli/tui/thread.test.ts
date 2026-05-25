@@ -32,13 +32,14 @@ function setupTuiSpies() {
   }))
   spyOn(UI, "error").mockImplementation(() => {})
   spyOn(Timeout, "withTimeout").mockImplementation((input) => input)
-  spyOn(Network, "resolveNetworkOptions").mockResolvedValue({
+  // resolveNetworkOptions is now an Effect.fn — mock the no-config variant instead
+  spyOn(Network, "resolveNetworkOptionsNoConfig").mockReturnValue({
     mdns: false,
     port: 0,
     hostname: "127.0.0.1",
     mdnsDomain: "opencode.local",
-    cors: [],
-  })
+    cors: [] as string[],
+  } as any)
   spyOn(Win32, "win32DisableProcessedInput").mockImplementation(() => {})
   spyOn(Win32, "win32InstallCtrlCGuard").mockReturnValue(undefined)
 }

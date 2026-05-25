@@ -51,6 +51,7 @@ import {
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync" // kilocode_change
+import { TuiAutoApprove } from "@/kilocode/cli/cmd/tui/auto-approve" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { WorkspaceLabel, type WorkspaceStatus } from "../workspace-label"
 
