@@ -16,10 +16,16 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
     })
 
     const update = Effect.fn("ConfigHttpApi.update")(function* (ctx) {
-      yield* configSvc.update(ctx.payload, { dispose: false })
+      yield* configSvc.update(ctx.payload)
       yield* markInstanceForDisposal(yield* InstanceState.context)
       return ctx.payload
     })
+
+    // kilocode_change start
+    const warnings = Effect.fn("ConfigHttpApi.warnings")(function* () {
+      return yield* configSvc.warnings()
+    })
+    // kilocode_change end
 
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
       const providers = yield* providerSvc.list()
@@ -29,6 +35,10 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       }
     })
 
-    return handlers.handle("get", get).handle("update", update).handle("providers", providers)
+    return handlers
+      .handle("get", get)
+      .handle("update", update)
+      .handle("warnings", warnings)
+      .handle("providers", providers) // kilocode_change
   }),
 )

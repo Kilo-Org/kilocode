@@ -25,8 +25,8 @@ const models: AutocompleteModelDef[] = [
     temperature: 0.2,
   },
   {
-    id: "inception/mercury-edit",
-    label: "Mercury Edit (Inception)",
+    id: "inception/mercury-edit-2",
+    label: "Mercury Edit 2 (Inception)",
     provider: "Inception",
     temperature: 0,
   },
@@ -36,9 +36,17 @@ export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models
 
 export const DEFAULT_AUTOCOMPLETE_MODEL: AutocompleteModelDef = models[0]!
 
+// Map inception/mercury-edit to inception/mercury-edit-2 so users who
+// already have the old id saved in settings.json keep working without a
+// silent fallback to Codestral. Not exposed in the dropdown.
+const aliases: Record<string, string> = {
+  "inception/mercury-edit": "inception/mercury-edit-2",
+}
+
 export function getAutocompleteModel(id: string): AutocompleteModelDef {
+  const resolved = aliases[id] ?? id
   for (const m of models) {
-    if (m.id === id) return m
+    if (m.id === resolved) return m
   }
   return DEFAULT_AUTOCOMPLETE_MODEL
 }

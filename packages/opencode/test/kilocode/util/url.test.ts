@@ -68,9 +68,7 @@ describe("normalizeUrls", () => {
     })
 
     test("comma after URL in a list is not consumed", () => {
-      expect(normalizeUrls("check https://example.com, then continue")).toBe(
-        "check https://example.com, then continue",
-      )
+      expect(normalizeUrls("check https://example.com, then continue")).toBe("check https://example.com, then continue")
     })
 
     test("closing parenthesis after URL is not consumed", () => {

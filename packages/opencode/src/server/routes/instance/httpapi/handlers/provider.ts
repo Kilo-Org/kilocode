@@ -5,6 +5,7 @@ import { Provider } from "@/provider/provider"
 import { ProviderID } from "@/provider/schema"
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
+import { disposeAllInstancesAfterProviderAuthCallback } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
 import { Effect, Schema } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi"
@@ -89,6 +90,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
           code: ctx.payload.code,
         })
         .pipe(Effect.catch(() => Effect.fail(new HttpApiError.BadRequest({}))))
+      yield* disposeAllInstancesAfterProviderAuthCallback() // kilocode_change
       return true
     })
 

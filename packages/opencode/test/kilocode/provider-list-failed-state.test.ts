@@ -23,7 +23,7 @@ mock.module("opencode-anthropic-auth", () => ({ default: () => ({}) }))
 mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: () => ({}) }))
 
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ModelCache } from "../../src/provider/model-cache"
 
 const CONFIG = JSON.stringify({ $schema: "https://app.kilo.ai/config.json" })
@@ -34,7 +34,7 @@ async function withInstance<T>(fn: () => Promise<T>): Promise<T> {
       await Bun.write(path.join(dir, "kilo.json"), CONFIG)
     },
   })
-  return Instance.provide({ directory: tmp.path, fn })
+  return WithInstance.provide({ directory: tmp.path, fn })
 }
 
 test("failedProviders returns empty array when no fetch has occurred", () => {
@@ -45,7 +45,12 @@ test("failedProviders returns empty array when no fetch has occurred", () => {
 test("getFailure returns undefined when fetch succeeds", async () => {
   stubbedResult = {
     models: {
-      "test/model": { id: "test/model", name: "Test", cost: { input: 1, output: 2 }, limit: { context: 128000, output: 4096 } },
+      "test/model": {
+        id: "test/model",
+        name: "Test",
+        cost: { input: 1, output: 2 },
+        limit: { context: 128000, output: 4096 },
+      },
     },
   }
   ModelCache.clear("kilo")
@@ -81,7 +86,12 @@ test("failure state is cleared when subsequent fetch succeeds", async () => {
 
   stubbedResult = {
     models: {
-      "test/model": { id: "test/model", name: "Test", cost: { input: 1, output: 2 }, limit: { context: 128000, output: 4096 } },
+      "test/model": {
+        id: "test/model",
+        name: "Test",
+        cost: { input: 1, output: 2 },
+        limit: { context: 128000, output: 4096 },
+      },
     },
   }
   ModelCache.clear("kilo")

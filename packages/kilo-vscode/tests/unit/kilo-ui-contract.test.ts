@@ -218,6 +218,36 @@ describe("Bash tool syntax highlighting and section labels (source)", () => {
   })
 })
 
+describe("HighlightedText @mention regex fallback and click handler (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("detects @path patterns via regex when source offsets are missing", () => {
+    // detectMentions is the regex fallback for when the backend doesn't
+    // populate FilePart.source.text.{start,end}
+    expect(src).toContain("detectMentions")
+    expect(src).toMatch(/MENTION_RE/)
+  })
+
+  it("prefers source offsets over regex when both are available", () => {
+    expect(src).toMatch(/offset\.length\s*>\s*0\s*\?/)
+  })
+
+  it("file mention spans are clickable via data.openFile", () => {
+    expect(src).toContain("data-clickable")
+    expect(src).toMatch(/segment\.type\s*===\s*"file".*data\.openFile/)
+  })
+
+  it("click handler strips @ prefix before calling openFile", () => {
+    expect(src).toMatch(/segment\.text\.replace\(\/\^@\//)
+  })
+
+  it("escapeHtml is imported from shared util, not duplicated", () => {
+    expect(src).toMatch(/import.*escapeHtml.*from.*util\/escape-html/)
+    // Must NOT contain a local function definition
+    expect(src).not.toMatch(/function escapeHtml/)
+  })
+})
+
 describe("BasicTool export contract (runtime)", () => {
   it("BasicTool and GenericTool are exported from basic-tool", () => {
     const result = check(`

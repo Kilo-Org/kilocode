@@ -14,6 +14,7 @@ import { Config } from "@/config/config"
 import { NotFoundError } from "@/storage/storage"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { Effect, Layer, Context, Schema } from "effect"
+import * as DateTime from "effect/DateTime"
 import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow, usable } from "./overflow"
 import { makeRuntime } from "@/effect/run-service"
@@ -21,6 +22,8 @@ import { fn } from "@/util/fn"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloCompactionPayloadRecovery } from "@/kilocode/session/compaction-payload-recovery" // kilocode_change
 import { KiloCompactionChunks } from "@/kilocode/session/compaction-chunks" // kilocode_change
+import { EventV2 } from "@/v2/event"
+import { SessionEvent } from "@/v2/session-event"
 
 const log = Log.create({ service: "session.compaction" })
 
@@ -302,7 +305,10 @@ export const layer: Layer.Layer<
     // goes backwards through parts until there are PRUNE_PROTECT tokens worth of tool
     // calls, then erases output of older tool calls to free context space
     // kilocode_change start - preserve normal opt-in pruning, but allow payload/compaction cleanup by default
-    const prune = Effect.fn("SessionCompaction.prune")(function* (input: { sessionID: SessionID; reason?: PruneReason }) {
+    const prune = Effect.fn("SessionCompaction.prune")(function* (input: {
+      sessionID: SessionID
+      reason?: PruneReason
+    }) {
       const cfg = yield* config.get()
       const reason = input.reason ?? "normal"
       if (cfg.compaction?.prune === false) return
@@ -469,7 +475,10 @@ export const layer: Layer.Layer<
       // kilocode_change end
 
       // kilocode_change start - fallback to chunked compaction when the first summary overflows
-      const fallback = KiloCompactionChunks.eligible({ result, error: processor.message.error ?? processor.compactError?.() })
+      const fallback = KiloCompactionChunks.eligible({
+        result,
+        error: processor.message.error ?? processor.compactError?.(),
+      })
         ? yield* KiloCompactionChunks.process({
             processors,
             session,
@@ -504,7 +513,8 @@ export const layer: Layer.Layer<
         })
       }
 
-      if (fallback === "continue" && input.auto) { // kilocode_change
+      if (fallback === "continue" && input.auto) {
+        // kilocode_change
         if (replay) {
           // kilocode_change start - compact oversized replay turns instead of looping into replay overflow
           replay = yield* KiloCompactionChunks.replay({
@@ -607,7 +617,19 @@ export const layer: Layer.Layer<
 
       // kilocode_change start - compaction already invalidates cache, so collapse stale tool outputs too
       if (processor.message.error) return "stop"
-      if (fallback === "continue") { // kilocode_change
+      if (fallback === "continue") {
+        const summary = summaryText(
+          (yield* session.messages({ sessionID: input.sessionID })).find((item) => item.info.id === msg.id) ?? {
+            info: msg,
+            parts: [],
+          },
+        )
+        EventV2.run(SessionEvent.Compaction.Ended.Sync, {
+          sessionID: input.sessionID,
+          timestamp: DateTime.makeUnsafe(Date.now()),
+          text: summary ?? "",
+          include: selected.tail_start_id,
+        })
         yield* prune({ sessionID: input.sessionID, reason: "post-compaction" })
         yield* bus.publish(Event.Compacted, { sessionID: input.sessionID })
       }
@@ -641,6 +663,11 @@ export const layer: Layer.Layer<
       // kilocode_change start - keep auto-compaction markers visible during queued turns
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       // kilocode_change end
+      EventV2.run(SessionEvent.Compaction.Started.Sync, {
+        sessionID: input.sessionID,
+        timestamp: DateTime.makeUnsafe(Date.now()),
+        reason: input.auto ? "auto" : "manual",
+      })
     })
 
     return Service.of({
@@ -666,11 +693,13 @@ export const defaultLayer = Layer.suspend(() =>
 
 const { runPromise } = makeRuntime(Service, defaultLayer)
 
-export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: Provider.Model }) { // kilocode_change
+export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: Provider.Model }) {
+  // kilocode_change
   return runPromise((svc) => svc.isOverflow(input))
 }
 
-export async function prune(input: { sessionID: SessionID; reason?: PruneReason }) { // kilocode_change
+export async function prune(input: { sessionID: SessionID; reason?: PruneReason }) {
+  // kilocode_change
   return runPromise((svc) => svc.prune(input))
 }
 

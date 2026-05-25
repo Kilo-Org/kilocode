@@ -249,7 +249,15 @@ be broken. Check every auto-merged file for:
   files changed. Note that this tool compares against the merge base via `HEAD`
   and will be silent until the merge commit lands
 - other CI guards that touched files imply (knip for `kilo-vscode/`,
-  `check-kilocode-change`, source-links, visual regression)
+  `check-kilocode-change`, source-links, visual regression,
+  `script/check-forbidden-strings.ts`)
+- if you encounter a hardcoded upstream URL, repo path, or attribution string
+  during conflict resolution that obviously shouldn't ship in Kilo (e.g. another
+  `https://opencode.ai/...` link, an `anomalyco/opencode` reference, an
+  attribution header naming "opencode"), suggest adding a literal pattern for
+  it to `script/check-forbidden-strings.ts` in the merge summary so future
+  merges catch it automatically. Don't add it silently mid-merge — flag it for
+  the user.
 
 ### 9. Commit with the standard message
 

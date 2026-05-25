@@ -1,6 +1,7 @@
 [install]
 exact = true
 minimumReleaseAge = 410520 # seconds (~4.75 days / ~114 hours)
+minimumReleaseAgeExcludes = ["mermaid", "@mermaid-js/parser"]
 
 [test]
 root = "./do-not-run-tests-from-root"

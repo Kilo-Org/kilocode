@@ -65,7 +65,7 @@ const seed = Effect.fn("NestedTaskToolTest.seed")(function* () {
 
 function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void }): TaskPromptOps {
   return {
-    cancel() {},
+    cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     background: () => Effect.void,
     prompt: (input) =>

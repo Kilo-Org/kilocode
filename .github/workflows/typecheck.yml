@@ -17,5 +17,13 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      # kilocode_change end
+
       - name: Run typecheck
         run: bun typecheck

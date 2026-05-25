@@ -52,8 +52,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var recentFailures = 0
     var recentGate: CompletableDeferred<Unit>? = null
 
-    /** Local sessions returned by [list]. */
-    val listed = mutableListOf<SessionDto>()
+    /** Local sessions returned by [list]. Accessed from concurrent coroutines in delete tests. */
+    val listed = java.util.concurrent.CopyOnWriteArrayList<SessionDto>()
 
     /** Cloud sessions returned by [cloudSessions]. */
     val cloud = mutableListOf<CloudSessionDto>()
@@ -85,7 +85,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
     val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
     val questionRejects = mutableListOf<Pair<String, String>>()
-    val deletes = mutableListOf<Pair<String, String>>()
+    val deletes = java.util.concurrent.CopyOnWriteArrayList<Pair<String, String>>()
     var deleteGate: CompletableDeferred<Unit>? = null
     val renames = mutableListOf<Triple<String, String, String>>()
     var renameThrows: Exception? = null

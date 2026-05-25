@@ -29,6 +29,11 @@ type Audio = {
   language?: string
 }
 
+type Args = {
+  pipe?: string[]
+  input: string[]
+}
+
 let active: Recording | undefined
 let starting: string | undefined
 
@@ -119,13 +124,15 @@ async function waitForStart(state: Recording): Promise<void> {
   })
 }
 
-async function startWithArgs(bin: string, file: string, input: Input, args: string[][]): Promise<Recording> {
+async function startWithArgs(bin: string, file: string, input: Input, args: Args[]): Promise<Recording> {
   const [first, ...rest] = args
   if (!first) throw new Error(`Unsupported platform for speech input: ${process.platform}`)
 
-  const proc = spawn(bin, ["-y", ...first, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-f", "wav", file], {
-    stdio: ["pipe", "ignore", "pipe"],
-  })
+  const proc = first.pipe
+    ? pipeProcess(first.pipe, bin, file)
+    : spawn(bin, ["-y", ...first.input, "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", "-f", "wav", file], {
+        stdio: ["pipe", "ignore", "pipe"],
+      })
   const state: Recording = { ...input, file, proc, stderr: [], stopped: false }
   active = state
 
@@ -149,6 +156,48 @@ async function startWithArgs(bin: string, file: string, input: Input, args: stri
     if (rest.length === 0) throw err
     return startWithArgs(bin, file, input, rest)
   }
+}
+
+function pipeProcess(pipe: string[], bin: string, file: string): ChildProcess {
+  const source = spawn("pw-record", pipe, { stdio: ["ignore", "pipe", "pipe"] })
+  const proc = spawn(
+    bin,
+    [
+      "-y",
+      "-f",
+      "s16le",
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-i",
+      "pipe:0",
+      "-acodec",
+      "pcm_s16le",
+      "-ar",
+      "16000",
+      "-ac",
+      "1",
+      "-f",
+      "wav",
+      file,
+    ],
+    {
+      stdio: ["pipe", "ignore", "pipe"],
+    },
+  )
+
+  if (source.stdout && proc.stdin) source.stdout.pipe(proc.stdin)
+  source.on("error", (err) => proc.emit("error", err))
+  source.stderr?.on("data", (data: Buffer) => proc.stderr?.emit("data", data))
+  source.once("exit", () => {
+    if (proc.stdin?.writable) proc.stdin.end()
+  })
+  proc.once("exit", () => {
+    if (!source.killed) source.kill("SIGTERM")
+  })
+
+  return proc
 }
 
 async function stopProcess(state: Recording): Promise<void> {
@@ -226,24 +275,33 @@ function platformPaths(): string[] {
   return ["/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg", "/home/linuxbrew/.linuxbrew/bin/ffmpeg"]
 }
 
-async function inputArgSets(bin: string): Promise<string[][]> {
-  if (process.platform === "darwin") return [["-f", "avfoundation", "-i", ":default"]]
-  if (process.platform === "linux")
+async function inputArgSets(bin: string): Promise<Args[]> {
+  if (process.platform === "darwin") return [{ input: ["-f", "avfoundation", "-i", ":default"] }]
+  if (process.platform === "linux") {
+    const device = process.env.KILO_FFMPEG_AUDIO_DEVICE
+    if (device)
+      return [
+        { pipe: ["--target", device, "--format", "s16", "--rate", "16000", "--channels", "1", "-"], input: [] },
+        { input: ["-f", "pulse", "-i", device] },
+        { input: ["-f", "alsa", "-i", device] },
+      ]
     return [
-      ["-f", "pulse", "-i", "default"],
-      ["-f", "alsa", "-i", "default"],
+      { pipe: ["--format", "s16", "--rate", "16000", "--channels", "1", "-"], input: [] },
+      { input: ["-f", "pulse", "-i", "default"] },
+      { input: ["-f", "alsa", "-i", "default"] },
     ]
+  }
   if (process.platform === "win32") return await windowsInputArgSets(bin)
   return []
 }
 
-async function windowsInputArgSets(bin: string): Promise<string[][]> {
+async function windowsInputArgSets(bin: string): Promise<Args[]> {
   const configured = process.env.KILO_FFMPEG_AUDIO_DEVICE
-  if (configured) return [["-f", "dshow", "-i", `audio=${configured}`]]
+  if (configured) return [{ input: ["-f", "dshow", "-i", `audio=${configured}`] }]
 
   const devices = await listDshowAudioDevices(bin)
   if (devices.length === 0) throw new Error("No Windows audio input devices found for speech input")
-  return devices.map((device) => ["-f", "dshow", "-i", `audio=${device}`])
+  return devices.map((device) => ({ input: ["-f", "dshow", "-i", `audio=${device}`] }))
 }
 
 async function listDshowAudioDevices(bin: string): Promise<string[]> {
@@ -266,9 +324,18 @@ function processOutput(err: unknown): string {
 }
 
 function summary(state: Recording, fallback: string): string {
-  const stderr = state.stderr.join("\n").trim()
+  const stderr = cleanOutput(state.stderr.join("\n"))
   if (!stderr) return fallback
   return `${fallback}: ${stderr.slice(-800)}`
+}
+
+export function cleanOutput(raw: string): string {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^(ffmpeg version|built with|configuration:|lib[a-z]+\s+\d)/i.test(line))
+  return lines.join("\n").trim()
 }
 
 async function removeFile(file: string): Promise<void> {

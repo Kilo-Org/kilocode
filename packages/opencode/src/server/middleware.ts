@@ -13,6 +13,8 @@ import { compress } from "hono/compress"
 import * as KiloServer from "@/kilocode/server/server" // kilocode_change
 import * as ServerBackend from "./backend"
 import { isAllowedCorsOrigin, type CorsOptions } from "./cors"
+import { isPtyConnectPath, PTY_CONNECT_TICKET_QUERY } from "./shared/pty-ticket"
+import { isPublicUIPath } from "./shared/public-ui"
 
 const log = Log.create({ service: "server" })
 
@@ -45,6 +47,8 @@ export const AuthMiddleware: MiddlewareHandler = (c, next) => {
   if (c.req.method === "OPTIONS") return next()
   const password = Flag.KILO_SERVER_PASSWORD
   if (!password) return next()
+  if (isPublicUIPath(c.req.method, c.req.path)) return next()
+  if (isPtyConnectPath(c.req.path) && c.req.query(PTY_CONNECT_TICKET_QUERY)) return next()
   const username = Flag.KILO_SERVER_USERNAME ?? "kilo" // kilocode_change
 
   if (c.req.query("auth_token")) c.req.raw.headers.set("authorization", `Basic ${c.req.query("auth_token")}`)
@@ -59,6 +63,7 @@ export function LoggerMiddleware(backendAttributes: ServerBackend.Attributes): M
     const attributes = {
       method: c.req.method,
       path: c.req.path,
+      // If this logger grows full-URL fields, redact auth_token and ticket query params.
       ...backendAttributes,
     }
     log.info("request", attributes)

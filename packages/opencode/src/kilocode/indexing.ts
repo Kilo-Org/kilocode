@@ -1,5 +1,4 @@
 import z from "zod"
-import { Schema } from "effect"
 import path from "path"
 import {
   CodeIndexManager,
@@ -8,22 +7,17 @@ import {
 } from "@kilocode/kilo-indexing/engine"
 import { toIndexingConfigInput, type IndexingConfig } from "@kilocode/kilo-indexing/config"
 import { hasIndexingPlugin } from "@kilocode/kilo-indexing/detect"
-import {
-  IndexingStatus,
-  INDEXING_STATUS_STATES,
-  disabledIndexingStatus,
-  normalizeIndexingStatus,
-} from "@kilocode/kilo-indexing/status"
+import { IndexingStatus, disabledIndexingStatus, normalizeIndexingStatus } from "@kilocode/kilo-indexing/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
-import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
 import { Auth } from "@/auth"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
+import { Event as IndexingEvent } from "./indexing-event"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
 
@@ -184,19 +178,6 @@ export namespace KiloIndexing {
     })
   }
 
-  // Mirror of IndexingStatus using Effect Schema for BusEvent.define, which
-  // requires a Schema.Top. The zod form above is kept for consumers that still
-  // depend on the z.infer-derived type.
-  const StateSchema = Schema.Literals(INDEXING_STATUS_STATES).annotate({ identifier: "IndexingStatusState" })
-
-  const StatusSchema = Schema.Struct({
-    state: StateSchema,
-    message: Schema.String,
-    processedFiles: Schema.Number,
-    totalFiles: Schema.Number,
-    percent: Schema.Number,
-  }).annotate({ identifier: "IndexingStatus" })
-
   type Entry = {
     manager?: CodeIndexManager
     current(): Status
@@ -213,12 +194,7 @@ export namespace KiloIndexing {
     disposed?: boolean
   }
 
-  export const Event = BusEvent.define(
-    "indexing.status",
-    Schema.Struct({
-      status: StatusSchema,
-    }),
-  )
+  export const Event = IndexingEvent
 
   const cache = new Map<string, Cache>()
 
@@ -227,7 +203,6 @@ export namespace KiloIndexing {
       await Bus.publish(Event, { status: current() })
     }
 
-    await publish()
     return {
       current,
       publish,

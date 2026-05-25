@@ -134,7 +134,6 @@ const edges: Edge[] = [
     type: "smoothstep",
     style: { strokeWidth: 2, stroke: "#888", strokeDasharray: "5 3" },
   },
-
 ]
 
 export const wantedLifecycle: DiagramDefinition = {

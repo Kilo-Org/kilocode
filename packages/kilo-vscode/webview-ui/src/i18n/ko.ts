@@ -180,6 +180,8 @@ export const dict = {
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
+  "model.group.collapse": "{{group}} 접기",
+  "model.group.expand": "{{group}} 펼치기",
   "model.favorite.add": "즐겨찾기에 추가",
   "model.favorite.remove": "즐겨찾기에서 제거",
 
@@ -1593,4 +1595,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "일치하는 브랜치 없음",
   "diffViewer.baseBranch.loading": "브랜치 로딩 중…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "계획이 준비되었습니다:",
 }

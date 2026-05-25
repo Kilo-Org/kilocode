@@ -22,6 +22,11 @@ type Meta = {
   truncated: boolean
 }
 
+function fill(template: string, args: string) {
+  if (template.includes("$ARGUMENTS")) return template.replaceAll("$ARGUMENTS", args)
+  return args ? `${template}\n\n${args}` : template
+}
+
 /**
  * If prompt starts with `/`, treat it as a slash-command reference.
  * Resolve the command template and return its content so the LLM can
@@ -29,7 +34,7 @@ type Meta = {
  * message or trying to dispatch a command on the same session (which
  * would deadlock).
  */
-async function resolve(prompt: string): Promise<string> {
+export async function resolvePrompt(prompt: string): Promise<string> {
   if (!prompt.startsWith("/")) return prompt
 
   const name = prompt.slice(1).split(/\s/, 1)[0]
@@ -46,7 +51,7 @@ async function resolve(prompt: string): Promise<string> {
   try {
     const template = await cmd.template
     log.info("resolved command template", { name, length: template.length })
-    return args ? `${template}\n\n${args}` : template
+    return fill(template, args)
   } catch (err) {
     log.warn("failed to resolve command template", { name, err })
     return prompt
@@ -113,7 +118,7 @@ export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
           }
         }
 
-        const resolved = await resolve(action.prompt)
+        const resolved = await resolvePrompt(action.prompt)
 
         const metadata: Meta = {
           accepted: action,

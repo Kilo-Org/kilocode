@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalet",
   "model.group.favorites": "Favoritter",
+  "model.group.collapse": "Skjul {{group}}",
+  "model.group.expand": "Vis {{group}}",
   "model.favorite.add": "Føj til favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
 
@@ -1614,4 +1616,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Planen er klar:",
 }

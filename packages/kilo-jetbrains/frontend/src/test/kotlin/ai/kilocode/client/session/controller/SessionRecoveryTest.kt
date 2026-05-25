@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
@@ -110,7 +112,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
     fun `test busy status is seeded from statuses map`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("busy"))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -119,7 +121,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [busy] [considering next steps]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
@@ -131,7 +133,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             next = 5000L,
         ))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -140,7 +142,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [retry] [Rate limited]
             """,
-            m, show = false,
+            m, show = true,
         )
         val state = m.model.state as SessionState.Retry
         assertEquals(3, state.attempt)
@@ -154,7 +156,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             requestID = "req_xyz",
         ))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -163,7 +165,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [offline] [No network]
             """,
-            m, show = false,
+            m, show = true,
         )
         assertEquals("req_xyz", (m.model.state as SessionState.Offline).requestId)
     }
@@ -171,7 +173,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
     fun `test idle status in map leaves controller in Idle`() {
         rpc.statuses.value = mapOf("ses_test" to SessionStatusDto("idle"))
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -180,14 +182,14 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [idle]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
     fun `test missing status entry leaves controller in Idle`() {
         rpc.statuses.value = emptyMap()
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -196,7 +198,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             """
             [code] [kilo/gpt-5] [idle]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 
@@ -211,7 +213,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -229,8 +231,109 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
             [code] [kilo/gpt-5] [awaiting-permission]
             """,
-            m, show = false,
+            m, show = true,
         )
+    }
+
+    // ------ Child session permission recovery from history ------
+
+    fun `test history with task part and pending child permission recovers to AwaitingPermission`() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                info = msg("msg1", "ses_test", "assistant"),
+                parts = listOf(
+                    PartDto(
+                        id = "part_task",
+                        sessionID = "ses_test",
+                        messageID = "msg1",
+                        type = "tool",
+                        tool = "task",
+                        metadata = mapOf("sessionId" to "ses_child"),
+                    ),
+                ),
+            )
+        )
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "child_perm_1",
+                sessionID = "ses_child",
+                permission = "read",
+                patterns = listOf("*.json"),
+            )
+        )
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertEquals("child_perm_1", perm.id)
+        assertEquals("ses_child", perm.sessionId)
+    }
+
+    fun `test pending child permission from unrelated session is ignored`() {
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "perm_unrelated",
+                sessionID = "ses_other_child",
+                permission = "read",
+                patterns = emptyList(),
+            )
+        )
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        // No task part linking ses_other_child — its permissions must be ignored
+        assertEquals(SessionState.Idle, m.model.state)
+    }
+
+    fun `test root pending permission takes priority over child pending permission`() {
+        rpc.history.add(
+            MessageWithPartsDto(
+                info = msg("msg1", "ses_test", "assistant"),
+                parts = listOf(
+                    PartDto(
+                        id = "part_task",
+                        sessionID = "ses_test",
+                        messageID = "msg1",
+                        type = "tool",
+                        tool = "task",
+                        metadata = mapOf("sessionId" to "ses_child"),
+                    ),
+                ),
+            )
+        )
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "root_perm",
+                sessionID = "ses_test",
+                permission = "edit",
+                patterns = listOf("*.kt"),
+            )
+        )
+        rpc.pendingPermissionList.add(
+            PermissionRequestDto(
+                id = "child_perm",
+                sessionID = "ses_child",
+                permission = "read",
+                patterns = listOf("*.json"),
+            )
+        )
+
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        projectRpc.state.value = workspaceReady()
+        val m = controller("ses_test")
+        flush()
+
+        // Root recovery runs first and sets AwaitingPermission for root perm
+        assertTrue(m.model.state is SessionState.AwaitingPermission)
+        val perm = (m.model.state as SessionState.AwaitingPermission).permission
+        assertEquals("root_perm", perm.id)
     }
 
     fun `test pending question overrides a seeded retry status`() {
@@ -243,7 +346,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
             )
         )
 
-        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY)
+        appRpc.state.value = ai.kilocode.rpc.dto.KiloAppStateDto(ai.kilocode.rpc.dto.KiloAppStatusDto.READY, config = ai.kilocode.rpc.dto.ConfigDto(model = "kilo/gpt-5"))
         projectRpc.state.value = workspaceReady()
         val m = controller("ses_test")
         flush()
@@ -259,7 +362,7 @@ class SessionRecoveryTest : SessionControllerTestBase() {
 
             [code] [kilo/gpt-5] [awaiting-question]
             """,
-            m, show = false,
+            m, show = true,
         )
     }
 }
