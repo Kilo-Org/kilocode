@@ -46,7 +46,7 @@ val ver = if (release) checked(
 
 val notes = providers.gradleProperty("kilo.changeNotes").orElse("Release candidate build.")
 val channel = providers.gradleProperty("kilo.channel").map { it.trim() }.orElse("default")
-val splitPort = providers.gradleProperty("kilo.splitModeServerPort").map(::port).orElse(providers.provider(::fallback))
+val splitPort = providers.gradleProperty("kilo.splitModeServerPort").orNull?.let(::port) ?: fallback()
 val isolated = providers.gradleProperty("kilo.dev.storage.isolated").map { it.toBoolean() }.orElse(false)
 val worktreeRoot = providers.gradleProperty("kilo.dev.worktree.root").orElse(
     providers.provider { rootProject.layout.projectDirectory.asFile.parentFile.parentFile.canonicalPath }

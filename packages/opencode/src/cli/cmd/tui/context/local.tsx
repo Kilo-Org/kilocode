@@ -464,21 +464,19 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       },
     }
 
-    // kilocode_change - validate configured agent model when agent changes
     createEffect(() => {
       // kilocode_change start - configured models resolve directly without persistence
       if (!model.ready) return
       const value = agent.current()
-      if (!value) return // guard against empty agent list during org switch
-      if (!value.model) return
+      if (!value?.model) return
       if (isModelValid(value.model)) return
       toast.show({
         variant: "warning",
         message: `Agent ${value.name}'s configured model ${value.model.providerID}/${value.model.modelID} is not valid`,
         duration: 3000,
       })
-      // kilocode_change end
     })
+    // kilocode_change end
 
     const result = {
       model,

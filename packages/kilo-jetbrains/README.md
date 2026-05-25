@@ -92,6 +92,8 @@ Production packaging still requires running `bun run build:production` so all pl
 
 Use the checked-in `Run IDE (Backend)` run configuration (or `./gradlew runIdeBackend`) to launch just the backend half of a split-mode session. It prepares the local-platform CLI binary automatically when `backend/build/generated/cli/cli/` does not contain the expected binary.
 
+If `Run IDE (Backend)` exits shortly after startup, check for an orphaned Java process from a previous backend run and kill it before restarting the backend.
+
 Use `Run IDE (Split Mode)` to launch both halves at once (composes `Run IDE (Backend)` + `Run IDE (Frontend)`).
 
 ### Backend Gradle properties

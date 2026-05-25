@@ -248,6 +248,13 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         ApplicationManager.getApplication().invokeAndWait(block)
     }
 
+    protected fun <T> edt(block: () -> T): T {
+        var result: T? = null
+        ApplicationManager.getApplication().invokeAndWait { result = block() }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
+    }
+
     /** Emit a chat event into the fake RPC flow. */
     protected fun emit(event: ChatEventDto, flush: Boolean = true) {
         runBlocking { rpc.events.emit(event) }

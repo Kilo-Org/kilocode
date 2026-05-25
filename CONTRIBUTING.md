@@ -42,12 +42,72 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 ## Developing Kilo CLI
 
 - **Requirements:** Bun 1.3.13+, Java 21 (see [Prerequisites](#prerequisites) above)
-- Install dependencies and start the dev server from the repo root:
+- Install dependencies and start the CLI from the repo root:
 
   ```bash
   bun install
   bun dev
   ```
+
+  `bun dev` and `bun run dev` both run the local CLI. For the VS Code extension, use `bun run extension`.
+
+## Common Checks
+
+From the repo root:
+
+```bash
+bun install
+bun run lint
+bun run typecheck
+```
+
+`bun run typecheck` wraps `bun turbo typecheck`. Use `bun turbo typecheck --force` if you need to bypass the Turbo cache.
+
+Do **not** run `bun test` from the repo root. The root test script intentionally exits with failure so tests run from the package that owns them.
+
+### CLI checks
+
+From `packages/opencode/`:
+
+```bash
+bun run typecheck
+bun test
+bun test ./path/to/file.test.ts
+```
+
+For backend/API validation, see [`TESTING.md`](./TESTING.md). It covers starting the local backend with `bun dev serve` and making `curl` requests against it. After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from the repo root to regenerate `packages/sdk/js/`.
+
+### VS Code extension checks
+
+From `packages/kilo-vscode/`:
+
+```bash
+bun run typecheck
+bun run lint
+bun run test:unit
+bun run test
+bun run compile
+bun run package
+```
+
+### Documentation checks
+
+From the repo root:
+
+```bash
+bun run --filter @kilocode/kilo-docs test
+bun run --filter @kilocode/kilo-docs build
+bun run --filter @kilocode/kilo-docs dev
+```
+
+For manual docs validation, run the docs site locally, preview the affected page, and check changed links and rendered content.
+
+### Guardrails
+
+- User-facing changes usually need a changeset (`bunx changeset add` or a file under `.changeset/`).
+- After changing server endpoints, regenerate the SDK with `./script/generate.ts`.
+- After adding or changing guarded URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root.
+- When editing shared `packages/opencode/` files, keep Kilo changes small and mark Kilo-only edits with `// kilocode_change` for a single line or `// kilocode_change start` / `// kilocode_change end` for a block. Do not add these markers inside `kilocode`-named paths.
 
 ### Developing the VS Code Extension
 

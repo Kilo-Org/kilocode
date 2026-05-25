@@ -11,10 +11,12 @@ import ai.kilocode.backend.app.ProfileResult
 import ai.kilocode.jetbrains.api.model.AgentConfig
 import ai.kilocode.jetbrains.api.model.Config
 import ai.kilocode.jetbrains.api.model.ConfigAgent
+import ai.kilocode.jetbrains.api.model.KiloProfile200Response
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.KiloAppRpcApi
 import ai.kilocode.rpc.dto.ConfigWarningDto
+import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -24,6 +26,9 @@ import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.ProfileBalanceDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileOrganizationDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.flow.Flow
@@ -63,6 +68,17 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
 
     override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto = app.models.variant(update)
 
+    override suspend fun refreshProfile(): ProfileDto? = app.refreshProfile()?.let(::profileDto)
+
+    override suspend fun startLogin(directory: String?): DeviceAuthDto = app.startLogin(directory)
+
+    override suspend fun completeLogin(directory: String?): ProfileDto? = app.completeLogin(directory)?.let(::profileDto)
+
+    override suspend fun logout(): Boolean = app.logout()
+
+    override suspend fun setOrganization(organizationId: String?): ProfileDto? =
+        app.setOrganization(organizationId)?.let(::profileDto)
+
     private fun dto(state: KiloAppState): KiloAppStateDto =
         appStateDto(state)
 }
@@ -85,6 +101,7 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             ),
             warnings = state.data.warnings.map(::warning),
             config = config(state.data.config),
+            profile = state.data.profile?.let(::profileDto),
         )
         is KiloAppState.Error -> KiloAppStateDto(
             status = KiloAppStatusDto.ERROR,
@@ -92,6 +109,16 @@ internal fun appStateDto(state: KiloAppState): KiloAppStateDto =
             errors = state.errors.map(::error),
         )
     }
+
+internal fun profileDto(p: KiloProfile200Response): ProfileDto = ProfileDto(
+    email = p.profile.email,
+    name = p.profile.name,
+    organizations = p.profile.organizations.orEmpty().map { org ->
+        ProfileOrganizationDto(id = org.id, name = org.name, role = org.role)
+    },
+    balance = p.balance?.let { ProfileBalanceDto(balance = it.balance) },
+    currentOrgId = p.currentOrgId,
+)
 
 private fun progress(p: LoadProgress) = LoadProgressDto(
     config = p.config,

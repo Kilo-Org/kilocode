@@ -1,5 +1,27 @@
 # @kilocode/cli
 
+## 7.3.9
+
+### Minor Changes
+
+- [#10500](https://github.com/Kilo-Org/kilocode/pull/10500) [`4ef3717`](https://github.com/Kilo-Org/kilocode/commit/4ef371768a1b8cc2cea895339b46d4a1322a6738) - Support xAI Grok OAuth and device-code login for SuperGrok users.
+
+### Patch Changes
+
+- [#10510](https://github.com/Kilo-Org/kilocode/pull/10510) [`c076058`](https://github.com/Kilo-Org/kilocode/commit/c076058bfcbd4f561abc634f3aa109dee598f396) - Use the fallback logo in old Windows terminal emulators while keeping the Unicode logo available over SSH.
+
+- [#9951](https://github.com/Kilo-Org/kilocode/pull/9951) [`0d12909`](https://github.com/Kilo-Org/kilocode/commit/0d12909a9edb49482365d826d0d91e908d40eb24) - Support optional review focus for `/local-review` and `/local-review-uncommitted`, optional base selection for `/local-review`, and focus both prompts on high-confidence security, performance, business logic, deploy safety, duplication, and dead-code findings.
+
+- [#10510](https://github.com/Kilo-Org/kilocode/pull/10510) [`656572c`](https://github.com/Kilo-Org/kilocode/commit/656572c2cfeff16034769381acfb60f9f85091a1) - Avoid leaving mouse and advanced keyboard modes enabled after exiting the TUI in mintty and MINGW terminals.
+
+## 7.3.8
+
+### Patch Changes
+
+- [#8403](https://github.com/Kilo-Org/kilocode/pull/8403) [`42844e5`](https://github.com/Kilo-Org/kilocode/commit/42844e505475650c16f92251421ad792c6429184) Thanks [@saschabuehrle](https://github.com/saschabuehrle)! - Accept `env` as an alias for `environment` in local MCP server configuration. Configurations using the more common `env` key (matching Docker, npm, and VS Code conventions) are now normalised on load instead of failing strict validation.
+
+- [#10495](https://github.com/Kilo-Org/kilocode/pull/10495) [`ae0fbe8`](https://github.com/Kilo-Org/kilocode/commit/ae0fbe89dc5859fcea3c5d1e459a77eb459a8f71) - Show recent and favorited models in provider-specific model lists.
+
 ## 7.3.7
 
 ### Patch Changes

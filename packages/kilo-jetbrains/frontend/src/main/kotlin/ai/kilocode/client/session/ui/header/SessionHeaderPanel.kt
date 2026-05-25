@@ -229,23 +229,23 @@ class SessionHeaderPanel(
         todoRow.background = style.editorBackground
         body.background = style.editorBackground
         viewport.background = style.editorBackground
-        title.font = style.boldUiFont
+        title.font = style.boldFont
         title.foreground = style.editorForeground
-        cost.font = style.uiFont
+        cost.font = style.regularFont
         cost.foreground = style.editorForeground
-        context.font = style.uiFont
+        context.font = style.regularFont
         context.foreground = style.editorForeground
-        todos.font = style.smallUiFont
+        todos.font = style.smallFont
         todos.foreground = style.editorForeground
-        tokenTitle.font = style.smallUiFont
+        tokenTitle.font = style.smallFont
         tokenTitle.foreground = style.editorForeground
-        input.font = style.smallUiFont
+        input.font = style.smallFont
         input.foreground = style.editorForeground
-        output.font = style.smallUiFont
+        output.font = style.smallFont
         output.foreground = style.editorForeground
-        cacheRead.font = style.smallUiFont
+        cacheRead.font = style.smallFont
         cacheRead.foreground = style.editorForeground
-        cacheWrite.font = style.smallUiFont
+        cacheWrite.font = style.smallFont
         cacheWrite.foreground = style.editorForeground
         bar.applyStyle(style)
         refresh()
@@ -391,7 +391,7 @@ class SessionHeaderPanel(
         expand.accessibleContext.accessibleName = KiloBundle.message(key)
     }
 
-    private fun expanded() = PropertiesComponent.getInstance().getBoolean(EXPANDED_KEY, true)
+    private fun expanded() = PropertiesComponent.getInstance().getBoolean(EXPANDED_KEY, false)
 
     private fun sizeTimeline() {
         val size = timeline.preferredSize

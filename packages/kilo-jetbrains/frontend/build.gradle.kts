@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.commonmark.autolink)
     implementation(libs.commonmark.tables)
     implementation(libs.commonmark.strikethrough)
+    implementation(libs.zxing.core)
 
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")

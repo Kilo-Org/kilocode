@@ -9,7 +9,8 @@ import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
-import ai.kilocode.client.session.views.PermissionView
+import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.client.session.views.TextView
@@ -324,6 +325,52 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertSame(item.progress, item.components.last())
     }
 
+    fun `test login required state makes LoginRequiredView visible and hides others`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.LoginRequired("Sign in required."))
+
+        val lv = find<LoginRequiredView>(item)!!
+        val qv = find<QuestionView>(item)!!
+        val pv = find<PermissionView>(item)!!
+
+        assertTrue(lv.isVisible)
+        assertFalse(qv.isVisible)
+        assertFalse(pv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test login required is anchored before progress footer`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.LoginRequired("Sign in required."))
+
+        val lv = find<LoginRequiredView>(item)!!
+        val comps = item.components.toList()
+
+        assertTrue(comps.indexOf(lv) < comps.indexOf(item.progress))
+        assertSame(item.progress, comps.last())
+    }
+
+    fun `test returning to idle hides login required view`() {
+        val item = panelWithPrompts()
+        model.setState(SessionState.LoginRequired("Sign in required."))
+        model.setState(SessionState.Idle)
+
+        val lv = find<LoginRequiredView>(item)!!
+
+        assertFalse(lv.isVisible)
+        assertSame(item.progress, item.components.last())
+    }
+
+    fun `test login required button invokes openProfile callback`() {
+        var called = false
+        val lv = LoginRequiredView(openProfile = { called = true }, dismiss = {})
+        lv.show("Sign in required.")
+
+        lv.openProfileButton().doClick()
+
+        assertTrue(called)
+    }
+
     // ------ question tool suppression ------
 
     fun `test active linked question hides matching running question tool`() {
@@ -406,13 +453,15 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
     private fun panelWithPrompts(): SessionMessageListPanel {
         val q = QuestionView(
+            project = project,
             reply = { _, _ -> },
             reject = { _ -> },
         )
         val p = PermissionView(
             reply = { _, _ -> },
         )
-        return SessionMessageListPanel(model, parent, q, p)
+        val l = LoginRequiredView(openProfile = {}, dismiss = {})
+        return SessionMessageListPanel(model, parent, q, p, l)
     }
 
     private inline fun <reified T> find(root: Container): T? = findCls(root, T::class.java)

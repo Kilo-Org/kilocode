@@ -14,6 +14,7 @@ import { RemoteRoutes } from "../../server/routes/instance/remote"
 import { NetworkRoutes } from "../../server/routes/instance/network"
 import { SuggestionRoutes } from "../suggestion/routes"
 import { IndexingRoutes } from "./routes/indexing"
+import { BackgroundProcessRoutes } from "./routes/background-process"
 import { createKiloRoutes } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"
 import { errors } from "../../server/error"
@@ -28,6 +29,7 @@ import { Bus } from "@/bus"
 
 export function register(app: Hono): Hono {
   return app
+    .route("/background-process", BackgroundProcessRoutes())
     .route("/permission", PermissionKilocodeRoutes())
     .route("/network", NetworkRoutes())
     .route("/indexing", IndexingRoutes()) // kilocode_change

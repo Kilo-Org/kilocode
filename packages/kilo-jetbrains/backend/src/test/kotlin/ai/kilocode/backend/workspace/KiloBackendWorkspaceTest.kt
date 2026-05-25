@@ -274,9 +274,11 @@ class KiloBackendWorkspaceTest {
     }
 
     // ------ Data mapping ------
+    // Detailed provider/command/path parsing correctness is covered in KiloCliDataParserTest.
+    // These integration tests verify end-to-end data flow: server → workspace state.
 
     @Test
-    fun `providers response maps models correctly`() = runBlocking {
+    fun `providers response reaches state with expected provider and model`() = runBlocking {
         mock.providers = PROVIDERS_JSON
         val app = setup()
         val ws = ready(app)
@@ -286,20 +288,10 @@ class KiloBackendWorkspaceTest {
         }
 
         val state = ws.state.value as KiloWorkspaceState.Ready
-        val provider = state.providers.providers[0]
-        assertEquals("anthropic", provider.id)
-        assertEquals("Anthropic", provider.name)
-        val model = provider.models["claude-4"]
-        assertNotNull(model)
-        assertEquals("Claude 4", model.name)
-        assertTrue(model.attachment)
-        assertTrue(model.reasoning)
-        assertTrue(model.toolCall)
-        assertEquals(2.0, model.recommendedIndex)
-        assertEquals(listOf("low", "medium", "high"), model.variants)
-        assertEquals(200000L, model.limit?.context)
-        assertEquals(100000L, model.limit?.input)
-        assertEquals(16000L, model.limit?.output)
+        assertEquals(1, state.providers.providers.size)
+        assertEquals("anthropic", state.providers.providers[0].id)
+        assertNotNull(state.providers.providers[0].models["claude-4"])
+        assertEquals(listOf("anthropic"), state.providers.connected)
     }
 
     @Test
