@@ -8,6 +8,19 @@ describe("scrubber", () => {
     expect(out.redactionsByType.aws_access_key).toBe(1)
   })
 
+  test("redacts aws secret key only when anchored to the key name", () => {
+    const out = scrubString('aws_secret_access_key="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"')
+    expect(out.value).toContain("<<REDACTED:aws_secret_key>>")
+    expect(out.redactionsByType.aws_secret_key).toBe(1)
+  })
+
+  test("does not flag bare 40-char hex strings (git SHAs)", () => {
+    const sha = "a".repeat(40)
+    const out = scrubString(`commit ${sha} added foo`)
+    expect(out.value).toContain(sha)
+    expect(out.redactionsByType.aws_secret_key).toBeUndefined()
+  })
+
   test("redacts JWT three-segment tokens", () => {
     const jwt = "eyJhbGciOi.eyJzdWIiOi.SflKxwRJSMeKKF2Q"
     const out = scrubString(`Authorization: Bearer ${jwt}`)
