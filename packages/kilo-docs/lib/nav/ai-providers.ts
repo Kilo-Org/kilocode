@@ -67,6 +67,7 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/chutes-ai", children: "Chutes AI" },
       { href: "/ai-providers/inception", children: "Inception" },
+      { href: "/ai-providers/inceptron", children: "Inceptron" },
       { href: "/ai-providers/minimax", children: "MiniMax" },
       { href: "/ai-providers/moonshot", children: "Moonshot" },
       { href: "/ai-providers/ovhcloud", children: "OVHcloud" },

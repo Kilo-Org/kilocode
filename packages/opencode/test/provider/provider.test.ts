@@ -19,6 +19,7 @@ import { makeRuntime } from "../../src/effect/run-service"
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
+const remove = (k: string) => env.runSync((svc) => svc.remove(k))
 
 async function run<A, E>(fn: (provider: Provider.Interface) => Effect.Effect<A, E, never>) {
   return AppRuntime.runPromise(
@@ -94,6 +95,74 @@ test("provider loaded from env variable", async () => {
       // merge additional options.
       expect(providers[ProviderID.anthropic].source).toBe("env")
       expect(providers[ProviderID.anthropic].options.headers["anthropic-beta"]).toBeDefined()
+    },
+  })
+})
+
+test("Inceptron loads from models.dev metadata", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+        }),
+      )
+    },
+  })
+  await WithInstance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      set("INCEPTRON_API_KEY", "test-inceptron-key")
+
+      const providers = await list()
+      const provider = providers[ProviderID.make("inceptron")]
+      expect(provider).toBeDefined()
+      if (!provider) throw new Error("Expected Inceptron provider")
+      const kimi = provider.models[ModelID.make("moonshotai/Kimi-K2.6")]
+
+      expect(provider.source).toBe("env")
+      expect(provider.name).toBe("Inceptron")
+      expect(provider.key).toBe("test-inceptron-key")
+      expect(provider.env).toEqual(["INCEPTRON_API_KEY"])
+      expect(kimi).toBeDefined()
+      expect(kimi.id).toBe(ModelID.make("moonshotai/Kimi-K2.6"))
+      expect(kimi.name).toBe("Kimi K2.6")
+      expect(kimi.family).toBe("kimi-k2.6")
+      expect(kimi.api.url).toBe("https://api.inceptron.io/v1")
+      expect(kimi.api.npm).toBe("@ai-sdk/openai-compatible")
+      expect(kimi.status).toBe("active")
+      expect(kimi.capabilities.temperature).toBe(true)
+      expect(kimi.capabilities.reasoning).toBe(true)
+      expect(kimi.capabilities.attachment).toBe(true)
+      expect(kimi.capabilities.toolcall).toBe(true)
+      expect(kimi.capabilities.interleaved).toEqual({ field: "reasoning_content" })
+      expect(kimi.capabilities.input).toEqual({
+        text: true,
+        audio: false,
+        image: true,
+        video: false,
+        pdf: false,
+      })
+      expect(kimi.capabilities.output).toEqual({
+        text: true,
+        audio: false,
+        image: false,
+        video: false,
+        pdf: false,
+      })
+      expect(kimi.limit).toEqual({ context: 262144, input: undefined, output: 262144 })
+      expect(kimi.cost).toEqual({
+        input: 0.78,
+        output: 3.5,
+        cache: {
+          read: 0.2,
+          write: 0,
+        },
+      })
+      expect(kimi.release_date).toBe("2026-04-21")
+
+      remove("INCEPTRON_API_KEY")
     },
   })
 })

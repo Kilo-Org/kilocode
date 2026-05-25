@@ -3,7 +3,7 @@
 // Content is inlined at compile time via Bun's static import of .md files.
 // Registered before all discovery phases so user skills with the same name override.
 
-import KILO_CONFIG from "./kilo-config.md"
+import KILO_CONFIG from "./kilo-config.md" with { type: "text" }
 
 export interface BuiltinSkill {
   name: string

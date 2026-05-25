@@ -59,6 +59,7 @@ delete process.env["DEEPSEEK_API_KEY"]
 delete process.env["FIREWORKS_API_KEY"]
 delete process.env["CEREBRAS_API_KEY"]
 delete process.env["SAMBANOVA_API_KEY"]
+delete process.env["INCEPTRON_API_KEY"]
 delete process.env["KILO_SERVER_PASSWORD"]
 delete process.env["KILO_SERVER_USERNAME"]
 

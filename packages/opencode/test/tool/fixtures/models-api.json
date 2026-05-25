@@ -63499,6 +63499,34 @@
       }
     }
   },
+  "inceptron": {
+    "id": "inceptron",
+    "env": ["INCEPTRON_API_KEY"],
+    "npm": "@ai-sdk/openai-compatible",
+    "api": "https://api.inceptron.io/v1",
+    "name": "Inceptron",
+    "doc": "https://docs.inceptron.io",
+    "models": {
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
+        "family": "kimi-k2.6",
+        "attachment": true,
+        "reasoning": true,
+        "tool_call": true,
+        "interleaved": { "field": "reasoning_content" },
+        "structured_output": true,
+        "temperature": true,
+        "knowledge": "2025-01",
+        "release_date": "2026-04-21",
+        "last_updated": "2026-04-21",
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "open_weights": true,
+        "limit": { "context": 262144, "output": 262144 },
+        "cost": { "input": 0.78, "output": 3.5, "cache_read": 0.2, "cache_write": 0 }
+      }
+    }
+  },
   "zhipuai-coding-plan": {
     "id": "zhipuai-coding-plan",
     "env": ["ZHIPU_API_KEY"],
