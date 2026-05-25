@@ -55,7 +55,7 @@ tsconfig.tsbuildinfo
 .kilo/bun.lock
 .kilo/yarn.lock
 .kilo/node_modules
-.kilo/plans/*upstream-merge-report-*.md
+.kilo/plans
 .kilocode/.gitignore
 .kilocode/package.json
 .kilocode/package-lock.json
