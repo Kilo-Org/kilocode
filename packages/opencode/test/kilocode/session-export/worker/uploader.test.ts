@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Storage } from "@/kilocode/session-export/worker/storage"
-import { Uploader } from "@/kilocode/session-export/worker/uploader"
+import { Uploader, backoffFor } from "@/kilocode/session-export/worker/uploader"
+import { Config } from "@/kilocode/session-export/config"
 
 describe("Uploader", () => {
   let dir: string
@@ -209,6 +210,13 @@ describe("Uploader", () => {
     })
     await uploader.flush("test")
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
+  })
+
+  test("backoffFor grows exponentially and caps at retryBackoffMaxMs", () => {
+    expect(backoffFor(0)).toBe(Config.retryBackoffMinMs)
+    expect(backoffFor(1)).toBe(Config.retryBackoffMinMs * 2)
+    expect(backoffFor(2)).toBe(Config.retryBackoffMinMs * 4)
+    expect(backoffFor(20)).toBe(Config.retryBackoffMaxMs)
   })
 
   test("dispose stops the periodic flush timer", async () => {

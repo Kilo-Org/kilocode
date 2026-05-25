@@ -109,14 +109,22 @@ export class Uploader {
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
           continue
         }
-        for (const row of rows) this.deps.storage.markRetry(row.id, Date.now() + Config.retryBackoffMinMs)
+        const retryAt = Date.now()
+        for (const row of rows) this.deps.storage.markRetry(row.id, retryAt + backoffFor(row.uploadAttempts))
         return
       }
     } catch (err) {
-      for (const row of rows) this.deps.storage.markRetry(row.id, Date.now() + Config.retryBackoffMinMs)
+      const retryAt = Date.now()
+      for (const row of rows) this.deps.storage.markRetry(row.id, retryAt + backoffFor(row.uploadAttempts))
       this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_network_error", props: { message: String(err) } })
     }
   }
+}
+
+export function backoffFor(attempts: number): number {
+  const exponent = Math.max(0, attempts)
+  const grown = Config.retryBackoffMinMs * 2 ** Math.min(exponent, 16)
+  return Math.min(grown, Config.retryBackoffMaxMs)
 }
 
 type HeaderArgs = {

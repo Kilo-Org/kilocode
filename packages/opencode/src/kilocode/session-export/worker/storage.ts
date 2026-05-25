@@ -13,6 +13,7 @@ export type EventRow = {
   agentVersion: string
   dataJson: string
   clientScrubbed: 0 | 1
+  uploadAttempts: number
 }
 
 export type ChunkRow = {
@@ -35,6 +36,7 @@ type EventRecord = {
   agent_version: string
   data_json: string
   client_scrubbed: number
+  upload_attempts: number
 }
 
 type ChunkRecord = {
@@ -155,6 +157,7 @@ export class Storage {
         agentVersion: row.agent_version,
         dataJson: row.data_json,
         clientScrubbed: row.client_scrubbed === 1 ? 1 : 0,
+        uploadAttempts: row.upload_attempts ?? 0,
       })
     }
     return out
