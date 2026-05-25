@@ -133,7 +133,8 @@ export class Storage {
       .query(
         `SELECT * FROM event
          WHERE uploaded_at IS NULL AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
-         ORDER BY ts ASC`,
+         ORDER BY ts ASC
+         LIMIT 500`,
       )
       .all(opts.now) as EventRecord[]
     const out: EventRow[] = []

@@ -68,4 +68,22 @@ describe("Storage", () => {
   test("dbSize reports approximate disk usage", () => {
     expect(storage.dbSize()).toBeGreaterThan(0)
   })
+
+  test("pendingEvents caps result set so a backlog cannot blow up heap", () => {
+    for (let i = 0; i < 600; i += 1) {
+      storage.insertEvent({
+        id: String(i).padStart(4, "0"),
+        schemaVersion: 1,
+        sessionId: "s1",
+        rootSessionId: "s1",
+        seq: i,
+        type: "llm_request_started",
+        ts: i,
+        agentVersion: "v0",
+        dataJson: "{}",
+        clientScrubbed: 1,
+      })
+    }
+    expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000_000 }).length).toBe(500)
+  })
 })
