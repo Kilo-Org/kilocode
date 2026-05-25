@@ -3,13 +3,36 @@ import { SessionExport } from "@/kilocode/session-export"
 import { getKillSwitchReason, resetEligibility } from "@/kilocode/session-export/eligibility"
 
 describe("SessionExport worker respawn", () => {
+  let feature: string | undefined
+
   beforeEach(() => {
+    feature = process.env.KILOCODE_FEATURE
     resetEligibility()
   })
 
   afterEach(async () => {
     await SessionExport.shutdown()
     resetEligibility()
+    if (feature === undefined) delete process.env.KILOCODE_FEATURE
+    else process.env.KILOCODE_FEATURE = feature
+  })
+
+  test("passes surface to worker init", () => {
+    const workers: FakeWorker[] = []
+    process.env.KILOCODE_FEATURE = "cli"
+    SessionExport.init({
+      agentVersion: "v0",
+      dbPath: ":memory:",
+      subscribeAll: () => () => {},
+      createWorker: () => {
+        const worker = new FakeWorker(0)
+        workers.push(worker)
+        return worker as unknown as Worker
+      },
+    })
+
+    const init = workers[0].messages.find((msg) => msg.kind === "init")
+    expect(init?.surface).toBe("cli")
   })
 
   test("respawns once when worker postMessage fails", () => {
@@ -57,7 +80,7 @@ class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   terminated = false
-  messages: Array<{ kind?: string }> = []
+  messages: Array<{ kind?: string; surface?: string }> = []
 
   constructor(private failures: number) {}
 

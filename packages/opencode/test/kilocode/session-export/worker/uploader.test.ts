@@ -50,6 +50,7 @@ describe("Uploader", () => {
       },
       reportTelemetry: (msg) => telemetry.push(msg),
       agentVersion: "v0",
+      surface: "test",
     })
     await uploader.flush("test")
     const headers = new Headers(calls[0].init.headers)
@@ -94,6 +95,7 @@ describe("Uploader", () => {
       },
       reportTelemetry: () => {},
       agentVersion: "v0",
+      surface: "test",
     })
     await uploader.flush("test")
     const first = JSON.parse(bodies[0]) as { events: Array<{ sessionId: string }> }
@@ -117,6 +119,7 @@ describe("Uploader", () => {
       },
       reportTelemetry: () => {},
       agentVersion: "v0",
+      surface: "test",
     })
     const first = uploader.flush("scheduled")
     let done = false
@@ -128,6 +131,26 @@ describe("Uploader", () => {
     release?.()
     await Promise.all([first, second])
     expect(done).toBe(true)
+  })
+
+  test("includes surface in batch metadata and upload headers", async () => {
+    const calls: Array<{ init: RequestInit }> = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        calls.push({ init })
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "vscode-extension",
+    })
+    await uploader.flush("test")
+    const headers = new Headers(calls[0].init.headers)
+    const body = JSON.parse(calls[0].init.body as string) as { surface?: string }
+    expect(headers.get("x-kilo-export-surface")).toBe("vscode-extension")
+    expect(body.surface).toBe("vscode-extension")
   })
 
   test("uploads chunks as zstd base64 strings", async () => {
@@ -154,6 +177,7 @@ describe("Uploader", () => {
       },
       reportTelemetry: () => {},
       agentVersion: "v0",
+      surface: "test",
     })
     await uploader.flush("test")
     const body = JSON.parse(bodies[0]) as { chunks: Array<{ id: string; bytes: unknown; size: number; encoding: string }> }
@@ -167,6 +191,7 @@ describe("Uploader", () => {
       fetch: async () => new Response("", { status: 400 }),
       reportTelemetry: () => {},
       agentVersion: "v0",
+      surface: "test",
     })
     await uploader.flush("test")
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
@@ -179,6 +204,7 @@ describe("Uploader", () => {
       fetch: async () => new Response("", { status: 500 }),
       reportTelemetry: () => {},
       agentVersion: "v0",
+      surface: "test",
     })
     await uploader.flush("test")
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)

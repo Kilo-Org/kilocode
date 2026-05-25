@@ -21,6 +21,7 @@ let options:
       agentVersion: string
       dbPath: string
       endpoint?: string
+      surface: string
       snapshotProvider?: CaptureDeps["snapshotProvider"]
       syncSeq: (sessionId: string) => number
       subscribeAll: (cb: (event: unknown) => void) => () => void
@@ -34,6 +35,7 @@ export const init = (opts: {
   agentVersion: string
   dbPath: string
   endpoint?: string
+  surface?: string
   snapshotProvider?: CaptureDeps["snapshotProvider"]
   syncSeq?: (sessionId: string) => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
@@ -48,6 +50,7 @@ export const init = (opts: {
       agentVersion: opts.agentVersion,
       dbPath: opts.dbPath,
       endpoint: opts.endpoint,
+      surface: opts.surface ?? currentSurface(),
       snapshotProvider: opts.snapshotProvider,
       syncSeq,
       subscribeAll: opts.subscribeAll,
@@ -123,6 +126,7 @@ function spawn(url = target()): void {
     dbPath: options.dbPath,
     agentVersion: options.agentVersion,
     endpoint: options.endpoint,
+    surface: options.surface,
   })
   capture = new Capture({
     worker,
@@ -149,6 +153,10 @@ function spawn(url = target()): void {
     console.warn("[session-export] worker error", event.message)
     respawn(event.error ?? event.message)
   }
+}
+
+function currentSurface(): string {
+  return process.env.KILOCODE_FEATURE?.trim() || "unknown"
 }
 
 function respawn(err: unknown): void {

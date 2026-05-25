@@ -22,6 +22,25 @@ describe("Capture", () => {
     expect(posted.length).toBe(0)
   })
 
+  test("free org requests do not start session export", async () => {
+    const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: "org_1" },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    cap.afterRequest({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      output: { textParts: ["ok"] },
+      durationMs: 1,
+      retryCount: 0,
+    })
+    await cap.onSessionClose("s1")
+    expect(posted.length).toBe(0)
+  })
+
   test("eligible input posts llm_request_started with full envelope", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({

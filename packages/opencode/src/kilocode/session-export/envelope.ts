@@ -30,6 +30,7 @@ export type ExportEventType =
 export type BatchEnvelope = {
   schemaVersion: 1
   agentVersion: string
+  surface: string
   batchId: string
   events: unknown[]
   chunks: { id: string; bytes: string; size: number; encoding: "zstd+base64" }[]

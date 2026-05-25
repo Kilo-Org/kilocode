@@ -8,6 +8,7 @@ export type UploaderDeps = {
   fetch: (input: string, init: RequestInit) => Promise<Response>
   reportTelemetry: (msg: Extract<FromWorker, { kind: "telemetry" }>) => void
   agentVersion: string
+  surface: string
 }
 
 export class Uploader {
@@ -57,6 +58,7 @@ export class Uploader {
         const body = JSON.stringify({
           schemaVersion: 1,
           agentVersion: this.deps.agentVersion,
+          surface: this.deps.surface,
           batchId,
           events: rows.map((row) => ({
             ...JSON.parse(row.dataJson),
@@ -76,7 +78,7 @@ export class Uploader {
         })
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",
-          headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion }),
+          headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion, surface: this.deps.surface }),
           body,
         })
         if (res.ok) {
@@ -106,6 +108,7 @@ type HeaderArgs = {
   body: string
   batchId: string
   agentVersion: string
+  surface: string
 }
 
 async function headers(args: HeaderArgs): Promise<Headers> {
@@ -116,6 +119,7 @@ async function headers(args: HeaderArgs): Promise<Headers> {
     "x-kilo-export-api-version": "1",
     "x-kilo-export-schema-version": "1",
     "x-kilo-export-agent-version": args.agentVersion,
+    "x-kilo-export-surface": args.surface,
     "x-kilo-export-root-session-id": first.rootSessionId,
     "x-kilo-export-session-id": first.sessionId,
     "x-kilo-export-batch-id": args.batchId,
