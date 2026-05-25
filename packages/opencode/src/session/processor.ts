@@ -544,6 +544,7 @@ export const layer: Layer.Layer<
               usage: value.usage,
               metadata: value.providerMetadata,
             })
+            const elapsed = Math.round(performance.now() - (ctx.stepStart || performance.now()))
             const metrics = KiloSessionMetrics.create({
               elapsed,
               tokens: usage.tokens,
