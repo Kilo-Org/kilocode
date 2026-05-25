@@ -116,6 +116,7 @@ async function withInstance<T>(fn: (dir: string) => T | Promise<T>) {
 async function initGitRepo(dir: string) {
   await fs.mkdir(dir, { recursive: true })
   await $`git init`.cwd(dir).quiet()
+  await $`git config core.autocrlf false`.cwd(dir).quiet() // kilocode_change - align test repos with Git service patch behavior
   await $`git config core.fsmonitor false`.cwd(dir).quiet()
   await $`git config commit.gpgsign false`.cwd(dir).quiet()
   await $`git config user.email "test@opencode.test"`.cwd(dir).quiet()
@@ -672,6 +673,7 @@ describe("workspace-old CRUD", () => {
       await initGitRepo(targetDir)
       await fs.writeFile(path.join(previousDir, "tracked.txt"), "changed\n")
       await fs.writeFile(path.join(previousDir, "new.txt"), "new\n")
+      await $`git add new.txt`.cwd(previousDir).quiet() // kilocode_change - avoid unrelated untracked patch path
 
       const previous = workspaceInfo(Instance.project.id, previousType)
       const target = workspaceInfo(Instance.project.id, targetType)

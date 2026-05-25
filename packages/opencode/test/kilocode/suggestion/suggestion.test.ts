@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { WithInstance } from "../../../src/project/with-instance"
 import { Suggestion } from "../../../src/kilocode/suggestion"
+import { resolvePrompt } from "../../../src/kilocode/suggestion/tool"
 import { tmpdir } from "../../fixture/fixture"
 
 afterEach(() => {
@@ -9,6 +10,19 @@ afterEach(() => {
 })
 
 describe("suggestion", () => {
+  test("resolves review command arguments into static templates", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const out = await resolvePrompt("/local-review-uncommitted --focus telemetry")
+
+        expect(out).toContain("## User Input\n\n--focus telemetry")
+        expect(out).not.toContain("$ARGUMENTS")
+      },
+    })
+  })
+
   test("show adds pending request with blocking flag", async () => {
     await using tmp = await tmpdir({ git: true })
     await WithInstance.provide({
