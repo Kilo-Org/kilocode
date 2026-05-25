@@ -50,7 +50,8 @@ export async function handleEvent(envelope: ExportEvent, ctx: HandlerCtx): Promi
 
 async function normalizePayload(envelope: ExportEvent, ctx: HandlerCtx): Promise<unknown> {
   const payload = stripIdentity(stripEnvelopeFields(envelope))
-  if (envelope.type === "workspace_baseline_completed") return normalizeBaseline(payload)
+  if (envelope.type === "workspace_baseline_completed") return normalizeBaseline(payload, ctx)
+  if (envelope.type === "workspace_delta_captured") return normalizeDelta(payload, ctx)
   if (envelope.type !== "tool_executed") return payload
   const out = { ...(payload as Record<string, unknown>) }
   if (envelope.toolInput !== undefined) {
@@ -64,16 +65,59 @@ async function normalizePayload(envelope: ExportEvent, ctx: HandlerCtx): Promise
   return out
 }
 
-function normalizeBaseline(payload: unknown): unknown {
+async function normalizeBaseline(payload: unknown, ctx: HandlerCtx): Promise<unknown> {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload
   const out = { ...(payload as Record<string, unknown>) }
   if (!Array.isArray(out.files)) return out
-  out.files = out.files.map((file) => {
-    if (!file || typeof file !== "object" || Array.isArray(file)) return file
+  const files: unknown[] = []
+  for (const file of out.files) {
+    if (!file || typeof file !== "object" || Array.isArray(file)) {
+      files.push(file)
+      continue
+    }
     const item = file as Record<string, unknown>
-    if (typeof item.path !== "string" || !isHighRiskPath(item.path)) return file
-    return { path: item.path, kind: item.kind, omitted: { reason: "high_risk_path" } }
-  })
+    if (typeof item.path === "string" && isHighRiskPath(item.path)) {
+      files.push({ path: item.path, kind: item.kind, omitted: { reason: "high_risk_path" } })
+      continue
+    }
+    const next = { ...item }
+    if (typeof next.content === "string") {
+      const bytes = Buffer.from(next.content, "utf8")
+      next.chunkIds = await ctx.chunker.write(bytes)
+      next.encoding = "utf8"
+      next.size = typeof next.size === "number" ? next.size : bytes.byteLength
+      delete next.content
+    }
+    files.push(next)
+  }
+  out.files = files
+  return out
+}
+
+async function normalizeDelta(payload: unknown, ctx: HandlerCtx): Promise<unknown> {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload
+  const out = { ...(payload as Record<string, unknown>) }
+  if (!Array.isArray(out.diff)) return out
+  const diff: unknown[] = []
+  for (const item of out.diff) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      diff.push(item)
+      continue
+    }
+    const next = { ...(item as Record<string, unknown>) }
+    if (typeof next.path === "string" && isHighRiskPath(next.path)) {
+      next.patchChunkIds = []
+      delete next.patch
+      diff.push(next)
+      continue
+    }
+    if (typeof next.patch === "string") {
+      next.patchChunkIds = await ctx.chunker.write(Buffer.from(next.patch, "utf8"))
+      delete next.patch
+    }
+    diff.push(next)
+  }
+  out.diff = diff
   return out
 }
 

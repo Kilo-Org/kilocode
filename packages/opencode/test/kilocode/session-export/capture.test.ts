@@ -115,6 +115,66 @@ describe("Capture", () => {
     expect(types).toContain("workspace_delta_captured")
   })
 
+  test("afterRequest captures a turn-end workspace delta after baseline resolves", async () => {
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "h0", files: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }),
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    posted.length = 0
+    cap.afterRequest({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      output: { textParts: ["ok"] },
+      durationMs: 1,
+      retryCount: 0,
+    })
+    await until(() =>
+      posted.some((item) => (item as { envelope?: { type?: string } }).envelope?.type === "workspace_delta_captured"),
+    )
+    const types = posted.map((item) => (item as { envelope?: { type?: string; trigger?: string } }).envelope)
+    expect(types.map((item) => item?.type)).toContain("workspace_delta_captured")
+    expect(types.find((item) => item?.type === "workspace_delta_captured")?.trigger).toBe("turn_end")
+  })
+
+  test("first request in a continued process uses persisted snapshot for next-request delta", async () => {
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      snapshotProvider: {
+        current: () => "h0",
+        remember: () => {},
+        baseline: async () => ({ snapshotId: "unused", files: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }),
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    await until(() =>
+      posted.some((item) => (item as { envelope?: { type?: string } }).envelope?.type === "workspace_delta_captured"),
+    )
+    const types = posted.map((item) => (item as { envelope?: { type?: string; trigger?: string } }).envelope)
+    expect(types.map((item) => item?.type)).not.toContain("workspace_baseline_started")
+    expect(types.find((item) => item?.type === "workspace_delta_captured")?.trigger).toBe("next_request")
+  })
+
   test("compaction dispatches a self-contained compaction_captured envelope", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
@@ -166,5 +226,13 @@ function meta(sessionId: string) {
     userMessageId: "u1",
     agent: "claude",
     modeId: "build",
+  }
+}
+
+async function until(check: () => boolean): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < 500) {
+    if (check()) return
+    await new Promise((resolve) => setTimeout(resolve, 5))
   }
 }

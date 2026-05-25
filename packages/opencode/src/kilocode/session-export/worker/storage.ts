@@ -217,6 +217,16 @@ function collectChunkIds(node: unknown, out: Set<string>): void {
       if (typeof id === "string") out.add(id)
     }
   }
+  if (Array.isArray(record.chunkIds)) {
+    for (const id of record.chunkIds) {
+      if (typeof id === "string") out.add(id)
+    }
+  }
+  if (Array.isArray(record.patchChunkIds)) {
+    for (const id of record.patchChunkIds) {
+      if (typeof id === "string") out.add(id)
+    }
+  }
   if (Array.isArray(record.inputChunkIds)) {
     for (const id of record.inputChunkIds) {
       if (typeof id === "string") out.add(id)

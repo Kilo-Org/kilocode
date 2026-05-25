@@ -5,6 +5,8 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "node:path"
 import { Bus } from "@/bus"
 import { SessionExport } from "@/kilocode/session-export"
+import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
+import { Instance } from "@/project/instance"
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -17,6 +19,10 @@ export namespace KilocodeBootstrap {
         agentVersion: InstallationVersion,
         dbPath: path.join(Global.Path.data, "session-export.db"),
         subscribeAll: (cb) => Bus.subscribeAll(cb),
+        snapshotProvider: createWorkspaceProvider({
+          root: Instance.worktree,
+          statePath: path.join(Global.Path.data, "session-export-workspace.json"),
+        }),
       })
     } catch (err) {
       log.warn("session export bootstrap failed", { err })

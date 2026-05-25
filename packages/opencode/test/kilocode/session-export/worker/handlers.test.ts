@@ -6,7 +6,12 @@ import { Storage } from "@/kilocode/session-export/worker/storage"
 import { Chunker } from "@/kilocode/session-export/worker/chunks"
 import { Scrubber } from "@/kilocode/session-export/worker/scrub"
 import { handleEvent } from "@/kilocode/session-export/worker/handlers"
-import type { LlmRequestCompleted, LlmRequestStarted, WorkspaceBaselineCompleted } from "@/kilocode/session-export/events"
+import type {
+  LlmRequestCompleted,
+  LlmRequestStarted,
+  WorkspaceBaselineCompleted,
+  WorkspaceDeltaCaptured,
+} from "@/kilocode/session-export/events"
 
 describe("handlers", () => {
   let dir: string
@@ -152,6 +157,60 @@ describe("handlers", () => {
     }
     expect(data.files[0]).toEqual({ path: ".env", kind: "file", omitted: { reason: "high_risk_path" } })
     expect(data.files[1].hash).toBe("public-hash")
+  })
+
+  test("workspace baseline file content is stored as upload chunks", async () => {
+    const env: WorkspaceBaselineCompleted = {
+      id: "01X",
+      schemaVersion: 1,
+      type: "workspace_baseline_completed",
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      ts: 100,
+      agentVersion: "v0",
+      consistency: "stable",
+      files: [{ path: "src/index.ts", kind: "file", size: 21, hash: "h1", content: "export const value = 1\n" }],
+    }
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as { files: Array<{ content?: string; chunkIds?: string[]; encoding?: string }> }
+    expect(data.files[0].content).toBeUndefined()
+    expect(data.files[0].encoding).toBe("utf8")
+    expect(data.files[0].chunkIds?.length).toBe(1)
+    expect(storage.chunksForEvents([rows[0].id]).length).toBe(1)
+  })
+
+  test("workspace delta patches are stored as upload chunks", async () => {
+    const env: WorkspaceDeltaCaptured = {
+      id: "01Y",
+      schemaVersion: 1,
+      type: "workspace_delta_captured",
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      ts: 100,
+      agentVersion: "v0",
+      snapshotHash: "h2",
+      prevSnapshotHash: "h1",
+      trigger: "turn_end",
+      diff: [
+        {
+          path: "src/index.ts",
+          status: "modified",
+          additions: 1,
+          deletions: 1,
+          patchChunkIds: [],
+          patch: "@@ -1 +1 @@\n-export const value = 1\n+export const value = 2\n",
+        },
+      ],
+    }
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as { diff: Array<{ patch?: string; patchChunkIds: string[] }> }
+    expect(data.diff[0].patch).toBeUndefined()
+    expect(data.diff[0].patchChunkIds.length).toBe(1)
+    expect(storage.chunksForEvents([rows[0].id]).length).toBe(1)
   })
 })
 

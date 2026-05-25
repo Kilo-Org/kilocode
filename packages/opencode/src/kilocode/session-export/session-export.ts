@@ -1,4 +1,4 @@
-import { Capture } from "./capture"
+import { Capture, type CaptureDeps } from "./capture"
 import { Config } from "./config"
 import { setKillSwitch } from "./eligibility"
 import { SyncSubscriber } from "./sync-subscriber"
@@ -20,6 +20,7 @@ let options:
       agentVersion: string
       dbPath: string
       endpoint?: string
+      snapshotProvider?: CaptureDeps["snapshotProvider"]
       syncSeq: () => number
       subscribeAll: (cb: (event: unknown) => void) => () => void
       createWorker: (url: WorkerTarget) => Worker
@@ -32,6 +33,7 @@ export const init = (opts: {
   agentVersion: string
   dbPath: string
   endpoint?: string
+  snapshotProvider?: CaptureDeps["snapshotProvider"]
   syncSeq?: () => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
   createWorker?: (url: WorkerTarget) => Worker
@@ -44,6 +46,7 @@ export const init = (opts: {
       agentVersion: opts.agentVersion,
       dbPath: opts.dbPath,
       endpoint: opts.endpoint,
+      snapshotProvider: opts.snapshotProvider,
       syncSeq,
       subscribeAll: opts.subscribeAll,
       createWorker: opts.createWorker ?? ((file) => new Worker(file)),
@@ -121,6 +124,7 @@ function spawn(url = target()): void {
     nowMs: () => Date.now(),
     syncSeq: options.syncSeq,
     onPostError: respawn,
+    snapshotProvider: options.snapshotProvider,
   })
   subscriber = new SyncSubscriber({
     isEligibleSession: (sessionId) => capture?.hasEligibleSession(sessionId) ?? false,

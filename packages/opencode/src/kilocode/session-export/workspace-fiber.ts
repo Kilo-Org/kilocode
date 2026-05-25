@@ -15,7 +15,7 @@ export type BaselineFiberArgs = {
 export type DeltaFiberArgs = {
   sessionId: string
   rootSessionId: string
-  trigger: "next_request" | "session_close"
+  trigger: "next_request" | "turn_end" | "session_close"
   prevSnapshotHash: string
   now: () => number
   syncSeq: () => number

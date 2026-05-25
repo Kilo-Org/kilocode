@@ -21,6 +21,8 @@ export type CaptureDeps = {
   syncSeq: () => number
   onPostError?: (err: unknown) => void
   snapshotProvider?: {
+    current?: (sessionId: string) => string | undefined
+    remember?: (sessionId: string, snapshotHash: string) => void
     baseline: () => Promise<{ snapshotId: string; files: FileEntry[] }>
     diff: (prevSnapshotHash: string) => Promise<{ snapshotHash: string; diff: DeltaEntry[] }>
   }
@@ -80,20 +82,28 @@ export class Capture {
     if (!this.firstEligible.has(meta.sessionId)) {
       this.firstEligible.add(meta.sessionId)
       this.roots.set(meta.sessionId, meta.rootSessionId)
-      const baseline: WorkspaceBaselineStarted = {
-        id: ulid(),
-        schemaVersion: 1,
-        type: "workspace_baseline_started",
-        sessionId: meta.sessionId,
-        rootSessionId: meta.rootSessionId,
-        parentSessionId: meta.parentSessionId,
-        seq: this.deps.syncSeq(),
-        ts: this.deps.nowMs(),
-        agentVersion: this.deps.agentVersion,
-        requestedAt: this.deps.nowMs(),
+      const previous = this.deps.snapshotProvider?.current?.(meta.sessionId)
+      if (previous) {
+        this.snapshots.set(meta.sessionId, previous)
+        this.startNextDelta(meta)
+      } else {
+        const baseline: WorkspaceBaselineStarted = {
+          id: ulid(),
+          schemaVersion: 1,
+          type: "workspace_baseline_started",
+          sessionId: meta.sessionId,
+          rootSessionId: meta.rootSessionId,
+          parentSessionId: meta.parentSessionId,
+          seq: this.deps.syncSeq(),
+          ts: this.deps.nowMs(),
+          agentVersion: this.deps.agentVersion,
+          requestedAt: this.deps.nowMs(),
+        }
+        this.dispatch(baseline)
+        this.startBaseline(meta)
       }
-      this.dispatch(baseline)
-      this.startBaseline(meta)
+    } else {
+      this.startNextDelta(meta)
     }
 
     const env: LlmRequestStarted = {
@@ -153,6 +163,7 @@ export class Capture {
       time: { completed: this.deps.nowMs() },
     }
     this.dispatch(env)
+    void this.startDelta(args.sessionId, args.rootSessionId, "turn_end")
   }
 
   dispatchRaw(envelope: ExportEvent): void {
@@ -195,14 +206,23 @@ export class Capture {
   async onSessionClose(sessionId: string): Promise<void> {
     if (!this.firstEligible.has(sessionId)) return
     if (this.degraded.has(sessionId)) return
+    const root = this.roots.get(sessionId) ?? sessionId
+    await this.startDelta(sessionId, root, "session_close")
+  }
+
+  private async startDelta(
+    sessionId: string,
+    rootSessionId: string,
+    trigger: "next_request" | "turn_end" | "session_close",
+  ): Promise<void> {
     const provider = this.deps.snapshotProvider
     if (!provider) return
-    const root = this.roots.get(sessionId) ?? sessionId
-    const previous = this.snapshots.get(sessionId) ?? ""
+    const previous = this.snapshots.get(sessionId)
+    if (!previous) return
     const next = await startDeltaFiber({
       sessionId,
-      rootSessionId: root,
-      trigger: "session_close",
+      rootSessionId,
+      trigger,
       prevSnapshotHash: previous,
       now: () => this.deps.nowMs(),
       syncSeq: () => this.deps.syncSeq(),
@@ -211,6 +231,11 @@ export class Capture {
       dispatch: (event) => this.dispatchRaw(event),
     })
     if (next) this.snapshots.set(sessionId, next)
+    if (next) provider.remember?.(sessionId, next)
+  }
+
+  private startNextDelta(meta: RequestMeta): void {
+    void this.startDelta(meta.sessionId, meta.rootSessionId, "next_request")
   }
 
   private announceDegraded(meta: RequestMeta): void {
@@ -245,6 +270,7 @@ export class Capture {
       dispatch: (event) => this.dispatchRaw(event),
     }).then((hash) => {
       if (hash) this.snapshots.set(meta.sessionId, hash)
+      if (hash) provider.remember?.(meta.sessionId, hash)
     })
   }
 

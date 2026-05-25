@@ -55,6 +55,7 @@ export type FileEntry = {
   kind: "file" | "symlink" | "directory"
   size?: number
   hash?: string
+  content?: string
   chunkIds?: string[]
   encoding?: "utf8" | "base64"
   omitted?: { reason: "secret" | "pii" | "binary" | "large" | "high_risk_path" | "error"; detail?: string }
@@ -76,13 +77,14 @@ export type DeltaEntry = {
   additions?: number
   deletions?: number
   patchChunkIds: string[]
+  patch?: string
 }
 
 export type WorkspaceDeltaCaptured = ExportEnvelope & {
   type: "workspace_delta_captured"
   snapshotHash: string
   prevSnapshotHash: string
-  trigger: "next_request" | "session_close"
+  trigger: "next_request" | "turn_end" | "session_close"
   diff: DeltaEntry[]
 }
 
