@@ -185,6 +185,14 @@ export class Storage {
     this.sqlite.query(`UPDATE chunk SET ref_count = ref_count - 1 WHERE id IN (${vars})`).run(...ids)
   }
 
+  commitUploaded(eventIds: string[], chunkIds: string[]): { events: number; chunks: number } {
+    return this.sqlite.transaction(() => {
+      this.markUploaded(eventIds)
+      this.decRefChunks(chunkIds)
+      return this.deleteUploaded()
+    })()
+  }
+
   chunksForEvents(ids: string[]): ChunkRow[] {
     if (ids.length === 0) return []
     const vars = ids.map(() => "?").join(",")

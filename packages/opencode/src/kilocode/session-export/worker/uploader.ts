@@ -96,16 +96,12 @@ export class Uploader {
         const eventIds = rows.map((row) => row.id)
         const chunkIds = chunks.map((chunk) => chunk.id)
         if (res.ok) {
-          this.deps.storage.markUploaded(eventIds)
-          this.deps.storage.decRefChunks(chunkIds)
-          const deleted = this.deps.storage.deleteUploaded()
+          const deleted = this.deps.storage.commitUploaded(eventIds, chunkIds)
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
           continue
         }
         if (res.status >= 400 && res.status < 500) {
-          this.deps.storage.markUploaded(eventIds)
-          this.deps.storage.decRefChunks(chunkIds)
-          this.deps.storage.deleteUploaded()
+          this.deps.storage.commitUploaded(eventIds, chunkIds)
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
           continue
         }
