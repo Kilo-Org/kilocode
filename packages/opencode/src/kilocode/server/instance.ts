@@ -49,8 +49,8 @@ export function register(app: Hono): Hono {
         resolver,
         errors,
         Auth: {
-          get: (id) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.get(id))),
-          set: (id, info) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set(id, info))),
+          get: (id: string) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.get(id))),
+          set: (id: string, info: Auth.Info) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set(id, info))),
         },
         z,
         Database,

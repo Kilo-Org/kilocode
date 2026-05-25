@@ -2,6 +2,7 @@ import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
 import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
+import { Command } from "@/command" // kilocode_change
 import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -93,6 +94,7 @@ export const layer: Layer.Layer<
   | Ripgrep.Service
   | Format.Service
   | Truncate.Service
+  | Command.Service // kilocode_change
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -372,6 +374,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
+    Layer.provide(Command.defaultLayer), // kilocode_change
   ),
 )
 // kilocode_change start
