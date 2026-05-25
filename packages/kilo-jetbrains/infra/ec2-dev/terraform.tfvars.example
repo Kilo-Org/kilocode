@@ -1,0 +1,24 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit it.
+
+# Required: path to your SSH public key file.
+# If you only have a .pem private key, generate the public key first:
+#   ssh-keygen -y -f ~/.ssh/your-key.pem > ~/.ssh/your-key.pub
+public_key_path = "~/.ssh/your-key.pub"
+
+# Required: name to register the EC2 key pair under in AWS.
+# Use something unique to you to avoid collisions in a shared account.
+key_name = "your-name-dev"
+
+# Optional overrides (defaults shown):
+# region           = "us-west-2"
+# name             = "jetbrains-dev"
+# instance_type    = "m7i.xlarge"
+# root_volume_size = 100
+
+# Optional: pin SSH ingress to a specific CIDR instead of auto-detecting.
+# allowed_cidr = "1.2.3.4/32"
+
+# Optional: explicit subnet / VPC (defaults to first default subnet in region).
+# subnet_id = "subnet-xxxxxxxx"
+# vpc_id    = "vpc-xxxxxxxx"

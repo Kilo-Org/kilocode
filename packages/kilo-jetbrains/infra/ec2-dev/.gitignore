@@ -1,0 +1,13 @@
+# Terraform local state and cache
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+
+# Local variable overrides — must not be committed
+*.tfvars
+!terraform.tfvars.example
+
+# Lock file: committed for reproducible provider versions
+# .terraform.lock.hcl  <- do not ignore this
