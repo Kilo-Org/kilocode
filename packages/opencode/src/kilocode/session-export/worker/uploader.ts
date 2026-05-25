@@ -12,19 +12,41 @@ export type UploaderDeps = {
 
 export class Uploader {
   private timer: ReturnType<typeof setTimeout> | undefined
-  private flushing = false
+  private active: Promise<void> | undefined
+  private requested = false
 
   constructor(private readonly deps: UploaderDeps) {}
 
   scheduleFlush(_reason: string): void {
-    if (this.flushing) return
+    if (this.active) {
+      this.requested = true
+      return
+    }
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => void this.flush("scheduled"), 0)
   }
 
   async flush(_reason: string): Promise<void> {
-    if (this.flushing) return
-    this.flushing = true
+    if (this.active) {
+      this.requested = true
+      return this.active
+    }
+    this.active = this.run()
+    try {
+      await this.active
+    } finally {
+      this.active = undefined
+    }
+  }
+
+  private async run(): Promise<void> {
+    do {
+      this.requested = false
+      await this.drain()
+    } while (this.requested)
+  }
+
+  private async drain(): Promise<void> {
     let rows: ReturnType<Storage["pendingEvents"]> = []
     try {
       while (true) {
@@ -70,8 +92,6 @@ export class Uploader {
     } catch (err) {
       for (const row of rows) this.deps.storage.markRetry(row.id, Date.now() + Config.retryBackoffMinMs)
       this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_network_error", props: { message: String(err) } })
-    } finally {
-      this.flushing = false
     }
   }
 }

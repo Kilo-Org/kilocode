@@ -103,6 +103,33 @@ describe("Uploader", () => {
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 })).toEqual([])
   })
 
+  test("concurrent shutdown flush waits for active upload", async () => {
+    let release: (() => void) | undefined
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async () => {
+        await blocked
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+    })
+    const first = uploader.flush("scheduled")
+    let done = false
+    const second = uploader.flush("shutdown").then(() => {
+      done = true
+    })
+    await Promise.resolve()
+    expect(done).toBe(false)
+    release?.()
+    await Promise.all([first, second])
+    expect(done).toBe(true)
+  })
+
   test("4xx response drops rows without retry", async () => {
     const uploader = new Uploader({
       storage,
