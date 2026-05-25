@@ -55,6 +55,7 @@ export class Uploader {
         rows = sessionRows(this.deps.storage.pendingEvents({ now, limitBytes: Config.flushSizeBytes }))
         if (rows.length === 0) return
         const batchId = await sha256Hex(rows.map((row) => row.id).join("\n"))
+        const chunks = this.deps.storage.chunksForEvents(rows.map((row) => row.id))
         const body = JSON.stringify({
           schemaVersion: 1,
           agentVersion: this.deps.agentVersion,
@@ -69,7 +70,7 @@ export class Uploader {
             seq: row.seq,
             ts: row.ts,
           })),
-          chunks: this.deps.storage.chunksForEvents(rows.map((row) => row.id)).map((chunk) => ({
+          chunks: chunks.map((chunk) => ({
             id: chunk.id,
             bytes: Buffer.from(chunk.bytes).toString("base64"),
             size: chunk.size,
@@ -81,14 +82,18 @@ export class Uploader {
           headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion, surface: this.deps.surface }),
           body,
         })
+        const eventIds = rows.map((row) => row.id)
+        const chunkIds = chunks.map((chunk) => chunk.id)
         if (res.ok) {
-          this.deps.storage.markUploaded(rows.map((row) => row.id))
+          this.deps.storage.markUploaded(eventIds)
+          this.deps.storage.decRefChunks(chunkIds)
           const deleted = this.deps.storage.deleteUploaded()
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.uploaded", props: { events: deleted.events, chunks: deleted.chunks, batchId } })
           continue
         }
         if (res.status >= 400 && res.status < 500) {
-          this.deps.storage.markUploaded(rows.map((row) => row.id))
+          this.deps.storage.markUploaded(eventIds)
+          this.deps.storage.decRefChunks(chunkIds)
           this.deps.storage.deleteUploaded()
           this.deps.reportTelemetry({ kind: "telemetry", name: "session_export.upload_4xx", props: { status: res.status, batchId } })
           continue

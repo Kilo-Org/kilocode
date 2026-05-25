@@ -182,6 +182,7 @@ describe("Uploader", () => {
     await uploader.flush("test")
     const body = JSON.parse(bodies[0]) as { chunks: Array<{ id: string; bytes: unknown; size: number; encoding: string }> }
     expect(body.chunks).toEqual([{ id: "h1", bytes: "AQIDBA==", size: 10, encoding: "zstd+base64" }])
+    expect(storage.getChunk("h1")).toBeUndefined()
   })
 
   test("4xx response drops rows without retry", async () => {
