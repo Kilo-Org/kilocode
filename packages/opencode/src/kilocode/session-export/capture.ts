@@ -60,7 +60,9 @@ export class Capture {
   }
 
   beforeRequest(args: {
-    input: EligibilityInput & { model: EligibilityInput["model"] & { providerId?: string; modelId?: string; variant?: string } }
+    input: EligibilityInput & {
+      model: EligibilityInput["model"] & { providerId?: string; providerID?: string; modelId?: string; modelID?: string; id?: string; variant?: string }
+    }
     requestMeta: RequestMeta
     assembled: {
       system: string[]
@@ -122,8 +124,8 @@ export class Capture {
       agent: meta.agent,
       modeId: meta.modeId,
       model: {
-        providerId: args.input.model.providerId ?? "",
-        modelId: args.input.model.modelId ?? "",
+        providerId: args.input.model.providerId ?? args.input.model.providerID ?? "",
+        modelId: args.input.model.modelId ?? args.input.model.modelID ?? args.input.model.id ?? "",
         variant: args.input.model.variant,
         isFree: true,
       },

@@ -46,6 +46,7 @@ export async function startBaselineFiber(args: BaselineFiberArgs): Promise<strin
 export async function startDeltaFiber(args: DeltaFiberArgs): Promise<string | undefined> {
   try {
     const result = await args.requestDiff(args.prevSnapshotHash)
+    if (result.diff.length === 0) return result.snapshotHash
     const env: WorkspaceDeltaCaptured = {
       id: ulid(),
       schemaVersion: 1,

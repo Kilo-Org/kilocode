@@ -18,7 +18,6 @@ const ENVELOPE = new Set([
   "sessionId",
   "rootSessionId",
   "parentSessionId",
-  "requestId",
   "seq",
   "ts",
   "agentVersion",
