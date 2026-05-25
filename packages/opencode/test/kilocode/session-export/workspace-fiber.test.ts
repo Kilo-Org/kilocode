@@ -62,9 +62,26 @@ describe("workspace fiber", () => {
       now: () => 0,
       syncSeq: () => 1,
       agentVersion: "v0",
-      requestDiff: async () => ({ snapshotHash: "h1", diff: [] }),
+      requestDiff: async () => ({ snapshotHash: "h1", diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }),
       dispatch: (event) => dispatched.push(event),
     })
     expect((dispatched[0] as { trigger: string }).trigger).toBe("session_close")
+  })
+
+  test("delta fiber skips empty diffs while returning snapshot", async () => {
+    const dispatched: unknown[] = []
+    const snapshot = await startDeltaFiber({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      trigger: "turn_end",
+      prevSnapshotHash: "h0",
+      now: () => 0,
+      syncSeq: () => 1,
+      agentVersion: "v0",
+      requestDiff: async () => ({ snapshotHash: "h1", diff: [] }),
+      dispatch: (event) => dispatched.push(event),
+    })
+    expect(snapshot).toBe("h1")
+    expect(dispatched.length).toBe(0)
   })
 })

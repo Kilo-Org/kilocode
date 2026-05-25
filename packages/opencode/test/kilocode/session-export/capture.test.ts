@@ -26,18 +26,23 @@ describe("Capture", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
       input: {
-        model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerId: "kilo", modelId: "free-1" },
+        model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true, providerID: "kilo", id: "free-1" },
         org: undefined,
       },
       requestMeta: meta("s1"),
       assembled: { system: ["sys"], messages: [], tools: {}, permissions: {}, params: {} },
     })
     expect(posted.length).toBe(2)
-    const msg = posted[1] as { kind: string; envelope: { type: string; seq: number; agentVersion: string } }
+    const msg = posted[1] as {
+      kind: string
+      envelope: { type: string; seq: number; agentVersion: string; model: { providerId: string; modelId: string } }
+    }
     expect(msg.kind).toBe("event")
     expect(msg.envelope.type).toBe("llm_request_started")
     expect(msg.envelope.seq).toBe(7)
     expect(msg.envelope.agentVersion).toBe("v0")
+    expect(msg.envelope.model.providerId).toBe("kilo")
+    expect(msg.envelope.model.modelId).toBe("free-1")
   })
 
   test("dispatch projects non-cloneable tool functions out of envelopes", () => {
@@ -100,7 +105,7 @@ describe("Capture", () => {
       syncSeq: () => 7,
       snapshotProvider: {
         baseline: async () => ({ snapshotId: "h0", files: [] }),
-        diff: async () => ({ snapshotHash: "h1", diff: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }),
       },
     })
     cap.beforeRequest({
@@ -113,6 +118,39 @@ describe("Capture", () => {
     await cap.onSessionClose("s1")
     const types = posted.map((item) => (item as { envelope?: { type?: string } }).envelope?.type)
     expect(types).toContain("workspace_delta_captured")
+  })
+
+  test("empty workspace deltas advance snapshot without dispatching", async () => {
+    const remembered: string[] = []
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "h0", files: [] }),
+        diff: async () => ({ snapshotHash: "h1", diff: [] }),
+        remember: (_sessionId, snapshotId) => remembered.push(snapshotId),
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    posted.length = 0
+    cap.afterRequest({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      output: { textParts: ["ok"] },
+      durationMs: 1,
+      retryCount: 0,
+    })
+    await until(() => remembered.includes("h1"))
+    const types = posted.map((item) => (item as { envelope?: { type?: string } }).envelope?.type)
+    expect(types).not.toContain("workspace_delta_captured")
   })
 
   test("afterRequest captures a turn-end workspace delta after baseline resolves", async () => {

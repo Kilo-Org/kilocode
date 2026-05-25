@@ -36,7 +36,9 @@ describe("handlers", () => {
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
     expect(rows.length).toBe(1)
     expect(rows[0].type).toBe("llm_request_started")
-    const data = JSON.parse(rows[0].dataJson) as { input: { system: string[] } }
+    const data = JSON.parse(rows[0].dataJson) as { requestId: string; input: { system: string[] } }
+    expect(rows[0].requestId).toBe("r1")
+    expect(data.requestId).toBe("r1")
     expect(data.input.system).toEqual(["sys"])
   })
 
