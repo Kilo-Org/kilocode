@@ -1971,17 +1971,17 @@ export type Workspace = {
   projectID: string
 }
 
-export type BackgroundProcessLogs = {
-  id: string
-  sessionID: string
-  output: string
-}
-
 export type WorkspaceWarpError = {
   name: "WorkspaceWarpError"
   data: {
     message: string
   }
+}
+
+export type BackgroundProcessLogs = {
+  id: string
+  sessionID: string
+  output: string
 }
 
 export type EffectHttpApiErrorUnauthorized = {
