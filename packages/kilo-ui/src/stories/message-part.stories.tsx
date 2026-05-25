@@ -232,7 +232,7 @@ const reasoningPart: ReasoningPart = {
   sessionID: SESSION_ID,
   messageID: ASST_MSG_ID,
   type: "reasoning",
-  text: "Let me think about this carefully. The user wants code improvements.\n\n1. First, I should check for error boundaries — they prevent cascading failures\n2. The dependencies could be updated to newer minor versions\n3. Unit tests would improve confidence in refactoring later\n\nI'll structure my response to address each point clearly.",
+  text: "**Reviewing code improvements**\n\nLet me think about this carefully. The user wants code improvements.\n\n1. First, I should check for error boundaries - they prevent cascading failures\n2. The dependencies could be updated to newer minor versions\n3. Unit tests would improve confidence in refactoring later\n\nI'll structure my response to address each point clearly.",
   time: { start: now - 9000, end: now - 8500 },
 }
 

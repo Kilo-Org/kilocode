@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.md
 
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.log.KiloLog
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
@@ -355,7 +356,11 @@ abstract class MdView private constructor() {
 
             linkColorOverride?.let { rules.append("a { color: ${hex(it)} } ") }
             codeFontOverride?.let { rules.append("tt, code, samp, pre { font-family: '${css(it)}', monospace } ") }
-            preBgOverride?.let { rules.append("pre { background: ${hex(it)} } ") }
+            preBgOverride?.let {
+                val color = hex(it)
+                rules.append("div.code-block { background: $color; border-color: $color; padding: ${UiStyle.Gap.xs()}px ${UiStyle.Gap.lg()}px } ")
+                rules.append("pre { background: $color; border-color: $color } ")
+            }
             preFgOverride?.let { rules.append("pre { color: ${hex(it)} } ") }
             codeBgOverride?.let { rules.append("code { background: ${hex(it)} } ") }
             quoteBorderOverride?.let { rules.append("blockquote { border-left-color: ${hex(it)} } ") }

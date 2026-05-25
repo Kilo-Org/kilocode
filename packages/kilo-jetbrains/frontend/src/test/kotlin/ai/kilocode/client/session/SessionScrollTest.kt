@@ -2,8 +2,13 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionOptionDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
+import ai.kilocode.rpc.dto.ToolRefDto
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CompletableDeferred
 
@@ -328,4 +333,79 @@ class SessionScrollTest : SessionUiTestBase() {
         assertSame(scrollComponent(), scrollView()?.parent?.parent)
         assertFalse(scrollView() is SessionMessageListPanel)
     }
+
+    // ------ question/login-required autoscroll ------
+
+    fun `test question appearing at bottom keeps scroll at bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_at_bottom")))
+        drainScroll()
+
+        assertBottom(bar)
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test question appearing while user is in middle preserves scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        emit(ChatEventDto.QuestionAsked("ses_test", question("q_middle")))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test login required appearing at bottom keeps scroll at bottom`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setBottom(bar)
+
+        val body = """{"error":{"code":"PAID_MODEL_AUTH_REQUIRED"}}"""
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "APIError", message = "Unauthorized", statusCode = 401, responseBody = body)))
+        drainScroll()
+
+        assertBottom(bar)
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test login required appearing while user is in middle preserves scroll position`() {
+        showMessages()
+        fillTranscript(24)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+
+        val body = """{"error":{"code":"PAID_MODEL_AUTH_REQUIRED"}}"""
+        emit(ChatEventDto.Error("ses_test", MessageErrorDto(type = "APIError", message = "Unauthorized", statusCode = 401, responseBody = body)))
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    // ------ helpers ------
+
+    private fun question(id: String) = QuestionRequestDto(
+        id = id,
+        sessionID = "ses_test",
+        questions = listOf(
+            QuestionInfoDto(
+                question = "Pick one",
+                header = "Choice",
+                options = listOf(QuestionOptionDto("A", "Option A")),
+                multiple = false,
+                custom = true,
+            ),
+        ),
+        tool = ToolRefDto("msg1", "call1"),
+    )
 }

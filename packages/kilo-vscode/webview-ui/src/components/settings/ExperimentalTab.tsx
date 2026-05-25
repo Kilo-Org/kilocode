@@ -26,7 +26,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, settings, updateConfig, updateSetting } = useConfig()
+  const { config, updateConfig } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const server = useServer()
@@ -47,7 +47,7 @@ const ExperimentalTab: Component = () => {
 
   const experimental = createMemo(() => config().experimental ?? {})
   const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.connected(), server.profileData()))
-  const speechModel = createMemo(() => selectedSpeechToTextModel(settings()))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
 
   const updateExperimental = (key: string, value: unknown) => {
     updateConfig({
@@ -211,8 +211,8 @@ const ExperimentalTab: Component = () => {
           }
         >
           <Switch
-            checked={Boolean(settings()["speechToText.enabled"] ?? false)}
-            onChange={(checked) => updateSetting("speechToText.enabled", checked)}
+            checked={experimental().speech_to_text ?? false}
+            onChange={(checked) => updateExperimental("speech_to_text", checked)}
             disabled={!kiloReady()}
             hideLabel
           >
@@ -229,7 +229,9 @@ const ExperimentalTab: Component = () => {
             current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
             value={(item) => item.value}
             label={(item) => `${item.label} (${item.provider})`}
-            onSelect={(item) => updateSetting("speechToText.model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)}
+            onSelect={(item) =>
+              updateExperimental("speech_to_text_model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)
+            }
             variant="secondary"
             size="small"
             triggerVariant="settings"

@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "En yeni",
   "model.group.recommended": "Önerilen",
   "model.group.favorites": "Favoriler",
+  "model.group.collapse": "{{group}} grubunu daralt",
+  "model.group.expand": "{{group}} grubunu genişlet",
   "model.favorite.add": "Favorilere ekle",
   "model.favorite.remove": "Favorilerden çıkar",
   "model.provider.anthropic": "Anthropic",
@@ -1635,4 +1637,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan hazır:",
 }

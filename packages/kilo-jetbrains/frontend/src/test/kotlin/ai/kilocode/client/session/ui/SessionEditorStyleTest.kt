@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import java.awt.Font
@@ -37,7 +38,7 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
         assertTrue(font.size < style.editorSize)
     }
 
-    fun `test custom style derives fonts from supplied editor baseline`() {
+    fun `test custom style keeps editor fields from supplied baseline`() {
         val style = SessionEditorStyle.create(family = "Courier New", size = 22)
 
         assertEquals("Courier New", style.editorFamily)
@@ -48,6 +49,43 @@ class SessionEditorStyleTest : BasePlatformTestCase() {
         assertEquals(22, style.boldEditorFont.size)
         assertTrue(style.boldEditorFont.isBold)
         assertTrue(style.smallEditorFont.size < style.editorSize)
-        assertEquals(style.editorSize, style.uiFont.size)
+    }
+
+    // --- UI fonts come from UiStyle.Fonts, NOT from the editor ---
+
+    fun `test headerFont equals UiStyle Fonts header`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+        assertEquals(UiStyle.Fonts.header(), style.headerFont)
+    }
+
+    fun `test hintFont equals UiStyle Fonts hint`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+        assertEquals(UiStyle.Fonts.hint(), style.hintFont)
+    }
+
+    fun `test regularFont equals UiStyle Fonts regular`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+        assertEquals(UiStyle.Fonts.regular(), style.regularFont)
+    }
+
+    fun `test boldFont equals UiStyle Fonts bold`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+        assertEquals(UiStyle.Fonts.bold(), style.boldFont)
+        assertTrue(style.boldFont.isBold)
+    }
+
+    fun `test smallFont equals UiStyle Fonts small`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+        assertEquals(UiStyle.Fonts.small(), style.smallFont)
+    }
+
+    fun `test ui fonts do not use editor font family`() {
+        val style = SessionEditorStyle.create(family = "Courier New", size = 22)
+
+        assertFalse("headerFont should not use editor font family", style.headerFont.name == "Courier New")
+        assertFalse("hintFont should not use editor font family", style.hintFont.name == "Courier New")
+        assertFalse("regularFont should not use editor font family", style.regularFont.name == "Courier New")
+        assertFalse("boldFont should not use editor font family", style.boldFont.name == "Courier New")
+        assertFalse("smallFont should not use editor font family", style.smallFont.name == "Courier New")
     }
 }

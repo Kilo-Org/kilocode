@@ -12,7 +12,7 @@ import { Auth } from "../../src/auth"
 import { Account } from "../../src/account/account"
 import { Env } from "../../src/env"
 import { Npm } from "@opencode-ai/core/npm"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { tmpdir } from "../fixture/fixture"
@@ -56,7 +56,7 @@ async function writeConfig(dir: string, config: unknown) {
 
 test("project config update creates .kilo/kilo.json and reloads it", async () => {
   await using tmp = await tmpdir()
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
@@ -72,7 +72,7 @@ test("project config update creates .kilo/kilo.json and reloads it", async () =>
 
 test("project config update skips empty delete-only writes when no config exists", async () => {
   await using tmp = await tmpdir()
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       await save({ provider: { missing: null } } as any)
@@ -86,7 +86,7 @@ test("project config update prefers existing root kilo.json", async () => {
   await using tmp = await tmpdir()
   await writeConfig(tmp.path, { username: "alice" })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       await save({ model: "updated/model" } as any)
@@ -105,7 +105,7 @@ test("project config update patches ancestor .kilo/kilo.json from nested directo
   await fs.mkdir(path.join(tmp.path, ".kilo"), { recursive: true })
   await writeConfig(path.join(tmp.path, ".kilo"), { username: "alice" })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: child,
     fn: async () => {
       await save({ model: "updated/model" } as any)

@@ -11,7 +11,7 @@ import { Env } from "../../../src/env"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Filesystem } from "../../../src/util/filesystem"
-import { Instance } from "../../../src/project/instance"
+import { WithInstance } from "../../../src/project/with-instance"
 import { Npm } from "@opencode-ai/core/npm"
 import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 
@@ -41,13 +41,13 @@ const layer = Config.layer.pipe(
 )
 
 const load = () => Effect.runPromise(Config.Service.use((svc) => svc.get()).pipe(Effect.scoped, Effect.provide(layer)))
-const clear = (wait = false) =>
-  Effect.runPromise(Config.Service.use((svc) => svc.invalidate(wait)).pipe(Effect.scoped, Effect.provide(layer)))
+const clear = () =>
+  Effect.runPromise(Config.Service.use((svc) => svc.invalidate()).pipe(Effect.scoped, Effect.provide(layer)))
 
 describe("kilocode default indexing plugin", () => {
   afterEach(async () => {
+    await clear()
     await disposeAllInstances()
-    await clear(true)
   })
 
   test("does not hard-enable indexing plugin when default plugins are disabled", async () => {
@@ -67,7 +67,7 @@ describe("kilocode default indexing plugin", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const config = await load()

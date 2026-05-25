@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
+  "model.group.collapse": "折叠 {{group}}",
+  "model.group.expand": "展开 {{group}}",
   "model.favorite.add": "添加到收藏夹",
   "model.favorite.remove": "从收藏夹中移除",
 
@@ -1549,4 +1551,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "没有匹配的分支",
   "diffViewer.baseBranch.loading": "正在加载分支…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "计划已准备就绪：",
 } satisfies Partial<Record<Keys, string>>

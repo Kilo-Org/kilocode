@@ -180,6 +180,8 @@ export const dict = {
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
+  "model.group.collapse": "Skjul {{group}}",
+  "model.group.expand": "Vis {{group}}",
   "model.favorite.add": "Legg til i favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
   "model.provider.anthropic": "Anthropic",
@@ -1608,4 +1610,5 @@ export const dict = {
   "diffViewer.baseBranch.empty": "No matching branches",
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Planen er klar:",
 } satisfies Partial<Record<Keys, string>>

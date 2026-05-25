@@ -8,6 +8,7 @@ import { ProviderAuth } from "@/provider/auth"
 import { ProviderID } from "@/provider/schema"
 import { mapValues, pickBy } from "remeda" // kilocode_change
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
+import { disposeAllInstancesAfterProviderAuthCallback } from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
 import { Effect } from "effect"
@@ -165,6 +166,7 @@ export const ProviderRoutes = lazy(() =>
             method,
             code,
           })
+          yield* disposeAllInstancesAfterProviderAuthCallback() // kilocode_change
           return true
         }),
     ),

@@ -44,9 +44,9 @@ internal class ContextBar : JPanel(BorderLayout(UiStyle.Gap.md(), 0)) {
         background = style.editorBackground
         foreground = style.editorForeground
         meter.background = style.editorBackground
-        used.font = style.smallUiFont
+        used.font = style.smallFont
         used.foreground = style.editorForeground
-        limit.font = style.smallUiFont
+        limit.font = style.smallFont
         limit.foreground = style.editorForeground
     }
 

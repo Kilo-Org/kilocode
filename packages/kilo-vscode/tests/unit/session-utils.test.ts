@@ -3,8 +3,7 @@ import {
   computeStatus,
   calcTotalCost,
   calcContextUsage,
-  formatRate,
-  latestRates,
+  calcTokenUsage,
   buildFamilyCosts,
   buildFamilyParents,
   buildFamilyLabels,
@@ -143,62 +142,32 @@ describe("calcContextUsage", () => {
   })
 })
 
-describe("latestRates", () => {
-  it("returns provider prompt and generation rates from newest assistant step", () => {
-    const msgs = [
-      {
-        role: "assistant",
-        parts: [
-          {
-            id: "sf1",
-            type: "step-finish" as const,
-            reason: "stop",
-            metrics: { duration: 2000, rate: { output: 25, prompt: 412.49, generation: 38.15 } },
-          },
-        ],
-      },
-    ]
+describe("calcTokenUsage", () => {
+  it("sums assistant message input, output, and cache read tokens", () => {
+    const result = calcTokenUsage([
+      { role: "assistant", tokens: { input: 100, output: 40, reasoning: 8, cache: { read: 10, write: 5 } } },
+      { role: "assistant", tokens: { input: 25, output: 15, cache: { read: 7, write: 3 } } },
+    ])
 
-    expect(latestRates(msgs)).toEqual({ prompt: 412.49, generation: 38.15, output: 25 })
+    expect(result).toEqual({ input: 125, output: 55, cached: 17 })
   })
 
-  it("returns rates from the current parts store", () => {
-    const msgs = [{ id: "msg1", role: "assistant" }]
-    const parts = {
-      msg1: [
-        {
-          id: "sf1",
-          type: "step-finish" as const,
-          reason: "stop",
-          metrics: { duration: 2000, rate: { output: 25, prompt: 412.49, generation: 38.15 } },
-        },
-      ],
-    }
+  it("ignores user messages, missing tokens, reasoning tokens, and cache writes", () => {
+    const result = calcTokenUsage([
+      { role: "user", tokens: { input: 999, output: 999, cache: { read: 999, write: 999 } } },
+      { role: "assistant" },
+      { role: "assistant", tokens: { input: 10, output: 4, reasoning: 30, cache: { read: 2, write: 20 } } },
+    ])
 
-    expect(latestRates(msgs, parts)).toEqual({ prompt: 412.49, generation: 38.15, output: 25 })
+    expect(result).toEqual({ input: 10, output: 4, cached: 2 })
   })
 
-  it("falls back to computed output as generation", () => {
-    const msgs = [
-      {
-        role: "assistant",
-        parts: [
-          {
-            id: "sf1",
-            type: "step-finish" as const,
-            reason: "stop",
-            metrics: { duration: 2000, rate: { output: 25 } },
-          },
-        ],
-      },
-    ]
+  it("returns undefined when there are no displayed token counts", () => {
+    const result = calcTokenUsage([
+      { role: "assistant", tokens: { input: 0, output: 0, reasoning: 12, cache: { read: 0, write: 6 } } },
+    ])
 
-    expect(latestRates(msgs)).toEqual({ generation: 25, output: 25 })
-  })
-
-  it("formats compact throughput text", () => {
-    expect(formatRate(38.15)).toBe("38.1 t/s")
-    expect(formatRate(undefined)).toBeUndefined()
+    expect(result).toBeUndefined()
   })
 })
 

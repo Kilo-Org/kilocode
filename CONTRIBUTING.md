@@ -14,15 +14,100 @@ There are lots of ways to contribute to the project:
 
 The Kilo Community is [on Discord](https://kilo.ai/discord).
 
+## Prerequisites
+
+- **Bun 1.3.13+** — required for all packages.
+- **Java 21** — required by the JetBrains plugin. The root `bun turbo typecheck` and `bun turbo test:ci` commands include `@kilocode/kilo-jetbrains` and will fail without Java 21.
+
+  The preferred way to install Java is via [SDKMAN](https://sdkman.io/install):
+
+  ```bash
+  # Install SDKMAN (if not already installed)
+  curl -s "https://get.sdkman.io" | bash
+
+  # Install and activate Java 21 (Eclipse Temurin)
+  sdk install java 21-tem
+  sdk use java 21-tem
+
+  # Verify
+  java -version
+  ```
+
+  If you don't plan to work on the JetBrains plugin, you can still run non-JetBrains checks directly:
+
+  ```bash
+  bun turbo typecheck --filter=!@kilocode/kilo-jetbrains
+  ```
+
 ## Developing Kilo CLI
 
-- **Requirements:** Bun 1.3.13+
-- Install dependencies and start the dev server from the repo root:
+- **Requirements:** Bun 1.3.13+, Java 21 (see [Prerequisites](#prerequisites) above)
+- Install dependencies and start the CLI from the repo root:
 
   ```bash
   bun install
   bun dev
   ```
+
+  `bun dev` and `bun run dev` both run the local CLI. For the VS Code extension, use `bun run extension`.
+
+## Common Checks
+
+From the repo root:
+
+```bash
+bun install
+bun run lint
+bun run typecheck
+```
+
+`bun run typecheck` wraps `bun turbo typecheck`. Use `bun turbo typecheck --force` if you need to bypass the Turbo cache.
+
+Do **not** run `bun test` from the repo root. The root test script intentionally exits with failure so tests run from the package that owns them.
+
+### CLI checks
+
+From `packages/opencode/`:
+
+```bash
+bun run typecheck
+bun test
+bun test ./path/to/file.test.ts
+```
+
+For backend/API validation, see [`TESTING.md`](./TESTING.md). It covers starting the local backend with `bun dev serve` and making `curl` requests against it. After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from the repo root to regenerate `packages/sdk/js/`.
+
+### VS Code extension checks
+
+From `packages/kilo-vscode/`:
+
+```bash
+bun run typecheck
+bun run lint
+bun run test:unit
+bun run test
+bun run compile
+bun run package
+```
+
+### Documentation checks
+
+From the repo root:
+
+```bash
+bun run --filter @kilocode/kilo-docs test
+bun run --filter @kilocode/kilo-docs build
+bun run --filter @kilocode/kilo-docs dev
+```
+
+For manual docs validation, run the docs site locally, preview the affected page, and check changed links and rendered content.
+
+### Guardrails
+
+- User-facing changes usually need a changeset (`bunx changeset add` or a file under `.changeset/`).
+- After changing server endpoints, regenerate the SDK with `./script/generate.ts`.
+- After adding or changing guarded URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root.
+- When editing shared `packages/opencode/` files, keep Kilo changes small and mark Kilo-only edits with `// kilocode_change` for a single line or `// kilocode_change start` / `// kilocode_change end` for a block. Do not add these markers inside `kilocode`-named paths.
 
 ### Developing the VS Code Extension
 
@@ -33,6 +118,23 @@ bun run extension        # Build + launch in dev mode
 ```
 
 This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
+
+### Developing the JetBrains Plugin
+
+Requires Java 21 (see [Prerequisites](#prerequisites)). From `packages/kilo-jetbrains/`:
+
+```bash
+./gradlew typecheck    # Compile-check all Kotlin sources
+./gradlew test         # Run all tests (backend + frontend)
+./gradlew runIde       # Launch sandboxed IntelliJ with the plugin
+```
+
+Or via the root turbo filter to run only JetBrains checks from the repo root:
+
+```bash
+bun turbo typecheck --filter=@kilocode/kilo-jetbrains
+bun turbo test:ci --filter=@kilocode/kilo-jetbrains
+```
 
 ### Running against a different directory
 
@@ -148,6 +250,20 @@ Current required fields by issue type:
 
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
+
+### Testing Evidence
+
+Every PR marked ready for review must include testing evidence. A bare `Not tested` or `N/A` answer is not sufficient.
+
+Choose checks that match the files touched. Include command results and manual/local verification; for visual CLI or extension changes, include screenshots or videos. Docs-only, config-only, and similar changes still need concrete evidence, such as a relevant command check or preview.
+
+If you cannot complete a relevant command, include all of the following in the PR:
+
+- The command you attempted or would normally run
+- The blocker or failure that prevented completion
+- The substitute verification you performed instead
+
+See [Testing Evidence for Pull Requests](packages/kilo-docs/pages/contributing/development-environment.md#testing-evidence-for-pull-requests) for more examples. Agent limitations, local resource constraints, OOM constraints, or an agent prompt that says to skip tests do not waive this requirement. Draft PRs may be incomplete until they are marked ready for review. Maintainers may still defer or close review at their discretion.
 
 ## Issue First Policy
 

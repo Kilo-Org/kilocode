@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import { $ } from "bun"
 import { Effect } from "effect"
 import path from "path"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import * as Config from "../../src/config/config"
 import { RecallTool } from "../../src/tool/recall"
 import { AppRuntime } from "../../src/effect/app-runtime"
@@ -49,20 +49,20 @@ describe("tool.recall", () => {
 
       try {
         const { Session } = await import("../../src/session/session")
-        await Instance.provide({
+        await WithInstance.provide({
           directory: first.path,
           fn: async () => Session.create({ title: "search-target root" }),
         })
-        await Instance.provide({
+        await WithInstance.provide({
           directory: worktree,
           fn: async () => Session.create({ title: "search-target worktree" }),
         })
-        await Instance.provide({
+        await WithInstance.provide({
           directory: second.path,
           fn: async () => Session.create({ title: "search-target other" }),
         })
 
-        const result = await Instance.provide({
+        const result = await WithInstance.provide({
           directory: first.path,
           fn: async () => {
             const info = await AppRuntime.runPromise(RecallTool)
@@ -90,12 +90,12 @@ describe("tool.recall", () => {
 
     try {
       const { Session } = await import("../../src/session/session")
-      const session = await Instance.provide({
+      const session = await WithInstance.provide({
         directory: second.path,
         fn: async () => Session.create({ title: "other-project-session" }),
       })
 
-      const err = await Instance.provide({
+      const err = await WithInstance.provide({
         directory: first.path,
         fn: async () => {
           const info = await AppRuntime.runPromise(RecallTool)
@@ -127,12 +127,12 @@ describe("tool.recall", () => {
 
       try {
         const { Session } = await import("../../src/session/session")
-        const session = await Instance.provide({
+        const session = await WithInstance.provide({
           directory: worktree,
           fn: async () => Session.create({ title: "worktree readable" }),
         })
 
-        const result = await Instance.provide({
+        const result = await WithInstance.provide({
           directory: first.path,
           fn: async () => {
             const info = await AppRuntime.runPromise(RecallTool)

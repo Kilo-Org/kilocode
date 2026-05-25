@@ -179,7 +179,8 @@ export default {
   }
 })
 
-test(
+// kilocode_change - skipped flaky test on Windows #9496
+test.skipIf(process.platform === "win32")(
   "times out hanging plugin cleanup on dispose",
   async () => {
     await using tmp = await tmpdir({

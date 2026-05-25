@@ -1,17 +1,21 @@
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
-import z from "zod"
 import { Config } from "@/config/config"
+import { InstanceState } from "@/effect/instance-state"
+import { InstanceStore } from "@/project/instance-store"
 import { Provider } from "@/provider/provider"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
-import { jsonRequest } from "./trace"
+import { jsonRequest, runRequest } from "./trace"
+import { Effect } from "effect"
+import * as Log from "@opencode-ai/core/util/log"
 // kilocode_change start
 import { fetchDefaultModel } from "@kilocode/kilo-gateway"
 import { Auth } from "@/auth"
-import { Effect } from "effect"
 import { ModelID, ProviderID } from "@/provider/schema"
 // kilocode_change end
+
+const log = Log.create({ service: "server.config" })
 
 export const ConfigRoutes = lazy(() =>
   new Hono()
@@ -57,13 +61,28 @@ export const ConfigRoutes = lazy(() =>
         },
       }),
       validator("json", Config.Info.zod),
-      async (c) =>
-        jsonRequest("ConfigRoutes.update", c, function* () {
-          const config = c.req.valid("json")
-          const cfg = yield* Config.Service
-          yield* cfg.update(config)
-          return config
-        }),
+      async (c) => {
+        const result = await runRequest(
+          "ConfigRoutes.update",
+          c,
+          Effect.gen(function* () {
+            const config = c.req.valid("json")
+            const cfg = yield* Config.Service
+            yield* cfg.update(config)
+            return { config, ctx: yield* InstanceState.context }
+          }),
+        )
+        const response = c.json(result.config)
+        void runRequest(
+          "ConfigRoutes.update.dispose",
+          c,
+          InstanceStore.Service.use((store) => store.dispose(result.ctx)).pipe(
+            Effect.uninterruptible,
+            Effect.catchCause((cause) => Effect.sync(() => log.warn("instance disposal failed", { cause }))),
+          ),
+        )
+        return response
+      },
     )
     // kilocode_change start
     .get(

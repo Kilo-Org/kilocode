@@ -2,7 +2,7 @@ import { createContext, useContext, createMemo, createSignal, onCleanup, createE
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { ExtensionMessage, IndexingStatus } from "../types/messages"
-import { formatIndexingLabel, indexingTone } from "./indexing-utils"
+import { applyIndexingStatusMessage, formatIndexingLabel, indexingTone } from "./indexing-utils"
 import { useConfig } from "./config"
 
 interface IndexingContextValue {
@@ -31,10 +31,7 @@ export const IndexingProvider: ParentComponent = (props) => {
   const [loading, setLoading] = createSignal(true)
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (!features().indexing) return
-    if (message.type !== "indexingStatusLoaded") return
-    setStatus(message.status)
-    setLoading(false)
+    applyIndexingStatusMessage(message, setStatus, setLoading)
   })
 
   onCleanup(unsubscribe)

@@ -91,7 +91,7 @@ const seed = Effect.fn("TaskToolModelTest.seed")(function* (title = "Parent") {
 
 function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void; text?: string }): TaskPromptOps {
   return {
-    cancel() {},
+    cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt: (input) =>
       Effect.sync(() => {

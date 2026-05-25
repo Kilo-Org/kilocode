@@ -98,42 +98,33 @@ export function calcContextUsage(
   return { tokens: total, percentage }
 }
 
-export function formatRate(input: number | undefined): string | undefined {
-  if (input === undefined) return undefined
-  if (!Number.isFinite(input)) return undefined
-  if (input <= 0) return undefined
-  return `${input.toFixed(1)} t/s`
+export type TokenUsageMessage = {
+  role: string
+  tokens?: {
+    input: number
+    output: number
+    reasoning?: number
+    cache?: { read: number; write: number }
+  }
 }
 
-export function latestRates(
-  msgs: Array<{ id?: string; role?: string; parts?: Array<{ type?: string; metrics?: StepMetrics }> }>,
-  all?: Record<string, Array<{ type?: string; metrics?: StepMetrics }>>,
-) {
-  const msg = [...msgs].reverse().find((item) => {
-    if (item.role !== "assistant") return false
-    const parts = item.parts ?? (item.id ? all?.[item.id] : undefined)
-    return parts?.some((part) => part.type === "step-finish" && part.metrics)
-  })
-  const parts = msg?.parts ?? (msg?.id ? all?.[msg.id] : undefined) ?? []
-  const part = [...parts].reverse().find((item) => item.type === "step-finish" && item.metrics)
-  if (!part?.metrics) return undefined
-  const rate = part.metrics.rate
-  const generation = rate.generation ?? rate.output
-  if (!rate.prompt && !generation && !rate.output) return undefined
-  return { prompt: rate.prompt, generation, output: rate.output }
-}
+export function calcTokenUsage(
+  messages: TokenUsageMessage[],
+): { input: number; output: number; cached: number } | undefined {
+  const total = messages.reduce(
+    (sum, m) => {
+      if (m.role !== "assistant" || !m.tokens) return sum
+      return {
+        input: sum.input + m.tokens.input,
+        output: sum.output + m.tokens.output,
+        cached: sum.cached + (m.tokens.cache?.read ?? 0),
+      }
+    },
+    { input: 0, output: 0, cached: 0 },
+  )
 
-export function messageRates(
-  msg: { id?: string; parts?: Array<{ type?: string; metrics?: StepMetrics }> },
-  all?: Record<string, Array<{ type?: string; metrics?: StepMetrics }>>,
-) {
-  const parts = msg.parts ?? (msg.id ? all?.[msg.id] : undefined) ?? []
-  const part = [...parts].reverse().find((item) => item.type === "step-finish" && item.metrics)
-  if (!part?.metrics) return undefined
-  const rate = part.metrics.rate
-  const generation = rate.generation ?? rate.output
-  if (!rate.prompt && !generation && !rate.output) return undefined
-  return { prompt: rate.prompt, generation, output: rate.output, duration: part.metrics.duration }
+  if (total.input > 0 || total.output > 0 || total.cached > 0) return total
+  return undefined
 }
 
 /**

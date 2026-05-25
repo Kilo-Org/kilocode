@@ -1,11 +1,6 @@
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
-// kilocode_change - AppRuntime is imported lazily inside dispatch() below to break a
-// module init cycle: Worktree → project/bootstrap → kilo-sessions → remote-sender →
-// app-runtime → Worktree. Static import here caused Worktree.defaultLayer to be
-// undefined when app-runtime evaluated during tests that import Worktree.
-import { Instance } from "@/project/instance"
 import { Session } from "@/session/session"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
@@ -18,6 +13,13 @@ import { ModelID, ProviderID } from "@/provider/schema"
 import * as Log from "@opencode-ai/core/util/log"
 import z from "zod"
 import { zodObject } from "@/util/effect-zod"
+
+type Provide = typeof import("@/project/with-instance").provide
+
+async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
+  const { WithInstance } = await import("@/project/with-instance")
+  return WithInstance.provide(input)
+}
 
 const QuestionData = z.object({
   requestID: z.string(),
@@ -69,7 +71,7 @@ export namespace RemoteSender {
       warn: (...args: any[]) => void
     }
     subscribe?: (callback: (event: any) => void) => () => void
-    provide?: typeof Instance.provide
+    provide?: Provide
   }
 
   export type Sender = {
@@ -110,10 +112,10 @@ export namespace RemoteSender {
     }
 
     async function backfillChildren(parentId: string) {
-      const provide = options.provide ?? Instance.provide
+      const run = options.provide ?? provide
       try {
         const dir = await directoryFor(parentId)
-        await provide({
+        await run({
           directory: dir,
           fn: async () => {
             await discoverChildren(parentId)
@@ -163,10 +165,10 @@ export namespace RemoteSender {
     }
 
     async function backfillPendingState(sessionId: string) {
-      const provide = options.provide ?? Instance.provide
+      const run = options.provide ?? provide
       try {
         const dir = await directoryFor(sessionId)
-        await provide({
+        await run({
           directory: dir,
           fn: () => replay(sessionId),
         })
@@ -228,11 +230,11 @@ export namespace RemoteSender {
     }
 
     function dispatchLongRunning(msg: RemoteProtocol.Command, dir: Promise<string>, work: () => Promise<void>) {
-      const provide = options.provide ?? Instance.provide
+      const run = options.provide ?? provide
       options.conn.send({ type: "response", id: msg.id, result: {} })
       void (async () => {
         try {
-          await provide({ directory: await dir, fn: work })
+          await run({ directory: await dir, fn: work })
         } catch (e) {
           options.log.error("long-running command failed after ACK", {
             id: msg.id,
@@ -244,10 +246,10 @@ export namespace RemoteSender {
     }
 
     function dispatchQuick(msg: RemoteProtocol.Command, dir: Promise<string>, work: () => Promise<void>) {
-      const provide = options.provide ?? Instance.provide
+      const run = options.provide ?? provide
       void (async () => {
         try {
-          await provide({ directory: await dir, fn: work })
+          await run({ directory: await dir, fn: work })
           options.conn.send({ type: "response", id: msg.id, result: {} })
         } catch (e) {
           options.conn.send({ type: "response", id: msg.id, error: String(e) })

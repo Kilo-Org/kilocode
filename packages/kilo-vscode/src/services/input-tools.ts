@@ -1,6 +1,5 @@
 import type { KiloConnectionService } from "./cli-backend/connection-service"
 import { routeAutocompleteMessage } from "./autocomplete/settings"
-import { buildSpeechToTextSettingsMessage } from "../speech-to-text/settings"
 import { handleSpeechToTextCancel, handleSpeechToTextStart, handleSpeechToTextStop } from "../speech-to-text/handler"
 
 type Msg = {
@@ -18,11 +17,6 @@ type Ctx = {
 
 export async function routeInputToolMessage(message: Msg, ctx: Ctx): Promise<boolean> {
   if (await routeAutocompleteMessage(message, ctx.post)) return true
-
-  if (message.type === "requestSpeechToTextSettings") {
-    ctx.post(buildSpeechToTextSettingsMessage())
-    return true
-  }
 
   if (message.type === "speechToTextStart") {
     if (!message.requestId) return true

@@ -1,13 +1,28 @@
-- Find code snippets most relevant to the search query using semantic search.
-- Returns matching content with file paths, line ranges, and relevance scores.
-- Searches based on meaning rather than exact text matches.
-- By default searches entire workspace, with capability to filter by path.
+Find code snippets by semantic meaning and return ranked matches with file paths and line ranges.
 
-Usage Notes:
-- Use this tool any time you start exploring a new area of the codebase. This tool will help discover all areas of the codebase related to the query, even if they do not match an exact symbol name.
-- Queries MUST be in English (translate if needed).
-- Prefer the Grep tool if you know the exact symbol name to search for and do not need semantic context.
+## When to use
 
-Example Queries:
-- "User login and password hashing"
-- "database connection pooling"
+- Explore an unfamiliar code area before you know exact identifiers
+- Find related implementations of a concept or behavior across the workspace
+- Search by intent such as authentication, caching, or session resume logic
+- Narrow a large codebase before following up with `Read` or `Grep`
+- Limit semantic search to one subdirectory with `path`
+
+## When NOT to use
+
+- Search for an exact symbol or regex pattern — use `Grep`
+- Find files by filename or extension — use `Glob`
+- Read the contents of a known file — use `Read`
+- Explore files outside the current workspace - use `Grep`, `Glob`, and `Read`
+
+## Examples
+
+- "User login and password hashing" → search for auth-related code by meaning
+- "Database connection pooling" → find conceptually similar implementations
+- "Session resume flow" → retrieve snippets involved in restoring session state
+- "Tool approval UI" with `path: "packages/opencode/src"` → combine a natural-language query with `path`
+
+## Constraints
+
+- Write the query in English.
+- Use `path` only for subdirectories inside the current workspace.

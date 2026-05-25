@@ -41,7 +41,7 @@ export interface LanguageParser {
   }
 }
 
-function resolveModulePath(specifier: string): string | undefined {
+export function resolveModulePath(specifier: string): string | undefined {
   try {
     return require.resolve(specifier)
   } catch {
@@ -53,7 +53,7 @@ function uniquePaths(paths: Array<string | undefined>): string[] {
   return [...new Set(paths.filter((item): item is string => !!item))]
 }
 
-function wasmDirectories(sourceDirectory?: string): string[] {
+export function wasmDirectories(sourceDirectory?: string): string[] {
   const baseDir = sourceDirectory || __dirname
   const execDir = path.dirname(process.execPath)
   const envDir = process.env.KILO_TREE_SITTER_WASM_DIR
@@ -80,7 +80,7 @@ function resolveFromDirectories(file: string, dirs: string[]): string | undefine
   }
 }
 
-function resolveCoreRuntimeWasmPath(sourceDirectory?: string): string | undefined {
+export function resolveCoreRuntimeWasmPath(sourceDirectory?: string): string | undefined {
   const dirs = wasmDirectories(sourceDirectory)
   const localPath = resolveFromDirectories("tree-sitter.wasm", dirs)
   if (localPath) {
@@ -89,7 +89,7 @@ function resolveCoreRuntimeWasmPath(sourceDirectory?: string): string | undefine
   return resolveModulePath("web-tree-sitter/tree-sitter.wasm")
 }
 
-function resolveLanguageWasmPath(langName: string, sourceDirectory?: string) {
+export function resolveLanguageWasmPath(langName: string, sourceDirectory?: string) {
   const dirs = wasmDirectories(sourceDirectory)
   const fileName = `tree-sitter-${langName}.wasm`
   const wasmPath = resolveFromDirectories(fileName, dirs)

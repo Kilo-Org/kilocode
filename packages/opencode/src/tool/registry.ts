@@ -2,7 +2,7 @@ import { PlanExitTool } from "./plan"
 import { Session } from "@/session/session"
 import { QuestionTool } from "./question"
 import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
-import { BashTool } from "./bash"
+import { ShellTool } from "./shell"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
@@ -111,7 +111,7 @@ export const layer: Layer.Layer<
     const plan = yield* PlanExitTool
     const webfetch = yield* WebFetchTool
     const websearch = yield* WebSearchTool
-    const bash = yield* BashTool
+    const shell = yield* ShellTool
     const globtool = yield* GlobTool
     const writetool = yield* WriteTool
     const edit = yield* EditTool
@@ -204,7 +204,7 @@ export const layer: Layer.Layer<
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
-          bash: Tool.init(bash),
+          shell: Tool.init(shell),
           read: Tool.init(read),
           glob: Tool.init(globtool),
           grep: Tool.init(greptool),
@@ -226,28 +226,31 @@ export const layer: Layer.Layer<
 
         return {
           custom,
-          builtin: [
-            tool.invalid,
-            ...(questionEnabled ? [tool.question] : []),
-            tool.bash,
-            tool.read,
-            tool.glob,
-            tool.grep,
-            tool.edit,
-            tool.write,
-            tool.task,
-            tool.fetch,
-            tool.todo,
-            tool.search,
-            tool.skill,
-            tool.patch,
-            // kilocode_change start
-            tool.plan,
-            ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
-            ...KiloToolRegistry.extra(kilo, cfg),
-            // kilocode_change end
-            ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
-          ],
+          builtin: KiloToolRegistry.describe(
+            [
+              tool.invalid,
+              ...(questionEnabled ? [tool.question] : []),
+              tool.shell,
+              tool.read,
+              tool.glob,
+              tool.grep,
+              tool.edit,
+              tool.write,
+              tool.task,
+              tool.fetch,
+              tool.todo,
+              tool.search,
+              tool.skill,
+              tool.patch,
+              // kilocode_change start
+              tool.plan,
+              ...(["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool.suggest] : []),
+              ...KiloToolRegistry.extra(kilo, cfg),
+              // kilocode_change end
+              ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
+            ],
+            kilo,
+          ), // kilocode_change
           task: tool.task,
           read: tool.read,
         }

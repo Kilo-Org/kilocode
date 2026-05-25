@@ -2,15 +2,11 @@ import z from "zod"
 import { EOL } from "os"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { logo as glyphs } from "./logo"
+import { tui } from "../kilocode/cli/logo" // kilocode_change
 
-const wordmark = [
-  // kilocode_change start
-  `██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ `,
-  `████   ██ ██     ██~~██   ██~~~~ ██     ██ `,
-  `██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ `,
-  `~~  ~~ ~~ ~~~~~~  ~~~~     ~~~~~ ~~~~~~ ~~ `,
-  // kilocode_change end
-]
+// kilocode_change start
+const wordmark = [...tui()]
+// kilocode_change end
 
 export const CancelledError = NamedError.create("UICancelledError", z.void())
 

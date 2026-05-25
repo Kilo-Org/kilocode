@@ -14,7 +14,7 @@
 
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Server } from "../../src/server/server"
 import { Session } from "../../src/session/session"
 import { Snapshot } from "../../src/snapshot"
@@ -45,7 +45,7 @@ test("pathological diffFull workload finishes quickly and does not block abort",
     },
   })
 
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const session = await Session.create({})
