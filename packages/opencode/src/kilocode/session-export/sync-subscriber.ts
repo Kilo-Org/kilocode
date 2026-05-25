@@ -8,6 +8,7 @@ export type SyncSubscriberDeps = {
   now: () => number
   syncSeq: (sessionId: string) => number
   getTurnId?: (sessionId: string) => string | undefined
+  getRootSessionId?: (sessionId: string) => string | undefined
 }
 
 type SyncLike = { type: string; aggregateID?: string; seq?: number; data?: unknown; properties?: unknown }
@@ -53,7 +54,7 @@ export class SyncSubscriber {
       schemaVersion: 1,
       type: "tool_executed",
       sessionId,
-      rootSessionId: sessionId,
+      rootSessionId: this.deps.getRootSessionId?.(sessionId) ?? sessionId,
       turnId: this.deps.getTurnId?.(sessionId),
       seq,
       eventSeq: seq,
@@ -81,7 +82,7 @@ export class SyncSubscriber {
         schemaVersion: 1,
         type: "terminal_outcome",
         sessionId,
-        rootSessionId: sessionId,
+        rootSessionId: this.deps.getRootSessionId?.(sessionId) ?? sessionId,
         turnId: this.deps.getTurnId?.(sessionId),
         seq: termSeq,
         eventSeq: termSeq,
@@ -105,7 +106,7 @@ export class SyncSubscriber {
       schemaVersion: 1,
       type: "permission_decided",
       sessionId,
-      rootSessionId: sessionId,
+      rootSessionId: this.deps.getRootSessionId?.(sessionId) ?? sessionId,
       turnId: this.deps.getTurnId?.(sessionId),
       seq,
       eventSeq: seq,
@@ -127,7 +128,7 @@ export class SyncSubscriber {
       schemaVersion: 1,
       type: "feedback_captured",
       sessionId,
-      rootSessionId: sessionId,
+      rootSessionId: this.deps.getRootSessionId?.(sessionId) ?? sessionId,
       turnId: this.deps.getTurnId?.(sessionId),
       seq,
       eventSeq: seq,

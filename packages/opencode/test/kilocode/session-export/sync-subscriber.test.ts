@@ -69,6 +69,43 @@ describe("SyncSubscriber", () => {
     expect(posted.some((item) => (item as { type?: string }).type === "terminal_outcome")).toBe(true)
   })
 
+  test("uses getRootSessionId so sub-agent events keep their root linkage", () => {
+    const posted: unknown[] = []
+    const sub = new SyncSubscriber({
+      isEligibleSession: () => true,
+      dispatch: (event) => posted.push(event),
+      agentVersion: "v0",
+      now: () => 0,
+      syncSeq: () => 1,
+      getRootSessionId: (sessionId) => (sessionId === "sub_1" ? "root_1" : sessionId),
+    })
+    sub.onSyncEvent({
+      type: "message.part.updated",
+      aggregateID: "sub_1",
+      seq: 5,
+      data: {
+        part: {
+          type: "tool",
+          state: { status: "completed", input: {}, output: "ok", metadata: { exit: 0 }, time: { start: 1, end: 5 } },
+          callID: "c1",
+          tool: "bash",
+        },
+      },
+    })
+    sub.onSyncEvent({
+      type: "permission.replied",
+      aggregateID: "sub_1",
+      data: { permission: "write_file", reply: { response: "once" } },
+    })
+    sub.onSyncEvent({
+      type: "session.feedback",
+      aggregateID: "sub_1",
+      data: { messageID: "m1", rating: "up" },
+    })
+    const roots = posted.map((item) => (item as { rootSessionId?: string }).rootSessionId)
+    expect(roots.every((root) => root === "root_1")).toBe(true)
+  })
+
   test("turnId groups tool events with the active session turn", () => {
     const posted: unknown[] = []
     const sub = new SyncSubscriber({

@@ -65,6 +65,10 @@ export class Capture {
     return this.turns.get(sessionId)
   }
 
+  rootSessionId(sessionId: string): string | undefined {
+    return this.roots.get(sessionId)
+  }
+
   beforeRequest(args: {
     input: EligibilityInput & {
       model: EligibilityInput["model"] & { providerId?: string; providerID?: string; modelId?: string; modelID?: string; id?: string; variant?: string }

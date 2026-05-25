@@ -143,6 +143,7 @@ function spawn(url = target()): void {
     now: () => Date.now(),
     syncSeq: options.syncSeq,
     getTurnId: (sessionId) => capture?.turnId(sessionId),
+    getRootSessionId: (sessionId) => capture?.rootSessionId(sessionId),
   })
   worker.onmessage = (event: MessageEvent) => {
     const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
