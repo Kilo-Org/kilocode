@@ -171,7 +171,7 @@ test("loads code_edit_display config field", async () => {
       })
     },
   })
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const config = await load()
