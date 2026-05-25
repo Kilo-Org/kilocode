@@ -1,0 +1,3310 @@
+diff --git a/packages/kilo-vscode/docs/mercury-next-edit-testing.html b/packages/kilo-vscode/docs/mercury-next-edit-testing.html
+new file mode 100644
+index 00000000000..ba66680952e
+--- /dev/null
++++ b/packages/kilo-vscode/docs/mercury-next-edit-testing.html
+@@ -0,0 +1,790 @@
++<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<title>Mercury Next Edit — Testing Playground (Kilo Code)</title>
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<style>
++  :root {
++    --bg: #0d1117;
++    --panel: #161b22;
++    --border: #30363d;
++    --fg: #e6edf3;
++    --muted: #8b949e;
++    --accent: #7ee787;
++    --accent2: #79c0ff;
++    --warn: #f0883e;
++    --danger: #ff7b72;
++    --code: #c9d1d9;
++    --code-bg: #0d1117;
++  }
++  @media (prefers-color-scheme: light) {
++    :root {
++      --bg: #ffffff;
++      --panel: #f6f8fa;
++      --border: #d0d7de;
++      --fg: #1f2328;
++      --muted: #57606a;
++      --accent: #1a7f37;
++      --accent2: #0969da;
++      --warn: #bc4c00;
++      --danger: #cf222e;
++      --code: #1f2328;
++      --code-bg: #f6f8fa;
++    }
++  }
++  * { box-sizing: border-box; }
++  html { font-size: 16px; }
++  body {
++    background: var(--bg); color: var(--fg);
++    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
++    line-height: 1.55;
++    margin: 0; padding: 0;
++  }
++  .wrap { max-width: 920px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
++  h1 { font-size: 2rem; margin-top: 0; letter-spacing: -0.01em; }
++  h2 { font-size: 1.4rem; margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
++  h3 { font-size: 1.1rem; margin-top: 1.75rem; }
++  p, li { color: var(--fg); }
++  .muted { color: var(--muted); }
++  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.78rem; background: var(--panel); border: 1px solid var(--border); color: var(--muted); margin-right: 6px; vertical-align: middle; }
++  .pill.same-line { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
++  .pill.off-cursor { color: var(--accent2); border-color: color-mix(in srgb, var(--accent2) 50%, var(--border)); }
++  .pill.suppressed { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, var(--border)); }
++  code, pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
++  code { background: var(--panel); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
++  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1rem; overflow-x: auto; margin: 0.5rem 0; }
++  pre code { background: none; padding: 0; color: var(--code); font-size: 0.88rem; line-height: 1.5; }
++  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; margin: 1rem 0; }
++  .card h3 { margin-top: 0; }
++  .card .label { font-weight: 600; color: var(--muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.06em; margin-top: 0.6rem; }
++  .step-list { padding-left: 1.4rem; margin: 0.4rem 0 0; }
++  table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; }
++  th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
++  th { color: var(--muted); font-weight: 600; }
++  .toc { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; margin: 1rem 0 2rem; }
++  .toc h2 { font-size: 1rem; margin: 0 0 0.4rem; border: 0; padding: 0; color: var(--muted); }
++  .toc ul { margin: 0; padding-left: 1.2rem; }
++  .toc li { margin: 0.15rem 0; font-size: 0.95rem; }
++  a { color: var(--accent2); text-decoration: none; }
++  a:hover { text-decoration: underline; }
++  blockquote { margin: 1rem 0; padding: 0.6rem 1rem; border-left: 3px solid var(--accent2); background: var(--panel); border-radius: 0 6px 6px 0; color: var(--fg); }
++  blockquote.warn { border-left-color: var(--warn); }
++  .footer { color: var(--muted); font-size: 0.85rem; margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 1rem; }
++  kbd { font-family: ui-monospace, monospace; background: var(--panel); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; font-size: 0.85em; }
++</style>
++</head>
++<body>
++<div class="wrap">
++
++<h1>Mercury Next Edit — Testing Playground</h1>
++<p class="muted">A walk-through guide for Kilo Code reviewers to validate the new <strong>Next Edit Suggestion</strong> integration powered by Mercury Edit 2 from Inception Labs.</p>
++
++<div class="toc">
++  <h2>On this page</h2>
++  <ul>
++    <li><a href="#what">What is Mercury Next Edit?</a></li>
++    <li><a href="#install">Install the PR locally</a> — 3 minutes from clone to running Dev Host</li>
++    <li><a href="#setup">Enabling the feature</a></li>
++    <li><a href="#flow">How the integration works</a></li>
++    <li><a href="#tests">Test cases</a> — 20 scenarios across Python, TS, Go, Rust, JS, SQL, MD</li>
++    <li><a href="#troubleshooting">Troubleshooting</a></li>
++    <li><a href="#feedback">Feedback we're looking for</a></li>
++  </ul>
++</div>
++
++<h2 id="what">What is Mercury Next Edit?</h2>
++<p><strong>Mercury Edit 2</strong> is a code-edit model from <a href="https://inceptionlabs.ai">Inception Labs</a>. Unlike FIM completion, it predicts the user's <em>next multi-line edit</em> given the current file, cursor position, and recent edit history. It typically responds in under 250 ms.</p>
++<p>This PR adds Mercury Next Edit as a <strong>new, opt-in</strong> autocomplete option in Kilo Code. It lives alongside everything that's already shipping &mdash; Codestral FIM and Mercury Edit 2 via the Kilo gateway are bit-for-bit unchanged. Selecting <strong>Mercury Next Edit (Inception)</strong> from the model dropdown switches to a separate render pipeline:</p>
++<ul>
++  <li><strong>Same-line predictions</strong> render as inline ghost text (just like FIM &mdash; <kbd>Tab</kbd> accepts).</li>
++  <li><strong>Off-cursor predictions</strong> render as a decoration (red strikethrough + green ghost annotation) at the predicted edit location. First <kbd>Tab</kbd> teleports the cursor there; second <kbd>Tab</kbd> applies.</li>
++  <li>After any accept, the integration immediately re-triggers Mercury so the user can walk a refactor with repeated <kbd>Tab</kbd> presses ("Tab-Tab-Tab").</li>
++</ul>
++
++<h2 id="install">Install the PR locally</h2>
++<p>You'll need to pull this PR's branch and run the extension in a development VSCode window ("Extension Development Host"). The whole loop is about 3 minutes once you have the prerequisites.</p>
++
++<h3>Prerequisites</h3>
++<ul>
++  <li><strong>VSCode</strong> ≥ 1.105.1 (matches kilocode's <code>engines.vscode</code>)</li>
++  <li><strong>Bun</strong> ≥ 1.3.13 (the build script checks the version) &mdash; install via <code>brew install bun</code> or <a href="https://bun.sh">bun.sh</a></li>
++  <li><strong>GitHub CLI</strong> (<code>gh</code>) &mdash; optional but makes the PR checkout one command</li>
++  <li><strong>An Inception API key</strong> &mdash; create one at <a href="https://platform.inceptionlabs.ai">platform.inceptionlabs.ai</a> if you don't already have one</li>
++</ul>
++
++<h3>1. Check out the PR branch</h3>
++<p>From an empty directory:</p>
++<pre><code>gh repo clone Kilo-Org/kilocode
++cd kilocode
++gh pr checkout 10536</code></pre>
++<p>Or without <code>gh</code>:</p>
++<pre><code>git clone https://github.com/Kilo-Org/kilocode.git
++cd kilocode
++git fetch origin pull/10536/head:mercury-next-edit-integration
++git checkout mercury-next-edit-integration</code></pre>
++
++<h3>2. Install dependencies</h3>
++<pre><code>bun install</code></pre>
++<p>(First install pulls the full monorepo &mdash; takes 30–60 seconds.)</p>
++
++<h3>3. Start the dev build</h3>
++<pre><code>cd packages/kilo-vscode
++bun run watch</code></pre>
++<p>Leave that terminal running. It rebuilds the extension on every save and runs the TypeScript compiler in watch mode.</p>
++
++<h3>4. Open kilocode in VSCode and launch the Extension Development Host</h3>
++<p>From a separate terminal (or your IDE launcher):</p>
++<pre><code>code /path/to/kilocode</code></pre>
++<p>Inside that VSCode window, press <kbd>F5</kbd> (or <strong>Run → Start Debugging</strong>). A second VSCode window opens, titled <strong>[Extension Development Host]</strong>. That window has this PR's build of the kilocode extension loaded.</p>
++
++<blockquote class="warn">
++  <p>Pre-push <code>turbo typecheck</code> may fail on packages that need Java (JetBrains plugin). That's environment, not code &mdash; not relevant to the NES feature. Use <code>--no-verify</code> on any local pushes if you hit it.</p>
++</blockquote>
++
++<h3>5. Open the test playground</h3>
++<p>In the Dev Host window: <strong>File → Open Folder…</strong> → choose <code>packages/kilo-vscode/docs/nes-examples/</code> inside this same repo. That gives you the 20 self-contained test files described below.</p>
++
++<h3>6. Configure NES</h3>
++<p>Settings (<kbd>Cmd</kbd>+<kbd>,</kbd>) in the Dev Host, search <code>kilo-code.new.autocomplete</code>:</p>
++<ul>
++  <li><code>model</code> → <strong>Mercury Next Edit (Inception)</strong> &mdash; <em>not</em> "Mercury Edit 2", which is the classic FIM-via-gateway option</li>
++  <li><code>nextEdit.apiKey</code> → paste your <code>sk_…</code> Inception API key (or set <code>INCEPTION_API_KEY</code> env before launching)</li>
++  <li><code>enableAutoTrigger</code> → ✓ (already the default)</li>
++</ul>
++
++<h3>7. Watch the pipeline live</h3>
++<p>In the Dev Host: <strong>View → Output</strong> → in the dropdown, select <strong>"Kilo Code · Next Edit"</strong>. Every request, response, and render decision is logged here with timestamps. Keep this panel visible while testing &mdash; it's the single best diagnostic.</p>
++
++<p>You're set. Skip to the <a href="#tests">test cases</a> below.</p>
++
++<h2 id="setup">Enabling the feature (settings reference)</h2>
++<p>In VSCode Settings (<kbd>Cmd</kbd>+<kbd>,</kbd>), search <code>kilo-code.new.autocomplete</code>:</p>
++<table>
++  <tr><th>Setting</th><th>Value</th></tr>
++  <tr><td><code>model</code></td><td><strong>Mercury Next Edit (Inception)</strong> &mdash; <em>not</em> "Mercury Edit 2", which is the original FIM-via-gateway option</td></tr>
++  <tr><td><code>nextEdit.apiKey</code></td><td>your Inception API key (<code>sk_...</code>); also accepts <code>INCEPTION_API_KEY</code> env var</td></tr>
++  <tr><td><code>enableAutoTrigger</code></td><td>✓ (default)</td></tr>
++  <tr><td><code>nextEdit.baseUrl</code></td><td>(optional) override the API base, defaults to <code>https://api.inceptionlabs.ai/v1</code></td></tr>
++  <tr><td><code>nextEdit.debug</code></td><td>(optional) mirror diagnostic logs to DevTools console</td></tr>
++</table>
++<p>To watch the pipeline live: <strong>View → Output</strong> in the Dev Host, choose the <strong>"Kilo Code · Next Edit"</strong> channel.</p>
++
++<h2 id="flow">How the integration works</h2>
++<p>The <code>AutocompleteServiceManager</code> instantiates both providers up front. Provider <em>registration</em> with <code>vscode.languages.registerInlineCompletionItemProvider</code> is driven by the configured model:</p>
++<ul>
++  <li><code>inception/mercury-next-edit</code> → <strong>NES provider</strong> (this PR's new pipeline)</li>
++  <li>anything else → <strong>classic FIM provider</strong> (unchanged)</li>
++</ul>
++<p>The NES provider, per keystroke:</p>
++<ol>
++  <li>Debounces 250 ms (skipped for explicit invocations).</li>
++  <li>Builds a Mercury prompt: current file + cursor + an editable region <code>[cursor − 5, cursor + 10]</code> + 3–5 recently-viewed-snippet ranges (from the shared <code>RecentlyVisitedRangesService</code>) + the last 5 debounced unidiffs (from a new per-file <code>EditHistoryTracker</code>).</li>
++  <li>Sends a single <code>role: "user"</code> message to <code>POST /v1/edit/completions</code> with <code>max_tokens: 512</code>.</li>
++  <li>Parses the triple-backtick fenced reply, strips Mercury's sentinel tokens, computes the minimal line-diff against the current document.</li>
++  <li>Branches: same-line diff → <code>InlineCompletionItem</code>; off-cursor diff → <code>NextEditSuggestionManager</code> with a decoration + Tab/Esc keybinding gated on a context flag (<code>kilo-code.nextEdit.hasPendingSuggestion</code>).</li>
++</ol>
++
++<h2 id="tests">Test cases</h2>
++<p>Each test below is a self-contained file at <code>packages/kilo-vscode/docs/nes-examples/</code> in this repo. Open that folder in the Extension Development Host (step 5 above), then work through the cases. Place your cursor where indicated, wait ~300 ms idle, and observe.</p>
++<p>Tip: keep this page open in a separate window from the Dev Host &mdash; the descriptions below would otherwise leak into Mercury's prompt context and bias the test.</p>
++
++<p>Render-path legend:</p>
++<p>
++  <span class="pill same-line">same-line ghost</span> appears as inline ghost text at the cursor (<kbd>Tab</kbd> accepts) &middot;
++  <span class="pill off-cursor">off-cursor decoration</span> renders away from the cursor; first <kbd>Tab</kbd> jumps, second <kbd>Tab</kbd> applies &middot;
++  <span class="pill suppressed">suppressed</span> negative case — nothing should render
++</p>
++
++<h3>Python — core tests</h3>
++
++<div class="card">
++  <h3>01 — Finish a recursive function body <span class="pill same-line">same-line</span></h3>
++  <pre><code>def factorial(n):
++    if n &lt;= 1:
++        return 1
++
++</code></pre>
++  <div class="label">Cursor</div>
++  <p>The empty indented line at the end of <code>factorial</code> (column 4).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing the recursive case (e.g. <code>return n * factorial(n - 1)</code>). <kbd>Tab</kbd> accepts.</p>
++</div>
++
++<div class="card">
++  <h3>02 — Pattern continuation <span class="pill same-line">same-line</span></h3>
++  <pre><code>COLOR_RED = "#ff0000"
++COLOR_GREEN = "#00ff00"
++COLOR_BLUE =</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of line 3 (right after <code>=</code>).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text appending a hex color like <code> "#0000ff"</code>.</p>
++</div>
++
++<div class="card">
++  <h3>03 — Mid-identifier completion <span class="pill same-line">same-line</span></h3>
++  <pre><code>def calculate_total(items):
++    total = 0
++    for item in items:
++        total += item.price
++    return tot</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of file (after <code>return tot</code>).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text completing the identifier (likely <code>al</code> &rarr; <code>total</code>).</p>
++</div>
++
++<div class="card">
++  <h3>04 — Loop body inference <span class="pill same-line">same-line</span></h3>
++  <pre><code>def calculate_total(items):
++    total = 0
++    for item in items:
++
++    return total</code></pre>
++  <div class="label">Cursor</div>
++  <p>The empty indented line inside the <code>for</code> loop (column 8).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing the accumulator update.</p>
++</div>
++
++<div class="card">
++  <h3>05 — Sibling method body <span class="pill same-line">same-line</span></h3>
++  <pre><code>class Stack:
++    def __init__(self):
++        self.items = []
++
++    def push(self, item):
++        self.items.append(item)
++
++    def pop(self):
++
++
++    def peek(self):
++        return self.items[-1] if self.items else None</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside <code>pop</code> (column 8).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing a body consistent with the symmetric <code>push</code>.</p>
++</div>
++
++<h3>Python — advanced</h3>
++
++<div class="card">
++  <h3>07 — Multi-line rename refactor <span class="pill off-cursor">off-cursor</span></h3>
++  <pre><code>def compute_user_score(u, w):
++    base = u * 10
++    bonus = w * 5
++    penalty = u - w
++    return base + bonus - penalty
++
++
++def compute_user_score(user_id, weight):
++    base = u * 10
++    bonus = w * 5
++    penalty = u - w
++    return base + bonus - penalty</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of the renamed signature line (<code>def compute_user_score(user_id, weight):</code>).</p>
++  <div class="label">Expected</div>
++  <p>Strikethrough on the body lines below + ghost showing the renamed body. First <kbd>Tab</kbd> jumps, second applies.</p>
++</div>
++
++<div class="card">
++  <h3>08 — Mixed insert + replace <span class="pill off-cursor">off-cursor</span></h3>
++  <pre><code>def sum_prices(items):
++    total = 0
++    for item in items:
++    return total</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of <code>total = 0</code>.</p>
++  <div class="label">Expected</div>
++  <p>Decoration on the broken for-loop area showing the corrected body (insertion + replacement combined).</p>
++</div>
++
++<div class="card">
++  <h3>10 — Mid-token completion <span class="pill same-line">same-line</span></h3>
++  <pre><code>def fibonacci(n):
++    if n &lt;= 1:
++        return n
++    return fibonacci(n - 1) + fibonacci(n - 2)
++
++
++result = fib</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of the file (after <code>result = fib</code>).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text extending the identifier and supplying a call, e.g. <code>onacci(10)</code>.</p>
++</div>
++
++<div class="card">
++  <h3>11 — Stub method with implemented siblings <span class="pill same-line">same-line</span></h3>
++  <pre><code>class Queue:
++    def __init__(self):
++        self.items = []
++
++    def enqueue(self, item):
++        self.items.append(item)
++
++    def peek(self):
++        return self.items[0] if self.items else None
++
++    def size(self):
++        return len(self.items)
++
++    def is_empty(self):
++        return not self.items
++
++    def dequeue(self):
++
++
++    def clear(self):
++        self.items.clear()</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside <code>dequeue</code> (column 8).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing a FIFO pop, e.g. <code>return self.items.pop(0)</code>.</p>
++</div>
++
++<div class="card">
++  <h3>12 — Type annotation insertion <span class="pill same-line">same-line</span> / <span class="pill off-cursor">off-cursor</span></h3>
++  <pre><code>def multiply(a: int, b: int) -&gt; int:
++    return a * b
++
++
++def subtract(a: int, b: int) -&gt; int:
++    return a - b
++
++
++def add(a, b):
++    return a + b</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of <code>def add(a, b):</code> (the only un-annotated function).</p>
++  <div class="label">Expected</div>
++  <p>Strikethrough on the signature line + ghost showing the typed version (<code>def add(a: int, b: int) -&gt; int:</code>). May render same-line or off-cursor depending on where on the line you clicked.</p>
++</div>
++
++<div class="card">
++  <h3>13 — Docstring generation <span class="pill same-line">same-line</span></h3>
++  <pre><code>import datetime
++
++
++def parse_iso_datetime(s):
++    """Parse an ISO 8601 datetime string into a datetime.datetime."""
++    return datetime.datetime.fromisoformat(s)
++
++
++def parse_iso_date(s):
++
++    return datetime.date.fromisoformat(s)</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line under <code>def parse_iso_date(s):</code> (column 4).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text inserting a one-line docstring matching the sibling's style.</p>
++</div>
++
++<div class="card">
++  <h3>14 — No-op suppression <span class="pill suppressed">suppressed</span></h3>
++  <pre><code>def add(a: int, b: int) -&gt; int:
++    """Return the sum of two integers."""
++    return a + b
++
++
++def multiply(a: int, b: int) -&gt; int:
++    """Return the product of two integers."""
++    return a * b
++
++
++def subtract(a: int, b: int) -&gt; int:
++    """Return a minus b."""
++    return a - b</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of <code>return a + b</code>.</p>
++  <div class="label">Expected</div>
++  <p><strong>Nothing</strong>. The code is already correct &mdash; either Mercury returns an identical reply or our suppression branch drops the proposal. Channel should show "no-op" or skip lines, never a render.</p>
++  <div class="label">Failure mode</div>
++  <p>Any visible suggestion that just replays the existing code is a false positive worth reporting.</p>
++</div>
++
++<h3>TypeScript</h3>
++
++<div class="card">
++  <h3>ts_07 — Array transform completion <span class="pill same-line">same-line</span></h3>
++  <pre><code>interface User {
++    id: number;
++    name: string;
++    active: boolean;
++}
++
++function getActiveUserNames(users: User[]): string[] {
++    return users
++}
++
++const sample: User[] = [
++    { id: 1, name: "ada", active: true },
++    { id: 2, name: "lin", active: false },
++    { id: 3, name: "rin", active: true },
++];
++
++console.log(getActiveUserNames(sample));</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of <code>return users</code> inside <code>getActiveUserNames</code>.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text completing the chain, e.g. <code>.filter(u =&gt; u.active).map(u =&gt; u.name)</code>.</p>
++</div>
++
++<div class="card">
++  <h3>ts_08 — Param type annotations <span class="pill off-cursor">off-cursor</span></h3>
++  <pre><code>function double(x: number): number {
++    return x * 2;
++}
++
++function add(a, b) {
++    return a + b;
++}
++
++function negate(x: number): number {
++    return -x;
++}
++
++function main(): void {
++    console.log(double(3));
++    console.log(add(2, 4));
++    console.log(negate(7));
++}
++
++main();</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of file (after <code>main();</code>).</p>
++  <div class="label">Expected</div>
++  <p>Decoration on the <code>add(a, b)</code> signature proposing the typed version.</p>
++</div>
++
++<div class="card">
++  <h3>ts_09 — React event handler <span class="pill same-line">same-line</span></h3>
++  <pre><code>declare const React: {
++    useState: &lt;T&gt;(initial: T) =&gt; [T, (next: T) =&gt; void];
++};
++
++function Counter(): JSX.Element {
++    const [count, setCount] = React.useState&lt;number&gt;(0);
++
++    function handleClick() {
++
++    }
++
++    return (
++        &lt;div&gt;
++            &lt;p&gt;Count: {count}&lt;/p&gt;
++            &lt;button onClick={handleClick}&gt;Increment&lt;/button&gt;
++        &lt;/div&gt;
++    );
++}
++
++export default Counter;</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside <code>handleClick</code> (column 4).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text incrementing <code>count</code> via <code>setCount</code>.</p>
++</div>
++
++<h3>Go</h3>
++
++<div class="card">
++  <h3>go_07 — Error handling block <span class="pill same-line">same-line</span></h3>
++  <pre><code>package main
++
++import (
++	"fmt"
++	"os"
++)
++
++func loadConfig(path string) ([]byte, error) {
++	data, err := os.ReadFile(path)
++
++	return data, nil
++}
++
++func main() {
++	cfg, err := loadConfig("config.json")
++	if err != nil {
++		fmt.Println("error:", err)
++		return
++	}
++	fmt.Println(string(cfg))
++}</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty line right after <code>data, err := os.ReadFile(path)</code>.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing the canonical <code>if err != nil { return nil, err }</code>.</p>
++</div>
++
++<div class="card">
++  <h3>go_08 — Struct method body <span class="pill same-line">same-line</span></h3>
++  <pre><code>package main
++
++import "fmt"
++
++type Rectangle struct {
++	Width  float64
++	Height float64
++}
++
++func (r Rectangle) Perimeter() float64 {
++	return 2 * (r.Width + r.Height)
++}
++
++func (r Rectangle) Area() float64 {
++
++}
++
++func main() {
++	r := Rectangle{Width: 3, Height: 4}
++	fmt.Println("perimeter:", r.Perimeter())
++	fmt.Println("area:", r.Area())
++}</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside <code>Area()</code>.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text computing area from <code>Width</code> and <code>Height</code>.</p>
++</div>
++
++<div class="card">
++  <h3>go_09 — Goroutine + channel <span class="pill same-line">same-line</span></h3>
++  <pre><code>package main
++
++import "fmt"
++
++func main() {
++	ch := make(chan int)
++
++	go func() {
++
++	}()
++
++	for v := range ch {
++		fmt.Println("got:", v)
++	}
++}</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside the goroutine.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text producing values onto the channel and closing it.</p>
++</div>
++
++<h3>Rust</h3>
++
++<div class="card">
++  <h3>rs_07 — Match-arm completion <span class="pill same-line">same-line</span></h3>
++  <pre><code>enum Shape {
++    Circle(f64),
++    Square(f64),
++    Rectangle(f64, f64),
++    Triangle(f64, f64),
++}
++
++fn area(s: &amp;Shape) -&gt; f64 {
++    match s {
++        Shape::Circle(r) =&gt; std::f64::consts::PI * r * r,
++        Shape::Square(side) =&gt; side * side,
++
++    }
++}
++
++fn main() {
++    let shapes = vec![
++        Shape::Circle(1.0),
++        Shape::Rectangle(2.0, 3.0),
++        Shape::Triangle(4.0, 5.0),
++    ];
++    for s in &amp;shapes {
++        println!("area = {}", area(s));
++    }
++}</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside the <code>match</code> body, after the <code>Square</code> arm.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text adding the missing <code>Rectangle</code> and <code>Triangle</code> arms.</p>
++</div>
++
++<div class="card">
++  <h3>rs_08 — Result/Option chaining <span class="pill same-line">same-line</span></h3>
++  <pre><code>fn parse_int(s: &amp;str) -&gt; Option&lt;i32&gt; {
++    let n = s.trim()
++    Some(n * 2)
++}
++
++fn main() {
++    let inputs = ["  21  ", "not-a-number", "10"];
++    for s in &amp;inputs {
++        match parse_int(s) {
++            Some(v) =&gt; println!("{} -&gt; {}", s, v),
++            None =&gt; println!("{} -&gt; skipped", s),
++        }
++    }
++}</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of <code>let n = s.trim()</code> (no semicolon yet).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text continuing the chain into a parsed <code>i32</code>.</p>
++</div>
++
++<div class="card">
++  <h3>rs_09 — Lifetime annotations <span class="pill off-cursor">off-cursor</span></h3>
++  <pre><code>fn longest(a: &amp;str, b: &amp;str) -&gt; &amp;str {
++    if a.len() &gt;= b.len() {
++        a
++    } else {
++        b
++    }
++}
++
++fn main() {
++    let s1 = String::from("hello world");
++    let s2 = String::from("hi");
++    let out = longest(&amp;s1, &amp;s2);
++    println!("longest = {}", out);
++}</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of file.</p>
++  <div class="label">Expected</div>
++  <p>Decoration on the <code>fn longest</code> signature proposing lifetime annotations.</p>
++</div>
++
++<h3>JavaScript</h3>
++
++<div class="card">
++  <h3>js_07 — Async/await fetch <span class="pill same-line">same-line</span></h3>
++  <pre><code>async function fetchUser(id) {
++    try {
++
++    } catch (err) {
++        console.error("fetchUser failed", err);
++        return null;
++    }
++}
++
++async function main() {
++    const user = await fetchUser(42);
++    console.log("user:", user);
++}
++
++main();</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside the <code>try {</code> block (column 8).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text completing the fetch + json parse.</p>
++</div>
++
++<div class="card">
++  <h3>js_08 — Express GET handler <span class="pill same-line">same-line</span></h3>
++  <pre><code>const app = {
++    get: (_path, _handler) =&gt; app,
++    post: (_path, _handler) =&gt; app,
++    listen: (_port, cb) =&gt; cb &amp;&amp; cb(),
++};
++
++const users = [
++    { id: 1, name: "ada" },
++    { id: 2, name: "lin" },
++];
++
++app.get("/users/:id", (req, res) =&gt; {
++
++});
++
++app.post("/users", (req, res) =&gt; {
++    const user = { id: users.length + 1, name: req.body.name };
++    users.push(user);
++    res.status(201).json(user);
++});
++
++app.listen(3000, () =&gt; console.log("listening on :3000"));</code></pre>
++  <div class="label">Cursor</div>
++  <p>Empty indented line inside the GET handler (column 4).</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing a get-by-id (lookup, 404, json response).</p>
++</div>
++
++<h3>SQL</h3>
++
++<div class="card">
++  <h3>sql_07 — Missing JOIN <span class="pill same-line">same-line</span></h3>
++  <pre><code>SELECT
++    c.name,
++    SUM(o.total) AS total_spent
++FROM orders o
++
++WHERE o.created_at &gt;= '2026-01-01'
++GROUP BY c.name
++ORDER BY total_spent DESC
++LIMIT 10;</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of the line <code>FROM orders o</code>.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text completing the JOIN against <code>customers</code>.</p>
++</div>
++
++<div class="card">
++  <h3>sql_08 — WHERE filter <span class="pill same-line">same-line</span></h3>
++  <pre><code>SELECT id, email
++FROM users
++WHERE
++ORDER BY last_login_at DESC;</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of the bare <code>WHERE</code> line.</p>
++  <div class="label">Expected</div>
++  <p>Ghost text proposing a predicate.</p>
++</div>
++
++<h3>Markdown (negative case)</h3>
++
++<div class="card">
++  <h3>md_07 — Prose should stay quiet <span class="pill suppressed">suppressed</span></h3>
++  <pre><code># Mercury Edit 2 — Quick Notes
++
++Mercury Edit 2 is a small, fast model trained to predict the user's
++next single edit given the current file, cursor position, and recent
++edit history. It targets latency under 200 ms on typical files and
++returns a unified-diff-like patch scoped to a window around the cursor.
++
++Unlike chat-style completions, the model is biased toward minimal,
++local changes — finishing a function body, fixing a typo, propagating
++a rename — rather than generating new files from scratch.</code></pre>
++  <div class="label">Cursor</div>
++  <p>End of the last sentence.</p>
++  <div class="label">Expected</div>
++  <p><strong>Nothing</strong>. If Mercury does propose a prose continuation it counts as a soft fail &mdash; we don't want a code model writing README content.</p>
++</div>
++
++<h2 id="troubleshooting">Troubleshooting</h2>
++<blockquote class="warn">
++  <p>If nothing happens when you type, open <strong>View → Output → "Kilo Code · Next Edit"</strong> and watch the log. The pipeline is verbose enough that 90% of issues are obvious from the first few lines.</p>
++</blockquote>
++
++<table>
++  <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
++  <tr><td>No log lines at all</td><td>Wrong model selected, or Dev Host wasn't reloaded after rebuild</td><td><kbd>Cmd</kbd>+<kbd>R</kbd> in the Dev Host; confirm <code>model = Mercury Next Edit (Inception)</code></td></tr>
++  <tr><td><code>skip — no API key resolved</code></td><td>Setting not saved</td><td>Re-paste the key in <code>nextEdit.apiKey</code>, press Enter, reload</td></tr>
++  <tr><td><code>&lt;- 401 Unauthorized</code></td><td>Wrong key or wrong tier</td><td>Verify the key at platform.inceptionlabs.ai</td></tr>
++  <tr><td><code>&lt;- 400 Bad Request</code></td><td>Prompt-shape regression (we shouldn't ship this, but if it happens during dev)</td><td>Capture the response body from the channel and ping the integration owner</td></tr>
++  <tr><td>Suggestion shown for a wrong-looking model</td><td>Selecting "Mercury Edit 2" routes through the classic FIM provider, not NES &mdash; that's by design (the old behavior is preserved)</td><td>Switch to "Mercury Next Edit (Inception)" to use the new pipeline</td></tr>
++  <tr><td>Inline ghost text never appears, but logs show <code>RENDER</code></td><td>Another extension (Copilot, Tabnine) is winning the inline-completion race</td><td>Temporarily disable conflicting extensions in the Dev Host</td></tr>
++</table>
++
++<h2 id="feedback">Feedback we'd love</h2>
++<ul>
++  <li><strong>Where the prediction was wrong but the UX was correct.</strong> Note the file + cursor position + what Mercury proposed. Helps us tune the model.</li>
++  <li><strong>Where the UX got in the way.</strong> Tab semantics, decoration appearance, chained-prediction timing, anything that felt clumsy compared to other NES products you've used.</li>
++  <li><strong>Performance regressions in classic FIM autocomplete.</strong> The PR is supposed to leave the classic path untouched &mdash; if Codestral or Mercury Edit 2 (FIM) feel different in this build, that's a regression we want to know about.</li>
++  <li><strong>Things you tried that aren't in this doc.</strong> The 20 tests are a starting point, not a contract. Real codebases will be different.</li>
++</ul>
++
++<div class="footer">
++  <p>Mercury Next Edit integration for Kilo Code &mdash; prepared by the Inception Labs team.<br>
++  Questions / bug reports: <a href="mailto:firas@inceptionlabs.ai">firas@inceptionlabs.ai</a>.</p>
++</div>
++
++</div>
++</body>
++</html>
+diff --git a/packages/kilo-vscode/docs/nes-examples/01_finish_function_body.py b/packages/kilo-vscode/docs/nes-examples/01_finish_function_body.py
+new file mode 100644
+index 00000000000..939b1044889
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/01_finish_function_body.py
+@@ -0,0 +1,4 @@
++def factorial(n):
++    if n <= 1:
++        return 1
++
+diff --git a/packages/kilo-vscode/docs/nes-examples/02_pattern_continuation.py b/packages/kilo-vscode/docs/nes-examples/02_pattern_continuation.py
+new file mode 100644
+index 00000000000..87d3616b278
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/02_pattern_continuation.py
+@@ -0,0 +1,3 @@
++COLOR_RED = "#ff0000"
++COLOR_GREEN = "#00ff00"
++COLOR_BLUE =
+diff --git a/packages/kilo-vscode/docs/nes-examples/03_typo_completion.py b/packages/kilo-vscode/docs/nes-examples/03_typo_completion.py
+new file mode 100644
+index 00000000000..932190bfe8b
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/03_typo_completion.py
+@@ -0,0 +1,5 @@
++def calculate_total(items):
++    total = 0
++    for item in items:
++        total += item.price
++    return tot
+diff --git a/packages/kilo-vscode/docs/nes-examples/04_loop_body.py b/packages/kilo-vscode/docs/nes-examples/04_loop_body.py
+new file mode 100644
+index 00000000000..7d7c9629b8a
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/04_loop_body.py
+@@ -0,0 +1,5 @@
++def calculate_total(items):
++    total = 0
++    for item in items:
++
++    return total
+diff --git a/packages/kilo-vscode/docs/nes-examples/05_class_method.py b/packages/kilo-vscode/docs/nes-examples/05_class_method.py
+new file mode 100644
+index 00000000000..2613e953eb5
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/05_class_method.py
+@@ -0,0 +1,12 @@
++class Stack:
++    def __init__(self):
++        self.items = []
++
++    def push(self, item):
++        self.items.append(item)
++
++    def pop(self):
++
++
++    def peek(self):
++        return self.items[-1] if self.items else None
+diff --git a/packages/kilo-vscode/docs/nes-examples/07_multiline_rename_refactor.py b/packages/kilo-vscode/docs/nes-examples/07_multiline_rename_refactor.py
+new file mode 100644
+index 00000000000..7846ab08f4b
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/07_multiline_rename_refactor.py
+@@ -0,0 +1,12 @@
++def compute_user_score(u, w):
++    base = u * 10
++    bonus = w * 5
++    penalty = u - w
++    return base + bonus - penalty
++
++
++def compute_user_score(user_id, weight):
++    base = u * 10
++    bonus = w * 5
++    penalty = u - w
++    return base + bonus - penalty
+diff --git a/packages/kilo-vscode/docs/nes-examples/08_mixed_insert_and_replace.py b/packages/kilo-vscode/docs/nes-examples/08_mixed_insert_and_replace.py
+new file mode 100644
+index 00000000000..94d9332e062
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/08_mixed_insert_and_replace.py
+@@ -0,0 +1,4 @@
++def sum_prices(items):
++    total = 0
++    for item in items:
++    return total
+diff --git a/packages/kilo-vscode/docs/nes-examples/10_mid_token_completion.py b/packages/kilo-vscode/docs/nes-examples/10_mid_token_completion.py
+new file mode 100644
+index 00000000000..5139ba755d3
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/10_mid_token_completion.py
+@@ -0,0 +1,7 @@
++def fibonacci(n):
++    if n <= 1:
++        return n
++    return fibonacci(n - 1) + fibonacci(n - 2)
++
++
++result = fib
+diff --git a/packages/kilo-vscode/docs/nes-examples/11_fill_sibling_method.py b/packages/kilo-vscode/docs/nes-examples/11_fill_sibling_method.py
+new file mode 100644
+index 00000000000..f2c4845e20e
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/11_fill_sibling_method.py
+@@ -0,0 +1,21 @@
++class Queue:
++    def __init__(self):
++        self.items = []
++
++    def enqueue(self, item):
++        self.items.append(item)
++
++    def peek(self):
++        return self.items[0] if self.items else None
++
++    def size(self):
++        return len(self.items)
++
++    def is_empty(self):
++        return not self.items
++
++    def dequeue(self):
++
++
++    def clear(self):
++        self.items.clear()
+diff --git a/packages/kilo-vscode/docs/nes-examples/12_type_annotation_insertion.py b/packages/kilo-vscode/docs/nes-examples/12_type_annotation_insertion.py
+new file mode 100644
+index 00000000000..8013be0a2a8
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/12_type_annotation_insertion.py
+@@ -0,0 +1,10 @@
++def multiply(a: int, b: int) -> int:
++    return a * b
++
++
++def subtract(a: int, b: int) -> int:
++    return a - b
++
++
++def add(a, b):
++    return a + b
+diff --git a/packages/kilo-vscode/docs/nes-examples/13_docstring_generation.py b/packages/kilo-vscode/docs/nes-examples/13_docstring_generation.py
+new file mode 100644
+index 00000000000..928cbb322bc
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/13_docstring_generation.py
+@@ -0,0 +1,11 @@
++import datetime
++
++
++def parse_iso_datetime(s):
++    """Parse an ISO 8601 datetime string into a datetime.datetime."""
++    return datetime.datetime.fromisoformat(s)
++
++
++def parse_iso_date(s):
++
++    return datetime.date.fromisoformat(s)
+diff --git a/packages/kilo-vscode/docs/nes-examples/14_no_op_suppression.py b/packages/kilo-vscode/docs/nes-examples/14_no_op_suppression.py
+new file mode 100644
+index 00000000000..81d91f5554a
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/14_no_op_suppression.py
+@@ -0,0 +1,13 @@
++def add(a: int, b: int) -> int:
++    """Return the sum of two integers."""
++    return a + b
++
++
++def multiply(a: int, b: int) -> int:
++    """Return the product of two integers."""
++    return a * b
++
++
++def subtract(a: int, b: int) -> int:
++    """Return a minus b."""
++    return a - b
+diff --git a/packages/kilo-vscode/docs/nes-examples/INSTRUCTIONS.md b/packages/kilo-vscode/docs/nes-examples/INSTRUCTIONS.md
+new file mode 100644
+index 00000000000..bc5f8822d0d
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/INSTRUCTIONS.md
+@@ -0,0 +1,201 @@
++# NES Test Playground — Instructions
++
++These tests are designed so that the source files contain **no hints** about what Mercury is supposed to predict. All cursor placements and expected behaviors live here. Don't open this file inside the Dev Host while testing — keep it in a separate window so the model can't see it.
++
++## One-time setup
++
++1. **`bun run watch`** is already running for the kilocode extension.
++2. In the kilocode VSCode window, press **F5** → opens the **Extension Development Host**.
++3. In the Dev Host: `File → Open Folder…` → `packages/kilo-vscode/docs/nes-examples/` inside this repo.
++4. Open Settings (`Cmd+,`), confirm:
++   - `kilo-code.new.autocomplete.enableAutoTrigger` → ✓ (default true)
++   - `kilo-code.new.autocomplete.model` → **Mercury Next Edit (Inception)** ← *NOT* "Mercury Edit 2", which is the classic FIM option
++   - `kilo-code.new.autocomplete.nextEdit.apiKey` → your `sk_...` key
++   - VSCode global `editor.inlineSuggest.enabled` → ✓
++5. To watch the pipeline live: `View → Output` → pick the **"Kilo Code · Next Edit"** channel.
++
++## Conventions used below
++
++- **Cursor placement**: where to click in the file before waiting.
++- **Expected (editor)**: what should appear on screen.
++- **Expected (channel)**: a stripped-down line you should see in the Next Edit output channel.
++- **Path**: which NES rendering path this exercises — same-line ghost / off-cursor replace / off-cursor insert / suppressed.
++
++After each test, **don't accept** if you want to re-run it — the suggestion will edit the file. Either `Cmd+Z` after accept, or just navigate to the next test file.
++
++---
++
++## Core tests (Python)
++
++### 01 — Finish a function body  *(path: same-line insert)*
++- **File**: `01_finish_function_body.py`
++- **Cursor**: the empty indented line at the end of `factorial` (column 4).
++- **Expected editor**: ghost text proposing the recursive case.
++- **Expected channel**: `diff at lines [N..N], cursor at line N`, then `RENDER`.
++
++### 02 — Pattern continuation  *(path: same-line ghost)*
++- **File**: `02_pattern_continuation.py`
++- **Cursor**: end of the last line (after `COLOR_BLUE = `).
++- **Expected editor**: ghost text appending a hex color.
++- **Expected channel**: `diff at lines [N..N], cursor at line N`, then `RENDER`.
++
++### 03 — Mid-identifier completion  *(path: same-line ghost)*
++- **File**: `03_typo_completion.py`
++- **Cursor**: end of the file (after `return tot`).
++- **Expected editor**: ghost text completing the identifier.
++- **Path**: same-line.
++
++### 04 — Loop body inference  *(path: same-line insert)*
++- **File**: `04_loop_body.py`
++- **Cursor**: the empty indented line inside the `for` loop (column 8).
++- **Expected editor**: ghost text proposing the accumulator update.
++
++### 05 — Sibling method body  *(path: same-line insert)*
++- **File**: `05_class_method.py`
++- **Cursor**: empty indented line inside `pop` (column 8).
++- **Expected editor**: ghost text proposing the pop body.
++
++---
++
++## Advanced Python tests
++
++### 07 — Multi-line rename refactor  *(path: off-cursor replace)*
++- **File**: `07_multiline_rename_refactor.py`
++- **Cursor**: end of the line with `def compute_user_score(user_id, weight):` (the renamed signature). The body below still uses the old `u` / `w` names.
++- **Expected editor**: strikethrough on the body lines + ghost showing the renamed body.
++- **Tab**: jump, then apply.
++
++### 08 — Mixed insert + replace  *(path: off-cursor replace, multi-line)*
++- **File**: `08_mixed_insert_and_replace.py`
++- **Cursor**: end of line `total = 0`.
++- **Expected editor**: a decoration spanning the for-loop area showing the corrected accumulator body. The proposed text is longer than the original.
++
++### 10 — Mid-token completion  *(path: same-line ghost)*
++- **File**: `10_mid_token_completion.py`
++- **Cursor**: end of the file (after `result = fib`).
++- **Expected editor**: ghost extending the identifier and supplying a call.
++
++### 11 — Stub method with implemented siblings  *(path: same-line insert)*
++- **File**: `11_fill_sibling_method.py`
++- **Cursor**: empty indented line inside `dequeue` (column 8).
++- **Expected editor**: ghost text filling in the FIFO body.
++
++### 12 — Type annotation insertion  *(path: same-line replace OR off-cursor replace)*
++- **File**: `12_type_annotation_insertion.py`
++- **Cursor**: on line `def add(a, b):` (anywhere on that line works; end-of-line is easiest).
++- **Expected editor**: strikethrough + ghost showing the typed signature. May render as inline ghost depending on where you place the cursor on the line.
++
++### 13 — Docstring generation  *(path: same-line insert)*
++- **File**: `13_docstring_generation.py`
++- **Cursor**: empty indented line directly under `def parse_iso_date(s):` (column 4).
++- **Expected editor**: ghost text starting with `"""` and a one-line description.
++
++### 14 — No-op suppression (NEGATIVE)  *(path: suppressed)*
++- **File**: `14_no_op_suppression.py`
++- **Cursor**: end of `return a + b`.
++- **Expected editor**: NOTHING. No ghost, no decoration.
++- **Expected channel**: either `identical replacement — no-op` or no `RENDER` line.
++- **Fail mode**: any visible suggestion is a false positive.
++
++---
++
++## TypeScript
++
++### ts_07 — Array transform  *(same-line)*
++- **File**: `ts_07_array_transform.ts`
++- **Cursor**: end of `return users` inside `getActiveUserNames`.
++- **Expected editor**: ghost text completing a `.filter(...).map(...)` chain.
++
++### ts_08 — Param type annotations  *(off-cursor replace)*
++- **File**: `ts_08_param_types.ts`
++- **Cursor**: end of file (after `main();`).
++- **Expected editor**: strikethrough on `add(a, b)` signature + ghost showing the typed version.
++
++### ts_09 — React event handler  *(same-line insert)*
++- **File**: `ts_09_jsx_handler.tsx`
++- **Cursor**: empty indented line inside `handleClick` (column 4).
++- **Expected editor**: ghost text incrementing `count`.
++
++---
++
++## Go
++
++### go_07 — Error handling  *(same-line insert, multi-line)*
++- **File**: `go_07_error_handling.go`
++- **Cursor**: empty line right after `data, err := os.ReadFile(path)`.
++- **Expected editor**: ghost text proposing the canonical `if err != nil { return nil, err }` block.
++
++### go_08 — Struct method body  *(same-line insert)*
++- **File**: `go_08_struct_method.go`
++- **Cursor**: empty indented line inside `Area()`.
++- **Expected editor**: ghost text computing area from `Width` and `Height`.
++
++### go_09 — Goroutine + channel  *(same-line insert, multi-line)*
++- **File**: `go_09_goroutine_channel.go`
++- **Cursor**: empty indented line inside the goroutine.
++- **Expected editor**: ghost text producing values onto the channel and closing it.
++
++---
++
++## Rust
++
++### rs_07 — Match-arm completion  *(same-line)*
++- **File**: `rs_07_match_arms.rs`
++- **Cursor**: empty indented line inside the `match s {` body, after the `Square` arm (column 8).
++- **Expected editor**: ghost text proposing the missing `Rectangle` and `Triangle` arms.
++
++### rs_08 — Result chaining  *(same-line ghost)*
++- **File**: `rs_08_result_chain.rs`
++- **Cursor**: end of the line `let n = s.trim()` (no semicolon yet).
++- **Expected editor**: ghost text continuing the chain into a parsed `i32`.
++
++### rs_09 — Lifetime annotation  *(off-cursor replace)*
++- **File**: `rs_09_lifetimes.rs`
++- **Cursor**: end of the file (after `main`'s closing `}`).
++- **Expected editor**: strikethrough on the `fn longest(...)` signature + ghost showing the lifetime-annotated version.
++
++---
++
++## JavaScript
++
++### js_07 — Async/await  *(same-line insert, multi-line)*
++- **File**: `js_07_async_await.js`
++- **Cursor**: empty indented line inside the `try {` block (column 8).
++- **Expected editor**: ghost text completing fetch + json parse.
++
++### js_08 — Express route handler  *(same-line insert, multi-line)*
++- **File**: `js_08_express_route.js`
++- **Cursor**: empty indented line inside the GET handler (column 4).
++- **Expected editor**: ghost text implementing get-by-id (lookup, 404, json response).
++
++---
++
++## SQL
++
++### sql_07 — JOIN clause  *(same-line ghost)*
++- **File**: `sql_07_join.sql`
++- **Cursor**: end of the line `FROM orders o`.
++- **Expected editor**: ghost text completing the JOIN against `customers`.
++
++### sql_08 — WHERE filter  *(same-line ghost)*
++- **File**: `sql_08_where_filter.sql`
++- **Cursor**: end of the bare `WHERE` line.
++- **Expected editor**: ghost text proposing a predicate.
++
++---
++
++## Markdown (negative)
++
++### md_07 — Prose, should stay quiet  *(suppressed)*
++- **File**: `md_07_prose_negative.md`
++- **Cursor**: end of the last sentence.
++- **Expected editor**: NOTHING (ideally). If Mercury does propose a continuation of the prose, note it as a soft fail — code models writing your README isn't the v0 product.
++
++---
++
++## Troubleshooting
++
++- **No log lines appearing**: confirm the output channel is "Kilo Code · Next Edit". Also confirm you reloaded the Dev Host after rebuilding.
++- **`[NES] skip — no API key resolved`**: setting wasn't saved. Re-paste the key, hit Enter, reload.
++- **`[NES] <- 400`**: regression on prompt shape — capture the body in the channel and ping the integration owner.
++- **Visible suggestion that's not in this doc**: write it down. Unexpected wins (or false positives) are the most useful signal.
+diff --git a/packages/kilo-vscode/docs/nes-examples/go_07_error_handling.go b/packages/kilo-vscode/docs/nes-examples/go_07_error_handling.go
+new file mode 100644
+index 00000000000..96d50b1e931
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/go_07_error_handling.go
+@@ -0,0 +1,21 @@
++package main
++
++import (
++	"fmt"
++	"os"
++)
++
++func loadConfig(path string) ([]byte, error) {
++	data, err := os.ReadFile(path)
++
++	return data, nil
++}
++
++func main() {
++	cfg, err := loadConfig("config.json")
++	if err != nil {
++		fmt.Println("error:", err)
++		return
++	}
++	fmt.Println(string(cfg))
++}
+diff --git a/packages/kilo-vscode/docs/nes-examples/go_08_struct_method.go b/packages/kilo-vscode/docs/nes-examples/go_08_struct_method.go
+new file mode 100644
+index 00000000000..dbfb598a331
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/go_08_struct_method.go
+@@ -0,0 +1,22 @@
++package main
++
++import "fmt"
++
++type Rectangle struct {
++	Width  float64
++	Height float64
++}
++
++func (r Rectangle) Perimeter() float64 {
++	return 2 * (r.Width + r.Height)
++}
++
++func (r Rectangle) Area() float64 {
++
++}
++
++func main() {
++	r := Rectangle{Width: 3, Height: 4}
++	fmt.Println("perimeter:", r.Perimeter())
++	fmt.Println("area:", r.Area())
++}
+diff --git a/packages/kilo-vscode/docs/nes-examples/go_09_goroutine_channel.go b/packages/kilo-vscode/docs/nes-examples/go_09_goroutine_channel.go
+new file mode 100644
+index 00000000000..4fe79b9fe87
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/go_09_goroutine_channel.go
+@@ -0,0 +1,15 @@
++package main
++
++import "fmt"
++
++func main() {
++	ch := make(chan int)
++
++	go func() {
++
++	}()
++
++	for v := range ch {
++		fmt.Println("got:", v)
++	}
++}
+diff --git a/packages/kilo-vscode/docs/nes-examples/js_07_async_await.js b/packages/kilo-vscode/docs/nes-examples/js_07_async_await.js
+new file mode 100644
+index 00000000000..30e4f0ba513
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/js_07_async_await.js
+@@ -0,0 +1,15 @@
++async function fetchUser(id) {
++    try {
++
++    } catch (err) {
++        console.error("fetchUser failed", err);
++        return null;
++    }
++}
++
++async function main() {
++    const user = await fetchUser(42);
++    console.log("user:", user);
++}
++
++main();
+diff --git a/packages/kilo-vscode/docs/nes-examples/js_08_express_route.js b/packages/kilo-vscode/docs/nes-examples/js_08_express_route.js
+new file mode 100644
+index 00000000000..75e3f2bcc93
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/js_08_express_route.js
+@@ -0,0 +1,22 @@
++const app = {
++    get: (_path, _handler) => app,
++    post: (_path, _handler) => app,
++    listen: (_port, cb) => cb && cb(),
++};
++
++const users = [
++    { id: 1, name: "ada" },
++    { id: 2, name: "lin" },
++];
++
++app.get("/users/:id", (req, res) => {
++
++});
++
++app.post("/users", (req, res) => {
++    const user = { id: users.length + 1, name: req.body.name };
++    users.push(user);
++    res.status(201).json(user);
++});
++
++app.listen(3000, () => console.log("listening on :3000"));
+diff --git a/packages/kilo-vscode/docs/nes-examples/md_07_prose_negative.md b/packages/kilo-vscode/docs/nes-examples/md_07_prose_negative.md
+new file mode 100644
+index 00000000000..3751a203cf2
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/md_07_prose_negative.md
+@@ -0,0 +1,10 @@
++# Mercury Edit 2 — Quick Notes
++
++Mercury Edit 2 is a small, fast model trained to predict the user's
++next single edit given the current file, cursor position, and recent
++edit history. It targets latency under 200 ms on typical files and
++returns a unified-diff-like patch scoped to a window around the cursor.
++
++Unlike chat-style completions, the model is biased toward minimal,
++local changes — finishing a function body, fixing a typo, propagating
++a rename — rather than generating new files from scratch.
+diff --git a/packages/kilo-vscode/docs/nes-examples/rs_07_match_arms.rs b/packages/kilo-vscode/docs/nes-examples/rs_07_match_arms.rs
+new file mode 100644
+index 00000000000..e666f246a03
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/rs_07_match_arms.rs
+@@ -0,0 +1,25 @@
++enum Shape {
++    Circle(f64),
++    Square(f64),
++    Rectangle(f64, f64),
++    Triangle(f64, f64),
++}
++
++fn area(s: &Shape) -> f64 {
++    match s {
++        Shape::Circle(r) => std::f64::consts::PI * r * r,
++        Shape::Square(side) => side * side,
++
++    }
++}
++
++fn main() {
++    let shapes = vec![
++        Shape::Circle(1.0),
++        Shape::Rectangle(2.0, 3.0),
++        Shape::Triangle(4.0, 5.0),
++    ];
++    for s in &shapes {
++        println!("area = {}", area(s));
++    }
++}
+diff --git a/packages/kilo-vscode/docs/nes-examples/rs_08_result_chain.rs b/packages/kilo-vscode/docs/nes-examples/rs_08_result_chain.rs
+new file mode 100644
+index 00000000000..2c51c0c6172
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/rs_08_result_chain.rs
+@@ -0,0 +1,14 @@
++fn parse_int(s: &str) -> Option<i32> {
++    let n = s.trim()
++    Some(n * 2)
++}
++
++fn main() {
++    let inputs = ["  21  ", "not-a-number", "10"];
++    for s in &inputs {
++        match parse_int(s) {
++            Some(v) => println!("{} -> {}", s, v),
++            None => println!("{} -> skipped", s),
++        }
++    }
++}
+diff --git a/packages/kilo-vscode/docs/nes-examples/rs_09_lifetimes.rs b/packages/kilo-vscode/docs/nes-examples/rs_09_lifetimes.rs
+new file mode 100644
+index 00000000000..86868749707
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/rs_09_lifetimes.rs
+@@ -0,0 +1,14 @@
++fn longest(a: &str, b: &str) -> &str {
++    if a.len() >= b.len() {
++        a
++    } else {
++        b
++    }
++}
++
++fn main() {
++    let s1 = String::from("hello world");
++    let s2 = String::from("hi");
++    let out = longest(&s1, &s2);
++    println!("longest = {}", out);
++}
+diff --git a/packages/kilo-vscode/docs/nes-examples/sql_07_join.sql b/packages/kilo-vscode/docs/nes-examples/sql_07_join.sql
+new file mode 100644
+index 00000000000..b692494f243
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/sql_07_join.sql
+@@ -0,0 +1,9 @@
++SELECT
++    c.name,
++    SUM(o.total) AS total_spent
++FROM orders o
++
++WHERE o.created_at >= '2026-01-01'
++GROUP BY c.name
++ORDER BY total_spent DESC
++LIMIT 10;
+diff --git a/packages/kilo-vscode/docs/nes-examples/sql_08_where_filter.sql b/packages/kilo-vscode/docs/nes-examples/sql_08_where_filter.sql
+new file mode 100644
+index 00000000000..ed2fd4a6a7f
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/sql_08_where_filter.sql
+@@ -0,0 +1,4 @@
++SELECT id, email
++FROM users
++WHERE
++ORDER BY last_login_at DESC;
+diff --git a/packages/kilo-vscode/docs/nes-examples/ts_07_array_transform.ts b/packages/kilo-vscode/docs/nes-examples/ts_07_array_transform.ts
+new file mode 100644
+index 00000000000..1cd15cd17b2
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/ts_07_array_transform.ts
+@@ -0,0 +1,17 @@
++interface User {
++    id: number;
++    name: string;
++    active: boolean;
++}
++
++function getActiveUserNames(users: User[]): string[] {
++    return users
++}
++
++const sample: User[] = [
++    { id: 1, name: "ada", active: true },
++    { id: 2, name: "lin", active: false },
++    { id: 3, name: "rin", active: true },
++];
++
++console.log(getActiveUserNames(sample));
+diff --git a/packages/kilo-vscode/docs/nes-examples/ts_08_param_types.ts b/packages/kilo-vscode/docs/nes-examples/ts_08_param_types.ts
+new file mode 100644
+index 00000000000..c114bc3f3cc
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/ts_08_param_types.ts
+@@ -0,0 +1,19 @@
++function double(x: number): number {
++    return x * 2;
++}
++
++function add(a, b) {
++    return a + b;
++}
++
++function negate(x: number): number {
++    return -x;
++}
++
++function main(): void {
++    console.log(double(3));
++    console.log(add(2, 4));
++    console.log(negate(7));
++}
++
++main();
+diff --git a/packages/kilo-vscode/docs/nes-examples/ts_09_jsx_handler.tsx b/packages/kilo-vscode/docs/nes-examples/ts_09_jsx_handler.tsx
+new file mode 100644
+index 00000000000..8d8481f2e46
+--- /dev/null
++++ b/packages/kilo-vscode/docs/nes-examples/ts_09_jsx_handler.tsx
+@@ -0,0 +1,20 @@
++declare const React: {
++    useState: <T>(initial: T) => [T, (next: T) => void];
++};
++
++function Counter(): JSX.Element {
++    const [count, setCount] = React.useState<number>(0);
++
++    function handleClick() {
++
++    }
++
++    return (
++        <div>
++            <p>Count: {count}</p>
++            <button onClick={handleClick}>Increment</button>
++        </div>
++    );
++}
++
++export default Counter;
+diff --git a/packages/kilo-vscode/package.json b/packages/kilo-vscode/package.json
+index 7918aa7e895..883a4f6e602 100644
+--- a/packages/kilo-vscode/package.json
++++ b/packages/kilo-vscode/package.json
+@@ -756,6 +756,16 @@
+         "key": "ctrl+l",
+         "mac": "cmd+l",
+         "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.autocomplete.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
++      },
++      {
++        "command": "kilo-code.next-edit.acceptOrJump",
++        "key": "tab",
++        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && kilo-code.nextEdit.hasPendingSuggestion"
++      },
++      {
++        "command": "kilo-code.next-edit.dismiss",
++        "key": "escape",
++        "when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilo-code.nextEdit.hasPendingSuggestion"
+       }
+     ],
+     "configuration": {
+@@ -824,13 +834,30 @@
+           "type": "string",
+           "enum": [
+             "mistralai/codestral-2508",
+-            "inception/mercury-edit-2"
++            "inception/mercury-edit-2",
++            "inception/mercury-next-edit"
+           ],
+           "enumDescriptions": [
+-            "Codestral by Mistral AI (default)",
+-            "Mercury Edit 2 by Inception"
++            "Codestral by Mistral AI (FIM autocomplete, default)",
++            "Mercury Edit 2 by Inception (FIM autocomplete via the Kilo gateway)",
++            "Mercury Next Edit by Inception (multi-line next-edit prediction with jump-to-edit UX, calls Inception API directly)"
+           ],
+-          "description": "Model to use for inline autocomplete suggestions"
++          "description": "Model to use for inline autocomplete suggestions. Mercury Next Edit uses a separate decoration-based render pipeline; everything else runs through the classic FIM provider."
++        },
++        "kilo-code.new.autocomplete.nextEdit.apiKey": {
++          "type": "string",
++          "default": "",
++          "description": "Inception API key used when Mercury Edit 2 is selected. Falls back to the INCEPTION_API_KEY environment variable. Get a key at https://platform.inceptionlabs.ai."
++        },
++        "kilo-code.new.autocomplete.nextEdit.baseUrl": {
++          "type": "string",
++          "default": "",
++          "description": "Override the base URL for Mercury Edit 2 requests (default: https://api.inceptionlabs.ai/v1). Use this to route through a self-hosted gateway."
++        },
++        "kilo-code.new.autocomplete.nextEdit.debug": {
++          "type": "boolean",
++          "default": false,
++          "description": "Mirror Next Edit log lines to the Developer Tools console in addition to the 'Kilo Code · Next Edit' output channel. Enable while debugging."
+         },
+         "kilo-code.new.autocomplete.enableAutoTrigger": {
+           "type": "boolean",
+diff --git a/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts b/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts
+index a272f677372..01a6c656ef2 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts
+@@ -6,11 +6,21 @@ import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
+ import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
+ import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
+ import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
++import { nesLog } from "./next-edit/log"
++import { NextEditInlineCompletionProvider } from "./next-edit/NextEditInlineCompletionProvider"
++import { NextEditSuggestionManager } from "./next-edit/NextEditSuggestionManager"
++import { toMercuryRecentSnippets } from "./next-edit/recentSnippetsAdapter"
+ import type { KiloConnectionService } from "../cli-backend"
+ import { hasValidCredentials } from "./fim"
+ import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
+ 
+ const CONFIG_SECTION = "kilo-code.new.autocomplete"
++/**
++ * Model id that triggers the NES pipeline. Selecting `inception/mercury-edit-2`
++ * keeps the original FIM-via-gateway behavior unchanged — the NES flow is
++ * opt-in via this distinct id only.
++ */
++const MERCURY_NEXT_EDIT_MODEL_ID = "inception/mercury-next-edit"
+ 
+ export interface AutocompleteServiceSettings {
+   enableAutoTrigger?: boolean
+@@ -59,7 +69,10 @@ export class AutocompleteServiceManager {
+   // VSCode Providers
+   public readonly codeActionProvider: AutocompleteCodeActionProvider
+   public readonly inlineCompletionProvider: AutocompleteInlineCompletionProvider
++  public readonly nextEditProvider: NextEditInlineCompletionProvider
++  public readonly nextEditSuggestionManager: NextEditSuggestionManager
+   private inlineCompletionProviderDisposable: vscode.Disposable | null = null
++  private inlineCompletionProviderKind: "classic" | "next-edit" | null = null
+   private unsubscribeState: (() => void) | null = null
+   private unsubscribeEvent: (() => void) | null = null
+ 
+@@ -88,6 +101,43 @@ export class AutocompleteServiceManager {
+       new AutocompleteTelemetry(),
+       (status) => this.handleFatalAutocompleteError(status),
+     )
++    this.nextEditSuggestionManager = new NextEditSuggestionManager()
++    this.nextEditProvider = new NextEditInlineCompletionProvider({
++      suggestionManager: this.nextEditSuggestionManager,
++      getRecentlyViewedSnippets: () => {
++        // Source: the shared `RecentlyVisitedRangesService` owned by the
++        // classic provider — it tracks selection changes regardless of which
++        // mode is registered, so the LRU is always warm.
++        const raw = this.inlineCompletionProvider.recentlyVisitedRangesService.getSnippets()
++        return toMercuryRecentSnippets(raw)
++      },
++      getApiKey: () => {
++        const fromConfig = vscode.workspace
++          .getConfiguration(CONFIG_SECTION)
++          .get<string>("nextEdit.apiKey")
++        return (fromConfig && fromConfig.length > 0 ? fromConfig : process.env.INCEPTION_API_KEY) || undefined
++      },
++      getBaseUrl: () =>
++        vscode.workspace.getConfiguration(CONFIG_SECTION).get<string>("nextEdit.baseUrl") || undefined,
++      onFatalError: (status) => this.handleFatalAutocompleteError(status),
++      onSuggestion: (event) => {
++        const eventName =
++          event.status === "error"
++            ? TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_FAILED
++            : event.shown
++              ? TelemetryEventName.AUTOCOMPLETE_LLM_SUGGESTION_RETURNED
++              : TelemetryEventName.AUTOCOMPLETE_LLM_REQUEST_COMPLETED
++        TelemetryProxy.capture(eventName, {
++          mode: "next-edit",
++          model: MERCURY_NEXT_EDIT_MODEL_ID,
++          latencyMs: event.latencyMs,
++          inputTokens: event.inputTokens,
++          outputTokens: event.outputTokens,
++          shown: event.shown,
++          errorStatus: event.errorStatus,
++        })
++      },
++    })
+ 
+     // Reload when CLI backend connection state changes so autocomplete
+     // picks up the connected state even if it wasn't ready at startup.
+@@ -116,6 +166,11 @@ export class AutocompleteServiceManager {
+     return AutocompleteServiceManager._instance
+   }
+ 
++  /** Which provider is currently registered (`null` if none). */
++  public get currentMode(): "classic" | "next-edit" | null {
++    return this.inlineCompletionProviderKind
++  }
++
+   public async load() {
+     this.settings = readSettings()
+ 
+@@ -136,9 +191,17 @@ export class AutocompleteServiceManager {
+    */
+   private async ensureInlineCompletionProviderRegistration() {
+     const shouldBeRegistered = (this.settings?.enableAutoTrigger ?? false) && !this.isSnoozed()
+-    const isRegistered = this.inlineCompletionProviderDisposable !== null
++    const desiredKind: "classic" | "next-edit" = this.settings?.model === MERCURY_NEXT_EDIT_MODEL_ID ? "next-edit" : "classic"
+ 
+-    // Already in the correct state — nothing to do
++    // Mode change while still enabled requires a swap: tear down the old
++    // registration so the new provider takes over.
++    if (shouldBeRegistered && this.inlineCompletionProviderKind !== null && this.inlineCompletionProviderKind !== desiredKind) {
++      this.inlineCompletionProviderDisposable?.dispose()
++      this.inlineCompletionProviderDisposable = null
++      this.inlineCompletionProviderKind = null
++    }
++
++    const isRegistered = this.inlineCompletionProviderDisposable !== null
+     if (shouldBeRegistered === isRegistered) {
+       return
+     }
+@@ -146,15 +209,18 @@ export class AutocompleteServiceManager {
+     if (!shouldBeRegistered) {
+       this.inlineCompletionProviderDisposable!.dispose()
+       this.inlineCompletionProviderDisposable = null
++      this.inlineCompletionProviderKind = null
+       return
+     }
+ 
+-    // Register classic provider (tracked via this.inlineCompletionProviderDisposable,
+-    // not context.subscriptions, so re-registration on reconnect doesn't leak)
++    const provider: vscode.InlineCompletionItemProvider =
++      desiredKind === "next-edit" ? this.nextEditProvider : this.inlineCompletionProvider
++    nesLog(`registering ${desiredKind} provider (model=${this.settings?.model}, autoTrigger=${this.settings?.enableAutoTrigger})`)
+     this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+       { scheme: "file" },
+-      this.inlineCompletionProvider,
++      provider,
+     )
++    this.inlineCompletionProviderKind = desiredKind
+   }
+ 
+   public async disable() {
+@@ -408,10 +474,13 @@ export class AutocompleteServiceManager {
+     if (this.inlineCompletionProviderDisposable) {
+       this.inlineCompletionProviderDisposable.dispose()
+       this.inlineCompletionProviderDisposable = null
++      this.inlineCompletionProviderKind = null
+     }
+ 
+     // Dispose inline completion provider resources
+     this.inlineCompletionProvider.dispose()
++    this.nextEditProvider.dispose()
++    this.nextEditSuggestionManager.dispose()
+ 
+     // Clear singleton instance
+     AutocompleteServiceManager._instance = null
+diff --git a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts
+index 78c16079f52..a608cfc96e5 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/classic-auto-complete/AutocompleteInlineCompletionProvider.ts
+@@ -111,7 +111,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
+   private connectionService: KiloConnectionService
+   private costTrackingCallback: CostTrackingCallback
+   private getSettings: () => AutocompleteServiceSettings | null
+-  private recentlyVisitedRangesService: RecentlyVisitedRangesService
++  public readonly recentlyVisitedRangesService: RecentlyVisitedRangesService
+   private recentlyEditedTracker: RecentlyEditedTracker
+   private debounceTimer: NodeJS.Timeout | null = null
+   /** The pending request associated with the current debounce timer (if any) */
+diff --git a/packages/kilo-vscode/src/services/autocomplete/index.ts b/packages/kilo-vscode/src/services/autocomplete/index.ts
+index 9b8a22eba1f..9d570402a30 100644
+--- a/packages/kilo-vscode/src/services/autocomplete/index.ts
++++ b/packages/kilo-vscode/src/services/autocomplete/index.ts
+@@ -1,6 +1,13 @@
+ import * as vscode from "vscode"
+ import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
+ import { ensureBackendForAutocomplete } from "./ensure-backend"
++import { nesLog } from "./next-edit/log"
++import { INLINE_COMPLETION_ACCEPTED_COMMAND as NEXT_EDIT_ACCEPTED_COMMAND } from "./next-edit/NextEditInlineCompletionProvider"
++import {
++  NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND,
++  NEXT_EDIT_DISMISS_COMMAND,
++  chainNextPrediction,
++} from "./next-edit/NextEditSuggestionManager"
+ import type { KiloConnectionService } from "../cli-backend"
+ 
+ export const registerAutocompleteProvider = (
+@@ -42,6 +49,31 @@ export const registerAutocompleteProvider = (
+       await autocompleteManager.disable()
+     }),
+   )
++  // Fired by VSCode when the user accepts a Next Edit suggestion. The provider
++  // attaches this command to its InlineCompletionItem so VSCode invokes it on Tab.
++  context.subscriptions.push(
++    vscode.commands.registerCommand(NEXT_EDIT_ACCEPTED_COMMAND, () => {
++      nesLog("suggestion accepted")
++      // Chain: re-trigger immediately so Mercury can surface the next edit
++      // without the user needing to type. The mode check guards against
++      // chaining when Mercury isn't the active model.
++      const mgr = AutocompleteServiceManager.getInstance()
++      if (mgr && mgr.currentMode === "next-edit") chainNextPrediction()
++    }),
++  )
++  // Tab handler for off-cursor suggestions: jump cursor to the predicted edit
++  // location; second Tab (or Tab while cursor is already there) applies the edit.
++  context.subscriptions.push(
++    vscode.commands.registerCommand(NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND, async () => {
++      await autocompleteManager.nextEditSuggestionManager.acceptOrJump()
++    }),
++  )
++  // Esc handler: dismiss the pending suggestion without applying it.
++  context.subscriptions.push(
++    vscode.commands.registerCommand(NEXT_EDIT_DISMISS_COMMAND, () => {
++      autocompleteManager.nextEditSuggestionManager.clear()
++    }),
++  )
+ 
+   // Register AutocompleteServiceManager Code Actions
+   context.subscriptions.push(
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/MercuryEditProvider.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/MercuryEditProvider.ts
+new file mode 100644
+index 00000000000..2b01b2b3724
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/MercuryEditProvider.ts
+@@ -0,0 +1,106 @@
++import {
++  INCEPTION_API_BASE_URL,
++  INCEPTION_EDIT_PATH,
++  MERCURY_EDIT_MODEL_ID,
++} from "./constants"
++import { parseMercuryEditReply } from "./editCompletionParser"
++import { nesLog, nesWarn } from "./log"
++import { buildMercuryEditPrompt } from "./mercuryPromptTemplate"
++import type { MercuryEditRequestContext, MercuryEditSuggestion } from "./types"
++
++/**
++ * Cap on tokens Mercury may return. The docs (decoding speed ~1000 tok/s)
++ * suggest 25-line edits land around 250 tokens; cap at 2× that so a single
++ * runaway response can't blow the latency budget.
++ */
++const MERCURY_MAX_TOKENS = 512
++
++export interface MercuryEditProviderOptions {
++  apiKey: string
++  /** Override the base URL (e.g., when routing through a gateway). Defaults to Inception. */
++  baseUrl?: string
++  /** Override the model id. Defaults to `mercury-edit-2`. */
++  model?: string
++  /** AbortSignal for cancellation (cursor moves, escape, etc.). */
++  signal?: AbortSignal
++  /** Hook to override `fetch` in tests. */
++  fetchImpl?: typeof fetch
++}
++
++interface ChatCompletionResponse {
++  choices?: Array<{ message?: { content?: string } }>
++  usage?: { prompt_tokens?: number; completion_tokens?: number }
++}
++
++/**
++ * Calls the Inception `POST /v1/edit/completions` endpoint with a single
++ * sentinel-tagged user message and parses the rewritten editable region from
++ * the response. Endpoint contract:
++ * https://docs.inceptionlabs.ai/api-reference/edit/create-a-code-edit-completion
++ */
++export class MercuryEditProvider {
++  constructor(private readonly options: MercuryEditProviderOptions) {}
++
++  async suggest(ctx: MercuryEditRequestContext): Promise<MercuryEditSuggestion | null> {
++    const baseUrl = this.options.baseUrl ?? INCEPTION_API_BASE_URL
++    const model = this.options.model ?? MERCURY_EDIT_MODEL_ID
++    const url = baseUrl.replace(/\/+$/, "") + INCEPTION_EDIT_PATH
++    const userContent = buildMercuryEditPrompt(ctx)
++
++    const start = Date.now()
++    const fetchImpl = this.options.fetchImpl ?? fetch
++    nesLog(`-> ${url} model=${model} promptChars=${userContent.length} region=[${ctx.editableRegionStartLine},${ctx.editableRegionEndLine}] diffs=${ctx.editDiffHistory.length} snippets=${ctx.recentlyViewedSnippets.length}`)
++    const res = await fetchImpl(url, {
++      method: "POST",
++      headers: {
++        "Content-Type": "application/json",
++        Authorization: `Bearer ${this.options.apiKey}`,
++      },
++      body: JSON.stringify({
++        model,
++        max_tokens: MERCURY_MAX_TOKENS,
++        // The /v1/edit/completions endpoint accepts ONLY a single user
++        // message — the system prompt is baked in server-side. See
++        // https://docs.inceptionlabs.ai/api-reference/edit/create-a-code-edit-completion
++        messages: [{ role: "user", content: userContent }],
++      }),
++      signal: this.options.signal,
++    })
++
++    if (!res.ok) {
++      const body = await safeReadBody(res)
++      nesWarn(`<- ${res.status} ${res.statusText} (${Date.now() - start}ms): ${body.slice(0, 200)}`)
++      throw new MercuryEditError(`Mercury edit request failed: ${res.status} ${res.statusText}: ${body}`, res.status)
++    }
++
++    const json = (await res.json()) as ChatCompletionResponse
++    const content = json.choices?.[0]?.message?.content ?? ""
++    const replacement = parseMercuryEditReply(content)
++    nesLog(`<- 200 (${Date.now() - start}ms) tokens=${json.usage?.completion_tokens ?? "?"} parsedChars=${replacement?.length ?? 0}`)
++    if (replacement === null) return null
++
++    return {
++      replacement,
++      editableRegionStartLine: ctx.editableRegionStartLine,
++      editableRegionEndLine: ctx.editableRegionEndLine,
++      latencyMs: Date.now() - start,
++      inputTokens: json.usage?.prompt_tokens,
++      outputTokens: json.usage?.completion_tokens,
++    }
++  }
++}
++
++export class MercuryEditError extends Error {
++  constructor(message: string, public readonly status: number) {
++    super(message)
++    this.name = "MercuryEditError"
++  }
++}
++
++async function safeReadBody(res: Response): Promise<string> {
++  try {
++    return await res.text()
++  } catch {
++    return "<unreadable>"
++  }
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/NextEditInlineCompletionProvider.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/NextEditInlineCompletionProvider.ts
+new file mode 100644
+index 00000000000..b69889c997b
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/NextEditInlineCompletionProvider.ts
+@@ -0,0 +1,348 @@
++import * as vscode from "vscode"
++import { computeEditableRegion } from "./editableRegion"
++import { EditHistoryTracker } from "./editHistoryTracker"
++import { nesLog } from "./log"
++import { MercuryEditError, MercuryEditProvider } from "./MercuryEditProvider"
++import type { NextEditSuggestionManager } from "./NextEditSuggestionManager"
++import type { MercuryEditRequestContext, MercuryRecentSnippet } from "./types"
++
++const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.next-edit.accepted"
++const DEFAULT_DEBOUNCE_MS = 250
++
++export interface NextEditProviderDeps {
++  /** Resolves the Inception API key (settings → env). */
++  getApiKey: () => string | undefined
++  /** Optional base URL override. */
++  getBaseUrl?: () => string | undefined
++  /** Optional model id override. */
++  getModelId?: () => string | undefined
++  /** Optional source of recently-viewed snippets (kilocode's VisibleCodeTracker can adapt to this). */
++  getRecentlyViewedSnippets?: (document: vscode.TextDocument) => MercuryRecentSnippet[]
++  /** Telemetry hook fired on every suggestion result. */
++  onSuggestion?: (event: NextEditSuggestionEvent) => void
++  onFatalError?: (status: number | null) => void
++  /** Stash for diffs that don't land on the cursor's line — rendered as a jump affordance. */
++  suggestionManager?: NextEditSuggestionManager
++}
++
++export interface NextEditSuggestionEvent {
++  shown: boolean
++  latencyMs: number
++  status: "ok" | "no-replacement" | "error"
++  errorStatus?: number
++  inputTokens?: number
++  outputTokens?: number
++}
++
++export class NextEditInlineCompletionProvider implements vscode.InlineCompletionItemProvider, vscode.Disposable {
++  private readonly editHistoryTracker: EditHistoryTracker
++  private debounceTimer: NodeJS.Timeout | null = null
++  private currentAbort: AbortController | null = null
++
++  constructor(private readonly deps: NextEditProviderDeps) {
++    this.editHistoryTracker = new EditHistoryTracker()
++  }
++
++  dispose(): void {
++    this.editHistoryTracker.dispose()
++    if (this.debounceTimer) clearTimeout(this.debounceTimer)
++    this.currentAbort?.abort()
++  }
++
++  async provideInlineCompletionItems(
++    document: vscode.TextDocument,
++    position: vscode.Position,
++    context: vscode.InlineCompletionContext,
++    token: vscode.CancellationToken,
++  ): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList | undefined> {
++    if (document.uri.scheme !== "file") return undefined
++    const apiKey = this.deps.getApiKey()
++    if (!apiKey) {
++      nesLog("skip — no API key resolved")
++      return undefined
++    }
++    // An off-cursor suggestion is on screen — don't race with it by fetching
++    // a competing same-line suggestion. The Tab keybinding for jump/apply
++    // depends on the pending state being unambiguous.
++    if (this.deps.suggestionManager?.isPending()) return undefined
++
++    const isExplicit = context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke
++    if (!isExplicit) {
++      await this.debounce(DEFAULT_DEBOUNCE_MS, token)
++      if (token.isCancellationRequested) return undefined
++    }
++
++    const abort = this.swapAbortController(token)
++    const ctx = this.buildRequestContext(document, position)
++    const provider = new MercuryEditProvider({
++      apiKey,
++      baseUrl: this.deps.getBaseUrl?.(),
++      model: this.deps.getModelId?.(),
++      signal: abort.signal,
++    })
++
++    try {
++      const suggestion = await provider.suggest(ctx)
++      if (!suggestion || token.isCancellationRequested) {
++        this.deps.onSuggestion?.({ shown: false, latencyMs: 0, status: "no-replacement" })
++        return undefined
++      }
++      return this.toCompletionItems(document, position, suggestion)
++    } catch (err) {
++      return this.handleError(err)
++    }
++  }
++
++  private swapAbortController(token: vscode.CancellationToken): AbortController {
++    this.currentAbort?.abort()
++    const abort = new AbortController()
++    this.currentAbort = abort
++    token.onCancellationRequested(() => abort.abort())
++    return abort
++  }
++
++  private buildRequestContext(document: vscode.TextDocument, position: vscode.Position): MercuryEditRequestContext {
++    const { startLine, endLine } = computeEditableRegion({
++      cursorLine: position.line,
++      totalLines: document.lineCount,
++    })
++    this.editHistoryTracker.flush(document)
++    return {
++      currentFilePath: document.uri.fsPath,
++      currentFileContent: document.getText(),
++      cursorLine: position.line,
++      cursorCharacter: position.character,
++      editableRegionStartLine: startLine,
++      editableRegionEndLine: endLine,
++      recentlyViewedSnippets: this.deps.getRecentlyViewedSnippets?.(document) ?? [],
++      editDiffHistory: this.editHistoryTracker.getRecentDiffs(),
++    }
++  }
++
++  private toCompletionItems(
++    document: vscode.TextDocument,
++    position: vscode.Position,
++    suggestion: { replacement: string; editableRegionStartLine: number; editableRegionEndLine: number; latencyMs: number; inputTokens?: number; outputTokens?: number },
++  ): vscode.InlineCompletionItem[] | undefined {
++    const endLine = Math.min(suggestion.editableRegionEndLine, document.lineCount - 1)
++    const fullRange = new vscode.Range(
++      new vscode.Position(suggestion.editableRegionStartLine, 0),
++      document.lineAt(endLine).range.end,
++    )
++    const currentText = document.getText(fullRange)
++    if (currentText === suggestion.replacement) {
++      this.deps.onSuggestion?.({
++        shown: false,
++        latencyMs: suggestion.latencyMs,
++        status: "no-replacement",
++        inputTokens: suggestion.inputTokens,
++        outputTokens: suggestion.outputTokens,
++      })
++      return undefined
++    }
++
++    // Trim to minimal diff: skip identical leading and trailing lines.
++    const currentLines = currentText.split("\n")
++    const proposedLines = suggestion.replacement.split("\n")
++    let prefixLines = 0
++    while (
++      prefixLines < currentLines.length &&
++      prefixLines < proposedLines.length &&
++      currentLines[prefixLines] === proposedLines[prefixLines]
++    )
++      prefixLines++
++    let suffixLines = 0
++    while (
++      suffixLines < currentLines.length - prefixLines &&
++      suffixLines < proposedLines.length - prefixLines &&
++      currentLines[currentLines.length - 1 - suffixLines] === proposedLines[proposedLines.length - 1 - suffixLines]
++    )
++      suffixLines++
++
++    const diffStartLineInFile = suggestion.editableRegionStartLine + prefixLines
++    const diffEndLineInFile = suggestion.editableRegionStartLine + currentLines.length - 1 - suffixLines
++    const trimmedReplacement = proposedLines.slice(prefixLines, proposedLines.length - suffixLines).join("\n")
++
++    nesLog(`diff at lines [${diffStartLineInFile}..${diffEndLineInFile}], cursor at line ${position.line}, ${trimmedReplacement.length} chars`)
++
++    // VSCode's inline ghost text only renders when the diff starts on the cursor's line.
++    // For off-cursor diffs, stash the suggestion in the manager — it renders a
++    // decoration-based "jump to next edit" affordance and Tab handles the move/apply.
++    const isPureInsertion = diffEndLineInFile < diffStartLineInFile
++    if (isPureInsertion || diffStartLineInFile !== position.line) {
++      this.stashOffCursorSuggestion(document, diffStartLineInFile, diffEndLineInFile, trimmedReplacement, isPureInsertion, suggestion)
++      return undefined
++    }
++    // Same-line diff: clear any prior off-cursor pending state so we don't render
++    // two competing affordances.
++    this.deps.suggestionManager?.clear()
++
++    // Same-line diff: build a range that starts at the cursor's exact position
++    // and provide insertText for everything from the cursor onward.
++    const cursorLineText = document.lineAt(position.line).text
++    const cursorLineCurrent = cursorLineText.slice(position.character)
++    const cursorLineProposed = proposedLines[prefixLines]
++    // Guard: if the proposal has fewer lines than the prefix consumed (a pure
++    // deletion at the trim seam), there's no cursor-line replacement to show.
++    if (cursorLineProposed === undefined) {
++      nesLog(`skipping render — proposal has no line at the cursor's index after trim`)
++      this.deps.onSuggestion?.({
++        shown: false,
++        latencyMs: suggestion.latencyMs,
++        status: "no-replacement",
++        inputTokens: suggestion.inputTokens,
++        outputTokens: suggestion.outputTokens,
++      })
++      return undefined
++    }
++    if (!cursorLineProposed.startsWith(cursorLineText.slice(0, position.character))) {
++      // The model wants to change characters BEFORE the cursor on the same line —
++      // can't render that as ghost text either. Skip for v0.
++      nesLog(`skipping render — diff edits characters before cursor on its line`)
++      this.deps.onSuggestion?.({
++        shown: false,
++        latencyMs: suggestion.latencyMs,
++        status: "no-replacement",
++        inputTokens: suggestion.inputTokens,
++        outputTokens: suggestion.outputTokens,
++      })
++      return undefined
++    }
++    const insertText = [cursorLineProposed.slice(position.character), ...proposedLines.slice(prefixLines + 1, proposedLines.length - suffixLines)].join("\n")
++    const renderEndLine = pickRenderEndLine(document, position.line, diffEndLineInFile, insertText)
++    const renderRange = new vscode.Range(position, new vscode.Position(renderEndLine, document.lineAt(renderEndLine).range.end.character))
++    // Compute the existing text from cursor → end of diff region for sanity.
++    const _existingFromCursor = document.getText(renderRange)
++    if (_existingFromCursor === cursorLineCurrent && cursorLineCurrent === insertText) {
++      nesLog(`post-trim no-op`)
++      return undefined
++    }
++
++    const item = new vscode.InlineCompletionItem(insertText, renderRange, {
++      command: INLINE_COMPLETION_ACCEPTED_COMMAND,
++      title: "Next Edit Accepted",
++    })
++    nesLog(`RENDER range=[${renderRange.start.line}:${renderRange.start.character}..${renderRange.end.line}:${renderRange.end.character}] insertChars=${insertText.length}`)
++    this.deps.onSuggestion?.({
++      shown: true,
++      latencyMs: suggestion.latencyMs,
++      status: "ok",
++      inputTokens: suggestion.inputTokens,
++      outputTokens: suggestion.outputTokens,
++    })
++    return [item]
++  }
++
++  private stashOffCursorSuggestion(
++    document: vscode.TextDocument,
++    diffStartLine: number,
++    diffEndLine: number,
++    trimmedReplacement: string,
++    isPureInsertion: boolean,
++    suggestion: { latencyMs: number; inputTokens?: number; outputTokens?: number },
++  ): void {
++    const mgr = this.deps.suggestionManager
++    if (!mgr) {
++      // Manager wasn't wired — fall through silently. The classic path
++      // already covers same-line completions; this branch only matters in
++      // tests or misconfigured embeds.
++      this.deps.onSuggestion?.({
++        shown: false,
++        latencyMs: suggestion.latencyMs,
++        status: "no-replacement",
++        inputTokens: suggestion.inputTokens,
++        outputTokens: suggestion.outputTokens,
++      })
++      return
++    }
++    if (isPureInsertion) {
++      // The original text we snapshot must come from the line VSCode will see
++      // when the user later accepts. For mid-file inserts that's `diffStartLine`
++      // (the line that gets pushed down). For EOF inserts (diffStartLine ===
++      // lineCount) there is no such line; fall back to lineCount-1 (the last
++      // line, which will sit just above the inserted content). The
++      // SuggestionManager's drift guard knows to compare against this anchor.
++      const isEof = diffStartLine >= document.lineCount
++      const anchorLine = isEof
++        ? Math.max(0, document.lineCount - 1)
++        : Math.max(0, Math.min(diffStartLine, document.lineCount - 1))
++      mgr.setPending({
++        kind: "insert",
++        document,
++        diffStartLine,
++        diffEndLine: diffStartLine,
++        replacement: trimmedReplacement + "\n",
++        originalText: document.lineAt(anchorLine).text,
++      })
++      nesLog(`insert suggestion stashed at line ${diffStartLine} (anchor=${anchorLine}, eof=${isEof}, ${trimmedReplacement.length} chars)`)
++    } else {
++      const originalRange = new vscode.Range(
++        new vscode.Position(diffStartLine, 0),
++        new vscode.Position(diffEndLine, document.lineAt(diffEndLine).range.end.character),
++      )
++      mgr.setPending({
++        kind: "replace",
++        document,
++        diffStartLine,
++        diffEndLine,
++        replacement: trimmedReplacement,
++        originalText: document.getText(originalRange),
++      })
++      nesLog(`replace suggestion stashed at lines [${diffStartLine}..${diffEndLine}]`)
++    }
++    this.deps.onSuggestion?.({
++      shown: true,
++      latencyMs: suggestion.latencyMs,
++      status: "ok",
++      inputTokens: suggestion.inputTokens,
++      outputTokens: suggestion.outputTokens,
++    })
++  }
++
++  private handleError(err: unknown): undefined {
++    if ((err as Error)?.name === "AbortError") return undefined
++    const status = err instanceof MercuryEditError ? err.status : null
++    this.deps.onSuggestion?.({
++      shown: false,
++      latencyMs: 0,
++      status: "error",
++      errorStatus: status ?? undefined,
++    })
++    if (status === 401 || status === 402) this.deps.onFatalError?.(status)
++    return undefined
++  }
++
++  private debounce(ms: number, token: vscode.CancellationToken): Promise<void> {
++    if (this.debounceTimer) clearTimeout(this.debounceTimer)
++    return new Promise<void>((resolve) => {
++      this.debounceTimer = setTimeout(resolve, ms)
++      token.onCancellationRequested(() => {
++        if (this.debounceTimer) clearTimeout(this.debounceTimer)
++        resolve()
++      })
++    })
++  }
++}
++
++export { INLINE_COMPLETION_ACCEPTED_COMMAND }
++
++/**
++ * VSCode's inline ghost text silently fails to render when the completion's
++ * range crosses a line boundary but the insert text has no newline (typical
++ * when Mercury implicitly drops a trailing blank line as file-end
++ * normalization). When that happens — and the lines past the cursor are
++ * blank — cap the range at the cursor's line so the ghost renders cleanly.
++ */
++function pickRenderEndLine(
++  document: vscode.TextDocument,
++  cursorLine: number,
++  diffEndLine: number,
++  insertText: string,
++): number {
++  if (diffEndLine <= cursorLine) return diffEndLine
++  if (insertText.includes("\n")) return diffEndLine
++  for (let l = cursorLine + 1; l <= diffEndLine; l++) {
++    if (document.lineAt(l).text.trim() !== "") return diffEndLine
++  }
++  return cursorLine
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/NextEditSuggestionManager.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/NextEditSuggestionManager.ts
+new file mode 100644
+index 00000000000..be00e64f476
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/NextEditSuggestionManager.ts
+@@ -0,0 +1,334 @@
++import * as vscode from "vscode"
++import { nesLog } from "./log"
++
++const PENDING_CONTEXT_KEY = "kilo-code.nextEdit.hasPendingSuggestion"
++
++export type PendingNextEdit =
++  | {
++      kind: "replace"
++      document: vscode.TextDocument
++      /** Inclusive start line of the lines being replaced. */
++      diffStartLine: number
++      /** Inclusive end line of the lines being replaced. */
++      diffEndLine: number
++      /** New text to substitute for [diffStartLine, diffEndLine]. */
++      replacement: string
++      /** Snapshot of the original text — used to detect drift. */
++      originalText: string
++    }
++  | {
++      kind: "insert"
++      document: vscode.TextDocument
++      /** Existing line BEFORE which the new content will be inserted. */
++      diffStartLine: number
++      /** Same as diffStartLine for hint/jump-target purposes. */
++      diffEndLine: number
++      /** Lines to insert. Must end with a newline so existing content gets pushed down. */
++      replacement: string
++      /** Snapshot of the surrounding (single) line — used as a soft drift guard. */
++      originalText: string
++    }
++
++/**
++ * Holds the currently-pending out-of-cursor NES suggestion and renders a
++ * jump-to-next-edit affordance via editor decorations. Same-line diffs are
++ * still handled by `InlineCompletionItem` (faster, native ghost text) — this
++ * manager is for everything else.
++ *
++ * Lifecycle: at most one pending suggestion at a time. A pending suggestion
++ * is cleared when the user accepts, dismisses, edits inside the diff range,
++ * or moves to a different document.
++ */
++export class NextEditSuggestionManager implements vscode.Disposable {
++  private pending: PendingNextEdit | null = null
++  private readonly subscriptions: vscode.Disposable[] = []
++
++  private readonly removedLineDecoration: vscode.TextEditorDecorationType
++  private readonly proposedLineDecoration: vscode.TextEditorDecorationType
++  private readonly hintDecoration: vscode.TextEditorDecorationType
++
++  constructor() {
++    // Tints + strikethrough on the lines that will be replaced or removed.
++    this.removedLineDecoration = vscode.window.createTextEditorDecorationType({
++      isWholeLine: true,
++      backgroundColor: new vscode.ThemeColor("diffEditor.removedLineBackground"),
++      overviewRulerColor: new vscode.ThemeColor("editorInfo.foreground"),
++      overviewRulerLane: vscode.OverviewRulerLane.Left,
++      textDecoration: "line-through; opacity: 0.65;",
++    })
++    // Inline `after` text showing the proposed replacement line.
++    this.proposedLineDecoration = vscode.window.createTextEditorDecorationType({
++      after: {
++        margin: "0 0 0 2em",
++        color: new vscode.ThemeColor("editorInfo.foreground"),
++        fontStyle: "italic",
++      },
++    })
++    // The one-line user-facing hint.
++    this.hintDecoration = vscode.window.createTextEditorDecorationType({
++      after: {
++        margin: "0 0 0 2em",
++        color: new vscode.ThemeColor("editorCodeLens.foreground"),
++        fontStyle: "italic",
++      },
++    })
++
++    // Dismiss when the document or selection moves in ways that invalidate
++    // the prediction.
++    this.subscriptions.push(
++      vscode.workspace.onDidChangeTextDocument((e) => {
++        const p = this.pending
++        if (!p) return
++        if (e.document !== p.document) return
++        // For "insert" we just confirm the anchor line is still there with its
++        // original content; for "replace" we re-check the full range.
++        let stillValid = true
++        try {
++          if (p.kind === "replace") {
++            const text = e.document.getText(
++              new vscode.Range(
++                new vscode.Position(p.diffStartLine, 0),
++                new vscode.Position(p.diffEndLine, e.document.lineAt(p.diffEndLine).range.end.character),
++              ),
++            )
++            stillValid = text === p.originalText
++          } else {
++            // Insert mode: only invalidate if the anchor line shifted.
++            const anchorLine = Math.min(p.diffStartLine, e.document.lineCount - 1)
++            const anchorText = e.document.lineAt(anchorLine).text
++            stillValid = anchorText === p.originalText
++          }
++        } catch {
++          stillValid = false
++        }
++        if (!stillValid) this.clear()
++      }),
++      vscode.window.onDidChangeActiveTextEditor(() => this.clear()),
++      // When the cursor moves (e.g., post-jump), refresh the hint so it
++      // flips between "Tab to jump" and "Tab to apply".
++      vscode.window.onDidChangeTextEditorSelection((e) => {
++        if (!this.pending) return
++        if (e.textEditor.document !== this.pending.document) return
++        this.renderDecorations(this.pending)
++      }),
++    )
++  }
++
++  public isPending(): boolean {
++    return this.pending !== null
++  }
++
++  public getPending(): PendingNextEdit | null {
++    return this.pending
++  }
++
++  public setPending(p: PendingNextEdit): void {
++    this.clearDecorations()
++    this.pending = p
++    void vscode.commands.executeCommand("setContext", PENDING_CONTEXT_KEY, true)
++    // Hide any in-flight inline suggestion so it can't compete with our Tab handler.
++    void vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
++    this.renderDecorations(p)
++  }
++
++  public clear(): void {
++    if (!this.pending) return
++    this.pending = null
++    this.clearDecorations()
++    void vscode.commands.executeCommand("setContext", PENDING_CONTEXT_KEY, false)
++  }
++
++  /** Tab handler — accept if cursor near the diff, else jump. */
++  public async acceptOrJump(): Promise<void> {
++    const p = this.pending
++    if (!p) return
++    const editor = vscode.window.activeTextEditor
++    if (!editor || editor.document !== p.document) {
++      this.clear()
++      return
++    }
++    const cursor = editor.selection.active
++    const inside =
++      p.kind === "replace"
++        ? cursor.line >= p.diffStartLine && cursor.line <= p.diffEndLine
++        : cursor.line === p.diffStartLine || cursor.line === p.diffStartLine - 1
++    if (inside) {
++      await this.applyPending()
++    } else {
++      const targetLine = Math.min(p.diffStartLine, Math.max(0, p.document.lineCount - 1))
++      const targetChar = p.document.lineAt(targetLine).firstNonWhitespaceCharacterIndex
++      const target = new vscode.Position(targetLine, targetChar)
++      editor.selection = new vscode.Selection(target, target)
++      editor.revealRange(new vscode.Range(target, target), vscode.TextEditorRevealType.InCenterIfOutsideViewport)
++      nesLog(`jumped cursor ${cursor.line} -> ${target.line} (pending diff at [${p.diffStartLine}..${p.diffEndLine}])`)
++      // Refresh hint immediately so "Tab to apply" is shown.
++      this.renderDecorations(p)
++    }
++  }
++
++  private async applyPending(): Promise<void> {
++    const p = this.pending
++    if (!p) return
++    const editor = vscode.window.activeTextEditor
++    if (!editor || editor.document !== p.document) {
++      this.clear()
++      return
++    }
++    // Snapshot what we're about to do, then nuke pending state so the upcoming
++    // document change doesn't re-enter via the invalidation listener.
++    this.clearDecorations()
++    this.pending = null
++    void vscode.commands.executeCommand("setContext", PENDING_CONTEXT_KEY, false)
++
++    let ok = false
++    if (p.kind === "insert") {
++      const pos = new vscode.Position(p.diffStartLine, 0)
++      ok = await editor.edit((b) => b.insert(pos, p.replacement))
++      nesLog(`applied insert at line ${pos.line} (${p.replacement.length} chars, ok=${ok})`)
++    } else {
++      const range = new vscode.Range(
++        new vscode.Position(p.diffStartLine, 0),
++        new vscode.Position(p.diffEndLine, p.document.lineAt(p.diffEndLine).range.end.character),
++      )
++      const currentInDoc = editor.document.getText(range)
++      if (currentInDoc !== p.originalText) {
++        nesLog(`document drifted since suggestion was made — dropping range [${p.diffStartLine}..${p.diffEndLine}]`)
++        return
++      }
++      ok = await editor.edit((b) => b.replace(range, p.replacement))
++      nesLog(`applied replace at lines [${p.diffStartLine}..${p.diffEndLine}] (ok=${ok})`)
++    }
++    if (ok) chainNextPrediction()
++  }
++
++  private renderDecorations(p: PendingNextEdit): void {
++    // Same document can be open in multiple splits — paint all of them so the
++    // user sees the decoration regardless of which split has focus.
++    const editors = vscode.window.visibleTextEditors.filter((e) => e.document === p.document)
++    if (editors.length === 0) return
++
++    const removedRanges: vscode.Range[] = []
++    const proposedAnnotations: vscode.DecorationOptions[] = []
++
++    if (p.kind === "replace") {
++      const originalLines = p.originalText.split("\n")
++      const proposedLines = p.replacement.split("\n")
++      const minLen = Math.min(originalLines.length, proposedLines.length)
++      for (let i = 0; i < minLen; i++) {
++        if (originalLines[i] === proposedLines[i]) continue
++        const lineNo = p.diffStartLine + i
++        const lineRange = p.document.lineAt(lineNo).range
++        removedRanges.push(lineRange)
++        proposedAnnotations.push({
++          range: new vscode.Range(lineRange.end, lineRange.end),
++          renderOptions: { after: { contentText: `→ ${visualize(proposedLines[i])}` } },
++        })
++      }
++      // Pure deletions inside a replace
++      for (let i = minLen; i < originalLines.length; i++) {
++        const lineNo = p.diffStartLine + i
++        const lineRange = p.document.lineAt(lineNo).range
++        removedRanges.push(lineRange)
++        proposedAnnotations.push({
++          range: new vscode.Range(lineRange.end, lineRange.end),
++          renderOptions: { after: { contentText: `→ (removed)` } },
++        })
++      }
++      // Additions inside a replace — anchor on last shared line
++      if (proposedLines.length > originalLines.length) {
++        const tailLineNo = p.diffStartLine + originalLines.length - 1
++        const safeLine = Math.max(p.diffStartLine, Math.min(tailLineNo, p.diffEndLine))
++        const tailRange = p.document.lineAt(safeLine).range
++        const added = proposedLines.slice(originalLines.length).map(visualize).join(" ⏎ ")
++        proposedAnnotations.push({
++          range: new vscode.Range(tailRange.end, tailRange.end),
++          renderOptions: { after: { contentText: `+ ${added}` } },
++        })
++      }
++    } else {
++      // Pure insertion: anchor the ghost text on the existing line, no strikethrough.
++      const anchorLine = Math.min(p.diffStartLine, p.document.lineCount - 1)
++      const safeAnchor = Math.max(0, anchorLine)
++      const anchorRange = p.document.lineAt(safeAnchor).range
++      // Strip the trailing \n we appended for insertion semantics, then show each
++      // inserted line collapsed with a small separator.
++      const lines = p.replacement.replace(/\n$/, "").split("\n").map(visualize)
++      const inserted = lines.join(" ⏎ ")
++      proposedAnnotations.push({
++        range: new vscode.Range(anchorRange.end, anchorRange.end),
++        renderOptions: { after: { contentText: `+ ${inserted}` } },
++      })
++    }
++
++    // Hint anchor + cursor check use the active editor if it's one of ours,
++    // else fall back to the first visible editor for this document.
++    const active = vscode.window.activeTextEditor
++    const referenceEditor =
++      active && editors.includes(active) ? active : editors[0]
++    const hintAnchor = Math.min(p.diffStartLine, p.document.lineCount - 1)
++    const hintLineEnd = p.document.lineAt(Math.max(0, hintAnchor)).range.end
++    const cursor = referenceEditor.selection.active
++    const cursorAtDiff =
++      p.kind === "replace"
++        ? cursor.line >= p.diffStartLine && cursor.line <= p.diffEndLine
++        : cursor.line === p.diffStartLine || cursor.line === p.diffStartLine - 1
++    const hintText = cursorAtDiff
++      ? "  ↳ Tab to apply · Esc to dismiss"
++      : "  ↳ Tab to jump here · Esc to dismiss"
++    const hintOptions: vscode.DecorationOptions[] = [
++      {
++        range: new vscode.Range(hintLineEnd, hintLineEnd),
++        renderOptions: { after: { contentText: hintText } },
++      },
++    ]
++
++    for (const editor of editors) {
++      editor.setDecorations(this.removedLineDecoration, removedRanges)
++      editor.setDecorations(this.proposedLineDecoration, proposedAnnotations)
++      editor.setDecorations(this.hintDecoration, hintOptions)
++    }
++  }
++
++  private clearDecorations(): void {
++    for (const editor of vscode.window.visibleTextEditors) {
++      editor.setDecorations(this.removedLineDecoration, [])
++      editor.setDecorations(this.proposedLineDecoration, [])
++      editor.setDecorations(this.hintDecoration, [])
++    }
++  }
++
++  public dispose(): void {
++    this.clear()
++    for (const s of this.subscriptions) s.dispose()
++    this.subscriptions.length = 0
++    this.removedLineDecoration.dispose()
++    this.proposedLineDecoration.dispose()
++    this.hintDecoration.dispose()
++  }
++}
++
++/**
++ * Re-invoke VSCode's inline-suggest UI after an accept so the provider fires
++ * again and surfaces the next prediction without the user having to type.
++ * This is the "Tab-Tab-Tab" walk-through-a-refactor UX from Cursor.
++ *
++ * A short delay lets the document change settle before we re-enter
++ * `provideInlineCompletionItems`, and gives the user a moment to abandon the
++ * chain by typing or moving the cursor.
++ */
++export function chainNextPrediction(delayMs = 60): void {
++  setTimeout(() => {
++    void vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
++  }, delayMs)
++}
++
++function visualize(line: string): string {
++  // VSCode after-text decorations don't support newlines — collapse just in case.
++  // Also surface leading whitespace explicitly so it isn't visually swallowed.
++  const collapsed = line.replace(/\s+$/g, "").replace(/^\t+/, (t) => "  ".repeat(t.length))
++  return collapsed.length > 120 ? collapsed.slice(0, 117) + "…" : collapsed
++}
++
++export const NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND = "kilo-code.next-edit.acceptOrJump"
++export const NEXT_EDIT_DISMISS_COMMAND = "kilo-code.next-edit.dismiss"
++export const NEXT_EDIT_PENDING_CONTEXT_KEY = PENDING_CONTEXT_KEY
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/editCompletionParser.spec.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/editCompletionParser.spec.ts
+new file mode 100644
+index 00000000000..5d340487e56
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/editCompletionParser.spec.ts
+@@ -0,0 +1,26 @@
++import { parseMercuryEditReply } from "../editCompletionParser"
++
++describe("parseMercuryEditReply", () => {
++  it("extracts the fenced body when the model returns plain triple backticks", () => {
++    const reply = "Some preamble\n```\nfunction foo() {\n  return 1\n}\n```\n"
++    expect(parseMercuryEditReply(reply)).toBe("function foo() {\n  return 1\n}")
++  })
++
++  it("extracts the body when the fence has a language tag", () => {
++    const reply = "```typescript\nconst x = 1\n```"
++    expect(parseMercuryEditReply(reply)).toBe("const x = 1")
++  })
++
++  it("strips Mercury <|code_to_edit|> sentinels when the model includes them", () => {
++    const reply = "```\n<|code_to_edit|>\nconst x = 2\n<|/code_to_edit|>\n```"
++    expect(parseMercuryEditReply(reply)).toBe("const x = 2")
++  })
++
++  it("returns null when no fenced block is present", () => {
++    expect(parseMercuryEditReply("just text, no fence")).toBeNull()
++  })
++
++  it("returns null on an empty string", () => {
++    expect(parseMercuryEditReply("")).toBeNull()
++  })
++})
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/editableRegion.spec.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/editableRegion.spec.ts
+new file mode 100644
+index 00000000000..d11f3543c1a
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/editableRegion.spec.ts
+@@ -0,0 +1,37 @@
++import { MAX_EDITABLE_REGION_LINES } from "../constants"
++import { computeEditableRegion } from "../editableRegion"
++
++describe("computeEditableRegion", () => {
++  it("returns the default [-5, +10] window around the cursor", () => {
++    const r = computeEditableRegion({ cursorLine: 20, totalLines: 100 })
++    expect(r.startLine).toBe(15)
++    expect(r.endLine).toBe(30)
++  })
++
++  it("clips at file start", () => {
++    const r = computeEditableRegion({ cursorLine: 2, totalLines: 50 })
++    expect(r.startLine).toBe(0)
++    expect(r.endLine).toBe(12)
++  })
++
++  it("clips at file end", () => {
++    const r = computeEditableRegion({ cursorLine: 49, totalLines: 50 })
++    expect(r.endLine).toBe(49)
++    expect(r.startLine).toBe(44)
++  })
++
++  it("caps the region at MAX_EDITABLE_REGION_LINES", () => {
++    const r = computeEditableRegion({
++      cursorLine: 100,
++      totalLines: 1000,
++      topMargin: 100,
++      bottomMargin: 100,
++    })
++    expect(r.endLine - r.startLine + 1).toBeLessThanOrEqual(MAX_EDITABLE_REGION_LINES)
++  })
++
++  it("handles an empty document gracefully", () => {
++    const r = computeEditableRegion({ cursorLine: 0, totalLines: 0 })
++    expect(r).toEqual({ startLine: 0, endLine: 0 })
++  })
++})
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/mercuryPromptTemplate.spec.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/mercuryPromptTemplate.spec.ts
+new file mode 100644
+index 00000000000..c01c4890faf
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/mercuryPromptTemplate.spec.ts
+@@ -0,0 +1,125 @@
++import {
++  MERCURY_CODE_TO_EDIT_CLOSE,
++  MERCURY_CODE_TO_EDIT_OPEN,
++  MERCURY_CURRENT_FILE_CONTENT_CLOSE,
++  MERCURY_CURRENT_FILE_CONTENT_OPEN,
++  MERCURY_CURSOR,
++  MERCURY_EDIT_DIFF_HISTORY_CLOSE,
++  MERCURY_EDIT_DIFF_HISTORY_OPEN,
++  MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_CLOSE,
++  MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN,
++  MERCURY_UNIQUE_TOKEN,
++} from "../constants"
++import {
++  buildMercuryEditPrompt,
++  currentFileContentBlock,
++  editDiffHistoryBlock,
++  recentlyViewedSnippetsBlock,
++} from "../mercuryPromptTemplate"
++
++describe("mercuryPromptTemplate", () => {
++  describe("recentlyViewedSnippetsBlock", () => {
++    it("wraps in open/close sentinels even when empty", () => {
++      const out = recentlyViewedSnippetsBlock([])
++      expect(out.startsWith(MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN)).toBe(true)
++      expect(out.endsWith(MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_CLOSE)).toBe(true)
++    })
++
++    it("emits one inner block per snippet with the file-path header", () => {
++      const out = recentlyViewedSnippetsBlock([
++        { filepath: "src/a.ts", content: "const a = 1" },
++        { filepath: "src/b.ts", content: "const b = 2" },
++      ])
++      expect(out).toContain("code_snippet_file_path: src/a.ts")
++      expect(out).toContain("code_snippet_file_path: src/b.ts")
++      expect(out).toContain("const a = 1")
++      expect(out).toContain("const b = 2")
++    })
++  })
++
++  describe("currentFileContentBlock", () => {
++    it("inserts <|cursor|> at the right character and wraps the editable region", () => {
++      const file = ["function foo() {", "  return 1", "}"].join("\n")
++      const out = currentFileContentBlock("src/foo.ts", file, 1, 1, 1, 2)
++      expect(out).toContain(MERCURY_CURRENT_FILE_CONTENT_OPEN)
++      expect(out).toContain(MERCURY_CURRENT_FILE_CONTENT_CLOSE)
++      expect(out).toContain("current_file_path: src/foo.ts")
++      expect(out).toContain(`  ${MERCURY_CURSOR}return 1`)
++      // Open marker precedes the editable region's first line; close marker follows it.
++      const openIdx = out.indexOf(MERCURY_CODE_TO_EDIT_OPEN)
++      const lineIdx = out.indexOf("return 1")
++      const closeIdx = out.indexOf(MERCURY_CODE_TO_EDIT_CLOSE)
++      expect(openIdx).toBeGreaterThan(-1)
++      expect(closeIdx).toBeGreaterThan(openIdx)
++      expect(lineIdx).toBeGreaterThan(openIdx)
++      expect(lineIdx).toBeLessThan(closeIdx)
++    })
++
++    it("clamps an out-of-range cursor instead of throwing", () => {
++      const file = "only-line"
++      const out = currentFileContentBlock("p.ts", file, 0, 0, 0, 9999)
++      expect(out).toContain(`only-line${MERCURY_CURSOR}`)
++    })
++  })
++
++  describe("editDiffHistoryBlock", () => {
++    it("strips the createPatch index+separator lines from each diff", () => {
++      const fakeDiff = ["Index: foo.ts", "===", "@@ -1,1 +1,1 @@", "-old", "+new"].join("\n")
++      const out = editDiffHistoryBlock([fakeDiff])
++      expect(out).toContain("@@ -1,1 +1,1 @@")
++      expect(out).not.toContain("Index: foo.ts")
++      expect(out).not.toContain("===")
++      expect(out.startsWith(MERCURY_EDIT_DIFF_HISTORY_OPEN)).toBe(true)
++      expect(out.endsWith(MERCURY_EDIT_DIFF_HISTORY_CLOSE)).toBe(true)
++    })
++
++    it("separates multiple diffs with a blank line so Mercury parses them as distinct hunks", () => {
++      const diff1 = ["Index: a.ts", "===", "@@ -1,1 +1,1 @@", "-a", "+aa"].join("\n")
++      const diff2 = ["Index: b.ts", "===", "@@ -2,1 +2,1 @@", "-b", "+bb"].join("\n")
++      const out = editDiffHistoryBlock([diff1, diff2])
++      // Both hunk headers should appear separated by a blank line.
++      const idx1 = out.indexOf("@@ -1,1 +1,1 @@")
++      const idx2 = out.indexOf("@@ -2,1 +2,1 @@")
++      expect(idx1).toBeGreaterThan(-1)
++      expect(idx2).toBeGreaterThan(idx1)
++      const between = out.slice(idx1, idx2)
++      // The body between the two hunk headers must contain at least one empty line.
++      expect(between).toContain("\n\n")
++    })
++  })
++
++  describe("buildMercuryEditPrompt", () => {
++    it("assembles all three blocks in the documented order", () => {
++      const out = buildMercuryEditPrompt({
++        currentFilePath: "p.ts",
++        currentFileContent: "a\nb\nc",
++        cursorLine: 1,
++        cursorCharacter: 0,
++        editableRegionStartLine: 1,
++        editableRegionEndLine: 1,
++        recentlyViewedSnippets: [],
++        editDiffHistory: [],
++      })
++      const snippetsIdx = out.indexOf(MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN)
++      const fileIdx = out.indexOf(MERCURY_CURRENT_FILE_CONTENT_OPEN)
++      const diffIdx = out.indexOf(MERCURY_EDIT_DIFF_HISTORY_OPEN)
++      expect(snippetsIdx).toBeGreaterThan(-1)
++      expect(fileIdx).toBeGreaterThan(snippetsIdx)
++      expect(diffIdx).toBeGreaterThan(fileIdx)
++    })
++
++    it("trails the user prompt with the NES unique token so Mercury recognises the call as next-edit", () => {
++      const out = buildMercuryEditPrompt({
++        currentFilePath: "p.ts",
++        currentFileContent: "a\nb",
++        cursorLine: 0,
++        cursorCharacter: 0,
++        editableRegionStartLine: 0,
++        editableRegionEndLine: 1,
++        recentlyViewedSnippets: [],
++        editDiffHistory: [],
++      })
++      expect(out.endsWith(MERCURY_UNIQUE_TOKEN)).toBe(true)
++    })
++  })
++})
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/recentSnippetsAdapter.spec.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/recentSnippetsAdapter.spec.ts
+new file mode 100644
+index 00000000000..828f5ac09db
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/__tests__/recentSnippetsAdapter.spec.ts
+@@ -0,0 +1,39 @@
++import { toMercuryRecentSnippets } from "../recentSnippetsAdapter"
++
++describe("toMercuryRecentSnippets", () => {
++  it("returns an empty array when no snippets are supplied", () => {
++    expect(toMercuryRecentSnippets([])).toEqual([])
++  })
++
++  it("caps the number of snippets at 5", () => {
++    const snippets = Array.from({ length: 12 }, (_, i) => ({
++      filepath: `file://${i}.ts`,
++      content: `const x${i} = ${i}`,
++    }))
++    const out = toMercuryRecentSnippets(snippets)
++    expect(out.length).toBe(5)
++  })
++
++  it("reverses input order (service returns newest→oldest, Mercury wants oldest→newest)", () => {
++    const out = toMercuryRecentSnippets([
++      { filepath: "a.ts", content: "newest" },
++      { filepath: "b.ts", content: "middle" },
++      { filepath: "c.ts", content: "oldest" },
++    ])
++    expect(out.map((s) => s.content)).toEqual(["oldest", "middle", "newest"])
++  })
++
++  it("trims content above 20 lines to a centered window", () => {
++    const content = Array.from({ length: 50 }, (_, i) => `line${i}`).join("\n")
++    const [snippet] = toMercuryRecentSnippets([{ filepath: "x.ts", content }])
++    const lines = snippet.content.split("\n")
++    expect(lines.length).toBe(20)
++    // Center: lines should be drawn from somewhere in the middle of the input.
++    expect(lines[0]).toMatch(/^line[12]\d$/)
++  })
++
++  it("passes through filepath verbatim when not a parsable URI", () => {
++    const [out] = toMercuryRecentSnippets([{ filepath: "not a uri", content: "x" }])
++    expect(out.filepath).toBe("not a uri")
++  })
++})
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts
+new file mode 100644
+index 00000000000..a2c3fa4ae43
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/constants.ts
+@@ -0,0 +1,37 @@
++/**
++ * Sentinel tokens used to template the prompt for Mercury Edit 2 via the
++ * Inception `/v1/edit/completions` endpoint. The tag set is defined by the
++ * model and must be reproduced verbatim — see
++ * https://docs.inceptionlabs.ai/capabilities/next-edit
++ */
++
++export const MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN = "<|recently_viewed_code_snippets|>"
++export const MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_CLOSE = "<|/recently_viewed_code_snippets|>"
++export const MERCURY_RECENTLY_VIEWED_CODE_SNIPPET_OPEN = "<|recently_viewed_code_snippet|>"
++export const MERCURY_RECENTLY_VIEWED_CODE_SNIPPET_CLOSE = "<|/recently_viewed_code_snippet|>"
++export const MERCURY_CURRENT_FILE_CONTENT_OPEN = "<|current_file_content|>"
++export const MERCURY_CURRENT_FILE_CONTENT_CLOSE = "<|/current_file_content|>"
++export const MERCURY_CODE_TO_EDIT_OPEN = "<|code_to_edit|>"
++export const MERCURY_CODE_TO_EDIT_CLOSE = "<|/code_to_edit|>"
++export const MERCURY_EDIT_DIFF_HISTORY_OPEN = "<|edit_diff_history|>"
++export const MERCURY_EDIT_DIFF_HISTORY_CLOSE = "<|/edit_diff_history|>"
++export const MERCURY_CURSOR = "<|cursor|>"
++
++export const MERCURY_EDIT_MODEL_ID = "mercury-edit-2"
++export const INCEPTION_API_BASE_URL = "https://api.inceptionlabs.ai/v1"
++export const INCEPTION_EDIT_PATH = "/edit/completions"
++
++/** Token Mercury Edit uses to distinguish next-edit calls from regular chat. */
++export const MERCURY_UNIQUE_TOKEN = "<|!@#IS_NEXT_EDIT!@#|>"
++
++// Note: the /v1/edit/completions endpoint accepts only a `role: "user"`
++// message — Mercury bakes the system prompt in server-side. Do not send a
++// client-side system prompt; the endpoint returns 400 if you do.
++
++/**
++ * Per docs: editable region size dominates output latency. Centering around
++ * the cursor with [-5, +10] is the recommended starting point.
++ */
++export const DEFAULT_EDITABLE_REGION_TOP_MARGIN = 5
++export const DEFAULT_EDITABLE_REGION_BOTTOM_MARGIN = 10
++export const MAX_EDITABLE_REGION_LINES = 25
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/editCompletionParser.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/editCompletionParser.ts
+new file mode 100644
+index 00000000000..99623afdf78
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/editCompletionParser.ts
+@@ -0,0 +1,33 @@
++import { MERCURY_CODE_TO_EDIT_CLOSE, MERCURY_CODE_TO_EDIT_OPEN } from "./constants"
++
++/**
++ * Mercury Edit 2 returns the rewritten editable region wrapped in a triple-backtick
++ * fence. The system prompt asks the model to include `<|code_to_edit|>` markers,
++ * so we strip those as well when present.
++ */
++export function parseMercuryEditReply(message: string): string | null {
++  if (!message) return null
++
++  const fenceOpen = message.indexOf("```")
++  if (fenceOpen === -1) return null
++  // Skip past the opening fence + optional language tag + newline.
++  const afterFenceOpen = message.indexOf("\n", fenceOpen + 3)
++  if (afterFenceOpen === -1) return null
++
++  const fenceClose = message.lastIndexOf("```")
++  if (fenceClose <= afterFenceOpen) return null
++
++  let body = message.slice(afterFenceOpen + 1, fenceClose)
++  // Trim a single trailing newline if the model added one before the fence.
++  if (body.endsWith("\n")) body = body.slice(0, -1)
++
++  // Strip Mercury's `<|code_to_edit|>` markers when included.
++  body = body.replace(new RegExp(`^${escape(MERCURY_CODE_TO_EDIT_OPEN)}\\n?`), "")
++  body = body.replace(new RegExp(`\\n?${escape(MERCURY_CODE_TO_EDIT_CLOSE)}$`), "")
++
++  return body
++}
++
++function escape(s: string): string {
++  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/editHistoryTracker.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/editHistoryTracker.ts
+new file mode 100644
+index 00000000000..710da5132cd
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/editHistoryTracker.ts
+@@ -0,0 +1,106 @@
++import { createPatch } from "diff"
++import * as vscode from "vscode"
++
++const DEFAULT_DEBOUNCE_MS = 1500
++const DEFAULT_MAX_DIFFS = 5
++
++/**
++ * Per-file snapshot tracker that emits range-based unidiffs after a short
++ * idle window — matching the Mercury docs' guidance: "if a user made multiple
++ * modifications in the same area, combine them into a single unidiff rather
++ * than many granular diffs."
++ *
++ * Diffs are produced lazily; the tracker holds the previously-emitted state
++ * per file and computes the diff against the current document content when
++ * the debounce fires.
++ */
++export class EditHistoryTracker implements vscode.Disposable {
++  private readonly snapshots = new Map<string, string>()
++  private readonly pendingTimers = new Map<string, NodeJS.Timeout>()
++  private readonly diffs: string[] = []
++  private readonly subscriptions: vscode.Disposable[] = []
++
++  constructor(
++    private readonly options: { debounceMs?: number; maxDiffs?: number } = {},
++  ) {
++    const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS
++
++    this.subscriptions.push(
++      vscode.workspace.onDidChangeTextDocument((event) => {
++        if (event.document.uri.scheme !== "file") return
++        if (event.contentChanges.length === 0) return
++        this.scheduleSnapshotDiff(event.document, debounceMs)
++      }),
++    )
++    this.subscriptions.push(
++      vscode.workspace.onDidCloseTextDocument((doc) => {
++        const key = doc.uri.fsPath
++        const t = this.pendingTimers.get(key)
++        if (t) clearTimeout(t)
++        this.pendingTimers.delete(key)
++        this.snapshots.delete(key)
++      }),
++    )
++  }
++
++  /**
++   * Force the pending diff (if any) for `document` to be emitted now. Call
++   * this immediately before building a request so the freshest user edit
++   * makes it into the prompt.
++   */
++  public flush(document: vscode.TextDocument): void {
++    const key = document.uri.fsPath
++    const t = this.pendingTimers.get(key)
++    if (t) clearTimeout(t)
++    this.pendingTimers.delete(key)
++    this.emitDiffNow(document)
++  }
++
++  /** Oldest → newest, matching the Mercury prompt-history convention. */
++  public getRecentDiffs(): string[] {
++    return [...this.diffs]
++  }
++
++  public dispose(): void {
++    for (const t of this.pendingTimers.values()) clearTimeout(t)
++    this.pendingTimers.clear()
++    for (const s of this.subscriptions) s.dispose()
++    this.subscriptions.length = 0
++  }
++
++  private scheduleSnapshotDiff(document: vscode.TextDocument, debounceMs: number): void {
++    const key = document.uri.fsPath
++    if (!this.snapshots.has(key)) {
++      // Seed the snapshot lazily — the first change is lost (we never saw
++      // the pre-edit state) but every subsequent edit window produces a
++      // useful diff.
++      this.snapshots.set(key, document.getText())
++      return
++    }
++    const existing = this.pendingTimers.get(key)
++    if (existing) clearTimeout(existing)
++    const timer = setTimeout(() => {
++      this.pendingTimers.delete(key)
++      this.emitDiffNow(document)
++    }, debounceMs)
++    this.pendingTimers.set(key, timer)
++  }
++
++  private emitDiffNow(document: vscode.TextDocument): void {
++    const key = document.uri.fsPath
++    const previous = this.snapshots.get(key)
++    if (previous === undefined) return
++    const current = document.getText()
++    if (current === previous) return
++
++    const filename = vscode.workspace.asRelativePath(document.uri, false)
++    const patch = createPatch(filename, previous, current, undefined, undefined, { context: 1 })
++    // `createPatch` returns "" for identical inputs; guard anyway.
++    if (patch && patch.trim().length > 0) {
++      this.diffs.push(patch)
++      const maxDiffs = this.options.maxDiffs ?? DEFAULT_MAX_DIFFS
++      if (this.diffs.length > maxDiffs) this.diffs.shift()
++    }
++    this.snapshots.set(key, current)
++  }
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/editableRegion.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/editableRegion.ts
+new file mode 100644
+index 00000000000..16be4a992b5
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/editableRegion.ts
+@@ -0,0 +1,43 @@
++import {
++  DEFAULT_EDITABLE_REGION_BOTTOM_MARGIN,
++  DEFAULT_EDITABLE_REGION_TOP_MARGIN,
++  MAX_EDITABLE_REGION_LINES,
++} from "./constants"
++
++export interface EditableRegionInputs {
++  cursorLine: number
++  totalLines: number
++  topMargin?: number
++  bottomMargin?: number
++}
++
++export interface EditableRegion {
++  startLine: number
++  endLine: number
++}
++
++/**
++ * Editable region selection per the Mercury docs: center [-top, +bottom] around
++ * the cursor, clipped to file bounds. Capped to MAX_EDITABLE_REGION_LINES (~25)
++ * because output tokens dominate latency.
++ */
++export function computeEditableRegion({
++  cursorLine,
++  totalLines,
++  topMargin = DEFAULT_EDITABLE_REGION_TOP_MARGIN,
++  bottomMargin = DEFAULT_EDITABLE_REGION_BOTTOM_MARGIN,
++}: EditableRegionInputs): EditableRegion {
++  if (totalLines <= 0) return { startLine: 0, endLine: 0 }
++
++  const lastLine = totalLines - 1
++  let start = Math.max(0, cursorLine - topMargin)
++  let end = Math.min(lastLine, cursorLine + bottomMargin)
++
++  const span = end - start + 1
++  if (span > MAX_EDITABLE_REGION_LINES) {
++    const overflow = span - MAX_EDITABLE_REGION_LINES
++    // Prefer trimming below the cursor, where we have less semantic context.
++    end = Math.max(start, end - overflow)
++  }
++  return { startLine: start, endLine: end }
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/log.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/log.ts
+new file mode 100644
+index 00000000000..2aac37f5bb9
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/log.ts
+@@ -0,0 +1,39 @@
++import * as vscode from "vscode"
++
++const CHANNEL_NAME = "Kilo Code · Next Edit"
++const DEBUG_SETTING = "kilo-code.new.autocomplete.nextEdit.debug"
++
++let channel: vscode.OutputChannel | null = null
++
++function getChannel(): vscode.OutputChannel {
++  if (!channel) channel = vscode.window.createOutputChannel(CHANNEL_NAME)
++  return channel
++}
++
++function debugEnabled(): boolean {
++  return (
++    vscode.workspace.getConfiguration().get<boolean>(DEBUG_SETTING) === true ||
++    process.env.KILO_NES_DEBUG === "1"
++  )
++}
++
++/**
++ * Append a single log line to the dedicated NES output channel. Always goes to
++ * the channel (so a user troubleshooting can flip it on without rebuilding);
++ * `console.log` is mirrored only when the debug setting is enabled.
++ */
++export function nesLog(message: string): void {
++  getChannel().appendLine(`[${new Date().toISOString()}] ${message}`)
++  if (debugEnabled()) console.log(`[NES] ${message}`)
++}
++
++/** Equivalent of `console.warn` for the channel. */
++export function nesWarn(message: string): void {
++  getChannel().appendLine(`[${new Date().toISOString()}] WARN ${message}`)
++  if (debugEnabled()) console.warn(`[NES] ${message}`)
++}
++
++export function disposeLog(): void {
++  channel?.dispose()
++  channel = null
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/mercuryPromptTemplate.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/mercuryPromptTemplate.ts
+new file mode 100644
+index 00000000000..62034cbdb55
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/mercuryPromptTemplate.ts
+@@ -0,0 +1,95 @@
++import {
++  MERCURY_CODE_TO_EDIT_CLOSE,
++  MERCURY_CODE_TO_EDIT_OPEN,
++  MERCURY_CURRENT_FILE_CONTENT_CLOSE,
++  MERCURY_CURRENT_FILE_CONTENT_OPEN,
++  MERCURY_CURSOR,
++  MERCURY_EDIT_DIFF_HISTORY_CLOSE,
++  MERCURY_EDIT_DIFF_HISTORY_OPEN,
++  MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_CLOSE,
++  MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN,
++  MERCURY_RECENTLY_VIEWED_CODE_SNIPPET_CLOSE,
++  MERCURY_RECENTLY_VIEWED_CODE_SNIPPET_OPEN,
++  MERCURY_UNIQUE_TOKEN,
++} from "./constants"
++import type { MercuryEditRequestContext, MercuryRecentSnippet } from "./types"
++
++function insertCursorToken(lines: string[], cursorLine: number, cursorCharacter: number): string[] {
++  if (cursorLine < 0 || cursorLine >= lines.length) return lines
++  const line = lines[cursorLine]
++  const safeChar = Math.min(Math.max(cursorCharacter, 0), line.length)
++  const next = line.slice(0, safeChar) + MERCURY_CURSOR + line.slice(safeChar)
++  return [...lines.slice(0, cursorLine), next, ...lines.slice(cursorLine + 1)]
++}
++
++export function recentlyViewedSnippetsBlock(snippets: MercuryRecentSnippet[]): string {
++  const inner = snippets
++    .map((s) =>
++      [
++        MERCURY_RECENTLY_VIEWED_CODE_SNIPPET_OPEN,
++        `code_snippet_file_path: ${s.filepath}`,
++        s.content,
++        MERCURY_RECENTLY_VIEWED_CODE_SNIPPET_CLOSE,
++      ].join("\n"),
++    )
++    .join("\n")
++  return [MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_OPEN, inner, MERCURY_RECENTLY_VIEWED_CODE_SNIPPETS_CLOSE].join("\n")
++}
++
++export function currentFileContentBlock(
++  currentFilePath: string,
++  currentFileContent: string,
++  editableRegionStartLine: number,
++  editableRegionEndLine: number,
++  cursorLine: number,
++  cursorCharacter: number,
++): string {
++  const rawLines = currentFileContent.split("\n")
++  const withCursor = insertCursorToken(rawLines, cursorLine, cursorCharacter)
++  const start = Math.max(0, Math.min(editableRegionStartLine, withCursor.length))
++  const end = Math.max(start, Math.min(editableRegionEndLine, withCursor.length - 1))
++  const instrumented = [
++    ...withCursor.slice(0, start),
++    MERCURY_CODE_TO_EDIT_OPEN,
++    ...withCursor.slice(start, end + 1),
++    MERCURY_CODE_TO_EDIT_CLOSE,
++    ...withCursor.slice(end + 1),
++  ]
++  return [
++    MERCURY_CURRENT_FILE_CONTENT_OPEN,
++    `current_file_path: ${currentFilePath}`,
++    instrumented.join("\n"),
++    MERCURY_CURRENT_FILE_CONTENT_CLOSE,
++  ].join("\n")
++}
++
++export function editDiffHistoryBlock(diffs: string[]): string {
++  // Each unidiff from `diff.createPatch` starts with an Index line and a
++  // separator we strip — matches the POC's editHistoryBlock. Diffs are
++  // separated by a blank line so the model parses them as distinct hunks.
++  const trimmed = diffs.map((d) => {
++    const lines = d.split("\n")
++    return lines.length > 2 ? lines.slice(2).join("\n") : d
++  })
++  return [MERCURY_EDIT_DIFF_HISTORY_OPEN, trimmed.join("\n\n"), MERCURY_EDIT_DIFF_HISTORY_CLOSE].join("\n")
++}
++
++export function buildMercuryEditPrompt(ctx: MercuryEditRequestContext): string {
++  // Trailing unique token signals "this is a next-edit request" to the model.
++  return [
++    recentlyViewedSnippetsBlock(ctx.recentlyViewedSnippets),
++    "",
++    currentFileContentBlock(
++      ctx.currentFilePath,
++      ctx.currentFileContent,
++      ctx.editableRegionStartLine,
++      ctx.editableRegionEndLine,
++      ctx.cursorLine,
++      ctx.cursorCharacter,
++    ),
++    "",
++    editDiffHistoryBlock(ctx.editDiffHistory),
++    "",
++    MERCURY_UNIQUE_TOKEN,
++  ].join("\n")
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/recentSnippetsAdapter.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/recentSnippetsAdapter.ts
+new file mode 100644
+index 00000000000..a4751b4f071
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/recentSnippetsAdapter.ts
+@@ -0,0 +1,45 @@
++import type { AutocompleteCodeSnippet } from "../continuedev/core/autocomplete/types"
++import * as vscode from "vscode"
++import type { MercuryRecentSnippet } from "./types"
++
++const MAX_SNIPPET_LINES = 20
++const MAX_SNIPPETS = 5
++
++/**
++ * Convert kilocode's already-collected `RecentlyVisitedRangesService` output
++ * into the shape Mercury Edit expects for the `<|recently_viewed_code_snippets|>`
++ * block. Per docs: 3–5 snippets × ~20 lines, oldest → newest, excluding the
++ * currently active file (the service already filters that out).
++ *
++ * `RecentlyVisitedRangesService.getSnippets()` returns snippets newest→oldest;
++ * we reverse so Mercury sees them in chronological order.
++ */
++export function toMercuryRecentSnippets(
++  snippets: ReadonlyArray<Pick<AutocompleteCodeSnippet, "filepath" | "content">>,
++): MercuryRecentSnippet[] {
++  return snippets
++    .slice(0, MAX_SNIPPETS)
++    .reverse()
++    .map((s) => ({
++      filepath: shortenPath(s.filepath),
++      content: trimToLines(s.content, MAX_SNIPPET_LINES),
++    }))
++}
++
++function trimToLines(content: string, maxLines: number): string {
++  const lines = content.split("\n")
++  if (lines.length <= maxLines) return content
++  // Center the trim window — keep the most semantically meaningful core.
++  const start = Math.floor((lines.length - maxLines) / 2)
++  return lines.slice(start, start + maxLines).join("\n")
++}
++
++function shortenPath(uri: string): string {
++  // Convert file:// URI strings to workspace-relative paths so the prompt is compact.
++  try {
++    const parsed = vscode.Uri.parse(uri)
++    return vscode.workspace.asRelativePath(parsed, false)
++  } catch {
++    return uri
++  }
++}
+diff --git a/packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts b/packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts
+new file mode 100644
+index 00000000000..a88e346a360
+--- /dev/null
++++ b/packages/kilo-vscode/src/services/autocomplete/next-edit/types.ts
+@@ -0,0 +1,26 @@
++export interface MercuryRecentSnippet {
++  filepath: string
++  content: string
++}
++
++export interface MercuryEditRequestContext {
++  currentFilePath: string
++  currentFileContent: string
++  cursorLine: number
++  cursorCharacter: number
++  editableRegionStartLine: number
++  editableRegionEndLine: number
++  recentlyViewedSnippets: MercuryRecentSnippet[]
++  editDiffHistory: string[]
++}
++
++export interface MercuryEditSuggestion {
++  /** The replacement text for lines [editableRegionStartLine, editableRegionEndLine]. */
++  replacement: string
++  editableRegionStartLine: number
++  editableRegionEndLine: number
++  /** Latency in milliseconds from request send to response parse. */
++  latencyMs: number
++  inputTokens?: number
++  outputTokens?: number
++}
+diff --git a/packages/kilo-vscode/src/shared/autocomplete-models.ts b/packages/kilo-vscode/src/shared/autocomplete-models.ts
+index 6f46b56512b..df027bc3863 100644
+--- a/packages/kilo-vscode/src/shared/autocomplete-models.ts
++++ b/packages/kilo-vscode/src/shared/autocomplete-models.ts
+@@ -30,6 +30,15 @@ const models: AutocompleteModelDef[] = [
+     provider: "Inception",
+     temperature: 0,
+   },
++  {
++    // Same wire-level model as `inception/mercury-edit-2`, but routed
++    // through the Next Edit pipeline (decoration-based jump-to-edit UX,
++    // /v1/edit/completions endpoint) instead of the classic FIM provider.
++    id: "inception/mercury-next-edit",
++    label: "Mercury Next Edit (Inception)",
++    provider: "Inception",
++    temperature: 0,
++  },
+ ]
+ 
+ export const AUTOCOMPLETE_MODELS: readonly AutocompleteModelDef[] = models
