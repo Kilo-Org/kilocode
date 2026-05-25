@@ -8,8 +8,11 @@ import { Uploader } from "@/kilocode/session-export/worker/uploader"
 describe("Uploader", () => {
   let dir: string
   let storage: Storage
+  let token: string | undefined
 
   beforeEach(() => {
+    token = process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
+    delete process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
     dir = mkdtempSync(join(tmpdir(), "session-export-"))
     storage = new Storage(join(dir, "session-export.db"))
     storage.migrate()
@@ -30,11 +33,14 @@ describe("Uploader", () => {
   afterEach(() => {
     storage.close()
     rmSync(dir, { recursive: true, force: true })
+    if (token === undefined) delete process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
+    else process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = token
   })
 
   test("2xx response marks rows uploaded and deletes them", async () => {
     const telemetry: unknown[] = []
     const calls: Array<{ input: string; init: RequestInit }> = []
+    process.env.KILO_SESSION_EXPORT_AUTH_TOKEN = "local-token"
     const uploader = new Uploader({
       storage,
       endpoint: "https://example.test/ingest",
@@ -60,6 +66,7 @@ describe("Uploader", () => {
     expect(headers.get("x-kilo-export-content-encoding")).toBe("identity")
     expect(headers.get("x-kilo-export-client-sent-at")).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     expect(headers.get("x-kilo-export-payload-sha256")).toBe(await sha256(body))
+    expect(headers.get("authorization")).toBe("Bearer local-token")
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
     expect(telemetry.some((item) => (item as { name?: string }).name === "session_export.uploaded")).toBe(true)
   })

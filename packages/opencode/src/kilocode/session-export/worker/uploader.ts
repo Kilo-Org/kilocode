@@ -86,7 +86,7 @@ type HeaderArgs = {
 async function headers(args: HeaderArgs): Promise<Headers> {
   const seqs = args.rows.map((row) => row.seq)
   const first = args.rows[0]
-  return new Headers({
+  const out = new Headers({
     "content-type": "application/json",
     "x-kilo-export-api-version": "1",
     "x-kilo-export-schema-version": "1",
@@ -101,6 +101,9 @@ async function headers(args: HeaderArgs): Promise<Headers> {
     "x-kilo-export-client-sent-at": new Date().toISOString(),
     "x-kilo-export-content-encoding": "identity",
   })
+  const token = process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
+  if (token) out.set("authorization", `Bearer ${token}`)
+  return out
 }
 
 function sessionRows(rows: ReturnType<Storage["pendingEvents"]>): ReturnType<Storage["pendingEvents"]> {
