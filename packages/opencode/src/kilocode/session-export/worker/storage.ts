@@ -13,6 +13,9 @@ export type EventRow = {
   agentVersion: string
   dataJson: string
   clientScrubbed: 0 | 1
+}
+
+export type PendingEventRow = EventRow & {
   uploadAttempts: number
 }
 
@@ -54,6 +57,7 @@ export class Storage {
     this.sqlite = new Database(path, { create: true })
     this.sqlite.exec("PRAGMA journal_mode = WAL")
     this.sqlite.exec("PRAGMA synchronous = NORMAL")
+    this.sqlite.exec("PRAGMA busy_timeout = 5000")
   }
 
   migrate(): void {
@@ -130,7 +134,7 @@ export class Storage {
     return { id: row.id, bytes: row.bytes, refCount: row.ref_count, size: row.size }
   }
 
-  pendingEvents(opts: { now: number; limitBytes: number }): EventRow[] {
+  pendingEvents(opts: { now: number; limitBytes: number }): PendingEventRow[] {
     const rows = this.sqlite
       .query(
         `SELECT * FROM event
@@ -139,7 +143,7 @@ export class Storage {
          LIMIT 500`,
       )
       .all(opts.now) as EventRecord[]
-    const out: EventRow[] = []
+    const out: PendingEventRow[] = []
     let bytes = 0
     for (const row of rows) {
       bytes += row.data_json.length
