@@ -28,6 +28,7 @@ internal class SessionScroll(
     companion object {
         private const val THRESHOLD = 32
         private const val OPEN_PASSES = 12
+        private const val FOLLOW_PASSES = 6
     }
 
     val component = JBScrollPane(body).apply {
@@ -95,10 +96,14 @@ internal class SessionScroll(
             return
         }
         tail = true
+        stable = -1
         auto = true
         show(messages)
         auto = false
-        followPass(++seq, 2)
+        val id = ++seq
+        ApplicationManager.getApplication().invokeLater {
+            followPass(id, FOLLOW_PASSES)
+        }
     }
 
     fun openBottom(done: () -> Unit) {
@@ -134,12 +139,16 @@ internal class SessionScroll(
         auto = true
         show(messages)
         auto = false
-        followPass(++seq, 2)
+        val id = ++seq
+        ApplicationManager.getApplication().invokeLater {
+            followPass(id, FOLLOW_PASSES)
+        }
     }
 
     private fun followPass(id: Int, remaining: Int) {
         if (id != seq || !tail) return
         auto = true
+        val prev = bottom()
         try {
             layoutScroll()
             scrollToBottom()
@@ -147,9 +156,15 @@ internal class SessionScroll(
         } finally {
             auto = false
         }
-        if (remaining <= 0) return
+        if (remaining <= 0) {
+            stable = -1
+            return
+        }
+        val next = bottom()
+        val left = if (next == prev && next == stable) remaining - 1 else FOLLOW_PASSES
+        stable = next
         ApplicationManager.getApplication().invokeLater {
-            followPass(id, remaining - 1)
+            followPass(id, left)
         }
     }
 

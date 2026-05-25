@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { KiloSessionPromptQueue } from "../../src/kilocode/session/prompt-queue"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Question } from "../../src/question"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { tmpdir } from "../fixture/fixture"
@@ -9,7 +9,7 @@ import { tmpdir } from "../fixture/fixture"
 describe("Question.dismissAll", () => {
   test("rejects pending asks for the target session and clears them", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const sesA = SessionID.make("ses_a")
@@ -99,7 +99,7 @@ describe("Question.dismissAll", () => {
 
   test("is a no-op when no questions exist", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await Question.dismissAll("ses_missing")
@@ -114,7 +114,7 @@ describe("Question.dismissAll", () => {
     // the user manually dismisses it. Verify the pre-emptive hasFollowup check
     // rejects with RejectedError before any pending entry is registered.
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_ask")

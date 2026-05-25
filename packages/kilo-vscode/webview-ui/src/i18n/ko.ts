@@ -180,6 +180,8 @@ export const dict = {
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
   "model.group.favorites": "즐겨찾기",
+  "model.group.collapse": "{{group}} 접기",
+  "model.group.expand": "{{group}} 펼치기",
   "model.favorite.add": "즐겨찾기에 추가",
   "model.favorite.remove": "즐겨찾기에서 제거",
 

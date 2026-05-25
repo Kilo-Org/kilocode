@@ -189,10 +189,6 @@ Each instance runs on a dedicated machine — there is no shared infrastructure 
 
 Your storage is region-pinned — once your instance is created in a region (e.g., DFW), it always runs there. OpenClaw config lives at `/root/.openclaw` and the workspace at `/root/clawd`.
 
-{% callout type="info" %}
-These are the beta specifications for machines and subject to change without notice.
-{% /callout %}
-
 ## Related
 
 - [KiloClaw Overview](/docs/kiloclaw/overview)

@@ -23,6 +23,10 @@ import { NotFoundError } from "@/storage/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
 import * as Log from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
+import { EventV2 } from "@/v2/event"
+import { SessionEvent } from "@/v2/session-event"
+import { Modelv2 } from "@/v2/model"
+import * as DateTime from "effect/DateTime"
 
 const DOOM_LOOP_THRESHOLD = 3
 const log = Log.create({ service: "session.processor" })
@@ -225,6 +229,11 @@ export const layer: Layer.Layer<
             attachments: output.attachments,
           },
         })
+        // kilocode_change start - accepted suggest review actions tag following LLM completion telemetry
+        if (match.part.tool === "suggest") {
+          ctx.telemetry = KiloSessionProcessor.suggestionReviewTelemetry(output.metadata) ?? ctx.telemetry
+        }
+        // kilocode_change end
         yield* settleToolCall(toolCallID)
       })
 
@@ -262,6 +271,12 @@ export const layer: Layer.Layer<
           case "reasoning-start":
             if (value.id in ctx.reasoningMap) return
             ctx.step.reasoning = true // kilocode_change
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Reasoning.Started.Sync, {
+              sessionID: ctx.sessionID,
+              reasoningID: value.id,
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             ctx.reasoningMap[value.id] = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -289,6 +304,13 @@ export const layer: Layer.Layer<
 
           case "reasoning-end":
             if (!(value.id in ctx.reasoningMap)) return
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Reasoning.Ended.Sync, {
+              sessionID: ctx.sessionID,
+              reasoningID: value.id,
+              text: ctx.reasoningMap[value.id].text,
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             // oxlint-disable-next-line no-self-assign -- reactivity trigger
             ctx.reasoningMap[value.id].text = ctx.reasoningMap[value.id].text
             ctx.reasoningMap[value.id].time = { ...ctx.reasoningMap[value.id].time, end: Date.now() }
@@ -302,6 +324,13 @@ export const layer: Layer.Layer<
               throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
             }
             ctx.step.tool = true // kilocode_change
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Tool.Input.Started.Sync, {
+              sessionID: ctx.sessionID,
+              callID: value.id,
+              name: value.toolName,
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             const part = yield* session.updatePart({
               id: ctx.toolcalls[value.id]?.partID ?? PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -323,8 +352,16 @@ export const layer: Layer.Layer<
           case "tool-input-delta":
             return
 
-          case "tool-input-end":
+          case "tool-input-end": {
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Tool.Input.Ended.Sync, {
+              sessionID: ctx.sessionID,
+              callID: value.id,
+              text: "",
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             return
+          }
 
           case "tool-call": {
             if (ctx.assistantMessage.summary) {
@@ -354,6 +391,19 @@ export const layer: Layer.Layer<
               }
             }
             // kilocode_change end
+            const toolCall = yield* readToolCall(value.toolCallId)
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Tool.Called.Sync, {
+              sessionID: ctx.sessionID,
+              callID: value.toolCallId,
+              tool: value.toolName,
+              input: value.input,
+              provider: {
+                executed: toolCall?.part.metadata?.providerExecuted === true,
+                ...(value.providerMetadata ? { metadata: value.providerMetadata } : {}),
+              },
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             yield* updateToolCall(value.toolCallId, (match) => ({
               ...match,
               tool: value.toolName,
@@ -397,6 +447,29 @@ export const layer: Layer.Layer<
           }
 
           case "tool-result": {
+            const toolCall = yield* readToolCall(value.toolCallId)
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Tool.Success.Sync, {
+              sessionID: ctx.sessionID,
+              callID: value.toolCallId,
+              structured: value.output.metadata,
+              content: [
+                {
+                  type: "text",
+                  text: value.output.output,
+                },
+                ...(value.output.attachments?.map((item: MessageV2.FilePart) => ({
+                  type: "file",
+                  uri: item.url,
+                  mime: item.mime,
+                  name: item.filename,
+                })) ?? []),
+              ],
+              provider: {
+                executed: toolCall?.part.metadata?.providerExecuted === true,
+              },
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             yield* completeToolCall(value.toolCallId, value.output)
             // kilocode_change start
             if (value.output.metadata?.dismissed === true) {
@@ -407,6 +480,20 @@ export const layer: Layer.Layer<
           }
 
           case "tool-error": {
+            const toolCall = yield* readToolCall(value.toolCallId)
+            // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+            EventV2.run(SessionEvent.Tool.Failed.Sync, {
+              sessionID: ctx.sessionID,
+              callID: value.toolCallId,
+              error: {
+                type: "unknown",
+                message: errorMessage(value.error),
+              },
+              provider: {
+                executed: toolCall?.part.metadata?.providerExecuted === true,
+              },
+              timestamp: DateTime.makeUnsafe(Date.now()),
+            })
             yield* failToolCall(value.toolCallId, value.error)
             return
           }
@@ -421,6 +508,20 @@ export const layer: Layer.Layer<
             if (!ctx.snapshot)
               ctx.snapshot = yield* snapshot.track({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id })
             // kilocode_change end
+            if (!ctx.assistantMessage.summary) {
+              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+              EventV2.run(SessionEvent.Step.Started.Sync, {
+                sessionID: ctx.sessionID,
+                agent: input.assistantMessage.agent,
+                model: {
+                  id: Modelv2.ID.make(ctx.model.id),
+                  providerID: Modelv2.ProviderID.make(ctx.model.providerID),
+                  variant: Modelv2.VariantID.make(input.assistantMessage.variant ?? "default"),
+                },
+                snapshot: ctx.snapshot,
+                timestamp: DateTime.makeUnsafe(Date.now()),
+              })
+            }
             yield* session.updatePart({
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -431,6 +532,12 @@ export const layer: Layer.Layer<
             return
 
           case "finish-step": {
+            // kilocode_change start - pass sessionID + messageID
+            const completedSnapshot = yield* snapshot.track({
+              sessionID: ctx.sessionID,
+              messageID: ctx.assistantMessage.id,
+            })
+            // kilocode_change end
             const usage = Session.getUsage({
               model: ctx.model,
               usage: value.usage,
@@ -448,6 +555,17 @@ export const layer: Layer.Layer<
               telemetry: ctx.telemetry,
             })
             // kilocode_change end
+            if (!ctx.assistantMessage.summary) {
+              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+              EventV2.run(SessionEvent.Step.Ended.Sync, {
+                sessionID: ctx.sessionID,
+                finish: value.finishReason,
+                cost: usage.cost,
+                tokens: usage.tokens,
+                snapshot: completedSnapshot,
+                timestamp: DateTime.makeUnsafe(Date.now()),
+              })
+            }
             ctx.assistantMessage.finish = value.finishReason
             // kilocode_change start - capture any subagent cost propagated by tool calls during this step (#6321)
             yield* reconcile()
@@ -457,12 +575,7 @@ export const layer: Layer.Layer<
             yield* session.updatePart({
               id: PartID.ascending(),
               reason: value.finishReason,
-              // kilocode_change start - pass sessionID + messageID
-              snapshot: yield* snapshot.track({
-                sessionID: ctx.sessionID,
-                messageID: ctx.assistantMessage.id,
-              }),
-              // kilocode_change end
+              snapshot: completedSnapshot,
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
@@ -526,6 +639,13 @@ export const layer: Layer.Layer<
           }
 
           case "text-start":
+            if (!ctx.assistantMessage.summary) {
+              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+              EventV2.run(SessionEvent.Text.Started.Sync, {
+                sessionID: ctx.sessionID,
+                timestamp: DateTime.makeUnsafe(Date.now()),
+              })
+            }
             ctx.currentText = {
               id: PartID.ascending(),
               messageID: ctx.assistantMessage.id,
@@ -566,6 +686,14 @@ export const layer: Layer.Layer<
               { text: ctx.currentText.text },
             )).text
             if (ctx.currentText.text.trim()) ctx.step.text = true // kilocode_change
+            if (!ctx.assistantMessage.summary) {
+              // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+              EventV2.run(SessionEvent.Text.Ended.Sync, {
+                sessionID: ctx.sessionID,
+                text: ctx.currentText.text,
+                timestamp: DateTime.makeUnsafe(Date.now()),
+              })
+            }
             {
               const end = Date.now()
               ctx.currentText.time = { start: ctx.currentText.time?.start ?? end, end }
@@ -659,6 +787,17 @@ export const layer: Layer.Layer<
           yield* bus.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
           return
         }
+        if (!ctx.assistantMessage.summary) {
+          // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+          EventV2.run(SessionEvent.Step.Failed.Sync, {
+            sessionID: ctx.sessionID,
+            error: {
+              type: "unknown",
+              message: errorMessage(e),
+            },
+            timestamp: DateTime.makeUnsafe(Date.now()),
+          })
+        }
         ctx.assistantMessage.error = error
         yield* bus.publish(Session.Event.Error, {
           sessionID: ctx.assistantMessage.sessionID,
@@ -711,13 +850,24 @@ export const layer: Layer.Layer<
                 // kilocode_change start
                 ...KiloSessionProcessor.retryOpts({ sessionID: ctx.sessionID, abort: ac.signal, set: status.set }),
                 // kilocode_change end
-                set: (info) =>
-                  status.set(ctx.sessionID, {
+                set: (info) => {
+                  // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+                  EventV2.run(SessionEvent.Retried.Sync, {
+                    sessionID: ctx.sessionID,
+                    attempt: info.attempt,
+                    error: {
+                      message: info.message,
+                      isRetryable: true,
+                    },
+                    timestamp: DateTime.makeUnsafe(Date.now()),
+                  })
+                  return status.set(ctx.sessionID, {
                     type: "retry",
                     attempt: info.attempt,
                     message: info.message,
                     next: info.next,
-                  }),
+                  })
+                },
               }),
             ),
             Effect.catch(halt),

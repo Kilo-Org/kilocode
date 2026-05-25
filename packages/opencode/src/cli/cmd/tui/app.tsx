@@ -28,6 +28,7 @@ import { useEvent } from "@tui/context/event"
 import { SDKProvider, useSDK } from "@tui/context/sdk"
 import { StartupLoading } from "@tui/component/startup-loading"
 import { SyncProvider, useSync } from "@tui/context/sync"
+import { SyncProviderV2 } from "@tui/context/sync-v2"
 import { LocalProvider, useLocal } from "@tui/context/local"
 import { DialogModel } from "@tui/component/dialog-model"
 import { useConnected } from "@tui/component/use-connected"
@@ -66,20 +67,21 @@ import { createTuiApi } from "@/cli/cmd/tui/plugin/api"
 import { TuiPluginRuntime } from "@/cli/cmd/tui/plugin/runtime"
 import type { RouteMap } from "@/cli/cmd/tui/plugin/api"
 import { FormatError, FormatUnknownError } from "@/cli/error"
-import { resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
+import { kitty, resetTerminalState } from "@/kilocode/cli/cmd/tui/util/terminal" // kilocode_change
 
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
 function rendererConfig(_config: TuiConfig.Info): CliRendererConfig {
   const mouseEnabled = !Flag.KILO_DISABLE_MOUSE && (_config.mouse ?? true)
+  const keyboard = kitty() // kilocode_change
 
   return {
     externalOutputMode: "passthrough",
     targetFps: 60,
     gatherStats: false,
     exitOnCtrlC: false,
-    useKittyKeyboard: {},
+    ...(keyboard ? { useKittyKeyboard: {} } : {}), // kilocode_change
     autoFocus: false,
     openConsoleOnError: false,
     useMouse: mouseEnabled,
@@ -177,27 +179,29 @@ export function tui(input: {
                       >
                         <ProjectProvider>
                           <SyncProvider>
-                            <ThemeProvider mode={mode}>
-                              <LocalProvider>
-                                <KeybindProvider>
-                                  <PromptStashProvider>
-                                    <DialogProvider>
-                                      <CommandProvider>
-                                        <FrecencyProvider>
-                                          <PromptHistoryProvider>
-                                            <PromptRefProvider>
-                                              <EditorContextProvider>
-                                                <App onSnapshot={input.onSnapshot} />
-                                              </EditorContextProvider>
-                                            </PromptRefProvider>
-                                          </PromptHistoryProvider>
-                                        </FrecencyProvider>
-                                      </CommandProvider>
-                                    </DialogProvider>
-                                  </PromptStashProvider>
-                                </KeybindProvider>
-                              </LocalProvider>
-                            </ThemeProvider>
+                            <SyncProviderV2>
+                              <ThemeProvider mode={mode}>
+                                <LocalProvider>
+                                  <KeybindProvider>
+                                    <PromptStashProvider>
+                                      <DialogProvider>
+                                        <CommandProvider>
+                                          <FrecencyProvider>
+                                            <PromptHistoryProvider>
+                                              <PromptRefProvider>
+                                                <EditorContextProvider>
+                                                  <App onSnapshot={input.onSnapshot} />
+                                                </EditorContextProvider>
+                                              </PromptRefProvider>
+                                            </PromptHistoryProvider>
+                                          </FrecencyProvider>
+                                        </CommandProvider>
+                                      </DialogProvider>
+                                    </PromptStashProvider>
+                                  </KeybindProvider>
+                                </LocalProvider>
+                              </ThemeProvider>
+                            </SyncProviderV2>
                           </SyncProvider>
                         </ProjectProvider>
                       </SDKProvider>

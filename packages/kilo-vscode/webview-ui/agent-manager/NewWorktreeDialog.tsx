@@ -70,7 +70,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const server = useServer()
   const session = useSession()
   const provider = useProvider()
-  const { config, settings } = useConfig()
+  const { config } = useConfig()
 
   const [tab, setTab] = createSignal<DialogTab>("new")
 
@@ -98,8 +98,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
   const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
   const speech = useSpeechToText(vscode, server, { t })
-  const canUseSpeech = () => canUseSpeechToText(settings(), config(), provider.connected(), server.profileData())
-  const speechModel = () => selectedSpeechToTextModel(settings())
+  const canUseSpeech = () => canUseSpeechToText(config(), provider.connected(), server.profileData())
+  const speechModel = () => selectedSpeechToTextModel(config())
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {

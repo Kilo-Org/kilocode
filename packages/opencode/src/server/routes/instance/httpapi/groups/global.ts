@@ -1,6 +1,8 @@
 import { Config } from "@/config/config"
 import { BusEvent } from "@/bus/bus-event"
 import { SyncEvent } from "@/sync"
+import "@/server/event"
+import "@/kilocode/indexing-event" // kilocode_change - register indexing.status before HttpApi event schemas
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { described } from "./metadata"
@@ -97,8 +99,8 @@ export const GlobalApi = HttpApi.make("global").add(
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.upgrade",
-          summary: "Upgrade opencode",
-          description: "Upgrade opencode to the specified version or latest if not specified.",
+          summary: "Upgrade kilo", // kilocode_change
+          description: "Upgrade kilo to the specified version or latest if not specified.", // kilocode_change
         }),
       ),
     )

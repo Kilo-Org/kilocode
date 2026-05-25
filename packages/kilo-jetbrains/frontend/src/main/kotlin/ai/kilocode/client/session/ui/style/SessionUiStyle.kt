@@ -72,6 +72,11 @@ object SessionUiStyle {
             const val USER_BORDER_HORIZONTAL_PADDING = 12
         }
 
+        /** Permission card command preview limits. */
+        object Permission {
+            const val COMMAND_LINES = 3
+        }
+
         /** Tool card preview limits and state colors. */
         object Tool {
             const val BODY_LINES = 15
@@ -105,20 +110,10 @@ object SessionUiStyle {
     }
 }
 
-/** Border presets for question, permission, and connection dock panels. */
+/** Border presets for connection dock panel. */
 object Dock {
     fun banner(): Border = JBUI.Borders.compound(
         JBUI.Borders.customLineTop(SessionUiStyle.View.line()),
         JBUI.Borders.empty(UiStyle.Gap.sm(), UiStyle.Gap.lg(), 0, UiStyle.Gap.lg()),
-    )!!
-
-    fun neutral(): Border = JBUI.Borders.compound(
-        JBUI.Borders.customLine(SessionUiStyle.View.line(), 1),
-        JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad()),
-    )!!
-
-    fun warning(): Border = JBUI.Borders.compound(
-        customLine(UiStyle.Colors.warningLabelForeground(), 1),
-        JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.pad()),
     )!!
 }

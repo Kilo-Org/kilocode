@@ -871,4 +871,10 @@ module.exports = [
     basePath: false,
     permanent: true,
   },
+  {
+    source: "/auto-top-ups",
+    destination: "https://kilo.ai/features/auto-top-ups",
+    basePath: false,
+    permanent: true,
+  },
 ]

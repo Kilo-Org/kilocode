@@ -280,8 +280,8 @@ html[data-theme="kilo-vscode"] {
   --syntax-diff-unknown: var(--vscode-charts-red);
 
   /* ===== Pierre diff engine (theme its CSS vars to VS Code editor colors) ===== */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
+  --diffs-light-bg: var(--background-stronger);
+  --diffs-dark-bg: var(--background-stronger);
 
   --diffs-bg-addition-override: color-mix(
     in lab,

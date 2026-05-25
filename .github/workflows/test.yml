@@ -59,6 +59,14 @@ jobs:
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
+      # kilocode_change start
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      # kilocode_change end
+
       - name: Configure git identity
         run: |
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
@@ -72,6 +80,13 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
+
+      # kilocode_change start
+      - name: Warm up Gradle wrapper
+        if: runner.os == 'Linux'
+        run: ./gradlew --version
+        working-directory: packages/kilo-jetbrains
+      # kilocode_change end
 
       - name: Run unit tests
         run: bun turbo test:ci

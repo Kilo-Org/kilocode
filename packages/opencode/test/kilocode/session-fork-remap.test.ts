@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
@@ -72,7 +72,7 @@ describe("Session.fork child session remapping", () => {
     "forked session gets its own copy of child sessions",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const parent = await Session.create({ title: "parent" })
@@ -138,7 +138,7 @@ describe("Session.fork child session remapping", () => {
     "nested child sessions are also remapped",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           // grandchild -> child -> parent
@@ -225,7 +225,7 @@ describe("Session.fork child session remapping", () => {
     "non-task tool parts are not affected",
     async () => {
       await using tmp = await tmpdir({ git: true })
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const parent = await Session.create({ title: "parent" })

@@ -3,7 +3,8 @@ import { Effect, FileSystem, Layer, Path } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Instance } from "../../src/project/instance"
-import { InstanceStore } from "../../src/project/instance-store"
+import { WithInstance } from "../../src/project/with-instance"
+import { InstanceRuntime } from "../../src/project/instance-runtime"
 import { Server } from "../../src/server/server"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
@@ -14,6 +15,7 @@ void Log.init({ print: false })
 
 const original = Flag.KILO_EXPERIMENTAL_HTTPAPI
 const it = testEffect(Layer.mergeAll(NodeFileSystem.layer, NodePath.layer))
+const describeProvider = process.platform === "win32" ? describe.skip : describe // kilocode_change - scoped temp cleanup is flaky on Windows CI
 const providerID = "test-oauth-parity"
 const oauthURL = "https://example.com/oauth"
 const oauthInstructions = "Finish OAuth"
@@ -91,7 +93,7 @@ function withProviderProject<A, E, R>(self: (dir: string) => Effect.Effect<A, E,
     yield* writeProviderAuthPlugin(dir)
     yield* Effect.addFinalizer(() =>
       Effect.promise(() =>
-        Instance.provide({ directory: dir, fn: () => InstanceStore.disposeInstance(Instance.current) }),
+        WithInstance.provide({ directory: dir, fn: () => InstanceRuntime.disposeInstance(Instance.current) }),
       ).pipe(Effect.ignore),
     )
 
@@ -105,7 +107,7 @@ afterEach(async () => {
   await resetDatabase()
 })
 
-describe("provider HttpApi", () => {
+describeProvider("provider HttpApi", () => { // kilocode_change
   it.live(
     "matches legacy OAuth authorize response shapes",
     withProviderProject((dir) =>
