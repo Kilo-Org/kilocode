@@ -94,6 +94,45 @@ describe("workspace provider", () => {
     expect(delta.diff.every((item) => item.patch?.includes("export const"))).toBe(true)
   })
 
+  test("evicts a session's previous snapshot when a new one is remembered", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 1\n")
+    await $`git add src.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path, statePath: state })
+    const first = await provider.baseline()
+    provider.remember("s1", first.snapshotId)
+
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 2\n")
+    const delta = await provider.diff(first.snapshotId)
+    provider.remember("s1", delta.snapshotHash)
+
+    const persisted = JSON.parse(await Bun.file(state).text()) as { snapshots: Record<string, unknown> }
+    expect(Object.keys(persisted.snapshots)).toEqual([delta.snapshotHash])
+  })
+
+  test("preserves a snapshot still referenced by another session", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 1\n")
+    await $`git add src.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path, statePath: state })
+    const shared = await provider.baseline()
+    provider.remember("s1", shared.snapshotId)
+    provider.remember("s2", shared.snapshotId)
+
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 2\n")
+    const delta = await provider.diff(shared.snapshotId)
+    provider.remember("s1", delta.snapshotHash)
+
+    const persisted = JSON.parse(await Bun.file(state).text()) as { snapshots: Record<string, unknown> }
+    expect(Object.keys(persisted.snapshots).sort()).toEqual([shared.snapshotId, delta.snapshotHash].sort())
+  })
+
   test("persists session snapshot state across provider instances", async () => {
     await using tmp = await tmpdir({ git: true })
     const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")

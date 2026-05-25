@@ -37,7 +37,12 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
       return state.sessions[sessionId]
     },
     remember(sessionId: string, snapshotId: string): void {
+      const previous = state.sessions[sessionId]
       state.sessions[sessionId] = snapshotId
+      if (previous && previous !== snapshotId && !Object.values(state.sessions).includes(previous)) {
+        delete state.snapshots[previous]
+        snapshots.delete(previous)
+      }
       save(opts.statePath, state)
     },
     async baseline(): Promise<{ snapshotId: string; files: FileEntry[]; capture: CaptureMetadata }> {
