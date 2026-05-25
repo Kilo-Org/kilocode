@@ -147,7 +147,7 @@ Dead-code rules:
 
 2. **Tools usage**: Use these git commands as needed:
    - View branch diff: `git diff <base>...HEAD` or `git diff <merge-base>` for working-tree-inclusive view
-   - View specific file diff: `git diff <base>...HEAD -- <file>`
+   - View specific file diff: `git -c core.quotepath=false diff <merge-base> -- <file>`
    - View branch commit history: `git log <base>..HEAD --oneline`
    - View file history: `git blame <file>`
 
