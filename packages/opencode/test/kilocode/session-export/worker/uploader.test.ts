@@ -210,6 +210,23 @@ describe("Uploader", () => {
     await uploader.flush("test")
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 }).length).toBe(0)
   })
+
+  test("dispose stops the periodic flush timer", async () => {
+    const calls: number[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async () => {
+        calls.push(1)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+    })
+    uploader.dispose()
+    expect(calls.length).toBe(0)
+  })
 })
 
 async function sha256(value: string): Promise<string> {

@@ -91,6 +91,7 @@ scope.onmessage = (event) => {
       void (async () => {
         await drain()
         await uploader?.flush("shutdown")
+        uploader?.dispose()
         storage?.close()
         storage = undefined
         uploader = undefined

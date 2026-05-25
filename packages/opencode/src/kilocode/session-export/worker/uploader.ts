@@ -13,10 +13,21 @@ export type UploaderDeps = {
 
 export class Uploader {
   private timer: ReturnType<typeof setTimeout> | undefined
+  private periodic: ReturnType<typeof setInterval> | undefined
   private active: Promise<void> | undefined
   private requested = false
 
-  constructor(private readonly deps: UploaderDeps) {}
+  constructor(private readonly deps: UploaderDeps) {
+    this.periodic = setInterval(() => this.scheduleFlush("periodic"), Config.flushIntervalMs)
+    this.periodic?.unref?.()
+  }
+
+  dispose(): void {
+    if (this.timer) clearTimeout(this.timer)
+    if (this.periodic) clearInterval(this.periodic)
+    this.timer = undefined
+    this.periodic = undefined
+  }
 
   scheduleFlush(_reason: string): void {
     if (this.active) {
