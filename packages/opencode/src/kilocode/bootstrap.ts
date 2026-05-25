@@ -20,7 +20,7 @@ export namespace KilocodeBootstrap {
         dbPath: path.join(Global.Path.data, "session-export.db"),
         subscribeAll: (cb) => Bus.subscribeAll(cb),
         snapshotProvider: createWorkspaceProvider({
-          root: Instance.worktree,
+          root: Instance.directory,
           statePath: path.join(Global.Path.data, "session-export-workspace.json"),
         }),
       })
