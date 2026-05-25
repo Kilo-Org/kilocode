@@ -14,6 +14,7 @@ import { File } from "@/file"
 import { FileWatcher } from "@/file/watcher"
 import { Ripgrep } from "@/file/ripgrep"
 import { Format } from "@/format"
+import { Git } from "@/git" // kilocode_change
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
@@ -158,6 +159,7 @@ export function createRoutes(corsOptions?: CorsOptions) {
       File.defaultLayer,
       FileWatcher.defaultLayer,
       Format.defaultLayer,
+      Git.defaultLayer, // kilocode_change
       LSP.defaultLayer,
       Installation.defaultLayer,
       MCP.defaultLayer,

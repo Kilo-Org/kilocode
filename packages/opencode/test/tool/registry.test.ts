@@ -5,6 +5,7 @@ import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { ToolRegistry } from "@/tool/registry"
 import { Command } from "@/command" // kilocode_change
+import { Git } from "@/git" // kilocode_change
 import { disposeAllInstances, provideTmpdirInstance, TestInstance, tmpdir } from "../fixture/fixture" // kilocode_change
 import { testEffect } from "../lib/effect"
 import { TestConfig } from "../fixture/config"
@@ -50,6 +51,7 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(Ripgrep.defaultLayer),
   Layer.provide(Truncate.defaultLayer),
   Layer.provide(Command.defaultLayer), // kilocode_change
+  Layer.provide(Git.defaultLayer), // kilocode_change
 )
 
 const it = testEffect(Layer.mergeAll(registryLayer, node))

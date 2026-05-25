@@ -50,6 +50,7 @@ import { Instruction } from "../session/instruction"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
+import { Git } from "../git" // kilocode_change
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 
@@ -95,6 +96,7 @@ export const layer: Layer.Layer<
   | Format.Service
   | Truncate.Service
   | Command.Service // kilocode_change
+  | Git.Service // kilocode_change
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -375,6 +377,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
     Layer.provide(Command.defaultLayer), // kilocode_change
+    Layer.provide(Git.defaultLayer), // kilocode_change
   ),
 )
 // kilocode_change start
