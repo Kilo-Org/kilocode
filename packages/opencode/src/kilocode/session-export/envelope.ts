@@ -6,7 +6,9 @@ export type ExportEnvelope = {
   rootSessionId: string
   parentSessionId?: string
   requestId?: string
+  turnId?: string
   seq: number
+  eventSeq?: number
   ts: number
   agentVersion: string
 }
@@ -30,5 +32,5 @@ export type BatchEnvelope = {
   agentVersion: string
   batchId: string
   events: unknown[]
-  chunks: { id: string; bytes: Uint8Array; size: number; encoding: "zstd" }[]
+  chunks: { id: string; bytes: string; size: number; encoding: "zstd+base64" }[]
 }

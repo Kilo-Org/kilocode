@@ -61,11 +61,21 @@ export type FileEntry = {
   omitted?: { reason: "secret" | "pii" | "binary" | "large" | "high_risk_path" | "error"; detail?: string }
 }
 
+export type CaptureMetadata = {
+  root: string
+  mode: "git-tracked-and-untracked" | "filesystem-walk"
+  fileCount: number
+  totalBytes: number
+  omittedCountsByReason: Record<string, number>
+  truncated: boolean
+}
+
 export type WorkspaceBaselineCompleted = ExportEnvelope & {
   type: "workspace_baseline_completed"
   snapshotId?: string
   consistency: "stable" | "eventual" | "missing"
   files: FileEntry[]
+  capture?: CaptureMetadata
   truncated?: boolean
   originalFileCount?: number
   originalTotalSize?: number

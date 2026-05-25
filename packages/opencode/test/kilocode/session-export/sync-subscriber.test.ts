@@ -68,4 +68,30 @@ describe("SyncSubscriber", () => {
     })
     expect(posted.some((item) => (item as { type?: string }).type === "terminal_outcome")).toBe(true)
   })
+
+  test("turnId groups tool events with the active session turn", () => {
+    const posted: unknown[] = []
+    const sub = new SyncSubscriber({
+      isEligibleSession: () => true,
+      dispatch: (event) => posted.push(event),
+      agentVersion: "v0",
+      now: () => 0,
+      syncSeq: () => 1,
+      getTurnId: () => "u1",
+    })
+    sub.onSyncEvent({
+      type: "message.part.updated",
+      aggregateID: "s1",
+      seq: 5,
+      data: {
+        part: {
+          type: "tool",
+          state: { status: "completed", input: {}, output: "ok", metadata: { exit: 0 }, time: { start: 1, end: 5 } },
+          callID: "c1",
+          tool: "bash",
+        },
+      },
+    })
+    expect(posted.every((item) => (item as { turnId?: string }).turnId === "u1")).toBe(true)
+  })
 })

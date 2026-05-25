@@ -67,7 +67,12 @@ export class Uploader {
             seq: row.seq,
             ts: row.ts,
           })),
-          chunks: this.deps.storage.chunksForEvents(rows.map((row) => row.id)),
+          chunks: this.deps.storage.chunksForEvents(rows.map((row) => row.id)).map((chunk) => ({
+            id: chunk.id,
+            bytes: Buffer.from(chunk.bytes).toString("base64"),
+            size: chunk.size,
+            encoding: "zstd+base64",
+          })),
         })
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",

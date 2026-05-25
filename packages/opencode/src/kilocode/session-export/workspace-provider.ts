@@ -4,7 +4,7 @@ import { readdir, readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import { formatPatch, structuredPatch } from "diff"
 import { Config } from "./config"
-import type { DeltaEntry, FileEntry } from "./events"
+import type { CaptureMetadata, DeltaEntry, FileEntry } from "./events"
 import { isHighRiskPath } from "./worker/scrub"
 
 type File = {
@@ -23,12 +23,13 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
   )
 
   const capture = async () => {
-    const files = await scan(opts.root)
+    const result = await scan(opts.root)
+    const files = result.files
     const id = hash(files)
     snapshots.set(id, files)
     state.snapshots[id] = [...files.values()]
     save(opts.statePath, state)
-    return { id, files }
+    return { id, files, capture: metadata(opts.root, result.mode, files) }
   }
 
   return {
@@ -39,9 +40,9 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
       state.sessions[sessionId] = snapshotId
       save(opts.statePath, state)
     },
-    async baseline(): Promise<{ snapshotId: string; files: FileEntry[] }> {
+    async baseline(): Promise<{ snapshotId: string; files: FileEntry[]; capture: CaptureMetadata }> {
       const snap = await capture()
-      return { snapshotId: snap.id, files: [...snap.files.values()].map(entry) }
+      return { snapshotId: snap.id, files: [...snap.files.values()].map(entry), capture: snap.capture }
     },
     async diff(prevSnapshotHash: string): Promise<{ snapshotHash: string; diff: DeltaEntry[] }> {
       const snap = await capture()
@@ -72,18 +73,22 @@ function save(file: string | undefined, state: State): void {
   writeFileSync(file, JSON.stringify(state))
 }
 
-async function scan(root: string): Promise<Map<string, File>> {
-  const paths = await list(root)
+async function scan(root: string): Promise<{ files: Map<string, File>; mode: CaptureMetadata["mode"] }> {
+  const result = await list(root)
+  const paths = result.paths
   const files = await Promise.all(paths.map((item) => inspect(root, item)))
   const out = new Map<string, File>()
   for (const file of files.filter((item): item is File => Boolean(item))) out.set(file.path, file)
-  return out
+  return { files: out, mode: result.mode }
 }
 
-async function list(root: string): Promise<string[]> {
+async function list(root: string): Promise<{ paths: string[]; mode: CaptureMetadata["mode"] }> {
   const git = await isgit(root)
   const items = git ? await tracked(root) : await walk(root, root)
-  return Array.from(new Set(items)).sort((a, b) => a.localeCompare(b))
+  return {
+    paths: Array.from(new Set(items)).sort((a, b) => a.localeCompare(b)),
+    mode: git ? "git-tracked-and-untracked" : "filesystem-walk",
+  }
 }
 
 async function isgit(root: string): Promise<boolean> {
@@ -164,6 +169,27 @@ function entry(file: File): FileEntry {
     content: file.content,
     omitted: file.omitted,
   }
+}
+
+function metadata(root: string, mode: CaptureMetadata["mode"], files: Map<string, File>): CaptureMetadata {
+  return {
+    root,
+    mode,
+    fileCount: files.size,
+    totalBytes: [...files.values()].reduce((sum, file) => sum + file.size, 0),
+    omittedCountsByReason: omitted(files),
+    truncated: false,
+  }
+}
+
+function omitted(files: Map<string, File>): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const file of files.values()) {
+    const reason = file.omitted?.reason
+    if (!reason) continue
+    out[reason] = (out[reason] ?? 0) + 1
+  }
+  return out
 }
 
 function delta(prev: Map<string, File>, next: Map<string, File>): DeltaEntry[] {

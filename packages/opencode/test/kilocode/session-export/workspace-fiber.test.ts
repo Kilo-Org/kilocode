@@ -20,6 +20,52 @@ describe("workspace fiber", () => {
     expect(env.files[0].path).toBe("src/a.ts")
   })
 
+  test("baseline event preserves capture metadata", async () => {
+    const dispatched: unknown[] = []
+    await startBaselineFiber({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      timeoutMs: 100,
+      now: () => 0,
+      syncSeq: () => 1,
+      agentVersion: "v0",
+      requestSnapshot: async () => ({
+        snapshotId: "snap-1",
+        files: [],
+        capture: {
+          root: "/repo",
+          mode: "filesystem-walk",
+          fileCount: 0,
+          totalBytes: 0,
+          omittedCountsByReason: {},
+          truncated: false,
+        },
+      }),
+      dispatch: (event) => dispatched.push(event),
+    })
+    expect(
+      (
+        dispatched[0] as {
+          capture?: {
+            root: string
+            mode: string
+            fileCount: number
+            totalBytes: number
+            omittedCountsByReason: Record<string, number>
+            truncated: boolean
+          }
+        }
+      ).capture,
+    ).toEqual({
+      root: "/repo",
+      mode: "filesystem-walk",
+      fileCount: 0,
+      totalBytes: 0,
+      omittedCountsByReason: {},
+      truncated: false,
+    })
+  })
+
   test("emits eventual consistency when token times out then arrives", async () => {
     const dispatched: unknown[] = []
     await startBaselineFiber({

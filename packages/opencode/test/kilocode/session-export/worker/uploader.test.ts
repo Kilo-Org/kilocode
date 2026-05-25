@@ -130,6 +130,36 @@ describe("Uploader", () => {
     expect(done).toBe(true)
   })
 
+  test("uploads chunks as zstd base64 strings", async () => {
+    storage.upsertChunk({ id: "h1", bytes: new Uint8Array([1, 2, 3, 4]), size: 10, encoding: "zstd" })
+    storage.insertEvent({
+      id: "02",
+      schemaVersion: 1,
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 1,
+      type: "llm_request_completed",
+      ts: 101,
+      agentVersion: "v0",
+      dataJson: '{"output":{"textParts":[{"__chunked":true,"chunkIds":["h1"],"size":10,"encoding":"utf8"}]}}',
+      clientScrubbed: 1,
+    })
+    const bodies: string[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        bodies.push(init.body as string)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+    })
+    await uploader.flush("test")
+    const body = JSON.parse(bodies[0]) as { chunks: Array<{ id: string; bytes: unknown; size: number; encoding: string }> }
+    expect(body.chunks).toEqual([{ id: "h1", bytes: "AQIDBA==", size: 10, encoding: "zstd+base64" }])
+  })
+
   test("4xx response drops rows without retry", async () => {
     const uploader = new Uploader({
       storage,

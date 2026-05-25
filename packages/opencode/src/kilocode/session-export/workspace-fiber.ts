@@ -1,20 +1,22 @@
-import type { DeltaEntry, ExportEvent, FileEntry, WorkspaceBaselineCompleted, WorkspaceDeltaCaptured } from "./events"
+import type { CaptureMetadata, DeltaEntry, ExportEvent, FileEntry, WorkspaceBaselineCompleted, WorkspaceDeltaCaptured } from "./events"
 import { ulid } from "./ulid"
 
 export type BaselineFiberArgs = {
   sessionId: string
   rootSessionId: string
+  turnId?: string
   timeoutMs: number
   now: () => number
   syncSeq: () => number
   agentVersion: string
-  requestSnapshot: () => Promise<{ snapshotId: string; files: FileEntry[] }>
+  requestSnapshot: () => Promise<{ snapshotId: string; files: FileEntry[]; capture?: CaptureMetadata }>
   dispatch: (envelope: ExportEvent) => void
 }
 
 export type DeltaFiberArgs = {
   sessionId: string
   rootSessionId: string
+  turnId?: string
   trigger: "next_request" | "turn_end" | "session_close"
   prevSnapshotHash: string
   now: () => number
@@ -26,18 +28,22 @@ export type DeltaFiberArgs = {
 
 export async function startBaselineFiber(args: BaselineFiberArgs): Promise<string | undefined> {
   const result = await resolveBaseline(args)
+  const seq = args.syncSeq()
   const env: WorkspaceBaselineCompleted = {
     id: ulid(),
     schemaVersion: 1,
     type: "workspace_baseline_completed",
     sessionId: args.sessionId,
     rootSessionId: args.rootSessionId,
-    seq: args.syncSeq(),
+    turnId: args.turnId,
+    seq,
+    eventSeq: seq,
     ts: args.now(),
     agentVersion: args.agentVersion,
     snapshotId: result.snapshotId,
     consistency: result.consistency,
     files: result.files,
+    capture: result.capture,
   }
   args.dispatch(env)
   return result.snapshotId
@@ -47,13 +53,16 @@ export async function startDeltaFiber(args: DeltaFiberArgs): Promise<string | un
   try {
     const result = await args.requestDiff(args.prevSnapshotHash)
     if (result.diff.length === 0) return result.snapshotHash
+    const seq = args.syncSeq()
     const env: WorkspaceDeltaCaptured = {
       id: ulid(),
       schemaVersion: 1,
       type: "workspace_delta_captured",
       sessionId: args.sessionId,
       rootSessionId: args.rootSessionId,
-      seq: args.syncSeq(),
+      turnId: args.turnId,
+      seq,
+      eventSeq: seq,
       ts: args.now(),
       agentVersion: args.agentVersion,
       snapshotHash: result.snapshotHash,
@@ -73,6 +82,7 @@ async function resolveBaseline(args: BaselineFiberArgs): Promise<{
   consistency: "stable" | "eventual" | "missing"
   snapshotId?: string
   files: FileEntry[]
+  capture?: CaptureMetadata
 }> {
   const pending = args.requestSnapshot()
   const timeout = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), args.timeoutMs))
@@ -81,13 +91,13 @@ async function resolveBaseline(args: BaselineFiberArgs): Promise<{
     if (winner === "timeout") {
       try {
         const eventual = await pending
-        return { consistency: "eventual", snapshotId: eventual.snapshotId, files: eventual.files }
+        return { consistency: "eventual", snapshotId: eventual.snapshotId, files: eventual.files, capture: eventual.capture }
       } catch (err) {
         console.warn("[session-export] eventual baseline failed", err)
         return { consistency: "missing", files: [] }
       }
     }
-    return { consistency: "stable", snapshotId: winner.snapshotId, files: winner.files }
+    return { consistency: "stable", snapshotId: winner.snapshotId, files: winner.files, capture: winner.capture }
   } catch (err) {
     console.warn("[session-export] baseline failed", err)
     return { consistency: "missing", files: [] }

@@ -23,6 +23,26 @@ describe("workspace provider", () => {
     expect(baseline.files.find((file) => file.path === "src.ts")?.content).toBe("export const value = 1\n")
   })
 
+  test("baseline includes capture completeness metadata", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 1\n")
+    await writeFile(join(tmp.path, ".env"), "SECRET=1\n")
+    await $`git add src.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path })
+    const baseline = await provider.baseline()
+
+    expect(baseline.capture).toEqual({
+      root: tmp.path,
+      mode: "git-tracked-and-untracked",
+      fileCount: 2,
+      totalBytes: 32,
+      omittedCountsByReason: { high_risk_path: 1 },
+      truncated: false,
+    })
+  })
+
   test("omits high-risk file contents before persistence", async () => {
     await using tmp = await tmpdir({ git: true })
     const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")

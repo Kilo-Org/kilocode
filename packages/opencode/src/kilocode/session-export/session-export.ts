@@ -1,6 +1,7 @@
 import { Capture, type CaptureDeps } from "./capture"
 import { Config } from "./config"
 import { setKillSwitch } from "./eligibility"
+import { createSequencer } from "./sequence"
 import { SyncSubscriber } from "./sync-subscriber"
 
 declare global {
@@ -13,15 +14,15 @@ let worker: Worker | undefined
 let capture: Capture | undefined
 let subscriber: SyncSubscriber | undefined
 let unsubscribe: (() => void) | undefined
-let seq = 0
 let attempts = 0
+let sequencer: ReturnType<typeof createSequencer> | undefined
 let options:
   | {
       agentVersion: string
       dbPath: string
       endpoint?: string
       snapshotProvider?: CaptureDeps["snapshotProvider"]
-      syncSeq: () => number
+      syncSeq: (sessionId: string) => number
       subscribeAll: (cb: (event: unknown) => void) => () => void
       createWorker: (url: WorkerTarget) => Worker
     }
@@ -34,14 +35,15 @@ export const init = (opts: {
   dbPath: string
   endpoint?: string
   snapshotProvider?: CaptureDeps["snapshotProvider"]
-  syncSeq?: () => number
+  syncSeq?: (sessionId: string) => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
   createWorker?: (url: WorkerTarget) => Worker
 }): void => {
   if (worker) return
   const url = target()
   try {
-    const syncSeq = opts.syncSeq ?? (() => seq++)
+    sequencer = opts.syncSeq ? undefined : createSequencer(opts.dbPath)
+    const syncSeq = opts.syncSeq ?? ((sessionId: string) => sequencer!.next(sessionId))
     options = {
       agentVersion: opts.agentVersion,
       dbPath: opts.dbPath,
@@ -61,6 +63,8 @@ export const init = (opts: {
     subscriber = undefined
     unsubscribe = undefined
     options = undefined
+    sequencer?.close()
+    sequencer = undefined
     throw err
   }
 }
@@ -101,6 +105,8 @@ export const shutdown = async (): Promise<void> => {
   subscriber = undefined
   unsubscribe = undefined
   options = undefined
+  sequencer?.close()
+  sequencer = undefined
   attempts = 0
 }
 
@@ -132,6 +138,7 @@ function spawn(url = target()): void {
     agentVersion: options.agentVersion,
     now: () => Date.now(),
     syncSeq: options.syncSeq,
+    getTurnId: (sessionId) => capture?.turnId(sessionId),
   })
   worker.onmessage = (event: MessageEvent) => {
     const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }

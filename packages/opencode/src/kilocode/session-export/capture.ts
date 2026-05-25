@@ -11,6 +11,7 @@ import type {
   LlmRequestStarted,
   SessionDegraded,
   WorkspaceBaselineStarted,
+  CaptureMetadata,
 } from "./events"
 import { startBaselineFiber, startDeltaFiber } from "./workspace-fiber"
 
@@ -18,12 +19,12 @@ export type CaptureDeps = {
   worker: { postMessage: (msg: ToWorker | { kind: string; [key: string]: unknown }) => void; terminate: () => void }
   agentVersion: string
   nowMs: () => number
-  syncSeq: () => number
+  syncSeq: (sessionId: string) => number
   onPostError?: (err: unknown) => void
   snapshotProvider?: {
     current?: (sessionId: string) => string | undefined
     remember?: (sessionId: string, snapshotHash: string) => void
-    baseline: () => Promise<{ snapshotId: string; files: FileEntry[] }>
+    baseline: () => Promise<{ snapshotId: string; files: FileEntry[]; capture?: CaptureMetadata }>
     diff: (prevSnapshotHash: string) => Promise<{ snapshotHash: string; diff: DeltaEntry[] }>
   }
   baselineTimeoutMs?: number
@@ -48,6 +49,7 @@ export class Capture {
   private degraded = new Set<string>()
   private roots = new Map<string, string>()
   private snapshots = new Map<string, string>()
+  private turns = new Map<string, string>()
 
   constructor(private readonly deps: CaptureDeps) {}
 
@@ -57,6 +59,10 @@ export class Capture {
 
   hasEligibleSession(sessionId: string): boolean {
     return this.firstEligible.has(sessionId) && !this.degraded.has(sessionId)
+  }
+
+  turnId(sessionId: string): string | undefined {
+    return this.turns.get(sessionId)
   }
 
   beforeRequest(args: {
@@ -80,6 +86,7 @@ export class Capture {
       this.announceDegraded(meta)
       return
     }
+    this.turns.set(meta.sessionId, meta.userMessageId)
 
     if (!this.firstEligible.has(meta.sessionId)) {
       this.firstEligible.add(meta.sessionId)
@@ -89,6 +96,7 @@ export class Capture {
         this.snapshots.set(meta.sessionId, previous)
         this.startNextDelta(meta)
       } else {
+        const seq = this.deps.syncSeq(meta.sessionId)
         const baseline: WorkspaceBaselineStarted = {
           id: ulid(),
           schemaVersion: 1,
@@ -96,7 +104,9 @@ export class Capture {
           sessionId: meta.sessionId,
           rootSessionId: meta.rootSessionId,
           parentSessionId: meta.parentSessionId,
-          seq: this.deps.syncSeq(),
+          turnId: meta.userMessageId,
+          seq,
+          eventSeq: seq,
           ts: this.deps.nowMs(),
           agentVersion: this.deps.agentVersion,
           requestedAt: this.deps.nowMs(),
@@ -108,6 +118,7 @@ export class Capture {
       this.startNextDelta(meta)
     }
 
+    const seq = this.deps.syncSeq(meta.sessionId)
     const env: LlmRequestStarted = {
       id: ulid(),
       schemaVersion: 1,
@@ -115,7 +126,9 @@ export class Capture {
       sessionId: meta.sessionId,
       rootSessionId: meta.rootSessionId,
       parentSessionId: meta.parentSessionId,
-      seq: this.deps.syncSeq(),
+      turnId: meta.userMessageId,
+      seq,
+      eventSeq: seq,
       ts: this.deps.nowMs(),
       agentVersion: this.deps.agentVersion,
       requestId: meta.requestId,
@@ -148,6 +161,7 @@ export class Capture {
   }): void {
     if (!this.firstEligible.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return
+    const seq = this.deps.syncSeq(args.sessionId)
     const env: LlmRequestCompleted = {
       id: ulid(),
       schemaVersion: 1,
@@ -155,7 +169,9 @@ export class Capture {
       sessionId: args.sessionId,
       rootSessionId: args.rootSessionId,
       parentSessionId: args.parentSessionId,
-      seq: this.deps.syncSeq(),
+      turnId: this.turns.get(args.sessionId),
+      seq,
+      eventSeq: seq,
       ts: this.deps.nowMs(),
       agentVersion: this.deps.agentVersion,
       requestId: args.requestId,
@@ -185,6 +201,7 @@ export class Capture {
   }): void {
     if (!this.firstEligible.has(args.sessionId)) return
     if (this.degraded.has(args.sessionId)) return
+    const seq = this.deps.syncSeq(args.sessionId)
     const env: CompactionCaptured = {
       id: ulid(),
       schemaVersion: 1,
@@ -192,8 +209,10 @@ export class Capture {
       sessionId: args.sessionId,
       rootSessionId: args.rootSessionId,
       parentSessionId: args.parentSessionId,
+      turnId: this.turns.get(args.sessionId),
       requestId: args.requestId,
-      seq: this.deps.syncSeq(),
+      seq,
+      eventSeq: seq,
       ts: this.deps.nowMs(),
       agentVersion: this.deps.agentVersion,
       input: args.input,
@@ -224,10 +243,11 @@ export class Capture {
     const next = await startDeltaFiber({
       sessionId,
       rootSessionId,
+      turnId: this.turns.get(sessionId),
       trigger,
       prevSnapshotHash: previous,
       now: () => this.deps.nowMs(),
-      syncSeq: () => this.deps.syncSeq(),
+      syncSeq: () => this.deps.syncSeq(sessionId),
       agentVersion: this.deps.agentVersion,
       requestDiff: provider.diff,
       dispatch: (event) => this.dispatchRaw(event),
@@ -243,6 +263,7 @@ export class Capture {
   private announceDegraded(meta: RequestMeta): void {
     if (this.degradedAnnounced.has(meta.sessionId)) return
     this.degradedAnnounced.add(meta.sessionId)
+    const seq = this.deps.syncSeq(meta.sessionId)
     const env: SessionDegraded = {
       id: ulid(),
       schemaVersion: 1,
@@ -250,7 +271,9 @@ export class Capture {
       sessionId: meta.sessionId,
       rootSessionId: meta.rootSessionId,
       parentSessionId: meta.parentSessionId,
-      seq: this.deps.syncSeq(),
+      turnId: this.turns.get(meta.sessionId),
+      seq,
+      eventSeq: seq,
       ts: this.deps.nowMs(),
       agentVersion: this.deps.agentVersion,
       reason: "ring_buffer_overflow",
@@ -264,9 +287,10 @@ export class Capture {
     void startBaselineFiber({
       sessionId: meta.sessionId,
       rootSessionId: meta.rootSessionId,
+      turnId: this.turns.get(meta.sessionId),
       timeoutMs: this.deps.baselineTimeoutMs ?? Config.baselineWaitMs,
       now: () => this.deps.nowMs(),
-      syncSeq: () => this.deps.syncSeq(),
+      syncSeq: () => this.deps.syncSeq(meta.sessionId),
       agentVersion: this.deps.agentVersion,
       requestSnapshot: provider.baseline,
       dispatch: (event) => this.dispatchRaw(event),

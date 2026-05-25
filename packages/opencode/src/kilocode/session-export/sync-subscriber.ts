@@ -6,7 +6,8 @@ export type SyncSubscriberDeps = {
   dispatch: (envelope: ExportEvent) => void
   agentVersion: string
   now: () => number
-  syncSeq: () => number
+  syncSeq: (sessionId: string) => number
+  getTurnId?: (sessionId: string) => string | undefined
 }
 
 type SyncLike = { type: string; aggregateID?: string; seq?: number; data?: unknown; properties?: unknown }
@@ -46,13 +47,16 @@ export class SyncSubscriber {
     const end = number(record(state.time).end) ?? this.deps.now()
     const output = text(state.output)
     const input = state.input
+    const seq = this.deps.syncSeq(sessionId)
     const tool: ToolExecuted = {
       id: ulid(),
       schemaVersion: 1,
       type: "tool_executed",
       sessionId,
       rootSessionId: sessionId,
-      seq: this.deps.syncSeq(),
+      turnId: this.deps.getTurnId?.(sessionId),
+      seq,
+      eventSeq: seq,
       ts: this.deps.now(),
       agentVersion: this.deps.agentVersion,
       toolCallId: text(part.callID) ?? "",
@@ -71,13 +75,16 @@ export class SyncSubscriber {
 
     if (toolName === "bash" || toolName === "shell") {
       const meta = record(state.metadata)
+      const termSeq = this.deps.syncSeq(sessionId)
       const term: TerminalOutcome = {
         id: ulid(),
         schemaVersion: 1,
         type: "terminal_outcome",
         sessionId,
         rootSessionId: sessionId,
-        seq: this.deps.syncSeq(),
+        turnId: this.deps.getTurnId?.(sessionId),
+        seq: termSeq,
+        eventSeq: termSeq,
         ts: this.deps.now(),
         agentVersion: this.deps.agentVersion,
         toolCallId: text(part.callID) ?? "",
@@ -92,13 +99,16 @@ export class SyncSubscriber {
   private handlePermission(sessionId: string, data: Record<string, unknown>): void {
     const reply = record(data.reply)
     const decision = text(reply.response) === "once" || text(reply.response) === "always" ? "allow" : "deny"
+    const seq = this.deps.syncSeq(sessionId)
     const env: PermissionDecided = {
       id: ulid(),
       schemaVersion: 1,
       type: "permission_decided",
       sessionId,
       rootSessionId: sessionId,
-      seq: this.deps.syncSeq(),
+      turnId: this.deps.getTurnId?.(sessionId),
+      seq,
+      eventSeq: seq,
       ts: this.deps.now(),
       agentVersion: this.deps.agentVersion,
       toolName: text(data.permission) ?? "",
@@ -111,13 +121,16 @@ export class SyncSubscriber {
 
   private handleFeedback(sessionId: string, data: Record<string, unknown>): void {
     const rating = text(data.rating) === "down" ? "down" : "up"
+    const seq = this.deps.syncSeq(sessionId)
     const env: FeedbackCaptured = {
       id: ulid(),
       schemaVersion: 1,
       type: "feedback_captured",
       sessionId,
       rootSessionId: sessionId,
-      seq: this.deps.syncSeq(),
+      turnId: this.deps.getTurnId?.(sessionId),
+      seq,
+      eventSeq: seq,
       ts: this.deps.now(),
       agentVersion: this.deps.agentVersion,
       messageId: text(data.messageID) ?? text(data.messageId) ?? "",
