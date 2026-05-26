@@ -826,13 +826,15 @@
             "mistralai/codestral-2508",
             "inception/mercury-edit-2",
             "codestral-2508",
-            "mercury-edit-2"
+            "mercury-edit-2",
+            "codestral:latest"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway (default)",
             "Mercury Edit 2 via Kilo Gateway",
             "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 via your connected Inception provider API key"
+            "Mercury Edit 2 via your connected Inception provider API key",
+            "Codestral via local Ollama at http://localhost:11434"
           ],
           "description": "Model to use for inline autocomplete suggestions"
         },
@@ -841,12 +843,14 @@
           "enum": [
             "kilo",
             "mistral",
-            "inception"
+            "inception",
+            "ollama"
           ],
           "enumDescriptions": [
             "Use autocomplete models through Kilo Gateway",
             "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
+            "Use autocomplete models through your connected Inception provider API key",
+            "Use autocomplete models through local Ollama at http://localhost:11434"
           ],
           "description": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },

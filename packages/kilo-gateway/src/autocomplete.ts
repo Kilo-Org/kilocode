@@ -1,4 +1,4 @@
-export type AutocompleteProviderID = "kilo" | "mistral" | "inception"
+export type AutocompleteProviderID = "kilo" | "mistral" | "inception" | "ollama"
 export type DirectAutocompleteProviderID = Exclude<AutocompleteProviderID, "kilo">
 
 export interface AutocompleteModelDef {
@@ -14,7 +14,7 @@ export interface AutocompleteModelDef {
   readonly provider: string
   /** Full model ID sent upstream by the FIM route. */
   readonly requestModel: string
-  /** Provider key to use for direct BYOK FIM. Empty means Kilo Gateway. */
+  /** Direct FIM provider to use instead of Kilo Gateway. */
   readonly directProvider?: DirectAutocompleteProviderID
   /** FIM request temperature. */
   readonly temperature: number
@@ -57,6 +57,16 @@ const models: AutocompleteModelDef[] = [
     provider: "Inception",
     requestModel: "mercury-edit-2",
     directProvider: "inception",
+    temperature: 0,
+  },
+  {
+    id: "ollama/codestral:latest",
+    modelID: "codestral:latest",
+    label: "Codestral",
+    providerID: "ollama",
+    provider: "Ollama (local)",
+    requestModel: "codestral:latest",
+    directProvider: "ollama",
     temperature: 0,
   },
 ]

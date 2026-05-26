@@ -33,6 +33,15 @@ describe("autocomplete settings", () => {
     expect(buildAutocompleteSettingsMessage().settings.model).toBe("mercury-edit-2")
   })
 
+  it("includes the configured local Ollama model in loaded settings", async () => {
+    state.set("provider", "ollama")
+    state.set("model", "codestral:latest")
+    const { buildAutocompleteSettingsMessage } = await import("../settings")
+
+    expect(buildAutocompleteSettingsMessage().settings.provider).toBe("ollama")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("codestral:latest")
+  })
+
   it("does not infer direct provider from a bare model name when provider is unset", async () => {
     // Safety: a legacy `model` setting alone must never silently route to a
     // direct BYOK provider. Direct providers require an explicit `provider`.
@@ -79,6 +88,8 @@ describe("autocomplete settings", () => {
 
     expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
     expect(validAutocompleteSetting("provider", "inception")).toBe(true)
+    expect(validAutocompleteSetting("model", "codestral:latest")).toBe(true)
+    expect(validAutocompleteSetting("provider", "ollama")).toBe(true)
   })
 
   it("rejects unsupported autocomplete updates", async () => {

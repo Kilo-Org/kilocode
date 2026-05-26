@@ -25,6 +25,11 @@ describe("FIM target resolution", () => {
       model: "mercury-edit-2",
       url: "https://api.inceptionlabs.ai/v1/fim/completions",
     })
+    expect(resolveFimTarget("ollama", "codestral:latest")).toEqual({
+      provider: "ollama",
+      model: "codestral:latest",
+      url: "http://localhost:11434/api/generate",
+    })
   })
 
   test("preserves gateway model pass-through behavior", () => {

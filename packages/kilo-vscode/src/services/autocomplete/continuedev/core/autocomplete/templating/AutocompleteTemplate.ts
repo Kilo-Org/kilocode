@@ -1,7 +1,7 @@
 // Fill in the middle prompts
 //
-// We only expose Codestral and Mercury Edit 2 as autocomplete models — every
-// other FIM template in the upstream continuedev list is unreachable.
+// Codestral and Mercury Edit 2 are the available autocomplete models. Ollama
+// applies local Codestral's FIM formatting from its prefix/suffix API.
 
 import { CompletionOptions } from "../../index.js"
 import { getLastNUriRelativePathParts, getShortestUniqueRelativeUriPaths } from "../../util/uri.js"

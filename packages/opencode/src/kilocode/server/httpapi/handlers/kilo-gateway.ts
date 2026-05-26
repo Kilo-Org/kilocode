@@ -19,7 +19,7 @@ import {
   fetchOrganizationModes,
   fetchProfile,
 } from "@kilocode/kilo-gateway"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
+import { DIRECT_FIM_ENV, requestMistralFim, requestOllamaFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { Effect } from "effect"
 import * as Stream from "effect/Stream"
@@ -82,13 +82,14 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       const info = target.provider === "kilo" ? yield* proxyAuth() : undefined
       const token = yield* Effect.gen(function* () {
         if (target.provider === "kilo") return info?.token
+        if (target.provider === "ollama") return undefined
         const item = yield* auth.get(target.provider).pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
         if (item?.type === "api") return item.key
         return DIRECT_FIM_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
       })
 
       if (target.provider === "kilo" && !info?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (target.provider !== "ollama" && !token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
       const signal =
@@ -97,13 +98,24 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
           : AbortSignal.timeout(FIM_TIMEOUT_MS)
       const response = yield* Effect.promise(async () => {
         try {
+          if (target.provider === "ollama") {
+            console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${target.url}`)
+            return requestOllamaFim(target.url, {
+              model: target.model,
+              prefix: ctx.payload.prefix,
+              suffix: ctx.payload.suffix,
+              maxTokens: ctx.payload.maxTokens ?? 256,
+              temperature: ctx.payload.temperature ?? 0.2,
+              signal,
+            })
+          }
           const run = async (url: string): Promise<Response> => {
             console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${url}`)
             return fetch(url, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 ...(target.provider === "kilo"
                   ? buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
                   : {}),
