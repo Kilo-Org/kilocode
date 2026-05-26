@@ -137,13 +137,6 @@ export const PROVIDER_MAP: Record<string, ProviderMapping> = {
     modelField: "lmStudioModelId",
     urlField: "lmStudioBaseUrl",
   },
-  atomicChat: {
-    id: "atomic-chat",
-    key: "atomicChatApiKey",
-    name: "Atomic Chat",
-    modelField: "atomicChatModelId",
-    urlField: "atomicChatBaseUrl",
-  },
   kilocode: {
     id: "kilo",
     key: "kilocodeToken",
