@@ -146,9 +146,7 @@ test("provider OAuth auth overrides inherited env variable", async () => {
       await Filesystem.write(authPath, prev)
     }
     if (prev === undefined) {
-      try {
-        await unlink(authPath)
-      } catch {}
+      await unlink(authPath).catch(() => undefined)
     }
   }
 })
