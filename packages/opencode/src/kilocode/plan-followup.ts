@@ -4,14 +4,12 @@ import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
-import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
 import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
-import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
@@ -69,97 +67,10 @@ function toText(item: MessageV2.WithParts): string {
     .trim()
 }
 
-const HANDOVER_PROMPT = `You are summarizing a planning session to hand off to an implementation session.
-
-The plan itself will be provided separately — do NOT repeat it. Instead, focus on information discovered during planning that would help the implementing agent but is NOT already in the plan text.
-
-Produce a concise summary using this template:
----
-## Discoveries
-
-[Key findings from code exploration — architecture patterns, gotchas, edge cases, relevant existing code that the plan references but doesn't fully explain]
-
-## Relevant Files
-
-[Structured list of files/directories that were read or discussed, with brief notes on what's relevant in each]
-
-## Implementation Notes
-
-[Any important context: conventions to follow, potential pitfalls, dependencies between steps, things the implementing agent should watch out for]
----
-
-If there is nothing useful to add beyond what the plan already says, respond with an empty string.
-Keep the summary concise — focus on high-entropy information that would save the implementing agent time.`
-
-export function formatTodos(todos: Todo.Info[]): string {
-  if (!todos.length) return ""
-  const icons: Record<string, string> = {
-    completed: "[x]",
-    in_progress: "[~]",
-    cancelled: "[-]",
-  }
-  return todos.map((t) => `- ${icons[t.status] ?? "[ ]"} ${t.content}`).join("\n")
-}
-
-export async function generateHandover(input: {
-  messages: MessageV2.WithParts[]
-  model: MessageV2.User["model"]
-  abort?: AbortSignal
-}): Promise<string> {
-  const log = Log.create({ service: "plan.followup" })
-  try {
-    const entry = await PlanFollowupRuntime.agent("compaction")
-    const model = entry?.model
-      ? await PlanFollowupRuntime.model(entry.model.providerID, entry.model.modelID)
-      : await PlanFollowupRuntime.model(input.model.providerID, input.model.modelID)
-
-    const sessionID = SessionID.make(Identifier.ascending("session"))
-    const userMsg: MessageV2.User = {
-      id: MessageID.ascending(),
-      sessionID,
-      role: "user",
-      time: { created: Date.now() },
-      agent: "plan",
-      model: input.model,
-    }
-
-    const stream = await LLM.stream({
-      agent: entry ?? {
-        name: "compaction",
-        mode: "subagent",
-        permission: [],
-        options: {},
-      },
-      user: userMsg,
-      tools: {},
-      model,
-      small: true,
-      messages: [
-        ...(await MessageV2.toModelMessages(input.messages, model)),
-        {
-          role: "user" as const,
-          content: HANDOVER_PROMPT,
-        },
-      ],
-      abort: input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
-      sessionID,
-      system: [],
-      retries: 1,
-    })
-
-    const result = await stream.text
-    return result.trim()
-  } catch (error) {
-    if (input.abort?.aborted) return ""
-    log.error("handover generation failed", { error })
-    return ""
-  }
-}
-
 export namespace PlanFollowup {
   const log = Log.create({ service: "plan.followup" })
 
-  export const PLAN_PREFIX = "Implement the following plan:"
+  export const PLAN_PREFIX = "Implement:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
@@ -325,9 +236,7 @@ export namespace PlanFollowup {
   async function startNew(input: {
     sessionID: SessionID
     plan: string
-    messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
-    abort?: AbortSignal
   }) {
     const code = await resolveCodeModel({
       model: input.model,
@@ -338,10 +247,8 @@ export namespace PlanFollowup {
     await WithInstance.provide({
       directory: session.directory,
       fn: async () => {
-        // Create the session FIRST so session.created fires immediately while the
-        // VS Code extension's pendingFollowup gate (30s TTL) is still fresh. The
-        // handover generation below can take tens of seconds and must not block
-        // the SSE event that drives the webview tab switch.
+        // Create the session first so the SSE event driving the webview tab switch
+        // fires before prompt seeding and implementation startup work.
         const next = await Session.create({})
         const ctl = new AbortController()
         pending.set(next.id, ctl)
@@ -354,68 +261,19 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
-          const todoList = formatTodos(todos)
+          const text = `${PLAN_PREFIX}\n\n${input.plan}\n\nThis plan was created in session ${input.sessionID}. Use \`kilo_local_recall\` to retrieve additional context from that session only if needed.`
 
-          // Assemble the user message text with or without a handover section.
-          // The section order is fixed so the initial and final renders stay
-          // aligned — only the handover block grows in between.
-          const compose = (handover: string) => {
-            const sections = [
-              `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
-              `Implement the following plan:\n\n${input.plan}`,
-            ]
-            if (handover) sections.push(`## Handover from Planning Session\n\n${handover}`)
-            if (todoList) sections.push(`## Todo List\n\n${todoList}`)
-            return sections.join("\n\n")
-          }
-
-          // Inject the plan and todos immediately so the new session tab shows
-          // real content right away. The handover section is appended to this
-          // same part in-place once the slow LLM call resolves below.
-          const msg: MessageV2.User = {
-            id: MessageID.ascending(),
+          await inject({
             sessionID: next.id,
-            role: "user",
-            time: { created: Date.now() },
             agent: "code",
             model: code.model,
-          }
-          await Session.updateMessage(msg)
-          const pid = PartID.ascending()
-          await Session.updatePart({
-            id: pid,
-            messageID: msg.id,
-            sessionID: next.id,
-            type: "text",
-            text: compose(""),
+            text,
             synthetic: false,
-          } satisfies MessageV2.TextPart)
+          })
 
           if (todos.length) {
             await PlanFollowupRuntime.todo.update({ sessionID: next.id, todos })
-          }
-
-          const handover = await generateHandover({
-            messages: input.messages,
-            model: input.model,
-            abort: input.abort ? AbortSignal.any([input.abort, ctl.signal]) : ctl.signal,
-          })
-          if (ctl.signal.aborted) {
-            await idle()
-            return
-          }
-
-          if (handover) {
-            await Session.updatePart({
-              id: pid,
-              messageID: msg.id,
-              sessionID: next.id,
-              type: "text",
-              text: compose(handover),
-              synthetic: false,
-            } satisfies MessageV2.TextPart)
           }
           if (ctl.signal.aborted) {
             await idle()
@@ -484,9 +342,7 @@ export namespace PlanFollowup {
       await startNew({
         sessionID: input.sessionID,
         plan,
-        messages: input.messages,
         model: user.model,
-        abort: input.abort,
       })
       return "break"
     }
