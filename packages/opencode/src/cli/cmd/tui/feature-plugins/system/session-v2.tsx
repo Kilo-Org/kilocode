@@ -721,7 +721,9 @@ function CodeSearch(props: ToolProps) {
 function WebSearch(props: ToolProps) {
   return (
     <InlineTool icon="◈" pending="Searching web..." complete={toolComplete(props.part)} part={props.part}>
-      Exa Web Search "{stringValue(props.input.query) ?? pendingInput(props.part)}"{" "}
+      {/* kilocode_change start */}
+      Web Search "{stringValue(props.input.query) ?? pendingInput(props.part)}"{" "}
+      {/* kilocode_change end */}
       <Show when={numberValue(props.metadata.numResults)}>{(results) => <>({results()} results)</>}</Show>
     </InlineTool>
   )

@@ -360,7 +360,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               const query = typeof data.query === "string" ? data.query : ""
               return {
                 icon: "◈",
-                title: `Exa Web Search "${query}"`,
+                title: `Web Search "${query}"`, // kilocode_change
                 body: (
                   <Show when={query}>
                     <box paddingLeft={1}>

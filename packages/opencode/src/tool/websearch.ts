@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect"
 import { HttpClient } from "effect/unstable/http"
 import * as Tool from "./tool"
-import * as McpExa from "./mcp-exa"
+import * as PerplexitySearch from "./perplexity-search" // kilocode_change
 import DESCRIPTION from "./websearch.txt"
 
 export const Parameters = Schema.Struct({
@@ -46,19 +46,19 @@ export const WebSearchTool = Tool.define(
             },
           })
 
-          const result = yield* McpExa.call(
+          // kilocode_change start
+          const result = yield* PerplexitySearch.search(
             http,
-            "web_search_exa",
-            McpExa.SearchArgs,
             {
               query: params.query,
-              type: params.type || "auto",
-              numResults: params.numResults || 8,
-              livecrawl: params.livecrawl || "fallback",
+              type: params.type,
+              numResults: params.numResults,
+              livecrawl: params.livecrawl,
               contextMaxCharacters: params.contextMaxCharacters,
             },
             "25 seconds",
           )
+          // kilocode_change end
 
           return {
             output: result ?? "No search results found. Please try a different query.",

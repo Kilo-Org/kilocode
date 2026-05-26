@@ -10,7 +10,7 @@
 //
 // See https://docs.perplexity.ai for the API surface.
 
-import { test, expect, describe } from "bun:test"
+import { afterEach, test, expect, describe } from "bun:test"
 import path from "path"
 
 import {
@@ -22,16 +22,32 @@ import {
   patchCustomLoaderResult,
 } from "../../src/kilocode/provider/provider"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Provider } from "@/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
-import { Env } from "../../src/env"
-import { makeRuntime } from "../../src/effect/run-service"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 
-const env = makeRuntime(Env.Service, Env.defaultLayer)
-const setEnv = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
+const original = {
+  perplexity: process.env.PERPLEXITY_API_KEY,
+  pplx: process.env.PPLX_API_KEY,
+}
+
+const setEnv = (k: string, v: string) => {
+  process.env[k] = v
+}
+
+const removeEnv = (k: string) => {
+  delete process.env[k]
+}
+
+afterEach(() => {
+  if (original.perplexity === undefined) removeEnv("PERPLEXITY_API_KEY")
+  else setEnv("PERPLEXITY_API_KEY", original.perplexity)
+
+  if (original.pplx === undefined) removeEnv("PPLX_API_KEY")
+  else setEnv("PPLX_API_KEY", original.pplx)
+})
 
 async function listProviders() {
   return AppRuntime.runPromise(
@@ -102,11 +118,11 @@ describe("perplexity Agent API — env-var loading and default model", () => {
         )
       },
     })
-    await Instance.provide({
+    removeEnv("PPLX_API_KEY")
+    setEnv("PERPLEXITY_API_KEY", "test-pplx-key")
+
+    await WithInstance.provide({
       directory: tmp.path,
-      init: Effect.promise(async () => {
-        setEnv("PERPLEXITY_API_KEY", "test-pplx-key")
-      }).pipe(Effect.asVoid),
       fn: async () => {
         const providers = await listProviders()
         const perplexity = providers[ProviderID.make("perplexity")]
@@ -138,11 +154,11 @@ describe("perplexity Agent API — env-var loading and default model", () => {
         )
       },
     })
-    await Instance.provide({
+    removeEnv("PERPLEXITY_API_KEY")
+    setEnv("PPLX_API_KEY", "test-pplx-fallback")
+
+    await WithInstance.provide({
       directory: tmp.path,
-      init: Effect.promise(async () => {
-        setEnv("PPLX_API_KEY", "test-pplx-fallback")
-      }).pipe(Effect.asVoid),
       fn: async () => {
         const providers = await listProviders()
         const perplexity = providers[ProviderID.make("perplexity")]
