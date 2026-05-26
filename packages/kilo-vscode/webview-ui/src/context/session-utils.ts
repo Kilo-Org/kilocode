@@ -1,4 +1,4 @@
-import type { Part, StepMetrics } from "../types/messages"
+import type { Message, Part, StepMetrics } from "../types/messages"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -124,6 +124,39 @@ export function calcTokenUsage(
   )
 
   if (total.input > 0 || total.output > 0 || total.cached > 0) return total
+  return undefined
+}
+
+export function formatRate(input: number | undefined): string | undefined {
+  if (input === undefined) return undefined
+  if (!Number.isFinite(input)) return undefined
+  if (input <= 0) return undefined
+  return `${input.toFixed(1)} t/s`
+}
+
+export function messageRates(
+  msg: Pick<Message, "id" | "role">,
+  parts: Record<string, Part[]>,
+): StepMetrics | undefined {
+  if (msg.role !== "assistant") return undefined
+  const list = parts[msg.id] ?? []
+  for (let i = list.length - 1; i >= 0; i--) {
+    const part = list[i]
+    if (part.type !== "step-finish") continue
+    if (!part.metrics) continue
+    return part.metrics
+  }
+  return undefined
+}
+
+export function latestRates(
+  messages: Pick<Message, "id" | "role">[],
+  parts: Record<string, Part[]>,
+): StepMetrics | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const rate = messageRates(messages[i], parts)
+    if (rate) return rate
+  }
   return undefined
 }
 

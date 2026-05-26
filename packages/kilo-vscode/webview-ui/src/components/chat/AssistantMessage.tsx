@@ -25,11 +25,10 @@ import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useServer } from "../../context/server"
-import { snapshotProgress } from "../../context/session-utils"
+import { formatRate, messageRates, snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
-import { formatRate, messageRates } from "../../context/session-utils"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,

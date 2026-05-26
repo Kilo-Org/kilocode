@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"

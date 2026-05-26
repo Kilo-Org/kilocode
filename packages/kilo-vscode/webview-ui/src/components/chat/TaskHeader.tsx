@@ -14,7 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
+import { calcTokenUsage, collapseCostBreakdown, formatRate } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -66,8 +66,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
-
   const hasTimeline = createMemo(() => {
     for (const m of session.visibleMessages()) {
       if (m.role !== "assistant") continue
@@ -87,6 +85,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
 
   // Read initial values from VS Code settings
   const [showMetrics, setShowMetrics] = createSignal(false)
+  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
+  const rates = createMemo(() => (showMetrics() ? session.throughput() : undefined))
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
   const handler = (e: MessageEvent<ExtensionMessage>) => {
     if (e.data.type === "timelineSettingLoaded") {
