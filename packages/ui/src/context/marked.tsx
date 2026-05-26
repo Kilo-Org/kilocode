@@ -14,6 +14,7 @@ import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
+// kilocode_change start: tag KaTeX output for scoped sanitizer allowances.
 export const katexAttr = "data-kilo-katex"
 export const katexToken = Math.random().toString(36).slice(2)
 const katexTag = /<span class="(katex(?:-display)?|katex-error)"/
@@ -22,6 +23,7 @@ function renderKatex(text: string, display: boolean) {
   const html = katex.renderToString(text, { displayMode: display, throwOnError: false })
   return html.replace(katexTag, `<span class="$1" ${katexAttr}="${katexToken}"`)
 }
+// kilocode_change end
 
 registerCustomTheme("Kilo", () => {
   return Promise.resolve({
@@ -403,9 +405,9 @@ function renderMathInText(text: string): string {
 
   // Display math: $$...$$
   const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
-  result = result.replace(displayMathRegex, (_, math) => {
+  result = result.replace(displayMathRegex, (_, math) => { // kilocode_change
     try {
-      return renderKatex(math, true)
+      return renderKatex(math, true) // kilocode_change
     } catch {
       return `$$${math}$$`
     }

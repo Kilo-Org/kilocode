@@ -1,4 +1,4 @@
-import { useMarked, deferredHighlight, fnv1a, katexAttr, katexToken } from "../context/marked"
+import { useMarked, deferredHighlight, fnv1a, katexAttr, katexToken } from "../context/marked" // kilocode_change
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
@@ -18,6 +18,7 @@ const max = 200
 const cache = new Map<string, Entry>()
 
 if (typeof window !== "undefined" && DOMPurify.isSupported) {
+  // kilocode_change start: scope KaTeX SVG/style sanitizer allowances to generated math.
   DOMPurify.addHook("uponSanitizeAttribute", (node: Element, hook) => {
     if (hook.attrName !== "style") return
     if (node.closest(`[${katexAttr}="${katexToken}"]`)) {
@@ -41,15 +42,16 @@ if (typeof window !== "undefined" && DOMPurify.isSupported) {
     if (node.namespaceURI === "http://www.w3.org/2000/svg" && !math) node.remove()
     if (node.getAttribute(katexAttr) !== katexToken) node.removeAttribute(katexAttr)
   })
+  // kilocode_change end
 }
 
 const config = {
-  USE_PROFILES: { html: true, mathMl: true, svg: true },
+  USE_PROFILES: { html: true, mathMl: true, svg: true }, // kilocode_change
   SANITIZE_NAMED_PROPS: true,
   FORBID_TAGS: ["style"],
-  FORBID_CONTENTS: ["style", "script"],
-  ADD_TAGS: ["svg", "path"],
-  ADD_ATTR: [katexAttr, "d", "viewBox", "preserveAspectRatio", "xmlns"],
+  FORBID_CONTENTS: ["style", "script"], // kilocode_change
+  ADD_TAGS: ["svg", "path"], // kilocode_change
+  ADD_ATTR: [katexAttr, "d", "viewBox", "preserveAspectRatio", "xmlns"], // kilocode_change
 }
 
 const iconPaths = {
