@@ -718,7 +718,7 @@ export const RunCommand = effectCmd({
           process.exit(1)
         }
         const auto = KiloRunAuto.create(sessionID) // kilocode_change
-        const approve = args.auto || args.autoApprove // kilocode_change
+        const approve = args.auto || args["auto-approve"] // kilocode_change
         await share(sdk, sessionID)
 
         loop().catch((e) => {
