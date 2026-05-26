@@ -206,10 +206,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     cache {fmtNum(tk().cached)}
                   </span>
                 </Show>
-                <Show when={formatRate(rates()?.prompt)}>
+                <Show when={formatRate(rates()?.rate.prompt)}>
                   {(value) => <span class="task-header-tokens-value">PP {value()}</span>}
                 </Show>
-                <Show when={formatRate(rates()?.generation)}>
+                <Show when={formatRate(rates()?.rate.generation)}>
                   {(value) => <span class="task-header-tokens-value">TG {value()}</span>}
                 </Show>
               </div>

@@ -182,14 +182,15 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
     props.showTokenThroughput ? messageRates(props.message, session.allParts()) : undefined,
   )
   const tooltip = createMemo(() => {
-    const rate = rates()
-    if (!rate) return undefined
+    const metrics = rates()
+    if (!metrics) return undefined
+    const rate = metrics.rate
     const rows = [
       rate.prompt ? `Prompt: ${formatRate(rate.prompt)}` : undefined,
       rate.generation ? `Generation: ${formatRate(rate.generation)}` : undefined,
       rate.output ? `Output: ${formatRate(rate.output)}` : undefined,
     ].filter(Boolean)
-    if (rate.duration) rows.push(`Duration: ${(rate.duration / 1000).toFixed(1)}s`)
+    if (metrics.duration) rows.push(`Duration: ${(metrics.duration / 1000).toFixed(1)}s`)
     return (
       <div class="assistant-message-metrics-tooltip">
         {rows.map((row) => (
@@ -213,7 +214,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             <Tooltip value={tooltip()} placement="top">
               <button data-slot="assistant-message-metrics-trigger" aria-label="Message token throughput">
                 <Icon name="status" size="small" />
-                <span>{formatRate(rate().generation ?? rate().output)}</span>
+                <span>{formatRate(rate().rate.generation ?? rate().rate.output)}</span>
               </button>
             </Tooltip>
           </div>
