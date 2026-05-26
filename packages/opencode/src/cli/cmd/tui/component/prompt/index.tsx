@@ -916,9 +916,10 @@ export function Prompt(props: PromptProps) {
       }
 
       sessionID = res.data.id
+      // kilocode_change start
       if (args.autoApprove && !args.sessionID && !args.continue) TuiAutoApprove.boot(sessionID)
+      // kilocode_change end
     }
-    // kilocode_change end
 
     const messageID = MessageID.ascending()
     let inputText = store.prompt.input

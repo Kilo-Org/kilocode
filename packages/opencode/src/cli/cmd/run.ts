@@ -508,7 +508,7 @@ export const RunCommand = effectCmd({
             if (event.type === "message.part.updated") {
               const part = event.properties.part
               // kilocode_change start - track Task child sessions for --auto permission replies
-              if (args.auto) KiloRunAuto.track(auto, part)
+              if (approve) KiloRunAuto.track(auto, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
 
@@ -605,7 +605,7 @@ export const RunCommand = effectCmd({
             if (event.type === "permission.asked") {
               const permission = event.properties
               // kilocode_change start - In auto mode, approve root and tracked Task child permissions only
-              if (args.auto) {
+              if (approve) {
                 if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
                 await sdk.permission.reply({
                   requestID: permission.id,
@@ -718,6 +718,7 @@ export const RunCommand = effectCmd({
           process.exit(1)
         }
         const auto = KiloRunAuto.create(sessionID) // kilocode_change
+        const approve = args.auto || args.autoApprove // kilocode_change
         await share(sdk, sessionID)
 
         loop().catch((e) => {
