@@ -9,7 +9,18 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { type Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, JSX } from "solid-js"
+import {
+  type Component,
+  For,
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  onCleanup,
+  onMount,
+  JSX,
+} from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -17,6 +28,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import { recentSessions } from "../../context/session-utils"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
@@ -265,7 +277,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
-            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued showTokenThroughput={metrics()} />}</For>
+            <For each={queuedTurns()}>
+              {(turn) => <VscodeSessionTurn turn={turn} queued showTokenThroughput={metrics()} />}
+            </For>
             <WorkingIndicator />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
