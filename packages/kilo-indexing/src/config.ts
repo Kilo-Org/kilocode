@@ -18,7 +18,7 @@ const providers = [
   "openrouter",
   "voyage",
 ] as const satisfies readonly EmbedderProvider[]
-const stores = ["lancedb", "qdrant"] as const
+const stores = ["lancedb", "qdrant", "valkey"] as const
 
 export const IndexingConfig = z
   .object({
@@ -109,6 +109,14 @@ export const IndexingConfig = z
       .strict()
       .optional()
       .describe("LanceDB vector store options"),
+    valkey: z
+      .object({
+        url: z.string().optional(),
+        password: z.string().optional(),
+      })
+      .strict()
+      .optional()
+      .describe("Valkey vector store connection options"),
     searchMinScore: z
       .number()
       .min(0)
@@ -217,6 +225,12 @@ export const IndexingSchema = Schema.Struct({
       directory: Schema.optional(Schema.String),
     }),
   ).annotate({ description: "LanceDB vector store options" }),
+  valkey: Schema.optional(
+    Schema.Struct({
+      url: Schema.optional(Schema.String),
+      password: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Valkey vector store connection options" }),
   searchMinScore: Schema.optional(Score).annotate({
     description: "Minimum similarity score for search results (default: 0.4)",
   }),
@@ -246,6 +260,8 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     lancedbVectorStoreDirectory: cfg?.lancedb?.directory,
     qdrantUrl: cfg?.qdrant?.url,
     qdrantApiKey: cfg?.qdrant?.apiKey,
+    valkeyUrl: cfg?.valkey?.url,
+    valkeyPassword: cfg?.valkey?.password,
     searchMinScore: cfg?.searchMinScore,
     searchMaxResults: cfg?.searchMaxResults,
     embeddingBatchSize: cfg?.embeddingBatchSize,
