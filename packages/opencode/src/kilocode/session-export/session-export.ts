@@ -22,6 +22,7 @@ let options:
       dbPath: string
       endpoint?: string
       surface: string
+      anonId?: string
       snapshotProvider?: CaptureDeps["snapshotProvider"]
       syncSeq: (sessionId: string) => number
       subscribeAll: (cb: (event: unknown) => void) => () => void
@@ -36,6 +37,7 @@ export const init = (opts: {
   dbPath: string
   endpoint?: string
   surface?: string
+  anonId?: string
   snapshotProvider?: CaptureDeps["snapshotProvider"]
   syncSeq?: (sessionId: string) => number
   subscribeAll: (cb: (event: unknown) => void) => () => void
@@ -51,6 +53,7 @@ export const init = (opts: {
       dbPath: opts.dbPath,
       endpoint: opts.endpoint,
       surface: opts.surface ?? currentSurface(),
+      anonId: opts.anonId,
       snapshotProvider: opts.snapshotProvider,
       syncSeq,
       subscribeAll: opts.subscribeAll,
@@ -127,6 +130,7 @@ function spawn(url = target()): void {
     agentVersion: options.agentVersion,
     endpoint: options.endpoint,
     surface: options.surface,
+    anonId: options.anonId,
   })
   capture = new Capture({
     worker,

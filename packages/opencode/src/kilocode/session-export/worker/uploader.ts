@@ -9,6 +9,7 @@ export type UploaderDeps = {
   reportTelemetry: (msg: Extract<FromWorker, { kind: "telemetry" }>) => void
   agentVersion: string
   surface: string
+  anonId?: string
 }
 
 export class Uploader {
@@ -90,7 +91,7 @@ export class Uploader {
         })
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",
-          headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion, surface: this.deps.surface }),
+          headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion, surface: this.deps.surface, anonId: this.deps.anonId }),
           body,
         })
         const eventIds = rows.map((row) => row.id)
@@ -129,6 +130,7 @@ type HeaderArgs = {
   batchId: string
   agentVersion: string
   surface: string
+  anonId?: string
 }
 
 async function headers(args: HeaderArgs): Promise<Headers> {
@@ -152,6 +154,7 @@ async function headers(args: HeaderArgs): Promise<Headers> {
   })
   const token = process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
   if (token) out.set("authorization", `Bearer ${token}`)
+  if (!token && args.anonId) out.set("x-kilo-anon-id", args.anonId)
   return out
 }
 

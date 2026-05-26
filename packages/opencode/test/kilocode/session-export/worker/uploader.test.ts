@@ -73,6 +73,43 @@ describe("Uploader", () => {
     expect(telemetry.some((item) => (item as { name?: string }).name === "session_export.uploaded")).toBe(true)
   })
 
+  test("sends anonymous id with all export headers when auth token is absent", async () => {
+    const calls: Array<{ init: RequestInit }> = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        calls.push({ init })
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+      anonId: "install_abc",
+    })
+    await uploader.flush("test")
+    const headers = new Headers(calls[0].init.headers)
+    const names = [
+      "x-kilo-export-api-version",
+      "x-kilo-export-schema-version",
+      "x-kilo-export-agent-version",
+      "x-kilo-export-surface",
+      "x-kilo-export-root-session-id",
+      "x-kilo-export-session-id",
+      "x-kilo-export-batch-id",
+      "x-kilo-export-seq-start",
+      "x-kilo-export-seq-end",
+      "x-kilo-export-event-count",
+      "x-kilo-export-payload-sha256",
+      "x-kilo-export-client-sent-at",
+      "x-kilo-export-content-encoding",
+    ]
+
+    expect(headers.get("authorization")).toBeNull()
+    expect(headers.get("x-kilo-anon-id")).toBe("install_abc")
+    for (const name of names) expect(headers.get(name)).toBeTruthy()
+  })
+
   test("uploads one session per batch so key metadata can reconstruct sessions", async () => {
     storage.insertEvent({
       id: "02",

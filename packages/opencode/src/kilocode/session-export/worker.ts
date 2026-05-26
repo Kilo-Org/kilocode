@@ -66,6 +66,7 @@ scope.onmessage = (event) => {
         reportTelemetry: (item) => scope.postMessage(item),
         agentVersion: msg.agentVersion ?? "unknown",
         surface: msg.surface ?? "unknown",
+        anonId: msg.anonId,
       })
       tripped = false
       scope.postMessage({ kind: "ready" })

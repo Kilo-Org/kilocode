@@ -7,6 +7,7 @@ import { Bus } from "@/bus"
 import { SessionExport } from "@/kilocode/session-export"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
 import { Instance } from "@/project/instance"
+import { Identity } from "@kilocode/kilo-telemetry"
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -15,8 +16,13 @@ export namespace KilocodeBootstrap {
     await KiloSessions.init()
     // kilocode_change start - session export bootstrap
     try {
+      const anon = await Identity.getMachineId().catch((err) => {
+        log.warn("session export identity failed", { err })
+        return undefined
+      })
       SessionExport.init({
         agentVersion: InstallationVersion,
+        anonId: anon,
         dbPath: path.join(Global.Path.data, "session-export.db"),
         subscribeAll: (cb) => Bus.subscribeAll(cb),
         snapshotProvider: createWorkspaceProvider({
