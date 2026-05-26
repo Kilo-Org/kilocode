@@ -15,6 +15,7 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
+import { ValkeyVectorStore } from "./vector-store/valkey-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import type { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
@@ -192,6 +193,23 @@ export class CodeIndexServiceFactory {
         dbDir,
       })
       return new LanceDBVectorStore(workspacePath, profile.dimension, dbDir, profile)
+    }
+
+    if (config.vectorStoreProvider === "valkey") {
+      if (!config.valkeyUrl) throw new Error("Valkey URL is required.")
+      log.info("creating vector store", {
+        provider: config.embedderProvider,
+        vectorStore: "valkey",
+        model: profile.modelId,
+        vectorSize: profile.dimension,
+      })
+      return new ValkeyVectorStore(
+        this.workspacePath,
+        config.valkeyUrl,
+        profile.dimension,
+        config.valkeyPassword,
+        profile,
+      )
     }
 
     if (!config.qdrantUrl) throw new Error("Qdrant URL is required.")

@@ -10,7 +10,7 @@ import type { EmbedderProvider } from "./manager"
 export interface CodeIndexConfig {
   isConfigured: boolean
   embedderProvider: EmbedderProvider
-  vectorStoreProvider?: "lancedb" | "qdrant"
+  vectorStoreProvider?: "lancedb" | "qdrant" | "valkey"
   lancedbVectorStoreDirectoryPlaceholder?: string
   modelId?: string
   modelDimension?: number
@@ -26,6 +26,8 @@ export interface CodeIndexConfig {
   voyageOptions?: { apiKey: string }
   qdrantUrl?: string
   qdrantApiKey?: string
+  valkeyUrl?: string
+  valkeyPassword?: string
   searchMinScore?: number
   searchMaxResults?: number
   embeddingBatchSize?: number
@@ -36,7 +38,7 @@ export type PreviousConfigSnapshot = {
   enabled: boolean
   configured: boolean
   embedderProvider: EmbedderProvider
-  vectorStoreProvider?: "lancedb" | "qdrant"
+  vectorStoreProvider?: "lancedb" | "qdrant" | "valkey"
   lancedbVectorStoreDirectory?: string
   modelId?: string
   modelDimension?: number
@@ -57,4 +59,6 @@ export type PreviousConfigSnapshot = {
   voyageApiKey?: string
   qdrantUrl?: string
   qdrantApiKey?: string
+  valkeyUrl?: string
+  valkeyPassword?: string
 }
