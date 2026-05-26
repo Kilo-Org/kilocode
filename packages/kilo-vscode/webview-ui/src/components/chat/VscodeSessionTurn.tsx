@@ -9,7 +9,7 @@
  * - Simpler flat structure without overflow containers
  */
 
-import { Component, createMemo, For, Show, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, createMemo, For, Show, createEffect } from "solid-js"
 import { UserMessageDisplay } from "@kilocode/kilo-ui/message-part"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -42,6 +42,7 @@ export interface VscodeTurn {
 interface VscodeSessionTurnProps {
   turn: VscodeTurn
   queued?: boolean
+  showTokenThroughput?: boolean
   onForkMessage?: (sessionId: string, messageId: string) => void
 }
 
@@ -90,17 +91,6 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       }, [])
       .reverse()
   })
-
-  const [metrics, setMetrics] = createSignal(false)
-
-  const handler = (e: MessageEvent<import("../../types/messages").ExtensionMessage>) => {
-    if (e.data.type === "timelineSettingLoaded") setMetrics(e.data.showTokenThroughput)
-  }
-  onMount(() => {
-    window.addEventListener("message", handler)
-    vscode.postMessage({ type: "requestTimelineSetting" })
-  })
-  onCleanup(() => window.removeEventListener("message", handler))
 
   const openChanges = () => vscode.postMessage({ type: "openChanges", turnId: message().id })
 
@@ -166,7 +156,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                   <AssistantMessage
                     message={msg}
                     showAssistantCopyPartID={showAssistantCopyPartID()}
-                    showTokenThroughput={metrics()}
+                    showTokenThroughput={props.showTokenThroughput}
                     feedback={{
                       enabled: feedback.telemetryEnabled(),
                       rating: feedback.getRating(msg.id),

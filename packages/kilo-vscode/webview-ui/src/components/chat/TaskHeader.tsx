@@ -84,9 +84,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const [expanded, setExpanded] = createSignal(true)
 
   // Read initial values from VS Code settings
-  const [showMetrics, setShowMetrics] = createSignal(false)
+  const [showMetrics, setShowMetrics] = createSignal<boolean | undefined>(undefined)
   const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
-  const rates = createMemo(() => (showMetrics() ? session.throughput() : undefined))
+  const rates = createMemo(() => (showMetrics() === true ? session.throughput() : undefined))
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
   const handler = (e: MessageEvent<ExtensionMessage>) => {
     if (e.data.type === "timelineSettingLoaded") {

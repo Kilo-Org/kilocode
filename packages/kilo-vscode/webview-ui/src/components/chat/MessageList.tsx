@@ -9,7 +9,7 @@
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { type Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, JSX } from "solid-js"
+import { type Component, For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount, JSX } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
@@ -17,6 +17,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
@@ -34,7 +35,7 @@ import {
   stableMessageTurns,
   type MessageTurn,
 } from "../../context/session-queue"
-import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
+import type { ExtensionMessage, QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -65,6 +66,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
+  const vscode = useVSCode()
   const dialog = useDialog()
 
   const autoScroll = createAutoScroll({
@@ -103,6 +105,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
   const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
   const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
+
+  const [metrics, setMetrics] = createSignal(false)
+  const handler = (e: MessageEvent<ExtensionMessage>) => {
+    if (e.data.type === "timelineSettingLoaded") setMetrics(e.data.showTokenThroughput)
+  }
+  window.addEventListener("message", handler)
+  onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
+  onCleanup(() => window.removeEventListener("message", handler))
 
   const activeUserIndex = createMemo(() => {
     const active = activeUserID()
@@ -245,14 +255,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     return index() > active
                   })
 
-                  return <VscodeSessionTurn turn={turn} queued={queued()} onForkMessage={props.onForkMessage} />
+                  return (
+                    <VscodeSessionTurn
+                      turn={turn}
+                      queued={queued()}
+                      showTokenThroughput={metrics()}
+                      onForkMessage={props.onForkMessage}
+                    />
+                  )
                 }}
               </Virtualizer>
             </Show>
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
-            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
+            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued showTokenThroughput={metrics()} />}</For>
             <WorkingIndicator />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
