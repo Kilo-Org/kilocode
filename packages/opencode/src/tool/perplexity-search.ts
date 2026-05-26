@@ -9,8 +9,6 @@ const URL = "https://api.perplexity.ai/search"
 export const SearchArgs = Schema.Struct({
   query: Schema.String,
   numResults: Schema.optional(Schema.Number),
-  livecrawl: Schema.optional(Schema.String),
-  type: Schema.optional(Schema.String),
   contextMaxCharacters: Schema.optional(Schema.Number),
 })
 
