@@ -111,11 +111,13 @@ interface State {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ProviderAuth") {}
 
-export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> = Layer.effect(
+export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
+  // kilocode_change
   Service,
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
+    const cache = yield* ModelCache.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("ProviderAuth.state")(function* () {
         const plugins = yield* plugin.list()
@@ -231,7 +233,7 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
         }
       }
       Telemetry.trackAuthSuccess(input.providerID)
-      ModelCache.clear(input.providerID)
+      yield* cache.clear(input.providerID)
       // kilocode_change end
     })
 
@@ -240,7 +242,11 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> =
 )
 
 export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(Layer.provide(Auth.defaultLayer), Layer.provide(Plugin.defaultLayer)),
+  layer.pipe(
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(Plugin.defaultLayer),
+    Layer.provide(ModelCache.defaultLayer), // kilocode_change
+  ),
 )
 
 export * as ProviderAuth from "./auth"

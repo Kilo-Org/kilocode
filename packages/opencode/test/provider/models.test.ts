@@ -5,6 +5,9 @@ import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { ModelsDev } from "../../src/provider/models"
+import { ModelCache } from "../../src/provider/model-cache" // kilocode_change
+import { Config } from "../../src/config/config" // kilocode_change
+import { Auth } from "../../src/auth" // kilocode_change
 import { it } from "../lib/effect"
 import { rm, writeFile, utimes, mkdir } from "fs/promises"
 import path from "path"
@@ -89,6 +92,9 @@ const buildLayer = (state: Ref.Ref<MockState>) =>
   Layer.fresh(ModelsDev.layer).pipe(
     Layer.provide(Layer.succeed(HttpClient.HttpClient, makeMockClient(state))),
     Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Config.defaultLayer), // kilocode_change
+    Layer.provide(Auth.defaultLayer), // kilocode_change
+    Layer.provide(ModelCache.defaultLayer), // kilocode_change
   )
 
 const writeCache = (data: object, mtimeMs?: number) =>
@@ -119,9 +125,8 @@ const initialState: MockState = {
 }
 
 // kilocode_change - skip: upstream tests assert raw-fixture passthrough but Kilo's
-// ModelsDev.get() filters/injects providers based on Config.get() (kilo-allowed gating,
-// apertis options, kilo provider injection). The test setup doesn't provide an Instance
-// context, so Config.get() throws "No context found for instance".
+// ModelsDev.get() filters/injects providers based on effect-native config access (kilo-allowed
+// gating, apertis options, and Kilo provider injection).
 describe.skip("ModelsDev Service", () => {
   it.live("get() returns providers from disk when cache file exists", () =>
     Effect.gen(function* () {

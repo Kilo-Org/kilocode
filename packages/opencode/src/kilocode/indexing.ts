@@ -13,6 +13,7 @@ import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { Instance } from "@/project/instance"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
+import { AppRuntime } from "@/effect/app-runtime"
 import { Auth } from "@/auth"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
@@ -63,7 +64,7 @@ function pending(): z.infer<typeof IndexingStatus> {
   }
 }
 
-async function kiloAuth(cfg: Awaited<ReturnType<typeof Config.get>>): Promise<KiloIndexingAuth> {
+async function kiloAuth(cfg: Config.Info): Promise<KiloIndexingAuth> {
   const auth = await Auth.get("kilo")
   return resolveKiloIndexingAuth({ config: cfg, auth })
 }
@@ -219,7 +220,7 @@ export namespace KiloIndexing {
 
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
-    const cfg = await Config.get()
+    const cfg = await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
     if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
       return track(hit, await inert(() => noWorkspace()))
     }
@@ -244,12 +245,10 @@ export namespace KiloIndexing {
     const root = path.join(Global.Path.state, "indexing")
     const manager = new CodeIndexManager(dir, root)
     const auth = await kiloAuth(cfg)
-    const globalConfig = await Config.getGlobal()
-    const merged = indexingWithKiloDefault(
-      { ...cfg, indexing: { ...globalConfig.indexing, ...cfg.indexing } },
-      auth,
-    ) as Config.Indexing | undefined
-    const cfgInput = await model(enrichKilo(input(merged, globalConfig.indexing), auth), auth)
+    const globalConfig = await AppRuntime.runPromise(Config.Service.use((svc) => svc.getGlobal()))
+    const global = globalConfig.indexing
+    const merged = indexingWithKiloDefault({ ...global, ...cfg.indexing }, auth)
+    const cfgInput = await model(enrichKilo(input(merged, global), auth), auth)
     const box = { status: pending() as Status | undefined }
     const current = () => box.status ?? normalizeIndexingStatus(manager)
     let disposed = false

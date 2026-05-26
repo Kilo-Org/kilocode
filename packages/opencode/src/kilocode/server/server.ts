@@ -3,6 +3,7 @@
 // Imported by ../../server/server.ts with minimal kilocode_change markers.
 
 import { ModelCache } from "../../provider/model-cache"
+import { AppRuntime } from "../../effect/app-runtime"
 import { InstanceRuntime } from "../../project/instance-runtime"
 
 /** Extra paths to skip request logging for */
@@ -20,7 +21,7 @@ export function corsOrigin(input: string): string | undefined {
 
 /** Invalidate model cache and provider state after auth change */
 export async function authChanged(providerID: string) {
-  ModelCache.clear(providerID)
+  await AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(providerID)))
   await InstanceRuntime.disposeAllInstances()
 }
 

@@ -37,6 +37,7 @@ export const ProviderRoutes = lazy(() =>
         jsonRequest("ProviderRoutes.list", c, function* () {
           const svc = yield* Provider.Service
           const cfg = yield* Config.Service
+          const cache = yield* ModelCache.Service // kilocode_change
           const config = yield* cfg.get()
           const all = yield* ModelsDev.Service.use((s) => s.get())
           const disabled = new Set(config.disabled_providers ?? [])
@@ -53,7 +54,7 @@ export const ProviderRoutes = lazy(() =>
             connected,
           )
           // kilocode_change start
-          const failed = ModelCache.failedProviders()
+          const failed = yield* cache.failedProviders()
           // Keep connected or failed providers even when they have 0 models so /connect can re-auth them.
           // Note: connected only contains providers whose model list is non-empty after Provider.Service.list(),
           // so failed must be checked explicitly for providers whose fetch returned an error.

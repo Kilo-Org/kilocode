@@ -19,6 +19,7 @@ import { createKiloRoutes } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"
 import { errors } from "../../server/error"
 import { ModelCache } from "../../provider/model-cache"
+import { AppRuntime } from "../../effect/app-runtime"
 import { Database } from "../../storage/db"
 import { Instance } from "../../project/instance"
 import { InstanceRuntime } from "../../project/instance-runtime"
@@ -59,7 +60,9 @@ export function register(app: Hono): Hono {
         Bus,
         SessionCreatedEvent: Session.Event.Created,
         Identifier,
-        ModelCache,
+        ModelCache: {
+          clear: (providerID: string) => AppRuntime.runSync(ModelCache.Service.use((cache) => cache.clear(providerID))),
+        },
       }),
     )
 }

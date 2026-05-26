@@ -38,6 +38,11 @@ import { tmpdir } from "../fixture/fixture"
 import { WithInstance } from "../../src/project/with-instance"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
+import { AppRuntime } from "../../src/effect/app-runtime"
+
+const clear = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(id)))
+const fetch = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.fetch(id)))
+const get = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.get(id)))
 
 test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", async () => {
   await using tmp = await tmpdir({
@@ -64,10 +69,10 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
     fn: async () => {
       // Reset captured and cache
       captured = undefined
-      ModelCache.clear("kilo")
+      await clear("kilo")
 
       // Trigger model fetch through the cache
-      await ModelCache.fetch("kilo")
+      await fetch("kilo")
 
       // The fetchKiloModels call should have received the organization ID
       expect(captured).toBeDefined()
@@ -100,9 +105,9 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
     directory: tmp.path,
     fn: async () => {
       captured = undefined
-      ModelCache.clear("kilo")
+      await clear("kilo")
 
-      await ModelCache.fetch("kilo")
+      await fetch("kilo")
 
       expect(captured).toBeDefined()
       expect(captured.kilocodeToken).toBe("test-personal-token")
@@ -135,25 +140,25 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
     fn: async () => {
       // Populate cache
       captured = undefined
-      ModelCache.clear("kilo")
-      await ModelCache.fetch("kilo")
+      await clear("kilo")
+      await fetch("kilo")
       expect(captured).toBeDefined()
 
       // Verify cache is populated — second fetch should NOT call fetchKiloModels
       captured = undefined
-      await ModelCache.fetch("kilo")
+      await fetch("kilo")
       expect(captured).toBeUndefined()
-      expect(ModelCache.get("kilo")).toBeDefined()
+      expect(await get("kilo")).toBeDefined()
 
       // Clear the cache
-      ModelCache.clear("kilo")
+      await clear("kilo")
 
       // get() should return undefined after clear
-      expect(ModelCache.get("kilo")).toBeUndefined()
+      expect(await get("kilo")).toBeUndefined()
 
       // Next fetch should call fetchKiloModels again
       captured = undefined
-      await ModelCache.fetch("kilo")
+      await fetch("kilo")
       expect(captured).toBeDefined()
     },
   })

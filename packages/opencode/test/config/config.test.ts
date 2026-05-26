@@ -78,6 +78,8 @@ const clear = async (wait = false) => {
 }
 const listDirs = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.directories()).pipe(Effect.scoped, Effect.provide(layer)))
+const warnings = () =>
+  Effect.runPromise(Config.Service.use((svc) => svc.warnings()).pipe(Effect.scoped, Effect.provide(layer)))
 const ready = () =>
   Effect.runPromise(Config.Service.use((svc) => svc.waitForDependencies()).pipe(Effect.scoped, Effect.provide(layer)))
 
@@ -409,7 +411,7 @@ test("prefers .kilo directory config over legacy .kilocode", async () => {
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const config = await Config.get()
+      const config = await load()
       expect(config.model).toBe("new/model")
     },
   })
@@ -599,8 +601,8 @@ test("validates config schema and reports warning on invalid fields", async () =
     fn: async () => {
       // kilocode_change - invalid schema surfaces as warnings, not a throw
       await load()
-      const warnings = await Config.warnings()
-      expect(warnings.length).toBeGreaterThan(0)
+      const issues = await warnings()
+      expect(issues.length).toBeGreaterThan(0)
     },
   })
 })
@@ -616,8 +618,8 @@ test("reports warning for invalid JSON", async () => {
     fn: async () => {
       // kilocode_change - invalid JSON surfaces as a warning, not a throw
       await load()
-      const warnings = await Config.warnings()
-      expect(warnings.length).toBeGreaterThan(0)
+      const issues = await warnings()
+      expect(issues.length).toBeGreaterThan(0)
     },
   })
 })
@@ -988,7 +990,7 @@ Hello from new command`,
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const config = await Config.get()
+      const config = await load()
 
       expect(config.command?.["hello"]).toEqual({
         description: "New command",

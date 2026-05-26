@@ -56,6 +56,7 @@ if (!process.env[ENV_VERSION]) {
   process.env[ENV_VERSION] = InstallationVersion
 }
 import { Config } from "./config/config"
+import { AppRuntime } from "./effect/app-runtime"
 import { Auth } from "./auth"
 // kilocode_change end
 import { DbCommand } from "./cli/cmd/db"
@@ -147,7 +148,7 @@ let cli = yargs(args) // kilocode_change
     })
 
     // kilocode_change start - Initialize telemetry
-    const globalCfg = await Config.getGlobal()
+    const globalCfg = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
     await Telemetry.init({
       dataPath: Global.Path.data,
       version: InstallationVersion,

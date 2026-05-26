@@ -41,7 +41,10 @@ import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
+import { AppRuntime } from "../../src/effect/app-runtime"
 import { Auth } from "../../src/auth"
+
+const clear = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(id)))
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   const item = providers[ProviderID.kilo]
@@ -55,7 +58,7 @@ test("kilo loader keeps paid models without auth and when config apiKey is prese
   // and ModelCache keeps fetched models in a TTL map.
   // ModelsDev.Data was removed in v1.14.33 — instance-store disposal handles cache invalidation.
   await Auth.remove("kilo")
-  ModelCache.clear("kilo")
+  await clear("kilo")
 
   await using base = await tmpdir({
     init: async (dir) => {
@@ -102,7 +105,7 @@ test("kilo loader keeps paid models without auth and when config apiKey is prese
 
 test("kilo loader keeps paid models without auth and when auth exists", async () => {
   await Auth.remove("kilo")
-  ModelCache.clear("kilo")
+  await clear("kilo")
 
   await using base = await tmpdir({
     init: async (dir) => {
