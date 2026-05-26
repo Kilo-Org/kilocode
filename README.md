@@ -112,7 +112,7 @@ Our community is built on respect, inclusivity, and collaboration. Please review
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT license.
 You’re free to use, modify, and distribute this code, including for commercial purposes as long as you include proper attribution and license notices. See [License](/LICENSE).
 
 ## FAQ
