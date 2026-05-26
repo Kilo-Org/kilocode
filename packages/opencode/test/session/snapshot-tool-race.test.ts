@@ -17,6 +17,7 @@ import { FetchHttpClient } from "effect/unstable/http"
 import fs from "fs/promises"
 import path from "path"
 import { Session } from "@/session/session"
+import { Project } from "@/project/project" // kilocode_change
 import { LLM } from "../../src/session/llm"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
@@ -130,6 +131,7 @@ function makeHttp() {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
+    Layer.provide(Project.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),

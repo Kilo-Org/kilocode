@@ -4,6 +4,8 @@ import { lazy } from "../../util/lazy"
 import { errors } from "../../server/error"
 import { SessionImportService } from "./service"
 import { SessionImportType } from "./types"
+import { Project } from "../../project/project"
+import { runRequest } from "../../server/routes/instance/trace"
 
 export const SessionImportRoutes = lazy(() =>
   new Hono()
@@ -26,7 +28,18 @@ export const SessionImportRoutes = lazy(() =>
         },
       }),
       validator("json", SessionImportType.Project),
-      async (c) => c.json(await SessionImportService.project(c.req.valid("json"))),
+      async (c) => {
+        const input = c.req.valid("json")
+        // Do not resolve an empty legacy worktree, because that would fall back to the current
+        // process directory and silently attach the migrated session to the wrong project.
+        if (!input.worktree.trim()) throw new Error("Legacy project import requires a non-empty worktree")
+        const result = await runRequest(
+          "SessionImportRoutes.project",
+          c,
+          Project.Service.use((svc) => svc.fromDirectory(input.worktree)),
+        )
+        return c.json({ ok: true, id: result.project.id })
+      },
     )
     .post(
       "/session",

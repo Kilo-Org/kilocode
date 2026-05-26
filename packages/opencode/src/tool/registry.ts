@@ -51,6 +51,7 @@ import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
+import { Project } from "@/project/project" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -93,6 +94,7 @@ export const layer: Layer.Layer<
   | Ripgrep.Service
   | Format.Service
   | Truncate.Service
+  | Project.Service // kilocode_change
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -372,6 +374,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
+    Layer.provide(Project.defaultLayer), // kilocode_change
   ),
 )
 // kilocode_change start

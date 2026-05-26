@@ -42,6 +42,7 @@ import { Todo } from "../../src/session/todo"
 import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "../../src/tool/registry"
+import { Project } from "../../src/project/project"
 import { Truncate } from "../../src/tool/truncate"
 import * as Log from "@opencode-ai/core/util/log"
 import { provideTmpdirServer } from "../fixture/fixture"
@@ -146,6 +147,7 @@ function makeHttp() {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
+    Layer.provide(Project.defaultLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
