@@ -14,19 +14,19 @@ export function useEvent() {
 
       // Special hack for truly global events
       if (event.directory === "global") {
-        handler(event.payload as Event)
+        handler(event.payload as Event) // kilocode_change
       }
 
       if (project.workspace.current()) {
         if (event.workspace === project.workspace.current()) {
-          handler(event.payload as Event)
+          handler(event.payload as Event) // kilocode_change
         }
 
         return
       }
 
       if (event.directory === project.instance.directory()) {
-        handler(event.payload as Event)
+        handler(event.payload as Event) // kilocode_change
       }
     })
   }

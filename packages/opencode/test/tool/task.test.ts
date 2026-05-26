@@ -310,7 +310,9 @@ describe("tool.task", () => {
             ready.resolve(input)
             return cancelled.promise
           }).pipe(Effect.as(reply(input, "cancelled"))),
+        // kilocode_change start
         background: () => Effect.void,
+        // kilocode_change end
       }
 
       const fiber = yield* def
@@ -443,6 +445,7 @@ describe("tool.task", () => {
           read: false,
         })
       }),
+    // kilocode_change start
     {
       config: {
         agent: {
