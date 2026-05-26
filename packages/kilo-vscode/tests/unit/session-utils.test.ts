@@ -10,6 +10,7 @@ import {
   buildCostBreakdown,
   collapseCostBreakdown,
   childID,
+  recentSessions,
 } from "../../webview-ui/src/context/session-utils"
 import type { Part } from "../../webview-ui/src/types/messages"
 
@@ -82,6 +83,36 @@ describe("computeStatus", () => {
   it("maps synthetic snapshot progress to snapshot status", () => {
     const part: Part = { type: "text", id: "p1", text: "⠋ Initializing snapshot…", synthetic: true }
     expect(computeStatus(part, t)).toBe("Initializing snapshot...")
+  })
+})
+
+describe("recentSessions", () => {
+  const at = (day: number) => `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`
+  const info = (id: string, day: number, parentID?: string | null) => ({
+    id,
+    updatedAt: at(day),
+    ...(parentID === undefined ? {} : { parentID }),
+  })
+
+  it("keeps the newest root sessions after removing sub-agents", () => {
+    const result = recentSessions([
+      info("old-root", 1),
+      info("child", 6, "old-root"),
+      info("new-root", 5),
+      info("blank-parent", 4, ""),
+      info("mid-root", 3, null),
+      info("fourth-root", 2),
+    ])
+
+    expect(result.map((session) => session.id)).toEqual(["new-root", "mid-root", "fourth-root"])
+  })
+
+  it("does not mutate the session list while sorting recents", () => {
+    const sessions = [info("old", 1), info("new", 3), info("mid", 2)]
+
+    recentSessions(sessions)
+
+    expect(sessions.map((session) => session.id)).toEqual(["old", "new", "mid"])
   })
 })
 

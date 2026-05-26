@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "搜尋分頁...",
   "agentManager.tabsMenu.empty": "沒有相符的分頁",
   "agentManager.tabsMenu.status.waiting": "等待",
-  "agentManager.tabsMenu.status.working": "工作中",
   "agentManager.tabsMenu.status.retry": "重試",
 
   "agentManager.terminal.new": "新增終端分頁",

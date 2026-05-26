@@ -246,6 +246,7 @@ export const layer: Layer.Layer<
             status: "error",
             input: match.part.state.input,
             error: errorMessage(error),
+            metadata: match.part.state.metadata, // kilocode_change - preserve running tool metadata on failure
             time: { start: match.part.state.time.start, end: Date.now() },
           },
         })

@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "ค้นหาแท็บ...",
   "agentManager.tabsMenu.empty": "ไม่มีแท็บที่ตรงกัน",
   "agentManager.tabsMenu.status.waiting": "รอ",
-  "agentManager.tabsMenu.status.working": "ทำงาน",
   "agentManager.tabsMenu.status.retry": "ลองใหม่",
 
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",

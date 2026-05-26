@@ -9,6 +9,7 @@ import { Config } from "@/config/config"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
+import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 
@@ -141,14 +142,18 @@ export const TaskTool = Tool.define(
       const info = msg.info
       // kilocode_change end
 
-      // kilocode_change start — prefer user's CLI-saved pick for this subagent
-      const saved = yield* KiloTask.resolveModel(next.name)
-      const model = saved ??
-        next.model ?? {
+      // kilocode_change start — prefer valid subagent overrides, safely inheriting when overrides go stale
+      const selected = yield* KiloTask.resolveModel({
+        name: next.name,
+        agent: next,
+        config: cfg,
+        parent: {
           modelID: msg.info.modelID,
           providerID: msg.info.providerID,
-        }
-      const variant = saved?.variant ?? (saved ? undefined : next.variant)
+        },
+      })
+      const model = selected.model
+      const variant = selected.variant
       // kilocode_change end
 
       // kilocode_change start - include child task metadata for UI rendering
@@ -212,66 +217,12 @@ export const TaskTool = Tool.define(
               parts,
             }
 
-            const metadata = {
-              sessionId: nextSession.id,
-              model,
-              variant, // kilocode_change
-              background: isBackground, // kilocode_change
+            // kilocode_change start - expose terminal child assistant errors through the task tool boundary
+            if (result.info.role === "assistant" && result.info.error) {
+              return yield* Effect.fail(new Error(errorMessage(result.info.error)))
             }
             // kilocode_change end
 
-            // kilocode_change start - allow the parent agent to continue while the child session runs
-            if (isBackground) {
-              const parentModel = {
-                modelID: info.modelID,
-                providerID: info.providerID,
-              }
-              yield* ops.background({
-                description: params.description,
-                agent: next.name,
-                messageID: ctx.messageID,
-                cost: costBefore,
-                child,
-                parent: {
-                  sessionID: ctx.sessionID,
-                  agent: ctx.agent,
-                  model: parentModel,
-                  parts: [
-                    {
-                      type: "text",
-                      synthetic: true,
-                      text: [
-                        `A background subagent has started.`,
-                        "",
-                        `Description: ${params.description}`,
-                        `Agent: ${next.name}`,
-                        `task_id: ${nextSession.id}`,
-                        "",
-                        "You will be notified when it completes. Continue with the user's task without waiting unless this result is required immediately.",
-                      ].join("\n"),
-                    },
-                  ],
-                  noReply: true,
-                },
-              })
-
-              return {
-                title: params.description,
-                metadata,
-                output: [
-                  `task_id: ${nextSession.id} (background subagent running)`,
-                  "",
-                  "<task_status>",
-                  "Background subagent started. You and the user will be notified when it completes.",
-                  "</task_status>",
-                ].join("\n"),
-              }
-            }
-            // kilocode_change end
-
-            const result = yield* ops.prompt(child) // kilocode_change - uses shared child prompt object
-
-            // kilocode_change start - return resumable task wrapper output
             return {
               title: params.description,
               metadata, // kilocode_change - includes background flag for UI rendering

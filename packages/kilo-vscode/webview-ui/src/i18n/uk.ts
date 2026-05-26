@@ -1439,6 +1439,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Мала модель",
   "settings.providers.smallModel.description":
     "Легка модель для генерації заголовків, повідомлень комітів, покращення запитів та інших швидких завдань",
+  "settings.providers.subagentModel.title": "Модель субагента",
+  "settings.providers.subagentModel.description":
+    "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",

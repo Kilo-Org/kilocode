@@ -17,6 +17,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { recentSessions } from "../../context/session-utils"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
@@ -93,11 +94,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
-  const recent = createMemo(() =>
-    [...session.sessions()]
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, 3),
-  )
+  const recent = createMemo(() => recentSessions(session.sessions()))
 
   const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
   const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))

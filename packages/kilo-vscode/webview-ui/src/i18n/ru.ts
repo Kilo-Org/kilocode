@@ -857,6 +857,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Подключён из ваших переменных окружения",
   "settings.providers.action.signInChatGPT": "Войти через ChatGPT",
   "settings.providers.custom.description": "Добавьте OpenAI-совместимый провайдер по базовому URL.",
+  "settings.providers.subagentModel.title": "Модель субагента",
+  "settings.providers.subagentModel.description":
+    "Модель по умолчанию и уровень рассуждения для субагентов task-tool. Оставьте пустым, чтобы унаследовать модель вызывающего агента.",
   "settings.providers.modeModels": "Модель для режима",
   "settings.providers.custom.note": "Добавьте OpenAI-совместимого провайдера по базовому URL.",
   "settings.providers.modeModels.description":
