@@ -130,10 +130,11 @@ export namespace RemoteSender {
     // sees state that was asked before it connected — analogous to the Cloud
     // Agent's `connected` event carrying pending question/permission fields.
     async function replay(sessionId: string) {
+      const { AppRuntime } = await import("@/effect/app-runtime")
       const [suggestions, questions, permissions] = await Promise.all([
         Suggestion.list(),
         Question.list(),
-        Permission.list(),
+        AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
       ])
       for (const suggestion of suggestions) {
         if (suggestion.sessionID !== sessionId) continue

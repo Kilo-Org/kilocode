@@ -8,6 +8,7 @@ import { Agent } from "../../../src/agent/agent"
 import { Config } from "../../../src/config/config"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
+import { AppRuntime } from "../../../src/effect/app-runtime"
 import { WithInstance } from "../../../src/project/with-instance"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Shell } from "../../../src/shell/shell"
@@ -65,6 +66,9 @@ const variants = (dir: string) => {
 const config = path.resolve(Global.Path.config)
 const configFile = path.join(config, "hello.txt")
 const configGlob = glob(path.join(config, "*"))
+const ask = (input: Permission.AskInput) => AppRuntime.runPromise(Permission.Service.use((svc) => svc.ask(input)))
+const reply = (input: Permission.ReplyInput) => AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply(input)))
+const requests = () => AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
 
 const capture = (requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">>, stop?: Error) => ({
   ...ctx,
@@ -91,9 +95,9 @@ const withShell = (item: { shell: string }, fn: () => Promise<void>) => async ()
 }
 
 async function reject() {
-  const requests = await Permission.list()
-  for (const req of requests) {
-    await Permission.reply({ requestID: req.id, reply: "reject" })
+  const items = await requests()
+  for (const req of items) {
+    await reply({ requestID: req.id, reply: "reject" })
   }
 }
 
@@ -106,18 +110,18 @@ async function immediate(pending: Promise<void>) {
       ),
     ])
   } finally {
-    const requests = await Permission.list()
-    if (requests.length > 0) {
+    const items = await requests()
+    if (items.length > 0) {
       await reject()
       await pending.catch(() => undefined)
     }
   }
-  expect(await Permission.list()).toHaveLength(0)
+  expect(await requests()).toHaveLength(0)
 }
 
 async function wait(count: number) {
   for (const _ of Array.from({ length: 500 })) {
-    const list = await Permission.list()
+    const list = await requests()
     if (list.length === count) return list
     await Bun.sleep(10)
   }
@@ -135,7 +139,7 @@ describe("external_directory allow config protection", () => {
       directory: tmp.path,
       fn: async () => {
         await immediate(
-          Permission.ask({
+          ask({
             id: PermissionID.make("permission_file_external_read"),
             sessionID: SessionID.make("session_file_external_read"),
             permission: "external_directory",
@@ -155,7 +159,7 @@ describe("external_directory allow config protection", () => {
       directory: tmp.path,
       fn: async () => {
         await immediate(
-          Permission.ask({
+          ask({
             id: PermissionID.make("permission_bash_external_read"),
             sessionID: SessionID.make("session_bash_external_read"),
             permission: "external_directory",
@@ -186,7 +190,7 @@ describe("external_directory allow config protection", () => {
     await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
-        const pending = Permission.ask({
+        const pending = ask({
           id: PermissionID.make("permission_bash_external_write"),
           sessionID: SessionID.make("session_bash_external_write"),
           permission: "external_directory",
@@ -203,7 +207,7 @@ describe("external_directory allow config protection", () => {
           metadata: { disableAlways: true },
         })
 
-        await Permission.reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })
+        await reply({ requestID: PermissionID.make("permission_bash_external_write"), reply: "reject" })
         await expect(pending).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })

@@ -166,7 +166,10 @@ export namespace KiloSessions {
   const STATUS_TIMEOUT_MS = 3_000
 
   async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
-    const permissions = (await Permission.list()).filter((p) => p.sessionID === sessionID)
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const permissions = (await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))).filter(
+      (p) => p.sessionID === sessionID,
+    )
     if (permissions.length > 0) return "permission"
 
     const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)

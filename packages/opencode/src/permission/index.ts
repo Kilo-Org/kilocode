@@ -17,7 +17,6 @@ import os from "os"
 import z from "zod" // kilocode_change
 import { evaluate as evalRule } from "./evaluate"
 import { PermissionID } from "./schema"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import { Identifier } from "@/id/id" // kilocode_change
 import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
@@ -550,18 +549,6 @@ export function toConfig(rules: Ruleset): ConfigPermission.Info {
   }
   return result
 }
-// kilocode_change end
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const list = () => runPromise((svc) => svc.list())
-export const ask = (input: AskInput) => runPromise((svc) => svc.ask(input))
-const replyPromise = (input: ReplyInput) => runPromise((svc) => svc.reply(input))
-export { replyPromise as reply }
-export const saveAlwaysRules = (input: z.infer<typeof SaveAlwaysRulesInput>) =>
-  runPromise((svc) => svc.saveAlwaysRules(input))
-export const allowEverything = (input: z.infer<typeof AllowEverythingInput>) =>
-  runPromise((svc) => svc.allowEverything(input))
 // kilocode_change end
 
 export * as Permission from "."

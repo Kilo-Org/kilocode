@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { AppRuntime } from "../../../src/effect/app-runtime"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { WithInstance } from "../../../src/project/with-instance"
@@ -17,6 +18,10 @@ async function app(experimental = false) {
   Flag.KILO_EXPERIMENTAL_HTTPAPI = experimental
   return experimental ? Server.Default().app : Server.Legacy().app
 }
+
+const ask = (input: Permission.AskInput) => AppRuntime.runPromise(Permission.Service.use((svc) => svc.ask(input)))
+const reply = (input: Permission.ReplyInput) => AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply(input)))
+const requests = () => AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
 
 describe("POST /permission/:requestID/reply", () => {
   test("returns 404 when requestID is not pending", async () => {
@@ -50,7 +55,7 @@ describe("POST /permission/:requestID/reply", () => {
         const server = await app()
         const session = await Session.create({})
 
-        const asking = Permission.ask({
+        const asking = ask({
           id: PermissionID.make("permission_accepted_http"),
           sessionID: session.id,
           permission: "bash",
@@ -61,7 +66,7 @@ describe("POST /permission/:requestID/reply", () => {
         })
 
         for (let i = 0; i < 100; i++) {
-          const list = await Permission.list()
+          const list = await requests()
           if (list.length > 0) break
           await new Promise((resolve) => setTimeout(resolve, 10))
         }
@@ -88,7 +93,7 @@ describe("POST /permission/:requestID/reply", () => {
         const server = await app()
         const session = await Session.create({})
 
-        const asking = Permission.ask({
+        const asking = ask({
           id: PermissionID.make("permission_double_http"),
           sessionID: session.id,
           permission: "bash",
@@ -99,7 +104,7 @@ describe("POST /permission/:requestID/reply", () => {
         })
 
         for (let i = 0; i < 100; i++) {
-          const list = await Permission.list()
+          const list = await requests()
           if (list.length > 0) break
           await new Promise((resolve) => setTimeout(resolve, 10))
         }
@@ -173,7 +178,7 @@ describe("POST /permission/:requestID/always-rules", () => {
         const server = await app()
         const session = await Session.create({})
 
-        const asking = Permission.ask({
+        const asking = ask({
           id: PermissionID.make("permission_always_http"),
           sessionID: session.id,
           permission: "bash",
@@ -184,7 +189,7 @@ describe("POST /permission/:requestID/always-rules", () => {
         })
 
         for (let i = 0; i < 100; i++) {
-          const list = await Permission.list()
+          const list = await requests()
           if (list.length > 0) break
           await new Promise((resolve) => setTimeout(resolve, 10))
         }
@@ -197,7 +202,7 @@ describe("POST /permission/:requestID/always-rules", () => {
         expect(save.status).toBe(200)
         expect(await save.json()).toBe(true)
 
-        await Permission.reply({
+        await reply({
           requestID: PermissionID.make("permission_always_http"),
           reply: "once",
         })

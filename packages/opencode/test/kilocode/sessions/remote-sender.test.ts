@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { afterEach, mock, spyOn } from "bun:test"
 import { Effect } from "effect"
+import { AppRuntime } from "../../../src/effect/app-runtime"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
@@ -45,6 +46,10 @@ const nolog = {
   info: () => {},
   error: () => {},
   warn: () => {},
+}
+
+function list(items: Permission.Request[]) {
+  return spyOn(AppRuntime, "runPromise").mockResolvedValue(items as never)
 }
 
 // kilocode_change start
@@ -865,7 +870,7 @@ describe("RemoteSender", () => {
       { id: "question_1", sessionID: "ses_target", questions: [{ type: "text", text: "Continue?" }] } as any,
       { id: "question_2", sessionID: "ses_other", questions: [{ type: "text", text: "Unrelated?" }] } as any,
     ])
-    spyOn(Permission, "list").mockResolvedValue([])
+    list([])
 
     const sender = RemoteSender.create({
       conn,
@@ -894,7 +899,7 @@ describe("RemoteSender", () => {
 
     spyOn(Suggestion, "list").mockResolvedValue([])
     spyOn(Question, "list").mockResolvedValue([])
-    spyOn(Permission, "list").mockResolvedValue([
+    list([
       {
         id: "permission_1",
         sessionID: "ses_target",
@@ -949,7 +954,7 @@ describe("RemoteSender", () => {
       { id: "sug_1", sessionID: "ses_other", text: "Review?", actions: [] } as any,
     ])
     spyOn(Question, "list").mockResolvedValue([{ id: "question_1", sessionID: "ses_other", questions: [] } as any])
-    spyOn(Permission, "list").mockResolvedValue([
+    list([
       {
         id: "permission_1",
         sessionID: "ses_other",
@@ -994,7 +999,7 @@ describe("RemoteSender", () => {
       } as any,
     ])
     spyOn(Question, "list").mockResolvedValue([])
-    spyOn(Permission, "list").mockResolvedValue([])
+    list([])
 
     const sender = RemoteSender.create({
       conn,

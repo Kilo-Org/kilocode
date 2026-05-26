@@ -1,11 +1,17 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
+import { AppRuntime } from "../../../src/effect/app-runtime"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { WithInstance } from "../../../src/project/with-instance"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
 import { tmpdir } from "../../fixture/fixture"
+
+const ask = (input: Permission.AskInput) => AppRuntime.runPromise(Permission.Service.use((svc) => svc.ask(input)))
+const reply = (input: Permission.ReplyInput) => AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply(input)))
+const allow = (input: Parameters<Permission.Interface["allowEverything"]>[0]) =>
+  AppRuntime.runPromise(Permission.Service.use((svc) => svc.allowEverything(input)))
 
 describe("permission.allowEverything endpoint", () => {
   test("disables global allow-all and removes wildcard from config", async () => {
@@ -35,7 +41,7 @@ describe("permission.allowEverything endpoint", () => {
 
         // After disabling, permission requests should not be auto-approved
         const session = await Session.create({})
-        const pending = Permission.ask({
+        const pending = ask({
           id: PermissionID.make("permission_global_disable"),
           sessionID: session.id,
           permission: "bash",
@@ -45,7 +51,7 @@ describe("permission.allowEverything endpoint", () => {
           ruleset: [],
         })
 
-        await Permission.reply({
+        await reply({
           requestID: PermissionID.make("permission_global_disable"),
           reply: "reject",
         })
@@ -66,7 +72,7 @@ describe("permission.allowEverything endpoint", () => {
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
         })
 
-        await Permission.allowEverything({
+        await allow({
           enable: true,
           sessionID: session.id,
         })
@@ -86,7 +92,7 @@ describe("permission.allowEverything endpoint", () => {
         const next = await Session.get(session.id)
         expect(next.permission ?? []).toEqual([])
 
-        const pending = Permission.ask({
+        const pending = ask({
           id: PermissionID.make("permission_session_disable"),
           sessionID: session.id,
           permission: "bash",
@@ -96,7 +102,7 @@ describe("permission.allowEverything endpoint", () => {
           ruleset: [],
         })
 
-        await Permission.reply({
+        await reply({
           requestID: PermissionID.make("permission_session_disable"),
           reply: "reject",
         })
@@ -104,7 +110,7 @@ describe("permission.allowEverything endpoint", () => {
         await expect(pending).rejects.toBeInstanceOf(Permission.RejectedError)
 
         const other = await Session.create({})
-        const blocked = Permission.ask({
+        const blocked = ask({
           id: PermissionID.make("permission_other_session"),
           sessionID: other.id,
           permission: "bash",
@@ -114,7 +120,7 @@ describe("permission.allowEverything endpoint", () => {
           ruleset: [],
         })
 
-        await Permission.reply({
+        await reply({
           requestID: PermissionID.make("permission_other_session"),
           reply: "reject",
         })
