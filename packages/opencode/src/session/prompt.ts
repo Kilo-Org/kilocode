@@ -1440,6 +1440,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+        const current = yield* status.get(input.sessionID)
+        if (input.noReply === true && current.type === "busy") yield* waitIdle(input.sessionID) // kilocode_change
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 

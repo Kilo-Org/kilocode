@@ -1479,6 +1479,59 @@ it.live(
 )
 
 it.live(
+  "noReply prompt waits for active parent reply before storing",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        // kilocode_change
+        const gate = defer<void>()
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({ title: "Pinned" })
+        yield* llm.pushMatch(
+          (hit) => JSON.stringify(hit.body).includes("hello"),
+          reply().wait(gate.promise).text("active reply").stop(),
+        )
+        const fiber = yield* prompt
+          .prompt({
+            sessionID: chat.id,
+            agent: "build",
+            model: ref,
+            parts: [{ type: "text", text: "hello" }],
+          })
+          .pipe(Effect.forkChild)
+        yield* waitFor(
+          "active parent request",
+          llm.inputs.pipe(
+            Effect.map((inputs) =>
+              inputs.some((item) => JSON.stringify(item.messages).includes("hello")) ? true : undefined,
+            ),
+          ),
+        )
+        const done = yield* prompt
+          .prompt({
+            sessionID: chat.id,
+            agent: "build",
+            model: ref,
+            noReply: true,
+            parts: [{ type: "text", synthetic: true, text: "A background subagent has completed." }],
+          })
+          .pipe(Effect.forkChild)
+        yield* Effect.sleep("50 millis")
+        const early = yield* MessageV2.filterCompactedEffect(chat.id)
+        expect(JSON.stringify(early)).not.toContain("A background subagent has completed.")
+        gate.resolve()
+        expect(Exit.isSuccess(yield* Fiber.await(fiber))).toBe(true)
+        expect(Exit.isSuccess(yield* Fiber.await(done))).toBe(true)
+        const later = yield* MessageV2.filterCompactedEffect(chat.id)
+        expect(JSON.stringify(later)).toContain("A background subagent has completed.")
+      }),
+      { git: true, config: providerCfg },
+    ),
+  10_000,
+)
+
+it.live(
   "background completion waits until the active parent reply finishes",
   () =>
     provideTmpdirServer(
