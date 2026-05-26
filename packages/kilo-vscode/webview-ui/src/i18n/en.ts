@@ -1470,7 +1470,7 @@ export const dict = {
     "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
-  "settings.providers.disabled.enable": "Enable",
+  "settings.providers.disabled.enable": "Unblock",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",
