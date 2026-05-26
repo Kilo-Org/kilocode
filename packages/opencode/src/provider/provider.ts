@@ -879,7 +879,9 @@ const ProviderModalities = Schema.Struct({
 const ProviderInterleaved = Schema.Union([
   Schema.Boolean,
   Schema.Struct({
-    field: Schema.Literals(["reasoning_content", "reasoning_details"]),
+    // kilocode_change start
+    field: Schema.Literals(["reasoning_content", "reasoning_details", "reasoning"]),
+    // kilocode_change end
   }),
 ])
 
@@ -1059,7 +1061,17 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
     release_date: model.release_date ?? "",
     variants: {},
   }
-  Object.assign(base, patchKiloModel(provider.id, model)) // kilocode_change
+  // kilocode_change start
+  const patch = patchKiloModel(provider.id, model)
+  if (patch.capabilities) {
+    base.capabilities = {
+      ...base.capabilities,
+      ...patch.capabilities,
+    }
+    delete patch.capabilities
+  }
+  Object.assign(base, patch)
+  // kilocode_change end
 
   return {
     ...base,

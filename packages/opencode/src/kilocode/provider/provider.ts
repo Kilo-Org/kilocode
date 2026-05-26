@@ -43,7 +43,7 @@ export const KILO_MODEL_SCHEMA_EXTENSIONS = {
 // ---------------------------------------------------------------------------
 
 export function patchModelsDevModel(providerID: string, source: any) {
-  return {
+  const result: any = {
     variants: providerID === "kilo" ? (source.variants ?? {}) : {},
     recommendedIndex: source.recommendedIndex,
     prompt: source.prompt,
@@ -51,6 +51,14 @@ export function patchModelsDevModel(providerID: string, source: any) {
     ai_sdk_provider: source.ai_sdk_provider,
     options: source.options ?? {},
   }
+
+  if (providerID === "cerebras" && source.id?.toLowerCase().includes("zai-glm-4.7")) {
+    result.capabilities = {
+      interleaved: { field: "reasoning" },
+    }
+  }
+
+  return result
 }
 
 // ---------------------------------------------------------------------------
