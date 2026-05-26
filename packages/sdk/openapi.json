@@ -16483,6 +16483,12 @@
           "small_model": {
             "type": "string"
           },
+          "subagent_model": {
+            "type": "string"
+          },
+          "subagent_variant": {
+            "type": "string"
+          },
           "default_agent": {
             "type": "string"
           },

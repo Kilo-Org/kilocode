@@ -1336,6 +1336,8 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   model?: string
   small_model?: string
+  subagent_model?: string
+  subagent_variant?: string
   default_agent?: string
   username?: string
   mode?: {

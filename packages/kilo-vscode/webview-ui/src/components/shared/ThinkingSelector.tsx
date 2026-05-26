@@ -25,6 +25,8 @@ export interface ThinkingSelectorBaseProps {
   onSelect: (value: string) => void
   /** Delay outside dismissal while the popover opens inside a dialog. */
   deferDismiss?: boolean
+  /** Popover placement — defaults to "top-start". */
+  placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
@@ -110,7 +112,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
     <Show when={props.variants.length > 0}>
       <PopupSelector
         expanded={false}
-        placement="top-start"
+        placement={props.placement ?? "top-start"}
         preferredWidth={180}
         minHeight={100}
         deferDismiss={props.deferDismiss}

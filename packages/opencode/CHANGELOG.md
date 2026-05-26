@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 7.3.10
+
+### Patch Changes
+
+- [#10302](https://github.com/Kilo-Org/kilocode/pull/10302) [`8ba138d`](https://github.com/Kilo-Org/kilocode/commit/8ba138def73897d7c19208a067f8a2b4be947fd6) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Export all messages from TUI instead of truncated store
+
 ## 7.3.9
 
 ### Minor Changes

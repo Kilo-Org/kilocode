@@ -1450,6 +1450,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Klein Model",
   "settings.providers.smallModel.description":
     "Lichtgewicht model voor het genereren van titels, commit-berichten, promptverbetering en andere snelle taken",
+  "settings.providers.subagentModel.title": "Subagentmodel",
+  "settings.providers.subagentModel.description":
+    "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",

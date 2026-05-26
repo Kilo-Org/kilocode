@@ -226,6 +226,13 @@ export const Info = Schema.Struct({
   small_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
   }),
+  subagent_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
+    description:
+      "Default model for task-tool subagents in the format of provider/model. If unset or unavailable, subagents inherit the calling agent model.",
+  }),
+  subagent_variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Default model variant for task-tool subagents when subagent_model is configured.",
+  }),
   // kilocode_change end
   // kilocode_change start - renamed from "build" to "code" + nullable for delete sentinel
   default_agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({

@@ -14,6 +14,21 @@ export function snapshotProgress(part: SnapshotPart | undefined): boolean {
   return (part.text ?? "").includes("Initializing snapshot")
 }
 
+type ParentSession = { parentID?: string | null }
+
+type RecentSession = ParentSession & { updatedAt: string }
+
+export function isRootSession(session: ParentSession): boolean {
+  return session.parentID === undefined || session.parentID === null
+}
+
+export function recentSessions<T extends RecentSession>(sessions: T[]): T[] {
+  return [...sessions]
+    .filter(isRootSession)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 3)
+}
+
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
