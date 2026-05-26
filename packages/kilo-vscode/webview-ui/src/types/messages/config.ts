@@ -43,7 +43,6 @@ export interface ExperimentalConfig {
   semantic_indexing?: boolean
   codebase_search?: boolean
   agent_manager_tool?: boolean
-  speech_to_text?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
@@ -118,6 +117,8 @@ export interface Config {
   permission?: PermissionConfig
   model?: string | null
   small_model?: string | null
+  subagent_model?: string | null
+  subagent_variant?: string | null
   default_agent?: string | null
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>

@@ -3,6 +3,7 @@ import {
   createContext,
   createEffect,
   createMemo,
+  onCleanup, // kilocode_change
   createSignal,
   For,
   Match,
@@ -25,6 +26,7 @@ import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, 
 import { Prompt, type PromptRef } from "@tui/component/prompt"
 // kilocode_change start
 import type { AssistantMessage, Part, Provider, ToolPart, UserMessage, TextPart, ReasoningPart } from "@kilocode/sdk/v2"
+import * as Log from "@opencode-ai/core/util/log"
 // kilocode_change end
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
@@ -43,7 +45,10 @@ import type { WebSearchTool } from "@/tool/websearch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
-import type { SemanticSearchTool } from "@/kilocode/tool/semantic-search" // kilocode_change
+// kilocode_change start
+import type { BackgroundProcessTool } from "@/kilocode/tool/background-process"
+import type { SemanticSearchTool } from "@/kilocode/tool/semantic-search"
+// kilocode_change end
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useEditorContext } from "@tui/context/editor"
@@ -269,6 +274,44 @@ export function Session() {
   const toast = useToast()
   const sdk = useSDK()
   const editor = useEditorContext()
+
+  // kilocode_change start - background processes are scoped to the visible session
+  function processGroup(sessionID: string) {
+    const info = sync.session.get(sessionID)
+    return info?.parentID ?? info?.id ?? sessionID
+  }
+
+  function processSessions(sessionID: string) {
+    const group = processGroup(sessionID)
+    const ids = new Set([sessionID, group])
+    for (const item of sync.data.session) {
+      if (item.id === group || item.parentID === group) ids.add(item.id)
+    }
+    return Array.from(ids)
+  }
+
+  function stopProcesses(sessionID: string) {
+    const workspace = project.workspace.current()
+    for (const id of processSessions(sessionID)) {
+      void sdk.client.backgroundProcess.stopSession({ sessionID: id, workspace }).catch((err) => {
+        Log.Default.warn("failed to stop session background processes", { sessionID: id, err })
+      })
+    }
+  }
+
+  let processSessionID = route.sessionID
+  createEffect(() => {
+    const next = route.sessionID
+    if (processSessionID === next) return
+    const prev = processSessionID
+    processSessionID = next
+    if (processGroup(prev) === processGroup(next)) return
+    stopProcesses(prev)
+  })
+  onCleanup(() => {
+    stopProcesses(processSessionID)
+  })
+  // kilocode_change end
 
   createEffect(() => {
     const sessionID = route.sessionID
@@ -974,10 +1017,16 @@ export function Session() {
         try {
           const sessionData = session()
           if (!sessionData) return
-          const sessionMessages = messages()
+          // kilocode_change start - fetch all messages from server instead of truncated sync store
+          const allMessages = await sdk.client.session.messages({ sessionID: sessionData.id }, { throwOnError: true })
+          const sessionMessages = allMessages.data.map((msg) => ({
+            info: msg.info,
+            parts: msg.parts,
+          }))
+          // kilocode_change end
           const transcript = formatTranscript(
             sessionData,
-            sessionMessages.map((msg) => ({ info: msg, parts: sync.data.part[msg.id] ?? [] })),
+            sessionMessages, // kilocode_change
             {
               thinking: showThinking(),
               toolDetails: showDetails(),
@@ -1005,7 +1054,6 @@ export function Session() {
         try {
           const sessionData = session()
           if (!sessionData) return
-          const sessionMessages = messages()
 
           const defaultFilename = `session-${sessionData.id.slice(0, 8)}.md`
 
@@ -1020,9 +1068,17 @@ export function Session() {
 
           if (options === null) return
 
+          // kilocode_change start - fetch all messages from server instead of truncated sync store
+          const allMessages = await sdk.client.session.messages({ sessionID: sessionData.id }, { throwOnError: true })
+          const sessionMessages = allMessages.data.map((msg) => ({
+            info: msg.info,
+            parts: msg.parts,
+          }))
+          // kilocode_change end
+
           const transcript = formatTranscript(
             sessionData,
-            sessionMessages.map((msg) => ({ info: msg, parts: sync.data.part[msg.id] ?? [] })),
+            sessionMessages, // kilocode_change
             {
               thinking: options.thinking,
               toolDetails: options.toolDetails,
@@ -1707,6 +1763,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
           <Grep {...toolprops} />
         </Match>
         {/* kilocode_change start */}
+        <Match when={props.part.tool === "background_process"}>
+          <BackgroundProcess {...toolprops} />
+        </Match>
         <Match when={props.part.tool === "semantic_search"}>
           <SemanticSearch {...toolprops} />
         </Match>
@@ -2122,6 +2181,51 @@ function WebSearch(props: ToolProps<typeof WebSearchTool>) {
 }
 
 // kilocode_change start
+function BackgroundProcess(props: ToolProps<typeof BackgroundProcessTool>) {
+  const sync = useSync()
+  const running = createMemo(() => props.part.state.status === "running")
+  const cmd = createMemo(() => (typeof props.input.command === "string" ? props.input.command : ""))
+  const action = createMemo(() => props.input.action ?? "start")
+  const desc = createMemo(() => props.input.description || cmd() || props.input.id || "background process")
+  const dir = createMemo(() => {
+    const raw = props.input.workdir
+    if (!raw || raw === ".") return undefined
+    const base = sync.path.directory
+    if (!base) return normalizePath(raw)
+    const abs = path.resolve(base, raw)
+    if (abs === base) return undefined
+    return normalizePath(abs)
+  })
+  const status = createMemo(() => {
+    if (typeof props.metadata.status === "string") return props.metadata.status
+    if (typeof props.metadata.count === "number") return `${props.metadata.count} running`
+    return undefined
+  })
+  const title = createMemo(() => {
+    if (action() === "list") return "List background processes"
+    if (action() === "logs") return `View background logs: ${desc()}`
+    if (action() === "status") return `Check background process: ${desc()}`
+    if (action() === "stop") return `Stop background process: ${desc()}`
+    if (action() === "restart") return `Restart background process: ${desc()}`
+    return `Start background process: ${desc()}`
+  })
+
+  return (
+    <InlineTool
+      icon="$"
+      pending="Preparing background process..."
+      complete={desc()}
+      spinner={running()}
+      part={props.part}
+    >
+      {title()}
+      <Show when={dir()}> in {dir()}</Show>
+      <Show when={cmd()}> · $ {cmd()}</Show>
+      <Show when={status()}> ({status()})</Show>
+    </InlineTool>
+  )
+}
+
 function SemanticSearch(props: ToolProps<typeof SemanticSearchTool>) {
   const meta = createMemo(() => props.metadata as { results?: { length: number }[] })
   const args = createMemo(() => props.input as { query?: string; path?: string })

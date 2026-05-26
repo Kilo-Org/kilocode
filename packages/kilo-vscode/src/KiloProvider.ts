@@ -66,6 +66,7 @@ import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/fo
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
 import { childID } from "./kilo-provider/task-session"
+import { VisibleTaskStreams } from "./kilo-provider/visible-task-streams"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession } from "./kilo-provider/abort"
 import {
@@ -135,6 +136,7 @@ import { configFeatures } from "./features"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
+import { stopSessionProcesses } from "./kilo-provider/background-process"
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 type ContextMessage = { contextDirectory?: unknown }
@@ -199,21 +201,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private promptRecovery: Promise<void> | null = null
   private trackedSessionIds: Set<string> = new Set()
   private syncedChildSessions: Set<string> = new Set()
-  /** Tracks the latest status for each session, used to warn before destructive config operations. */
-  private sessionStatusMap = new Map<string, SessionStatus["type"]>()
-  /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
-  private sessionDirectories = new Map<string, string>()
+  private sessionStatusMap = new Map<string, SessionStatus["type"]>() // Latest status used for destructive config warnings.
+  private sessionDirectories = new Map<string, string>() // Per-session directory overrides, such as Agent Manager worktrees.
   private permissionDirectories = new Map<string, string>()
-  /** Project ID for the current workspace, used to filter out sessions from other repositories. */
-  private projectID: string | undefined
-  /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
-  private loadMessagesAbort: AbortController | null = null
-  /** Per-session last focus-mode reconcile timestamp — throttles rapid tab switching. */
-  private lastReconciledAt = new Map<string, number>()
-  /** Set when refreshSessions() is called before the client is ready.
-   *  Cleared and retried once the connection transitions to "connected". */
-  private pendingSessionRefresh = false
+  private projectID: string | undefined // Current workspace project ID used to filter sessions.
+  private loadMessagesAbort: AbortController | null = null // Current load request cancellation.
+  private lastReconciledAt = new Map<string, number>() // Per-session focus-mode reconcile timestamp.
+  private pendingSessionRefresh = false // Refresh requested before the client is ready.
   private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
+  private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
   private readonly confirmations = new MessageConfirmation()
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
@@ -290,6 +286,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.opts.tabTitle?.(nativeTitle(session))
   }
 
+  private stopCurrentSessionProcesses(next?: string): void {
+    const sid = this.contextSessionID ?? this.currentSession?.id
+    if (!sid || sid === next) return
+    const session = this.currentSession?.id === sid ? this.currentSession : undefined
+    void stopSessionProcesses(this.client, sid, this.getSessionDirectory(sid, session))
+  }
+
   private sendRemoteStatus(): void {
     const s = this.remoteService?.getState()
     if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
@@ -298,6 +301,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.streams.focus(id)
     if (id) this.connectionService.registerFocused(this.instanceId, id)
     else this.connectionService.unregisterFocused(this.instanceId)
+  }
+
+  public setStreamVisibility(active: boolean): void {
+    this.visibleTaskStreams.setActive(active)
   }
 
   public setProjectDirectory(directory: string | null): void {
@@ -436,11 +443,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    // Store the webview references
     this.isWebviewReady = false
     this.webview = webviewView.webview
 
-    // Set up webview options
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
@@ -463,13 +468,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private setSidebarVisible(visible: boolean): void {
+    this.setStreamVisibility(visible)
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", visible)
     this.opts.onSidebarVisibilityChange?.(visible)
   }
 
-  /**
-   * Resolve a WebviewPanel for displaying the Kilo webview in an editor tab.
-   */
+  /** Resolve a WebviewPanel for displaying Kilo in an editor tab. */
   public resolveWebviewPanel(panel: vscode.WebviewPanel): void {
     // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
     this.isWebviewReady = false
@@ -484,7 +488,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     this.setupWebviewMessageHandler(panel.webview)
     this.viewStateDisposable?.dispose()
-    this.viewStateDisposable = panel.onDidChangeViewState(() =>
+    this.viewStateDisposable = this.visibleTaskStreams.bindPanel(panel, () =>
       this.focusSession(panel.active ? this.currentSession?.id : undefined),
     )
     this.initializeConnection()
@@ -492,6 +496,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Register a session created externally and notify the webview. */
   public registerSession(session: Session): void {
+    this.stopCurrentSessionProcesses(session.id)
     this.setCurrentSession(session)
     this.contextSessionID = session.id
     this.trackedSessionIds.add(session.id)
@@ -641,10 +646,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       ) {
         return
       }
+      this.visibleTaskStreams.handle(message)
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
+          this.visibleTaskStreams.clear()
           await this.syncWebviewState("webviewReady")
           this.flushPendingReviewComments()
           this.recoverPendingPrompts()
@@ -713,7 +720,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleCreateSession()
           break
         case "clearSession":
-          this.contextSessionID = this.currentSession?.id ?? this.contextSessionID
+          this.stopCurrentSessionProcesses()
+          this.contextSessionID = undefined
           this.setCurrentSession(null)
           this.focusSession()
           break
@@ -1357,6 +1365,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         { directory: workspaceDir, platform: this.opts.platform },
         { throwOnError: true },
       )
+      this.stopCurrentSessionProcesses(session.id)
       this.setCurrentSession(session)
       this.contextSessionID = session.id
       this.trackDirectory(session.id, workspaceDir)
@@ -1382,7 +1391,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.client.session
       .get({ sessionID, directory: dir })
       .then((r) => {
-        if (r.data && !signal?.aborted) {
+        if (r.data && !signal?.aborted && this.contextSessionID === sessionID) {
           this.setCurrentSession(r.data)
           this.contextSessionID = r.data.id
         }
@@ -1411,7 +1420,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     options: { mode?: MessageLoadMode; before?: string; limit?: number } = {},
   ): Promise<void> {
     const mode = options.mode ?? "replace"
-    if (mode !== "prepend") {
+    if (mode === "replace" || mode === "focus") {
+      this.stopCurrentSessionProcesses(sessionID)
       this.trackedSessionIds.add(sessionID)
       this.focusSession(sessionID)
       this.contextSessionID = sessionID
@@ -1617,15 +1627,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.getWorkspaceDirectory(sessionID)
+      const workspaceDir = this.getSessionDirectory(
+        sessionID,
+        this.currentSession?.id === sessionID ? this.currentSession : undefined,
+      )
+      await stopSessionProcesses(this.client, sessionID, workspaceDir)
       await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
       this.trackedSessionIds.delete(sessionID)
       this.streams.drop(sessionID)
+      this.visibleTaskStreams.delete(sessionID)
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
+        this.contextSessionID = undefined
         this.setCurrentSession(null)
         this.focusSession(undefined)
       }
@@ -2490,6 +2506,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         { directory: dir, platform: this.opts.platform },
         { throwOnError: true },
       )
+      this.stopCurrentSessionProcesses(session.id)
       this.setCurrentSession(session)
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
@@ -2865,6 +2882,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         return self.currentSession
       },
       set currentSession(session) {
+        self.stopCurrentSessionProcesses(session?.id)
         self.setCurrentSession(session)
         if (session) self.contextSessionID = session.id
       },
@@ -3403,6 +3421,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
+  private getSessionDirectory(sessionId: string, session?: Session): string {
+    return this.sessionDirectories.get(sessionId) ?? session?.directory ?? this.getRootDirectory()
+  }
+
   private getContextDirectory(): string {
     return resolveContextDirectory({
       currentSessionID: this.currentSession?.id,
@@ -3561,6 +3583,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autocompleteConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
+    this.visibleTaskStreams.clear()
     this.streams.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false

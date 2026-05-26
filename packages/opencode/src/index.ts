@@ -57,6 +57,7 @@ if (!process.env[ENV_VERSION]) {
 }
 import { Config } from "./config/config"
 import { Auth } from "./auth"
+import { AppRuntime } from "./effect/app-runtime"
 // kilocode_change end
 import { DbCommand } from "./cli/cmd/db"
 import path from "path"
@@ -156,11 +157,11 @@ let cli = yargs(args) // kilocode_change
 
     // Migrate legacy Kilo CLI auth if needed
     await migrateLegacyKiloAuth(
-      async () => (await Auth.get("kilo")) !== undefined,
-      async (auth) => Auth.set("kilo", auth),
+      async () => (await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))) !== undefined,
+      async (auth) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set("kilo", auth))),
     )
 
-    const kiloAuth = await Auth.get("kilo")
+    const kiloAuth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
     if (kiloAuth) {
       const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
       const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined

@@ -3,7 +3,9 @@
 // should use the organization-specific endpoint, not the personal endpoint.
 
 import { test, expect, mock } from "bun:test"
+import { unlink } from "fs/promises"
 import path from "path"
+import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
@@ -36,8 +38,10 @@ mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: mockPlugin }))
 
 import { tmpdir } from "../fixture/fixture"
 import { WithInstance } from "../../src/project/with-instance"
-import { Auth } from "../../src/auth"
+import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
+
+const authPath = path.join(Global.Path.data, "auth.json")
 
 test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", async () => {
   await using tmp = await tmpdir({
@@ -51,30 +55,45 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
     },
   })
   // Simulate an OAuth login where user selected an enterprise organization
-  await Auth.set("kilo", {
-    type: "oauth",
-    access: "test-oauth-token",
-    refresh: "test-refresh-token",
-    expires: Date.now() + 3600000,
-    accountId: "org-enterprise-123",
-  })
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      // Reset captured and cache
-      captured = undefined
-      ModelCache.clear("kilo")
+  try {
+    await Filesystem.write(
+      authPath,
+      JSON.stringify({
+        kilo: {
+          type: "oauth",
+          access: "test-oauth-token",
+          refresh: "test-refresh-token",
+          expires: Date.now() + 3600000,
+          accountId: "org-enterprise-123",
+        },
+      }),
+    )
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Reset captured and cache
+        captured = undefined
+        ModelCache.clear("kilo")
 
-      // Trigger model fetch through the cache
-      await ModelCache.fetch("kilo")
+        // Trigger model fetch through the cache
+        await ModelCache.fetch("kilo")
 
-      // The fetchKiloModels call should have received the organization ID
-      expect(captured).toBeDefined()
-      expect(captured.kilocodeToken).toBe("test-oauth-token")
-      expect(captured.kilocodeOrganizationId).toBe("org-enterprise-123")
-    },
-  })
+        // The fetchKiloModels call should have received the organization ID
+        expect(captured).toBeDefined()
+        expect(captured.kilocodeToken).toBe("test-oauth-token")
+        expect(captured.kilocodeOrganizationId).toBe("org-enterprise-123")
+      },
+    })
+  } finally {
+    if (prev !== undefined) {
+      await Filesystem.write(authPath, prev)
+    }
+    if (prev === undefined) {
+      await unlink(authPath).catch(() => undefined)
+    }
+  }
 })
 
 test("model fetch without OAuth accountId does not set kilocodeOrganizationId", async () => {
@@ -89,26 +108,41 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
     },
   })
   // Simulate an OAuth login for a personal account (no accountId)
-  await Auth.set("kilo", {
-    type: "oauth",
-    access: "test-personal-token",
-    refresh: "test-refresh-token",
-    expires: Date.now() + 3600000,
-  })
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      captured = undefined
-      ModelCache.clear("kilo")
+  try {
+    await Filesystem.write(
+      authPath,
+      JSON.stringify({
+        kilo: {
+          type: "oauth",
+          access: "test-personal-token",
+          refresh: "test-refresh-token",
+          expires: Date.now() + 3600000,
+        },
+      }),
+    )
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        captured = undefined
+        ModelCache.clear("kilo")
 
-      await ModelCache.fetch("kilo")
+        await ModelCache.fetch("kilo")
 
-      expect(captured).toBeDefined()
-      expect(captured.kilocodeToken).toBe("test-personal-token")
-      expect(captured.kilocodeOrganizationId).toBeUndefined()
-    },
-  })
+        expect(captured).toBeDefined()
+        expect(captured.kilocodeToken).toBe("test-personal-token")
+        expect(captured.kilocodeOrganizationId).toBeUndefined()
+      },
+    })
+  } finally {
+    if (prev !== undefined) {
+      await Filesystem.write(authPath, prev)
+    }
+    if (prev === undefined) {
+      await unlink(authPath).catch(() => undefined)
+    }
+  }
 })
 
 test("ModelCache.clear removes cached entry so next fetch hits the network", async () => {
@@ -122,39 +156,54 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
       )
     },
   })
-  await Auth.set("kilo", {
-    type: "oauth",
-    access: "token-clear-test",
-    refresh: "refresh-clear",
-    expires: Date.now() + 3600000,
-    accountId: "org-clear",
-  })
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
-  await WithInstance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      // Populate cache
-      captured = undefined
-      ModelCache.clear("kilo")
-      await ModelCache.fetch("kilo")
-      expect(captured).toBeDefined()
+  try {
+    await Filesystem.write(
+      authPath,
+      JSON.stringify({
+        kilo: {
+          type: "oauth",
+          access: "token-clear-test",
+          refresh: "refresh-clear",
+          expires: Date.now() + 3600000,
+          accountId: "org-clear",
+        },
+      }),
+    )
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Populate cache
+        captured = undefined
+        ModelCache.clear("kilo")
+        await ModelCache.fetch("kilo")
+        expect(captured).toBeDefined()
 
-      // Verify cache is populated — second fetch should NOT call fetchKiloModels
-      captured = undefined
-      await ModelCache.fetch("kilo")
-      expect(captured).toBeUndefined()
-      expect(ModelCache.get("kilo")).toBeDefined()
+        // Verify cache is populated — second fetch should NOT call fetchKiloModels
+        captured = undefined
+        await ModelCache.fetch("kilo")
+        expect(captured).toBeUndefined()
+        expect(ModelCache.get("kilo")).toBeDefined()
 
-      // Clear the cache
-      ModelCache.clear("kilo")
+        // Clear the cache
+        ModelCache.clear("kilo")
 
-      // get() should return undefined after clear
-      expect(ModelCache.get("kilo")).toBeUndefined()
+        // get() should return undefined after clear
+        expect(ModelCache.get("kilo")).toBeUndefined()
 
-      // Next fetch should call fetchKiloModels again
-      captured = undefined
-      await ModelCache.fetch("kilo")
-      expect(captured).toBeDefined()
-    },
-  })
+        // Next fetch should call fetchKiloModels again
+        captured = undefined
+        await ModelCache.fetch("kilo")
+        expect(captured).toBeDefined()
+      },
+    })
+  } finally {
+    if (prev !== undefined) {
+      await Filesystem.write(authPath, prev)
+    }
+    if (prev === undefined) {
+      await unlink(authPath).catch(() => undefined)
+    }
+  }
 })

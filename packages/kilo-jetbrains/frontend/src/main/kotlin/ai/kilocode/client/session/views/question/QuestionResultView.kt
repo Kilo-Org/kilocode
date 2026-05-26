@@ -5,7 +5,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.session.views.PartView
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.ToolView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
@@ -108,7 +108,9 @@ class QuestionResultView(tool: Tool) : PartView() {
 
     override fun applyStyle(style: SessionEditorStyle) {
         this.style = style
-        val label = setFont(title, style.boldEditorFont) || setFont(sub, style.smallEditorFont)
+        val t = setFont(title, style.boldFont)
+        val s = setFont(sub, style.smallFont)
+        val label = t || s
         val body = texts.fold(false) { acc, item -> setFont(item.first, item.second) || acc }
         if (!label && !body) return
         refresh()
@@ -136,6 +138,9 @@ class QuestionResultView(tool: Tool) : PartView() {
     fun bodyCreated(): Boolean = pane != null
 
     fun bodyFonts(): List<Font> = texts.map { it.first.font }
+
+    fun titleFont(): Font = title.font
+    fun subFont(): Font = sub.font
 
     override fun dumpLabel(): String = "QuestionResultView#$contentId(${labelText()})"
 
@@ -268,7 +273,7 @@ class QuestionResultView(tool: Tool) : PartView() {
     }
 
     private fun setFont(area: JBTextArea, bold: Boolean): Boolean {
-        val font = if (bold) style.boldEditorFont else style.transcriptFont
+        val font = if (bold) style.boldFont else style.regularFont
         if (area.font == font) return false
         area.font = font
         return true

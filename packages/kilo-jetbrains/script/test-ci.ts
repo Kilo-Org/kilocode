@@ -3,24 +3,38 @@
 /**
  * CI test runner for the JetBrains plugin.
  *
- * Runs ./gradlew test --continue so all modules run even when some fail,
+ * Runs ./gradlew test --continue --no-daemon so all modules run even when some fail,
  * then collects per-module JUnit XML results into .artifacts/unit/junit.xml
  * so mikepenz/action-junit-report can find them at the standard path.
  *
- * Always exits 0 — test failures are surfaced as JUnit report annotations,
- * not as CI job failures. The suite runs on both Linux and Windows but
- * IntelliJ Swing/coroutine tests are inherently flaky on Windows, so failing
- * the job on test failures would be noisy.
+ * Exits with Gradle's exit code on Linux/macOS so test failures fail the
+ * repo-wide `bun turbo test:ci` run. On Windows, exits 0 regardless — IntelliJ
+ * Swing/coroutine tests are inherently flaky on Windows and failing the job
+ * there would be noisy; failures remain visible via JUnit report annotations.
  */
 
-import { $ } from "bun"
 import { join } from "node:path"
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs"
 
 const root = join(import.meta.dir, "..")
-const gradlew = process.platform === "win32" ? "./gradlew.bat" : "./gradlew"
+const gradlew = process.platform === "win32" ? "gradlew.bat" : "./gradlew"
+const args = ["test", "--continue", "--no-daemon"]
+const cmd = process.platform === "win32" ? ["cmd.exe", "/c", gradlew, ...args] : [gradlew, ...args]
+const fallback = 45 * 60 * 1000
+const parsed = Number(process.env.KILO_JETBRAINS_TEST_TIMEOUT_MS ?? fallback)
+const timeout = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 
-const result = await $`${gradlew} test --continue`.cwd(root).nothrow()
+const proc = Bun.spawn(cmd, {
+  cwd: root,
+  stdout: "inherit",
+  stderr: "inherit",
+})
+const timer = setTimeout(() => {
+  console.error(`[jetbrains-test] Gradle timed out after ${Math.round(timeout / 1000)}s`)
+  proc.kill()
+}, timeout)
+const code = await proc.exited
+clearTimeout(timer)
 
 const modules = [".", "shared", "frontend", "backend"]
 const suites: string[] = []
@@ -43,6 +57,7 @@ mkdirSync(join(root, ".artifacts", "unit"), { recursive: true })
 writeFileSync(out, `<?xml version="1.0" encoding="UTF-8"?>\n<testsuites>\n${suites.join("\n")}\n</testsuites>\n`)
 
 console.log(`[jetbrains-test] collected ${suites.length} suite(s) -> ${out}`)
-if (result.exitCode !== 0) {
-  console.log(`[jetbrains-test] Gradle exited ${result.exitCode} — failures visible in JUnit report`)
+if (code !== 0) {
+  console.log(`[jetbrains-test] Gradle exited ${code} — failures visible in JUnit report`)
+  if (process.platform !== "win32") process.exit(code)
 }

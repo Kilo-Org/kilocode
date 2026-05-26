@@ -14,11 +14,7 @@ const modern = {
     `████🬺🬏   ██   ██     ██  ██   ██     ██       ██   `,
     `██  ██ ██████ 🬁🬬████ 🬁🬬██     🬁🬬████ 🬁🬬████ ██████ `,
   ],
-  exit: [
-    `  ██  ██ ██🬺🬏   ██  ██   ██🬺🬏  `,
-    `  ████🬺🬏   ██   ██     ██  ██  `,
-    `  ██  ██ ██████ 🬁🬬████ 🬁🬬██    `,
-  ],
+  exit: [`  ██  ██ ██🬺🬏   ██  ██   ██🬺🬏  `, `  ████🬺🬏   ██   ██     ██  ██  `, `  ██  ██ ██████ 🬁🬬████ 🬁🬬██    `],
 }
 
 const fallback = {
@@ -33,11 +29,7 @@ const fallback = {
     `████     ██   ██     ██  ██   ██     ██       ██   `,
     `██  ██ ██████ ██████   ██       ████ ██████ ██████ `,
   ],
-  exit: [
-    `  ██  ██ ████   ██  ██   ██    `,
-    `  ████     ██   ██     ██  ██  `,
-    `  ██  ██ ██████ ██████   ██    `,
-  ],
+  exit: [`  ██  ██ ████   ██  ██   ██    `, `  ████     ██   ██     ██  ██  `, `  ██  ██ ██████ ██████   ██    `],
 }
 
 function flag(value: string | undefined) {
@@ -47,14 +39,20 @@ function flag(value: string | undefined) {
   if (no.has(key)) return false
 }
 
+function windows(env: NodeJS.ProcessEnv) {
+  if (env.WT_SESSION) return true
+  if (env.TERM_PROGRAM === "vscode") return true
+  if (env.WEZTERM_PANE) return true
+  if (env.TERM_PROGRAM === "WezTerm") return true
+  return false
+}
+
 export function supports(env = process.env, platform = process.platform) {
   const override = flag(env.KILO_UNICODE_LOGO)
   if (override !== undefined) return override
-  // Terminals do not expose font glyph coverage over SSH, so prefer the safe logo for remote sessions.
   if (env.TERM === "dumb") return false
-  if (env.SSH_TTY) return false
-  if (env.SSH_CLIENT) return false
-  if (env.SSH_CONNECTION) return false
+  // Old Windows Console Host cannot render the sextant glyphs used by the modern logo.
+  if (platform === "win32") return windows(env)
   if (env.ConEmuPID) return false
   if (env.ANSICON) return false
   return true
@@ -77,10 +75,5 @@ export function session(
   platform = process.platform,
 ) {
   const logo = supports(env, platform) ? modern.exit : fallback.exit
-  return [
-    ``,
-    `${logo[0]}${dim}${title}${normal}`,
-    `${logo[1]}${dim}kilo -s ${id}${normal}`,
-    logo[2],
-  ].join("\n")
+  return [``, `${logo[0]}${dim}${title}${normal}`, `${logo[1]}${dim}kilo -s ${id}${normal}`, logo[2]].join("\n")
 }

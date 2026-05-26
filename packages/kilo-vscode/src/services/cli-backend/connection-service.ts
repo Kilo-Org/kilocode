@@ -584,7 +584,8 @@ export class KiloConnectionService {
 
     this.sseClient = new SdkSSEAdapter(this.client)
 
-    // Wait until SSE actually reaches a terminal state before resolving connect().
+    // Wait until SSE yields its first server event before resolving connect().
+    // Initial stream failures are handled by the adapter reconnect loop.
     let resolveConnected: (() => void) | null = null
     let rejectConnected: ((error: Error) => void) | null = null
     const connectedPromise = new Promise<void>((resolve, reject) => {
@@ -601,11 +602,8 @@ export class KiloConnectionService {
       }
     })
 
-    this.sseClient.onError((error) => {
+    this.sseClient.onError(() => {
       this.setState("error")
-      rejectConnected?.(error)
-      resolveConnected = null
-      rejectConnected = null
     })
 
     // Wire SSE state → broadcast to all registered state listeners

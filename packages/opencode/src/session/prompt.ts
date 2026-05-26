@@ -8,7 +8,6 @@ import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kil
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
-import z from "zod"
 import * as EffectZod from "@/util/effect-zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
@@ -64,6 +63,7 @@ import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect/bridge"
 import { EventV2 } from "@/v2/event"
 import { SessionEvent } from "@/v2/session-event"
+import { Modelv2 } from "@/v2/model"
 import { AgentAttachment, FileAttachment, Source } from "@/v2/session-prompt"
 import * as DateTime from "effect/DateTime"
 import { eq } from "@/storage/db"
@@ -135,9 +135,8 @@ export const layer = Layer.effect(
       return yield* EffectBridge.make()
     })
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
-      const run = yield* runner()
       return {
-        cancel: (sessionID: SessionID) => run.fork(cancel(sessionID)),
+        cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input),
       } satisfies TaskPromptOps
@@ -789,7 +788,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const markReady = ready ? ready.open.pipe(Effect.asVoid) : Effect.void
           const { msg, part, cwd } = yield* Effect.gen(function* () {
             const ctx = yield* InstanceState.context
-            const session = yield* sessions.get(input.sessionID)
+            const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
             if (session.revert) {
               yield* revert.cleanup(session)
             }
@@ -1023,9 +1022,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         EventV2.run(SessionEvent.ModelSwitched.Sync, {
           sessionID: input.sessionID,
           timestamp: DateTime.makeUnsafe(info.time.created),
-          id: info.model.modelID,
-          providerID: info.model.providerID,
-          variant: info.model.variant,
+          model: {
+            id: Modelv2.ID.make(info.model.modelID),
+            providerID: Modelv2.ProviderID.make(info.model.providerID),
+            variant: Modelv2.VariantID.make(info.model.variant ?? "default"),
+          },
         })
       }
 
@@ -1414,7 +1415,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput) {
-        const session = yield* sessions.get(input.sessionID)
+        const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
         // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
@@ -1476,9 +1477,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
         const ctx = yield* InstanceState.context
         const slog = elog.with({ sessionID })
-        let structured: unknown | undefined
+        let structured: unknown
         let step = 0
-        const session = yield* sessions.get(sessionID)
+        const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
 
         while (true) {
           yield* status.set(sessionID, { type: "busy" })
@@ -1505,15 +1506,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 
-          // kilocode_change start - carry local review command marker into LLM telemetry
-          const telemetry = KiloSessionProcessor.extractReviewTelemetry(
-            msgs.findLast((m) => m.info.role === "user" && m.info.id === lastUser.id)?.parts ?? [],
-          )
-          // kilocode_change end
-
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
           )
+          // kilocode_change start - carry local review command marker into LLM telemetry
+          const telemetry =
+            KiloSessionProcessor.extractReviewTelemetry(
+              msgs.findLast((m) => m.info.role === "user" && m.info.id === lastUser.id)?.parts ?? [],
+            ) ?? KiloSessionProcessor.extractSuggestionReviewTelemetry(lastAssistantMsg?.parts ?? [])
+          // kilocode_change end
+
           // kilocode_change start - keep provider-executed tools from forcing a re-loop
           // Some providers return "stop" even when the assistant message contains tool calls.
           // Keep the loop running so tool results can be sent back to the model.

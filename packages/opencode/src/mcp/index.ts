@@ -32,7 +32,6 @@ import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { BusEvent } from "../bus/bus-event"
 import { Bus } from "@/bus"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { TuiEvent } from "@/cli/cmd/tui/event"
 import open from "open"
 import { Effect, Exit, Layer, Option, Context, Schema, Stream } from "effect"
@@ -982,12 +981,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(CrossSpawnSpawner.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
 )
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const status = () => runPromise((svc) => svc.status())
-export const connect = (name: string) => runPromise((svc) => svc.connect(name))
-export const disconnect = (name: string) => runPromise((svc) => svc.disconnect(name))
-// kilocode_change end
 
 export * as MCP from "."

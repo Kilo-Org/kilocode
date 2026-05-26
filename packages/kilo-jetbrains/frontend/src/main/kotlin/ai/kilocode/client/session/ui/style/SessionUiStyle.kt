@@ -72,6 +72,11 @@ object SessionUiStyle {
             const val USER_BORDER_HORIZONTAL_PADDING = 12
         }
 
+        /** Permission card command preview limits. */
+        object Permission {
+            const val COMMAND_LINES = 3
+        }
+
         /** Tool card preview limits and state colors. */
         object Tool {
             const val BODY_LINES = 15

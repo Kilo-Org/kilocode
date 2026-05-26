@@ -1,5 +1,6 @@
 import type { Context } from "effect"
 import type { Hono } from "hono"
+import { BackgroundProcessPaths } from "./groups/background-process"
 import { IndexingPaths } from "./groups/indexing"
 import { KiloGatewayPaths } from "./groups/kilo-gateway"
 import { KilocodePaths } from "./groups/kilocode"
@@ -12,6 +13,12 @@ import { TelemetryPaths } from "./groups/telemetry"
 type Handler = (request: Request, context: Context.Context<unknown>) => Promise<Response>
 
 export function register(app: Hono, handler: Handler, context: Context.Context<unknown>) {
+  app.get(BackgroundProcessPaths.list, (c) => handler(c.req.raw, context))
+  app.get(BackgroundProcessPaths.get, (c) => handler(c.req.raw, context))
+  app.get(BackgroundProcessPaths.logs, (c) => handler(c.req.raw, context))
+  app.post(BackgroundProcessPaths.stop, (c) => handler(c.req.raw, context))
+  app.post(BackgroundProcessPaths.restart, (c) => handler(c.req.raw, context))
+  app.post(BackgroundProcessPaths.stopSession, (c) => handler(c.req.raw, context))
   app.post("/permission/allow-everything", (c) => handler(c.req.raw, context))
   app.post("/enhance-prompt", (c) => handler(c.req.raw, context))
   app.post("/commit-message", (c) => handler(c.req.raw, context))

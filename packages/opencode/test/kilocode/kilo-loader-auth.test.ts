@@ -41,7 +41,6 @@ import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
-import { Auth } from "../../src/auth"
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   const item = providers[ProviderID.kilo]
@@ -49,96 +48,102 @@ function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
 }
 
+const authPath = path.join(Global.Path.data, "auth.json")
+
 test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
   // Reset state that may be stale from other test files sharing this process.
-  // Auth.set from other tests persists in the shared auth.json,
-  // and ModelCache keeps fetched models in a TTL map.
-  // ModelsDev.Data was removed in v1.14.33 — instance-store disposal handles cache invalidation.
-  await Auth.remove("kilo")
-  ModelCache.clear("kilo")
+  // Persisted auth from other tests and ModelCache's TTL map must not affect this test.
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
-  await using base = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
+  try {
+    await Filesystem.write(authPath, JSON.stringify({}))
+    ModelCache.clear("kilo")
 
-  const none = await WithInstance.provide({
-    directory: base.path,
-    fn: async () => paid(await Provider.list()),
-  })
+    await using base = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
 
-  await using keyed = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            kilo: {
-              options: {
-                apiKey: "test-key",
+    const none = await WithInstance.provide({
+      directory: base.path,
+      fn: async () => paid(await Provider.list()),
+    })
+
+    await using keyed = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+            provider: {
+              kilo: {
+                options: {
+                  apiKey: "test-key",
+                },
               },
             },
-          },
-        }),
-      )
-    },
-  })
+          }),
+        )
+      },
+    })
 
-  const count = await WithInstance.provide({
-    directory: keyed.path,
-    fn: async () => paid(await Provider.list()),
-  })
+    const count = await WithInstance.provide({
+      directory: keyed.path,
+      fn: async () => paid(await Provider.list()),
+    })
 
-  expect(none).toBeGreaterThan(0)
-  expect(count).toBeGreaterThan(0)
+    expect(none).toBeGreaterThan(0)
+    expect(count).toBeGreaterThan(0)
+  } finally {
+    if (prev !== undefined) {
+      await Filesystem.write(authPath, prev)
+    }
+    if (prev === undefined) {
+      await unlink(authPath).catch(() => undefined)
+    }
+  }
 })
 
 test("kilo loader keeps paid models without auth and when auth exists", async () => {
-  await Auth.remove("kilo")
-  ModelCache.clear("kilo")
-
-  await using base = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
-
-  const none = await WithInstance.provide({
-    directory: base.path,
-    fn: async () => paid(await Provider.list()),
-  })
-
-  await using keyed = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
-
-  const authPath = path.join(Global.Path.data, "auth.json")
-  let prev: string | undefined
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
   try {
-    prev = await Filesystem.readText(authPath)
-  } catch {}
+    await Filesystem.write(authPath, JSON.stringify({}))
+    ModelCache.clear("kilo")
 
-  try {
+    await using base = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+
+    const none = await WithInstance.provide({
+      directory: base.path,
+      fn: async () => paid(await Provider.list()),
+    })
+
+    await using keyed = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+
     await Filesystem.write(
       authPath,
       JSON.stringify({
@@ -161,9 +166,7 @@ test("kilo loader keeps paid models without auth and when auth exists", async ()
       await Filesystem.write(authPath, prev)
     }
     if (prev === undefined) {
-      try {
-        await unlink(authPath)
-      } catch {}
+      await unlink(authPath).catch(() => undefined)
     }
   }
 })

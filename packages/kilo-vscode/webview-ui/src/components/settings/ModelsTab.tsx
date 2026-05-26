@@ -2,19 +2,24 @@ import { Component, For, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
 import { ModelSelectorBase } from "../shared/ModelSelector"
+import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
-import { AUTOCOMPLETE_PROVIDER_ID, AUTOCOMPLETE_SELECTOR_MODELS } from "./autocomplete-model-selector"
+import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
   const { config, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
+  const provider = useProvider()
   const session = useSession()
 
-  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.id)
+  const autocompleteProvider = () =>
+    String(settings()["autocomplete.provider"] ?? DEFAULT_AUTOCOMPLETE_MODEL.providerID)
+  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.modelID)
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -24,6 +29,35 @@ const ModelsTab: Component = () => {
       }
       updateConfig({ [configKey]: `${providerID}/${modelID}` })
     }
+  }
+
+  const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
+  const subagentVariants = createMemo(() => {
+    const model = provider.findModel(subagentModel())
+    return model?.variants ? Object.keys(model.variants) : []
+  })
+  const subagentVariant = createMemo(() => {
+    const list = subagentVariants()
+    if (list.length === 0) return undefined
+    const value = config().subagent_variant ?? undefined
+    return value && list.includes(value) ? value : undefined
+  })
+
+  function handleSubagentModelSelect(providerID: string, modelID: string) {
+    if (!providerID || !modelID) {
+      updateConfig({ subagent_model: null, subagent_variant: null })
+      return
+    }
+    const model = { providerID, modelID }
+    const variants = provider.findModel(model)?.variants
+    const list = variants ? Object.keys(variants) : []
+    const value = config().subagent_model === `${providerID}/${modelID}` ? config().subagent_variant : undefined
+    const variant = value && list.includes(value) ? value : list[0]
+    updateConfig({ subagent_model: `${providerID}/${modelID}`, subagent_variant: variant ?? null })
+  }
+
+  function handleSubagentVariantSelect(value: string) {
+    updateConfig({ subagent_variant: value })
   }
 
   const allAgents = createMemo(() => session.agents())
@@ -39,7 +73,8 @@ const ModelsTab: Component = () => {
   }
 
   function handleAutocompleteModelSelect(providerID: string, modelID: string) {
-    if (providerID !== AUTOCOMPLETE_PROVIDER_ID || !modelID) return
+    if (!providerID || !modelID) return
+    updateSetting("autocomplete.provider", providerID)
     updateSetting("autocomplete.model", modelID)
   }
 
@@ -72,12 +107,32 @@ const ModelsTab: Component = () => {
           />
         </SettingsRow>
         <SettingsRow
+          title={language.t("settings.providers.subagentModel.title")}
+          description={language.t("settings.providers.subagentModel.description")}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px", "flex-wrap": "wrap" }}>
+            <ModelSelectorBase
+              value={subagentModel()}
+              onSelect={handleSubagentModelSelect}
+              placement="bottom-start"
+              allowClear
+              clearLabel={language.t("settings.providers.notSet")}
+            />
+            <ThinkingSelectorBase
+              variants={subagentVariants()}
+              value={subagentVariant()}
+              onSelect={handleSubagentVariantSelect}
+              placement="bottom-start"
+            />
+          </div>
+        </SettingsRow>
+        <SettingsRow
           title={language.t("settings.autocomplete.model.title")}
           description={language.t("settings.autocomplete.model.description")}
           last
         >
           <ModelSelectorBase
-            value={{ providerID: AUTOCOMPLETE_PROVIDER_ID, modelID: autocompleteModel() }}
+            value={getAutocompleteSelection(autocompleteProvider(), autocompleteModel())}
             onSelect={handleAutocompleteModelSelect}
             placement="bottom-start"
             models={AUTOCOMPLETE_SELECTOR_MODELS}
