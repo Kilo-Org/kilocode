@@ -35,11 +35,11 @@ describe("autocomplete settings", () => {
 
   it("includes the configured local Ollama model in loaded settings", async () => {
     state.set("provider", "ollama")
-    state.set("model", "codestral:latest")
+    state.set("model", "qwen2.5-coder:1.5b")
     const { buildAutocompleteSettingsMessage } = await import("../settings")
 
     expect(buildAutocompleteSettingsMessage().settings.provider).toBe("ollama")
-    expect(buildAutocompleteSettingsMessage().settings.model).toBe("codestral:latest")
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("qwen2.5-coder:1.5b")
   })
 
   it("does not infer direct provider from a bare model name when provider is unset", async () => {
@@ -88,7 +88,7 @@ describe("autocomplete settings", () => {
 
     expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
     expect(validAutocompleteSetting("provider", "inception")).toBe(true)
-    expect(validAutocompleteSetting("model", "codestral:latest")).toBe(true)
+    expect(validAutocompleteSetting("model", "qwen2.5-coder:1.5b")).toBe(true)
     expect(validAutocompleteSetting("provider", "ollama")).toBe(true)
   })
 

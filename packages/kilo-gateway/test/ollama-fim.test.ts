@@ -22,7 +22,7 @@ describe("Ollama FIM request", () => {
       },
     })
     const response = await requestOllamaFim(`http://127.0.0.1:${server.port}/api/generate`, {
-      model: "codestral:latest",
+      model: "qwen2.5-coder:1.5b",
       prefix: "function answer() {\n  ",
       suffix: "\n}",
       maxTokens: 256,
@@ -33,7 +33,7 @@ describe("Ollama FIM request", () => {
 
     expect(calls).toEqual([
       {
-        model: "codestral:latest",
+        model: "qwen2.5-coder:1.5b",
         prompt: "function answer() {\n  ",
         suffix: "\n}",
         options: { num_predict: 16, temperature: 0 },

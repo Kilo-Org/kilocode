@@ -827,14 +827,14 @@
             "inception/mercury-edit-2",
             "codestral-2508",
             "mercury-edit-2",
-            "codestral:latest"
+            "qwen2.5-coder:1.5b"
           ],
           "enumDescriptions": [
             "Codestral via Kilo Gateway (default)",
             "Mercury Edit 2 via Kilo Gateway",
             "Codestral via your connected Mistral provider API key",
             "Mercury Edit 2 via your connected Inception provider API key",
-            "Codestral via local Ollama at http://localhost:11434"
+            "Qwen2.5 Coder 1.5B via local Ollama at http://localhost:11434"
           ],
           "description": "Model to use for inline autocomplete suggestions"
         },
