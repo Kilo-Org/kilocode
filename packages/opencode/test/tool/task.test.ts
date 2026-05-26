@@ -473,6 +473,7 @@ describe("tool.task", () => {
       const promptOps: TaskPromptOps = {
         cancel: () => Effect.void,
         resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
+        background: () => Effect.void,
         prompt: (input) =>
           Effect.sync(() => {
             const result = reply(input, "partial")

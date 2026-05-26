@@ -143,7 +143,7 @@ export const layer = Layer.effect(
         // kilocode_change start - run subagents after the task tool returns and notify the parent when done
         background: (input) =>
           Effect.sync(() => {
-            run.fork(background(input).pipe(Effect.tapErrorCause((cause) => Effect.logError("background subagent fiber failed", cause))))
+            run.fork(background(input).pipe(Effect.tapError((error) => Effect.logError("background subagent fiber failed", error))))
           }),
         // kilocode_change end
       } satisfies TaskPromptOps

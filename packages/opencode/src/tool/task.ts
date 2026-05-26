@@ -217,12 +217,72 @@ export const TaskTool = Tool.define(
               parts,
             }
 
+            const metadata = {
+              sessionId: nextSession.id,
+              model,
+              variant, // kilocode_change
+              background: isBackground, // kilocode_change
+            }
+            // kilocode_change end
+
+            // kilocode_change start - allow the parent agent to continue while the child session runs
+            if (isBackground) {
+              const parentModel = {
+                modelID: info.modelID,
+                providerID: info.providerID,
+              }
+              yield* ops.background({
+                description: params.description,
+                agent: next.name,
+                messageID: ctx.messageID,
+                cost: costBefore,
+                child,
+                parent: {
+                  sessionID: ctx.sessionID,
+                  agent: ctx.agent,
+                  model: parentModel,
+                  parts: [
+                    {
+                      type: "text",
+                      synthetic: true,
+                      text: [
+                        `A background subagent has started.`,
+                        "",
+                        `Description: ${params.description}`,
+                        `Agent: ${next.name}`,
+                        `task_id: ${nextSession.id}`,
+                        "",
+                        "You will be notified when it completes. Continue with the user's task without waiting unless this result is required immediately.",
+                      ].join("\n"),
+                    },
+                  ],
+                  noReply: true,
+                },
+              })
+
+              return {
+                title: params.description,
+                metadata,
+                output: [
+                  `task_id: ${nextSession.id} (background subagent running)`,
+                  "",
+                  "<task_status>",
+                  "Background subagent started. You and the user will be notified when it completes.",
+                  "</task_status>",
+                ].join("\n"),
+              }
+            }
+            // kilocode_change end
+
+            const result = yield* ops.prompt(child) // kilocode_change - uses shared child prompt object
+
             // kilocode_change start - expose terminal child assistant errors through the task tool boundary
             if (result.info.role === "assistant" && result.info.error) {
               return yield* Effect.fail(new Error(errorMessage(result.info.error)))
             }
             // kilocode_change end
 
+            // kilocode_change start - return resumable task wrapper output
             return {
               title: params.description,
               metadata, // kilocode_change - includes background flag for UI rendering
