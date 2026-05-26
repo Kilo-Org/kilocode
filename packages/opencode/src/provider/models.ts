@@ -193,15 +193,41 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
     const get = Effect.fn("ModelsDev.get")(function* () {
       const providers = { ...(yield* cachedGet) }
       delete providers["kilo"]
+      // OrcaRouter ships its own /api/pricing catalog; never trust models.dev for it.
+      delete providers["orcarouter"]
 
       const config = yield* Effect.promise(() => Config.get())
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
+      const orcarouterAllowed = (!enabled || enabled.has("orcarouter")) && !disabled.has("orcarouter")
       const apt = config.provider?.apertis?.options
       const aptBase = apt?.baseURL ?? "https://api.apertis.ai/v1"
       const aptFetch = {
         ...(apt?.baseURL ? { baseURL: apt.baseURL } : {}),
+      }
+
+      if (orcarouterAllowed) {
+        const cfgKey = config.provider?.["orcarouter"]?.options?.apiKey
+        const authEntry = yield* Effect.promise(() => Auth.get("orcarouter").catch(() => undefined))
+        const authKey = authEntry?.type === "api" ? authEntry.key : undefined
+        const envKey = process.env["ORCAROUTER_API_KEY"]
+        const hasKey = Boolean(cfgKey || authKey || envKey)
+
+        if (hasKey) {
+          const orca = yield* Effect.promise(() => ModelCache.fetch("orcarouter").catch(() => ({})))
+          providers["orcarouter"] = {
+            id: "orcarouter",
+            name: "OrcaRouter",
+            env: ["ORCAROUTER_API_KEY"],
+            api: "https://api.orcarouter.ai/v1",
+            npm: "@ai-sdk/openai-compatible",
+            models: orca,
+          }
+          if (Object.keys(orca).length === 0) {
+            yield* Effect.sync(() => void ModelCache.refresh("orcarouter").catch(() => {}))
+          }
+        }
       }
 
       if (kiloAllowed) {

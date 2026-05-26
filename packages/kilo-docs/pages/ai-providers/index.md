@@ -42,6 +42,7 @@ Run models on your own hardware for privacy and offline use:
 Route requests through unified APIs with additional features:
 
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
+- **[OrcaRouter](/docs/ai-providers/orcarouter)** - OpenAI-compatible gateway at provider cost price; multi-vendor routing with `orcarouter/auto`
 - **[Glama](/docs/ai-providers/glama)** - Enterprise AI gateway
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account

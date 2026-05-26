@@ -3,6 +3,7 @@ import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
 import * as Log from "@opencode-ai/core/util/log"
+import { fetchOrcaRouterModels } from "../kilocode/provider/orcarouter"
 
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })
@@ -187,6 +188,10 @@ export namespace ModelCache {
     // kilocode_change start
     if (providerID === "apertis") {
       const models = await fetchApertisModels(options)
+      return { models }
+    }
+    if (providerID === "orcarouter") {
+      const models = await fetchOrcaRouterModels()
       return { models }
     }
     // kilocode_change end

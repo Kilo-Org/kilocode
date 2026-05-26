@@ -9,6 +9,9 @@
   <!-- packages/opencode/src/provider/models.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.ts -->
+- <https://api.orcarouter.ai/v1>
+  <!-- packages/opencode/src/kilocode/provider/orcarouter.ts -->
+  <!-- packages/opencode/src/provider/models.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
@@ -49,6 +52,8 @@
   <!-- packages/opencode/src/cli/cmd/github.ts -->
 - <https://docs.mistral.ai/capabilities/reasoning/adjustable>
   <!-- packages/opencode/src/provider/transform.ts -->
+- <https://docs.orcarouter.ai/routing/auto-router>
+  <!-- packages/opencode/src/kilocode/provider/provider.ts -->
 - <https://docs.venice.ai/overview/guides/reasoning-models#reasoning-effort>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks>
@@ -192,6 +197,10 @@
   <!-- packages/opencode/src/lsp/server.ts -->
 - <https://www.morphllm.com/>
   <!-- packages/opencode/src/tool/warpgrep.ts -->
+- <https://www.orcarouter.ai>
+  <!-- packages/opencode/src/kilocode/provider/orcarouter.ts -->
+- <https://www.orcarouter.ai/api/pricing>
+  <!-- packages/opencode/src/kilocode/provider/orcarouter.ts -->
 - <https://www.rfc-editor.org/rfc/rfc8628#section-3.5>
   <!-- packages/opencode/src/plugin/github-copilot/copilot.ts -->
 - <https://x.com>
