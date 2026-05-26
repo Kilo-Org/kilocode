@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Storage } from "@/kilocode/session-export/worker/storage"
@@ -108,6 +108,29 @@ describe("Uploader", () => {
     expect(headers.get("authorization")).toBeNull()
     expect(headers.get("x-kilo-anon-id")).toBe("install_abc")
     for (const name of names) expect(headers.get(name)).toBeTruthy()
+  })
+
+  test("falls back to telemetry id when anon id is not provided", async () => {
+    const calls: Array<{ init: RequestInit }> = []
+    writeFileSync(join(dir, "telemetry-id"), "install_from_disk")
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        calls.push({ init })
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+      anonIdPath: join(dir, "telemetry-id"),
+    })
+
+    await uploader.flush("test")
+
+    const headers = new Headers(calls[0].init.headers)
+    expect(headers.get("authorization")).toBeNull()
+    expect(headers.get("x-kilo-anon-id")).toBe("install_from_disk")
   })
 
   test("uploads one session per batch so key metadata can reconstruct sessions", async () => {

@@ -7,6 +7,7 @@ import { Scrubber } from "./worker/scrub"
 import { Storage } from "./worker/storage"
 import { Uploader } from "./worker/uploader"
 import { checkBufferCap } from "./worker/buffer-cap"
+import path from "node:path"
 
 type Scope = {
   onmessage: (event: MessageEvent<ToWorker>) => void
@@ -67,6 +68,7 @@ scope.onmessage = (event) => {
         agentVersion: msg.agentVersion ?? "unknown",
         surface: msg.surface ?? "unknown",
         anonId: msg.anonId,
+        anonIdPath: path.join(path.dirname(msg.dbPath), "telemetry-id"),
       })
       tripped = false
       scope.postMessage({ kind: "ready" })

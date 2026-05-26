@@ -1,6 +1,7 @@
 import { Config } from "../config"
 import type { FromWorker } from "./ipc"
 import type { Storage } from "./storage"
+import { readFile } from "node:fs/promises"
 
 export type UploaderDeps = {
   storage: Storage
@@ -10,6 +11,7 @@ export type UploaderDeps = {
   agentVersion: string
   surface: string
   anonId?: string
+  anonIdPath?: string
 }
 
 export class Uploader {
@@ -91,7 +93,15 @@ export class Uploader {
         })
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",
-          headers: await headers({ rows, body, batchId, agentVersion: this.deps.agentVersion, surface: this.deps.surface, anonId: this.deps.anonId }),
+          headers: await headers({
+            rows,
+            body,
+            batchId,
+            agentVersion: this.deps.agentVersion,
+            surface: this.deps.surface,
+            anonId: this.deps.anonId,
+            anonIdPath: this.deps.anonIdPath,
+          }),
           body,
         })
         const eventIds = rows.map((row) => row.id)
@@ -131,6 +141,7 @@ type HeaderArgs = {
   agentVersion: string
   surface: string
   anonId?: string
+  anonIdPath?: string
 }
 
 async function headers(args: HeaderArgs): Promise<Headers> {
@@ -154,8 +165,17 @@ async function headers(args: HeaderArgs): Promise<Headers> {
   })
   const token = process.env.KILO_SESSION_EXPORT_AUTH_TOKEN
   if (token) out.set("authorization", `Bearer ${token}`)
-  if (!token && args.anonId) out.set("x-kilo-anon-id", args.anonId)
+  const anon = args.anonId ?? (await anonId(args.anonIdPath))
+  if (!token && anon) out.set("x-kilo-anon-id", anon)
   return out
+}
+
+async function anonId(file: string | undefined): Promise<string | undefined> {
+  if (!file) return undefined
+  const text = await readFile(file, "utf8").catch(() => undefined)
+  const id = text?.trim()
+  if (!id) return undefined
+  return id
 }
 
 function sessionRows(rows: ReturnType<Storage["pendingEvents"]>): ReturnType<Storage["pendingEvents"]> {
