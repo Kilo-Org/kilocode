@@ -32,21 +32,29 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable or configure it in your `kilo.json` config file:
+Pick one of three ways to supply the API key:
 
-**Environment variable:**
+**1. Environment variable** (simplest):
 
 ```bash
 export ORCAROUTER_API_KEY="sk-orca-..."
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**2. Shared auth store** — stored outside the shell environment:
+
+```bash
+kilo auth orcarouter
+```
+
+**3. Inline in `kilo.json`** (`~/.config/kilo/kilo.json` or `./kilo.json`):
 
 ```jsonc
 {
   "provider": {
     "orcarouter": {
-      "env": ["ORCAROUTER_API_KEY"],
+      "options": {
+        "apiKey": "sk-orca-...",
+      },
     },
   },
 }
@@ -59,8 +67,6 @@ Then set your default model. Model IDs follow OrcaRouter's `<vendor>/<model>` na
   "model": "orcarouter/anthropic/claude-sonnet-4.6",
 }
 ```
-
-You can also store the key via `kilo auth orcarouter` so it lives in the shared auth store rather than your shell environment.
 
 {% /tab %}
 {% /tabs %}

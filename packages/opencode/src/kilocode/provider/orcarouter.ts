@@ -79,6 +79,11 @@ function isChatModel(entry: PricingEntry): boolean {
   return true
 }
 
+// Family-pattern fallback for when /api/pricing's `supported_parameters`
+// doesn't list reasoning_effort (some entries are incomplete). Patterns
+// reflect the model families OrcaRouter documents as reasoning-capable in
+// https://docs.orcarouter.ai/advanced/reasoning — Claude 4 sonnet/opus all
+// support extended thinking, OpenAI o-series + gpt-5 family all do, etc.
 function isReasoningModel(name: string, params: Set<string>): boolean {
   if (params.has("reasoning_effort") || params.has("reasoning")) return true
   const lower = name.toLowerCase()

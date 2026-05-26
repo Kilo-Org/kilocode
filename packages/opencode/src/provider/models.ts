@@ -13,6 +13,7 @@ import { Config } from "../config/config"
 import { ModelCache } from "./model-cache"
 import { Auth } from "../auth"
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway"
+import { ORCAROUTER_API, ORCAROUTER_ENV } from "../kilocode/provider/orcarouter"
 // kilocode_change end
 
 // kilocode_change start
@@ -211,7 +212,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
         const cfgKey = config.provider?.["orcarouter"]?.options?.apiKey
         const authEntry = yield* Effect.promise(() => Auth.get("orcarouter").catch(() => undefined))
         const authKey = authEntry?.type === "api" ? authEntry.key : undefined
-        const envKey = process.env["ORCAROUTER_API_KEY"]
+        const envKey = process.env[ORCAROUTER_ENV]
         const hasKey = Boolean(cfgKey || authKey || envKey)
 
         if (hasKey) {
@@ -219,12 +220,15 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
           providers["orcarouter"] = {
             id: "orcarouter",
             name: "OrcaRouter",
-            env: ["ORCAROUTER_API_KEY"],
-            api: "https://api.orcarouter.ai/v1",
+            env: [ORCAROUTER_ENV],
+            api: ORCAROUTER_API,
             npm: "@ai-sdk/openai-compatible",
             models: orca,
           }
           if (Object.keys(orca).length === 0) {
+            // Best-effort background warm; matches the existing kilo / apertis
+            // refresh pattern above. A failure here only delays the catalog;
+            // the next get() call will retry.
             yield* Effect.sync(() => void ModelCache.refresh("orcarouter").catch(() => {}))
           }
         }
