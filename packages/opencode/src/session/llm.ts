@@ -388,26 +388,29 @@ const live: Layer.Layer<
       const parent = input.parentSessionID ?? KiloSession.resolveParent(input.sessionID)
       const found = KiloSession.resolveRoot(input.sessionID)
       const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
-      SessionExport.beforeRequest({
-        input: { model: input.model, org },
-        requestMeta: {
-          sessionId: input.sessionID,
-          rootSessionId: root,
-          parentSessionId: parent,
-          requestId: input.user.id,
-          userMessageId: input.user.id,
-          agent: input.agent.name,
-          modeId: input.agent.mode,
-        },
-        assembled: {
-          system,
-          messages,
-          tools,
-          permissions: input.permission ?? [],
-          toolChoice: input.toolChoice,
-          params,
-        },
-      })
+      const exportable = isKilo && input.model.isFree === true && !org && input.agent.name !== "title"
+      if (exportable) {
+        SessionExport.beforeRequest({
+          input: { model: input.model, org },
+          requestMeta: {
+            sessionId: input.sessionID,
+            rootSessionId: root,
+            parentSessionId: parent,
+            requestId: input.user.id,
+            userMessageId: input.user.id,
+            agent: input.agent.name,
+            modeId: input.agent.mode,
+          },
+          assembled: {
+            system,
+            messages,
+            tools,
+            permissions: input.permission ?? [],
+            toolChoice: input.toolChoice,
+            params,
+          },
+        })
+      }
       // kilocode_change end
 
       const result = streamText({ // kilocode_change
@@ -493,6 +496,7 @@ const live: Layer.Layer<
       })
       // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
+      if (!exportable) return result
       return {
         ...result,
         fullStream: observeFullStream(result.fullStream, {
@@ -567,9 +571,9 @@ function observeFullStream(
       retryCount: meta.retries,
     })
   }
-  return stream.pipeThrough(
-    new TransformStream({
-      transform(part, controller) {
+  const observed = async function* () {
+    try {
+      for await (const part of stream) {
         rawParts.push(part)
         collectPart(part, {
           textParts,
@@ -578,13 +582,15 @@ function observeFullStream(
           setFinish: (val) => (finishReason = val),
           setUsage: (val) => (usage = val),
         })
-        controller.enqueue(part)
-      },
-      flush() {
-        done()
-      },
-    }),
-  ) as Result["fullStream"]
+        yield part
+      }
+      done()
+    } catch (err) {
+      done(err)
+      throw err
+    }
+  }
+  return observed() as unknown as Result["fullStream"]
 }
 
 function collectPart(
