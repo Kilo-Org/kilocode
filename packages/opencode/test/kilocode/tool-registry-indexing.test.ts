@@ -199,21 +199,18 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "background_process",
       ])
-      expect(
-        KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, agent_manager_tool: true } }).map(
-          (tool) => tool.id,
-        ),
-      ).toEqual(["codebase_search", "semantic_search", "recall", "background_process"])
+      expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
+        ["codebase_search", "semantic_search", "recall", "background_process"],
+      )
 
       process.env["KILO_CLIENT"] = "vscode"
-      expect(
-        KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, agent_manager_tool: true } }).map(
-          (tool) => tool.id,
-        ),
-      ).toEqual(["codebase_search", "semantic_search", "recall", "background_process", "agent_manager"])
+      expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
+        ["codebase_search", "semantic_search", "recall", "background_process", "agent_manager"],
+      )
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
         "recall",
         "background_process",
+        "agent_manager",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"

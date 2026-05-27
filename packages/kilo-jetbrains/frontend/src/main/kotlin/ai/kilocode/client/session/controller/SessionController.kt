@@ -18,6 +18,7 @@ import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
 import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigWarningDto
@@ -119,6 +120,7 @@ class SessionController(
     private var partType: String? = null
     private var tool: String? = null
     private var eventJob: Job? = null
+    private var drainJob: Job? = null
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
     private val childIds: MutableSet<String> = mutableSetOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
@@ -140,6 +142,7 @@ class SessionController(
     private var modelTime: Double? = null
 
     val ready: Boolean get() = model.isReady()
+    val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
     internal val blank: Boolean get() = ref == null && model.isEmpty() && !model.showSession
     internal val id: String? get() = sid
     internal val refKey: String? get() = ref?.key
@@ -233,6 +236,24 @@ class SessionController(
                 LOG.warn("${ChatLogSummary.sid(id)} kind=abort dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
+    }
+
+    fun setAutoApprove(value: Boolean) {
+        assertEdt()
+        KiloPluginSettings.setAutoApprove(value)
+        if (!value) {
+            drainJob?.cancel()
+            drainJob = null
+            return
+        }
+        val current = model.state
+        val skip = if (current is SessionState.AwaitingPermission) {
+            approve(current.permission)
+            setOf(current.permission.id)
+        } else {
+            emptySet()
+        }
+        drainAutoApprove(skip)
     }
 
     fun compact() {
@@ -355,6 +376,77 @@ class SessionController(
                 }
             }
         }
+    }
+
+    private fun approve(request: PermissionRequestDto) {
+        approve(request.id) { toPermission(request) }
+    }
+
+    private fun approve(permission: Permission) {
+        approve(permission.id) { permission }
+    }
+
+    private fun approve(id: String, restore: () -> Permission) {
+        assertEdt()
+        LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
+        cs.launch {
+            try {
+                if (!autoApprove) {
+                    edt {
+                        if (disposed) return@edt
+                        model.setState(SessionState.AwaitingPermission(restore()))
+                    }
+                    return@launch
+                }
+                edt {
+                    if (disposed) return@edt
+                    model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+                }
+                sessions.replyPermission(id, directory, PermissionReplyDto("once"))
+                LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id ok=true" }
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt {
+                    if (disposed) return@edt
+                    model.setState(SessionState.AwaitingPermission(restore().copy(
+                        state = PermissionRequestState.ERROR,
+                        message = e.message ?: KiloBundle.message("session.permission.error"),
+                    )))
+                }
+            }
+        }
+    }
+
+    private fun drainAutoApprove(skip: Set<String> = emptySet()) {
+        val id = sid ?: return
+        val ids = (childIds + id).toSet()
+        drainJob?.cancel()
+        drainJob = cs.launch {
+            try {
+                val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
+                val count = replyAll(permissions)
+                if (count == 0) return@launch
+                runEdt {
+                    if (disposed) return@runEdt
+                    val current = model.state
+                    if (current is SessionState.AwaitingPermission && current.permission.sessionId in ids) {
+                        model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+                    }
+                }
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(id)} kind=permission-auto-drain dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+            }
+        }
+    }
+
+    private suspend fun replyAll(permissions: List<PermissionRequestDto>): Int {
+        var count = 0
+        for (request in permissions) {
+            if (!autoApprove) return count
+            sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
+            count++
+        }
+        return count
     }
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
@@ -657,6 +749,10 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
+            if (autoApprove) {
+                replyAll(permissions)
+                return
+            }
             val last = toPermission(permissions.last())
             runEdt {
                 if (disposed) return@runEdt
@@ -675,6 +771,17 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
+            if (permissions.isNotEmpty() && autoApprove) {
+                val count = replyAll(permissions)
+                if (count > 0) {
+                    runEdt {
+                        if (disposed) return@runEdt
+                        if (sid != id) return@runEdt
+                        model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+                    }
+                    return
+                }
+            }
             val branch = when {
                 permissions.isNotEmpty() -> "permission"
                 questions.isNotEmpty() -> "question"
@@ -794,6 +901,10 @@ class SessionController(
             }
 
             is ChatEventDto.PermissionAsked -> {
+                if (autoApprove) {
+                    approve(event.request)
+                    return
+                }
                 val perm = toPermission(event.request)
                 model.setState(SessionState.AwaitingPermission(perm))
             }
@@ -1372,6 +1483,7 @@ class SessionController(
         disposed = true
         connectionDelay.dispose()
         eventJob?.cancel()
+        drainJob?.cancel()
         childJobs.values.forEach { it.cancel() }
         childJobs.clear()
         childIds.clear()

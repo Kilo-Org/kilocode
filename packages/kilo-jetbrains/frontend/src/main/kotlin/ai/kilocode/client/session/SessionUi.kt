@@ -246,6 +246,11 @@ class SessionUi(
         prompt.model.onSelect = { item -> controller.selectModel(item.provider, item.id) }
         prompt.reasoning.onSelect = { item -> controller.selectVariant(item.id) }
         prompt.onReset = { controller.clearModelOverride() }
+        prompt.onAutoApproveToggle = { value ->
+            controller.setAutoApprove(value)
+            prompt.setAutoApprove(controller.autoApprove)
+        }
+        prompt.setAutoApprove(controller.autoApprove)
         prompt.model.favorites = { app.favorites.value }
         prompt.model.onFavoriteToggle = { item -> app.toggleModelFavorite(item.provider, item.id) }
 

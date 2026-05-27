@@ -42,7 +42,6 @@ export interface ExperimentalConfig {
   batch_tool?: boolean
   semantic_indexing?: boolean
   codebase_search?: boolean
-  agent_manager_tool?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean

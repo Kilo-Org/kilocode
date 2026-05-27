@@ -200,7 +200,6 @@ Available experimental settings include:
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Speech to Text Model** - optionally select the transcription model
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
-- **Agent Manager Tool** - allow agents to start Agent Manager local and worktree sessions from chat
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Voice input appears automatically when the Kilo provider is enabled and you are signed in. Choosing **Speech to Text Model** stores `experimental.speech_to_text_model` in your global Kilo CLI config (`~/.config/kilo/kilo.jsonc`):
@@ -220,7 +219,6 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
   "experimental": {
     "codebase_search": true,
     "batch_tool": false,
-    "agent_manager_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,
     "mcp_timeout": 30000

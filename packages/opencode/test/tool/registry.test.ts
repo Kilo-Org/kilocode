@@ -26,6 +26,8 @@ import { Ripgrep } from "@/file/ripgrep"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
 import { Project } from "@/project/project" // kilocode_change
+import { WithInstance } from "@/project/with-instance"
+import { SessionStatus } from "@/session/status" // kilocode_change
 
 const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
@@ -53,6 +55,7 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(Project.defaultLayer), // kilocode_change
   Layer.provide(Command.defaultLayer), // kilocode_change
   Layer.provide(Git.defaultLayer), // kilocode_change
+  Layer.provide(SessionStatus.defaultLayer), // kilocode_change
 )
 
 const it = testEffect(Layer.mergeAll(registryLayer, node))

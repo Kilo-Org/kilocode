@@ -51,6 +51,7 @@ import { Git } from "../git" // kilocode_change
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { Project } from "@/project/project" // kilocode_change
+import { SessionStatus } from "@/session/status" // kilocode_change
 
 const log = Log.create({ service: "tool.registry" })
 
@@ -96,6 +97,7 @@ export const layer: Layer.Layer<
   | Project.Service // kilocode_change
   | Command.Service // kilocode_change
   | Git.Service // kilocode_change
+  | SessionStatus.Service // kilocode_change
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -378,6 +380,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Project.defaultLayer), // kilocode_change
     Layer.provide(Command.defaultLayer), // kilocode_change
     Layer.provide(Git.defaultLayer), // kilocode_change
+    Layer.provide(SessionStatus.defaultLayer), // kilocode_change
   ),
 )
 

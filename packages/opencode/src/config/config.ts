@@ -353,9 +353,6 @@ export const Info = Schema.Struct({
       semantic_indexing: Schema.optional(Schema.Boolean).annotate({
         description: "Enable semantic codebase indexing and the semantic_search tool",
       }),
-      agent_manager_tool: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable the VS Code Agent Manager orchestration tool",
-      }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
       }),
