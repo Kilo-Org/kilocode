@@ -4,7 +4,7 @@ import { pathToFileURL } from "url"
 import { UI } from "../ui"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EOL } from "os"
-import { text as streamText } from "node:stream/consumers"
+import { text as streamText } from "node:stream/consumers" // kilocode_change: node consumer import for portable stdin handling below
 import { Filesystem } from "@/util/filesystem"
 import { createKiloClient, type KiloClient, type ToolPart } from "@kilocode/sdk/v2"
 import { Server } from "../../server/server"
@@ -23,13 +23,15 @@ import { TaskTool } from "../../tool/task"
 import { SkillTool } from "../../tool/skill"
 import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "@/util/locale"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
+// kilocode_change start: Kilo run integrations for cloud/auto flows, Effect lifecycle, auth, and shell rendering
+import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
+import { KiloRunAuto } from "@/kilocode/cli/run-auto"
 import { Effect } from "effect"
 import { effectCmd } from "../effect-cmd"
 import { ServerAuth } from "@/server/auth"
 import { ShellTool } from "../../tool/shell"
 import { ShellID } from "../../tool/shell/id"
+// kilocode_change end
 
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
@@ -208,13 +210,13 @@ function normalizePath(input?: string) {
 
 export const RunCommand = effectCmd({
   command: "run [message..]",
-  describe: "run kilo with a message",
+  describe: "run kilo with a message", // kilocode_change: branding
   // --attach connects to a remote server (no local instance needed); the
   // default path runs an in-process server and needs the project instance.
   instance: (args) => !args.attach,
   // For --dir without --attach, load instance for the resolved target dir.
   // The handler also chdirs (preserving the legacy order: chdir → file resolution).
-  directory: (args) => (args.dir && !args.attach ? path.resolve(process.cwd(), args.dir) : process.cwd()), // kilocode_change
+  directory: (args) => (args.dir && !args.attach ? path.resolve(process.cwd(), args.dir) : process.cwd()),
   builder: (yargs: Argv) =>
     yargs
       .positional("message", {
@@ -241,7 +243,7 @@ export const RunCommand = effectCmd({
         describe: "fork the session before continuing (requires --continue or --session)",
         type: "boolean",
       })
-      // kilocode_change start - support cloud fork in run command
+      // kilocode_change start: expose --cloud-fork for Kilo cloud session imports
       .option("cloud-fork", {
         type: "boolean",
         describe: "fetch session from cloud and continue locally (use with --session)",
@@ -278,7 +280,7 @@ export const RunCommand = effectCmd({
       })
       .option("attach", {
         type: "string",
-        describe: "attach to a running kilo server (e.g., http://localhost:4096)", // kilocode_change
+        describe: "attach to a running kilo server (e.g., http://localhost:4096)",
       })
       .option("password", {
         alias: ["p"],
@@ -288,7 +290,7 @@ export const RunCommand = effectCmd({
       .option("username", {
         alias: ["u"],
         type: "string",
-        describe: "basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')", // kilocode_change
+        describe: "basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')", // kilocode_change: branding and Kilo server auth username override
       })
       .option("dir", {
         type: "string",
@@ -311,8 +313,8 @@ export const RunCommand = effectCmd({
         type: "boolean",
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
         default: false,
+      // kilocode_change start: expose --auto for Kilo autonomous/pipeline permission handling
       })
-      // kilocode_change start - auto approve all permissions
       .option("auto", {
         type: "boolean",
         describe: "auto-approve all permissions (for autonomous/pipeline usage)",
@@ -360,7 +362,7 @@ export const RunCommand = effectCmd({
         }
       }
 
-      if (!process.stdin.isTTY) message += "\n" + (await streamText(process.stdin))
+      if (!process.stdin.isTTY) message += "\n" + (await streamText(process.stdin)) // kilocode_change: read stdin via node consumer instead of Bun.stdin.text() for runtime portability
 
       if (message.trim().length === 0 && !args.command) {
         UI.error("You must provide a message or a command")
@@ -371,7 +373,7 @@ export const RunCommand = effectCmd({
         UI.error("--fork requires --continue or --session")
         process.exit(1)
       }
-      // kilocode_change start
+      // kilocode_change start: validate --cloud-fork flag combinations for Kilo cloud sessions
       const cloudForkError = validateCloudFork({
         cloudFork: args["cloud-fork"],
         fork: args.fork,
@@ -411,7 +413,7 @@ export const RunCommand = effectCmd({
       async function session(sdk: KiloClient) {
         const baseID = args.continue ? (await sdk.session.list()).data?.find((s) => !s.parentID)?.id : args.session
 
-        // kilocode_change start
+        // kilocode_change start: --cloud-fork imports the base session from Kilo cloud before continuing
         if (baseID && args["cloud-fork"]) {
           const id = await importCloudSession(sdk, baseID).catch(() => undefined)
           if (!id) {
@@ -482,8 +484,10 @@ export const RunCommand = effectCmd({
 
         async function loop() {
           const toggles = new Map<string, boolean>()
-          const MAX_RETRIES = 3 // kilocode_change
-          let retries = 0 // kilocode_change
+          // kilocode_change start: network retry counter for session.network.asked handling below
+          const MAX_RETRIES = 3
+          let retries = 0
+          // kilocode_change end
 
           for await (const event of events.stream) {
             if (
@@ -500,7 +504,7 @@ export const RunCommand = effectCmd({
 
             if (event.type === "message.part.updated") {
               const part = event.properties.part
-              // kilocode_change start - track Task child sessions for --auto permission replies
+              // kilocode_change start: track Task child sessions for --auto permission replies
               if (args.auto) KiloRunAuto.track(auto, part)
               // kilocode_change end
               if (part.sessionID !== sessionID) continue
@@ -577,7 +581,7 @@ export const RunCommand = effectCmd({
               UI.error(err)
             }
 
-            // kilocode_change start
+            // kilocode_change start: reset the network retry counter when the session resumes work
             if (
               event.type === "session.status" &&
               event.properties.sessionID === sessionID &&
@@ -597,7 +601,7 @@ export const RunCommand = effectCmd({
 
             if (event.type === "permission.asked") {
               const permission = event.properties
-              // kilocode_change start - In auto mode, approve root and tracked Task child permissions only
+              // kilocode_change start: handle Kilo --auto permission replies/rejections and transient network retries with backoff
               if (args.auto) {
                 if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
                 await sdk.permission.reply({
@@ -617,9 +621,7 @@ export const RunCommand = effectCmd({
                 requestID: permission.id,
                 reply: "reject",
               })
-              // kilocode_change end
             }
-            // kilocode_change start - network retry handling
             if (event.type === "session.network.asked") {
               const request = event.properties
               if (request.sessionID !== sessionID) continue
@@ -710,7 +712,7 @@ export const RunCommand = effectCmd({
           UI.error("Session not found")
           process.exit(1)
         }
-        const auto = KiloRunAuto.create(sessionID) // kilocode_change
+        const auto = KiloRunAuto.create(sessionID) // kilocode_change: --auto state used by KiloRunAuto.track/allowed above
         await share(sdk, sessionID)
 
         loop().catch((e) => {
