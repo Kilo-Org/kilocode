@@ -61,7 +61,8 @@ export function register(app: Hono): Hono {
         SessionCreatedEvent: Session.Event.Created,
         Identifier,
         ModelCache: {
-          clear: (providerID: string) => AppRuntime.runSync(ModelCache.Service.use((cache) => cache.clear(providerID))),
+          clear: (providerID: string) =>
+            AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(providerID))),
         },
       }),
     )

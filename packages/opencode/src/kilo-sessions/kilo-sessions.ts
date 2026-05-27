@@ -257,21 +257,21 @@ export namespace KiloSessions {
               return
             }
 
-            const state = current ?? { running: false, dirty: false }
-            statusSyncs.set(sessionID, state)
+            const entry = current ?? { running: false, dirty: false }
+            statusSyncs.set(sessionID, entry)
 
             const fail = (error: unknown) => {
-              const dirty = state.dirty
+              const dirty = entry.dirty
               statusSyncs.delete(sessionID)
               log.error("status sync failed", { sessionID, error: String(error) })
               if (dirty) sync(evt)
             }
 
             const loop = async () => {
-              state.running = true
-              state.dirty = false
+              entry.running = true
+              entry.dirty = false
               await deriveAndSyncStatus(sessionID)
-              if (state.dirty) {
+              if (entry.dirty) {
                 void loop().catch(fail)
                 return
               }

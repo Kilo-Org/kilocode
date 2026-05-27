@@ -29,7 +29,7 @@ type Validator = any
 type Resolver = any
 type Errors = any
 type Auth = any
-type ModelCache = { clear: (providerID: string) => void }
+type ModelCache = { clear: (providerID: string) => void | Promise<void> }
 type Z = any
 
 interface KiloRoutesDeps extends ImportDeps {
