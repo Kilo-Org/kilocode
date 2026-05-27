@@ -1226,7 +1226,7 @@ export type IndexingConfig = {
   lancedb?: {
     directory?: string
   }
-valkey?: {
+  valkey?: {
     url?: string
     password?: string
   }
