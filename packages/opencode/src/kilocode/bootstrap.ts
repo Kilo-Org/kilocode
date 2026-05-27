@@ -1,3 +1,5 @@
+import { Cause, Context, Effect, Layer } from "effect"
+import { EffectBridge } from "@/effect/bridge"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
@@ -12,30 +14,56 @@ import { Identity } from "@kilocode/kilo-telemetry"
 const log = Log.create({ service: "kilocode-bootstrap" })
 
 export namespace KilocodeBootstrap {
-  export async function init() {
-    await KiloSessions.init()
-    // kilocode_change start - session export bootstrap
-    try {
-      const anon = await Identity.getMachineId().catch((err) => {
-        log.warn("session export identity failed", { err })
-        return undefined
-      })
-      SessionExport.init({
-        agentVersion: InstallationVersion,
-        anonId: anon,
-        dbPath: path.join(Global.Path.data, "session-export.db"),
-        subscribeAll: (cb) => Bus.subscribeAll(cb),
-        snapshotProvider: createWorkspaceProvider({
-          root: Instance.directory,
-          statePath: path.join(Global.Path.data, "session-export-workspace.json"),
-        }),
-      })
-    } catch (err) {
-      log.warn("session export bootstrap failed", { err })
-    }
-    // kilocode_change end
-    void import("@/kilocode/indexing")
-      .then((mod) => mod.KiloIndexing.init())
-      .catch((err) => log.warn("indexing bootstrap failed", { err }))
+  export interface Interface {
+    readonly init: () => Effect.Effect<void, unknown>
   }
+
+  export class Service extends Context.Service<Service, Interface>()("@kilocode/Bootstrap") {}
+
+  export const layer = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const sessions = yield* KiloSessions.Service
+
+      const init = Effect.fn("KilocodeBootstrap.init")(function* () {
+        yield* sessions.init()
+        // kilocode_change start - session export bootstrap
+        yield* Effect.gen(function* () {
+          const anon = yield* EffectBridge.fromPromise(() =>
+            Identity.getMachineId().catch((err) => {
+              log.warn("session export identity failed", { err })
+              return undefined
+            }),
+          )
+          SessionExport.init({
+            agentVersion: InstallationVersion,
+            anonId: anon,
+            dbPath: path.join(Global.Path.data, "session-export.db"),
+            subscribeAll: (cb) => Bus.subscribeAll(cb),
+            snapshotProvider: createWorkspaceProvider({
+              root: Instance.directory,
+              statePath: path.join(Global.Path.data, "session-export-workspace.json"),
+            }),
+          })
+        }).pipe(
+          Effect.catchCause((cause) =>
+            Effect.sync(() => log.warn("session export bootstrap failed", { err: Cause.squash(cause) })),
+          ),
+        )
+        // kilocode_change end
+        yield* EffectBridge.fromPromise(() =>
+          import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
+        ).pipe(
+          Effect.catchCause((cause) =>
+            Effect.sync(() => log.warn("indexing bootstrap failed", { err: Cause.squash(cause) })),
+          ),
+          Effect.forkDetach,
+        )
+      })
+
+      return Service.of({ init })
+    }),
+  )
+
+  export const defaultLayer = layer.pipe(Layer.provide(KiloSessions.defaultLayer))
 }

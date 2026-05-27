@@ -1,11 +1,26 @@
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
+import { KiloLLM } from "@/kilocode/session/llm"
 import { Agent } from "@/agent/agent"
+import { AppRuntime } from "@/effect/app-runtime"
+import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
 
 const log = Log.create({ service: "commit-message" })
+
+export const CommitMessageRuntime = {
+  generate(input: LLM.StreamInput, signal: AbortSignal) {
+    // runPromise is needed until generateCommitMessage() uses Effect
+    return AppRuntime.runPromise(
+      LLM.Service.use((svc) => KiloLLM.text(svc.stream(input)).pipe(Effect.orDie)),
+      {
+        signal,
+      },
+    )
+  },
+}
 
 const SYSTEM_PROMPT = `You are an expert Git commit message generator that creates conventional commit messages based on staged changes. Analyze the provided git diff output and generate an appropriate conventional commit message following the specification.
 
@@ -150,44 +165,37 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   try {
-    const stream = await LLM.stream({
-      agent,
-      user: {
-        id: "commit-message",
+    const result = await CommitMessageRuntime.generate(
+      {
+        agent,
+        user: {
+          id: "commit-message",
+          sessionID: "commit-message",
+          role: "user",
+          model: {
+            providerID: model.providerID,
+            modelID: model.id,
+          },
+          time: {
+            created: Date.now(),
+            completed: Date.now(),
+          },
+        } as any,
+        tools: {},
+        model,
+        small: true,
+        messages: [
+          {
+            role: "user" as const,
+            content: userMessage,
+          },
+        ],
         sessionID: "commit-message",
-        role: "user",
-        model: {
-          providerID: model.providerID,
-          modelID: model.id,
-        },
-        time: {
-          created: Date.now(),
-          completed: Date.now(),
-        },
-      } as any,
-      tools: {},
-      model,
-      small: true,
-      messages: [
-        {
-          role: "user" as const,
-          content: userMessage,
-        },
-      ],
-      abort: controller.signal,
-      sessionID: "commit-message",
-      system: [],
-      retries: 3,
-    })
-
-    // Consume the stream explicitly so that stream-level errors surface
-    // immediately instead of leaving the .text promise hanging (issue #7345).
-    // With some providers/versions of the Vercel AI SDK, `await stream.text`
-    // never resolves when the underlying stream errors out early.
-    let result = ""
-    for await (const chunk of stream.textStream) {
-      result += chunk
-    }
+        system: [],
+        retries: 3,
+      },
+      controller.signal,
+    )
 
     log.info("generated", { message: result })
     return { message: clean(result) }

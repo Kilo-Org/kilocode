@@ -10,6 +10,7 @@
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "lint": "oxlint",
     "typecheck": "bun turbo typecheck",
+    "test:ci": "bun turbo test:ci",
     "postinstall": "bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts",
     "prepare": "husky",
     "random": "echo 'Random script'",
@@ -145,6 +146,6 @@
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.3.8",
+  "version": "7.3.12",
   "peerDependencies": {}
 }

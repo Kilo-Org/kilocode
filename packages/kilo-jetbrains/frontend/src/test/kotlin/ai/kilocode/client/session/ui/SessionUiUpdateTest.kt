@@ -28,7 +28,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent)
+        panel = SessionMessageListPanel(model, parent, openFile = {})
     }
 
     override fun tearDown() {
@@ -125,8 +125,8 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         val mv = panel.findMessage("a1")!!
         val gv = mv.part("g1")
         assertNotNull(gv)
-        assertTrue(gv is ai.kilocode.client.session.views.GenericView)
-        assertTrue((gv as ai.kilocode.client.session.views.GenericView).labelText().contains("snapshot"))
+        assertTrue(gv is ai.kilocode.client.session.views.base.GenericView)
+        assertTrue((gv as ai.kilocode.client.session.views.base.GenericView).labelText().contains("snapshot"))
     }
 
     // ------ silent part types ------

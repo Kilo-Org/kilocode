@@ -42,12 +42,72 @@ The Kilo Community is [on Discord](https://kilo.ai/discord).
 ## Developing Kilo CLI
 
 - **Requirements:** Bun 1.3.13+, Java 21 (see [Prerequisites](#prerequisites) above)
-- Install dependencies and start the dev server from the repo root:
+- Install dependencies and start the CLI from the repo root:
 
   ```bash
   bun install
   bun dev
   ```
+
+  `bun dev` and `bun run dev` both run the local CLI. For the VS Code extension, use `bun run extension`.
+
+## Common Checks
+
+From the repo root:
+
+```bash
+bun install
+bun run lint
+bun run typecheck
+```
+
+`bun run typecheck` wraps `bun turbo typecheck`. Use `bun turbo typecheck --force` if you need to bypass the Turbo cache.
+
+Do **not** run `bun test` from the repo root. The root test script intentionally exits with failure so tests run from the package that owns them.
+
+### CLI checks
+
+From `packages/opencode/`:
+
+```bash
+bun run typecheck
+bun test
+bun test ./path/to/file.test.ts
+```
+
+For backend/API validation, see [`TESTING.md`](./TESTING.md). It covers starting the local backend with `bun dev serve` and making `curl` requests against it. After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from the repo root to regenerate `packages/sdk/js/`.
+
+### VS Code extension checks
+
+From `packages/kilo-vscode/`:
+
+```bash
+bun run typecheck
+bun run lint
+bun run test:unit
+bun run test
+bun run compile
+bun run package
+```
+
+### Documentation checks
+
+From the repo root:
+
+```bash
+bun run --filter @kilocode/kilo-docs test
+bun run --filter @kilocode/kilo-docs build
+bun run --filter @kilocode/kilo-docs dev
+```
+
+For manual docs validation, run the docs site locally, preview the affected page, and check changed links and rendered content.
+
+### Guardrails
+
+- User-facing changes usually need a changeset (`bunx changeset add` or a file under `.changeset/`).
+- After changing server endpoints, regenerate the SDK with `./script/generate.ts`.
+- After adding or changing guarded URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root.
+- When editing shared `packages/opencode/` files, keep Kilo changes small and mark Kilo-only edits with `// kilocode_change` for a single line or `// kilocode_change start` / `// kilocode_change end` for a block. Do not add these markers inside `kilocode`-named paths.
 
 ### Developing the VS Code Extension
 
@@ -188,14 +248,69 @@ Current required fields by issue type:
 
 ## Pull Request Expectations
 
+Contributor guidance exists to protect maintainer review time and keep reviews focused on work that is ready to evaluate.
+
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
 
-## Issue First Policy
+### Contribution Ownership and AI Assistance
 
-All pull requests must reference an existing issue.
+AI and coding agents are allowed, but contributors own the work they submit. Before requesting review, make sure you personally understand the change, have tested it appropriately, can explain the diff, and understand how it interacts with the affected packages and the rest of the repo.
 
-This helps reviewers understand the problem statement, discussion, and intended scope before reviewing the code change.
+If you use an agent, start it from the repo root so the root `AGENTS.md` is available. When your change touches a package with its own guidance, read and follow that package's `AGENTS.md` or contributor docs too.
+
+Maintainers may close PRs that appear to be submitted without credible contributor ownership or understanding, including AI-assisted work that the contributor cannot explain or has not meaningfully reviewed.
+
+### Tracker Use and Automation
+
+Do not submit batches of agent-generated, untested, or weakly reviewed PRs.
+
+Please keep concurrent PRs focused and limited. As a rule, open no more than three PRs at a time, especially if you are a new contributor. Prioritize high-impact or high-priority issues first instead of opening many speculative fixes. If a contributor opens a large batch of low-value or duplicative PRs, maintainers may close the batch and ask the contributor to choose one PR to reopen, focus, and bring up to the documented review bar before submitting more.
+
+For issues, do not mass-create tickets through automation or agents. Search existing issues first, open issues only when you have enough context for someone to act, and prioritize the most important reports instead of filing every possible finding. Maintainers may close duplicate, low-signal, automated, or weakly reviewed issues without action.
+
+Repeated disregard of this contribution guide, or high-volume automated or agent-generated tracker spam across issues or PRs, may result in maintainers blocking the responsible account.
+
+### Bug Bounties
+
+Kilo has bug bounties. To be eligible, make sure your GitHub account is connected in your Kilo account.
+
+### Testing Evidence
+
+Every PR marked ready for review must include testing evidence. A bare `Not tested` or `N/A` answer is not sufficient.
+
+Choose checks that match the files touched. Include command results and manual/local verification; for visual CLI or extension changes, include screenshots or videos. Docs-only, config-only, and similar changes still need concrete evidence, such as a relevant command check or preview.
+
+If you cannot complete a relevant command, include all of the following in the PR:
+
+- The command you attempted or would normally run
+- The blocker or failure that prevented completion
+- The substitute verification you performed instead
+
+See [Testing Evidence for Pull Requests](packages/kilo-docs/pages/contributing/development-environment.md#testing-evidence-for-pull-requests) for more examples. Agent limitations, local resource constraints, OOM constraints, or an agent prompt that says to skip tests do not waive this requirement. Draft PRs may be incomplete until they are marked ready for review. Maintainers may still defer or close review at their discretion.
+
+Our issue-first policy asks contributors to reference an existing issue when opening a PR. This helps reviewers understand the problem statement, discussion, and intended scope before reviewing the code change.
+
+A review-ready PR description should explain:
+
+- What problem is being solved
+- Why the change is needed
+- Important implementation choices or tradeoffs reviewers cannot infer from the diff
+- How the change was tested or verified
+
+Keep the description focused on context reviewers cannot infer from the diff. Skip file-by-file summaries, placeholders, and other filler.
+
+For visual UI changes, include screenshots or video showing the relevant before/after or resulting state.
+
+Maintainers may close or decline review of PRs presented as review-ready at their discretion when they lack:
+
+- Linked issue context
+- A clear what/why explanation
+- Credible testing evidence
+- Credible contributor ownership of AI-assisted work
+- Relevant UI proof for visual UI changes
+
+When a PR is close to this bar, addresses important work, or would benefit from further shaping, maintainers may ask for specific fixes instead of closing or declining review. Contributors may reopen or resubmit once the PR meets the documented bar.
 
 ## PR Titles
 
@@ -211,6 +326,8 @@ Use conventional commit style PR titles such as:
 ## Issue and PR Lifecycle
 
 To keep our backlog manageable, we automatically close inactive issues and PRs after a period of inactivity. This isn't a judgment on quality — older items tend to lose context over time and we'd rather start fresh if they're still relevant. Feel free to reopen or create a new issue/PR if you're still working on something!
+
+Maintainers may also close issues or PRs that disregard the contribution guide, bypass required context, or lack credible contributor ownership of AI-assisted work.
 
 ## Style Preferences
 

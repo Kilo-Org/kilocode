@@ -3,6 +3,7 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -11,6 +12,8 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
@@ -216,6 +219,59 @@ class KiloAppService internal constructor(
         _favorites.value = state.favorite
     }
 
+    /** Refresh the user profile and return the latest data. Null = not logged in. */
+    suspend fun refreshProfile(): ProfileDto? = try {
+        call { refreshProfile() }.also { setProfile(it) }
+    } catch (e: Exception) {
+        LOG.warn("profile refresh failed", e)
+        null
+    }
+
+    /** Refresh profile in fire-and-forget fashion from non-suspend context. */
+    fun refreshProfileAsync() {
+        cs.launch { refreshProfile() }
+    }
+
+    /**
+     * Start the Kilo device auth login flow.
+     * Returns [DeviceAuthDto] with the URL/code to display.
+     * Throws on failure.
+     */
+    suspend fun startLogin(directory: String? = null): DeviceAuthDto = call { startLogin(directory) }
+
+    /**
+     * Complete the login flow. Blocks until authentication finishes.
+     * Returns the user profile, or null if unavailable.
+     */
+    suspend fun completeLogin(directory: String? = null): ProfileDto? = try {
+        call { completeLogin(directory) }.also { setProfile(it) }
+    } catch (e: Exception) {
+        LOG.warn("login completion failed", e)
+        null
+    }
+
+    /** Log out and clear the user profile. */
+    suspend fun logout(): Boolean = try {
+        call { logout() }.also { ok ->
+            if (ok) setProfile(null)
+        }
+    } catch (e: Exception) {
+        LOG.warn("logout failed", e)
+        false
+    }
+
+    /**
+     * Switch active account context.
+     * Pass null for personal account, organization ID for org context.
+     * Returns the updated profile, or null if not logged in.
+     */
+    suspend fun setOrganization(organizationId: String?): ProfileDto? = try {
+        call { setOrganization(organizationId) }.also { setProfile(it) }
+    } catch (e: Exception) {
+        LOG.warn("organization switch failed", e)
+        null
+    }
+
     /**
      * Collect app state changes and invoke [fn] for each update.
      */
@@ -226,5 +282,13 @@ class KiloAppService internal constructor(
                 fn(next)
             }
         }
+    }
+
+    private fun setProfile(profile: ProfileDto?) {
+        val current = _state.value
+        val progress = current.progress?.copy(
+            profile = if (profile == null) ProfileStatusDto.NOT_LOGGED_IN else ProfileStatusDto.LOADED,
+        )
+        _state.value = current.copy(profile = profile, progress = progress)
     }
 }

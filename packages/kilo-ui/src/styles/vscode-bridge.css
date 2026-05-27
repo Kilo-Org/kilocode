@@ -283,45 +283,16 @@ html[data-theme="kilo-vscode"] {
   --diffs-light-bg: var(--background-stronger);
   --diffs-dark-bg: var(--background-stronger);
 
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
+  /* Pierre 1.1 mixes line and gutter tints from the diff color.
+     Only word emphasis uses a final background override. */
   --diffs-bg-addition-emphasis-override: color-mix(
     in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
+    var(--background-stronger) 60%,
     var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-hover-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
   );
   --diffs-bg-deletion-emphasis-override: color-mix(
     in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-hover-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
+    var(--background-stronger) 60%,
     var(--syntax-diff-delete, #da3319)
   );
 

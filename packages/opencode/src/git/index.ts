@@ -1,7 +1,6 @@
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Effect, Layer, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 const cfg = [
   "--no-optional-locks",
@@ -362,10 +361,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(CrossSpawnSpawner.defaultLayer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const run = (args: string[], opts: Options) => runPromise((svc) => svc.run(args, opts))
-// kilocode_change end
 
 export * as Git from "."

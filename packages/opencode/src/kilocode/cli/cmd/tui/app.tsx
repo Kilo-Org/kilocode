@@ -22,6 +22,7 @@ import { Link } from "@tui/ui/link"
 import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
+import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
 
 // Re-export so upstream can render the route without importing directly
 export { KiloClawView } from "@/kilocode/claw/view"
@@ -132,6 +133,7 @@ export function init() {
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
+  const dialog = useDialog()
 
   // Inject TUI dependencies for kilo-gateway
   initializeTUIDependencies({
@@ -154,6 +156,16 @@ export function init() {
 
   // Register auto-approve toggle
   command.register(() => [
+    {
+      title: "Background processes",
+      description: "List and manage tracked background processes",
+      value: "background_process.list",
+      category: "Kilo",
+      slash: { name: "process", aliases: ["processes"] },
+      onSelect: () => {
+        dialog.replace(() => <DialogProcessList />)
+      },
+    },
     {
       get title() {
         return isAllowEverything(sync.data.config.permission) ? "Disable auto-approve mode" : "Enable auto-approve mode"

@@ -2,6 +2,7 @@ package ai.kilocode.client.session.ui.model
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
 import com.intellij.ui.CollectionListModel
@@ -12,18 +13,12 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.EmptyIcon
-import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
-import java.awt.Component
 import java.awt.FlowLayout
-import java.awt.Graphics
-import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.Rectangle
-import java.awt.RenderingHints
-import java.awt.font.FontRenderContext
 import javax.swing.Icon
 import javax.swing.JList
 import javax.swing.JPanel
@@ -70,7 +65,11 @@ internal class ModelPickerRenderer(
         verticalAlignment = SwingConstants.CENTER
     }
     private val title = SimpleColoredComponent()
-    private val badge = BadgeIcon
+    private val badge = FilledBadgeIcon(
+        KiloBundle.message("model.picker.free"),
+        ModelText.freeBg(),
+        JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE),
+    )
     private val provider = JBLabel()
     private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         add(title)
@@ -157,33 +156,4 @@ internal class ModelPickerRenderer(
     internal fun badgeVisible(): Boolean = head.getComponent(1).isVisible
 
     private class BadgeLabel(icon: Icon) : JBLabel(icon)
-
-    private object BadgeIcon : Icon {
-        private val text = KiloBundle.message("model.picker.free")
-
-        override fun getIconWidth(): Int {
-            val font = JBFont.small()
-            val w = font.getStringBounds(text, FontRenderContext(null, true, true)).width.toInt()
-            return w + JBUI.scale(12)
-        }
-
-        override fun getIconHeight(): Int = JBUI.scale(16)
-
-        override fun paintIcon(c: Component?, g: Graphics, x: Int, y: Int) {
-            val g2 = g.create() as Graphics2D
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2.translate(x, y)
-                g2.color = ModelText.freeBg()
-                g2.fillRoundRect(0, 0, iconWidth, iconHeight, JBUI.scale(4), JBUI.scale(4))
-                g2.color = JBColor.namedColor("Kilo.ModelPicker.freeBadgeForeground", JBColor.WHITE)
-                g2.font = JBFont.small()
-                val fm = g2.fontMetrics
-                val y = (iconHeight + fm.ascent - fm.descent) / 2
-                g2.drawString(text, JBUI.scale(6), y)
-            } finally {
-                g2.dispose()
-            }
-        }
-    }
 }

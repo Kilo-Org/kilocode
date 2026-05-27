@@ -534,6 +534,7 @@ function pathParameterSchema(route: string, name: string) {
   if (name in PathParameterSchemas) return PathParameterSchemas[name as keyof typeof PathParameterSchemas]
   if (name === "id" && route.startsWith("DELETE /experimental/workspace/")) return { type: "string", pattern: "^wrk.*" }
   if (name === "id" && route.startsWith("POST /experimental/workspace/")) return { type: "string", pattern: "^wrk.*" }
+  if (name === "processID" && route.includes(" /background-process/")) return { type: "string", pattern: "^bgp.*" } // kilocode_change
   if (name === "requestID" && route.startsWith("POST /permission/")) return { type: "string", pattern: "^per.*" }
   if (name === "requestID" && route.startsWith("POST /question/")) return { type: "string", pattern: "^que.*" }
   // /network/* reuses QuestionID (prefix "que"), not a separate brand. // kilocode_change

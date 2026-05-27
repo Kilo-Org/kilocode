@@ -22,9 +22,10 @@ const _typeCheck: _AssertAgentImplementsACPAgent = true
 describe("acp.agent interface compliance", () => {
   // Extract method names from the ACPAgent interface type
   type ACPAgentMethods = keyof ACPAgent
+  type ACPRuntimeMethod = ACPAgentMethods | "resumeSession" | "closeSession" // kilocode_change
 
   // Methods that the SDK's router explicitly checks for at runtime
-  const sdkCheckedMethods: ACPAgentMethods[] = [
+  const sdkCheckedMethods: ACPRuntimeMethod[] = [ // kilocode_change
     // Required
     "initialize",
     "newSession",

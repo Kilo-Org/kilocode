@@ -102,9 +102,11 @@ export const ConfigRoutes = lazy(() =>
           },
         },
       }),
-      async (c) => {
-        return c.json(await Config.warnings())
-      },
+      async (c) =>
+        jsonRequest("ConfigRoutes.warnings", c, function* () {
+          const cfg = yield* Config.Service
+          return yield* cfg.warnings()
+        }),
     )
     // kilocode_change end
     .get(

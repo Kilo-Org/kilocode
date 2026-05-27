@@ -8,16 +8,18 @@ export type Event =
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
+  | EventTuiPromptAppend
+  | EventTuiCommandExecute
+  | EventTuiToastShow1
+  | EventTuiSessionSelect
+  | EventKilocodeAgentManagerStart
+  | EventIndexingStatus
   | EventServerInstanceDisposed
   | EventLspClientDiagnostics
   | EventLspUpdated
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected
-  | EventTuiPromptAppend
-  | EventTuiCommandExecute
-  | EventTuiToastShow1
-  | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
   | EventSessionNetworkAsked
@@ -27,6 +29,8 @@ export type Event =
   | EventMessagePartDelta
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventBackgroundProcessUpdated
+  | EventBackgroundProcessDeleted
   | EventSessionTurnOpen
   | EventSessionTurnClose
   | EventSessionDiff
@@ -44,7 +48,6 @@ export type Event =
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
-  | EventKilocodeAgentManagerStart
   | EventVcsBranchUpdated
   | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
@@ -89,7 +92,6 @@ export type Event =
   | EventSessionNextCompactionStarted
   | EventSessionNextCompactionDelta
   | EventSessionNextCompactionEnded
-  | EventIndexingStatus
 
 export type OAuth = {
   type: "oauth"
@@ -115,6 +117,71 @@ export type WellKnownAuth = {
 }
 
 export type Auth = OAuth | ApiAuth | WellKnownAuth
+
+export type EventTuiPromptAppend = {
+  id: string
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  id: string
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  id: string
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  id: string
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
+}
+
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
 
 export type QuestionOption = {
   /**
@@ -178,61 +245,6 @@ export type QuestionRejected = {
   requestID: string
 }
 
-export type EventTuiPromptAppend = {
-  id: string
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  id: string
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  id: string
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  id: string
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-}
-
 export type SessionNetworkWait = {
   id: string
   sessionID: string
@@ -256,6 +268,26 @@ export type PermissionRequest = {
   tool?: {
     messageID: string
     callID: string
+  }
+}
+
+export type BackgroundProcessInfo = {
+  id: string
+  sessionID: string
+  pid?: number
+  command: string
+  cwd: string
+  description?: string
+  ports: Array<number>
+  status: "starting" | "running" | "ready" | "exited" | "failed" | "stopping" | "stopped"
+  ready: boolean
+  exitCode?: number
+  signal?: string
+  output: string
+  time: {
+    started: number
+    updated: number
+    ended?: number
   }
 }
 
@@ -835,16 +867,6 @@ export type Prompt = {
   agents?: Array<PromptAgentAttachment>
 }
 
-export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
-
-export type IndexingStatus = {
-  state: IndexingStatusState
-  message: string
-  processedFiles: number
-  totalFiles: number
-  percent: number
-}
-
 export type GlobalEvent = {
   directory: string
   project?: string
@@ -853,16 +875,18 @@ export type GlobalEvent = {
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
+    | EventTuiPromptAppend
+    | EventTuiCommandExecute
+    | EventTuiToastShow
+    | EventTuiSessionSelect
+    | EventKilocodeAgentManagerStart
+    | EventIndexingStatus
     | EventServerInstanceDisposed
     | EventLspClientDiagnostics
     | EventLspUpdated
     | EventQuestionAsked
     | EventQuestionReplied
     | EventQuestionRejected
-    | EventTuiPromptAppend
-    | EventTuiCommandExecute
-    | EventTuiToastShow
-    | EventTuiSessionSelect
     | EventMcpToolsChanged
     | EventMcpBrowserOpenFailed
     | EventSessionNetworkAsked
@@ -872,6 +896,8 @@ export type GlobalEvent = {
     | EventMessagePartDelta
     | EventPermissionAsked
     | EventPermissionReplied
+    | EventBackgroundProcessUpdated
+    | EventBackgroundProcessDeleted
     | EventSessionTurnOpen
     | EventSessionTurnClose
     | EventSessionDiff
@@ -889,7 +915,6 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
-    | EventKilocodeAgentManagerStart
     | EventVcsBranchUpdated
     | EventKiloSessionsRemoteStatusChanged
     | EventWorkspaceReady
@@ -934,7 +959,6 @@ export type GlobalEvent = {
     | EventSessionNextCompactionStarted
     | EventSessionNextCompactionDelta
     | EventSessionNextCompactionEnded
-    | EventIndexingStatus
     | SyncEventMessageUpdated
     | SyncEventMessageRemoved
     | SyncEventMessagePartUpdated
@@ -1302,6 +1326,8 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   model?: string
   small_model?: string
+  subagent_model?: string
+  subagent_variant?: string
   default_agent?: string
   username?: string
   mode?: {
@@ -1402,8 +1428,6 @@ export type Config = {
     batch_tool?: boolean
     codebase_search?: boolean
     semantic_indexing?: boolean
-    agent_manager_tool?: boolean
-    speech_to_text?: boolean
     speech_to_text_model?: string
     openTelemetry?: boolean
     primary_tools?: Array<string>
@@ -1952,6 +1976,12 @@ export type WorkspaceWarpError = {
   data: {
     message: string
   }
+}
+
+export type BackgroundProcessLogs = {
+  id: string
+  sessionID: string
+  output: string
 }
 
 export type EffectHttpApiErrorUnauthorized = {
@@ -2514,6 +2544,30 @@ export type EventGlobalConfigUpdated = {
   }
 }
 
+export type EventKilocodeAgentManagerStart = {
+  id: string
+  type: "kilocode.agent_manager.start"
+  properties: {
+    requestID: string
+    sessionID: string
+    mode: "worktree" | "local"
+    versions?: boolean
+    tasks: Array<{
+      prompt?: string
+      name?: string
+      branchName?: string
+    }>
+  }
+}
+
+export type EventIndexingStatus = {
+  id: string
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type EventServerInstanceDisposed = {
   id: string
   type: "server.instance.disposed"
@@ -2633,6 +2687,23 @@ export type EventPermissionReplied = {
     sessionID: string
     requestID: string
     reply: "once" | "always" | "reject"
+  }
+}
+
+export type EventBackgroundProcessUpdated = {
+  id: string
+  type: "background_process.updated"
+  properties: {
+    info: BackgroundProcessInfo
+  }
+}
+
+export type EventBackgroundProcessDeleted = {
+  id: string
+  type: "background_process.deleted"
+  properties: {
+    sessionID: string
+    processID: string
   }
 }
 
@@ -2796,22 +2867,6 @@ export type EventProjectUpdated = {
   id: string
   type: "project.updated"
   properties: Project
-}
-
-export type EventKilocodeAgentManagerStart = {
-  id: string
-  type: "kilocode.agent_manager.start"
-  properties: {
-    requestID: string
-    sessionID: string
-    mode: "worktree" | "local"
-    versions?: boolean
-    tasks: Array<{
-      prompt?: string
-      name?: string
-      branchName?: string
-    }>
-  }
 }
 
 export type EventVcsBranchUpdated = {
@@ -3337,14 +3392,6 @@ export type EventSessionNextCompactionEnded = {
     sessionID: string
     text: string
     include?: string
-  }
-}
-
-export type EventIndexingStatus = {
-  id: string
-  type: "indexing.status"
-  properties: {
-    status: IndexingStatus
   }
 }
 
@@ -7346,6 +7393,168 @@ export type ExperimentalWorkspaceWarpResponses = {
 export type ExperimentalWorkspaceWarpResponse =
   ExperimentalWorkspaceWarpResponses[keyof ExperimentalWorkspaceWarpResponses]
 
+export type BackgroundProcessListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/background-process"
+}
+
+export type BackgroundProcessListResponses = {
+  /**
+   * List of background processes
+   */
+  200: Array<BackgroundProcessInfo>
+}
+
+export type BackgroundProcessListResponse = BackgroundProcessListResponses[keyof BackgroundProcessListResponses]
+
+export type BackgroundProcessGetData = {
+  body?: never
+  path: {
+    processID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/background-process/{processID}"
+}
+
+export type BackgroundProcessGetErrors = {
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type BackgroundProcessGetError = BackgroundProcessGetErrors[keyof BackgroundProcessGetErrors]
+
+export type BackgroundProcessGetResponses = {
+  /**
+   * Background process info
+   */
+  200: BackgroundProcessInfo
+}
+
+export type BackgroundProcessGetResponse = BackgroundProcessGetResponses[keyof BackgroundProcessGetResponses]
+
+export type BackgroundProcessLogsData = {
+  body?: never
+  path: {
+    processID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/background-process/{processID}/logs"
+}
+
+export type BackgroundProcessLogsErrors = {
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type BackgroundProcessLogsError = BackgroundProcessLogsErrors[keyof BackgroundProcessLogsErrors]
+
+export type BackgroundProcessLogsResponses = {
+  /**
+   * Background process logs
+   */
+  200: BackgroundProcessLogs
+}
+
+export type BackgroundProcessLogsResponse = BackgroundProcessLogsResponses[keyof BackgroundProcessLogsResponses]
+
+export type BackgroundProcessStopData = {
+  body?: never
+  path: {
+    processID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/background-process/{processID}/stop"
+}
+
+export type BackgroundProcessStopErrors = {
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type BackgroundProcessStopError = BackgroundProcessStopErrors[keyof BackgroundProcessStopErrors]
+
+export type BackgroundProcessStopResponses = {
+  /**
+   * Stopped background process
+   */
+  200: BackgroundProcessInfo
+}
+
+export type BackgroundProcessStopResponse = BackgroundProcessStopResponses[keyof BackgroundProcessStopResponses]
+
+export type BackgroundProcessRestartData = {
+  body?: never
+  path: {
+    processID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/background-process/{processID}/restart"
+}
+
+export type BackgroundProcessRestartErrors = {
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type BackgroundProcessRestartError = BackgroundProcessRestartErrors[keyof BackgroundProcessRestartErrors]
+
+export type BackgroundProcessRestartResponses = {
+  /**
+   * Restarted background process
+   */
+  200: BackgroundProcessInfo
+}
+
+export type BackgroundProcessRestartResponse =
+  BackgroundProcessRestartResponses[keyof BackgroundProcessRestartResponses]
+
+export type BackgroundProcessStopSessionData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/background-process/session/{sessionID}/stop"
+}
+
+export type BackgroundProcessStopSessionResponses = {
+  /**
+   * Stopped session background processes
+   */
+  200: boolean
+}
+
+export type BackgroundProcessStopSessionResponse =
+  BackgroundProcessStopSessionResponses[keyof BackgroundProcessStopSessionResponses]
+
 export type CommitMessageGenerateData = {
   body?: {
     /**
@@ -7528,6 +7737,7 @@ export type KiloFimData = {
   body?: {
     prefix: string
     suffix: string
+    provider?: string
     model?: string
     maxTokens?: number
     temperature?: number
@@ -7569,6 +7779,55 @@ export type KiloFimResponses = {
 }
 
 export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
+
+export type KiloEditData = {
+  body?: {
+    provider?: string
+    model?: string
+    maxTokens?: number
+    currentFilePath: string
+    currentFileContent: string
+    cursorLine: number
+    cursorCharacter: number
+    editableRegionStartLine: number
+    editableRegionEndLine: number
+    recentlyViewedSnippets: Array<{
+      filepath: string
+      content: string
+    }>
+    editDiffHistory: Array<string>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/edit"
+}
+
+export type KiloEditErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloEditError = KiloEditErrors[keyof KiloEditErrors]
+
+export type KiloEditResponses = {
+  /**
+   * Next Edit completion
+   */
+  200: {
+    content: string
+    usage?: {
+      prompt_tokens?: number
+      completion_tokens?: number
+    }
+  }
+}
+
+export type KiloEditResponse = KiloEditResponses[keyof KiloEditResponses]
 
 export type KiloAudioTranscriptionsData = {
   body?: {

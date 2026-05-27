@@ -65,36 +65,14 @@ export class FimPromptBuilder {
     signal?: AbortSignal,
   ): Promise<FimCompletionResult> {
     const { formattedPrefix, prunedSuffix, autocompleteInput } = prompt
-    let perflog = ""
-    const logtime = (() => {
-      let timestamp = performance.now()
-      return (msg: string) => {
-        const baseline = timestamp
-        timestamp = performance.now()
-        perflog += `${msg}: ${timestamp - baseline}\n`
-      }
-    })()
-
-    logtime("snippets")
-
-    console.log("[FIM] formattedPrefix:", formattedPrefix)
-
     let response = ""
     const onChunk = (text: string) => {
       response += text
     }
-    logtime("prep fim")
     const usageInfo = await generateFim(connection, modelId, formattedPrefix, prunedSuffix, onChunk, signal)
-    logtime("fim network")
-    console.log("[FIM] response:", response)
 
     const fillInAtCursorSuggestion = processSuggestion(response)
 
-    if (fillInAtCursorSuggestion.text) {
-      console.info("Final FIM suggestion:", fillInAtCursorSuggestion)
-    }
-    logtime("processSuggestion")
-    console.log(perflog + `lengths: ${formattedPrefix.length + prunedSuffix.length}\n`)
     return {
       suggestion: fillInAtCursorSuggestion,
       cost: usageInfo.cost,

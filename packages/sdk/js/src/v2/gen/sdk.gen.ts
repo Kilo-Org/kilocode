@@ -13,6 +13,16 @@ import type {
   AuthRemoveResponses,
   AuthSetErrors,
   AuthSetResponses,
+  BackgroundProcessGetErrors,
+  BackgroundProcessGetResponses,
+  BackgroundProcessListResponses,
+  BackgroundProcessLogsErrors,
+  BackgroundProcessLogsResponses,
+  BackgroundProcessRestartErrors,
+  BackgroundProcessRestartResponses,
+  BackgroundProcessStopErrors,
+  BackgroundProcessStopResponses,
+  BackgroundProcessStopSessionResponses,
   CommandListResponses,
   CommitMessageGenerateErrors,
   CommitMessageGenerateResponses,
@@ -87,6 +97,8 @@ import type {
   KilocodeSessionImportProjectResponses,
   KilocodeSessionImportSessionErrors,
   KilocodeSessionImportSessionResponses,
+  KiloEditErrors,
+  KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
   KiloModesResponses,
@@ -5112,6 +5124,214 @@ export class Tui extends HeyApiClient {
   }
 }
 
+export class BackgroundProcess extends HeyApiClient {
+  /**
+   * List background processes
+   *
+   * List tracked background processes for the current instance.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<BackgroundProcessListResponses, unknown, ThrowOnError>({
+      url: "/background-process",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get background process
+   *
+   * Get status and retained output for one background process.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      BackgroundProcessGetResponses,
+      BackgroundProcessGetErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get background process logs
+   *
+   * Get the retained output tail for one background process.
+   */
+  public logs<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      BackgroundProcessLogsResponses,
+      BackgroundProcessLogsErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}/logs",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Stop background process
+   *
+   * Terminate a background process and its child process tree.
+   */
+  public stop<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      BackgroundProcessStopResponses,
+      BackgroundProcessStopErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}/stop",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Restart background process
+   *
+   * Stop and restart a background process with its original command.
+   */
+  public restart<ThrowOnError extends boolean = false>(
+    parameters: {
+      processID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "processID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      BackgroundProcessRestartResponses,
+      BackgroundProcessRestartErrors,
+      ThrowOnError
+    >({
+      url: "/background-process/{processID}/restart",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Stop session background processes
+   *
+   * Terminate and forget all background processes associated with one session.
+   */
+  public stopSession<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<BackgroundProcessStopSessionResponses, unknown, ThrowOnError>({
+      url: "/background-process/session/{sessionID}/stop",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class CommitMessage extends HeyApiClient {
   /**
    * Generate commit message
@@ -5543,6 +5763,7 @@ export class Kilo extends HeyApiClient {
       workspace?: string
       prefix?: string
       suffix?: string
+      provider?: string
       model?: string
       maxTokens?: number
       temperature?: number
@@ -5558,6 +5779,7 @@ export class Kilo extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "prefix" },
             { in: "body", key: "suffix" },
+            { in: "body", key: "provider" },
             { in: "body", key: "model" },
             { in: "body", key: "maxTokens" },
             { in: "body", key: "temperature" },
@@ -5567,6 +5789,66 @@ export class Kilo extends HeyApiClient {
     )
     return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
       url: "/kilo/fim",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Next Edit completion
+   *
+   * Proxy a Mercury-style Next Edit request. The user supplies the already-templated sentinel-tagged prompt in `content`; the gateway forwards to the upstream edit endpoint (currently Inception's /v1/edit/completions) and returns the unwrapped reply.
+   */
+  public edit<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      provider?: string
+      model?: string
+      maxTokens?: number
+      currentFilePath?: string
+      currentFileContent?: string
+      cursorLine?: number
+      cursorCharacter?: number
+      editableRegionStartLine?: number
+      editableRegionEndLine?: number
+      recentlyViewedSnippets?: Array<{
+        filepath: string
+        content: string
+      }>
+      editDiffHistory?: Array<string>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "provider" },
+            { in: "body", key: "model" },
+            { in: "body", key: "maxTokens" },
+            { in: "body", key: "currentFilePath" },
+            { in: "body", key: "currentFileContent" },
+            { in: "body", key: "cursorLine" },
+            { in: "body", key: "cursorCharacter" },
+            { in: "body", key: "editableRegionStartLine" },
+            { in: "body", key: "editableRegionEndLine" },
+            { in: "body", key: "recentlyViewedSnippets" },
+            { in: "body", key: "editDiffHistory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<KiloEditResponses, KiloEditErrors, ThrowOnError>({
+      url: "/kilo/edit",
       ...options,
       ...params,
       headers: {
@@ -6688,6 +6970,11 @@ export class KiloClient extends HeyApiClient {
   private _tui?: Tui
   get tui(): Tui {
     return (this._tui ??= new Tui({ client: this.client }))
+  }
+
+  private _backgroundProcess?: BackgroundProcess
+  get backgroundProcess(): BackgroundProcess {
+    return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
   }
 
   private _commitMessage?: CommitMessage

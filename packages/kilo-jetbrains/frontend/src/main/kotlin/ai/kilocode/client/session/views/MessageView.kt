@@ -9,6 +9,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.ui.RoundedLineBorder
 import com.intellij.util.ui.JBUI
@@ -26,12 +27,13 @@ import com.intellij.util.ui.JBUI
  */
 class MessageView(
     val msg: Message,
+    private val openFile: (String) -> Unit,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
     JBUI.scale(SessionUiStyle.SessionLayout.GAP),
 ), SessionEditorStyleTarget, SessionView {
 
-    constructor(msg: Message) : this(msg, SessionEditorStyle.current())
+    constructor(msg: Message, openFile: (String) -> Unit) : this(msg, openFile, SessionEditorStyle.current())
 
     val role: String get() = msg.info.role
 
@@ -53,7 +55,7 @@ class MessageView(
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
-            val view = ViewFactory.create(content)
+            val view = ViewFactory.create(content, openFile)
             view.applyStyle(style)
             parts[content.id] = view
             add(view)
@@ -93,7 +95,7 @@ class MessageView(
             refresh()
             return
         }
-        val view = ViewFactory.create(content)
+        val view = ViewFactory.create(content, openFile)
         view.applyStyle(style)
         parts[content.id] = view
         add(view)
@@ -105,7 +107,7 @@ class MessageView(
         val at = components.indexOfFirst { it === existing }.takeIf { it >= 0 } ?: componentCount
         parts.remove(content.id)
         remove(existing)
-        val view = ViewFactory.create(content)
+        val view = ViewFactory.create(content, openFile)
         view.applyStyle(style)
         parts[content.id] = view
         add(view, at)
@@ -126,8 +128,10 @@ class MessageView(
      * pending/running question tool part linked to the active question.
      */
     private fun isHidden(content: Content): Boolean {
-        val ref = hidden ?: return false
         if (content !is Tool) return false
+        if (content.name == "todoread") return true
+        if (content.name == "todowrite" && content.state != ToolExecState.COMPLETED) return true
+        val ref = hidden ?: return false
         if (content.name != "question") return false
         if (content.state != ToolExecState.PENDING && content.state != ToolExecState.RUNNING) return false
         return msg.info.id == ref.messageId && content.callId == ref.callId
@@ -143,7 +147,7 @@ class MessageView(
         for ((_, content) in msg.parts) {
             if (content is StepFinish) continue
             if (isHidden(content)) continue
-            val view = ViewFactory.create(content)
+            val view = ViewFactory.create(content, openFile)
             view.applyStyle(style)
             parts[content.id] = view
             add(view)

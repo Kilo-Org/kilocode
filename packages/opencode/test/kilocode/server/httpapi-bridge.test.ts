@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { OpenApi } from "effect/unstable/httpapi"
+import { BackgroundProcessPaths } from "../../../src/kilocode/server/httpapi/groups/background-process"
 import { KiloGatewayPaths } from "../../../src/kilocode/server/httpapi/groups/kilo-gateway"
 import { ExperimentalPaths } from "../../../src/server/routes/instance/httpapi/groups/experimental"
 import { PublicApi } from "../../../src/server/routes/instance/httpapi/public"
@@ -79,6 +80,12 @@ describe("Kilo HttpApi bridge", () => {
     const hono = new Set(openApiRouteKeys(await Server.openapiHono()))
     const effect = new Set(openApiRouteKeys(effectOpenApi()))
     const kilo = [
+      `GET ${BackgroundProcessPaths.list}`,
+      "GET /background-process/{processID}",
+      "GET /background-process/{processID}/logs",
+      "POST /background-process/{processID}/stop",
+      "POST /background-process/{processID}/restart",
+      "POST /background-process/session/{sessionID}/stop",
       "POST /permission/allow-everything",
       "POST /enhance-prompt",
       "POST /commit-message",
@@ -111,6 +118,8 @@ describe("Kilo HttpApi bridge", () => {
 
     expect(kilo.filter((route) => !hono.has(route))).toEqual([])
     expect(kilo.filter((route) => !effect.has(route))).toEqual([])
+    expect(hono.has("POST /background-process")).toBe(false)
+    expect(effect.has("POST /background-process")).toBe(false)
     expect(effect.has("GET /indexing/status")).toBe(true)
   })
 

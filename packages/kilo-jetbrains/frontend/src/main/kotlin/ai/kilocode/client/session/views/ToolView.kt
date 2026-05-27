@@ -7,6 +7,7 @@ import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.icons.AllIcons
