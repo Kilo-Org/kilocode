@@ -106,15 +106,7 @@ CORRECT — description is always required:
 </example>
 
 - CRITICAL: The edit tool parameter names are EXACTLY `oldString` and `newString` — never use abbreviations like `oldStr`, `newStr`, `old_string`, or `new_string`. Using the wrong key causes immediate schema validation failure with "received undefined".
-- CRITICAL: When using the edit tool, `oldString` MUST contain only actual file content — NEVER include line number prefixes from Read tool output. The Read tool prefixes each line with `N: ` for display only; strip these before constructing `oldString`.
-
-<example tool="edit">
-WRONG — oldString contains line number prefixes (will fail to match):
-{"oldString": "1: <!doctype html>\n2: <html lang=\"en\">\n3:   <head>"}
-
-CORRECT — oldString contains only the actual file content:
-{"oldString": "<!doctype html>\n<html lang=\"en\">\n  <head>"}
-</example>
+- CRITICAL: When using the edit tool, `oldString` MUST contain only exact file content from Read output, including its original indentation.
 
 # Code References
 When referencing code, use the pattern `file_path:line_number`.
