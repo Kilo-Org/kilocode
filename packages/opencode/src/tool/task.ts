@@ -9,6 +9,7 @@ import { Config } from "@/config/config"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
+import { errorMessage } from "@/util/error" // kilocode_change
 import { Effect, Exit, Schema } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 
@@ -118,14 +119,18 @@ export const TaskTool = Tool.define(
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
 
-      // kilocode_change start — prefer user's CLI-saved pick for this subagent
-      const saved = yield* KiloTask.resolveModel(next.name)
-      const model = saved ??
-        next.model ?? {
+      // kilocode_change start — prefer valid subagent overrides, safely inheriting when overrides go stale
+      const selected = yield* KiloTask.resolveModel({
+        name: next.name,
+        agent: next,
+        config: cfg,
+        parent: {
           modelID: msg.info.modelID,
           providerID: msg.info.providerID,
-        }
-      const variant = saved?.variant ?? (saved ? undefined : next.variant)
+        },
+      })
+      const model = selected.model
+      const variant = selected.variant
       // kilocode_change end
 
       yield* ctx.metadata({
@@ -175,6 +180,12 @@ export const TaskTool = Tool.define(
               },
               parts,
             })
+
+            // kilocode_change start - expose terminal child assistant errors through the task tool boundary
+            if (result.info.role === "assistant" && result.info.error) {
+              return yield* Effect.fail(new Error(errorMessage(result.info.error)))
+            }
+            // kilocode_change end
 
             return {
               title: params.description,

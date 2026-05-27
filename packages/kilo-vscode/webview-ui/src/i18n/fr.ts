@@ -288,7 +288,7 @@ export const dict = {
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
 
-  "speechToText.tooltip.start": "Démarrer la saisie vocale",
+  "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
   "speechToText.tooltip.error": "La saisie vocale a échoué. Cliquez pour effacer.",
@@ -868,6 +868,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Connecté depuis vos variables d'environnement",
   "settings.providers.action.signInChatGPT": "Se connecter avec ChatGPT",
   "settings.providers.custom.description": "Ajoutez un fournisseur compatible OpenAI par URL de base.",
+  "settings.providers.subagentModel.title": "Modèle de sous-agent",
+  "settings.providers.subagentModel.description":
+    "Modèle par défaut et effort de raisonnement pour les sous-agents du task-tool. Laissez vide pour hériter du modèle de l'agent appelant.",
   "settings.providers.modeModels": "Modèle par mode",
   "settings.providers.custom.note": "Ajoutez un fournisseur compatible OpenAI par URL de base.",
   "settings.providers.modeModels.description":
@@ -1275,14 +1278,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",
-  "settings.experimental.agentManagerTool.title": "Outil Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Autoriser les agents à démarrer des sessions locales Agent Manager et des sessions worktree depuis un appel d'outil",
   "settings.experimental.speechToText.title": "Transcription vocale",
   "settings.experimental.speechToText.description":
     "Activez la saisie vocale dans les champs de prompt en utilisant votre compte Kilo via Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Activez Kilo provider et connectez-vous pour utiliser la saisie vocale dans les champs de prompt.",
+    "Activez et connectez-vous au fournisseur Kilo pour utiliser Speech to Text. Speech to Text n'est actuellement pris en charge qu'avec Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Modèle de transcription vocale",
   "settings.experimental.speechToTextModel.description":
     "Choisissez le modèle de transcription Kilo Gateway pour la saisie vocale.",
@@ -1308,6 +1308,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Sélectionner un agent à configurer…",
   "settings.agentBehaviour.modelOverride.title": "Remplacement du modèle",
   "settings.agentBehaviour.modelOverride.description": "Remplacer le modèle par défaut pour cet agent",
+  "settings.agentBehaviour.variantOverride.title": "Remplacement de la variante",
+  "settings.agentBehaviour.variantOverride.description": "Remplacer la variante du modèle pour cet agent",
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
   "settings.agentBehaviour.prompt.description": "Prompt système supplémentaire pour cet agent",
   "settings.agentBehaviour.temperature.title": "Température",

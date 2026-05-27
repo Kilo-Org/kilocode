@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Rechercher des onglets...",
   "agentManager.tabsMenu.empty": "Aucun onglet correspondant",
   "agentManager.tabsMenu.status.waiting": "Attente",
-  "agentManager.tabsMenu.status.working": "En cours",
   "agentManager.tabsMenu.status.retry": "Réessai",
 
   "agentManager.terminal.new": "Nouvel onglet de terminal",

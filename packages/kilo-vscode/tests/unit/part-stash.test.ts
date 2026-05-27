@@ -26,6 +26,15 @@ describe("PartStash", () => {
     expect(stash.size()).toBe(0)
   })
 
+  it("removePart() keeps off-screen removals authoritative", () => {
+    const stash = new PartStash()
+    stash.put("m1", [text("p1", "m1", "drop"), text("p2", "m1", "keep")])
+    stash.removePart("m1", "p1")
+    expect(stash.peek("m1")?.map((part) => part.id)).toEqual(["p2"])
+    stash.removePart("m1", "p2")
+    expect(stash.peek("m1")).toEqual([])
+  })
+
   it("take() consumes stashed parts atomically", () => {
     const stash = new PartStash()
     stash.put("m1", [text("p1", "m1", "a")])

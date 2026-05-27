@@ -5,7 +5,6 @@ import { NonNegativeInt } from "@/util/schema"
 import { Global } from "@opencode-ai/core/global"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 
@@ -103,13 +102,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const get = (providerID: string) => runPromise((svc) => svc.get(providerID))
-export const all = () => runPromise((svc) => svc.all())
-export const set = (key: string, info: Info) => runPromise((svc) => svc.set(key, info))
-export const remove = (key: string) => runPromise((svc) => svc.remove(key))
-// kilocode_change end
 
 export * as Auth from "."

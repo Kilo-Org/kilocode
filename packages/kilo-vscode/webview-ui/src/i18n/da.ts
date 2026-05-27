@@ -285,7 +285,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
 
-  "speechToText.tooltip.start": "Start stemmeinput",
+  "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
   "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
   "speechToText.tooltip.error": "Stemmeinput mislykkedes. Klik for at rydde.",
@@ -854,6 +854,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
   "settings.providers.custom.description": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
+  "settings.providers.subagentModel.title": "Underagentmodel",
+  "settings.providers.subagentModel.description":
+    "Standardmodel og ræsonnementsindsats for task-tool-underagenter. Lad den være tom for at nedarve den kaldende agents model.",
   "settings.providers.modeModels": "Model pr. tilstand",
   "settings.providers.custom.note": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
   "settings.providers.modeModels.description":
@@ -1249,14 +1252,11 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-værktøj",
-  "settings.experimental.agentManagerTool.description":
-    "Tillad agenter at starte lokale Agent Manager-sessioner og worktree-sessioner fra et værktøjskald",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktivér stemmeinput i prompt-felter ved hjælp af din Kilo-konto gennem Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktivér og log ind på Kilo provider for at bruge stemmeinput i prompt-felter.",
+    "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Model til tale til tekst",
   "settings.experimental.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
@@ -1280,6 +1280,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Vælg en agent at konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modeloverstyring",
   "settings.agentBehaviour.modelOverride.description": "Tilsidesæt standardmodellen for denne agent",
+  "settings.agentBehaviour.variantOverride.title": "Variantoverstyring",
+  "settings.agentBehaviour.variantOverride.description": "Tilsidesæt modelvarianten for denne agent",
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
   "settings.agentBehaviour.prompt.description": "Yderligere systemprompt for denne agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",

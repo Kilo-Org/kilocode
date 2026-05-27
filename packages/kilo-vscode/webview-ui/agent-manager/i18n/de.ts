@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Tabs suchen...",
   "agentManager.tabsMenu.empty": "Keine passenden Tabs",
   "agentManager.tabsMenu.status.waiting": "Warten",
-  "agentManager.tabsMenu.status.working": "Läuft",
   "agentManager.tabsMenu.status.retry": "Erneut",
 
   "agentManager.terminal.new": "Neuer Terminal-Tab",

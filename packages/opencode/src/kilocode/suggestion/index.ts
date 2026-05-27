@@ -4,19 +4,14 @@ import { Identifier } from "../../id/id"
 import { SessionID } from "../../session/schema"
 import { ZodOverride } from "../../util/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import { Telemetry, type ReviewCommand } from "@kilocode/kilo-telemetry"
+import { Telemetry } from "@kilocode/kilo-telemetry"
 import z from "zod"
 import { Schema } from "effect"
 import { KiloSessionPromptQueue } from "../session/prompt-queue"
+import { parseReviewCommand } from "../review/command"
 
 export namespace Suggestion {
   const log = Log.create({ service: "suggestion" })
-
-  function command(prompt: string): ReviewCommand | undefined {
-    if (!prompt.startsWith("/")) return
-    const name = prompt.slice(1).split(/\s/, 1)[0]
-    if (name === "review" || name === "local-review" || name === "local-review-uncommitted") return name
-  }
 
   export const Action = z
     .object({
@@ -160,7 +155,7 @@ export namespace Suggestion {
         reject,
       }
       info.actions.forEach((action, index) => {
-        const cmd = command(action.prompt)
+        const cmd = parseReviewCommand(action.prompt)
         if (!cmd) return
         Telemetry.trackSuggestionShown({
           sessionId: info.sessionID,
@@ -195,7 +190,7 @@ export namespace Suggestion {
 
     log.info("accepted", { requestID: input.requestID, index: input.index, label: action.label })
 
-    const cmd = command(action.prompt)
+    const cmd = parseReviewCommand(action.prompt)
     if (cmd) {
       Telemetry.trackSuggestionAccepted({
         sessionId: existing.info.sessionID,

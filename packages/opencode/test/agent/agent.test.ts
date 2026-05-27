@@ -65,7 +65,7 @@ test("ask agent has correct default properties", async () => {
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const ask = await Agent.get("ask")
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
       expect(ask).toBeDefined()
       expect(ask?.mode).toBe("primary")
       expect(ask?.native).toBe(true)
@@ -99,7 +99,7 @@ test("ask agent denies edit/write/bash even when user config adds a specific edi
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const ask = await Agent.get("ask")
+      const ask = await load(tmp.path, (svc) => svc.get("ask"))
       expect(ask).toBeDefined()
       // user config must not leak edit capability into ask mode — even for the
       // specific path the user allowed, ask mode must still deny it
@@ -885,8 +885,13 @@ test("Agent.get('build') returns code agent for backward compatibility", async (
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const build = await Agent.get("build")
-      const code = await Agent.get("code")
+      const [build, code] = await load(tmp.path, (svc) =>
+        Effect.gen(function* () {
+          const build = yield* svc.get("build")
+          const code = yield* svc.get("code")
+          return [build, code] as const
+        }),
+      )
       expect(build).toBeDefined()
       expect(build).toBe(code)
       expect(build?.name).toBe("code")
@@ -908,7 +913,7 @@ test("agent.build config applies to code agent for backward compatibility", asyn
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const code = await Agent.get("code")
+      const code = await load(tmp.path, (svc) => svc.get("code"))
       expect(code).toBeDefined()
       expect(code?.temperature).toBe(0.8)
       expect(code?.color).toBe("#00FF00")
@@ -925,7 +930,7 @@ test("default_agent: 'build' returns code agent for backward compatibility", asy
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const agent = await Agent.defaultAgent()
+      const agent = await load(tmp.path, (svc) => svc.defaultAgent())
       expect(agent).toBe("code")
     },
   })
@@ -942,9 +947,9 @@ test("agent.build disable removes code agent for backward compatibility", async 
   await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
-      const code = await Agent.get("code")
+      const code = await load(tmp.path, (svc) => svc.get("code"))
       expect(code).toBeUndefined()
-      const agents = await Agent.list()
+      const agents = await load(tmp.path, (svc) => svc.list())
       const names = agents.map((a) => a.name)
       expect(names).not.toContain("code")
     },

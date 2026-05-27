@@ -284,7 +284,7 @@ export const dict = {
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input",
+  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
   "speechToText.tooltip.stop": "Stop capturing",
   "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
   "speechToText.tooltip.error": "Speech input failed. Click to clear.",
@@ -1239,14 +1239,11 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
-  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
-  "settings.experimental.agentManagerTool.description":
-    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Enable and sign in to the Kilo provider to use voice input in prompt fields.",
+    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Speech to Text Model",
   "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
@@ -1271,6 +1268,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Override",
+  "settings.agentBehaviour.variantOverride.description": "Override the model variant for this agent",
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
   "settings.agentBehaviour.prompt.description": "Additional system prompt for this agent",
   "settings.agentBehaviour.temperature.title": "Temperature",
@@ -1460,6 +1459,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description":
     "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

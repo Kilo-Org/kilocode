@@ -48,6 +48,7 @@ class KiloBackendChatManager(
             "message.part.removed",
             "session.turn.open",
             "session.turn.close",
+            "session.created",
             "session.error",
             "session.status",
             "session.updated",
@@ -80,6 +81,12 @@ class KiloBackendChatManager(
                     val parsed = KiloCliDataParser.parseChatEvent(event.type, event.data)
                     if (parsed != null) {
                         log.debug { ChatLogSummary.event(parsed) }
+                        if (parsed is ChatEventDto.SessionStatusChanged && parsed.status.type != "busy") {
+                            log.info(
+                                "${ChatLogSummary.sid(parsed.sessionID)} kind=status route=chat-events emit=true " +
+                                    "${ChatLogSummary.status(parsed.status)} bytes=${event.data.length}",
+                            )
+                        }
                         _events.emit(parsed)
                     } else {
                         log.warn("SSE parse returned null for type=${event.type} bytes=${event.data.length}")

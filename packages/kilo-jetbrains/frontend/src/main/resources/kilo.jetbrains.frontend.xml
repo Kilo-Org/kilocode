@@ -7,6 +7,9 @@
     <resource-bundle>messages.KiloBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
+
         <toolWindow id="Kilo Code"
                     anchor="left"
                     icon="/icons/kilo.svg"
@@ -77,6 +80,10 @@
                 description="Send the current Kilo prompt">
             <keyboard-shortcut keymap="$default"
                                first-keystroke="ENTER"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="meta ENTER"/>
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="control ENTER"/>
         </action>
 
         <action id="Kilo.StopSession"
