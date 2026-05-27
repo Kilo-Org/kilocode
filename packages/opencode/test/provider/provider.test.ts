@@ -161,8 +161,6 @@ test("Inceptron loads from models.dev metadata", async () => {
         },
       })
       expect(kimi.release_date).toBe("2026-04-21")
-
-      remove("INCEPTRON_API_KEY")
     },
   })
 })
