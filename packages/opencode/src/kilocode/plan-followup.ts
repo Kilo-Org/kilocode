@@ -351,11 +351,12 @@ export namespace PlanFollowup {
         const next = await Session.create({})
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        await SessionStatus.set(next.id, { type: "busy" })
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
         await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
 
         const idle = () =>
-          SessionStatus.set(next.id, { type: "idle" }).catch((err) => {
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
             log.warn("failed to clear follow-up busy status", { sessionID: next.id, err })
           })
 

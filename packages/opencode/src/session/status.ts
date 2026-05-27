@@ -3,7 +3,6 @@ import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
 import { QuestionID } from "@/question/schema" // kilocode_change
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { zod } from "@/util/effect-zod"
 import { NonNegativeInt, withStatics } from "@/util/schema"
 import { Effect, Layer, Context, Schema } from "effect"
@@ -93,13 +92,5 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export const list = () => runPromise((svc) => svc.list())
-export const get = (sessionID: SessionID) => runPromise((svc) => svc.get(sessionID))
-export const set = (sessionID: SessionID, status: Info) => runPromise((svc) => svc.set(sessionID, status))
-// kilocode_change end
 
 export * as SessionStatus from "./status"
