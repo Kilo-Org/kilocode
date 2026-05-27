@@ -8,6 +8,7 @@ import type {
   SkillMarketplaceItem,
   McpMarketplaceItem,
   ModeMarketplaceItem,
+  AgentMarketplaceItem,
   McpInstallationMethod,
   InstallMarketplaceItemOptions,
   InstallResult,
@@ -26,6 +27,7 @@ export class MarketplaceInstaller {
     const scope = options.target ?? "project"
     if (item.type === "skill") return this.installSkill(item, scope, workspace)
     if (item.type === "mcp") return this.installMcp(item, options, scope, workspace)
+    if (item.type === "agent") return this.installAgent(item, scope, workspace)
     return this.installMode(item, scope, workspace)
   }
 
@@ -102,6 +104,70 @@ export class MarketplaceInstaller {
     config.agent[item.id] = convertModeToAgent(item.content)
 
     await this.writeConfig(scope, workspace, config)
+    return { success: true, slug: item.id }
+  }
+
+  // ── Agent ───────────────────────────────────────────────────────────
+
+  async installAgent(
+    item: AgentMarketplaceItem,
+    scope: "project" | "global",
+    workspace?: string,
+  ): Promise<InstallResult> {
+    if (scope === "project" && !workspace) {
+      return { success: false, slug: item.id, error: "No workspace directory for project-scope install" }
+    }
+
+    if (!isSafeId(item.id)) {
+      return { success: false, slug: item.id, error: "Invalid agent id" }
+    }
+
+    const dir = this.paths.agentsDir(scope, workspace)
+    await fs.mkdir(dir, { recursive: true })
+
+    const { prompt, ...front } = item.content
+    const frontmatter = yaml.stringify(front).trimEnd()
+    const content = `---\n${frontmatter}\n---\n\n${prompt}\n`
+    const filepath = path.join(dir, `${item.id}.md`)
+    await fs.writeFile(filepath, content, "utf-8")
+
+    // Migration: remove stale kilo.json agent entry with same id if present
+    const config = await this.readConfig(scope, workspace)
+    if (config.agent?.[item.id]) {
+      delete (config.agent as Record<string, unknown>)[item.id]
+      if (Object.keys(config.agent as object).length === 0) delete config.agent
+      await this.writeConfig(scope, workspace, config)
+    }
+
+    return { success: true, slug: item.id, filePath: filepath, line: 1 }
+  }
+
+  async removeAgent(
+    item: AgentMarketplaceItem,
+    scope: "project" | "global",
+    workspace?: string,
+  ): Promise<RemoveResult> {
+    if (!isSafeId(item.id)) {
+      return { success: false, slug: item.id, error: "Invalid agent id" }
+    }
+
+    const filepath = path.join(this.paths.agentsDir(scope, workspace), `${item.id}.md`)
+    try {
+      await fs.unlink(filepath)
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+        return { success: false, slug: item.id, error: String(err) }
+      }
+    }
+
+    // Also clean up any stale kilo.json agent entry
+    const config = await this.readConfig(scope, workspace)
+    if (config.agent?.[item.id]) {
+      delete (config.agent as Record<string, unknown>)[item.id]
+      if (Object.keys(config.agent as object).length === 0) delete config.agent
+      await this.writeConfig(scope, workspace, config)
+    }
+
     return { success: true, slug: item.id }
   }
 
@@ -191,6 +257,7 @@ export class MarketplaceInstaller {
   async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
     if (item.type === "skill") return this.removeSkill(item, scope, workspace)
     if (item.type === "mcp") return this.removeMcp(item, scope, workspace)
+    if (item.type === "agent") return this.removeAgent(item, scope, workspace)
     return this.removeMode(item, scope, workspace)
   }
 

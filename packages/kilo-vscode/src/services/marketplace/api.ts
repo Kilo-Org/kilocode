@@ -1,5 +1,12 @@
 import { parse as parseYaml } from "yaml"
-import type { MarketplaceItem, McpMarketplaceItem, ModeMarketplaceItem, SkillMarketplaceItem, RawSkill } from "./types"
+import type {
+  MarketplaceItem,
+  McpMarketplaceItem,
+  ModeMarketplaceItem,
+  AgentMarketplaceItem,
+  SkillMarketplaceItem,
+  RawSkill,
+} from "./types"
 
 const BASE_URL = "https://api.kilo.ai/api/marketplace"
 const CACHE_TTL = 300_000
@@ -100,6 +107,18 @@ export class MarketplaceApiClient {
     return result
   }
 
+  private async fetchAgents(): Promise<AgentMarketplaceItem[]> {
+    const cached = this.getCached("agents")
+    if (cached) return cached as AgentMarketplaceItem[]
+
+    const text = await fetchWithRetry(`${BASE_URL}/agents`)
+    const parsed = parseResponse(text) as { items?: unknown[] }
+    const items = (parsed.items ?? []) as Array<Record<string, unknown>>
+    const result = items.map((item) => ({ ...item, type: "agent" as const }) as AgentMarketplaceItem)
+    this.setCache("agents", result)
+    return result
+  }
+
   private async fetchSkills(): Promise<SkillMarketplaceItem[]> {
     const cached = this.getCached("skills")
     if (cached) return cached as SkillMarketplaceItem[]
@@ -116,6 +135,10 @@ export class MarketplaceApiClient {
     const errors: string[] = []
 
     const settled = await Promise.all([
+      this.fetchAgents().catch((err: unknown) => {
+        errors.push(`Failed to fetch agents: ${err instanceof Error ? err.message : String(err)}`)
+        return [] as AgentMarketplaceItem[]
+      }),
       this.fetchModes().catch((err: unknown) => {
         errors.push(`Failed to fetch modes: ${err instanceof Error ? err.message : String(err)}`)
         return [] as ModeMarketplaceItem[]
@@ -131,7 +154,7 @@ export class MarketplaceApiClient {
     ])
 
     return {
-      items: [...settled[0], ...settled[1], ...settled[2]],
+      items: [...settled[0], ...settled[1], ...settled[2], ...settled[3]],
       errors,
     }
   }

@@ -9,7 +9,7 @@ import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import type {
   MarketplaceItem,
   McpMarketplaceItem,
-  ModeMarketplaceItem,
+  AgentMarketplaceItem,
   SkillMarketplaceItem,
   MarketplaceInstalledMetadata,
 } from "../../types/marketplace"
@@ -31,12 +31,12 @@ export const MarketplaceView = () => {
   const [metadata, setMetadata] = createSignal<MarketplaceInstalledMetadata>(EMPTY_METADATA)
   const [fetching, setFetching] = createSignal(true)
   const [errors, setErrors] = createSignal<string[]>([])
-  const [tab, setTab] = createSignal("mcp")
+  const [tab, setTab] = createSignal("agent")
   const [pending, setPending] = createSignal<{ item: MarketplaceItem; scope: "project" | "global" } | null>(null)
 
   const skills = createMemo(() => items().filter((i): i is SkillMarketplaceItem => i.type === "skill"))
   const mcps = createMemo(() => items().filter((i): i is McpMarketplaceItem => i.type === "mcp"))
-  const modes = createMemo(() => items().filter((i): i is ModeMarketplaceItem => i.type === "mode"))
+  const agents = createMemo(() => items().filter((i): i is AgentMarketplaceItem => i.type === "agent"))
 
   const fetchData = () => {
     setFetching(true)
@@ -153,18 +153,18 @@ export const MarketplaceView = () => {
 
       <Tabs value={tab()} onChange={setTab} class="marketplace-tabs-root">
         <Tabs.List>
+          <Tabs.Trigger value="agent">{t("marketplace.tab.agents")}</Tabs.Trigger>
           <Tabs.Trigger value="mcp">{t("marketplace.tab.mcp")}</Tabs.Trigger>
-          <Tabs.Trigger value="mode">{t("marketplace.tab.modes")}</Tabs.Trigger>
           <Tabs.Trigger value="skill">{t("marketplace.tab.skills")}</Tabs.Trigger>
         </Tabs.List>
 
         <div class="marketplace-content">
-          <Tabs.Content value="mcp">
+          <Tabs.Content value="agent">
             <MarketplaceListView
-              items={mcps()}
+              items={agents()}
               metadata={metadata()}
               fetching={fetching()}
-              type="mcp"
+              type="agent"
               searchPlaceholder={t("marketplace.search")}
               emptyMessage={t("marketplace.empty")}
               onInstall={handleInstall}
@@ -172,12 +172,12 @@ export const MarketplaceView = () => {
             />
           </Tabs.Content>
 
-          <Tabs.Content value="mode">
+          <Tabs.Content value="mcp">
             <MarketplaceListView
-              items={modes()}
+              items={mcps()}
               metadata={metadata()}
               fetching={fetching()}
-              type="mode"
+              type="mcp"
               searchPlaceholder={t("marketplace.search")}
               emptyMessage={t("marketplace.empty")}
               onInstall={handleInstall}

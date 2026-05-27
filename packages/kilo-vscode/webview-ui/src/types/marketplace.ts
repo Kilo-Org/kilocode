@@ -34,6 +34,19 @@ export interface ModeMarketplaceItem extends MarketplaceItemBase {
   content: string
 }
 
+export interface AgentContent {
+  mode: "primary" | "subagent" | "all"
+  description: string
+  prompt: string
+  options?: Record<string, unknown>
+  permission?: Record<string, unknown>
+}
+
+export interface AgentMarketplaceItem extends MarketplaceItemBase {
+  type: "agent"
+  content: AgentContent
+}
+
 export interface SkillMarketplaceItem extends MarketplaceItemBase {
   type: "skill"
   category: string
@@ -43,7 +56,7 @@ export interface SkillMarketplaceItem extends MarketplaceItemBase {
   displayCategory: string
 }
 
-export type MarketplaceItem = McpMarketplaceItem | ModeMarketplaceItem | SkillMarketplaceItem
+export type MarketplaceItem = McpMarketplaceItem | ModeMarketplaceItem | AgentMarketplaceItem | SkillMarketplaceItem
 
 export interface InstallMarketplaceItemOptions {
   target?: "global" | "project"
