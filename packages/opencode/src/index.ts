@@ -58,7 +58,6 @@ if (!process.env[ENV_VERSION]) {
 import { Config } from "./config/config"
 import { AppRuntime } from "./effect/app-runtime"
 import { Auth } from "./auth"
-import { AppRuntime } from "./effect/app-runtime"
 // kilocode_change end
 import { DbCommand } from "./cli/cmd/db"
 import path from "path"

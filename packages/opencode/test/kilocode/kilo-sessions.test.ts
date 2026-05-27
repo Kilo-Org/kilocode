@@ -15,7 +15,10 @@ import { testEffect } from "../lib/effect"
 const it = testEffect(CrossSpawnSpawner.defaultLayer)
 
 function layer(overrides: Partial<Config.Interface> = {}) {
-  return KiloSessions.layer.pipe(Layer.provideMerge(Bus.layer), Layer.provide(TestConfig.layer(overrides)))
+  return Layer.merge(
+    KiloSessions.layer.pipe(Layer.provideMerge(Bus.layer), Layer.provide(TestConfig.layer(overrides))),
+    Auth.defaultLayer,
+  )
 }
 
 it.instance("initializes once per instance through Config.Service", () => {
@@ -58,9 +61,10 @@ it.instance("does not duplicate created-session subscribers when init is repeate
   const id = SessionID.descending("session-created")
 
   return Effect.gen(function* () {
+    const auth = yield* Auth.Service
     const bus = yield* Bus.Service
     const sessions = yield* KiloSessions.Service
-    yield* Effect.promise(() => Auth.set("kilo", { type: "api", key: "test-token" }))
+    yield* auth.set("kilo", { type: "api", key: "test-token" })
     yield* sessions.init()
     yield* sessions.init()
     yield* Effect.sleep(50)
@@ -79,12 +83,13 @@ it.instance("does not duplicate created-session subscribers when init is repeate
     yield* Effect.sleep(50)
     expect(calls).toHaveLength(1)
   }).pipe(
-    Effect.provide(layer()),
     Effect.ensuring(
-      Effect.promise(async () => {
-        await Auth.remove("kilo")
+      Effect.gen(function* () {
+        const auth = yield* Auth.Service
+        yield* auth.remove("kilo").pipe(Effect.orDie)
         request.mockRestore()
       }),
     ),
+    Effect.provide(layer()),
   )
 })
