@@ -161,6 +161,7 @@ test("loads JSON config file", async () => {
   })
 })
 
+// kilocode_change start
 test("preserves Kilo provider free model metadata", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -191,6 +192,7 @@ test("preserves Kilo provider free model metadata", async () => {
     },
   })
 })
+// kilocode_change end
 
 test("loads shell config field", async () => {
   await using tmp = await tmpdir({
