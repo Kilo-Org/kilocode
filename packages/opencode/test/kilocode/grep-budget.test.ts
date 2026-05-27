@@ -45,6 +45,13 @@ const ctx = {
 }
 
 describe("kilocode grep budget", () => {
+  it.live("initializes without instance-scoped output configuration", () =>
+    Effect.gen(function* () {
+      const grep = yield* (yield* GrepTool).init()
+      expect(grep.description).toContain("previewed to 500 characters")
+    }),
+  )
+
   it.instance("limits each matching line to 500 characters", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance

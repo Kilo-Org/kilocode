@@ -18,8 +18,8 @@ export namespace GrepBudget {
 
   export const make = Effect.gen(function* () {
     const truncate = yield* Truncate.Service
-    const max = Math.min((yield* truncate.limits()).maxBytes, Truncate.MAX_BYTES)
     return Effect.fn("GrepBudget.output")(function* (text: string) {
+      const max = Math.min((yield* truncate.limits()).maxBytes, Truncate.MAX_BYTES)
       return yield* truncate.output(text, { maxBytes: max })
     })
   })
