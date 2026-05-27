@@ -50,6 +50,7 @@ export class Capture {
   private roots = new Map<string, string>()
   private snapshots = new Map<string, string>()
   private turns = new Map<string, string>()
+  private deltas = new Map<string, Promise<void>>()
 
   constructor(private readonly deps: CaptureDeps) {}
 
@@ -83,6 +84,7 @@ export class Capture {
       params: Record<string, unknown>
     }
   }): void {
+    if (args.requestMeta.agent === "title") return
     if (!isEligible(args.input)) return
     const meta = args.requestMeta
 
@@ -236,6 +238,29 @@ export class Capture {
   }
 
   private async startDelta(
+    sessionId: string,
+    rootSessionId: string,
+    trigger: "next_request" | "turn_end" | "session_close",
+  ): Promise<void> {
+    const prev = this.deltas.get(sessionId) ?? Promise.resolve()
+    const next = prev.then(
+      () => this.captureDelta(sessionId, rootSessionId, trigger),
+      () => this.captureDelta(sessionId, rootSessionId, trigger),
+    )
+    this.deltas.set(sessionId, next)
+    void next.then(
+      () => {
+        if (this.deltas.get(sessionId) === next) this.deltas.delete(sessionId)
+      },
+      (err) => {
+        if (this.deltas.get(sessionId) === next) this.deltas.delete(sessionId)
+        this.deps.onPostError?.(err)
+      },
+    )
+    return next
+  }
+
+  private async captureDelta(
     sessionId: string,
     rootSessionId: string,
     trigger: "next_request" | "turn_end" | "session_close",

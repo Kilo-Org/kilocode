@@ -82,6 +82,10 @@ export namespace KiloSession {
     return roots.get(id) ?? id
   }
 
+  export function resolveParent(id: string): string | undefined {
+    return parents.get(id)
+  }
+
   export function featureForPlatform(platform: string | undefined): string | undefined {
     switch (platform) {
       case "agent-manager":

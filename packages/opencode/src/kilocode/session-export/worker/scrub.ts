@@ -9,7 +9,7 @@ const PATTERNS: Pattern[] = [
   { name: "aws_access_key", regex: /\bAKIA[0-9A-Z]{16}\b/g },
   { name: "aws_secret_key", regex: /(?:aws[_-]?secret[_-]?(?:access[_-]?)?key)\s*[=:]\s*["']?[0-9a-zA-Z/+]{40}["']?/gi },
   { name: "gcp_service_key", regex: /\bAIza[0-9A-Za-z\-_]{35}\b/g },
-  { name: "openai_key", regex: /\bsk-[A-Za-z0-9]{20,}\b/g },
+  { name: "openai_key", regex: /\bsk-[A-Za-z0-9_-]{20,}(?=\b|[^A-Za-z0-9_-])/g },
   { name: "anthropic_key", regex: /\bsk-ant-[A-Za-z0-9_\-]{20,}\b/g },
   { name: "github_pat", regex: /\bghp_[A-Za-z0-9]{36}\b/g },
   { name: "stripe_key", regex: /\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g },

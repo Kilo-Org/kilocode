@@ -166,6 +166,42 @@ describe("Uploader", () => {
     expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 })).toEqual([])
   })
 
+  test("restores parent session id into uploaded event envelopes", async () => {
+    storage.insertEvent({
+      id: "02",
+      schemaVersion: 1,
+      sessionId: "child",
+      rootSessionId: "root",
+      parentSessionId: "root",
+      seq: 0,
+      type: "llm_request_started",
+      ts: 101,
+      agentVersion: "v0",
+      dataJson: "{}",
+      clientScrubbed: 1,
+    })
+    const bodies: string[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        bodies.push(init.body as string)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+    })
+
+    await uploader.flush("test")
+
+    const child = bodies
+      .map((body) => JSON.parse(body) as { events: Array<{ sessionId: string; parentSessionId?: string }> })
+      .flatMap((body) => body.events)
+      .find((event) => event.sessionId === "child")
+    expect(child?.parentSessionId).toBe("root")
+  })
+
   test("concurrent shutdown flush waits for active upload", async () => {
     let release: (() => void) | undefined
     const blocked = new Promise<void>((resolve) => {

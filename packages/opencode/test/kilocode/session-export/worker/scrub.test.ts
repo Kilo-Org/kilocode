@@ -39,6 +39,12 @@ describe("scrubber", () => {
     expect(out.redactionsByType.env_secret).toBeGreaterThanOrEqual(3)
   })
 
+  test("redacts provider keys with separators after sk prefix", () => {
+    const out = scrubString("token=sk-proj-abcdefghijklmnopqrstuvwxyz_1234567890")
+    expect(out.value).toContain("<<REDACTED:openai_key>>")
+    expect(out.redactionsByType.openai_key).toBe(1)
+  })
+
   test("isHighRiskPath flags credential-looking paths", () => {
     expect(isHighRiskPath(".env")).toBe(true)
     expect(isHighRiskPath(".env.local")).toBe(true)

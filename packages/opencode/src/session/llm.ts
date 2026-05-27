@@ -387,12 +387,15 @@ const live: Layer.Layer<
       // kilocode_change start - capture eligible session export request start
       const org = yield* isKilo && input.model.isFree === true ? Effect.promise(() => getActiveOrg()) : Effect.succeed(undefined)
       const started = Date.now()
+      const parent = input.parentSessionID ?? KiloSession.resolveParent(input.sessionID)
+      const found = KiloSession.resolveRoot(input.sessionID)
+      const root = parent ? (found === input.sessionID ? parent : found) : input.sessionID
       SessionExport.beforeRequest({
         input: { model: input.model, org },
         requestMeta: {
           sessionId: input.sessionID,
-          rootSessionId: input.sessionID,
-          parentSessionId: input.parentSessionID,
+          rootSessionId: root,
+          parentSessionId: parent,
           requestId: input.user.id,
           userMessageId: input.user.id,
           agent: input.agent.name,
@@ -464,7 +467,7 @@ const live: Layer.Layer<
           ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
           ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
           ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
-          ...(isKilo && input.parentSessionID ? { [HEADER_PARENT_TASKID]: input.parentSessionID } : {}),
+          ...(isKilo && parent ? { [HEADER_PARENT_TASKID]: parent } : {}),
           ...(isKilo && attr.feature ? { [HEADER_FEATURE]: attr.feature } : {}),
           // kilocode_change end
           ...input.model.headers,
@@ -487,16 +490,17 @@ const live: Layer.Layer<
             },
           ],
         }),
-        // kilocode_change - disable AI SDK span recording (ai.* / gen_ai.*)
+        // kilocode_change start - disable AI SDK span recording (ai.* / gen_ai.*)
         experimental_telemetry: { isEnabled: false },
       })
+      // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
       return {
         ...result,
         fullStream: observeFullStream(result.fullStream, {
           sessionId: input.sessionID,
-          rootSessionId: input.sessionID,
-          parentSessionId: input.parentSessionID,
+          rootSessionId: root,
+          parentSessionId: parent,
           requestId: input.user.id,
           started,
           retries: input.retries ?? 0,

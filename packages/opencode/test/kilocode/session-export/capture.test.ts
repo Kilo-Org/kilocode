@@ -41,6 +41,24 @@ describe("Capture", () => {
     expect(posted.length).toBe(0)
   })
 
+  test("title agent requests do not start session export", () => {
+    const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: { ...meta("s1"), agent: "title" },
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    cap.afterRequest({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      output: { textParts: ["Remote E2E"] },
+      durationMs: 1,
+      retryCount: 0,
+    })
+    expect(posted.length).toBe(0)
+  })
+
   test("eligible input posts llm_request_started with full envelope", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
@@ -239,6 +257,52 @@ describe("Capture", () => {
     const events = posted.map((item) => (item as { envelope?: { type?: string; turnId?: string } }).envelope)
     expect(events.find((item) => item?.type === "llm_request_completed")?.turnId).toBe("u1")
     expect(events.find((item) => item?.type === "workspace_delta_captured")?.turnId).toBe("u1")
+  })
+
+  test("workspace deltas for one session run serially", async () => {
+    const gate = Promise.withResolvers<void>()
+    const state = { active: 0, max: 0, calls: 0 }
+    const cap = new Capture({
+      worker,
+      agentVersion: "v0",
+      nowMs: () => 100,
+      syncSeq: () => 7,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "h0", files: [] }),
+        diff: async () => {
+          state.active += 1
+          state.calls += 1
+          state.max = Math.max(state.max, state.active)
+          if (state.calls === 1) await gate.promise
+          state.active -= 1
+          return { snapshotHash: `h${state.calls}`, diff: [{ path: "src/a.ts", status: "modified", patchChunkIds: [] }] }
+        },
+      },
+    })
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: meta("s1"),
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    cap.afterRequest({
+      sessionId: "s1",
+      rootSessionId: "s1",
+      requestId: "r1",
+      output: { textParts: ["ok"] },
+      durationMs: 1,
+      retryCount: 0,
+    })
+    await until(() => state.calls === 1)
+    cap.beforeRequest({
+      input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
+      requestMeta: { ...meta("s1"), requestId: "r2", userMessageId: "u2" },
+      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.max).toBe(1)
+    gate.resolve()
+    await until(() => state.calls === 2)
   })
 
   test("first request in a continued process uses persisted snapshot for next-request delta", async () => {

@@ -81,6 +81,7 @@ export class Uploader {
             type: row.type,
             sessionId: row.sessionId,
             rootSessionId: row.rootSessionId,
+            parentSessionId: row.parentSessionId,
             seq: row.seq,
             ts: row.ts,
           })),
