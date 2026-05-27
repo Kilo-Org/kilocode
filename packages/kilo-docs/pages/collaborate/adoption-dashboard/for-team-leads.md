@@ -71,9 +71,8 @@ Low Depth indicates that developers may be trying AI but not trusting or shippin
 
 **Actions:**
 
-1. Enable [Managed Indexing](/docs/deploy-secure/managed-indexing) to improve context quality
-2. Review whether suggestions are relevant to your codebase
-3. Introduce chained workflows to increase multi-stage usage
+1. Review whether suggestions are relevant to your codebase
+2. Introduce chained workflows to increase multi-stage usage
 
 ### Low Frequency Signals
 
@@ -119,7 +118,6 @@ Use the score tiers as milestones:
 **For Depth:**
 
 - "Chain Challenge" — Complete one feature using plan → build → review
-- Managed Indexing rollout — Enable better context for the whole team
 - Deploy previews — Validate AI output before merging
 
 **For Coverage:**
@@ -170,7 +168,6 @@ The AI Adoption Score is designed to be quotable:
 >
 > **Key Actions Taken:**
 >
-> - Enabled Managed Indexing for better AI context
 > - Introduced Code Reviews for all PRs
 > - Onboarded 3 inactive team members
 >

@@ -607,7 +607,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/managed-indexing",
-    destination: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/deploy-secure",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/deploy-secure/managed-indexing",
+    destination: "/docs/deploy-secure",
     basePath: false,
     permanent: true,
   },
