@@ -358,6 +358,15 @@ export const layer: Layer.Layer<
   }),
 )
 
+// kilocode_change start
+const kiloLayers: [
+  typeof Project.defaultLayer,
+  typeof Command.defaultLayer,
+  typeof Git.defaultLayer,
+  typeof SessionStatus.defaultLayer,
+] = [Project.defaultLayer, Command.defaultLayer, Git.defaultLayer, SessionStatus.defaultLayer]
+// kilocode_change end
+
 export const defaultLayer = Layer.suspend(() =>
   layer.pipe(
     Layer.provide(Config.defaultLayer),
@@ -377,10 +386,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
-    Layer.provide(Project.defaultLayer), // kilocode_change
-    Layer.provide(Command.defaultLayer), // kilocode_change
-    Layer.provide(Git.defaultLayer), // kilocode_change
-    Layer.provide(SessionStatus.defaultLayer), // kilocode_change
+    Layer.provide(kiloLayers), // kilocode_change
   ),
 )
 

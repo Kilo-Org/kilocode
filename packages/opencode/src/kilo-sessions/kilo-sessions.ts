@@ -185,7 +185,6 @@ export namespace KiloSessions {
     const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
     if (questions.length > 0) return "question"
 
-    const { AppRuntime } = await import("@/effect/app-runtime")
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
     if (status.type === "offline") return "retry"
     return status.type

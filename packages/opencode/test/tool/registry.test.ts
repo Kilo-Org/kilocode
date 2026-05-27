@@ -33,6 +33,14 @@ const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
   directories: () => InstanceState.directory.pipe(Effect.map((dir) => [path.join(dir, ".opencode")])),
 })
+// kilocode_change start
+const kiloLayers: [
+  typeof Project.defaultLayer,
+  typeof Command.defaultLayer,
+  typeof Git.defaultLayer,
+  typeof SessionStatus.defaultLayer,
+] = [Project.defaultLayer, Command.defaultLayer, Git.defaultLayer, SessionStatus.defaultLayer]
+// kilocode_change end
 
 const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(configLayer),
@@ -52,10 +60,7 @@ const registryLayer = ToolRegistry.layer.pipe(
   Layer.provide(node),
   Layer.provide(Ripgrep.defaultLayer),
   Layer.provide(Truncate.defaultLayer),
-  Layer.provide(Project.defaultLayer), // kilocode_change
-  Layer.provide(Command.defaultLayer), // kilocode_change
-  Layer.provide(Git.defaultLayer), // kilocode_change
-  Layer.provide(SessionStatus.defaultLayer), // kilocode_change
+  Layer.provide(kiloLayers), // kilocode_change
 )
 
 const it = testEffect(Layer.mergeAll(registryLayer, node))
