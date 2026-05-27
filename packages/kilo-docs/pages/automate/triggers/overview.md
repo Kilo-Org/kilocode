@@ -211,11 +211,9 @@ When a trigger fires, the rendered message is sent directly to your agent as a p
 - The minimum interval for scheduled triggers is **10 minutes**.
 - Webhook URLs act as secrets — rotate them immediately if compromised.
 - Prompt templates should be specific enough to prevent unintended agent actions.
-- Kilo Code credits are consumed each time a trigger fires and the agent processes the prompt.
+- Kilo Code credits are consumed each time a trigger fires, and the agent processes the prompt.
 
 ## Related
 
 - [Integrations](/docs/automate/integrations)
-- [Code Reviews](/docs/automate/code-reviews/overview)
 - [KiloClaw Triggers](/docs/kiloclaw/triggers)
-- [Automate Overview](/docs/automate)
