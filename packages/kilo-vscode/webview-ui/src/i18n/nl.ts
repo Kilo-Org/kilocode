@@ -287,7 +287,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten",
+  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
@@ -1262,7 +1262,7 @@ export const dict = {
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Schakel Kilo provider in en meld u aan om spraakinvoer in promptvelden te gebruiken.",
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
@@ -1288,6 +1288,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecteer een agent om te configureren…",
   "settings.agentBehaviour.modelOverride.title": "Model Overschrijven",
   "settings.agentBehaviour.modelOverride.description": "Overschrijf het standaard model voor deze agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Overschrijven",
+  "settings.agentBehaviour.variantOverride.description": "Overschrijf de modelvariant voor deze agent",
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",
@@ -1450,6 +1452,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Klein Model",
   "settings.providers.smallModel.description":
     "Lichtgewicht model voor het genereren van titels, commit-berichten, promptverbetering en andere snelle taken",
+  "settings.providers.subagentModel.title": "Subagentmodel",
+  "settings.providers.subagentModel.description":
+    "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",

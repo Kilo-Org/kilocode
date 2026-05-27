@@ -4,6 +4,8 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.migration.FakeMigrationUiController
+import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.controller.SessionController
@@ -80,6 +82,7 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
         id: String? = null,
         displayMs: Long = 0,
         open: ((SessionRef) -> Unit)? = null,
+        migration: MigrationUiController = FakeMigrationUiController(),
     ): SessionUi {
         val manager = open?.let { fn ->
             object : SessionManager {
@@ -88,7 +91,14 @@ abstract class SessionUiTestBase : BasePlatformTestCase() {
                 override fun openSession(ref: SessionRef) = fn(ref)
             }
         }
-        return SessionUi(project, workspace, sessions, app, scope, ref = SessionRef.from(id), displayMs = displayMs, manager = manager).apply {
+        return SessionUi(
+            project, workspace, sessions, app, scope,
+            ref = SessionRef.from(id),
+            displayMs = displayMs,
+            manager = manager,
+            workspaces = workspaces,
+            migration = migration,
+        ).apply {
             setSize(800, 600)
         }
     }

@@ -11,6 +11,7 @@ import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/con
 import { buildKiloHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
+import { createFimHandler } from "./fim.js"
 import {
   GatewayError,
   UnauthorizedError,
@@ -43,8 +44,6 @@ interface KiloRoutesDeps extends ImportDeps {
   z: Z
   Instances: { disposeAllInstances(): Promise<void> }
 }
-
-const FIM_TIMEOUT_MS = 30_000
 
 /**
  * Create Kilo Gateway routes with OpenCode dependencies injected
@@ -318,74 +317,13 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         z.object({
           prefix: z.string(),
           suffix: z.string(),
+          provider: z.string().optional(),
           model: z.string().optional(),
           maxTokens: z.number().optional(),
           temperature: z.number().optional(),
         }),
       ),
-      async (c: any) => {
-        const proxy = await getProxyAuth()
-
-        if (!proxy.auth) {
-          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
-        }
-
-        if (!proxy.token) {
-          return c.json({ error: "No valid token found" }, 401)
-        }
-
-        const { prefix, suffix, model, maxTokens, temperature } = c.req.valid("json")
-        const fimModel = model ?? "mistralai/codestral-2501"
-        const fimMaxTokens = maxTokens ?? 256
-        const fimTemperature = temperature ?? 0.2
-
-        const baseApiUrl = KILO_API_BASE + "/api/"
-        const endpoint = new URL("fim/completions", baseApiUrl)
-
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${proxy.token}`,
-          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: proxy.organizationId }),
-          [HEADER_FEATURE]: "autocomplete",
-        }
-
-        const signal = AbortSignal.any([c.req.raw.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
-
-        let response: Response
-        try {
-          response = await fetch(endpoint, {
-            method: "POST",
-            headers,
-            signal,
-            body: JSON.stringify({
-              model: fimModel,
-              prompt: prefix,
-              suffix,
-              max_tokens: fimMaxTokens,
-              temperature: fimTemperature,
-              stream: true,
-            }),
-          })
-        } catch (err) {
-          if (err instanceof DOMException && err.name === "TimeoutError")
-            return c.json({ error: "FIM request timed out" }, 504 as any)
-          if (signal.aborted) return c.json({ error: "FIM request canceled" }, 499 as any)
-          throw err
-        }
-
-        if (!response.ok) {
-          const text = await response.text()
-          return c.json({ error: `FIM request failed: ${response.status} ${text}` }, response.status as any)
-        }
-
-        return new Response(response.body, {
-          headers: {
-            "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
-            Connection: "keep-alive",
-          },
-        })
-      },
+      createFimHandler(Auth),
     )
     .post(
       "/audio/transcriptions",

@@ -1,6 +1,7 @@
 package ai.kilocode.rpc
 
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
+import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.platform.rpc.RemoteApiProviderService
 import fleet.rpc.RemoteApi
 import fleet.rpc.Rpc
@@ -36,4 +37,10 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
 
     /** Trigger a full reload of workspace data. */
     suspend fun reload(directory: String)
+
+    /** Resolve [path] to matching files, scoped primarily to [directory]. */
+    suspend fun files(directory: String, path: String): List<WorkspaceFileDto>
+
+    /** Open an absolute backend file path in the IDE. */
+    suspend fun openFile(path: String): Boolean
 }

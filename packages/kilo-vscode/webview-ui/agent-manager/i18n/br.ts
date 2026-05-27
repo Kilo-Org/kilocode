@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Pesquisar abas...",
   "agentManager.tabsMenu.empty": "Nenhuma aba correspondente",
   "agentManager.tabsMenu.status.waiting": "Espera",
-  "agentManager.tabsMenu.status.working": "Execução",
   "agentManager.tabsMenu.status.retry": "Repetir",
 
   "agentManager.terminal.new": "Nova aba de terminal",

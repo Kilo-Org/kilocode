@@ -19,6 +19,7 @@ import {
   fetchOrganizationModes,
   fetchProfile,
 } from "@kilocode/kilo-gateway"
+import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget } from "@kilocode/kilo-gateway/fim"
 import { buildKiloHeaders } from "@kilocode/kilo-gateway"
 import { Effect } from "effect"
 import * as Stream from "effect/Stream"
@@ -78,36 +79,50 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     })
 
     const fim = Effect.fn("KiloGatewayHttpApi.fim")(function* (ctx: { payload: typeof FimBody.Type }) {
-      const info = yield* proxyAuth()
-      if (!info.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
-      if (!info.token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      const target = resolveFimTarget(ctx.payload.provider, ctx.payload.model)
+      const info = target.provider === "kilo" ? yield* proxyAuth() : undefined
+      const token = yield* Effect.gen(function* () {
+        if (target.provider === "kilo") return info?.token
+        const item = yield* auth.get(target.provider).pipe(Effect.mapError(() => new HttpApiError.Unauthorized({})))
+        if (item?.type === "api") return item.key
+        return DIRECT_FIM_ENV[target.provider].map((key) => process.env[key]).find(Boolean)
+      })
+
+      if (target.provider === "kilo" && !info?.auth) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
+      if (!token) return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const request = yield* HttpServerRequest.HttpServerRequest
-      const endpoint = new URL("fim/completions", `${KILO_API_BASE}/api/`)
       const signal =
         request.source instanceof Request
           ? AbortSignal.any([request.source.signal, AbortSignal.timeout(FIM_TIMEOUT_MS)])
           : AbortSignal.timeout(FIM_TIMEOUT_MS)
       const response = yield* Effect.promise(async () => {
         try {
-          return await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${info.token}`,
-              ...buildKiloHeaders(undefined, { kilocodeOrganizationId: info.organizationId }),
-              [HEADER_FEATURE]: "autocomplete",
-            },
-            signal,
-            body: JSON.stringify({
-              model: ctx.payload.model ?? "mistralai/codestral-2501",
-              prompt: ctx.payload.prefix,
-              suffix: ctx.payload.suffix,
-              max_tokens: ctx.payload.maxTokens ?? 256,
-              temperature: ctx.payload.temperature ?? 0.2,
-              stream: true,
-            }),
-          })
+          const run = async (url: string): Promise<Response> => {
+            console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${url}`)
+            return fetch(url, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                ...(target.provider === "kilo"
+                  ? buildKiloHeaders(undefined, { kilocodeOrganizationId: info?.organizationId })
+                  : {}),
+                ...(target.provider === "kilo" ? { [HEADER_FEATURE]: "autocomplete" } : {}),
+              },
+              signal,
+              body: JSON.stringify({
+                model: target.model,
+                prompt: ctx.payload.prefix,
+                suffix: ctx.payload.suffix,
+                max_tokens: ctx.payload.maxTokens ?? 256,
+                temperature: ctx.payload.temperature ?? 0.2,
+                stream: true,
+              }),
+            })
+          }
+          if (target.provider === "mistral") return requestMistralFim(run)
+          return run(target.url)
         } catch (err) {
           if (err instanceof DOMException && err.name === "TimeoutError")
             return Response.json({ error: "FIM request timed out" }, { status: 504 })

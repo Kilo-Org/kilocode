@@ -76,6 +76,7 @@ export const ConfigProvider: ParentComponent = (props) => {
         "autocomplete.enableAutoTrigger": message.settings.enableAutoTrigger,
         "autocomplete.enableSmartInlineTaskKeybinding": message.settings.enableSmartInlineTaskKeybinding,
         "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
+        "autocomplete.provider": message.settings.provider,
         "autocomplete.model": message.settings.model,
       })
       return

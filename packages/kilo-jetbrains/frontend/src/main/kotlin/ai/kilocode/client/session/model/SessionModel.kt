@@ -359,6 +359,8 @@ class SessionModel {
                 existing.output = dto.output
                 existing.error = dto.error
                 existing.time = dto.time
+                existing.todos = dto.todos
+                existing.todoView = dto.todoView
             }
             is Compaction -> return
             is StepFinish -> {
@@ -391,6 +393,8 @@ class SessionModel {
                 output = dto.output
                 error = dto.error
                 time = dto.time
+                todos = dto.todos
+                todoView = dto.todoView
             }
             "compaction" -> Compaction(dto.id)
             "step-finish" -> StepFinish(dto.id).apply {

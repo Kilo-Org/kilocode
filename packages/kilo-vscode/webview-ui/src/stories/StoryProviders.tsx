@@ -76,6 +76,11 @@ const MOCK_PROVIDERS = {
         inputPrice: 0.003,
         outputPrice: 0.015,
         limit: { context: 200000, output: 8192 },
+        variants: {
+          low: { reasoningEffort: "low" },
+          medium: { reasoningEffort: "medium" },
+          high: { reasoningEffort: "high" },
+        },
       },
     },
   },

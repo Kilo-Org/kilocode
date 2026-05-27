@@ -15,6 +15,7 @@ import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Auth } from "@/auth"
+import { makeRuntime } from "@/effect/run-service"
 import { registerDisposer } from "@/effect/instance-registry"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
@@ -23,6 +24,7 @@ import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
 
 const log = Log.create({ service: "kilocode-indexing" })
+const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
 const missing = () => disabledIndexingStatus("Indexing plugin is not enabled for this workspace.")
 const noWorkspace = () =>
   disabledIndexingStatus("Codebase indexing is disabled because no workspace folder is open in VS Code.")
@@ -65,8 +67,8 @@ function pending(): z.infer<typeof IndexingStatus> {
 }
 
 async function kiloAuth(cfg: Config.Info): Promise<KiloIndexingAuth> {
-  const auth = await Auth.get("kilo")
-  return resolveKiloIndexingAuth({ config: cfg, auth })
+  const info = await auth.runPromise((svc) => svc.get("kilo"))
+  return resolveKiloIndexingAuth({ config: cfg, auth: info })
 }
 
 function enrichKilo(input: ReturnType<typeof toIndexingConfigInput>, auth: KiloIndexingAuth) {

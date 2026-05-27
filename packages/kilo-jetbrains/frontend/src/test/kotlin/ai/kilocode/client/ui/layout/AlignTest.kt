@@ -372,6 +372,34 @@ class AlignTest : BasePlatformTestCase() {
         assertBounds(80, 0, 40, 100, child)
     }
 
+    fun `test layout measures preferred height after width probe`() {
+        val child = object : JBLabel("x") {
+            override fun getMinimumSize() = Dimension(0, 0)
+            override fun getPreferredSize() = Dimension(20, if (width == 100) 12 else 60)
+            override fun getMaximumSize() = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+        }
+        val wrap = child.align(HAlign.TRACK, VAlign.TOP)
+
+        wrap.setBounds(0, 0, 100, 80)
+        wrap.doLayout()
+
+        assertBounds(0, 0, 100, 12, child)
+    }
+
+    fun `test layout measures preferred width after height probe`() {
+        val child = object : JBLabel("x") {
+            override fun getMinimumSize() = Dimension(0, 0)
+            override fun getPreferredSize() = Dimension(if (height == 80) 17 else 70, 20)
+            override fun getMaximumSize() = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+        }
+        val wrap = child.align(HAlign.LEFT, VAlign.TRACK)
+
+        wrap.setBounds(0, 0, 100, 80)
+        wrap.doLayout()
+
+        assertBounds(0, 0, 17, 80, child)
+    }
+
     // ------ helpers ------
 
     private infix fun Int.x(h: Int) = Dimension(this, h)
