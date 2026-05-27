@@ -28,7 +28,7 @@ If you have an active [SuperGrok or X Premium subscription](https://x.ai/grok), 
 - **Automatic token refresh:** Kilo Code refreshes your access token in the background so long-running sessions stay authenticated.
 
 {% callout type="note" %}
-SuperGrok and X Premium subscription access works with Kilo Code's core functionality (VS Code extension and CLI). For cloud features such as Cloud Agents or KiloClaw, use the [Kilo Gateway](/docs/gateway) — the Gateway supports xAI via [BYOK](/docs/getting-started/byok) with an API key (OAuth/ subscriptions are not supported through the Gateway).
+SuperGrok and X Premium subscription access works with Kilo Code's core functionality (VS Code extension and CLI). For cloud features such as Cloud Agents or KiloClaw, use the [Kilo Gateway](/docs/gateway) — the Gateway supports xAI via [BYOK](/docs/getting-started/byok) with an API key (OAuth and subscription-based access are not supported through the Gateway).
 {% /callout %}
 
 ### Setup with SuperGrok / X Premium
