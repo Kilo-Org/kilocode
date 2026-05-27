@@ -454,6 +454,54 @@ describe("tool.task", () => {
       },
     },
   )
+
+  // kilocode_change start - terminal child assistant errors fail the task tool boundary
+  it.instance("execute fails when child prompt returns assistant error", () =>
+    Effect.gen(function* () {
+      const { chat, assistant } = yield* seed()
+      const tool = yield* TaskTool
+      const def = yield* tool.init()
+      const promptOps: TaskPromptOps = {
+        cancel: () => Effect.void,
+        resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
+        prompt: (input) =>
+          Effect.sync(() => {
+            const result = reply(input, "partial")
+            if (result.info.role !== "assistant") return result
+            return {
+              ...result,
+              info: {
+                ...result.info,
+                error: MessageV2.fromError(new Error("child prompt failed"), { providerID: ref.providerID }),
+              },
+            }
+          }),
+      }
+
+      const exit = yield* def
+        .execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "general",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+        .pipe(Effect.exit)
+
+      expect(Exit.isFailure(exit)).toBe(true)
+    }),
+  )
+  // kilocode_change end
 })
 
 // kilocode_change start - subagent cost propagation coverage (#6321)

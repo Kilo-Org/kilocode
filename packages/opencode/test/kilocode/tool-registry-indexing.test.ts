@@ -227,19 +227,27 @@ describe("kilocode tool registry indexing", () => {
   test("logs indexing bootstrap failures without blocking session bootstrap", async () => {
     const logger = Log.create({ service: "kilocode-bootstrap" })
     const err = new Error("indexing init failed")
-    const sessions = spyOn(KiloSessions, "init").mockResolvedValue(undefined)
+    const calls: string[] = []
+    const sessions = Layer.succeed(
+      KiloSessions.Service,
+      KiloSessions.Service.of({ init: () => Effect.sync(() => calls.push("sessions")) }),
+    )
     const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
     const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
     try {
-      await KilocodeBootstrap.init()
+      await Effect.runPromise(
+        KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
+          Effect.provide(KilocodeBootstrap.layer.pipe(Layer.provide(sessions))),
+          Effect.scoped,
+        ),
+      )
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      expect(sessions).toHaveBeenCalledTimes(1)
+      expect(calls).toEqual(["sessions"])
       expect(indexing).toHaveBeenCalledTimes(1)
       expect(warn).toHaveBeenCalledWith("indexing bootstrap failed", { err })
     } finally {
-      sessions.mockRestore()
       indexing.mockRestore()
       warn.mockRestore()
     }

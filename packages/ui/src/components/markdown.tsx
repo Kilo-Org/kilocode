@@ -8,6 +8,7 @@ import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
+import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight" // kilocode_change
 
 type Entry = {
   hash: string
@@ -436,6 +437,7 @@ export function Markdown(
             const fromHash = fromEl.getAttribute("data-source-hash")
             const toCode = toEl.querySelector("code")?.textContent ?? ""
             if (fromHash === fnv1a(toCode)) return false
+            if (preserveStreamingHighlight(fromEl, toEl, local.streaming ?? false)) return false // kilocode_change
             // Source changed during streaming — fall through so morphdom replaces // kilocode_change
             // the stale highlighted block with the updated plain block, which will
             // be re-highlighted on the next deferredHighlight pass.

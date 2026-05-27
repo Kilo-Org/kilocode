@@ -17,6 +17,7 @@ import { IndexingRoutes } from "./routes/indexing"
 import { BackgroundProcessRoutes } from "./routes/background-process"
 import { createKiloRoutes } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"
+import { AppRuntime } from "../../effect/app-runtime"
 import { errors } from "../../server/error"
 import { ModelCache } from "../../provider/model-cache"
 import { Database } from "../../storage/db"
@@ -47,7 +48,10 @@ export function register(app: Hono): Hono {
         validator,
         resolver,
         errors,
-        Auth,
+        Auth: {
+          get: (id: string) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.get(id))),
+          set: (id: string, info: Auth.Info) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set(id, info))),
+        },
         z,
         Database,
         Instance,
@@ -59,7 +63,10 @@ export function register(app: Hono): Hono {
         Bus,
         SessionCreatedEvent: Session.Event.Created,
         Identifier,
-        ModelCache,
+        ModelCache: {
+          clear: (providerID: string) =>
+            AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(providerID))),
+        },
       }),
     )
 }

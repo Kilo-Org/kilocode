@@ -7,6 +7,7 @@ import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.PickerButton
 import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.CollectionListModel
@@ -24,10 +25,7 @@ import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.Box
-import javax.swing.BoxLayout
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
 import javax.swing.ScrollPaneConstants
@@ -68,15 +66,10 @@ internal class SessionAccountOverlay(
         addActionListener { profile() }
     }
 
-    private val row = JPanel().apply {
-        layout = BoxLayout(this, BoxLayout.X_AXIS)
-        isOpaque = false
-        add(picker)
-        add(Box.createHorizontalStrut(UiStyle.Gap.md()))
-        add(balance)
-        add(Box.createHorizontalStrut(UiStyle.Gap.md()))
-        add(profileBtn)
-    }
+    private val row = Stack.horizontal(gap = UiStyle.Gap.md())
+        .next(picker)
+        .next(balance)
+        .next(profileBtn)
 
     private val panel = RoundedContentPanel(UiStyle.Gap.lg(), UiStyle.Gap.lg()).apply {
         addToCenter(row)

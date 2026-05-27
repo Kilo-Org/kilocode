@@ -2,15 +2,14 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.ui.layout.Stack
 import com.intellij.ide.DataManager
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.options.ex.Settings
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
-import javax.swing.BoxLayout
 import javax.swing.JComponent
-import javax.swing.JPanel
 
 /**
  * Root settings entry under Settings -> Tools -> Kilo Code.
@@ -31,13 +30,12 @@ class KiloSettingsConfigurable : SearchableConfigurable {
     override fun getDisplayName(): String = KiloBundle.message("settings.kilo.displayName")
 
     override fun createComponent(): JComponent {
-        val panel = JPanel()
-        panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
+        val panel = Stack.vertical()
         panel.border = JBUI.Borders.empty(8, 0, 0, 0)
 
         val desc = JBLabel(KiloBundle.message("settings.kilo.description"))
         desc.border = JBUI.Borders.emptyBottom(12)
-        panel.add(desc)
+        panel.next(desc)
 
         val link = ActionLink(KiloBundle.message("settings.profile.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink
@@ -45,7 +43,7 @@ class KiloSettingsConfigurable : SearchableConfigurable {
             open(settings, UserProfileConfigurable.ID)
         }
         link.border = JBUI.Borders.emptyBottom(4)
-        panel.add(link)
+        panel.next(link)
 
         return panel
     }

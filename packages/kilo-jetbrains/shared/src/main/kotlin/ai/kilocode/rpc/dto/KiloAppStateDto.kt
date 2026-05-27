@@ -7,6 +7,7 @@ enum class KiloAppStatusDto {
     DISCONNECTED,
     CONNECTING,
     LOADING,
+    MIGRATION_REQUIRED,
     READY,
     ERROR,
 }
@@ -88,4 +89,5 @@ data class KiloAppStateDto(
     val warnings: List<ConfigWarningDto> = emptyList(),
     val config: ConfigDto? = null,
     val profile: ProfileDto? = null,
+    val migration: LegacyMigrationDetectionDto? = null,
 )

@@ -504,8 +504,6 @@ export const ExperimentalRoutes = lazy(() =>
         // kilocode_change start
         const ctx = Instance.current
         const projectID = query.worktrees && !query.projectID ? ctx.project.id : query.projectID
-        // kilocode_change end
-        // kilocode_change start
         const directories = query.worktrees
           ? await runRequest(
               "ExperimentalRoutes.session.worktrees",
@@ -513,8 +511,7 @@ export const ExperimentalRoutes = lazy(() =>
               Project.Service.use((svc) => WorktreeFamily.list(svc, ctx)),
             )
           : undefined
-        // kilocode_change end
-        // kilocode_change start - sort longest-first so most specific worktree matches first
+        // sort longest-first so most specific worktree matches first
         const sorted = directories ? [...directories].sort((a, b) => b.length - a.length) : undefined
         // kilocode_change end
         const sessions: Session.GlobalInfo[] = []

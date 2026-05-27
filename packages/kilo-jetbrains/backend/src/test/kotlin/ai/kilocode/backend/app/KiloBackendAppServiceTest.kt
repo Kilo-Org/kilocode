@@ -37,8 +37,8 @@ class KiloBackendAppServiceTest {
         mock.close()
     }
 
-    private fun create(): KiloBackendAppService =
-        KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+    private fun create(loadTimeoutMs: Long = 30_000L): KiloBackendAppService =
+        KiloBackendAppService.create(scope, FakeCliServer(mock), log, loadTimeoutMs)
 
     @Test
     fun `full lifecycle reaches Ready`() = runBlocking {
@@ -399,6 +399,104 @@ class KiloBackendAppServiceTest {
                 svc.appState.first { it is KiloAppState.Ready }
             }
             assertIs<KiloAppState.Ready>(ready)
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `hung app load transitions from Loading to Error`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val svc = create(loadTimeoutMs = 300L)
+
+        try {
+            svc.connect()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+
+            val err = withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Error }
+            } as KiloAppState.Error
+
+            assertEquals("Failed to load required data", err.message)
+            assertTrue(err.errors.any { it.detail?.contains("timeout", ignoreCase = true) == true })
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `hung warnings do not prevent Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.warningsGate = gate
+        val svc = create(loadTimeoutMs = 300L)
+
+        try {
+            svc.connect()
+
+            val ready = withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            } as KiloAppState.Ready
+
+            assertTrue(ready.data.warnings.isEmpty())
+            assertTrue(svc.warnings.isEmpty())
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `restart during Loading cancels stale load and reaches Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val svc = create(loadTimeoutMs = 500L)
+
+        try {
+            svc.connect()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+
+            gate.countDown()
+            svc.restart()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            }
+
+            assertIs<KiloAppState.Ready>(svc.appState.value)
+            assertFalse(log.messages.any { it.contains("Application start timed out") })
+        } finally {
+            gate.countDown()
+        }
+    }
+
+    @Test
+    fun `reinstall during Loading cancels stale load and reaches Ready`() = runBlocking {
+        val gate = CountDownLatch(1)
+        mock.responseGate = gate
+        val svc = create(loadTimeoutMs = 500L)
+
+        try {
+            svc.connect()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Loading }
+            }
+
+            gate.countDown()
+            svc.reinstall()
+
+            withTimeout(10_000) {
+                svc.appState.first { it is KiloAppState.Ready }
+            }
+
+            assertIs<KiloAppState.Ready>(svc.appState.value)
+            assertFalse(log.messages.any { it.contains("Application start timed out") })
         } finally {
             gate.countDown()
         }

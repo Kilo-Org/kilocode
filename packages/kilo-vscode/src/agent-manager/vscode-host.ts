@@ -99,6 +99,10 @@ export class VscodeHost implements Host {
     provider.attachToWebview(panel.webview, {
       onBeforeMessage: opts.onBeforeMessage,
     })
+    provider.setStreamVisibility(panel.active && panel.visible)
+    const streams = panel.onDidChangeViewState((event) =>
+      provider.setStreamVisibility(event.webviewPanel.active && event.webviewPanel.visible),
+    )
     if (this.autoApprove) provider.setAutoApproveController(this.autoApprove)
 
     const sessions: SessionProvider = {
@@ -147,6 +151,7 @@ export class VscodeHost implements Host {
         return panel.onDidDispose(cb)
       },
       dispose() {
+        streams.dispose()
         provider.dispose()
         panel.dispose()
       },

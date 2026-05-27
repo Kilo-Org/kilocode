@@ -2,7 +2,6 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import path from "path"
-import * as Config from "../../src/config/config"
 import { WithInstance } from "../../src/project/with-instance"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
@@ -28,10 +27,6 @@ describe("experimental.session.list", () => {
 
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
-
-      spyOn(Config, "get").mockImplementation(
-        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
-      )
 
       try {
         const { Server } = await import("../../src/server/server")
@@ -98,10 +93,6 @@ describe("experimental.session.list", () => {
 
     try {
       await $`git worktree add ${worktree} -b test-branch-sdk-${Date.now()}`.cwd(first.path).quiet()
-
-      spyOn(Config, "get").mockImplementation(
-        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
-      )
 
       try {
         const { Server } = await import("../../src/server/server")

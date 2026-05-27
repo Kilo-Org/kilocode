@@ -10118,6 +10118,9 @@
                   "suffix": {
                     "type": "string"
                   },
+                  "provider": {
+                    "type": "string"
+                  },
                   "model": {
                     "type": "string"
                   },
@@ -16460,6 +16463,12 @@
           "small_model": {
             "type": "string"
           },
+          "subagent_model": {
+            "type": "string"
+          },
+          "subagent_variant": {
+            "type": "string"
+          },
           "default_agent": {
             "type": "string"
           },
@@ -16763,9 +16772,6 @@
                 "type": "boolean"
               },
               "agent_manager_tool": {
-                "type": "boolean"
-              },
-              "speech_to_text": {
                 "type": "boolean"
               },
               "speech_to_text_model": {

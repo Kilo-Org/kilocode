@@ -217,6 +217,7 @@ export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const bus = yield* Bus.Service
+    const config = yield* Config.Service // kilocode_change
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
         const row = Database.use((db) =>
@@ -359,7 +360,7 @@ export const layer = Layer.effect(
           action: "allow" as const,
         }))
         if (alwaysRules.length > 0) {
-          yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false }))
+          yield* config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false })
         }
       }
       // kilocode_change end
@@ -398,7 +399,7 @@ export const layer = Layer.effect(
       existing.saved = true // kilocode_change
 
       if (newRules.length > 0) {
-        yield* Effect.promise(() => Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false }))
+        yield* config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
       }
 
       yield* drainCovered(
@@ -514,7 +515,7 @@ export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
   return result
 }
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
+export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer)) // kilocode_change
 
 // kilocode_change start — inverse of fromConfig: convert rules back to config format
 const SCALAR_ONLY_PERMISSIONS = new Set([

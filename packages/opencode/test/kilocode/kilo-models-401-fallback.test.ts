@@ -25,6 +25,13 @@ mock.module("@gitlab/opencode-gitlab-auth", () => ({ default: () => ({}) }))
 import { tmpdir } from "../fixture/fixture"
 import { WithInstance } from "../../src/project/with-instance"
 import { ModelCache } from "../../src/provider/model-cache"
+import { AppRuntime } from "../../src/effect/app-runtime"
+
+const clear = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(id)))
+const fetch = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.fetch(id)))
+const failed = () => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.failedProviders()))
+const failure = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.getFailure(id)))
+const get = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.get(id)))
 
 const CONFIG = JSON.stringify({ $schema: "https://app.kilo.ai/config.json" })
 
@@ -38,16 +45,16 @@ async function withInstance<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 test("401 from gateway sets provider as failed in ModelCache", async () => {
-  ModelCache.clear("kilo")
-  await withInstance(() => ModelCache.fetch("kilo"))
-  expect(ModelCache.failedProviders()).toContain("kilo")
-  expect(ModelCache.getFailure("kilo")).toMatchObject({ kind: "unauthorized", status: 401 })
+  await clear("kilo")
+  await withInstance(() => fetch("kilo"))
+  expect(await failed()).toContain("kilo")
+  expect(await failure("kilo")).toMatchObject({ kind: "unauthorized", status: 401 })
 })
 
 test("401 from gateway caches empty models (not undefined)", async () => {
-  ModelCache.clear("kilo")
-  await withInstance(() => ModelCache.fetch("kilo"))
-  const cached = ModelCache.get("kilo")
+  await clear("kilo")
+  await withInstance(() => fetch("kilo"))
+  const cached = await get("kilo")
   expect(cached).toBeDefined()
   expect(Object.keys(cached!)).toHaveLength(0)
 })

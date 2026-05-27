@@ -53,7 +53,6 @@ import {
   IndexingConfig as KiloIndexingConfig,
   IndexingSchema as KiloIndexingSchema,
 } from "@kilocode/kilo-indexing/config"
-import { makeRuntime } from "@/effect/run-service"
 import { unique } from "remeda"
 // kilocode_change end
 
@@ -226,6 +225,13 @@ export const Info = Schema.Struct({
   small_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
   }),
+  subagent_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
+    description:
+      "Default model for task-tool subagents in the format of provider/model. If unset or unavailable, subagents inherit the calling agent model.",
+  }),
+  subagent_variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
+    description: "Default model variant for task-tool subagents when subagent_model is configured.",
+  }),
   // kilocode_change end
   // kilocode_change start - renamed from "build" to "code" + nullable for delete sentinel
   default_agent: Schema.optional(Schema.NullOr(Schema.String)).annotate({
@@ -349,9 +355,6 @@ export const Info = Schema.Struct({
       }),
       agent_manager_tool: Schema.optional(Schema.Boolean).annotate({
         description: "Enable the VS Code Agent Manager orchestration tool",
-      }),
-      speech_to_text: Schema.optional(Schema.Boolean).annotate({
-        description: "Enable speech-to-text voice input in Kilo clients",
       }),
       speech_to_text_model: Schema.optional(Schema.String).annotate({
         description: "Speech-to-text transcription model ID to use for voice input",
@@ -1095,45 +1098,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Account.defaultLayer),
   Layer.provide(Npm.defaultLayer),
 )
-
-// kilocode_change start - keep async wrappers for Kilo callsites during Effect migration
-const { runPromise } = makeRuntime(Service, defaultLayer)
-
-export async function get() {
-  return runPromise((svc) => svc.get())
-}
-
-export async function getGlobal() {
-  return runPromise((svc) => svc.getGlobal())
-}
-
-export async function getConsoleState() {
-  return runPromise((svc) => svc.getConsoleState())
-}
-
-export async function update(config: Info) {
-  return runPromise((svc) => svc.update(config))
-}
-
-export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
-  return runPromise((svc) => svc.updateGlobal(config, options))
-}
-
-export async function invalidate() {
-  return runPromise((svc) => svc.invalidate())
-}
-
-export async function directories() {
-  return runPromise((svc) => svc.directories())
-}
-
-export async function waitForDependencies() {
-  return runPromise((svc) => svc.waitForDependencies())
-}
-
-export async function warnings() {
-  return runPromise((svc) => svc.warnings())
-}
-// kilocode_change end
 
 export * as Config from "./config"

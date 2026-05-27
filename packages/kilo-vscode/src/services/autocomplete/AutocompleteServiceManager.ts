@@ -23,11 +23,13 @@ export interface AutocompleteServiceSettings {
 
 function readSettings(): AutocompleteServiceSettings {
   const config = vscode.workspace.getConfiguration(CONFIG_SECTION)
+  const info = getAutocompleteModel(config.get<string>("provider"), config.get<string>("model"))
   return {
     enableAutoTrigger: config.get<boolean>("enableAutoTrigger") ?? true,
     enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding") ?? true,
     enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete") ?? true,
-    model: getAutocompleteModel(config.get<string>("model") ?? "").id,
+    provider: info.providerID,
+    model: info.modelID,
     snoozeUntil: config.get<number>("snoozeUntil"),
   }
 }
@@ -119,9 +121,7 @@ export class AutocompleteServiceManager {
   public async load() {
     this.settings = readSettings()
 
-    if (this.settings.model) {
-      this.inlineCompletionProvider.setModel(this.settings.model)
-    }
+    this.inlineCompletionProvider.setModel(getAutocompleteModel(this.settings.provider, this.settings.model).id)
 
     await this.updateGlobalContext()
     this.updateStatusBar()
@@ -319,11 +319,13 @@ export class AutocompleteServiceManager {
   }
 
   private getCurrentModelName(): string {
-    return this.inlineCompletionProvider.getModelId()
+    const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+    return info.label
   }
 
   private getCurrentProviderName(): string {
-    return getAutocompleteModel(this.inlineCompletionProvider.getModelId()).provider
+    const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+    return info.provider
   }
 
   private hasNoUsableProvider(): boolean {

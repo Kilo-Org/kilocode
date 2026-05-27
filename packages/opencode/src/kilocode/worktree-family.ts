@@ -10,11 +10,10 @@ export namespace WorktreeFamily {
       return [Filesystem.resolve(ctx.directory)]
     }
 
-    const listed = yield* Effect.promise(() =>
-      Git.run(["worktree", "list", "--porcelain"], {
-        cwd: ctx.worktree,
-      }),
-    )
+    const git = yield* Git.Service
+    const listed = yield* git.run(["worktree", "list", "--porcelain"], {
+      cwd: ctx.worktree,
+    })
 
     if (listed.exitCode === 0) {
       const dirs = listed
