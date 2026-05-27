@@ -382,7 +382,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                 }
                 created.add(workspace.directory to id)
                 refs.add(ref)
-                SessionUi(project, workspace, sessions, app, scope, ref = ref, manager = owner).also {
+                SessionUi(project, workspace, sessions, app, scope, ref = ref, manager = owner, workspaces = workspaces).also {
                     ui.add(it)
                     Disposer.register(it) { ui.remove(it) }
                 }

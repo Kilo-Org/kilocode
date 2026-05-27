@@ -10118,6 +10118,9 @@
                   "suffix": {
                     "type": "string"
                   },
+                  "provider": {
+                    "type": "string"
+                  },
                   "model": {
                     "type": "string"
                   },
@@ -15636,7 +15639,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Server configuration for kilo serve and web commands"
+        "description": "Server configuration for the kilo serve command"
       },
       "IndexingConfig": {
         "type": "object",
@@ -16223,17 +16226,21 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["local"],
-            "description": "Type of MCP server connection"
+            "enum": ["local"]
           },
           "command": {
             "type": "array",
             "items": {
               "type": "string"
-            },
-            "description": "Command and arguments to run the MCP server"
+            }
           },
           "environment": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -16766,12 +16773,6 @@
                 "type": "boolean"
               },
               "semantic_indexing": {
-                "type": "boolean"
-              },
-              "agent_manager_tool": {
-                "type": "boolean"
-              },
-              "speech_to_text": {
                 "type": "boolean"
               },
               "speech_to_text_model": {
@@ -18401,22 +18402,6 @@
         "required": ["id", "type", "name", "branch", "directory", "extra", "projectID"],
         "additionalProperties": false
       },
-      "BackgroundProcessLogs": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "sessionID": {
-            "type": "string"
-          },
-          "output": {
-            "type": "string"
-          }
-        },
-        "required": ["id", "sessionID", "output"],
-        "additionalProperties": false
-      },
       "WorkspaceWarpError": {
         "type": "object",
         "properties": {
@@ -18436,6 +18421,22 @@
           }
         },
         "required": ["name", "data"],
+        "additionalProperties": false
+      },
+      "BackgroundProcessLogs": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionID": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "sessionID", "output"],
         "additionalProperties": false
       },
       "effect_HttpApiError_Unauthorized": {

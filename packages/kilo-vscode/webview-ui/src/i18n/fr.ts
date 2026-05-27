@@ -288,7 +288,7 @@ export const dict = {
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
   "prompt.action.indexing": "Paramètres d'indexation",
 
-  "speechToText.tooltip.start": "Démarrer la saisie vocale",
+  "speechToText.tooltip.start": "Démarrer la saisie vocale avec Kilo Gateway",
   "speechToText.tooltip.stop": "Arrêter la capture audio",
   "speechToText.tooltip.transcribing": "Transcription en cours... Cliquez pour annuler.",
   "speechToText.tooltip.error": "La saisie vocale a échoué. Cliquez pour effacer.",
@@ -1278,9 +1278,6 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",
-  "settings.experimental.agentManagerTool.title": "Outil Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Autoriser les agents à démarrer des sessions locales Agent Manager et des sessions worktree depuis un appel d'outil",
   "settings.experimental.speechToText.title": "Transcription vocale",
   "settings.experimental.speechToText.description":
     "Activez la saisie vocale dans les champs de prompt en utilisant votre compte Kilo via Kilo Gateway.",

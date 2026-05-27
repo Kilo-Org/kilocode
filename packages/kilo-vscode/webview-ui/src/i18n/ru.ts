@@ -284,7 +284,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 
-  "speechToText.tooltip.start": "Начать голосовой ввод",
+  "speechToText.tooltip.start": "Начать голосовой ввод с Kilo Gateway",
   "speechToText.tooltip.stop": "Остановить захват звука",
   "speechToText.tooltip.transcribing": "Распознавание... Нажмите для отмены.",
   "speechToText.tooltip.error": "Ошибка голосового ввода. Нажмите, чтобы очистить.",
@@ -1255,9 +1255,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
-  "settings.experimental.agentManagerTool.title": "Инструмент Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Разрешить агентам запускать локальные сеансы Agent Manager и сеансы worktree через вызов инструмента",
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":
     "Включите голосовой ввод в полях запросов, используя вашу учетную запись Kilo через Kilo Gateway.",

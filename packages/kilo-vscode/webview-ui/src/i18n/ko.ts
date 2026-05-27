@@ -285,7 +285,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'프롬프트 향상' 버튼은 추가 컨텍스트, 명확화 또는 재구성을 제공하여 요청을 개선합니다. 여기에 요청을 입력한 다음 버튼을 다시 클릭하여 작동 방식을 확인해보세요.",
 
-  "speechToText.tooltip.start": "음성 입력 시작",
+  "speechToText.tooltip.start": "Kilo Gateway로 음성 입력 시작",
   "speechToText.tooltip.stop": "음성 캡처 중지",
   "speechToText.tooltip.transcribing": "변환 중... 취소하려면 클릭하세요.",
   "speechToText.tooltip.error": "음성 입력에 실패했습니다. 지우려면 클릭하세요.",
@@ -1241,9 +1241,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "코드베이스 검색",
   "settings.experimental.codebaseSearch.description": "코드베이스 전체에서 AI 기반 자연어 검색 활성화",
-  "settings.experimental.agentManagerTool.title": "Agent Manager 도구",
-  "settings.experimental.agentManagerTool.description":
-    "에이전트가 도구 호출로 Agent Manager 로컬 세션 및 워크트리 세션을 시작하도록 허용",
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
   "settings.experimental.speechToText.description":
     "Kilo Gateway를 통해 Kilo 계정을 사용하여 프롬프트 필드에서 음성 입력을 활성화합니다.",

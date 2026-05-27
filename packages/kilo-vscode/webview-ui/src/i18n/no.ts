@@ -289,7 +289,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
-  "speechToText.tooltip.start": "Start taleinndata",
+  "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
   "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
@@ -1218,9 +1218,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøk",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig språksøk på tvers av kodebasen",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-verktøy",
-  "settings.experimental.agentManagerTool.description":
-    "Tillat agenter å starte lokale Agent Manager-økter og worktree-økter fra et verktøykall",
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",

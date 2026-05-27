@@ -42,7 +42,7 @@ import com.intellij.openapi.editor.event.DocumentListener
 /** Question tool form rendered inside the session transcript. */
 class QuestionView(
     private val project: Project,
-    private val reply: (String, QuestionReplyDto) -> Unit,
+    private val reply: (String, QuestionReplyDto, List<List<String>>) -> Unit,
     private val reject: (String) -> Unit,
     private val scroll: () -> Unit = {},
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
@@ -125,6 +125,7 @@ class QuestionView(
         customTexts = List(q.items.size) { "" }
         customOpen = List(q.items.size) { false }
         isVisible = true
+        applyStyle(SessionEditorStyle.current())
         syncPage()
     }
 
@@ -185,7 +186,9 @@ class QuestionView(
         val shown = minOf(idx + 1, total)
         summary.text = KiloBundle.message("session.question.summary", shown, total)
         summary.foreground = UiStyle.Colors.weak()
+        summary.isVisible = total > 1
         nav.isVisible = total > 1
+        topPanel.isVisible = total > 1
     }
 
     private fun syncFooter(q: Question) {
@@ -254,6 +257,8 @@ class QuestionView(
             else sel.toList()
         }
     }
+
+    private fun optionAnswers(i: Int): List<String> = selections.getOrNull(i)?.toList() ?: emptyList()
 
     private fun addContent(item: QuestionItem, set: MutableSet<String>) {
         val opts = optionList(item, set)
@@ -709,7 +714,8 @@ class QuestionView(
         val id = request ?: return
         if ((question?.items?.indices ?: return).any { !isReady(it) }) return
         val answers = (question?.items?.indices ?: return).map { effectiveAnswers(it) }
-        reply(id, QuestionReplyDto(answers))
+        val opts = (question?.items?.indices ?: return).map { optionAnswers(it) }
+        reply(id, QuestionReplyDto(answers), opts)
         hideView()
     }
 

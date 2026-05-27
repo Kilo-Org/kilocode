@@ -4,7 +4,6 @@ import { $ } from "bun"
 import { Effect } from "effect"
 import path from "path"
 import { WithInstance } from "../../src/project/with-instance"
-import * as Config from "../../src/config/config"
 import { RecallTool } from "../../src/tool/recall"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { resetDatabase } from "../fixture/db"
@@ -42,10 +41,6 @@ describe("tool.recall", () => {
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
-
-      spyOn(Config, "get").mockImplementation(
-        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
-      )
 
       try {
         const { Session } = await import("../../src/session/session")
@@ -86,8 +81,6 @@ describe("tool.recall", () => {
     await using first = await tmpdir({ git: true })
     await using second = await tmpdir({ git: true })
 
-    spyOn(Config, "get").mockImplementation(async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>)
-
     try {
       const { Session } = await import("../../src/session/session")
       const session = await WithInstance.provide({
@@ -120,10 +113,6 @@ describe("tool.recall", () => {
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
       await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
-
-      spyOn(Config, "get").mockImplementation(
-        async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>,
-      )
 
       try {
         const { Session } = await import("../../src/session/session")

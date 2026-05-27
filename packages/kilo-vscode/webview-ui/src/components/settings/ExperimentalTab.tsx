@@ -191,23 +191,10 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.agentManagerTool.title")}
-          description={language.t("settings.experimental.agentManagerTool.description")}
-        >
-          <Switch
-            checked={experimental().agent_manager_tool ?? false}
-            onChange={(checked) => updateExperimental("agent_manager_tool", checked)}
-            hideLabel
-          >
-            {language.t("settings.experimental.agentManagerTool.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.experimental.speechToText.title")}
+          title={language.t("settings.experimental.speechToTextModel.title")}
           description={
             kiloReady()
-              ? language.t("settings.experimental.speechToText.description")
+              ? language.t("settings.experimental.speechToTextModel.description")
               : language.t("settings.experimental.speechToText.disabledDescription")
           }
         >
@@ -216,35 +203,21 @@ const ExperimentalTab: Component = () => {
             placement="top"
             inactive={kiloReady()}
           >
-            <Switch
-              checked={experimental().speech_to_text ?? false}
-              onChange={(checked) => updateExperimental("speech_to_text", checked)}
+            <Select
+              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
+              value={(item) => item.value}
+              label={(item) => `${item.label} (${item.provider})`}
+              onSelect={(item) =>
+                updateExperimental("speech_to_text_model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)
+              }
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
               disabled={!kiloReady()}
-              hideLabel
-            >
-              {language.t("settings.experimental.speechToText.title")}
-            </Switch>
+              placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
+            />
           </Tooltip>
-        </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.experimental.speechToTextModel.title")}
-          description={language.t("settings.experimental.speechToTextModel.description")}
-        >
-          <Select
-            options={SPEECH_TO_TEXT_MODEL_OPTIONS}
-            current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
-            value={(item) => item.value}
-            label={(item) => `${item.label} (${item.provider})`}
-            onSelect={(item) =>
-              updateExperimental("speech_to_text_model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)
-            }
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-            disabled={!kiloReady()}
-            placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
-          />
         </SettingsRow>
 
         <SettingsRow

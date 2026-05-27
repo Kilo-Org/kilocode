@@ -286,7 +286,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
 
-  "speechToText.tooltip.start": "Započni glasovni unos",
+  "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
   "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
@@ -1259,9 +1259,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
-  "settings.experimental.agentManagerTool.title": "Agent Manager alat",
-  "settings.experimental.agentManagerTool.description":
-    "Dozvoli agentima da pokreću lokalne Agent Manager sesije i worktree sesije iz poziva alata",
   "settings.experimental.speechToText.title": "Govor u tekst",
   "settings.experimental.speechToText.description":
     "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",

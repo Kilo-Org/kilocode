@@ -282,7 +282,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 
-  "speechToText.tooltip.start": "開始語音輸入",
+  "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
   "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
@@ -1188,9 +1188,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
-  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
-  "settings.experimental.agentManagerTool.description":
-    "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
   "settings.experimental.speechToText.disabledDescription":
