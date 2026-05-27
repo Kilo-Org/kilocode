@@ -1,5 +1,8 @@
 import { describe, test, expect, beforeEach } from "bun:test"
 import { Capture } from "@/kilocode/session-export/capture"
+import { ModelID, ProviderID } from "@/provider/schema"
+import { MessageID, SessionID } from "@/session/schema"
+import type { MessageV2 } from "@/session/message-v2"
 import { jsonSchema, tool } from "ai"
 
 describe("Capture", () => {
@@ -352,7 +355,7 @@ describe("Capture", () => {
       requestId: "rA",
       input: {
         inputMessagesSnapshot: [{ role: "user", content: "..." }],
-        selectedContext: { foo: 1 },
+        selectedContext: context("s1"),
         prompt: "Summarize the conversation so far.",
       },
       output: { summary: "Discussed X.", assistantMessageId: "aA" },
@@ -372,7 +375,7 @@ describe("Capture", () => {
       sessionId: "s_unknown",
       rootSessionId: "s_unknown",
       requestId: "rZ",
-      input: { inputMessagesSnapshot: [], selectedContext: {}, prompt: "" },
+      input: { inputMessagesSnapshot: [], selectedContext: [], prompt: "" },
       output: { summary: "", assistantMessageId: "" },
       modelId: "free-1",
       durationMs: 0,
@@ -390,6 +393,22 @@ function meta(sessionId: string) {
     agent: "claude",
     modeId: "build",
   }
+}
+
+function context(sessionId: string): MessageV2.WithParts[] {
+  return [
+    {
+      info: {
+        id: MessageID.ascending(),
+        sessionID: SessionID.make(sessionId),
+        role: "user",
+        time: { created: 0 },
+        agent: "build",
+        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("free-1") },
+      },
+      parts: [],
+    },
+  ]
 }
 
 async function until(check: () => boolean): Promise<void> {

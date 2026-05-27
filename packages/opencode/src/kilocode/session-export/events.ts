@@ -1,8 +1,11 @@
 import type { ExportEnvelope } from "./envelope"
 import type { Permission } from "@/permission"
-import type { ModelMessage, Tool } from "ai"
+import type { MessageV2 } from "@/session/message-v2"
+import type { ModelMessage, TextStreamPart, Tool } from "ai"
 
 export type { ExportEnvelope } from "./envelope"
+
+export type LlmStreamPart = TextStreamPart<Record<string, Tool>>
 
 export type LlmRequestStarted = ExportEnvelope & {
   type: "llm_request_started"
@@ -36,8 +39,8 @@ export type LlmRequestCompleted = ExportEnvelope & {
   output: {
     textParts: string[]
     reasoningParts?: string[]
-    toolCalls?: unknown[]
-    rawParts?: unknown[]
+    toolCalls?: LlmStreamPart[]
+    rawParts?: LlmStreamPart[]
     finishReason?: string
     error?: unknown
     usage?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
@@ -133,8 +136,8 @@ export type PermissionDecided = ExportEnvelope & {
 export type CompactionCaptured = ExportEnvelope & {
   type: "compaction_captured"
   input: {
-    inputMessagesSnapshot: unknown[]
-    selectedContext: unknown
+    inputMessagesSnapshot: ModelMessage[]
+    selectedContext: MessageV2.WithParts[]
     previousSummary?: string
     prompt: string
     tailStartId?: string

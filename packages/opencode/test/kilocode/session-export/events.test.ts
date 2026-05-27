@@ -1,5 +1,12 @@
 import { describe, test, expect } from "bun:test"
-import type { ExportEvent, ExportEnvelope, LlmRequestStarted, SessionDegraded } from "@/kilocode/session-export/events"
+import type {
+  CompactionCaptured,
+  ExportEvent,
+  ExportEnvelope,
+  LlmRequestCompleted,
+  LlmRequestStarted,
+  SessionDegraded,
+} from "@/kilocode/session-export/events"
 import type { BatchEnvelope } from "@/kilocode/session-export/envelope"
 
 describe("event types", () => {
@@ -113,5 +120,17 @@ describe("event types", () => {
 
     expect(batch.events[0].sessionId).toBe("s1")
     expect(batch.events[0].requestId).toBe("r1")
+  })
+
+  test("captured model payloads expose existing source types", () => {
+    function completed(ev: LlmRequestCompleted) {
+      return ev.output.rawParts?.[0]?.type
+    }
+    function compacted(ev: CompactionCaptured) {
+      return [ev.input.inputMessagesSnapshot[0]?.role, ev.input.selectedContext[0]?.info.sessionID]
+    }
+
+    expect(typeof completed).toBe("function")
+    expect(typeof compacted).toBe("function")
   })
 })
