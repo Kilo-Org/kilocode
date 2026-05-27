@@ -34,7 +34,7 @@ describe("workspace fiber", () => {
         files: [],
         capture: {
           root: "/repo",
-          mode: "filesystem-walk",
+          mode: "git-tracked-and-untracked",
           fileCount: 0,
           totalBytes: 0,
           omittedCountsByReason: {},
@@ -58,7 +58,7 @@ describe("workspace fiber", () => {
       ).capture,
     ).toEqual({
       root: "/repo",
-      mode: "filesystem-walk",
+      mode: "git-tracked-and-untracked",
       fileCount: 0,
       totalBytes: 0,
       omittedCountsByReason: {},

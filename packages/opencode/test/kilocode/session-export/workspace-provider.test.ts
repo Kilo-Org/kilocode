@@ -1,12 +1,45 @@
 import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
-import { mkdtemp, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises"
 import { tmpdir as osTmpdir } from "node:os"
 import { join } from "node:path"
 import { tmpdir } from "../../fixture/fixture"
 import { createWorkspaceProvider } from "@/kilocode/session-export/workspace-provider"
 
 describe("workspace provider", () => {
+  test("captures the repository root when started from a nested git directory", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await mkdir(join(tmp.path, "src", "nested"), { recursive: true })
+    await writeFile(join(tmp.path, "package.json"), '{"name":"repo"}\n')
+    await writeFile(join(tmp.path, "src", "nested", "index.ts"), "export const nested = true\n")
+    await $`git add package.json src/nested/index.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: join(tmp.path, "src", "nested") })
+    const baseline = await provider.baseline()
+
+    expect(baseline.capture.mode).toBe("git-tracked-and-untracked")
+    expect(baseline.files.map((file) => file.path)).toEqual(["package.json", "src/nested/index.ts"])
+    expect(baseline.files.find((file) => file.path === "package.json")?.content).toBe('{"name":"repo"}\n')
+  })
+
+  test("does not capture filesystem files outside a git repository", async () => {
+    await using tmp = await tmpdir()
+    await writeFile(join(tmp.path, "loose.txt"), "do not sync me\n")
+
+    const provider = createWorkspaceProvider({ root: tmp.path })
+    const baseline = await provider.baseline()
+
+    expect(baseline.capture).toEqual({
+      mode: "none",
+      fileCount: 0,
+      totalBytes: 0,
+      omittedCountsByReason: {},
+      truncated: false,
+    })
+    expect(baseline.files).toEqual([])
+  })
+
   test("captures initial filesystem state and ignores gitignored files", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeFile(join(tmp.path, ".gitignore"), "ignored.txt\n")

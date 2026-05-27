@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { readdir, readFile, stat } from "node:fs/promises"
+import { readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import { formatPatch, structuredPatch } from "diff"
 import { Config } from "./config"
@@ -79,27 +79,22 @@ function save(file: string | undefined, state: State): void {
 }
 
 async function scan(root: string): Promise<{ files: Map<string, File>; mode: CaptureMetadata["mode"] }> {
-  const result = await list(root)
-  const paths = result.paths
-  const files = await Promise.all(paths.map((item) => inspect(root, item)))
+  const repo = await repository(root)
+  if (!repo) return { files: new Map(), mode: "none" }
+  const paths = await tracked(repo)
+  const files = await Promise.all(paths.map((item) => inspect(repo, item)))
   const out = new Map<string, File>()
   for (const file of files.filter((item): item is File => Boolean(item))) out.set(file.path, file)
-  return { files: out, mode: result.mode }
+  return { files: out, mode: "git-tracked-and-untracked" }
 }
 
-async function list(root: string): Promise<{ paths: string[]; mode: CaptureMetadata["mode"] }> {
-  const git = await isgit(root)
-  const items = git ? await tracked(root) : await walk(root, root)
-  return {
-    paths: Array.from(new Set(items)).sort((a, b) => a.localeCompare(b)),
-    mode: git ? "git-tracked-and-untracked" : "filesystem-walk",
-  }
-}
-
-async function isgit(root: string): Promise<boolean> {
-  const proc = Bun.spawn(["git", "rev-parse", "--is-inside-work-tree"], { cwd: root, stdout: "pipe", stderr: "pipe" })
+async function repository(root: string): Promise<string | undefined> {
+  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], { cwd: root, stdout: "pipe", stderr: "pipe" })
   const [text, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited])
-  return code === 0 && text.trim() === "true"
+  if (code !== 0) return
+  const repo = text.trim()
+  if (!repo) return
+  return path.resolve(repo)
 }
 
 async function tracked(root: string): Promise<string[]> {
@@ -109,28 +104,8 @@ async function tracked(root: string): Promise<string[]> {
     stderr: "pipe",
   })
   const [text, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited])
-  if (code !== 0) return walk(root, root)
-  return text.split("\0").filter(Boolean)
-}
-
-async function walk(root: string, dir: string): Promise<string[]> {
-  const list = await readdir(dir, { withFileTypes: true }).catch(() => [])
-  const nested = await Promise.all(
-    list
-      .filter((item) => !skip(item.name))
-      .map(async (item) => {
-        const full = path.join(dir, item.name)
-        const rel = path.relative(root, full).replaceAll("\\", "/")
-        if (item.isDirectory()) return walk(root, full)
-        if (item.isFile() || item.isSymbolicLink()) return [rel]
-        return []
-      }),
-  )
-  return nested.flat()
-}
-
-function skip(name: string): boolean {
-  return name === ".git" || name === "node_modules" || name === ".DS_Store"
+  if (code !== 0) return []
+  return Array.from(new Set(text.split("\0").filter(Boolean))).sort((a, b) => a.localeCompare(b))
 }
 
 async function inspect(root: string, rel: string): Promise<File | undefined> {
