@@ -203,8 +203,10 @@ export const layer: Layer.Layer<
         }
 
         const cfg = yield* config.get() // kilocode_change: capture for KiloToolRegistry.extra
+        // kilocode_change start: add vscode client + KILO_* flag
         const questionEnabled =
-          ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL // kilocode_change: add vscode client + KILO_* flag
+          ["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL
+        // kilocode_change end
 
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
