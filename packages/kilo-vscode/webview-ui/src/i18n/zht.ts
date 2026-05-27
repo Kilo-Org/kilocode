@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推薦",
   "model.group.favorites": "我的最愛",
+  "model.group.collapse": "折疊 {{group}}",
+  "model.group.expand": "展開 {{group}}",
   "model.favorite.add": "加入我的最愛",
   "model.favorite.remove": "從我的最愛中移除",
 
@@ -280,7 +282,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 
-  "speechToText.tooltip.start": "開始語音輸入",
+  "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
   "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
@@ -800,6 +802,8 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "從您的環境變數連線",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登入",
   "settings.providers.custom.description": "透過基礎 URL 新增 OpenAI 相容的提供商。",
+  "settings.providers.subagentModel.title": "子代理模型",
+  "settings.providers.subagentModel.description": "task-tool 子代理的預設模型和推理工作量。留空以繼承呼叫代理的模型。",
   "settings.providers.modeModels": "按模式選擇模型",
   "settings.providers.custom.note": "透過 Base URL 新增 OpenAI 相容供應商。",
   "settings.providers.modeModels.description": "為特定模式覆寫預設模型。如果未設定，將使用全域預設模型。",
@@ -1189,7 +1193,8 @@ export const dict = {
     "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
-  "settings.experimental.speechToText.disabledDescription": "啟用並登入 Kilo provider 以在提示詞欄位中使用語音輸入。",
+  "settings.experimental.speechToText.disabledDescription":
+    "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
   "settings.experimental.speechToTextModel.title": "語音轉文字模型",
   "settings.experimental.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
@@ -1212,6 +1217,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",
   "settings.agentBehaviour.modelOverride.title": "模型覆寫",
   "settings.agentBehaviour.modelOverride.description": "覆寫此 Agent 的預設模型",
+  "settings.agentBehaviour.variantOverride.title": "模型變體覆寫",
+  "settings.agentBehaviour.variantOverride.description": "覆寫此 Agent 的模型變體",
   "settings.agentBehaviour.prompt.title": "自訂提示詞",
   "settings.agentBehaviour.prompt.description": "此 Agent 的附加系統提示詞",
   "settings.agentBehaviour.temperature.title": "溫度",

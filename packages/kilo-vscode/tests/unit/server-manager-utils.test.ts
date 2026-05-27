@@ -1,6 +1,15 @@
 import { describe, it, expect } from "bun:test"
 import { parseServerPort } from "../../src/services/cli-backend/server-utils"
 import { resolveServerCwd, resolveIndexingEnv, toErrorMessage } from "../../src/services/cli-backend/server-manager"
+import {
+  copyTreeSitterResources,
+  resolveTreeSitterEnv,
+  treeSitterDirForBinary,
+  treeSitterDirForExtension,
+} from "../../src/services/cli-backend/cli-resources"
+import * as fs from "fs/promises"
+import * as os from "os"
+import * as path from "path"
 
 describe("parseServerPort", () => {
   it("parses port from standard CLI startup message", () => {
@@ -43,6 +52,53 @@ describe("parseServerPort", () => {
   it("matches only first occurrence when multiple ports present", () => {
     const output = "listening on http://127.0.0.1:3000 and http://127.0.0.1:4000"
     expect(parseServerPort(output)).toBe(3000)
+  })
+})
+
+describe("cli tree-sitter resources", () => {
+  it("resolves resources next to the VS Code bundled CLI", () => {
+    const root = "/Users/test/.vscode/extensions/kilocode.kilo-code-7.2.50-darwin-arm64"
+    const bin = `${root}/bin/kilo`
+
+    expect(treeSitterDirForBinary(bin)).toBe(`${root}/bin/tree-sitter`)
+    expect(treeSitterDirForExtension(root)).toBe(`${root}/bin/tree-sitter`)
+    expect(resolveTreeSitterEnv(root)).toEqual({ KILO_TREE_SITTER_WASM_DIR: `${root}/bin/tree-sitter` })
+  })
+
+  it("resolves resources next to a Windows packaged CLI", () => {
+    const root = String.raw`C:\Users\test\.vscode\extensions\kilocode.kilo-code-7.2.50-win32-x64`
+    const bin = String.raw`${root}\bin\kilo.exe`
+
+    expect(treeSitterDirForBinary(bin)).toBe(String.raw`${root}\bin\tree-sitter`)
+    expect(treeSitterDirForExtension(root)).toBe(String.raw`${root}\bin\tree-sitter`)
+    expect(resolveTreeSitterEnv(root)).toEqual({
+      KILO_TREE_SITTER_WASM_DIR: String.raw`${root}\bin\tree-sitter`,
+    })
+  })
+
+  it("copies runtime and language WASMs with the packaged CLI binary", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-tree-sitter-"))
+    try {
+      const source = path.join(root, "dist", "@kilocode", "cli-darwin-arm64", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const dir = treeSitterDirForBinary(source)
+
+      await fs.mkdir(dir, { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(path.join(dir, "tree-sitter.wasm"), "runtime")
+      await fs.writeFile(path.join(dir, "tree-sitter-typescript.wasm"), "language")
+
+      await copyTreeSitterResources(source, target)
+
+      expect(await fs.readFile(path.join(treeSitterDirForBinary(target), "tree-sitter.wasm"), "utf8")).toBe("runtime")
+      expect(await fs.readFile(path.join(treeSitterDirForBinary(target), "tree-sitter-typescript.wasm"), "utf8")).toBe(
+        "language",
+      )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
   })
 })
 

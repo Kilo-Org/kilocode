@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "Mais recente",
   "model.group.recommended": "Recomendado",
   "model.group.favorites": "Favoritos",
+  "model.group.collapse": "Recolher {{group}}",
+  "model.group.expand": "Expandir {{group}}",
   "model.favorite.add": "Adicionar aos favoritos",
   "model.favorite.remove": "Remover dos favoritos",
   "model.provider.anthropic": "Anthropic",
@@ -284,7 +286,7 @@ export const dict = {
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
 
-  "speechToText.tooltip.start": "Iniciar entrada de voz",
+  "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
   "speechToText.tooltip.stop": "Parar captura",
   "speechToText.tooltip.transcribing": "Transcrevendo... Clique para cancelar.",
   "speechToText.tooltip.error": "Falha na entrada de voz. Clique para limpar.",
@@ -817,6 +819,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Conectado a partir das suas variáveis de ambiente",
   "settings.providers.action.signInChatGPT": "Entrar com ChatGPT",
   "settings.providers.custom.description": "Adicione um provedor compatível com OpenAI pela URL base.",
+  "settings.providers.subagentModel.title": "Modelo de Subagente",
+  "settings.providers.subagentModel.description":
+    "Modelo padrão e esforço de raciocínio para subagentes do task-tool. Deixe em branco para herdar o modelo do agente chamador.",
   "settings.providers.modeModels": "Modelo por Modo",
   "settings.providers.custom.note": "Adicione um provedor compatível com OpenAI por URL base.",
   "settings.providers.modeModels.description":
@@ -1261,7 +1266,7 @@ export const dict = {
   "settings.experimental.speechToText.description":
     "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Ative e faça login no Kilo provider para usar a entrada de voz nos campos de prompt.",
+    "Ative e faça login no provedor Kilo para usar o Speech to Text. Atualmente, o Speech to Text é compatível apenas com o Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Modelo de fala para texto",
   "settings.experimental.speechToTextModel.description":
     "Escolha o modelo de transcrição do Kilo Gateway para entrada de voz.",
@@ -1286,6 +1291,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecionar um agente para configurar…",
   "settings.agentBehaviour.modelOverride.title": "Substituição de modelo",
   "settings.agentBehaviour.modelOverride.description": "Substituir o modelo padrão para este agente",
+  "settings.agentBehaviour.variantOverride.title": "Substituição de variante",
+  "settings.agentBehaviour.variantOverride.description": "Substituir a variante do modelo para este agente",
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",

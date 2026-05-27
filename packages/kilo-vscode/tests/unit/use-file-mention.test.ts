@@ -86,6 +86,67 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("seedFromText populates knownPaths so mentions are recognized in pre-filled text", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    // Before seeding, no paths are known
+    expect(mention.mentionedPaths().size).toBe(0)
+
+    // Seed from text containing @mentions (simulates setChatBoxMessage after revert)
+    mention.seedFromText("Say hi to @packages/plugin/tsconfig.json !")
+
+    expect(mention.mentionedPaths().has("packages/plugin/tsconfig.json")).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromText handles multiple @mentions in one string", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromText("check @src/a.ts and @src/b.tsx")
+
+    expect(mention.mentionedPaths().has("src/a.ts")).toBe(true)
+    expect(mention.mentionedPaths().has("src/b.tsx")).toBe(true)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromText ignores text without @mentions", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromText("no mentions here")
+    expect(mention.mentionedPaths().size).toBe(0)
+
+    dispose.fn?.()
+  })
+
   it("filters visible results synchronously while a new search is pending", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()

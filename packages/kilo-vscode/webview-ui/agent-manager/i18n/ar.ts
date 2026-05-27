@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "البحث في علامات التبويب...",
   "agentManager.tabsMenu.empty": "لا توجد علامات تبويب مطابقة",
   "agentManager.tabsMenu.status.waiting": "انتظار",
-  "agentManager.tabsMenu.status.working": "يعمل",
   "agentManager.tabsMenu.status.retry": "إعادة",
 
   "agentManager.terminal.new": "علامة تبويب جديدة للمحطة الطرفية",

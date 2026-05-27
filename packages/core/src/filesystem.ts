@@ -46,6 +46,7 @@ export namespace AppFileSystem {
     readonly isDir: (path: string) => Effect.Effect<boolean>
     readonly isFile: (path: string) => Effect.Effect<boolean>
     readonly existsSafe: (path: string) => Effect.Effect<boolean>
+    readonly readFileStringSafe: (path: string) => Effect.Effect<string | undefined, Error>
     readonly readJson: (path: string) => Effect.Effect<unknown, Error>
     readonly writeJson: (path: string, data: unknown, mode?: number) => Effect.Effect<void, Error>
     readonly ensureDir: (path: string) => Effect.Effect<void, Error>
@@ -67,6 +68,12 @@ export namespace AppFileSystem {
 
       const existsSafe = Effect.fn("FileSystem.existsSafe")(function* (path: string) {
         return yield* fs.exists(path).pipe(Effect.orElseSucceed(() => false))
+      })
+
+      const readFileStringSafe = Effect.fn("FileSystem.readFileStringSafe")(function* (path: string) {
+        return yield* fs
+          .readFileString(path)
+          .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(undefined)))
       })
 
       const isDir = Effect.fn("FileSystem.isDir")(function* (path: string) {
@@ -195,6 +202,7 @@ export namespace AppFileSystem {
       return Service.of({
         ...fs,
         existsSafe,
+        readFileStringSafe,
         isDir,
         isFile,
         readDirectoryEntries,

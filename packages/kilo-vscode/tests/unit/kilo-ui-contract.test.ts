@@ -137,6 +137,19 @@ describe("DataProvider contract (runtime)", () => {
   })
 })
 
+describe("Assistant Markdown streaming contract (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const block =
+    src.match(
+      /PART_MAPPING\["text"\]\s*=\s*function TextPartDisplay[\s\S]*?(?=\/\/ Expanded mode|PART_MAPPING\["reasoning"\])/,
+    )?.[0] ?? ""
+
+  it("passes active text streams through Markdown's streaming mode", () => {
+    expect(block).not.toBe("")
+    expect(block).toContain("streaming={streaming()}")
+  })
+})
+
 describe("Edit tool diff-first click contract (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
 
@@ -215,6 +228,36 @@ describe("Bash tool syntax highlighting and section labels (source)", () => {
 
   it("bash tool passes outputPath from metadata to BashHighlightedOutput", () => {
     expect(block).toContain("props.metadata.outputPath")
+  })
+})
+
+describe("HighlightedText @mention regex fallback and click handler (source)", () => {
+  const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+
+  it("detects @path patterns via regex when source offsets are missing", () => {
+    // detectMentions is the regex fallback for when the backend doesn't
+    // populate FilePart.source.text.{start,end}
+    expect(src).toContain("detectMentions")
+    expect(src).toMatch(/MENTION_RE/)
+  })
+
+  it("prefers source offsets over regex when both are available", () => {
+    expect(src).toMatch(/offset\.length\s*>\s*0\s*\?/)
+  })
+
+  it("file mention spans are clickable via data.openFile", () => {
+    expect(src).toContain("data-clickable")
+    expect(src).toMatch(/segment\.type\s*===\s*"file".*data\.openFile/)
+  })
+
+  it("click handler strips @ prefix before calling openFile", () => {
+    expect(src).toMatch(/segment\.text\.replace\(\/\^@\//)
+  })
+
+  it("escapeHtml is imported from shared util, not duplicated", () => {
+    expect(src).toMatch(/import.*escapeHtml.*from.*util\/escape-html/)
+    // Must NOT contain a local function definition
+    expect(src).not.toMatch(/function escapeHtml/)
   })
 })
 

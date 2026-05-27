@@ -26,6 +26,8 @@ import kotlinx.coroutines.runBlocking
 import java.awt.Cursor
 import java.awt.event.KeyEvent
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JComponent
@@ -282,7 +284,7 @@ class HistoryControllerTest : BasePlatformTestCase() {
     }
 
     fun `test cloud history uses relative time and sections`() {
-        val now = Instant.now()
+        val now = LocalDate.of(2026, 5, 18).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant()
         val today = CloudHistoryItem(cloud("cloud_today", "Today", now.minus(5, ChronoUnit.HOURS)))
         val yesterday = CloudHistoryItem(cloud("cloud_yesterday", "Yesterday", now.minus(1, ChronoUnit.DAYS)))
         val offset = CloudHistoryItem(

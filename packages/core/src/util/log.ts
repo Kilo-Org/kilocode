@@ -1,3 +1,5 @@
+export * as Log from "./log"
+
 import path from "path"
 import { existsSync, writeFileSync } from "fs" // kilocode_change
 import fs from "fs/promises"

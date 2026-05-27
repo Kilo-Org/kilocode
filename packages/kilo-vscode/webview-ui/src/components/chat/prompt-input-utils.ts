@@ -110,3 +110,9 @@ export function isSuggesting(blocked: boolean, suggestions: number): boolean {
 export function isQuestioning(blocked: boolean, questions: number): boolean {
   return !blocked && questions > 0
 }
+
+/** Whether a mention token refers to a file or folder path (not a special mention like terminal/git-changes). */
+export function isPathMention(text: string): boolean {
+  const path = text.replace(/^@/, "")
+  return path !== "terminal" && path !== "git-changes"
+}

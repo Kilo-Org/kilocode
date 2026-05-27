@@ -7,6 +7,7 @@ enum class KiloAppStatusDto {
     DISCONNECTED,
     CONNECTING,
     LOADING,
+    MIGRATION_REQUIRED,
     READY,
     ERROR,
 }
@@ -52,6 +53,34 @@ data class ConfigDto(
 )
 
 @Serializable
+data class ProfileOrganizationDto(
+    val id: String,
+    val name: String,
+    val role: String,
+)
+
+@Serializable
+data class ProfileBalanceDto(
+    val balance: Double,
+)
+
+@Serializable
+data class ProfileDto(
+    val email: String,
+    val name: String? = null,
+    val organizations: List<ProfileOrganizationDto> = emptyList(),
+    val balance: ProfileBalanceDto? = null,
+    val currentOrgId: String? = null,
+)
+
+@Serializable
+data class DeviceAuthDto(
+    val code: String?,
+    val verificationUrl: String,
+    val expiresIn: Int = 900,
+)
+
+@Serializable
 data class KiloAppStateDto(
     val status: KiloAppStatusDto,
     val error: String? = null,
@@ -59,4 +88,6 @@ data class KiloAppStateDto(
     val progress: LoadProgressDto? = null,
     val warnings: List<ConfigWarningDto> = emptyList(),
     val config: ConfigDto? = null,
+    val profile: ProfileDto? = null,
+    val migration: LegacyMigrationDetectionDto? = null,
 )

@@ -180,6 +180,8 @@ export const dict = {
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalt",
   "model.group.favorites": "Favoritter",
+  "model.group.collapse": "Skjul {{group}}",
+  "model.group.expand": "Vis {{group}}",
   "model.favorite.add": "Legg til i favoritter",
   "model.favorite.remove": "Fjern fra favoritter",
   "model.provider.anthropic": "Anthropic",
@@ -287,7 +289,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedre prompt' hjelper med å forbedre forespørselen din ved å gi ekstra kontekst, avklaring eller omformulering. Prøv å skrive en forespørsel her og klikk på knappen igjen for å se hvordan det fungerer.",
 
-  "speechToText.tooltip.start": "Start taleinndata",
+  "speechToText.tooltip.start": "Start taleinndata med Kilo Gateway",
   "speechToText.tooltip.stop": "Stopp lydfangst",
   "speechToText.tooltip.transcribing": "Transkriberer... Klikk for å avbryte.",
   "speechToText.tooltip.error": "Taleinndata mislyktes. Klikk for å tømme.",
@@ -819,6 +821,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Koblet til fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Logg inn med ChatGPT",
   "settings.providers.custom.description": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
+  "settings.providers.subagentModel.title": "Underagentmodell",
+  "settings.providers.subagentModel.description":
+    "Standardmodell og resonneringsinnsats for task-tool-underagenter. La stå tom for å arve den kallende agentens modell.",
   "settings.providers.modeModels": "Modell per modus",
   "settings.providers.custom.note": "Legg til en OpenAI-kompatibel leverandør via basis-URL.",
   "settings.providers.modeModels.description":
@@ -1220,7 +1225,7 @@ export const dict = {
   "settings.experimental.speechToText.description":
     "Aktiver taleinndata i prompt-felt ved å bruke din Kilo-konto gjennom Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Aktiver Kilo provider og logg på for å bruke taleinndata i prompt-felt.",
+    "Aktiver og logg på Kilo-leverandøren for å bruke Speech to Text. Speech to Text støttes for øyeblikket bare med Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Tale-til-tekst-modell",
   "settings.experimental.speechToTextModel.description": "Velg Kilo Gateway-transkripsjonsmodellen for taleinndata.",
   "settings.experimental.continueOnDeny.title": "Fortsett ved avvisning",
@@ -1278,6 +1283,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Velg en agent å konfigurere…",
   "settings.agentBehaviour.modelOverride.title": "Modelloverstying",
   "settings.agentBehaviour.modelOverride.description": "Overstyr standardmodellen for denne agenten",
+  "settings.agentBehaviour.variantOverride.title": "Variantoverstyring",
+  "settings.agentBehaviour.variantOverride.description": "Overstyr modellvarianten for denne agenten",
   "settings.agentBehaviour.prompt.title": "Egendefinert prompt",
   "settings.agentBehaviour.prompt.description": "Ekstra systemprompt for denne agenten",
   "settings.agentBehaviour.temperature.title": "Temperatur",

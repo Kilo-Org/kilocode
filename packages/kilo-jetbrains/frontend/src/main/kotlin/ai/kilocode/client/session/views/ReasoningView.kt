@@ -6,6 +6,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdView
@@ -109,7 +110,6 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
         body.add(md.component, BorderLayout.CENTER)
 
         add(header, BorderLayout.NORTH)
-        if (canExpand()) add(scroll, BorderLayout.CENTER)
         sync()
     }
 
@@ -122,7 +122,6 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
             md.set(source)
             changed = true
         }
-        changed = syncBody() || changed
         changed = sync() || changed
         if (changed) refresh()
     }
@@ -131,8 +130,7 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
         if (delta.isEmpty()) return
         source += delta
         md.append(delta)
-        var changed = syncBody()
-        changed = sync() || changed
+        val changed = sync()
         if (changed || bodyVisible()) refresh()
     }
 
@@ -207,12 +205,6 @@ class ReasoningView(reasoning: Reasoning) : PartView() {
             }
         }
         return changed
-    }
-
-    private fun syncBody(): Boolean {
-        if (!canExpand()) return collapse()
-        if (bodyVisible()) return false
-        return expand()
     }
 
     private fun setVisible(component: JBLabel, visible: Boolean): Boolean {

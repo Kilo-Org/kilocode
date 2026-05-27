@@ -76,14 +76,8 @@ export const ConfigProvider: ParentComponent = (props) => {
         "autocomplete.enableAutoTrigger": message.settings.enableAutoTrigger,
         "autocomplete.enableSmartInlineTaskKeybinding": message.settings.enableSmartInlineTaskKeybinding,
         "autocomplete.enableChatAutocomplete": message.settings.enableChatAutocomplete,
+        "autocomplete.provider": message.settings.provider,
         "autocomplete.model": message.settings.model,
-      })
-      return
-    }
-    if (message.type === "speechToTextSettingsLoaded") {
-      mergeSettings({
-        "speechToText.enabled": message.settings.enabled,
-        "speechToText.model": message.settings.model,
       })
       return
     }
@@ -155,7 +149,6 @@ export const ConfigProvider: ParentComponent = (props) => {
   const requestInitialData = () => {
     vscode.postMessage({ type: "requestConfig" })
     vscode.postMessage({ type: "requestAutocompleteSettings" })
-    vscode.postMessage({ type: "requestSpeechToTextSettings" })
   }
 
   // Request config immediately; if the extension's httpClient is not yet ready,

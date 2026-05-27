@@ -15,6 +15,7 @@ import { Env } from "../../src/env"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { Format } from "../../src/format"
+import { Git } from "../../src/git"
 import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
@@ -139,6 +140,7 @@ function makeHttp() {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
+    Layer.provide(Git.defaultLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),

@@ -1,5 +1,6 @@
 import { Component, For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -26,7 +27,7 @@ const SHARE_OPTIONS: ShareOption[] = [
 ]
 
 const ExperimentalTab: Component = () => {
-  const { config, settings, updateConfig, updateSetting } = useConfig()
+  const { config, updateConfig } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const server = useServer()
@@ -47,7 +48,7 @@ const ExperimentalTab: Component = () => {
 
   const experimental = createMemo(() => config().experimental ?? {})
   const kiloReady = createMemo(() => hasSpeechToTextAccess(config(), provider.connected(), server.profileData()))
-  const speechModel = createMemo(() => selectedSpeechToTextModel(settings()))
+  const speechModel = createMemo(() => selectedSpeechToTextModel(config()))
 
   const updateExperimental = (key: string, value: unknown) => {
     updateConfig({
@@ -203,39 +204,33 @@ const ExperimentalTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
-          title={language.t("settings.experimental.speechToText.title")}
+          title={language.t("settings.experimental.speechToTextModel.title")}
           description={
             kiloReady()
-              ? language.t("settings.experimental.speechToText.description")
+              ? language.t("settings.experimental.speechToTextModel.description")
               : language.t("settings.experimental.speechToText.disabledDescription")
           }
         >
-          <Switch
-            checked={Boolean(settings()["speechToText.enabled"] ?? false)}
-            onChange={(checked) => updateSetting("speechToText.enabled", checked)}
-            disabled={!kiloReady()}
-            hideLabel
+          <Tooltip
+            value={language.t("settings.experimental.speechToText.disabledDescription")}
+            placement="top"
+            inactive={kiloReady()}
           >
-            {language.t("settings.experimental.speechToText.title")}
-          </Switch>
-        </SettingsRow>
-
-        <SettingsRow
-          title={language.t("settings.experimental.speechToTextModel.title")}
-          description={language.t("settings.experimental.speechToTextModel.description")}
-        >
-          <Select
-            options={SPEECH_TO_TEXT_MODEL_OPTIONS}
-            current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
-            value={(item) => item.value}
-            label={(item) => `${item.label} (${item.provider})`}
-            onSelect={(item) => updateSetting("speechToText.model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-            disabled={!kiloReady()}
-            placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
-          />
+            <Select
+              options={SPEECH_TO_TEXT_MODEL_OPTIONS}
+              current={SPEECH_TO_TEXT_MODEL_OPTIONS.find((item) => item.value === speechModel())}
+              value={(item) => item.value}
+              label={(item) => `${item.label} (${item.provider})`}
+              onSelect={(item) =>
+                updateExperimental("speech_to_text_model", item?.value ?? DEFAULT_SPEECH_TO_TEXT_MODEL.id)
+              }
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+              disabled={!kiloReady()}
+              placeholder={DEFAULT_SPEECH_TO_TEXT_MODEL.label}
+            />
+          </Tooltip>
         </SettingsRow>
 
         <SettingsRow

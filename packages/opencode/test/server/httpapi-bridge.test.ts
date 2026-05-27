@@ -221,22 +221,23 @@ describe("HttpApi server", () => {
     expect(Server.backend()).toEqual({ backend: "effect-httpapi", reason: "env" })
   })
 
-  // kilocode_change start - skip Effect HttpApi parity tests until Kilo overlay routes are migrated.
-  // These tests verify every Hono route has an Effect HttpApi contract. Kilo-specific routes
-  // (/config/warnings, /indexing/status, /kilo/claw/*, /kilo/cloud-sessions, /experimental/worktree/diff*)
-  // aren't yet wired into PublicApi. The Effect HttpApi bridge is gated behind KILO_EXPERIMENTAL_HTTPAPI
-  // and is not enabled in any production client (VS Code extension, JetBrains, TUI, desktop all use Hono).
-  // Follow-up: migrate Kilo overlay routes onto the Effect HttpApi bridge.
-  test.skip("covers every generated OpenAPI route with Effect HttpApi contracts", async () => {
-    const honoRoutes = openApiRouteKeys(await Server.openapi())
+  test("covers every generated OpenAPI route with Effect HttpApi contracts", async () => {
+    const honoRoutes = openApiRouteKeys(await Server.openapiHono())
     const effectRoutes = openApiRouteKeys(effectOpenApi())
 
     expect(honoRoutes.filter((route) => !effectRoutes.includes(route))).toEqual([])
-    expect(effectRoutes.filter((route) => !honoRoutes.includes(route))).toEqual([])
+    expect(effectRoutes.filter((route) => !honoRoutes.includes(route))).toEqual([
+      "GET /api/session",
+      "GET /api/session/{sessionID}/context",
+      "GET /api/session/{sessionID}/message",
+      "POST /api/session/{sessionID}/compact",
+      "POST /api/session/{sessionID}/prompt",
+      "POST /api/session/{sessionID}/wait",
+    ])
   })
 
-  test.skip("matches generated OpenAPI route parameters", async () => {
-    const hono = openApiParameters(await Server.openapi())
+  test("matches generated OpenAPI route parameters", async () => {
+    const hono = openApiParameters(await Server.openapiHono())
     const effect = openApiParameters(effectOpenApi())
 
     expect(
@@ -246,8 +247,8 @@ describe("HttpApi server", () => {
     ).toEqual([])
   })
 
-  test.skip("matches generated OpenAPI request body shape", async () => {
-    const hono = openApiRequestBodies(await Server.openapi())
+  test("matches generated OpenAPI request body shape", async () => {
+    const hono = openApiRequestBodies(await Server.openapiHono())
     const effect = openApiRequestBodies(effectOpenApi())
 
     expect(
@@ -256,7 +257,6 @@ describe("HttpApi server", () => {
         .map((route) => ({ route, hono: hono[route], effect: effect[route] })),
     ).toEqual([])
   })
-  // kilocode_change end
 
   test("matches SDK-affecting query parameter schemas", async () => {
     const effect = effectOpenApi()

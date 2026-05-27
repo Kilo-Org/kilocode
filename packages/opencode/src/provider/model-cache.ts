@@ -2,10 +2,12 @@
 import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
+import { makeRuntime } from "../effect/run-service"
 import * as Log from "@opencode-ai/core/util/log"
 
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })
+  const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   // Cache structure
   const cache = new Map<
@@ -256,6 +258,7 @@ export namespace ModelCache {
    */
   async function getAuthOptions(providerID: string): Promise<any> {
     const options: any = {}
+    const getAuth = (id: string) => auth.runPromise((svc) => svc.get(id))
 
     if (providerID === "kilo") {
       // Get from Config
@@ -272,7 +275,7 @@ export namespace ModelCache {
       // kilocode_change end
 
       // Get from Auth
-      const auth = await Auth.get(providerID)
+      const auth = await getAuth(providerID)
       if (auth) {
         if (auth.type === "api") {
           options.kilocodeToken = auth.key
@@ -313,7 +316,7 @@ export namespace ModelCache {
         options.baseURL = providerConfig.options.baseURL
       }
 
-      const auth = await Auth.get(providerID)
+      const auth = await getAuth(providerID)
       if (auth && auth.type === "api") {
         options.apiKey = auth.key
       }

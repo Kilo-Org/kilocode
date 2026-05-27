@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "Søg faner...",
   "agentManager.tabsMenu.empty": "Ingen matchende faner",
   "agentManager.tabsMenu.status.waiting": "Venter",
-  "agentManager.tabsMenu.status.working": "Arbejder",
   "agentManager.tabsMenu.status.retry": "Igen",
 
   "agentManager.terminal.new": "Ny terminalfane",

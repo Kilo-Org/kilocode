@@ -177,6 +177,8 @@ export const dict = {
   "model.tag.latest": "最新",
   "model.group.recommended": "推荐",
   "model.group.favorites": "收藏夹",
+  "model.group.collapse": "折叠 {{group}}",
+  "model.group.expand": "展开 {{group}}",
   "model.favorite.add": "添加到收藏夹",
   "model.favorite.remove": "从收藏夹中移除",
 
@@ -281,7 +283,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
 
-  "speechToText.tooltip.start": "开始语音输入",
+  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
   "speechToText.tooltip.transcribing": "正在转录... 点击取消。",
   "speechToText.tooltip.error": "语音输入失败。点击清除。",
@@ -832,6 +834,8 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "从您的环境变量连接",
   "settings.providers.action.signInChatGPT": "使用 ChatGPT 登录",
   "settings.providers.custom.description": "通过基础 URL 添加 OpenAI 兼容的提供商。",
+  "settings.providers.subagentModel.title": "子代理模型",
+  "settings.providers.subagentModel.description": "task-tool 子代理的默认模型和推理工作量。留空以继承调用代理的模型。",
   "settings.providers.modeModels": "按模式选择模型",
   "settings.providers.custom.note": "通过 Base URL 添加 OpenAI 兼容提供商。",
   "settings.providers.modeModels.description": "为特定模式覆盖默认模型。如果未设置，将使用全局默认模型。",
@@ -1220,7 +1224,8 @@ export const dict = {
   "settings.experimental.agentManagerTool.description": "允许智能体通过工具调用启动 Agent Manager 本地会话和工作树会话",
   "settings.experimental.speechToText.title": "语音转文本",
   "settings.experimental.speechToText.description": "通过 Kilo Gateway 使用您的 Kilo 帐户在提示词字段中启用语音输入。",
-  "settings.experimental.speechToText.disabledDescription": "启用并登录 Kilo provider 以在提示词字段中使用语音输入。",
+  "settings.experimental.speechToText.disabledDescription":
+    "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
   "settings.experimental.speechToTextModel.title": "语音转文本模型",
   "settings.experimental.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
@@ -1243,6 +1248,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
   "settings.agentBehaviour.modelOverride.description": "覆盖此智能体的默认模型",
+  "settings.agentBehaviour.variantOverride.title": "模型变体覆盖",
+  "settings.agentBehaviour.variantOverride.description": "覆盖此智能体的模型变体",
   "settings.agentBehaviour.prompt.title": "自定义提示词",
   "settings.agentBehaviour.prompt.description": "此智能体的附加系统提示词",
   "settings.agentBehaviour.temperature.title": "温度",

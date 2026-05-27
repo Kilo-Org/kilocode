@@ -23,6 +23,7 @@ export interface TextPart extends BasePart {
   type: "text"
   text: string
   synthetic?: boolean
+  time?: { start: number; end?: number }
 }
 
 export interface FilePartSource {
@@ -52,6 +53,7 @@ export interface ToolPart extends BasePart {
 export interface ReasoningPart extends BasePart {
   type: "reasoning"
   text: string
+  time?: { start: number; end?: number }
 }
 
 // Step parts from the backend

@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test"
 import { $ } from "bun"
 import { Snapshot } from "../../src/snapshot"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { Filesystem } from "../../src/util/filesystem"
 import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
@@ -22,7 +22,7 @@ async function bootstrap() {
 
 test("diffFull returns cached result for same hash pair", async () => {
   await using tmp = await bootstrap()
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const before = await Snapshot.track()
@@ -45,7 +45,7 @@ test("diffFull returns cached result for same hash pair", async () => {
 
 test("diffFull returns empty array when from === to", async () => {
   await using tmp = await bootstrap()
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const hash = await Snapshot.track()
@@ -59,7 +59,7 @@ test("diffFull returns empty array when from === to", async () => {
 
 test("diffFull concurrent calls for same pair share one result", async () => {
   await using tmp = await bootstrap()
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       const before = await Snapshot.track()

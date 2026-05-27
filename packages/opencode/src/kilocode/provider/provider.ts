@@ -9,6 +9,7 @@
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { ProviderID, ModelID } from "@/provider/schema"
+import { optionalOmitUndefined } from "@/util/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
@@ -31,7 +32,7 @@ export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any)
 // ---------------------------------------------------------------------------
 
 export const KILO_MODEL_SCHEMA_EXTENSIONS = {
-  recommendedIndex: Schema.optional(Schema.Number),
+  recommendedIndex: optionalOmitUndefined(Schema.Finite),
   prompt: Schema.optional(Schema.Literals(PROMPTS)),
   isFree: Schema.optional(Schema.Boolean),
   ai_sdk_provider: Schema.optional(Schema.Literals(AI_SDK_PROVIDERS)),

@@ -10,6 +10,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.ui.HoverIcon
+import ai.kilocode.client.ui.RoundedContentPanel
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
 import ai.kilocode.log.ChatLogSummary
@@ -357,55 +358,22 @@ class PromptPanel(
         }
     }
 
-    private inner class PromptShell : BorderLayoutPanel() {
-        private val arc = JBValue.UIInteger("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC)
+    private inner class PromptShell : RoundedContentPanel(
+        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
+        JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+    ) {
         private val focus = JBValue.UIInteger("Component.focusWidth", SessionUiStyle.View.Prompt.FOCUS_WIDTH)
 
-        init {
-            isOpaque = false
-            border = JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-            )
+        override fun contentColor() = style.editorScheme.defaultBackground
+
+        override fun outlineColor() = if (UIUtil.isFocusAncestor(editor)) {
+            JBUI.CurrentTheme.Focus.focusColor()
+        } else {
+            SessionUiStyle.View.line()
         }
 
-        override fun updateUI() {
-            super.updateUI()
-            border = JBUI.Borders.empty(
-                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-                JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-            )
-        }
+        override fun outlineWidth() = if (UIUtil.isFocusAncestor(editor)) focus.get() else JBUI.scale(1)
 
-        override fun paintComponent(g: Graphics) {
-            val g2 = g.create() as Graphics2D
-            try {
-                g2.setRenderingHint(
-                    RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON,
-                )
-                g2.color = style.editorScheme.defaultBackground
-                val size = arc.get()
-                g2.fillRoundRect(0, 0, width, height, size, size)
-                val active = UIUtil.isFocusAncestor(editor)
-                g2.color = if (active) {
-                    JBUI.CurrentTheme.Focus.focusColor()
-                } else {
-                    SessionUiStyle.View.line()
-                }
-                val bw = if (active) focus.get() else JBUI.scale(1)
-                for (idx in 0 until bw) {
-                    val inset = idx
-                    val w = width - inset * 2 - 1
-                    val h = height - inset * 2 - 1
-                    if (w > 0 && h > 0) {
-                        g2.drawRoundRect(inset, inset, w, h, size, size)
-                    }
-                }
-            } finally {
-                g2.dispose()
-            }
-            super.paintComponent(g)
-        }
+        override fun cornerArc() = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
     }
 }

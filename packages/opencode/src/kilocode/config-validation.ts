@@ -8,8 +8,9 @@ import { ConfigMarkdown } from "@/config/markdown"
 import { Config } from "@/config/config"
 import { ConfigAgent } from "@/config/agent"
 import { ConfigCommand } from "@/config/command"
-import { ConfigPaths } from "@/config/paths"
+import { JsonError } from "@/config/error"
 import { Instance } from "@/project/instance"
+import { Filesystem } from "@/util/filesystem"
 
 export namespace ConfigValidation {
   const JSONC_EXT = new Set([".json", ".jsonc"])
@@ -23,7 +24,10 @@ export namespace ConfigValidation {
   }
 
   async function jsonc(filepath: string): Promise<string> {
-    const text = await ConfigPaths.readFile(filepath)
+    const text = await Filesystem.readText(filepath).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return undefined
+      throw new JsonError({ path: filepath }, { cause: err })
+    })
     if (text === undefined) return ""
 
     const errors: ParseError[] = []

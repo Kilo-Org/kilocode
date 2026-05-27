@@ -2,7 +2,12 @@ package ai.kilocode.client.session
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.migration.KiloMigrationService
+import ai.kilocode.client.migration.MigrationUiController
+import ai.kilocode.client.migration.MigrationUiState
+import ai.kilocode.client.migration.ui.MigrationOverlayPanel
 import ai.kilocode.client.session.model.SessionModelEvent
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.scroll.SessionScroll
@@ -12,9 +17,8 @@ import ai.kilocode.client.session.ui.LoadingPanel
 import ai.kilocode.client.session.ui.ReasoningPicker
 import ai.kilocode.client.session.ui.mode.ModePicker
 import ai.kilocode.client.session.ui.model.ModelPicker
-import ai.kilocode.client.session.ui.PermissionPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
-import ai.kilocode.client.session.ui.QuestionPanel
+import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionRootPanel
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
@@ -23,19 +27,34 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.controller.EVENT_FLUSH_MS
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.LoginRequiredView
+import ai.kilocode.client.session.views.permission.PermissionView
+import ai.kilocode.client.session.views.question.QuestionView
+import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.ChatLogSummary
+import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.ui.LafManagerListener
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.editor.colors.EditorColorsManager
-import com.intellij.openapi.Disposable
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurableWithId
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.util.function.Predicate
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
-import javax.swing.BoxLayout
-import javax.swing.BoxLayout.Y_AXIS
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -50,10 +69,12 @@ class SessionUi(
     workspace: Workspace,
     sessions: KiloSessionService,
     app: KiloAppService,
-    cs: CoroutineScope,
+    private val cs: CoroutineScope,
     ref: SessionRef? = null,
     displayMs: Long = SessionController.DISPLAY_DELAY_MS,
     private val manager: SessionManager? = null,
+    private val workspaces: KiloWorkspaceService = service(),
+    private val migration: MigrationUiController = service<KiloMigrationService>(),
 ) : JPanel(BorderLayout()), Disposable, SessionEditorStyleTarget {
 
     companion object {
@@ -62,6 +83,8 @@ class SessionUi(
 
     private val project = project
     private val app = app
+    private val sessions = sessions
+    private val workspace = workspace
     private var opening = ref != null
     private var pending = false
     private var loaded: Boolean? = null
@@ -80,10 +103,12 @@ class SessionUi(
         beforeUpdate = { if (opening) false else scroll.atBottom() },
         afterUpdate = { if (!opening) scroll.followBottom(it) },
         loaded = ::onSessionLoaded,
+        openProfileAction = ::openProfileSettings,
     )
 
 
     private lateinit var root: SessionRootPanel
+    private lateinit var account: SessionAccountOverlay
 
     private lateinit var sessionContent: JPanel
 
@@ -97,12 +122,15 @@ class SessionUi(
 
     internal lateinit var scroll: SessionScroll
 
-    private lateinit var question: QuestionPanel
-    private lateinit var permission: PermissionPanel
+    private lateinit var question: QuestionView
+    private lateinit var permission: PermissionView
+    private lateinit var login: LoginRequiredView
     private lateinit var connection: ConnectionPanel
 
     private lateinit var prompt: PromptPanel
     private lateinit var load: LoadingPanel
+    private lateinit var migrationOverlay: MigrationOverlayPanel
+    private var modalFocus: (() -> JComponent)? = null
     private var style = SessionEditorStyle.current()
 
     init {
@@ -110,6 +138,7 @@ class SessionUi(
         scroll.show(body(controller.model.state))
         bindUi()
         bindStyle()
+        bindMigration()
         applyStyle(style)
         onStateChanged(controller.model.state)
         loaded?.let(::finishOpen)
@@ -133,10 +162,47 @@ class SessionUi(
 
     internal fun currentStyle() = style
 
-    val defaultFocusedComponent: JComponent get() = prompt.defaultFocusedComponent
+    val defaultFocusedComponent: JComponent get() {
+        modalFocus?.invoke()?.let { return it }
+        return prompt.defaultFocusedComponent
+    }
+
+    internal fun setModalContent(content: JComponent?, focus: (() -> JComponent)? = null) {
+        modalFocus = if (content == null) null else focus
+        root.setModalContent(content)
+    }
 
     private fun buildUi() {
         root = SessionRootPanel()
+
+        migrationOverlay = MigrationOverlayPanel().apply {
+            onSkip = { migration.skip() }
+            onDone = { migration.finish() }
+            onContinueFromError = { migration.finish() }
+            onStart = { sel -> migration.start(sel) }
+        }
+        migrationOverlay.border = JBUI.Borders.empty(
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING),
+        )
+
+        account = SessionAccountOverlay(
+            select = { org -> controller.selectOrganization(org) },
+            profile = { controller.openProfile() },
+        )
+        root.addOverlay(account) { pane, child ->
+            val size = child.preferredSize
+            val top = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_VERTICAL_PADDING)
+            val right = JBUI.scale(SessionUiStyle.View.Prompt.PANEL_HORIZONTAL_PADDING)
+            java.awt.Rectangle(
+                pane.width - size.width - right,
+                top,
+                size.width,
+                size.height,
+            )
+        }
 
         sessionContent = JPanel(BorderLayout())
 
@@ -146,12 +212,20 @@ class SessionUi(
 
         load = LoadingPanel()
         progressBody = load
-        messageBody = SessionMessageListPanel(controller.model, this)
+        question = QuestionView(
+            project = project,
+            reply = { id, dto, opts -> controller.replyQuestion(id, dto, opts) },
+            reject = { id -> controller.rejectQuestion(id) },
+            scroll = { scroll.followBottom(true) },
+        )
+        permission = PermissionView(
+            reply = { id, dto -> controller.replyPermission(id, dto) },
+        )
+        login = LoginRequiredView(openProfile = { controller.openProfile() }, dismiss = { controller.dismissLoginRequired() })
+        messageBody = SessionMessageListPanel(controller.model, this, question, permission, login, ::openFile)
         header = SessionHeaderPanel(controller, this)
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
-        question = QuestionPanel(controller)
-        permission = PermissionPanel(controller)
         connection = ConnectionPanel(this, controller)
 
         prompt = PromptPanel(
@@ -163,15 +237,7 @@ class SessionUi(
         sessionContent.add(header, BorderLayout.NORTH)
         sessionContent.add(scroll.component, BorderLayout.CENTER)
         root.content.add(sessionContent, BorderLayout.CENTER)
-        // Dock panels stay in normal flow so each visible state takes layout space
-        // above the prompt.
-        root.content.add(JPanel().apply {
-            this.layout = BoxLayout(this, Y_AXIS)
-            add(question)
-            add(permission)
-            add(connection)
-            add(prompt)
-        }, BorderLayout.SOUTH)
+        root.content.add(Stack.vertical().next(connection).next(prompt), BorderLayout.SOUTH)
         add(root, BorderLayout.CENTER)
     }
 
@@ -227,12 +293,17 @@ class SessionUi(
                     scroll.show(messageBody)
                 }
 
-                is SessionControllerEvent.AppChanged,
+                is SessionControllerEvent.AppChanged -> {
+                    prompt.setReady(controller.model.isReady())
+                }
+
                 is SessionControllerEvent.WorkspaceChanged -> {
                     prompt.setReady(controller.model.isReady())
                 }
 
                 is SessionControllerEvent.ConnectionChanged -> Unit
+
+                is SessionControllerEvent.AccountOverlayChanged -> account.onEvent(event)
             }
         }
 
@@ -261,6 +332,33 @@ class SessionUi(
         }
     }
 
+    private fun bindMigration() {
+        cs.launch {
+            migration.state.collect { state ->
+                withContext(Dispatchers.Main) {
+                    applyMigrationState(state)
+                }
+            }
+        }
+    }
+
+    @RequiresEdt
+    private fun applyMigrationState(state: MigrationUiState) {
+        when (state) {
+            is MigrationUiState.Hidden -> {
+                if (root.blocker.isVisible) LOG.info("Migration wizard: overlay hidden session=${id ?: cacheKey ?: "new"}")
+                setModalContent(null)
+            }
+            is MigrationUiState.Needed -> {
+                if (!root.blocker.isVisible) LOG.info("Migration wizard: overlay shown session=${id ?: cacheKey ?: "new"} phase=${state.phase}")
+                migrationOverlay.update(state)
+                setModalContent(migrationOverlay) { migrationOverlay.preferredFocusComponent() }
+                migrationOverlay.revalidate()
+                migrationOverlay.repaint()
+            }
+        }
+    }
+
     private fun bindStyle() {
         val bus = ApplicationManager.getApplication().messageBus.connect(this)
         bus.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
@@ -282,6 +380,7 @@ class SessionUi(
     }
 
     private fun body(state: SessionState): JPanel {
+        if (state is SessionState.Retry || state is SessionState.Offline) return progressBody
         if (controller.model.showSession) return messageBody
         if (state is SessionState.Loading) return progressBody
         return blankBody
@@ -319,24 +418,16 @@ class SessionUi(
         prompt.clear()
     }
 
+    private fun openFile(path: String) {
+        cs.launch {
+            workspaces.openPath(workspace.directory, path)
+        }
+    }
+
     private fun onStateChanged(state: SessionState) {
         prompt.setBusy(state.isBusy())
-        when (state) {
-            is SessionState.AwaitingQuestion -> {
-                permission.hidePanel()
-                question.show(state.question)
-            }
-
-            is SessionState.AwaitingPermission -> {
-                question.hidePanel()
-                permission.show(state.permission)
-            }
-
-            else -> {
-                question.hidePanel()
-                permission.hidePanel()
-            }
-        }
+        load.setState(state)
+        scroll.show(body(state))
         refresh()
     }
 
@@ -353,6 +444,16 @@ class SessionUi(
         prompt.applyStyle(style)
         scroll.applyStyle(style)
         refresh()
+    }
+
+    private fun openProfileSettings() {
+        ShowSettingsUtil.getInstance().showSettingsDialog(
+            project,
+            Predicate { cfg: Configurable ->
+                cfg is ConfigurableWithId && cfg.getId() == UserProfileConfigurable.ID
+            },
+            { cfg: Configurable -> cfg.focusOn(UserProfileConfigurable.FOCUS_ACCOUNT_COMBO) },
+        )
     }
 
     override fun dispose() {}

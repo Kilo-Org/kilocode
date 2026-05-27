@@ -55,7 +55,6 @@ export const dict = {
   "agentManager.tabsMenu.search": "탭 검색...",
   "agentManager.tabsMenu.empty": "일치하는 탭 없음",
   "agentManager.tabsMenu.status.waiting": "대기",
-  "agentManager.tabsMenu.status.working": "작업 중",
   "agentManager.tabsMenu.status.retry": "재시도",
 
   "agentManager.terminal.new": "새 터미널 탭",

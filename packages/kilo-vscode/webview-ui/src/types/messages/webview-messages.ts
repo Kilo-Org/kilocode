@@ -329,10 +329,6 @@ export interface RequestAutocompleteSettingsMessage {
   type: "requestAutocompleteSettings"
 }
 
-export interface RequestSpeechToTextSettingsMessage {
-  type: "requestSpeechToTextSettings"
-}
-
 export interface RequestChatCompletionMessage {
   type: "requestChatCompletion"
   text: string
@@ -388,6 +384,12 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface StreamSessionVisibleMessage {
+  type: "streamSessionVisible"
+  sessionID: string
+  visible: boolean
 }
 
 export interface RequestBrowserSettingsMessage {
@@ -1107,7 +1109,6 @@ export type WebviewMessage =
   | RenameSessionRequest
   | ExportSessionTranscriptRequest
   | RequestAutocompleteSettingsMessage
-  | RequestSpeechToTextSettingsMessage
   | RequestChatCompletionMessage
   | SpeechToTextStartMessage
   | SpeechToTextStopMessage
@@ -1118,6 +1119,7 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage

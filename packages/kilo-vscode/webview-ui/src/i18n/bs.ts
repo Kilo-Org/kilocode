@@ -178,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Najnovije",
   "model.group.recommended": "Preporučeno",
   "model.group.favorites": "Favoriti",
+  "model.group.collapse": "Sakrij {{group}}",
+  "model.group.expand": "Prikaži {{group}}",
   "model.favorite.add": "Dodaj u favorite",
   "model.favorite.remove": "Ukloni iz favorita",
   "model.provider.anthropic": "Anthropic",
@@ -284,7 +286,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Dugme 'Poboljšaj prompt' pomaže poboljšati vaš zahtjev pružajući dodatni kontekst, pojašnjenje ili preformulaciju. Pokušajte upisati zahtjev ovdje i ponovo kliknite na dugme da vidite kako funkcioniše.",
 
-  "speechToText.tooltip.start": "Započni glasovni unos",
+  "speechToText.tooltip.start": "Započni glasovni unos sa Kilo Gateway",
   "speechToText.tooltip.stop": "Zaustavi hvatanje zvuka",
   "speechToText.tooltip.transcribing": "Prepisivanje... Kliknite da otkažete.",
   "speechToText.tooltip.error": "Glasovni unos nije uspio. Kliknite da očistite.",
@@ -858,6 +860,9 @@ export const dict = {
   "settings.providers.connected.environmentDescription": "Povezano iz vaših varijabli okruženja",
   "settings.providers.action.signInChatGPT": "Prijavi se putem ChatGPT",
   "settings.providers.custom.description": "Dodaj OpenAI-kompatibilan provajder putem osnovnog URL-a.",
+  "settings.providers.subagentModel.title": "Model podagenta",
+  "settings.providers.subagentModel.description":
+    "Zadani model i napor zaključivanja za podagente task-tool-a. Ostavite nepodešeno da naslijedi model pozivnog agenta.",
   "settings.providers.modeModels": "Model po režimu",
   "settings.providers.custom.note": "Dodajte provajdera kompatibilnog s OpenAI putem osnovnog URL-a.",
   "settings.providers.modeModels.description":
@@ -1261,7 +1266,7 @@ export const dict = {
   "settings.experimental.speechToText.description":
     "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Omogućite i prijavite se na Kilo provider da koristite glasovni unos u poljima za promptove.",
+    "Omogućite i prijavite se na Kilo provajder da biste koristili Speech to Text. Speech to Text je trenutno podržan samo uz Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Model govora u tekst",
   "settings.experimental.speechToTextModel.description":
     "Odaberite Kilo Gateway model za transkripciju za glasovni unos.",
@@ -1286,6 +1291,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Odaberi agenta za konfiguraciju…",
   "settings.agentBehaviour.modelOverride.title": "Zamjena modela",
   "settings.agentBehaviour.modelOverride.description": "Zamijeni zadani model za ovog agenta",
+  "settings.agentBehaviour.variantOverride.title": "Zamjena varijante",
+  "settings.agentBehaviour.variantOverride.description": "Zamijeni varijantu modela za ovog agenta",
   "settings.agentBehaviour.prompt.title": "Prilagođeni prompt",
   "settings.agentBehaviour.prompt.description": "Dodatni sistemski prompt za ovog agenta",
   "settings.agentBehaviour.temperature.title": "Temperatura",

@@ -7,12 +7,12 @@ export const iconNames = [
   "zai",
   "zai-coding-plan",
   "xiaomi",
-  "xiaomi-token-plan-sgp", // kilocode_change
-  "xiaomi-token-plan-cn", // kilocode_change
-  "xiaomi-token-plan-ams", // kilocode_change
+  "xiaomi-token-plan-sgp",
+  "xiaomi-token-plan-cn",
+  "xiaomi-token-plan-ams",
   "xai",
   "wandb",
-  "wafer.ai", // kilocode_change
+  "wafer.ai",
   "vultr",
   "vivgrid",
   "vercel",
@@ -20,8 +20,8 @@ export const iconNames = [
   "v0",
   "upstage",
   "togetherai",
-  "the-grid-ai", // kilocode_change
-  "tencent-tokenhub", // kilocode_change
+  "the-grid-ai",
+  "tencent-tokenhub",
   "tencent-coding-plan",
   "synthetic",
   "submodel",
@@ -32,7 +32,7 @@ export const iconNames = [
   "scaleway",
   "sap-ai-core",
   "requesty",
-  "regolo-ai", // kilocode_change
+  "regolo-ai",
   "qiniu-ai",
   "qihang-ai",
   "privatemode-ai",
@@ -48,7 +48,7 @@ export const iconNames = [
   "nvidia",
   "novita-ai",
   "nova",
-  "neuralwatt", // kilocode_change
+  "neuralwatt",
   "nebius",
   "nano-gpt",
   "morph",
@@ -56,7 +56,7 @@ export const iconNames = [
   "moonshotai-cn",
   "modelscope",
   "moark",
-  "mixlayer", // kilocode_change
+  "mixlayer",
   "mistral",
   "minimax",
   "minimax-coding-plan",
@@ -65,10 +65,10 @@ export const iconNames = [
   "meganova",
   "lucidquery",
   "lmstudio",
-  "llmgateway", // kilocode_change
+  "llmgateway",
   "llama",
   "kuae-cloud-coding-plan",
-  "kiro", // kilocode_change
+  "kiro",
   "kimi-for-coding",
   "kilo",
   "jiekou",
@@ -77,7 +77,7 @@ export const iconNames = [
   "inception",
   "iflowcn",
   "huggingface",
-  "hpc-ai", // kilocode_change
+  "hpc-ai",
   "helicone",
   "groq",
   "google",
@@ -86,7 +86,7 @@ export const iconNames = [
   "gitlab",
   "github-models",
   "github-copilot",
-  "frogbot", // kilocode_change
+  "frogbot",
   "friendli",
   "firmware",
   "fireworks-ai",
@@ -94,7 +94,7 @@ export const iconNames = [
   "evroc",
   "drun",
   "dinference",
-  "digitalocean", // kilocode_change
+  "digitalocean",
   "deepseek",
   "deepinfra",
   "cortecs",
@@ -117,7 +117,7 @@ export const iconNames = [
   "alibaba-coding-plan-cn",
   "alibaba-cn",
   "aihubmix",
-  "abliteration-ai", // kilocode_change
+  "abliteration-ai",
   "abacus",
   "302ai",
 ] as const

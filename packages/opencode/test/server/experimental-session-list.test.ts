@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import { $ } from "bun"
 import path from "path"
 import * as Config from "../../src/config/config"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
@@ -38,7 +38,7 @@ describe("experimental.session.list", () => {
         const { Session } = await import("../../src/session/session")
 
         // Create worktree session first so it computes its own project ID via rev-list
-        const branch = await Instance.provide({
+        const branch = await WithInstance.provide({
           directory: worktree,
           fn: async () => Session.create({ title: "worktree-session" }),
         })
@@ -46,7 +46,7 @@ describe("experimental.session.list", () => {
         // Now write a stale project ID to .git/kilo — this overrides the root's cached ID
         await Bun.write(path.join(first.path, ".git", "kilo"), "stale-project-id")
 
-        const root = await Instance.provide({
+        const root = await WithInstance.provide({
           directory: first.path,
           fn: async () => ({
             app: Server.Default().app,
@@ -58,7 +58,7 @@ describe("experimental.session.list", () => {
         })
         await Bun.file(path.join(first.path, ".git", "kilo")).delete()
 
-        await Instance.provide({
+        await WithInstance.provide({
           directory: second.path,
           fn: async () => Session.create({ title: "other-project-session" }),
         })
@@ -107,12 +107,12 @@ describe("experimental.session.list", () => {
         const { Server } = await import("../../src/server/server")
         const { Session } = await import("../../src/session/session")
 
-        const branch = await Instance.provide({
+        const branch = await WithInstance.provide({
           directory: worktree,
           fn: async () => Session.create({ title: "worktree-session" }),
         })
 
-        const root = await Instance.provide({
+        const root = await WithInstance.provide({
           directory: first.path,
           fn: async () => ({
             app: Server.Default().app,
@@ -123,7 +123,7 @@ describe("experimental.session.list", () => {
           }),
         })
 
-        await Instance.provide({
+        await WithInstance.provide({
           directory: second.path,
           fn: async () => Session.create({ title: "other-project-session" }),
         })

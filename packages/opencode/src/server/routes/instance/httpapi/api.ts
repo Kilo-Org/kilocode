@@ -19,6 +19,20 @@ import { SessionApi } from "./groups/session"
 import { SyncApi } from "./groups/sync"
 import { TuiApi } from "./groups/tui"
 import { WorkspaceApi } from "./groups/workspace"
+import { V2Api } from "./groups/v2"
+// kilocode_change start - Kilo HttpApi groups
+import { CommitMessageApi } from "@/kilocode/server/httpapi/groups/commit-message"
+import { BackgroundProcessApi } from "@/kilocode/server/httpapi/groups/background-process"
+import { EnhancePromptApi } from "@/kilocode/server/httpapi/groups/enhance-prompt"
+import { IndexingApi } from "@/kilocode/server/httpapi/groups/indexing"
+import { KiloGatewayApi } from "@/kilocode/server/httpapi/groups/kilo-gateway"
+import { KilocodeApi } from "@/kilocode/server/httpapi/groups/kilocode"
+import { NetworkApi } from "@/kilocode/server/httpapi/groups/network"
+import { RemoteApi } from "@/kilocode/server/httpapi/groups/remote"
+import { SessionImportApi } from "@/kilocode/server/httpapi/groups/session-import"
+import { SuggestionApi } from "@/kilocode/server/httpapi/groups/suggestion"
+import { TelemetryApi } from "@/kilocode/server/httpapi/groups/telemetry"
+// kilocode_change end
 
 // SSE event schemas built from the same BusEvent/SyncEvent registries that
 // the Hono spec uses, so both specs emit identical Event/SyncEvent components.
@@ -40,8 +54,22 @@ export const InstanceHttpApi = HttpApi.make("opencode-instance")
   .addHttpApi(ProviderApi)
   .addHttpApi(SessionApi)
   .addHttpApi(SyncApi)
+  .addHttpApi(V2Api)
   .addHttpApi(TuiApi)
   .addHttpApi(WorkspaceApi)
+  // kilocode_change start - Kilo HttpApi groups
+  .addHttpApi(BackgroundProcessApi)
+  .addHttpApi(CommitMessageApi)
+  .addHttpApi(EnhancePromptApi)
+  .addHttpApi(IndexingApi)
+  .addHttpApi(KiloGatewayApi)
+  .addHttpApi(KilocodeApi)
+  .addHttpApi(NetworkApi)
+  .addHttpApi(RemoteApi)
+  .addHttpApi(SessionImportApi)
+  .addHttpApi(SuggestionApi)
+  .addHttpApi(TelemetryApi)
+// kilocode_change end
 
 export const OpenCodeHttpApi = HttpApi.make("opencode")
   .addHttpApi(RootHttpApi)

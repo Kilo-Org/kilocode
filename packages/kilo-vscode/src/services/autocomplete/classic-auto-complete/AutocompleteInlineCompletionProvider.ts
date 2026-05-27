@@ -22,7 +22,7 @@ import {
 import { FimPromptBuilder } from "./FillInTheMiddle"
 import { hasValidCredentials } from "../fim"
 import type { KiloConnectionService } from "../../cli-backend"
-import { getAutocompleteModel } from "../../../shared/autocomplete-models"
+import { getAutocompleteModelById } from "../../../shared/autocomplete-models"
 import { ContextRetrievalService } from "../continuedev/core/autocomplete/context/ContextRetrievalService"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { RecentlyVisitedRangesService } from "../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
@@ -345,7 +345,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     const telemetryContext: AutocompleteContext = {
       languageId: document.languageId,
       modelId: this.contextProvider.modelId,
-      provider: getAutocompleteModel(this.contextProvider.modelId).provider,
+      provider: getAutocompleteModelById(this.contextProvider.modelId).provider,
     }
 
     this.telemetry?.captureSuggestionRequested(telemetryContext)
@@ -586,7 +586,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     const telemetryContext: AutocompleteContext = {
       languageId,
       modelId: this.contextProvider.modelId,
-      provider: getAutocompleteModel(this.contextProvider.modelId).provider,
+      provider: getAutocompleteModelById(this.contextProvider.modelId).provider,
     }
 
     // Defense-in-depth: credentials may become invalid between the provider gate and the actual

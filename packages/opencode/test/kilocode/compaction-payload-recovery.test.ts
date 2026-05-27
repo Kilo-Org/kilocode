@@ -8,7 +8,7 @@ import { Config } from "../../src/config/config"
 import { KiloCompactionPayloadRecovery } from "../../src/kilocode/session/compaction-payload-recovery"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Snapshot } from "../../src/snapshot"
 import { LLM } from "../../src/session/llm"
@@ -306,7 +306,7 @@ describe("KiloCompactionPayloadRecovery", () => {
       }),
     )
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await svc.create({})
