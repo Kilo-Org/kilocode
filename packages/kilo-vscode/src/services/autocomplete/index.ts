@@ -1,6 +1,13 @@
 import * as vscode from "vscode"
 import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import { ensureBackendForAutocomplete } from "./ensure-backend"
+import { nesLog } from "./next-edit/log"
+import { INLINE_COMPLETION_ACCEPTED_COMMAND as NEXT_EDIT_ACCEPTED_COMMAND } from "./next-edit/NextEditInlineCompletionProvider"
+import {
+  NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND,
+  NEXT_EDIT_DISMISS_COMMAND,
+  chainNextPrediction,
+} from "./next-edit/NextEditSuggestionManager"
 import type { KiloConnectionService } from "../cli-backend"
 
 export const registerAutocompleteProvider = (
@@ -40,6 +47,27 @@ export const registerAutocompleteProvider = (
   context.subscriptions.push(
     vscode.commands.registerCommand("kilo-code.new.autocomplete.disable", async () => {
       await autocompleteManager.disable()
+    }),
+  )
+  // Fired by VSCode when the user accepts a Next Edit same-line ghost. Chains
+  // the next prediction so users can walk a refactor with repeated Tabs.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(NEXT_EDIT_ACCEPTED_COMMAND, () => {
+      nesLog("suggestion accepted")
+      if (autocompleteManager.currentMode === "next-edit") chainNextPrediction()
+    }),
+  )
+  // Tab handler for off-cursor pending suggestions: first press teleports the
+  // cursor to the predicted edit, second press applies.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(NEXT_EDIT_ACCEPT_OR_JUMP_COMMAND, async () => {
+      await autocompleteManager.nextEditSuggestionManager.acceptOrJump()
+    }),
+  )
+  // Esc handler: dismiss the pending suggestion without applying.
+  context.subscriptions.push(
+    vscode.commands.registerCommand(NEXT_EDIT_DISMISS_COMMAND, () => {
+      autocompleteManager.nextEditSuggestionManager.clear()
     }),
   )
 
