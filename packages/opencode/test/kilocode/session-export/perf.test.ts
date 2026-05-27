@@ -10,7 +10,7 @@ describe("session export performance budget", () => {
     const input = {
       input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     }
     const samples: number[] = []
     for (let i = 0; i < 10_000; i++) {
@@ -31,7 +31,7 @@ describe("session export performance budget", () => {
       cap.beforeRequest({
         input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
         requestMeta: meta(`s${i}`),
-        assembled: { system: [body], messages: [], tools: {}, permissions: {}, params: {} },
+        assembled: { system: [body], messages: [], tools: {}, permissions: [], params: {} },
       })
       samples.push(performance.now() - start)
     }

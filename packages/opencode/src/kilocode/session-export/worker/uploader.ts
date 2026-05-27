@@ -1,4 +1,5 @@
 import { Config } from "../config"
+import type { BatchEnvelope, JsonObject, JsonValue, UploadedEvent } from "../envelope"
 import type { FromWorker } from "./ipc"
 import type { Storage } from "./storage"
 import { readFile } from "node:fs/promises"
@@ -70,18 +71,19 @@ export class Uploader {
         if (rows.length === 0) return
         const batchId = await sha256Hex(rows.map((row) => row.id).join("\n"))
         const chunks = this.deps.storage.chunksForEvents(rows.map((row) => row.id))
-        const body = JSON.stringify({
+        const batch: BatchEnvelope = {
           schemaVersion: 1,
           agentVersion: this.deps.agentVersion,
           surface: this.deps.surface,
           batchId,
-          events: rows.map((row) => ({
-            ...JSON.parse(row.dataJson),
+          events: rows.map((row): UploadedEvent => ({
+            ...parseObject(row.dataJson),
             id: row.id,
             type: row.type,
             sessionId: row.sessionId,
             rootSessionId: row.rootSessionId,
-            parentSessionId: row.parentSessionId,
+            ...(row.parentSessionId ? { parentSessionId: row.parentSessionId } : {}),
+            ...(row.requestId ? { requestId: row.requestId } : {}),
             seq: row.seq,
             ts: row.ts,
           })),
@@ -91,7 +93,8 @@ export class Uploader {
             size: chunk.size,
             encoding: "zstd+base64",
           })),
-        })
+        }
+        const body = JSON.stringify(batch)
         const res = await this.deps.fetch(this.deps.endpoint, {
           method: "POST",
           headers: await headers({
@@ -189,4 +192,10 @@ async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value)
   const hash = await crypto.subtle.digest("SHA-256", bytes)
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+function parseObject(value: string): JsonObject {
+  const json = JSON.parse(value) as JsonValue
+  if (!json || typeof json !== "object" || Array.isArray(json)) throw new Error("stored event payload must be a JSON object")
+  return json
 }

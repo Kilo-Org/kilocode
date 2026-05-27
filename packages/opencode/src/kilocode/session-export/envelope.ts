@@ -27,11 +27,26 @@ export type ExportEventType =
   | "scrub_report"
   | "session_degraded"
 
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue }
+
+export type JsonObject = { [key: string]: JsonValue }
+
+export type UploadedEvent = JsonObject & {
+  id: string
+  type: ExportEventType
+  sessionId: string
+  rootSessionId: string
+  parentSessionId?: string
+  requestId?: string
+  seq: number
+  ts: number
+}
+
 export type BatchEnvelope = {
   schemaVersion: 1
   agentVersion: string
   surface: string
   batchId: string
-  events: unknown[]
+  events: UploadedEvent[]
   chunks: { id: string; bytes: string; size: number; encoding: "zstd+base64" }[]
 }

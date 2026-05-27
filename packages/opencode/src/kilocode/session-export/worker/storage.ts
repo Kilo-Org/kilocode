@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite"
+import type { ExportEventType } from "../envelope"
 
 export type EventRow = {
   id: string
@@ -8,7 +9,7 @@ export type EventRow = {
   parentSessionId?: string
   seq: number
   requestId?: string
-  type: string
+  type: ExportEventType
   ts: number
   agentVersion: string
   dataJson: string
@@ -34,7 +35,7 @@ type EventRecord = {
   parent_session_id: string | null
   seq: number
   request_id: string | null
-  type: string
+  type: ExportEventType
   ts: number
   agent_version: string
   data_json: string

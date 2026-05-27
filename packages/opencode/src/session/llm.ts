@@ -2,7 +2,7 @@ import { Provider } from "@/provider/provider"
 import * as Log from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer, Record } from "effect"
 import * as Stream from "effect/Stream"
-import { streamText, wrapLanguageModel, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
+import { streamText, wrapLanguageModel, type LanguageModelUsage, type ModelMessage, type Tool, tool, jsonSchema } from "ai"
 import { mergeDeep } from "remeda"
 import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
@@ -44,6 +44,7 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer"
 const log = Log.create({ service: "llm" })
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 type Result = Awaited<ReturnType<typeof streamText>>
+type StreamResult = { fullStream: AsyncIterable<Event> }
 
 // Avoid re-instantiating remeda's deep merge types in this hot LLM path; the runtime behavior is still mergeDeep.
 const mergeOptions = (target: Record<string, any>, source: Record<string, any> | undefined): Record<string, any> =>
@@ -496,9 +497,8 @@ const live: Layer.Layer<
       })
       // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
-      if (!exportable) return result
+      if (!exportable) return { fullStream: result.fullStream } satisfies StreamResult
       return {
-        ...result,
         fullStream: observeFullStream(result.fullStream, {
           sessionId: input.sessionID,
           rootSessionId: root,
@@ -507,7 +507,7 @@ const live: Layer.Layer<
           started,
           retries: input.retries ?? 0,
         }),
-      }
+      } satisfies StreamResult
       // kilocode_change end
     })
 
@@ -544,7 +544,7 @@ export const defaultLayer = Layer.suspend(() =>
 
 // kilocode_change start - session export stream observer
 function observeFullStream(
-  stream: Result["fullStream"],
+  stream: AsyncIterable<Event>,
   meta: {
     sessionId: string
     rootSessionId: string
@@ -553,11 +553,11 @@ function observeFullStream(
     started: number
     retries: number
   },
-): Result["fullStream"] {
+): AsyncIterable<Event> {
   const textParts: string[] = []
   const reasoningParts: string[] = []
-  const toolCalls: unknown[] = []
-  const rawParts: unknown[] = []
+  const toolCalls: Event[] = []
+  const rawParts: Event[] = []
   let finishReason: string | undefined
   let usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined
   const done = (error?: unknown) => {
@@ -590,40 +590,54 @@ function observeFullStream(
       throw err
     }
   }
-  return observed() as unknown as Result["fullStream"]
+  return observed()
 }
 
 function collectPart(
-  part: unknown,
+  part: Event,
   out: {
     textParts: string[]
     reasoningParts: string[]
-    toolCalls: unknown[]
+    toolCalls: Event[]
     setFinish: (value: string | undefined) => void
     setUsage: (value: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined) => void
   },
 ): void {
-  if (!part || typeof part !== "object") return
-  const item = part as Record<string, unknown>
-  const type = typeof item.type === "string" ? item.type : undefined
-  const text = typeof item.text === "string" ? item.text : typeof item.textDelta === "string" ? item.textDelta : undefined
-  if (type?.includes("text") && text) out.textParts.push(text)
-  const reasoning = typeof item.reasoning === "string" ? item.reasoning : typeof item.reasoningDelta === "string" ? item.reasoningDelta : undefined
-  if (type?.includes("reasoning") && reasoning) out.reasoningParts.push(reasoning)
-  if (type?.includes("tool")) out.toolCalls.push(item)
-  if (typeof item.finishReason === "string") out.setFinish(item.finishReason)
-  const usage = normalizeUsage(item.usage)
-  if (usage) out.setUsage(usage)
+  switch (part.type) {
+    case "text-delta":
+      if (part.text) out.textParts.push(part.text)
+      return
+    case "reasoning-delta":
+      if (part.text) out.reasoningParts.push(part.text)
+      return
+    case "tool-input-start":
+    case "tool-input-delta":
+    case "tool-input-end":
+    case "tool-call":
+    case "tool-result":
+    case "tool-error":
+    case "tool-output-denied":
+    case "tool-approval-request":
+      out.toolCalls.push(part)
+      return
+    case "finish-step":
+      out.setFinish(part.finishReason)
+      out.setUsage(normalizeUsage(part.usage))
+      return
+    case "finish":
+      out.setFinish(part.finishReason)
+      out.setUsage(normalizeUsage(part.totalUsage))
+      return
+    default:
+      return
+  }
 }
 
-function normalizeUsage(value: unknown) {
-  if (!value || typeof value !== "object") return undefined
-  const item = value as Record<string, unknown>
-  const inputTokens = typeof item.inputTokens === "number" ? item.inputTokens : typeof item.promptTokens === "number" ? item.promptTokens : 0
-  const outputTokens =
-    typeof item.outputTokens === "number" ? item.outputTokens : typeof item.completionTokens === "number" ? item.completionTokens : 0
-  const cacheReadTokens = typeof item.cacheReadTokens === "number" ? item.cacheReadTokens : undefined
-  const cacheWriteTokens = typeof item.cacheWriteTokens === "number" ? item.cacheWriteTokens : undefined
+function normalizeUsage(value: LanguageModelUsage) {
+  const inputTokens = value.inputTokens ?? 0
+  const outputTokens = value.outputTokens ?? 0
+  const cacheReadTokens = value.inputTokenDetails.cacheReadTokens ?? undefined
+  const cacheWriteTokens = value.inputTokenDetails.cacheWriteTokens ?? undefined
   return { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }
 }
 // kilocode_change end

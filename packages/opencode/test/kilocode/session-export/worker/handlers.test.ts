@@ -119,15 +119,11 @@ describe("handlers", () => {
 
   test("drops identity fields before writing data_json", async () => {
     const env = started("01I", {
-      messages: [
-        {
-          role: "user",
-          content: "hello",
-          accountId: "acct_123",
-          email: "user@example.com",
-          organizationId: "org_123",
-        },
-      ],
+      params: {
+        accountId: "acct_123",
+        email: "user@example.com",
+        organizationId: "org_123",
+      },
     })
     await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
     const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
@@ -231,7 +227,7 @@ function started(id: string, input: Partial<LlmRequestStarted["input"]>): LlmReq
     agent: "claude",
     modeId: "build",
     model: { providerId: "kilo", modelId: "free-1", isFree: true },
-    input: { system: [], messages: [], tools: {}, permissions: {}, params: {}, ...input },
+    input: { system: [], messages: [], tools: {}, permissions: [], params: {}, ...input },
     time: { created: 0 },
   }
 }

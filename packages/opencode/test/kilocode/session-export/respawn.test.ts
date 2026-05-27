@@ -114,6 +114,6 @@ function request(sessionId: string): Parameters<typeof SessionExport.beforeReque
       agent: "build",
       modeId: "build",
     },
-    assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+    assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
   }
 }

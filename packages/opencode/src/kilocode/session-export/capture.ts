@@ -2,6 +2,8 @@ import type { ToWorker } from "./worker/ipc"
 import { Config } from "./config"
 import { ulid } from "./ulid"
 import { isEligible, type EligibilityInput } from "./eligibility"
+import type { Permission } from "@/permission"
+import type { ModelMessage, Tool } from "ai"
 import type {
   CompactionCaptured,
   DeltaEntry,
@@ -16,7 +18,7 @@ import type {
 import { startBaselineFiber, startDeltaFiber } from "./workspace-fiber"
 
 export type CaptureDeps = {
-  worker: { postMessage: (msg: ToWorker | { kind: string; [key: string]: unknown }) => void; terminate: () => void }
+  worker: { postMessage: (msg: ToWorker) => void; terminate: () => void }
   agentVersion: string
   nowMs: () => number
   syncSeq: (sessionId: string) => number
@@ -77,9 +79,9 @@ export class Capture {
     requestMeta: RequestMeta
     assembled: {
       system: string[]
-      messages: unknown[]
-      tools: Record<string, unknown>
-      permissions: unknown
+      messages: ModelMessage[]
+      tools: Record<string, Tool>
+      permissions: Permission.Ruleset
       toolChoice?: "auto" | "required" | "none"
       params: Record<string, unknown>
     }

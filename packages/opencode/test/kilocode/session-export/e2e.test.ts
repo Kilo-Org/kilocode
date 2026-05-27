@@ -163,7 +163,7 @@ function request(sessionId: string): Parameters<Capture["beforeRequest"]>[0] {
       system: [],
       messages: [{ role: "user", content: "hello" }],
       tools: {},
-      permissions: {},
+      permissions: [],
       params: {},
     },
   }
@@ -192,7 +192,7 @@ function events(): ExportEvent[] {
         system: [],
         messages: [{ role: "user", content: "token=AKIAIOSFODNN7EXAMPLE" }],
         tools: {},
-        permissions: {},
+        permissions: [],
         params: {},
       },
       time: { created: 100 },

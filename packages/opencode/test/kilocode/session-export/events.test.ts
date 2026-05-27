@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import type { ExportEvent, ExportEnvelope, LlmRequestStarted, SessionDegraded } from "@/kilocode/session-export/events"
+import type { BatchEnvelope } from "@/kilocode/session-export/envelope"
 
 describe("event types", () => {
   test("envelope shape is well-formed", () => {
@@ -35,7 +36,7 @@ describe("event types", () => {
         system: ["You are..."],
         messages: [],
         tools: {},
-        permissions: {} as never,
+        permissions: [],
         params: {},
       },
       time: { created: 0 },
@@ -88,5 +89,29 @@ describe("event types", () => {
       }
     }
     expect(typeof widen).toBe("function")
+  })
+
+  test("BatchEnvelope events expose uploaded envelope fields", () => {
+    const batch: BatchEnvelope = {
+      schemaVersion: 1,
+      agentVersion: "v0",
+      surface: "test",
+      batchId: "b1",
+      events: [
+        {
+          id: "01HABC",
+          type: "llm_request_started",
+          sessionId: "s1",
+          rootSessionId: "s1",
+          seq: 1,
+          ts: 100,
+          requestId: "r1",
+        },
+      ],
+      chunks: [],
+    }
+
+    expect(batch.events[0].sessionId).toBe("s1")
+    expect(batch.events[0].requestId).toBe("r1")
   })
 })

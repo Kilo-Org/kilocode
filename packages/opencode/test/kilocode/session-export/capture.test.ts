@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from "bun:test"
 import { Capture } from "@/kilocode/session-export/capture"
+import { jsonSchema, tool } from "ai"
 
 describe("Capture", () => {
   const posted: unknown[] = []
@@ -17,7 +18,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@ai-sdk/openai" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     expect(posted.length).toBe(0)
   })
@@ -27,7 +28,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: "org_1" },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     cap.afterRequest({
       sessionId: "s1",
@@ -46,7 +47,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: { ...meta("s1"), agent: "title" },
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     cap.afterRequest({
       sessionId: "s1",
@@ -67,7 +68,7 @@ describe("Capture", () => {
         org: undefined,
       },
       requestMeta: meta("s1"),
-      assembled: { system: ["sys"], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: ["sys"], messages: [], tools: {}, permissions: [], params: {} },
     })
     expect(posted.length).toBe(2)
     const msg = posted[1] as {
@@ -100,8 +101,14 @@ describe("Capture", () => {
       assembled: {
         system: [],
         messages: [],
-        tools: { shell: { description: "run", execute: () => "ok" } },
-        permissions: {},
+        tools: {
+          shell: tool({
+            description: "run",
+            inputSchema: jsonSchema({ type: "object", properties: {} }),
+            execute: () => "ok",
+          }),
+        },
+        permissions: [],
         params: {},
       },
     })
@@ -115,7 +122,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     const types = posted.map((item) => (item as { envelope?: { type?: string } }).envelope?.type)
     expect(types).toEqual(["workspace_baseline_started", "llm_request_started"])
@@ -127,7 +134,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     const types = posted.map((item) => (item as { envelope?: { type?: string } }).envelope?.type)
     expect(types).toContain("session_degraded")
@@ -148,7 +155,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     posted.length = 0
@@ -173,7 +180,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     posted.length = 0
@@ -204,7 +211,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     posted.length = 0
@@ -238,7 +245,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     posted.length = 0
@@ -282,7 +289,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     cap.afterRequest({
@@ -297,7 +304,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: { ...meta("s1"), requestId: "r2", userMessageId: "u2" },
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.max).toBe(1)
@@ -321,7 +328,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     await until(() =>
       posted.some((item) => (item as { envelope?: { type?: string } }).envelope?.type === "workspace_delta_captured"),
@@ -336,7 +343,7 @@ describe("Capture", () => {
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
       requestMeta: meta("s1"),
-      assembled: { system: [], messages: [], tools: {}, permissions: {}, params: {} },
+      assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     posted.length = 0
     cap.compaction({

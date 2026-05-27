@@ -37,7 +37,7 @@ describe("worker entry", () => {
         agent: "claude",
         modeId: "build",
         model: { providerId: "kilo", modelId: "free-1", isFree: true },
-        input: { system: ["hi"], messages: [], tools: {}, permissions: {}, params: {} },
+        input: { system: ["hi"], messages: [], tools: {}, permissions: [], params: {} },
         time: { created: 0 },
       },
     })

@@ -1,4 +1,6 @@
 import type { ExportEnvelope } from "./envelope"
+import type { Permission } from "@/permission"
+import type { ModelMessage, Tool } from "ai"
 
 export type { ExportEnvelope } from "./envelope"
 
@@ -17,9 +19,9 @@ export type LlmRequestStarted = ExportEnvelope & {
   }
   input: {
     system: string[]
-    messages: unknown[]
-    tools: Record<string, unknown>
-    permissions: unknown
+    messages: ModelMessage[]
+    tools: Record<string, Tool>
+    permissions: Permission.Ruleset
     toolChoice?: "auto" | "required" | "none"
     params: Record<string, unknown>
   }
