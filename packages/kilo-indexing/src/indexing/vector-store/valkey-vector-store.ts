@@ -607,6 +607,9 @@ export class ValkeyVectorStore implements IVectorStore {
       { type: "TAG", name: "seg2" },
       { type: "TAG", name: "seg3" },
       { type: "TAG", name: "seg4" },
+      // Note: HASH TAG fields tokenize on comma by default. File paths containing
+      // literal commas would be split into multiple tags. This is acceptable because
+      // file paths in practice do not contain commas.
       { type: "TAG", name: "filePath" },
       { type: "TAG", name: "type" },
     ]
