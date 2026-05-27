@@ -128,8 +128,9 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         id: String? = null,
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
+        open: (SessionRef) -> Unit = {},
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs)
+        return controller(id, flushMs, true, displayMs = displayMs, open = open)
     }
 
     protected fun controller(
@@ -148,6 +149,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         session: SessionDto? = null,
         beforeUpdate: () -> Boolean = { false },
         afterUpdate: (Boolean) -> Unit = {},
+        open: (SessionRef) -> Unit = {},
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
     ): SessionController {
         val root = Root()
@@ -162,6 +164,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             flushMs,
             condense,
             displayMs,
+            open = open,
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
         )

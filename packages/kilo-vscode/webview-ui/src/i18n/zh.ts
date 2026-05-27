@@ -283,7 +283,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
 
-  "speechToText.tooltip.start": "开始语音输入",
+  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
   "speechToText.tooltip.transcribing": "正在转录... 点击取消。",
   "speechToText.tooltip.error": "语音输入失败。点击清除。",
@@ -1220,8 +1220,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "代码库搜索",
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
-  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
-  "settings.experimental.agentManagerTool.description": "允许智能体通过工具调用启动 Agent Manager 本地会话和工作树会话",
   "settings.experimental.speechToText.title": "语音转文本",
   "settings.experimental.speechToText.description": "通过 Kilo Gateway 使用您的 Kilo 帐户在提示词字段中启用语音输入。",
   "settings.experimental.speechToText.disabledDescription":

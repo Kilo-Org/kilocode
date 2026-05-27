@@ -286,7 +286,7 @@ export const dict = {
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
   "prompt.action.indexing": "Configurações de indexação",
 
-  "speechToText.tooltip.start": "Iniciar entrada de voz",
+  "speechToText.tooltip.start": "Iniciar entrada de voz com o Kilo Gateway",
   "speechToText.tooltip.stop": "Parar captura",
   "speechToText.tooltip.transcribing": "Transcrevendo... Clique para cancelar.",
   "speechToText.tooltip.error": "Falha na entrada de voz. Clique para limpar.",
@@ -1259,9 +1259,6 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
-  "settings.experimental.agentManagerTool.title": "Ferramenta Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Permitir que agentes iniciem sessões locais e sessões worktree do Agent Manager a partir de uma chamada de ferramenta",
   "settings.experimental.speechToText.title": "Fala para texto",
   "settings.experimental.speechToText.description":
     "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",

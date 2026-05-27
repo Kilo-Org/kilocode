@@ -10,6 +10,8 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.QuestionInfoDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 
 class TurnLifecycleTest : SessionControllerTestBase() {
@@ -70,6 +72,20 @@ class TurnLifecycleTest : SessionControllerTestBase() {
             """,
             m,
         )
+    }
+
+    fun `test TurnClose completed preserves AwaitingQuestion state`() {
+        val (m, _, _) = prompted()
+
+        emit(
+            ChatEventDto.QuestionAsked(
+                "ses_test",
+                QuestionRequestDto("q1", "ses_test", listOf(QuestionInfoDto("Pick one", "Choice"))),
+            ),
+        )
+        emit(ChatEventDto.TurnClose("ses_test", "completed"))
+
+        assertTrue(m.model.state is SessionState.AwaitingQuestion)
     }
 
     fun `test Error fires StateChanged to Error`() {

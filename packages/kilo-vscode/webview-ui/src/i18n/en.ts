@@ -284,7 +284,7 @@ export const dict = {
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
-  "speechToText.tooltip.start": "Start voice input",
+  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
   "speechToText.tooltip.stop": "Stop capturing",
   "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
   "speechToText.tooltip.error": "Speech input failed. Click to clear.",
@@ -1239,9 +1239,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
-  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
-  "settings.experimental.agentManagerTool.description":
-    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",

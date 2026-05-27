@@ -24,6 +24,7 @@ import { Plugin } from "@/plugin"
 import { Project } from "@/project/project"
 import { ProviderAuth } from "@/provider/auth"
 import { ModelsDev } from "@/provider/models"
+import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Provider } from "@/provider/provider"
 import { Pty } from "@/pty"
 import { PtyTicket } from "@/pty/ticket"
@@ -163,6 +164,7 @@ export function createRoutes(corsOptions?: CorsOptions) {
       LSP.defaultLayer,
       Installation.defaultLayer,
       MCP.defaultLayer,
+      ModelCache.defaultLayer, // kilocode_change
       ModelsDev.defaultLayer,
       Permission.defaultLayer,
       Plugin.defaultLayer,

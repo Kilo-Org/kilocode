@@ -287,7 +287,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten",
+  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
@@ -1255,9 +1255,6 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-tool",
-  "settings.experimental.agentManagerTool.description":
-    "Sta agents toe om lokale Agent Manager-sessies en worktree-sessies te starten vanuit een tool call",
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",

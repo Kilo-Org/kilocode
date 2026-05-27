@@ -284,7 +284,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
 
-  "speechToText.tooltip.start": "Sesli girişi başlat",
+  "speechToText.tooltip.start": "Kilo Gateway ile sesli girişi başlatın",
   "speechToText.tooltip.stop": "Ses yakalamayı durdur",
   "speechToText.tooltip.transcribing": "Metne dönüştürülüyor... İptal etmek için tıklayın.",
   "speechToText.tooltip.error": "Sesli giriş başarısız oldu. Temizlemek için tıklayın.",
@@ -1248,9 +1248,6 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",
-  "settings.experimental.agentManagerTool.title": "Agent Manager Aracı",
-  "settings.experimental.agentManagerTool.description":
-    "Ajanların bir araç çağrısından Agent Manager yerel oturumları ve worktree oturumları başlatmasına izin ver",
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":
     "Kilo Gateway üzerinden Kilo hesabınızı kullanarak komut alanlarında sesli girişi etkinleştirin.",

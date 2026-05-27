@@ -145,6 +145,49 @@ describe("plan_exit detection", () => {
       await expect(pending).resolves.toBe("break")
     }))
 
+  test("JetBrains client enables plan follow-up with custom answer", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      try {
+        process.env.KILO_CLIENT = "jetbrains"
+        const seeded = await seed({
+          text: "Here is the plan",
+          tools: [
+            {
+              tool: "plan_exit",
+              input: {},
+              output: "Plan is ready. Ending planning turn.",
+            },
+          ],
+        })
+
+        expect(SessionPrompt.shouldAskPlanFollowup({ messages: seeded.messages, abort: AbortSignal.any([]) })).toBe(true)
+
+        const pending = PlanFollowup.ask({
+          sessionID: seeded.sessionID,
+          messages: seeded.messages,
+          abort: AbortSignal.any([]),
+        })
+
+        const question = await waitQuestion(seeded.sessionID)
+        expect(question).toBeDefined()
+        if (!question) return
+        expect(question.questions[0].question).toBe("Ready to implement?")
+        expect(question.questions[0].header).toBe("Implement")
+        expect(question.questions[0].custom).toBe(true)
+        expect(question.questions[0].options.map((item) => item.label)).toEqual([
+          PlanFollowup.ANSWER_NEW_SESSION,
+          PlanFollowup.ANSWER_CONTINUE,
+        ])
+        expect(question.questions[0].options.find((item) => item.label === PlanFollowup.ANSWER_CONTINUE)?.mode).toBe("code")
+        await Question.reject(question.id)
+        await expect(pending).resolves.toBe("break")
+      } finally {
+        if (prev === undefined) delete process.env.KILO_CLIENT
+        else process.env.KILO_CLIENT = prev
+      }
+    }))
+
   test("PlanFollowup.ask triggers and continue works with plan_exit", () =>
     withInstance(async () => {
       const seeded = await seed({

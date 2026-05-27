@@ -18,10 +18,11 @@ import com.intellij.util.ui.JBUI
  */
 class TurnView(
     val id: String,
+    private val openFile: (String) -> Unit,
     private var style: SessionEditorStyle = SessionEditorStyle.current(),
 ) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), SessionEditorStyleTarget {
 
-    constructor(id: String) : this(id, SessionEditorStyle.current())
+    constructor(id: String, openFile: (String) -> Unit) : this(id, openFile, SessionEditorStyle.current())
 
     private val messages = LinkedHashMap<String, MessageView>()
 
@@ -31,7 +32,7 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, style)
+        val view = MessageView(msg, openFile, style)
         messages[msg.info.id] = view
         add(view)
         revalidate()

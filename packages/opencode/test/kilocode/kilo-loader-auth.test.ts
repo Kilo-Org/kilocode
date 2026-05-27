@@ -41,6 +41,9 @@ import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
 import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
+import { AppRuntime } from "../../src/effect/app-runtime"
+
+const clear = (id: string) => AppRuntime.runPromise(ModelCache.Service.use((cache) => cache.clear(id)))
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   const item = providers[ProviderID.kilo]
@@ -51,13 +54,12 @@ function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
 const authPath = path.join(Global.Path.data, "auth.json")
 
 test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
-  // Reset state that may be stale from other test files sharing this process.
   // Persisted auth from other tests and ModelCache's TTL map must not affect this test.
   const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
   try {
     await Filesystem.write(authPath, JSON.stringify({}))
-    ModelCache.clear("kilo")
+    await clear("kilo")
 
     await using base = await tmpdir({
       init: async (dir) => {
@@ -115,7 +117,7 @@ test("kilo loader keeps paid models without auth and when auth exists", async ()
 
   try {
     await Filesystem.write(authPath, JSON.stringify({}))
-    ModelCache.clear("kilo")
+    await clear("kilo")
 
     await using base = await tmpdir({
       init: async (dir) => {

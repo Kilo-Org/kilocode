@@ -282,7 +282,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
 
-  "speechToText.tooltip.start": "بدء الإدخال الصوتي",
+  "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
   "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
@@ -1230,9 +1230,6 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
-  "settings.experimental.agentManagerTool.title": "أداة Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "السماح للوكلاء ببدء جلسات Agent Manager المحلية وجلسات worktree من استدعاء أداة",
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":
     "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",

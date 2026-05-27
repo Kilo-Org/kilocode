@@ -285,7 +285,7 @@ export namespace PlanFollowup {
           // main prompt input below the dock already routes typed text as a question
           // reply, so "Type your own answer" would be redundant (originally hidden in
           // 65566af7f8, flipped back during the v1.4.4 upstream merge).
-          custom: Flag.KILO_CLIENT === "cli",
+          custom: Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "jetbrains",
           options: [
             {
               label: ANSWER_NEW_SESSION,

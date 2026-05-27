@@ -28,7 +28,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent)
+        panel = SessionMessageListPanel(model, parent, openFile = {})
     }
 
     override fun tearDown() {

@@ -37,7 +37,6 @@
       "outputs": []
     },
     "@kilocode/kilo-jetbrains#test:ci": {
-      "dependsOn": ["@kilocode/kilo-jetbrains#typecheck"],
       "outputs": [".artifacts/unit/junit.xml"]
     },
     "@opencode-ai/ui#test": {
