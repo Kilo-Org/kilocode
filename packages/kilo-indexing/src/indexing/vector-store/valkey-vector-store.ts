@@ -552,7 +552,7 @@ export class ValkeyVectorStore implements IVectorStore {
 
   async dispose(): Promise<void> {
     if (this.connectingPromise) {
-      try { await this.connectingPromise } catch { /* ignore */ }
+      try { await this.connectingPromise } catch (err) { log.debug("dispose: ignored connection error", { err }) }
     }
     if (this.client) {
       this.client.close()
