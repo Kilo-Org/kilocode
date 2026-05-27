@@ -25,6 +25,11 @@ describe("FIM target resolution", () => {
       model: "mercury-edit-2",
       url: "https://api.inceptionlabs.ai/v1/fim/completions",
     })
+    expect(resolveFimTarget("ollama", "qwen2.5-coder:1.5b")).toEqual({
+      provider: "ollama",
+      model: "qwen2.5-coder:1.5b",
+      url: "http://localhost:11434/api/generate",
+    })
   })
 
   test("preserves gateway model pass-through behavior", () => {

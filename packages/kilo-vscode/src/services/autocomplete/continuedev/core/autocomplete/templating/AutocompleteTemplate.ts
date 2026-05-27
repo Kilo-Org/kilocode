@@ -1,7 +1,7 @@
 // Fill in the middle prompts
 //
-// We only expose Codestral and Mercury Edit 2 as autocomplete models — every
-// other FIM template in the upstream continuedev list is unreachable.
+// Codestral, Mercury Edit 2, and local Qwen2.5 Coder are the available
+// autocomplete models. Ollama formats Qwen FIM from its prefix/suffix API.
 
 import { CompletionOptions } from "../../index.js"
 import { getLastNUriRelativePathParts, getShortestUniqueRelativeUriPaths } from "../../util/uri.js"

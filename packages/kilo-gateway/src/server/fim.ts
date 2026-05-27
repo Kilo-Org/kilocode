@@ -1,6 +1,6 @@
 import { HEADER_FEATURE } from "../api/constants.js"
 import type { DirectAutocompleteProviderID } from "../autocomplete.js"
-import { DIRECT_FIM_ENV, requestMistralFim, resolveFimTarget, type FimTarget } from "../fim.js"
+import { DIRECT_FIM_ENV, requestMistralFim, requestOllamaFim, resolveFimTarget, type FimTarget } from "../fim.js"
 import { buildKiloHeaders } from "../headers.js"
 import type { AuthStore } from "./handlers.js"
 
@@ -18,7 +18,7 @@ async function getProxyAuth(Auth: Auth) {
   }
 }
 
-async function getProviderKey(Auth: Auth, provider: DirectAutocompleteProviderID) {
+async function getProviderKey(Auth: Auth, provider: Exclude<DirectAutocompleteProviderID, "ollama">) {
   const auth = await Auth.get(provider)
   if (auth?.type === "api") return auth.key
   return DIRECT_FIM_ENV[provider].map((key) => process.env[key]).find(Boolean)
@@ -26,7 +26,7 @@ async function getProviderKey(Auth: Auth, provider: DirectAutocompleteProviderID
 
 async function fetchFim(
   target: FimTarget,
-  key: string,
+  key: string | undefined,
   input: {
     prefix: string
     suffix: string
@@ -36,13 +36,25 @@ async function fetchFim(
     organizationId?: string
   },
 ): Promise<Response> {
+  if (target.provider === "ollama") {
+    console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${target.url}`)
+    return requestOllamaFim(target.url, {
+      model: target.model,
+      prefix: input.prefix,
+      suffix: input.suffix,
+      maxTokens: input.maxTokens,
+      temperature: input.temperature,
+      signal: input.signal,
+    })
+  }
+
   const run = async (url: string) => {
     console.info(`[FIM] request provider=${target.provider} model=${target.model} url=${url}`)
     return fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
+        ...(key ? { Authorization: `Bearer ${key}` } : {}),
         ...(target.provider === "kilo"
           ? buildKiloHeaders(undefined, { kilocodeOrganizationId: input.organizationId })
           : {}),
@@ -71,7 +83,12 @@ export function createFimHandler(Auth: Auth) {
     const fimMaxTokens = maxTokens ?? 256
     const fimTemperature = temperature ?? 0.2
     const proxy = target.provider === "kilo" ? await getProxyAuth(Auth) : undefined
-    const token = target.provider === "kilo" ? proxy?.token : await getProviderKey(Auth, target.provider)
+    const token =
+      target.provider === "kilo"
+        ? proxy?.token
+        : target.provider === "ollama"
+          ? undefined
+          : await getProviderKey(Auth, target.provider)
 
     if (target.provider === "kilo" && !proxy?.auth) {
       return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
@@ -81,7 +98,7 @@ export function createFimHandler(Auth: Auth) {
       return c.json({ error: "No valid token found" }, 401)
     }
 
-    if (!token) {
+    if (target.provider !== "ollama" && !token) {
       return c.json({ error: `Missing ${target.provider} provider API key` }, 401)
     }
 
