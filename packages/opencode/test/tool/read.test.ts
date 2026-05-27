@@ -306,8 +306,10 @@ describe("tool.read truncation", () => {
       yield* put(path.join(dir, "offset.txt"), lines)
 
       const result = yield* exec(dir, { filePath: path.join(dir, "offset.txt"), offset: 10, limit: 5 })
-      expect(result.output).not.toContain("10: line10") // kilocode_change - read content is unnumbered
-      expect(result.output).not.toContain("14: line14") // kilocode_change - read content is unnumbered
+      // kilocode_change start
+      expect(result.output).not.toContain("10: line10")
+      expect(result.output).not.toContain("14: line14")
+      // kilocode_change end
       expect(result.output).toContain("line10")
       expect(result.output).toContain("line14")
       expect(result.output).not.toContain("line0")
