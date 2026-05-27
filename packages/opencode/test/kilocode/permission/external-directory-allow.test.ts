@@ -1,25 +1,27 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Layer, ManagedRuntime } from "effect"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import * as CrossSpawnSpawner from "../../../src/effect/cross-spawn-spawner"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Global } from "@opencode-ai/core/global"
 import { Agent } from "../../../src/agent/agent"
-import { Global } from "../../../src/global"
+import { Config } from "../../../src/config/config"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
-import { Instance } from "../../../src/project/instance"
+import { WithInstance } from "../../../src/project/with-instance"
 import { MessageID, SessionID } from "../../../src/session/schema"
 import { Shell } from "../../../src/shell/shell"
-import { Truncate } from "../../../src/tool"
-import { BashTool } from "../../../src/tool/bash"
+import { Truncate } from "../../../src/tool/truncate"
+import { ShellTool } from "../../../src/tool/shell"
 import { Plugin } from "../../../src/plugin"
-import { tmpdir } from "../../fixture/fixture"
+import { disposeAllInstances, tmpdir } from "../../fixture/fixture"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
 
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
     CrossSpawnSpawner.defaultLayer,
     AppFileSystem.defaultLayer,
+    Config.defaultLayer,
     Plugin.defaultLayer,
     Truncate.defaultLayer,
     Agent.defaultLayer,
@@ -49,7 +51,7 @@ const ps =
 
 Shell.acceptable.reset()
 
-const init = () => runtime.runPromise(BashTool.pipe(Effect.flatMap((info) => info.init())))
+const init = () => runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
 const quote = (text: string) => `"${text.replaceAll('"', '\\"')}"`
 const glob = (file: string) =>
   process.platform === "win32" ? AppFileSystem.normalizePathPattern(file) : file.replaceAll("\\", "/")
@@ -123,13 +125,13 @@ async function wait(count: number) {
 }
 
 afterEach(async () => {
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 describe("external_directory allow config protection", () => {
   test("allows file-tool external_directory requests for global config paths", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await immediate(
@@ -149,7 +151,7 @@ describe("external_directory allow config protection", () => {
 
   test("allows read-only bash external_directory requests for global config paths", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         await immediate(
@@ -181,7 +183,7 @@ describe("external_directory allow config protection", () => {
 
   test("keeps unknown bash external_directory requests for global config paths protected", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const pending = Permission.ask({
@@ -212,7 +214,7 @@ describe("bash external_directory access metadata", () => {
   test("emits read access metadata for cat external files", async () => {
     await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const bash = await init()
@@ -240,7 +242,7 @@ describe("bash external_directory access metadata", () => {
       withShell(item, async () => {
         await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
         await using tmp = await tmpdir({ git: true })
-        await Instance.provide({
+        await WithInstance.provide({
           directory: tmp.path,
           fn: async () => {
             const bash = await init()
@@ -267,7 +269,7 @@ describe("bash external_directory access metadata", () => {
   test("does not emit read access metadata for mutating external file commands", async () => {
     await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const bash = await init()
@@ -298,7 +300,7 @@ describe("bash external_directory access metadata", () => {
   test("does not emit read access metadata for mixed read and write external commands", async () => {
     await using outer = await tmpdir({ init: (dir) => Bun.write(path.join(dir, "hello.txt"), "hello") })
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const bash = await init()

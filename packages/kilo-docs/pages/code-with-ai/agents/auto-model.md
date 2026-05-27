@@ -33,6 +33,10 @@ The underlying models behind each Auto Model tier are updated server-side as bet
 - **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
 - **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
 
+{% callout type="warning" title="Data handling for Auto Free" %}
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. In particular, it may route to NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) — trial use only, not for production or sensitive data. Do not submit personal or confidential data when using Auto Free.
+{% /callout %}
+
 ## Benefits
 
 ### Cost Optimization

@@ -76,6 +76,12 @@ Find the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar. Cli
 
 The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
+**Exporting local transcripts:**
+
+Run `/export` in chat, or open a local session's **History** context menu and choose **Export session transcript**. The save dialog lets you choose the Markdown (`.md`) destination.
+
+Kilo builds the export from the complete local session history, not only the messages currently loaded in the chat view.
+
 {% /tab %}
 {% tab label="CLI" %}
 
@@ -128,6 +134,7 @@ Reference files and other context directly in your message using `@`:
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
+- Mermaid code blocks → Fenced `mermaid` blocks render as diagrams after the message finishes streaming. The source remains copyable, and invalid Mermaid syntax stays visible in a contained error state.
 
 **Status signals:**
 

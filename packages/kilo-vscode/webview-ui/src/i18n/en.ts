@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Share this session and copy the URL to clipboard",
   "command.session.unshare": "Unshare session",
   "command.session.unshare.description": "Stop sharing this session",
+  "command.session.export": "Export session transcript",
 
   "palette.search.placeholder": "Search files, commands, and sessions",
   "palette.empty": "No results found",
@@ -137,6 +138,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is required",
+  "provider.connect.prompt.required": "{{field}} is required",
+  "provider.connect.azure.endpointType.label": "Select Azure endpoint configuration",
+  "provider.connect.azure.endpointType.resourceName.label": "Resource name",
+  "provider.connect.azure.endpointType.resourceName.hint": "Build the endpoint from your Azure resource name",
+  "provider.connect.azure.endpointType.baseURL.label": "Full endpoint URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Use a custom Azure OpenAI endpoint",
+  "provider.connect.azure.resourceName.label": "Azure resource name",
+  "provider.connect.azure.resourceName.placeholder": "e.g. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI endpoint URL",
+  "provider.connect.azure.baseURL.placeholder": "e.g. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen gives you access to a curated set of reliable optimized models for coding agents.",
   "provider.connect.opencodeZen.line2":
@@ -167,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Latest",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",
+  "model.group.collapse": "Collapse {{group}}",
+  "model.group.expand": "Expand {{group}}",
   "model.favorite.add": "Add to favorites",
   "model.favorite.remove": "Remove from favorites",
   "model.provider.anthropic": "Anthropic",
@@ -260,6 +273,7 @@ export const dict = {
   "prompt.attachment.remove": "Remove attachment",
   "prompt.action.send": "Send",
   "prompt.action.send.blocked": "Answer or dismiss the pending question first",
+  "prompt.action.send.recording": "Transcribe and send",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Enhance prompt",
   "prompt.action.indexing": "Indexing settings",
@@ -270,6 +284,19 @@ export const dict = {
   "prompt.action.resetModel": "Reset model to default",
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
+  "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
+  "speechToText.tooltip.stop": "Stop capturing",
+  "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
+  "speechToText.tooltip.error": "Speech input failed. Click to clear.",
+  "speechToText.error.title": "Speech input failed",
+  "speechToText.error.loginRequired": "Sign in to Kilo to use speech input.",
+  "speechToText.error.permission": "Microphone permission was denied.",
+  "speechToText.error.microphone": "Could not start the microphone.",
+  "speechToText.error.recording": "Recording failed.",
+  "speechToText.error.emptyRecording": "No audio was recorded.",
+  "speechToText.error.emptyTranscript": "No speech was detected.",
+  "speechToText.error.encoding": "Could not encode the recording.",
+  "speechToText.toast.transcribed": "Transcription inserted",
 
   "prompt.toast.pasteUnsupported.title": "Unsupported paste",
   "prompt.toast.pasteUnsupported.description": "Only images or PDFs can be pasted here.",
@@ -457,6 +484,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
   "error.promotionLimit.action": "Sign Up",
+  "error.providerAuth.title": "{{provider}} signed you out",
+  "error.providerAuth.description": "Reconnect {{provider}}, then send your message again.",
+  "error.providerAuth.chatgpt.title": "OpenAI signed you out",
+  "error.providerAuth.chatgpt.description":
+    "Sign in with ChatGPT again, then send your message again to keep using Codex models.",
 
   "error.chain.unknown": "Unknown error",
   "error.chain.causedBy": "Caused by:",
@@ -1003,9 +1035,18 @@ export const dict = {
   "settings.indexing.title": "Indexing",
   "settings.indexing.status.title": "Status",
   "settings.indexing.enable.title": "Enable indexing",
-  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off for this workspace.",
+  "settings.indexing.enable.description": "Turn semantic codebase indexing on or off.",
+  "settings.indexing.globalEnable.title": "Enable globally",
+  "settings.indexing.globalEnable.description": "Enable indexing for every workspace.",
+  "settings.indexing.projectEnable.title": "Enable for this project",
+  "settings.indexing.projectEnable.description": "Enable indexing for this workspace when global indexing is off.",
+  "settings.indexing.projectEnable.disabledTooltip": "Global indexing is enabled, so this project is already covered.",
   "settings.indexing.provider.title": "Embedding provider",
   "settings.indexing.provider.description": "Choose the provider used to generate embeddings for semantic search.",
+  "settings.indexing.kiloModel.title": "Kilo model preset",
+  "settings.indexing.kiloModel.description": "Choose a supported Kilo-hosted embedding model.",
+  "settings.indexing.kiloSignIn.title": "Kilo sign-in required",
+  "settings.indexing.kiloSignIn.description": "Sign in to Kilo to use hosted embeddings.",
   "settings.indexing.model.title": "Embedding model",
   "settings.indexing.model.description": "Override the default embedding model for the selected provider.",
   "settings.indexing.dimension.title": "Vector dimension",
@@ -1162,6 +1203,7 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.description": "Use a smart keybinding for triggering inline tasks",
   "settings.autocomplete.chatAutocomplete.title": "Enable chat textarea autocomplete",
   "settings.autocomplete.chatAutocomplete.description": "Show autocomplete suggestions in the chat textarea",
+  "settings.autocomplete.modelsHint": "To choose which model is used for autocompletions, see the Models settings.",
 
   "settings.notifications.agent.title": "Agent Completion",
   "settings.notifications.agent.description": "Show notification when agent completes a task",
@@ -1197,6 +1239,16 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.agentManagerTool.title": "Agent Manager Tool",
+  "settings.experimental.agentManagerTool.description":
+    "Allow agents to start Agent Manager local sessions and worktree sessions from a tool call",
+  "settings.experimental.speechToText.title": "Speech to Text",
+  "settings.experimental.speechToText.description":
+    "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Enable and sign in to the Kilo provider to use Speech to Text. Speech to Text is currently only supported through Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Speech to Text Model",
+  "settings.experimental.speechToTextModel.description": "Choose the Kilo Gateway transcription model for voice input.",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
@@ -1219,6 +1271,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
   "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Override",
+  "settings.agentBehaviour.variantOverride.description": "Override the model variant for this agent",
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
   "settings.agentBehaviour.prompt.description": "Additional system prompt for this agent",
   "settings.agentBehaviour.temperature.title": "Temperature",
@@ -1368,7 +1422,10 @@ export const dict = {
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
-  "settings.context.autoCompaction.description": "Automatically compact context when it's full",
+  "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
+  "settings.context.compactionLimit.title": "Auto Compaction Limit",
+  "settings.context.compactionLimit.description":
+    "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
   "settings.context.prune.title": "Prune Old Outputs",
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
@@ -1390,6 +1447,8 @@ export const dict = {
   "settings.display.layout.description": "Layout mode for the chat interface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Stretch",
+  "settings.display.fontSize.title": "Font Size",
+  "settings.display.fontSize.description": "Adjust the Kilo webview UI font size independently from VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
@@ -1403,11 +1462,15 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description":
     "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model and reasoning effort for task-tool subagents. Leave unset to inherit the calling agent's model.",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",
   "settings.providers.disabled": "Disabled Providers",
   "settings.providers.disabled.description": "Providers to hide from the provider list",
+  "settings.providers.disabled.enable": "Enable",
   "settings.providers.enabled": "Enabled Providers (Allowlist)",
   "settings.providers.enabled.description": "If set, only these providers will be available (exclusive allowlist)",
   "settings.providers.notSet": "Not set (use server default)",
@@ -1533,4 +1596,31 @@ export const dict = {
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
   "notifications.action.tryModelGeneric": "Try Model",
+
+  "diffViewer.source.workspace.label": "Branch",
+  "diffViewer.source.workspace.tooltip":
+    "All changes on this branch compared to the base branch. Includes uncommitted files (staged, unstaged, untracked) and local commits not yet in the base.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Files with changes you've added to git's staging area (`git add`), as they will appear in the next commit.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Files modified in your working tree but not yet staged, plus untracked (new) files.",
+  "diffViewer.source.session.label": "Session",
+  "diffViewer.source.session.tooltip":
+    "Files changed by Kilo during the current session, based on per-turn snapshots. Resets when you start a new session.",
+  "diffViewer.group.session": "Session",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots are disabled for this repository. Please edit your configuration files in order to display session changes.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+
+  "plan.exit.ready": "Plan is ready:",
 }

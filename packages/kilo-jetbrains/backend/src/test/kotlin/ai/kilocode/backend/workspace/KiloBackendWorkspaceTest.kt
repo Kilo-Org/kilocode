@@ -274,9 +274,11 @@ class KiloBackendWorkspaceTest {
     }
 
     // ------ Data mapping ------
+    // Detailed provider/command/path parsing correctness is covered in KiloCliDataParserTest.
+    // These integration tests verify end-to-end data flow: server → workspace state.
 
     @Test
-    fun `providers response maps models correctly`() = runBlocking {
+    fun `providers response reaches state with expected provider and model`() = runBlocking {
         mock.providers = PROVIDERS_JSON
         val app = setup()
         val ws = ready(app)
@@ -286,15 +288,10 @@ class KiloBackendWorkspaceTest {
         }
 
         val state = ws.state.value as KiloWorkspaceState.Ready
-        val provider = state.providers.providers[0]
-        assertEquals("anthropic", provider.id)
-        assertEquals("Anthropic", provider.name)
-        val model = provider.models["claude-4"]
-        assertNotNull(model)
-        assertEquals("Claude 4", model.name)
-        assertTrue(model.attachment)
-        assertTrue(model.reasoning)
-        assertTrue(model.toolCall)
+        assertEquals(1, state.providers.providers.size)
+        assertEquals("anthropic", state.providers.providers[0].id)
+        assertNotNull(state.providers.providers[0].models["claude-4"])
+        assertEquals(listOf("anthropic"), state.providers.connected)
     }
 
     @Test
@@ -511,8 +508,10 @@ class KiloBackendWorkspaceTest {
                             "interleaved": false
                         },
                         "cost": {"input": 0, "output": 0, "cache": {"read": 0, "write": 0}},
-                        "limit": {"context": 200000, "output": 16000},
+                        "limit": {"context": 200000, "input": 100000, "output": 16000},
                         "status": "active",
+                        "recommendedIndex": 2,
+                        "variants": {"high": {}, "low": {}, "medium": {}},
                         "options": {},
                         "headers": {},
                         "release_date": "2025-05-01"

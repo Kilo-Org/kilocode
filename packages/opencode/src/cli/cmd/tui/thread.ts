@@ -1,16 +1,16 @@
 import { cmd } from "@/cli/cmd/cmd"
 import { tui } from "./app"
-import { Rpc } from "@/util"
+import { Rpc } from "@/util/rpc"
 import { type rpc } from "./worker"
 import path from "path"
 import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { errorMessage } from "@/util/error"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
@@ -18,7 +18,12 @@ import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { TuiConfig } from "./config/tui"
-import { KILO_PROCESS_ROLE, KILO_RUN_ID, ensureRunID, sanitizedProcessEnv } from "@/util/opencode-process"
+import {
+  KILO_PROCESS_ROLE,
+  KILO_RUN_ID,
+  ensureRunID,
+  sanitizedProcessEnv,
+} from "@opencode-ai/core/util/opencode-process"
 import { validateSession } from "./validate-session"
 
 declare global {
@@ -67,6 +72,12 @@ async function input(value?: string) {
   if (!value) return piped
   if (!piped) return value
   return piped + "\n" + value
+}
+
+export function resolveThreadDirectory(project?: string, envPWD = process.env.PWD, cwd = process.cwd()) {
+  const root = Filesystem.resolve(envPWD ?? cwd)
+  if (project) return Filesystem.resolve(path.isAbsolute(project) ? project : path.join(root, project))
+  return Filesystem.resolve(cwd)
 }
 
 export const TuiThreadCommand = cmd({
@@ -138,10 +149,7 @@ export const TuiThreadCommand = cmd({
 
       // Resolve relative --project paths from PWD, then use the real cwd after
       // chdir so the thread and worker share the same directory key.
-      const root = Filesystem.resolve(process.env.PWD ?? process.cwd())
-      const next = args.project
-        ? Filesystem.resolve(path.isAbsolute(args.project) ? args.project : path.join(root, args.project))
-        : Filesystem.resolve(process.cwd())
+      const next = resolveThreadDirectory(args.project)
       const file = await target()
       try {
         process.chdir(next)

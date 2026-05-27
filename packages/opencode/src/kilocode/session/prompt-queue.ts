@@ -42,8 +42,8 @@ export namespace KiloSessionPromptQueue {
 
   /**
    * Exempt an injected user message from being hidden by scope().
-   * Called after PlanFollowup.inject() so the injected follow-up is visible
-   * without also unhiding unrelated prompts that were queued mid-turn.
+   * Called after internal follow-ups or compaction markers are persisted so
+   * they are visible without also unhiding unrelated prompts queued mid-turn.
    */
   export function retarget(sessionID: SessionID, id: MessageID) {
     const current = targets.get(sessionID)

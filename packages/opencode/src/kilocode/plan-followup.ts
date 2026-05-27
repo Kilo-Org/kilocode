@@ -2,55 +2,56 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
-import { Flag } from "@/flag/flag"
-import { Global } from "@/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
-import { Provider } from "@/provider"
+import { Provider } from "@/provider/provider"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Question } from "@/question"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
 
-const agents = makeRuntime(Agent.Service, Agent.defaultLayer)
-const providers = makeRuntime(Provider.Service, Provider.defaultLayer)
-const questions = makeRuntime(Question.Service, Question.defaultLayer)
-const todo = makeRuntime(Todo.Service, Todo.defaultLayer)
+const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
+const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
+const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
+const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
 
 export const PlanFollowupRuntime = {
   agent(name: string): Promise<Agent.Info | undefined> {
-    return agents.runPromise((svc) => svc.get(name))
+    return agents().runPromise((svc) => svc.get(name))
   },
   model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
-    return providers.runPromise((svc) => svc.getModel(providerID, modelID))
+    return providers().runPromise((svc) => svc.getModel(providerID, modelID))
   },
   question: {
     ask(input: Parameters<Question.Interface["ask"]>[0]) {
-      return questions.runPromise((svc) => svc.ask(input))
+      return questions().runPromise((svc) => svc.ask(input))
     },
     list() {
-      return questions.runPromise((svc) => svc.list())
+      return questions().runPromise((svc) => svc.list())
     },
     reject(requestID: Parameters<Question.Interface["reject"]>[0]) {
-      return questions.runPromise((svc) => svc.reject(requestID))
+      return questions().runPromise((svc) => svc.reject(requestID))
     },
   },
   todo: {
     get(sessionID: SessionID) {
-      return todo.runPromise((svc) => svc.get(sessionID))
+      return todo().runPromise((svc) => svc.get(sessionID))
     },
     update(input: Parameters<Todo.Interface["update"]>[0]) {
-      return todo.runPromise((svc) => svc.update(input))
+      return todo().runPromise((svc) => svc.update(input))
     },
   },
   async loop(sessionID: SessionID) {
@@ -236,7 +237,7 @@ export namespace PlanFollowup {
 
     // Fall back to plan file on disk
     const session = await Session.get(SessionID.make(input.sessionID))
-    const file = Bun.file(Session.plan(session))
+    const file = Bun.file(Session.plan(session, Instance.current))
     const plan = await file.text().catch(() => "")
     return plan.trim()
   }
@@ -284,7 +285,7 @@ export namespace PlanFollowup {
           // main prompt input below the dock already routes typed text as a question
           // reply, so "Type your own answer" would be redundant (originally hidden in
           // 65566af7f8, flipped back during the v1.4.4 upstream merge).
-          custom: Flag.KILO_CLIENT === "cli",
+          custom: Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "jetbrains",
           options: [
             {
               label: ANSWER_NEW_SESSION,
@@ -297,6 +298,7 @@ export namespace PlanFollowup {
               labelKey: "plan.followup.answer.continue",
               description: "Implement the plan in this session",
               descriptionKey: "plan.followup.answer.continue.description",
+              mode: "code",
             },
           ],
         },
@@ -331,8 +333,9 @@ export namespace PlanFollowup {
       model: input.model,
     })
     const session = await Session.get(input.sessionID)
+    const { WithInstance } = await import("@/project/with-instance")
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: session.directory,
       fn: async () => {
         // Create the session FIRST so session.created fires immediately while the
@@ -351,7 +354,7 @@ export namespace PlanFollowup {
           })
 
         try {
-          const file = Session.plan(session)
+          const file = Session.plan(session, Instance.current)
           const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
           const todoList = formatTodos(todos)
 
@@ -419,7 +422,7 @@ export namespace PlanFollowup {
             return
           }
 
-          const queue = Instance.provide({
+          const queue = WithInstance.provide({
             directory: next.directory,
             fn: async () => {
               if (ctl.signal.aborted) {

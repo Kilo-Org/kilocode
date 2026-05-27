@@ -2,16 +2,17 @@ import path from "path"
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { Bus } from "../../src/bus"
-import { KiloSessionPromptQueue } from "../../src/kilocode/session/prompt-queue"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { Question } from "../../src/question"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Instance } from "../../src/project/instance"
-import { Session } from "../../src/session"
+import { WithInstance } from "../../src/project/with-instance"
+import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
+import { SessionCompaction } from "../../src/session/compaction"
 import { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, SessionID } from "../../src/session/schema"
-import { Log } from "../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
@@ -239,6 +240,51 @@ describe("session prompt queue", () => {
     expect(ids[ids.length - 1]).toBe(injected)
   })
 
+  test("keeps auto-compaction markers created during a queued turn visible", async () => {
+    // Regression for ses_20d25cccbffeVAw7Y9XGfL9p5O: an overflow inside a queued
+    // turn creates an auto-compaction user message after the queued prompt. If
+    // scope() hides that marker, runLoop never processes the compaction task and
+    // instead retries the same oversized request until compaction is exhausted.
+    await using tmp = await tmpdir({ git: true })
+    await WithInstance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({ title: "Queued compaction regression" })
+        const first = MessageID.ascending()
+        const ans = MessageID.ascending()
+        const queued = MessageID.ascending()
+
+        await Session.updateMessage(user(session.id, first).info)
+        await Session.updateMessage(assistant(session.id, ans, first).info)
+        await Session.updateMessage(user(session.id, queued).info)
+
+        const result = await Effect.runPromise(
+          KiloSessionPromptQueue.enqueue(
+            session.id,
+            queued,
+            Effect.promise(async () => {
+              await SessionCompaction.create({
+                sessionID: session.id,
+                agent: "code",
+                model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
+                auto: true,
+                overflow: true,
+              })
+              const messages = await Session.messages({ sessionID: session.id })
+              const compact = messages.find((msg) => msg.parts.some((part) => part.type === "compaction"))?.info.id
+              return { compact, ids: KiloSessionPromptQueue.scope(session.id, messages).map((item) => item.info.id) }
+            }),
+            Effect.succeed({ compact: undefined, ids: [] }),
+          ),
+        )
+
+        if (!result.compact) throw new Error("missing compaction marker")
+        expect(result.ids).toEqual([first, ans, queued, result.compact])
+        expect(result.ids[result.ids.length - 1]).toBe(result.compact)
+      },
+    })
+  })
+
   test("hasFollowup reports true only for prompts enqueued after the active slot started", async () => {
     const sessionID = SessionID.make("session_followup_semantics")
     const observed: Array<{ where: string; value: boolean }> = []
@@ -366,7 +412,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const session = await Session.create({ title: "Queued prompt regression" })
@@ -483,7 +529,7 @@ describe("session prompt queue", () => {
         },
       })
 
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const session = await Session.create({ title: "Queued cancel regression" })
@@ -542,7 +588,7 @@ describe("session prompt queue", () => {
     const dismissed = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await Session.create({ title: "Suggestion unblock regression" })
@@ -587,7 +633,7 @@ describe("session prompt queue", () => {
     const rejected = Promise.withResolvers<void>()
     await using tmp = await tmpdir({ git: true })
 
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const session = await Session.create({ title: "Question unblock regression" })
@@ -641,7 +687,7 @@ describe("session prompt queue", () => {
     // hasFollowup=true and reject synchronously, before any pending entry or
     // Shown event is published.
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_suggestion")
@@ -702,7 +748,7 @@ describe("session prompt queue", () => {
 
   test("auto-dismisses a question shown after a queued prompt", async () => {
     await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
+    await WithInstance.provide({
       directory: tmp.path,
       fn: async () => {
         const sessionID = SessionID.make("ses_auto_question")

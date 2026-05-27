@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, stat as statFile, writeFile } from "fs/promises"
+import { chmod, mkdir, readFile, rename, stat as statFile, writeFile } from "fs/promises" // kilocode_change
 import { createWriteStream, existsSync, statSync } from "fs"
 import { realpathSync } from "fs"
 // kilocode_change start - harden containment checks
@@ -6,7 +6,7 @@ import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep, win32
 // kilocode_change end
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
-import { Glob } from "@opencode-ai/shared/util/glob"
+import { Glob } from "@opencode-ai/core/util/glob"
 
 // Fast sync version for metadata checks
 export async function exists(p: string): Promise<boolean> {
@@ -59,24 +59,29 @@ function isEnoent(e: unknown): e is { code: "ENOENT" } {
 }
 
 export async function write(p: string, content: string | Buffer | Uint8Array, mode?: number): Promise<void> {
-  try {
+  // kilocode_change start - atomic write via temp-file + rename to avoid partial reads on concurrent saves
+  // Include a random suffix so that concurrent writes to the same path never share a temp file,
+  // even on platforms where Date.now() has low resolution (e.g. Windows ~100ms).
+  const tmp = `${p}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  async function doWrite() {
     if (mode) {
-      await writeFile(p, content, { mode })
+      await writeFile(tmp, content, { mode })
     } else {
-      await writeFile(p, content)
+      await writeFile(tmp, content)
     }
+    await rename(tmp, p)
+  }
+  try {
+    await doWrite()
   } catch (e) {
     if (isEnoent(e)) {
       await mkdir(dirname(p), { recursive: true })
-      if (mode) {
-        await writeFile(p, content, { mode })
-      } else {
-        await writeFile(p, content)
-      }
+      await doWrite()
       return
     }
     throw e
   }
+  // kilocode_change end
 }
 
 export async function writeJson(p: string, data: unknown, mode?: number): Promise<void> {
@@ -246,3 +251,5 @@ export async function globUp(pattern: string, start: string, stop?: string) {
   }
   return result
 }
+
+export * as Filesystem from "./filesystem"

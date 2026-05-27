@@ -126,6 +126,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
       description = markdoc.frontmatter.description
     }
   }
+  const noindex = markdoc?.frontmatter?.noindex === true
 
   const toc = pageProps.markdoc?.content ? collectHeadings(pageProps.markdoc.content) : []
 
@@ -139,6 +140,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
         <meta name="referrer" content="strict-origin" />
         <meta name="title" content={title} />
         <meta name="description" content={description} />
+        {noindex && <meta name="robots" content="noindex, nofollow" />}
         <link rel="icon" href="/docs/favicon/favicon.ico" sizes="48x48" type="image/x-icon" />
         <link rel="shortcut icon" href="/docs/favicon/favicon.ico" />
         <link rel="icon" href="/docs/favicon/favicon.svg" type="image/svg+xml" />

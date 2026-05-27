@@ -1,3 +1,8 @@
+---
+title: List Code Definition Names Tool | Kilo Code Docs
+description: Learn how the list_code_definition_names tool provides a structural overview of your codebase by listing functions, classes, and definitions with line numbers.
+---
+
 # list_code_definition_names
 
 The `list_code_definition_names` tool provides a structural overview of your codebase by listing code definitions from source files at the top level of a specified directory. It helps Kilo Code understand code architecture by displaying line numbers and definition snippets.

@@ -5,14 +5,14 @@ import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
 import { uniqueBy } from "remeda"
 import path from "path"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 import { iife } from "@/util/iife"
 import { useToast } from "../ui/toast"
 import { useArgs } from "./args"
 import { useSDK } from "./sdk"
 import { useProject } from "./project" // kilocode_change
 import { RGBA } from "@opentui/core"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 
 export function parseModel(model: string) {
   const [providerID, ...rest] = model.split("/")
@@ -151,6 +151,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const filePath = path.join(Global.Path.state, "model.json")
       const state = {
         pending: false,
+        writer: Promise.resolve() as Promise<unknown>, // kilocode_change - serialize writes
       }
 
       // kilocode_change start - keep configured-agent selections process-local
@@ -180,12 +181,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return
         }
         state.pending = false
-        Filesystem.writeJson(filePath, {
-          model: modelStore.model, // kilocode_change
+        // kilocode_change start - serialize writes so a slow first write cannot overwrite a later one
+        const data = {
+          model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
-        })
+        }
+        state.writer = state.writer.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
+        // kilocode_change end
       }
 
       Filesystem.readJson(filePath)
@@ -264,6 +268,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         // kilocode_change start - expose persisted per-agent pick separately from overrides
         saved(name: string) {
           return modelStore.model[name]
+        },
+        // kilocode_change end
+        // kilocode_change start - resolve once all queued writes (atomic write+rename) have settled.
+        // Used by tests to deterministically await the writer chain instead of sleeping for a fixed
+        // duration, which is too slow on Windows CI where temp-file rename can exceed 50ms under AV.
+        async flush() {
+          const deadline = Date.now() + 5000
+          while (state.pending && Date.now() < deadline) await new Promise((r) => setTimeout(r, 0))
+          await state.writer
         },
         // kilocode_change end
         recent() {
@@ -451,21 +464,19 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       },
     }
 
-    // kilocode_change - validate configured agent model when agent changes
     createEffect(() => {
       // kilocode_change start - configured models resolve directly without persistence
       if (!model.ready) return
       const value = agent.current()
-      if (!value) return // guard against empty agent list during org switch
-      if (!value.model) return
+      if (!value?.model) return
       if (isModelValid(value.model)) return
       toast.show({
         variant: "warning",
         message: `Agent ${value.name}'s configured model ${value.model.providerID}/${value.model.modelID} is not valid`,
         duration: 3000,
       })
-      // kilocode_change end
     })
+    // kilocode_change end
 
     const result = {
       model,

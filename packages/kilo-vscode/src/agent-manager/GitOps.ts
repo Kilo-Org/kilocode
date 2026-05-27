@@ -3,7 +3,13 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import simpleGit from "simple-git"
-import { parseWorktreeList, normalizePath } from "./git-import"
+import {
+  parseWorktreeList,
+  normalizePath,
+  parseForEachRefOutput,
+  buildBranchList,
+  type BranchListItem,
+} from "./git-import"
 import type { Semaphore } from "./semaphore"
 
 interface GitOpsOptions {
@@ -43,6 +49,14 @@ export interface ExecResult {
 }
 
 /**
+ * Fixed SSH command injected by {@link nonInteractiveEnv} when the user has
+ * not already configured their own. Exported so callers can check whether a
+ * `GIT_SSH_COMMAND` originated from Kilo (safe) or was inherited from the
+ * parent process (untrusted).
+ */
+export const KILO_NON_INTERACTIVE_SSH_COMMAND = "ssh -o BatchMode=yes"
+
+/**
  * Build environment variables that prevent git and SSH from opening interactive
  * prompts. Used for background operations (e.g. periodic fetch) so users with
  * SSH keys that require passphrase confirmation are not bombarded with dialogs.
@@ -57,9 +71,18 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
     GIT_TERMINAL_PROMPT: "0",
   }
   if (!process.env.GIT_SSH_COMMAND) {
-    env.GIT_SSH_COMMAND = "ssh -o BatchMode=yes"
+    env.GIT_SSH_COMMAND = KILO_NON_INTERACTIVE_SSH_COMMAND
   }
   return env
+}
+
+/**
+ * True when `env.GIT_SSH_COMMAND` is the fixed value Kilo sets, rather than
+ * an inherited one from the parent process. Use this to decide whether it's
+ * safe to pass `allowUnsafeSshCommand: true` to simple-git.
+ */
+export function isKiloOwnedSshCommand(env: NodeJS.ProcessEnv): boolean {
+  return env.GIT_SSH_COMMAND === KILO_NON_INTERACTIVE_SSH_COMMAND
 }
 
 export class GitOps {
@@ -217,6 +240,31 @@ export class GitOps {
     return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
       .then(() => true)
       .catch(() => false)
+  }
+
+  /**
+   * List local branches and `origin/*` remotes sorted by last commit date,
+   * with the resolved default branch flagged. Mirrors WorktreeManager's
+   * `listBranches` shape but takes `cwd` per call so it works outside the
+   * worktree context (e.g. for the diff viewer's base branch picker).
+   */
+  async listBranches(cwd: string): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    const def = (await this.resolveDefaultBranch(cwd)) ?? ""
+    const raw = await this.raw(
+      [
+        "for-each-ref",
+        "--sort=-committerdate",
+        "--format=%(refname)\t%(committerdate:iso-strict)",
+        "refs/heads/",
+        "refs/remotes/origin/",
+      ],
+      cwd,
+    ).catch((err) => {
+      this.log("listBranches: for-each-ref failed", err instanceof Error ? err.message : String(err))
+      return ""
+    })
+    const { locals, remotes, dates } = parseForEachRefOutput(raw)
+    return { branches: buildBranchList(locals, remotes, dates, def), defaultBranch: def }
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */

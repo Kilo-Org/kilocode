@@ -11,6 +11,8 @@ export type SidebarItem = { type: "local" | "wt" | "session"; id: string }
 /** Build a canonical sidebar order containing section IDs and every worktree ID. */
 export function completeSidebarOrder(secs: SectionState[], all: WorktreeState[], order: string[]): string[] {
   const valid = new Set([...secs.map((sec) => sec.id), ...all.map((wt) => wt.id)])
+  const secIds = new Set(secs.map((sec) => sec.id))
+  const wtMap = new Map(all.map((wt) => [wt.id, wt]))
   const result: string[] = []
   const seen = new Set<string>()
   const add = (id: string) => {
@@ -21,7 +23,18 @@ export function completeSidebarOrder(secs: SectionState[], all: WorktreeState[],
   for (const id of order) add(id)
   for (const sec of secs) add(sec.id)
   for (const wt of all) add(wt.id)
-  return result
+  if (secs.length === 0) return result
+  return [
+    ...result.filter((id) => {
+      const wt = wtMap.get(id)
+      return wt && !wt.sectionId
+    }),
+    ...result.filter((id) => secIds.has(id)),
+    ...result.filter((id) => {
+      const wt = wtMap.get(id)
+      return wt?.sectionId
+    }),
+  ]
 }
 
 /** Check if this worktree is part of a multi-version group. */
@@ -42,8 +55,7 @@ export const isGroupEnd = (wt: WorktreeState, idx: number, list: WorktreeState[]
 }
 
 /**
- * Build the interleaved list of sections and ungrouped worktrees
- * ordered by sidebarWorktreeOrder.
+ * Build the top-level list with ungrouped worktrees before sections.
  */
 export function buildTopLevelItems(
   secs: SectionState[],
@@ -54,34 +66,18 @@ export function buildTopLevelItems(
   if (secs.length === 0) {
     return all.map((wt) => ({ kind: "worktree" as const, wt }))
   }
-  const secMap = new Map(secs.map((s) => [s.id, s]))
-  const wtMap = new Map(ungrouped.map((wt) => [wt.id, wt]))
-  const result: TopLevelItem[] = []
-  const placed = new Set<string>()
-
-  for (const id of order) {
-    if (placed.has(id)) continue
-    placed.add(id)
-    const sec = secMap.get(id)
-    if (sec) {
-      result.push({ kind: "section", section: sec })
-      continue
-    }
-    const wt = wtMap.get(id)
-    if (wt) result.push({ kind: "worktree", wt })
-  }
-  for (const sec of secs) {
-    if (!placed.has(sec.id)) result.push({ kind: "section", section: sec })
-  }
-  for (const wt of ungrouped) {
-    if (!placed.has(wt.id)) result.push({ kind: "worktree", wt })
-  }
-  return result
+  const rank = new Map(order.map((id, idx) => [id, idx] as const))
+  const sort = <T extends { id: string }>(items: T[]) =>
+    [...items].sort((a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER))
+  return [
+    ...sort(ungrouped).map((wt) => ({ kind: "worktree" as const, wt })),
+    ...sort(secs).map((section) => ({ kind: "section" as const, section })),
+  ]
 }
 
 /**
  * Build the flat visual order of all sidebar items matching what the user sees.
- * LOCAL is always first, then worktrees in visual order (respecting section layout and
+ * LOCAL is always first, then worktrees in visual order (ungrouped first, then sections,
  * skipping collapsed sections), then unassigned sessions.
  */
 export function buildSidebarOrder(

@@ -143,6 +143,7 @@ class ChatLogSummaryTest {
                 providerID = "kilo",
                 modelID = "gpt-5",
                 agent = "code",
+                variant = "medium",
             )
         )
 
@@ -150,6 +151,7 @@ class ChatLogSummaryTest {
         assertTrue(out.contains("types=text"), out)
         assertTrue(out.contains("agent=code"), out)
         assertTrue(out.contains("model=kilo/gpt-5"), out)
+        assertTrue(out.contains("variant=medium"), out)
     }
 
     @Test

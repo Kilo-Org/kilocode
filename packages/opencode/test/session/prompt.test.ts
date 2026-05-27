@@ -1,27 +1,29 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { FetchHttpClient } from "effect/unstable/http"
-import { expect } from "bun:test"
+import { afterEach, expect, mock, spyOn } from "bun:test" // kilocode_change - spy on review telemetry
+import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change - assert review command telemetry
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath } from "url"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Config } from "../../src/config"
-import { LSP } from "../../src/lsp"
+import { Config } from "@/config/config"
+import { LSP } from "@/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
-import { Provider as ProviderSvc } from "../../src/provider"
+import { Provider as ProviderSvc } from "@/provider/provider"
 import { Env } from "../../src/env"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
-import { Session } from "../../src/session"
+import { Session } from "@/session/session"
+import { SessionMessageTable } from "../../src/session/session.sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionSummary } from "../../src/session/summary"
 import { Instruction } from "../../src/session/instruction"
@@ -29,18 +31,22 @@ import { SessionProcessor } from "../../src/session/processor"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
+import { Suggestion } from "../../src/kilocode/suggestion" // kilocode_change - accept suggestion in telemetry test
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
+import { SessionV2 } from "../../src/v2/session"
 import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
 import { Shell } from "../../src/shell/shell"
 import { Snapshot } from "../../src/snapshot"
-import { ToolRegistry } from "../../src/tool"
-import { Truncate } from "../../src/tool"
-import { Log } from "../../src/util"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { ToolRegistry } from "@/tool/registry"
+import { Truncate } from "@/tool/truncate"
+import * as Log from "@opencode-ai/core/util/log"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import * as Database from "../../src/storage/db"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { Format } from "../../src/format"
+import { Git } from "../../src/git" // kilocode_change
 import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
@@ -189,6 +195,7 @@ function makeHttp() {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
+    Layer.provide(Git.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -215,7 +222,12 @@ function makeHttp() {
 
 const it = testEffect(makeHttp())
 const unix = process.platform !== "win32" ? it.live : it.live.skip
-const unixSkip = it.live.skip // kilocode_change - TODO(#8990): skip flaky cancel tests on Linux CI
+
+// kilocode_change start - restore any spies between tests so review telemetry spy never leaks
+afterEach(() => {
+  mock.restore()
+})
+// kilocode_change end
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -329,9 +341,11 @@ const addSubtask = (sessionID: SessionID, messageID: MessageID, model = ref) =>
   })
 
 const boot = Effect.fn("test.boot")(function* (input?: { title?: string }) {
+  const config = yield* Config.Service
   const prompt = yield* SessionPrompt.Service
   const run = yield* SessionRunState.Service
   const sessions = yield* Session.Service
+  yield* config.get()
   const chat = yield* sessions.create(input ?? { title: "Pinned" })
   return { prompt, run, sessions, chat }
 })
@@ -377,6 +391,47 @@ it.live("loop calls LLM and returns assistant message", () =>
       const parts = result.parts.filter((p) => p.type === "text")
       expect(parts.some((p) => p.type === "text" && p.text === "world")).toBe(true)
       expect(yield* llm.hits).toHaveLength(1)
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+
+it.live("prompt emits v2 prompted and synthetic events", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({ title: "Pinned" })
+
+      yield* prompt.prompt({
+        sessionID: chat.id,
+        agent: "build",
+        noReply: true,
+        parts: [
+          { type: "text", text: "hello v2" },
+          {
+            type: "file",
+            mime: "text/plain",
+            filename: "note.txt",
+            url: "data:text/plain;base64,bm90ZSBjb250ZW50",
+          },
+        ],
+      })
+
+      const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
+        Effect.provide(SessionV2.layer),
+      )
+      const row = Database.use((db) =>
+        db.select().from(SessionMessageTable).where(Database.eq(SessionMessageTable.session_id, chat.id)).get(),
+      )
+      expect(messages.find((message) => message.type === "user")).toMatchObject({ type: "user", text: "hello v2" })
+      expect(typeof row?.data.time.created).toBe("number")
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "synthetic", text: expect.stringContaining("Called the Read tool") }),
+          expect.objectContaining({ type: "synthetic", text: "note content" }),
+        ]),
+      )
     }),
     { git: true, config: providerCfg },
   ),
@@ -693,6 +748,50 @@ it.live(
   10_000, // kilocode_change
 )
 
+// kilocode_change start - child task failures stay tool errors so the parent can recover
+it.live("failed task tool preserves metadata and lets the parent follow up", () =>
+  provideTmpdirServer(
+    Effect.fnUntraced(function* ({ llm }) {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const chat = yield* sessions.create({
+        title: "Pinned",
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
+      })
+      yield* llm.tool("task", {
+        description: "inspect bug",
+        prompt: "look into the cache key path",
+        subagent_type: "general",
+      })
+      yield* llm.error(400, { error: { message: "child prompt failed" } })
+      yield* llm.text("parent recovered")
+      yield* user(chat.id, "hello")
+
+      const result = yield* prompt.loop({ sessionID: chat.id })
+      expect(yield* llm.calls).toBe(3)
+      expect(result.parts.some((part) => part.type === "text" && part.text === "parent recovered")).toBe(true)
+
+      const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+      const part = msgs
+        .flatMap((msg) => msg.parts)
+        .find(
+          (part): part is ErrorToolPart =>
+            part.type === "tool" && part.tool === "task" && part.state.status === "error",
+        )
+      expect(part).toBeDefined()
+      if (!part) return
+      expect(part.state.error).toContain("child prompt failed")
+      expect(part.state.metadata?.sessionId).toBeDefined()
+
+      const hits = yield* llm.hits
+      expect(hits).toHaveLength(3)
+      expect(JSON.stringify(hits.at(-1)?.body)).toContain("child prompt failed")
+    }),
+    { git: true, config: providerCfg },
+  ),
+)
+// kilocode_change end
+
 it.live(
   "loop sets status to busy then idle",
   () =>
@@ -757,7 +856,8 @@ it.live(
   3_000,
 )
 
-it.live(
+unix(
+  // kilocode_change - skip flaky cancel test on Windows CI
   "cancel records MessageAbortedError on interrupted process",
   () =>
     provideTmpdirServer(
@@ -894,6 +994,43 @@ it.live(
 // kilocode_change end
 
 it.live(
+  "cancel propagates from slash command subtask to child session",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service
+        const chat = yield* sessions.create({ title: "Pinned" })
+        yield* llm.hang
+        const msg = yield* user(chat.id, "hello")
+        yield* addSubtask(chat.id, msg.id)
+
+        const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        yield* llm.wait(1)
+
+        const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+        const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
+        const tool = taskMsg ? toolPart(taskMsg.parts) : undefined
+        const sessionID = tool?.state.status === "running" ? tool.state.metadata?.sessionId : undefined
+        expect(typeof sessionID).toBe("string")
+        if (typeof sessionID !== "string") throw new Error("missing child session id")
+        const childID = SessionID.make(sessionID)
+        expect((yield* status.get(childID)).type).toBe("busy")
+
+        yield* prompt.cancel(chat.id)
+        const exit = yield* Fiber.await(fiber)
+        expect(Exit.isSuccess(exit)).toBe(true)
+
+        expect((yield* status.get(chat.id)).type).toBe("idle")
+        expect((yield* status.get(childID)).type).toBe("idle")
+      }),
+      { git: true, config: providerCfg },
+    ),
+  10_000,
+)
+
+it.live(
   "cancel with queued callers resolves all cleanly",
   () =>
     provideTmpdirServer(
@@ -960,6 +1097,7 @@ it.live(
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* llm.wait(1)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        yield* Effect.sleep(50) // kilocode_change - let b attach to a's done deferred before gate resolves
         gate.resolve()
 
         const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1177,6 +1315,56 @@ unix("shell completes a fast command on the preferred shell", () =>
   ),
 )
 
+unix(
+  "shell uses configured shell over env shell",
+  () =>
+    withSh(() =>
+      provideTmpdirInstance(
+        (_dir) =>
+          Effect.gen(function* () {
+            if (!Bun.which("bash")) return
+
+            const { prompt, chat } = yield* boot()
+            const result = yield* prompt.shell({
+              sessionID: chat.id,
+              agent: "build",
+              command: "[[ 1 -eq 1 ]] && printf configured",
+            })
+
+            const tool = completedTool(result.parts)
+            if (!tool) return
+            expect(tool.state.output).toContain("configured")
+          }),
+        { git: true, config: { ...cfg, shell: "bash" } },
+      ),
+    ),
+  30_000,
+)
+
+unix("shell commands can change directory after startup", () =>
+  provideTmpdirInstance(
+    (dir) =>
+      Effect.gen(function* () {
+        const { prompt, run, chat } = yield* boot()
+        const parent = path.dirname(dir)
+        const result = yield* prompt.shell({
+          sessionID: chat.id,
+          agent: "build",
+          command: "cd .. && pwd",
+        })
+
+        expect(result.info.role).toBe("assistant")
+        const tool = completedTool(result.parts)
+        if (!tool) return
+
+        expect(tool.state.output).toContain(parent)
+        expect(tool.state.metadata.output).toContain(parent)
+        yield* run.assertNotBusy(chat.id)
+      }),
+    { git: true, config: cfg },
+  ),
+)
+
 unix("shell lists files from the project directory", () =>
   provideTmpdirInstance(
     (dir) =>
@@ -1267,6 +1455,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1276,7 +1465,9 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell to actually be running before forking loop
+        yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+        // kilocode_change end
 
         const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         yield* Effect.sleep(50)
@@ -1305,6 +1496,7 @@ it.live(
       Effect.fnUntraced(function* ({ llm }) {
         const prompt = yield* SessionPrompt.Service
         const sessions = yield* Session.Service
+        const status = yield* SessionStatus.Service // kilocode_change
         const chat = yield* sessions.create({
           title: "Pinned",
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
@@ -1314,7 +1506,9 @@ it.live(
         const sh = yield* prompt
           .shell({ sessionID: chat.id, agent: "build", command: "sleep 0.2" })
           .pipe(Effect.forkChild)
-        yield* Effect.sleep(50)
+        // kilocode_change start - wait for shell to actually be running before forking loop callers
+        yield* waitFor("shell busy", status.get(chat.id).pipe(Effect.map((s) => (s.type === "busy" ? s : undefined))))
+        // kilocode_change end
 
         const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
         const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
@@ -1338,8 +1532,46 @@ it.live(
   30_000, // kilocode_change - Windows CI process startup can exceed 3s
 )
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+unix(
+  "command ! expansion uses configured shell over env shell",
+  () =>
+    withSh(() =>
+      provideTmpdirServer(
+        ({ llm }) =>
+          Effect.gen(function* () {
+            if (!Bun.which("bash")) return
+
+            const { prompt, chat } = yield* boot()
+            yield* llm.text("done")
+
+            const result = yield* prompt.command({
+              sessionID: chat.id,
+              command: "probe",
+              arguments: "",
+            })
+
+            expect(result.info.role).toBe("assistant")
+            const inputs = yield* llm.inputs
+            expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("configured")
+          }),
+        {
+          git: true,
+          config: (url) => ({
+            ...providerCfg(url),
+            shell: "bash",
+            command: {
+              probe: {
+                template: "Probe: !`[[ 1 -eq 1 ]] && printf configured`",
+              },
+            },
+          }),
+        },
+      ),
+    ),
+  30_000,
+)
+
+unix(
   "cancel interrupts shell and resolves cleanly",
   () =>
     withSh(() =>
@@ -1375,22 +1607,41 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+// kilocode_change start - cancel persists aborted shell result when shell ignores TERM
+unix(
   "cancel persists aborted shell result when shell ignores TERM",
   () =>
     withSh(() =>
       provideTmpdirInstance(
         (_dir) =>
           Effect.gen(function* () {
-            const { prompt, chat } = yield* boot()
+            const { prompt, chat, sessions } = yield* boot()
 
             const sh = yield* prompt
-              .shell({ sessionID: chat.id, agent: "build", command: "trap '' TERM; sleep 30" })
+              .shell({
+                sessionID: chat.id,
+                agent: "build",
+                command: "trap '' TERM; printf started; sleep 10; printf not-killed",
+              })
               .pipe(Effect.forkChild)
-            yield* Effect.sleep(50)
+            yield* waitFor(
+              "shell start output",
+              sessions
+                .messages({ sessionID: chat.id })
+                .pipe(
+                  Effect.map((msgs) =>
+                    msgs
+                      .flatMap((msg) => msg.parts)
+                      .find(
+                        (part) =>
+                          part.type === "tool" &&
+                          part.state.status === "running" &&
+                          (part.state.metadata?.output ?? "").includes("started"),
+                      ),
+                  ),
+                ),
+            )
 
             yield* prompt.cancel(chat.id)
 
@@ -1400,7 +1651,9 @@ unixSkip(
               expect(exit.value.info.role).toBe("assistant")
               const tool = completedTool(exit.value.parts)
               if (tool) {
+                expect(tool.state.output).toContain("started")
                 expect(tool.state.output).toContain("User aborted the command")
+                expect(tool.state.output).not.toContain("not-killed")
               }
             }
           }),
@@ -1441,7 +1694,20 @@ unix(
 
           const run = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
           yield* llm.wait(1)
-          yield* Effect.sleep(150)
+          // kilocode_change start
+          yield* waitFor(
+            "large bash output",
+            sessions.messages({ sessionID: chat.id }).pipe(
+              Effect.map((msgs) => {
+                const part = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool")
+                if (part?.type !== "tool") return
+                if (part.state.status !== "running") return
+                if (!String(part.state.metadata?.output ?? "").includes("03999")) return
+                return part
+              }),
+            ),
+          )
+          // kilocode_change end
           yield* prompt.cancel(chat.id)
 
           const exit = yield* Fiber.await(run)
@@ -1462,8 +1728,7 @@ unix(
   30_000,
 )
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+unix(
   "cancel interrupts loop queued behind shell",
   () =>
     provideTmpdirInstance(
@@ -1483,6 +1748,10 @@ unixSkip(
 
           const exit = yield* Fiber.await(loop)
           expect(Exit.isSuccess(exit)).toBe(true)
+          if (Exit.isSuccess(exit)) {
+            const tool = completedTool(exit.value.parts)
+            expect(tool?.state.output).toContain("User aborted the command")
+          }
 
           yield* Fiber.await(sh)
         }),
@@ -1490,7 +1759,6 @@ unixSkip(
     ),
   30_000,
 )
-// kilocode_change end
 
 unix(
   "shell rejects when another shell is already running",
@@ -1888,6 +2156,94 @@ it.live("applies agent variant only when using agent model", () =>
     },
   ),
 )
+
+// kilocode_change start - /review subtask path tags child completions for telemetry
+it.live(
+  "review command marks child completions with review telemetry",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const trackSpy = spyOn(Telemetry, "trackLlmCompletion")
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({
+          title: "Review telemetry",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        // child subagent's first LLM step needs non-zero usage so trackStep fires
+        yield* llm.text("review done", { usage: { input: 100, output: 50 } })
+
+        yield* prompt.command({
+          sessionID: chat.id,
+          command: "review",
+          arguments: "",
+          agent: "general",
+        })
+
+        const tagged = trackSpy.mock.calls
+          .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
+          .find((p) => p.mode === "review" && p.feature === "code_reviews" && p.command === "review")
+        expect(tagged).toBeDefined()
+      }),
+      { git: true, config: providerCfg },
+    ),
+  30_000,
+)
+
+it.live(
+  "accepted suggest tool marks following completion with review telemetry",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const trackSpy = spyOn(Telemetry, "trackLlmCompletion")
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const chat = yield* sessions.create({
+          title: "Suggest telemetry",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        yield* llm.tool("suggest", {
+          suggest: "Run a local review?",
+          actions: [{ label: "Review", prompt: "/local-review-uncommitted --focus telemetry" }],
+        })
+        yield* llm.text("review done", { usage: { input: 100, output: 50 } })
+
+        const fiber = yield* prompt
+          .prompt({
+            sessionID: chat.id,
+            agent: "build",
+            model: ref,
+            parts: [{ type: "text", text: "Suggest a review action." }],
+          })
+          .pipe(Effect.forkChild)
+        const request = yield* waitFor(
+          "suggestion request",
+          Effect.promise(() => Suggestion.list()).pipe(
+            Effect.map((items) => items.find((item) => item.sessionID === chat.id)),
+          ),
+        )
+
+        yield* Effect.promise(() => Suggestion.accept({ requestID: request.id, index: 0 }))
+        yield* Fiber.join(fiber)
+
+        const tagged = trackSpy.mock.calls
+          .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
+          .find(
+            (p) =>
+              p.mode === "review" &&
+              p.feature === "code_reviews" &&
+              p.command === "local-review-uncommitted" &&
+              p.tool === "suggest",
+          )
+        expect(tagged).toBeDefined()
+      }),
+      { git: true, config: providerCfg },
+    ),
+  30_000,
+)
+// kilocode_change end
 
 // Agent / command resolution errors
 

@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
-import { Config } from "../../../src/config"
+import { Config } from "../../../src/config/config"
 
 describe("Config.Info experimental.openTelemetry default", () => {
   test("defaults to true when experimental is set without openTelemetry", () => {

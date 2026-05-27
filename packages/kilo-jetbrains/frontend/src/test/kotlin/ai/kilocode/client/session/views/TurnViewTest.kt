@@ -1,33 +1,40 @@
 package ai.kilocode.client.session.views
 
 import ai.kilocode.client.session.model.Message
+import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.Text
+import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 
 /**
  * Tests for [TurnView] and [MessageView].
  */
 @Suppress("UnstableApiUsage")
 class TurnViewTest : BasePlatformTestCase() {
+    private val openFile: (String) -> Unit = {}
 
     // ------ TurnView ------
 
     fun `test new TurnView is empty`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         assertTrue(tv.messageIds().isEmpty())
     }
 
     fun `test addMessage appends and returns view`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         val mv = tv.addMessage(msg("u1", "user"))
         assertEquals("u1", mv.msg.info.id)
         assertEquals(listOf("u1"), tv.messageIds())
     }
 
     fun `test addMessage preserves insertion order`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         tv.addMessage(msg("u1", "user"))
         tv.addMessage(msg("a1", "assistant"))
         tv.addMessage(msg("a2", "assistant"))
@@ -35,7 +42,7 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test messageView returns the view for a given id`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         tv.addMessage(msg("u1", "user"))
         val mv = tv.messageView("u1")
         assertNotNull(mv)
@@ -43,12 +50,12 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test messageView returns null for unknown id`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         assertNull(tv.messageView("missing"))
     }
 
     fun `test removeMessage removes the view`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         tv.addMessage(msg("u1", "user"))
         tv.addMessage(msg("a1", "assistant"))
 
@@ -59,14 +66,14 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test removeMessage unknown id is noop`() {
-        val tv = TurnView("t1")
+        val tv = TurnView("t1", openFile)
         tv.addMessage(msg("u1", "user"))
         tv.removeMessage("nope")
         assertEquals(listOf("u1"), tv.messageIds())
     }
 
     fun `test dump produces correct format`() {
-        val tv = TurnView("u1")
+        val tv = TurnView("u1", openFile)
         tv.addMessage(msg("u1", "user"))
         tv.addMessage(msg("a1", "assistant"))
         assertEquals("user#u1, assistant#a1", tv.dump())
@@ -75,22 +82,22 @@ class TurnViewTest : BasePlatformTestCase() {
     // ------ MessageView ------
 
     fun `test new MessageView is empty`() {
-        val mv = MessageView(msg("u1", "user"))
+        val mv = MessageView(msg("u1", "user"), openFile)
         assertTrue(mv.partIds().isEmpty())
     }
 
     fun `test MessageView for user message has user role`() {
-        val mv = MessageView(msg("u1", "user"))
+        val mv = MessageView(msg("u1", "user"), openFile)
         assertEquals("user", mv.role)
     }
 
     fun `test MessageView for assistant message has assistant role`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         assertEquals("assistant", mv.role)
     }
 
     fun `test upsertPart adds a new TextView for Text content`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         val text = ai.kilocode.client.session.model.Text("p1")
         text.content.append("hello")
         mv.upsertPart(text)
@@ -100,7 +107,7 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test upsertPart updates existing part rather than adding duplicate`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         val t1 = ai.kilocode.client.session.model.Text("p1").also { it.content.append("v1") }
         mv.upsertPart(t1)
 
@@ -113,7 +120,7 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test removePart removes the renderer`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         mv.upsertPart(ai.kilocode.client.session.model.Text("p1").also { it.content.append("x") })
         mv.removePart("p1")
 
@@ -122,13 +129,13 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test removePart unknown id is noop`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         mv.removePart("none")
         assertTrue(mv.partIds().isEmpty())
     }
 
     fun `test appendDelta reaches TextView`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         mv.upsertPart(ai.kilocode.client.session.model.Text("p1").also { it.content.append("hello ") })
 
         mv.appendDelta("p1", "world")
@@ -138,7 +145,7 @@ class TurnViewTest : BasePlatformTestCase() {
     }
 
     fun `test appendDelta for unknown part id is noop`() {
-        val mv = MessageView(msg("a1", "assistant"))
+        val mv = MessageView(msg("a1", "assistant"), openFile)
         // Must not throw
         mv.appendDelta("unknown", "delta")
     }
@@ -148,10 +155,44 @@ class TurnViewTest : BasePlatformTestCase() {
         val text = ai.kilocode.client.session.model.Text("p1").also { it.content.append("preloaded") }
         message.parts["p1"] = text
 
-        val mv = MessageView(message)
+        val mv = MessageView(message, openFile)
 
         assertEquals(listOf("p1"), mv.partIds())
         assertTrue(mv.part("p1") is TextView)
+    }
+
+    fun `test assistant card parts use shared compact gap`() {
+        val message = msg("a1", "assistant")
+        val reasoning = Reasoning("r1")
+        val tool = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
+        message.parts["r1"] = reasoning
+        message.parts["t1"] = tool
+        val mv = MessageView(message, openFile)
+
+        mv.setSize(400, 200)
+        mv.doLayout()
+
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+            mv.part("t1")!!.y - mv.part("r1")!!.bounds.maxY.toInt(),
+        )
+    }
+
+    fun `test consecutive messages use shared compact gap`() {
+        val tv = TurnView("u1", openFile)
+        tv.addMessage(msg("u1", "user").also { msg ->
+            msg.parts["t1"] = Tool("t1", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
+        })
+        tv.addMessage(msg("a2", "assistant").also { msg ->
+            msg.parts["t2"] = Tool("t2", "read", toolKind("read")).also { it.state = ToolExecState.COMPLETED }
+        })
+
+        tv.setSize(400, 300)
+        tv.doLayout()
+        val first = tv.messageView("u1")!!
+        val second = tv.messageView("a2")!!
+
+        assertEquals(JBUI.scale(SessionUiStyle.SessionLayout.GAP), second.y - first.bounds.maxY.toInt())
     }
 
     // ------ helpers ------

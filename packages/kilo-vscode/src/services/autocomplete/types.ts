@@ -4,7 +4,6 @@ import type { Position, Range, RangeInFile } from "./continuedev/core"
 import type { FileIgnoreController } from "./shims/FileIgnoreController"
 import type { ContextRetrievalService } from "./continuedev/core/autocomplete/context/ContextRetrievalService"
 import type { VsCodeIde } from "./continuedev/core/vscode-test-harness/src/VSCodeIde"
-import type { AutocompleteModel } from "./AutocompleteModel"
 
 export interface ResponseMetaData {
   cost: number
@@ -81,7 +80,6 @@ export interface AutocompleteStatusBarStateProps {
   snoozed?: boolean
   model?: string
   provider?: string
-  profileName?: string | null
   hasNoUsableProvider?: boolean
   totalSessionCost: number
   completionCount: number
@@ -212,6 +210,6 @@ export function contextToAutocompleteInput(context: AutocompleteSuggestionContex
 export interface AutocompleteContextProvider {
   contextService: ContextRetrievalService
   ide: VsCodeIde
-  model: AutocompleteModel
+  modelId: string
   ignoreController?: Promise<FileIgnoreController>
 }

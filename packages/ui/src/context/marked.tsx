@@ -541,7 +541,9 @@ export async function deferredHighlight(
   onComplete?: () => void,
   signal?: { aborted: boolean },
 ): Promise<void> {
-  const blocks = Array.from(container.querySelectorAll("pre > code[data-lang]:not([data-highlighted])"))
+  const blocks = Array.from(
+    container.querySelectorAll('pre > code[data-lang]:not([data-highlighted]):not([data-lang="mermaid"])'),
+  )
   if (blocks.length === 0) {
     onComplete?.()
     return
@@ -663,7 +665,8 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             // chars, so "c++" doesn't become "c" (wrong language highlight).
             const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
             const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
-            const attr = safe ? ` class="language-${safe}" data-lang="${safe}"` : ' data-lang="text"'
+            const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
+            const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
             return `<pre><code${attr}>${escaped}</code></pre>`
           },
           // kilocode_change end

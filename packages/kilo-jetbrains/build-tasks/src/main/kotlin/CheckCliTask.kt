@@ -5,6 +5,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
@@ -14,9 +15,14 @@ import java.io.File
  * Verify that CLI binaries exist before packaging the plugin.
  * In production mode, all platform binaries must be present.
  * In dev mode, only the current platform binary is required.
+ *
+ * CLI binaries must be prepared separately before packaging:
+ *   Local:      bun run build          (from packages/kilo-jetbrains/)
+ *   Production: bun run build:production
  */
 abstract class CheckCliTask : DefaultTask() {
     @get:InputDirectory
+    @get:Optional
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val dir: DirectoryProperty
 

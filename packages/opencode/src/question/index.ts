@@ -1,10 +1,10 @@
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { InstanceState } from "@/effect"
+import { InstanceState } from "@/effect/instance-state"
 import { SessionID, MessageID } from "@/session/schema"
 import { zod } from "@/util/effect-zod"
-import { Log } from "@/util"
+import * as Log from "@opencode-ai/core/util/log"
 import { withStatics } from "@/util/schema"
 import { QuestionID } from "./schema"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
@@ -28,6 +28,12 @@ export class Option extends Schema.Class<Option>("QuestionOption")({
   }),
   descriptionKey: Schema.optional(Schema.String).annotate({
     description: "Optional i18n key for the description",
+  }),
+  // kilocode_change end
+  // kilocode_change start - hint to UI clients to switch the active agent/mode picker
+  // when this option is selected (before the reply is confirmed by the server).
+  mode: Schema.optional(Schema.String).annotate({
+    description: "Optional agent/mode name to pre-select in the UI when this option is picked",
   }),
   // kilocode_change end
 }) {

@@ -39,6 +39,15 @@ runs:
     - name: Clear checkout auth
       run: |
         git config --local --unset-all http.https://github.com/.extraheader || true
+        # kilocode_change start
+        keys="$(git config --local --name-only --get-regexp '^includeIf\.gitdir:' || true)"
+        for key in $keys; do
+          path="$(git config --local --get "$key" || true)"
+          case "$path" in
+            *git-credentials-*.config) git config --local --unset-all "$key" || true ;;
+          esac
+        done
+        # kilocode_change end
       shell: bash
 
     - name: Configure git remote

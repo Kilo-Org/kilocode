@@ -182,6 +182,10 @@ export class SessionTerminalManager {
     return entry !== undefined && entry.terminal.exitStatus === undefined
   }
 
+  hasActiveTerminal(): boolean {
+    return this.host.activeTerminal() !== undefined
+  }
+
   dispose(): void {
     void this.host.setContext("kilo-code.agentTerminalFocus", false)
     for (const entry of this.terminals.values()) entry.terminal.dispose()

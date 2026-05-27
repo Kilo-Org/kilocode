@@ -1,6 +1,6 @@
 import path from "path"
 import { writeHeapSnapshot } from "node:v8"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 
 export namespace HeapSnapshot {
   export function write() {

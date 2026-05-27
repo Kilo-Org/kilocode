@@ -2,17 +2,19 @@
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
-import { Cause, Exit } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
-import { Session } from "@/session"
-import { Flag } from "@/flag/flag"
+import { Session } from "@/session/session"
+import { Instance } from "@/project/instance"
+import type { SessionStatus } from "@/session/status"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
 import { Permission } from "@/permission"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
-import { Filesystem } from "@/util"
+import { Filesystem } from "@/util/filesystem"
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -26,7 +28,7 @@ export namespace KiloSessionPrompt {
    */
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
-    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
+    if (!["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)
@@ -57,13 +59,60 @@ export namespace KiloSessionPrompt {
     return PlanFollowup.abort(sessionID)
   }
 
+  export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
+    sessionID: SessionID
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+  }) {
+    const state = yield* input.status.get(input.sessionID)
+    if (state.type !== "idle") return
+
+    const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+    const tail = msgs.at(-1)
+    if (!tail || tail.info.role !== "assistant") return
+    if (tail.parts.length > 0 || tail.info.finish || tail.info.error) return
+
+    const prev = msgs.at(-2)
+    if (!prev || prev.info.role !== "user") return
+    if (tail.info.parentID !== prev.info.id) return
+
+    yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+  })
+
+  export const recoverProviderFinishError = Effect.fn("KiloSessionPrompt.recoverProviderFinishError")(
+    function* (input: {
+      sessionID: SessionID
+      status: Pick<SessionStatus.Interface, "get">
+      sessions: Pick<Session.Interface, "messages" | "removeMessage">
+    }) {
+      const state = yield* input.status.get(input.sessionID)
+      if (state.type !== "idle") return
+
+      const msgs = yield* input.sessions.messages({ sessionID: input.sessionID, limit: 2 })
+      const tail = msgs.at(-1)
+      if (!tail || tail.info.role !== "assistant") return
+      if (tail.info.finish !== "error" || tail.info.error) return
+      if (!tail.parts.some((part) => part.type === "step-finish" && part.reason === "error")) return
+
+      const prev = msgs.at(-2)
+      if (!prev || prev.info.role !== "user") return
+      if (tail.info.parentID !== prev.info.id) return
+
+      yield* input.sessions.removeMessage({ sessionID: input.sessionID, messageID: tail.info.id })
+    },
+  )
+
   export function guardPermissions(input: {
     agent: { name: string; permission: Permission.Ruleset }
     session: Pick<Session.Info, "permission">
   }) {
     const rules = input.session.permission ?? []
     if (!modes.includes(input.agent.name)) return rules
-    return Permission.merge(rules, input.agent.permission, rules.filter((rule) => rule.action === "deny"))
+    return Permission.merge(
+      rules,
+      input.agent.permission,
+      rules.filter((rule) => rule.action === "deny"),
+    )
   }
 
   export function hardPermissions(input: { agent: { name: string; permission: Permission.Ruleset } }) {
@@ -92,7 +141,17 @@ export namespace KiloSessionPrompt {
     cache: EnvCache
   }) {
     if (input.cache.user !== input.lastUser.id) {
-      input.cache.block = environmentDetails(input.lastUser.editorContext)
+      const ctx = (() => {
+        try {
+          return Instance.current
+        } catch {
+          return undefined
+        }
+      })()
+      input.cache.block = environmentDetails({
+        ...input.lastUser.editorContext,
+        ...(ctx ? { directory: ctx.directory, worktree: ctx.worktree } : {}),
+      })
       input.cache.user = input.lastUser.id
     }
     if (!input.cache.block) return
@@ -134,6 +193,16 @@ export namespace KiloSessionPrompt {
   }
 
   /**
+   * Ensures the plan file directory exists. Pre-checks with `Filesystem.isDir`
+   * because `fs.mkdir(recursive: true)` still throws `EEXIST` on Windows
+   * OneDrive ReparsePoint directories in some Node versions (kilocode#9755).
+   */
+  export async function ensurePlanDir(dir: string) {
+    if (await Filesystem.isDir(dir)) return
+    await fs.mkdir(dir, { recursive: true })
+  }
+
+  /**
    * Injects plan-specific reminders into the user message when using the plan agent.
    * Ensures the plan file directory exists and tells the agent where to write.
    */
@@ -143,9 +212,9 @@ export namespace KiloSessionPrompt {
     userMessage: MessageV2.WithParts
   }) {
     if (input.agent.name !== "plan") return
-    const plan = Session.plan(input.session)
+    const plan = Session.plan(input.session, Instance.current)
     const exists = await Filesystem.exists(plan)
-    if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
+    if (!exists) await ensurePlanDir(path.dirname(plan))
     const info = exists
       ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
       : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`

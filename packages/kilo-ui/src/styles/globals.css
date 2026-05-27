@@ -8,9 +8,26 @@
 /* ===== Global design tokens ===== */
 
 :root {
-  --font-size-small: 11px;
-  --font-size-base: 13px;
-  --font-size-large: 16px;
+  --kilo-font-size-10: 10px;
+  --kilo-font-size-11: 11px;
+  --kilo-font-size-12: 12px;
+  --kilo-font-size-13: 13px;
+  --kilo-font-size-14: 14px;
+  --kilo-font-size-15: 15px;
+  --kilo-font-size-16: 16px;
+  --kilo-font-size-17: 17px;
+  --kilo-font-size-18: 18px;
+  --kilo-font-size-19: 19px;
+  --kilo-font-size-20: 20px;
+  --kilo-font-size-21: 21px;
+  --kilo-font-size-22: 22px;
+  --kilo-font-size-23: 23px;
+  --kilo-font-size-24: 24px;
+  --kilo-font-scale: 1;
+  --font-size-x-small: var(--kilo-font-size-10);
+  --font-size-small: var(--kilo-font-size-11);
+  --font-size-base: var(--kilo-font-size-13);
+  --font-size-large: var(--kilo-font-size-16);
 
   /* Tight border radius (~2px) */
   --radius-xs: 2px;
@@ -131,7 +148,7 @@ html[data-theme="kilo-vscode"] {
   --font-family-sans: var(--vscode-font-family);
   --font-family-mono: var(--vscode-editor-font-family, Menlo, Monaco, "Courier New", monospace);
   font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
+  font-size: calc(var(--vscode-font-size, 16px) * var(--kilo-font-scale, 1));
   font-weight: var(--vscode-font-weight);
 
   ::-webkit-scrollbar-button {

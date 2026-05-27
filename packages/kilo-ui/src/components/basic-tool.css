@@ -7,7 +7,7 @@
   }
 
   [data-slot="basic-tool-tool-info"] {
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
     text-align: start;
   }
 
@@ -34,19 +34,19 @@
   }
 
   [data-slot="basic-tool-tool-subtitle"] {
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
   }
 
   [data-slot="basic-tool-tool-title"] {
-    font-size: 14px;
+    font-size: var(--kilo-font-size-14);
   }
 
   [data-slot="message-part-title-text"] {
-    font-size: 14px;
+    font-size: var(--kilo-font-size-14);
   }
 
   [data-slot="message-part-title-filename"] {
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
   }
 
   [data-slot="message-part-meta-line"] {
@@ -57,7 +57,7 @@
     white-space: nowrap;
     min-width: 0;
     flex-shrink: 1;
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
 
     &.clickable {
       cursor: pointer;
@@ -88,7 +88,7 @@
     text-align: left;
     flex-shrink: 1;
     min-width: 0;
-    font-size: 12px;
+    font-size: var(--kilo-font-size-12);
   }
 
   [data-slot="webfetch-meta"] {
@@ -164,7 +164,7 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
 
   [data-slot="mcp-section-label"] {
     padding: 6px 12px 0;
-    font-size: 11px;
+    font-size: var(--kilo-font-size-11);
     color: var(--text-weak, var(--vscode-descriptionForeground));
   }
 

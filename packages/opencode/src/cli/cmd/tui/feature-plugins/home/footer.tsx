@@ -1,6 +1,6 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
 import { createMemo, Match, Show, Switch } from "solid-js"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
 
 const id = "internal:home-footer"
 

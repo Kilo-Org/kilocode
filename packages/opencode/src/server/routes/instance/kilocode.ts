@@ -5,7 +5,7 @@ import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
 import { Skill } from "@/skill"
-import { Agent } from "@/agent/agent"
+import * as KiloAgent from "@/kilocode/agent"
 import { lazy } from "@/util/lazy"
 import { errors } from "../../error"
 import { SessionImportRoutes } from "@/kilocode/session-import/routes"
@@ -92,7 +92,7 @@ export const KilocodeRoutes = lazy(() =>
       ),
       async (c) => {
         const { name } = c.req.valid("json")
-        await Agent.remove(name)
+        await KiloAgent.remove(name)
         return c.json(true)
       },
     ),

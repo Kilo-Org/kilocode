@@ -19,15 +19,6 @@ OpenRouter is an AI platform that provides access to a wide variety of language 
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "OpenRouter" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your OpenRouter API key into the "OpenRouter API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-5.  **(Optional) Custom Base URL:** If you need to use a custom base URL for the OpenRouter API, check "Use custom base URL" and enter the URL. Leave this blank for most users.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add OpenRouter and enter your API key.
@@ -66,17 +57,89 @@ Then set your default model:
 ```
 
 {% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2.  **Select Provider:** Choose "OpenRouter" from the "API Provider" dropdown.
+3.  **Enter API Key:** Paste your OpenRouter API key into the "OpenRouter API Key" field.
+4.  **Select Model:** Choose your desired model from the "Model" dropdown.
+5.  **(Optional) Custom Base URL:** If you need to use a custom base URL for the OpenRouter API, check "Use custom base URL" and enter the URL. Leave this blank for most users.
+
+{% /tab %}
 {% /tabs %}
 
 ## Supported Transforms
 
-OpenRouter provides an [optional "middle-out" message transform](https://openrouter.ai/docs/features/message-transforms) to help with prompts that exceed the maximum context size of a model. You can enable it by checking the "Compress prompts and message chains to the context size" box.
+OpenRouter provides an [optional "middle-out" message transform](https://openrouter.ai/docs/features/message-transforms) to help with prompts that exceed the maximum context size of a model.
+
+{% tabs %}
+{% tab label="VSCode & CLI" %}
+
+The middle-out transform is not exposed as a dedicated UI control in the VS Code extension. To enable it, set `transforms` on the model's `options` in your `kilo.json` config file. Anything under `options` is forwarded verbatim to the OpenRouter AI SDK as `providerOptions.openrouter`:
+
+```jsonc
+{
+  "provider": {
+    "openrouter": {
+      "models": {
+        "anthropic/claude-sonnet-4-20250514": {
+          "options": {
+            "transforms": ["middle-out"],
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+The legacy extension does not expose a control for the middle-out transform, and it does not read configuration from `kilo.json`. To use this option, switch to the new VS Code extension or the CLI.
+
+{% /tab %}
+{% /tabs %}
 
 ## Provider Routing
 
-OpenRouter can route to many different inference providers and this can be controlled in the API Provider settings under Provider Routing.
+OpenRouter can route to many different inference providers. This can be controlled directly via OpenRouter's [`provider` routing parameter](https://openrouter.ai/docs/features/provider-routing).
 
-### Provider Sorting
+{% tabs %}
+{% tab label="VSCode & CLI" %}
+
+Provider routing is not exposed as dedicated UI controls in the VS Code extension. To configure it, set OpenRouter's `provider` routing fields under the model's `options` in your `kilo.json` config file. Everything under `options` is forwarded to the OpenRouter AI SDK as `providerOptions.openrouter`, so any field from the [OpenRouter provider routing docs](https://openrouter.ai/docs/features/provider-routing) can be used.
+
+```jsonc
+{
+  "provider": {
+    "openrouter": {
+      "models": {
+        "anthropic/claude-sonnet-4-20250514": {
+          "options": {
+            "provider": {
+              "sort": "price", // "price" | "throughput" | "latency"
+              "order": ["Anthropic", "Google"], // specific provider preference
+              "only": ["Anthropic"], // restrict to listed providers
+              "data_collection": "deny", // "allow" | "deny"
+              "zdr": true, // zero data retention
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+Omit any field to fall back to your OpenRouter account's default. Fields are passed through without validation — see OpenRouter's docs for the full list of supported values.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+The legacy settings UI exposes Provider Routing as two dropdowns under **Provider Routing**:
+
+**Provider Sorting**
 
 - Default provider sorting: use the setting in your OpenRouter account
 - Prefer providers with lower price
@@ -84,12 +147,15 @@ OpenRouter can route to many different inference providers and this can be contr
 - Prefer providers with lower latency (i.e. shorter time to first token)
 - A specific provider preference can also be chosen.
 
-### Data Policy
+**Data Policy**
 
 - No data policy set: use the settings in your OpenRouter account.
 - Allow prompt training: providers that may train on your prompts or completions are allowed. Free models generally require this option to be enabled.
 - Deny prompt training: providers that may train on your prompts or completions are not allowed.
 - Zero data retention: only providers with a strict zero data retention policy are allowed. This option is not recommended, as it will disable many popular providers, such as Anthropic and OpenAI.
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

@@ -28,7 +28,7 @@ function isNotFound(err: unknown) {
   return false
 }
 
-// Poll /global/health at the same interval as packages/app/src/context/server.tsx.
+// Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
@@ -514,7 +514,6 @@ export class KiloConnectionService {
 
   /**
    * Start polling GET /global/health every 10 seconds.
-   * Ported from packages/app/src/context/server.tsx (HEALTH_POLL_INTERVAL_MS).
    * Provides a second detection channel for server death independent of the SSE heartbeat.
    * If the health check fails while we believe we are connected, the SSE client is
    * disconnected so its reconnect loop kicks in immediately.
@@ -585,7 +584,8 @@ export class KiloConnectionService {
 
     this.sseClient = new SdkSSEAdapter(this.client)
 
-    // Wait until SSE actually reaches a terminal state before resolving connect().
+    // Wait until SSE yields its first server event before resolving connect().
+    // Initial stream failures are handled by the adapter reconnect loop.
     let resolveConnected: (() => void) | null = null
     let rejectConnected: ((error: Error) => void) | null = null
     const connectedPromise = new Promise<void>((resolve, reject) => {
@@ -602,11 +602,8 @@ export class KiloConnectionService {
       }
     })
 
-    this.sseClient.onError((error) => {
+    this.sseClient.onError(() => {
       this.setState("error")
-      rejectConnected?.(error)
-      resolveConnected = null
-      rejectConnected = null
     })
 
     // Wire SSE state → broadcast to all registered state listeners

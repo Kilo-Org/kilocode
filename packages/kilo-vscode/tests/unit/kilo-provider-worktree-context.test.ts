@@ -93,6 +93,17 @@ describe("resolveNewSessionDirectory", () => {
     expect(dir).toBe("/repo/.kilo/worktrees/feature")
   })
 
+  it("uses explicit Agent Manager worktree context after the active session was cleared", () => {
+    const dir = resolveNewSessionDirectory({
+      agentManagerContext: "wt_feature",
+      contextDirectory: "/repo/.kilo/worktrees/feature",
+      sessionDirectories: new Map(),
+      workspaceDirectory: "/repo",
+    })
+
+    expect(dir).toBe("/repo/.kilo/worktrees/feature")
+  })
+
   it("creates local Agent Manager sessions in the workspace root after a worktree was selected", () => {
     const dir = resolveNewSessionDirectory({
       contextSessionID: "ses_worktree",

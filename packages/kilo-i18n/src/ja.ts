@@ -77,4 +77,26 @@ export const dict = {
   "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
   "plan.followup.answer.continue": "ここで続行",
   "plan.followup.answer.continue.description": "このセッションで計画を実装する",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "スナップショットが遅い",
+  "snapshot.slowRepo.question":
+    "リポジトリのサイズのためか、スナップショットシステムの初期化に時間がかかっています。\n\nこのリポジトリのスナップショットを無効にしますか？",
+  "snapshot.slowRepo.answer.continue": "スナップショットを続行",
+  "snapshot.slowRepo.answer.continue.description":
+    "スナップショットが完了するまで待機します。初回のスナップショットが作成された後は、以降のターンは高速になります。",
+  "snapshot.slowRepo.answer.disable": "このプロジェクトで無効化",
+  "snapshot.slowRepo.answer.disable.description":
+    "このプロジェクトでは Kilo のスナップショットを無効にします。Kilo による変更の取り消し/やり直しはできなくなりますが、git は引き続きすべてを追跡します。",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "差分ビューアーで開く",
+  "ui.messagePart.shell.command": "コマンド",
+  "ui.messagePart.shell.output": "出力",
+  "ui.messagePart.openInEditor": "エディタで開く",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "役に立ちました",
+  "ui.message.feedback.notHelpful": "役に立ちませんでした",
+  "ui.message.feedback.clearRating": "評価をクリア",
 }

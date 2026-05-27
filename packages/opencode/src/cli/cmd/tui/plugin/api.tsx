@@ -18,7 +18,7 @@ import { DialogSelect, type DialogSelectOption as SelectOption } from "../ui/dia
 import { Prompt } from "../component/prompt"
 import { Slot as HostSlot } from "./slots"
 import type { useToast } from "../ui/toast"
-import { InstallationVersion } from "@/installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 
 type RouteEntry = {
   key: symbol
@@ -159,6 +159,11 @@ function stateApi(sync: ReturnType<typeof useSync>): TuiPluginApi["state"] {
       todo(sessionID) {
         return sync.data.todo[sessionID] ?? []
       },
+      // kilocode_change start
+      processes(sessionID) {
+        return sync.data.background_process[sessionID] ?? []
+      },
+      // kilocode_change end
       messages(sessionID) {
         return sync.data.message[sessionID] ?? []
       },

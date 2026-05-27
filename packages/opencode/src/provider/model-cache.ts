@@ -1,11 +1,13 @@
-// kilocode_change new file
-import { fetchKiloModels } from "@kilocode/kilo-gateway"
-import { Config } from "../config"
+// kilocode_change - new file
+import { fetchKiloModels, type KiloModelsResult } from "@kilocode/kilo-gateway"
+import { Config } from "../config/config"
 import { Auth } from "../auth"
-import { Log } from "../util"
+import { makeRuntime } from "../effect/run-service"
+import * as Log from "@opencode-ai/core/util/log"
 
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })
+  const auth = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   // Cache structure
   const cache = new Map<
@@ -18,6 +20,23 @@ export namespace ModelCache {
 
   const TTL = 5 * 60 * 1000 // 5 minutes
   const inFlightRefresh = new Map<string, Promise<Record<string, any>>>()
+
+  // Per-provider failure tracking
+  const failures = new Map<string, KiloModelsResult["error"]>()
+
+  /**
+   * Get the failure state for a provider (undefined = no failure)
+   */
+  export function getFailure(providerID: string): KiloModelsResult["error"] | undefined {
+    return failures.get(providerID)
+  }
+
+  /**
+   * Get all provider IDs that have a failure state
+   */
+  export function failedProviders(): string[] {
+    return [...failures.keys()]
+  }
 
   /**
    * Get cached models if available and not expired
@@ -61,24 +80,30 @@ export namespace ModelCache {
     // Cache miss - fetch models
     log.info("fetching models", { providerID })
 
-    try {
-      const authOptions = await getAuthOptions(providerID)
-      const mergedOptions = { ...authOptions, ...options }
-
-      const models = await fetchModels(providerID, mergedOptions)
-
-      // Store in cache
-      cache.set(providerID, {
-        models,
-        timestamp: Date.now(),
-      })
-
-      log.info("models fetched and cached", { providerID, count: Object.keys(models).length })
-      return models
-    } catch (error) {
-      log.error("failed to fetch models", { providerID, error })
+    const authOptions = await getAuthOptions(providerID).catch((err) => {
+      log.warn("getAuthOptions failed", { providerID, err })
       return {}
+    })
+    const mergedOptions = { ...authOptions, ...options }
+
+    const result = await fetchModels(providerID, mergedOptions)
+    const { models } = result
+
+    if (result.error) {
+      failures.set(providerID, result.error)
+      log.warn("model fetch error", { providerID, error: result.error })
+    } else {
+      failures.delete(providerID)
     }
+
+    // Store in cache (even on error, to avoid hammering the API)
+    cache.set(providerID, {
+      models,
+      timestamp: Date.now(),
+    })
+
+    log.info("models fetched and cached", { providerID, count: Object.keys(models).length })
+    return models
   }
 
   /**
@@ -100,32 +125,29 @@ export namespace ModelCache {
     const refreshPromise = (async () => {
       log.info("refreshing models", { providerID })
 
-      try {
-        const authOptions = await getAuthOptions(providerID)
-        const mergedOptions = { ...authOptions, ...options }
-
-        const models = await fetchModels(providerID, mergedOptions)
-
-        // Update cache with new models
-        cache.set(providerID, {
-          models,
-          timestamp: Date.now(),
-        })
-
-        log.info("models refreshed", { providerID, count: Object.keys(models).length })
-        return models
-      } catch (error) {
-        log.error("failed to refresh models", { providerID, error })
-
-        // Return existing cache or empty object
-        const cached = cache.get(providerID)
-        if (cached) {
-          log.debug("returning stale cache after refresh failure", { providerID })
-          return cached.models
-        }
-
+      const authOptions = await getAuthOptions(providerID).catch((err) => {
+        log.warn("getAuthOptions failed during refresh", { providerID, err })
         return {}
+      })
+      const mergedOptions = { ...authOptions, ...options }
+
+      const result = await fetchModels(providerID, mergedOptions)
+      const { models } = result
+
+      if (result.error) {
+        failures.set(providerID, result.error)
+        log.warn("model refresh error", { providerID, error: result.error })
+      } else {
+        failures.delete(providerID)
       }
+
+      cache.set(providerID, {
+        models,
+        timestamp: Date.now(),
+      })
+
+      log.info("models refreshed", { providerID, count: Object.keys(models).length })
+      return models
     })()
 
     // Track in-flight refresh
@@ -145,6 +167,7 @@ export namespace ModelCache {
    */
   export function clear(providerID: string): void {
     const deleted = cache.delete(providerID)
+    failures.delete(providerID)
     if (deleted) {
       log.info("cache cleared", { providerID })
     } else {
@@ -158,20 +181,21 @@ export namespace ModelCache {
    * @param options - Provider options
    * @returns Fetched models
    */
-  async function fetchModels(providerID: string, options: any): Promise<Record<string, any>> {
+  async function fetchModels(providerID: string, options: any): Promise<KiloModelsResult> {
     if (providerID === "kilo") {
       return fetchKiloModels(options)
     }
 
     // kilocode_change start
     if (providerID === "apertis") {
-      return fetchApertisModels(options)
+      const models = await fetchApertisModels(options)
+      return { models }
     }
     // kilocode_change end
 
     // Other providers not implemented yet
     log.debug("provider not implemented", { providerID })
-    return {}
+    return { models: {} }
   }
 
   // kilocode_change start
@@ -234,6 +258,7 @@ export namespace ModelCache {
    */
   async function getAuthOptions(providerID: string): Promise<any> {
     const options: any = {}
+    const getAuth = (id: string) => auth.runPromise((svc) => svc.get(id))
 
     if (providerID === "kilo") {
       // Get from Config
@@ -250,7 +275,7 @@ export namespace ModelCache {
       // kilocode_change end
 
       // Get from Auth
-      const auth = await Auth.get(providerID)
+      const auth = await getAuth(providerID)
       if (auth) {
         if (auth.type === "api") {
           options.kilocodeToken = auth.key
@@ -291,7 +316,7 @@ export namespace ModelCache {
         options.baseURL = providerConfig.options.baseURL
       }
 
-      const auth = await Auth.get(providerID)
+      const auth = await getAuth(providerID)
       if (auth && auth.type === "api") {
         options.apiKey = auth.key
       }

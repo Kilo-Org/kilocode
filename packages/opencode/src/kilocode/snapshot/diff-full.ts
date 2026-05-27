@@ -13,7 +13,7 @@
 import { Effect } from "effect"
 import { parsePatch } from "diff"
 import type { StructuredPatch } from "diff"
-import { Log } from "../../util"
+import * as Log from "@opencode-ai/core/util/log"
 
 export namespace DiffFull {
   const log = Log.create({ service: "snapshot.diff-full" })

@@ -13,6 +13,11 @@ export function sameDiffMeta(left: WorktreeFileDiff, right: WorktreeFileDiff) {
   )
 }
 
+export function diffToken(diff: WorktreeFileDiff) {
+  const parts = [diff.status ?? "", diff.additions, diff.deletions, diff.tracked ?? "", diff.generatedLike ?? ""]
+  return diff.stamp ?? parts.join(":")
+}
+
 export interface MergeResult {
   diffs: WorktreeFileDiff[]
   /** Files whose metadata changed while we preserved cached content.

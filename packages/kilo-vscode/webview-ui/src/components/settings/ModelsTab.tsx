@@ -1,31 +1,25 @@
-import { Component, For, createMemo, createSignal, onCleanup } from "solid-js"
+import { Component, For, createMemo } from "solid-js"
 import { Card } from "@kilocode/kilo-ui/card"
-import { Select } from "@kilocode/kilo-ui/select"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useProvider } from "../../context/provider"
 import { useSession } from "../../context/session"
-import { useVSCode } from "../../context/vscode"
 import { parseModelString } from "../../../../src/shared/provider-model"
-import { AUTOCOMPLETE_MODELS, DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
+import { DEFAULT_AUTOCOMPLETE_MODEL } from "../../../../src/shared/autocomplete-models"
 import { ModelSelectorBase } from "../shared/ModelSelector"
+import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
 import SettingsRow from "./SettingsRow"
-import type { ExtensionMessage } from "../../types/messages"
+import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
-  const { config, updateConfig } = useConfig()
+  const { config, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
+  const provider = useProvider()
   const session = useSession()
-  const vscode = useVSCode()
 
-  const [autocompleteModel, setAutocompleteModel] = createSignal<string>(DEFAULT_AUTOCOMPLETE_MODEL.id)
-
-  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type === "autocompleteSettingsLoaded") {
-      setAutocompleteModel(message.settings.model)
-    }
-  })
-  onCleanup(unsubscribe)
-  vscode.postMessage({ type: "requestAutocompleteSettings" })
+  const autocompleteProvider = () =>
+    String(settings()["autocomplete.provider"] ?? DEFAULT_AUTOCOMPLETE_MODEL.providerID)
+  const autocompleteModel = () => String(settings()["autocomplete.model"] ?? DEFAULT_AUTOCOMPLETE_MODEL.modelID)
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -35,6 +29,35 @@ const ModelsTab: Component = () => {
       }
       updateConfig({ [configKey]: `${providerID}/${modelID}` })
     }
+  }
+
+  const subagentModel = createMemo(() => parseModelString(config().subagent_model ?? undefined))
+  const subagentVariants = createMemo(() => {
+    const model = provider.findModel(subagentModel())
+    return model?.variants ? Object.keys(model.variants) : []
+  })
+  const subagentVariant = createMemo(() => {
+    const list = subagentVariants()
+    if (list.length === 0) return undefined
+    const value = config().subagent_variant ?? undefined
+    return value && list.includes(value) ? value : undefined
+  })
+
+  function handleSubagentModelSelect(providerID: string, modelID: string) {
+    if (!providerID || !modelID) {
+      updateConfig({ subagent_model: null, subagent_variant: null })
+      return
+    }
+    const model = { providerID, modelID }
+    const variants = provider.findModel(model)?.variants
+    const list = variants ? Object.keys(variants) : []
+    const value = config().subagent_model === `${providerID}/${modelID}` ? config().subagent_variant : undefined
+    const variant = value && list.includes(value) ? value : list[0]
+    updateConfig({ subagent_model: `${providerID}/${modelID}`, subagent_variant: variant ?? null })
+  }
+
+  function handleSubagentVariantSelect(value: string) {
+    updateConfig({ subagent_variant: value })
   }
 
   const allAgents = createMemo(() => session.agents())
@@ -47,6 +70,12 @@ const ModelsTab: Component = () => {
       }
       updateConfig({ agent: { [agentName]: { model: `${providerID}/${modelID}` } } })
     }
+  }
+
+  function handleAutocompleteModelSelect(providerID: string, modelID: string) {
+    if (!providerID || !modelID) return
+    updateSetting("autocomplete.provider", providerID)
+    updateSetting("autocomplete.model", modelID)
   }
 
   return (
@@ -78,22 +107,36 @@ const ModelsTab: Component = () => {
           />
         </SettingsRow>
         <SettingsRow
+          title={language.t("settings.providers.subagentModel.title")}
+          description={language.t("settings.providers.subagentModel.description")}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px", "flex-wrap": "wrap" }}>
+            <ModelSelectorBase
+              value={subagentModel()}
+              onSelect={handleSubagentModelSelect}
+              placement="bottom-start"
+              allowClear
+              clearLabel={language.t("settings.providers.notSet")}
+            />
+            <ThinkingSelectorBase
+              variants={subagentVariants()}
+              value={subagentVariant()}
+              onSelect={handleSubagentVariantSelect}
+              placement="bottom-start"
+            />
+          </div>
+        </SettingsRow>
+        <SettingsRow
           title={language.t("settings.autocomplete.model.title")}
           description={language.t("settings.autocomplete.model.description")}
           last
         >
-          <Select
-            options={AUTOCOMPLETE_MODELS.map((m) => m.id)}
-            current={autocompleteModel()}
-            label={(opt: string) => AUTOCOMPLETE_MODELS.find((m) => m.id === opt)?.label ?? opt}
-            value={(opt: string) => opt}
-            onSelect={(opt) => {
-              if (opt !== undefined) {
-                setAutocompleteModel(opt)
-                vscode.postMessage({ type: "updateAutocompleteSetting", key: "model", value: opt })
-              }
-            }}
-            triggerVariant="settings"
+          <ModelSelectorBase
+            value={getAutocompleteSelection(autocompleteProvider(), autocompleteModel())}
+            onSelect={handleAutocompleteModelSelect}
+            placement="bottom-start"
+            models={AUTOCOMPLETE_SELECTOR_MODELS}
+            favorites={false}
           />
         </SettingsRow>
       </Card>

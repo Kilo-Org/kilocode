@@ -23,7 +23,7 @@ type Diff = {
 }
 
 const repo = process.env.GH_REPO ?? "Kilo-Org/kilocode"
-const bot = ["actions-user", "opencode", "opencode-agent[bot]"]
+const bot = ["actions-user", "github-actions[bot]", "opencode", "opencode-agent[bot]"]
 const team = [
   ...(await Bun.file(new URL("../.github/TEAM_MEMBERS", import.meta.url))
     .text()
@@ -31,12 +31,10 @@ const team = [
     .then((x) => x.filter((x) => x && !x.startsWith("#")))),
   ...bot,
 ]
-const order = ["Core", "TUI", "Desktop", "SDK", "Extensions"] as const
+const order = ["Core", "TUI", "SDK", "Extensions"] as const // kilocode_change
 const sections = {
   core: "Core",
   tui: "TUI",
-  app: "Desktop",
-  tauri: "Desktop",
   sdk: "SDK",
   plugin: "SDK",
   "extensions/zed": "Extensions",
@@ -75,11 +73,16 @@ async function diff(base: string, head: string) {
 }
 
 function section(areas: Set<string>) {
-  const priority = ["core", "tui", "app", "tauri", "sdk", "plugin", "extensions/zed", "extensions/vscode", "github"]
+  const priority = ["core", "tui", "sdk", "plugin", "extensions/zed", "extensions/vscode", "github"] // kilocode_change
   for (const area of priority) {
     if (areas.has(area)) return sections[area as keyof typeof sections]
   }
   return "Core"
+}
+
+function type(message: string) {
+  if (message.match(/fix/i)) return "Bugfixes"
+  return "Improvements"
 }
 
 function reverted(commits: Commit[]) {
@@ -116,7 +119,7 @@ async function commits(from: string, to: string) {
   }
 
   const log =
-    await $`git log ${base}..${head} --format=%H -- packages/opencode packages/sdk packages/plugin packages/desktop packages/app sdks/vscode packages/extensions github`.text()
+    await $`git log ${base}..${head} --format=%H -- packages/opencode packages/sdk packages/plugin packages/extensions github`.text() // kilocode_change
 
   const list: Commit[] = []
   for (const hash of log.split("\n").filter(Boolean)) {
@@ -130,11 +133,9 @@ async function commits(from: string, to: string) {
     for (const file of diff.split("\n").filter(Boolean)) {
       if (file.startsWith("packages/opencode/src/cli/cmd/")) areas.add("tui")
       else if (file.startsWith("packages/opencode/")) areas.add("core")
-      else if (file.startsWith("packages/desktop/src-tauri/")) areas.add("tauri")
-      else if (file.startsWith("packages/desktop/") || file.startsWith("packages/app/")) areas.add("app")
       else if (file.startsWith("packages/sdk/") || file.startsWith("packages/plugin/")) areas.add("sdk")
       else if (file.startsWith("packages/extensions/")) areas.add("extensions/zed")
-      else if (file.startsWith("sdks/vscode/") || file.startsWith("github/")) areas.add("extensions/vscode")
+      else if (file.startsWith("github/")) areas.add("extensions/vscode")
     }
 
     if (areas.size === 0) continue
@@ -193,13 +194,20 @@ async function thanks(from: string, to: string, reuse: boolean) {
 }
 
 function format(from: string, to: string, list: Commit[], thanks: string[]) {
-  const grouped = new Map<string, string[]>()
-  for (const title of order) grouped.set(title, [])
+  const grouped = new Map<string, Map<string, string[]>>()
+  for (const title of order) {
+    grouped.set(
+      title,
+      new Map([
+        ["Improvements", []],
+        ["Bugfixes", []],
+      ]),
+    )
+  }
 
   for (const commit of list) {
-    const title = section(commit.areas)
     const attr = commit.author && !team.includes(commit.author) ? ` (@${commit.author})` : ""
-    grouped.get(title)!.push(`- \`${commit.hash}\` ${commit.message}${attr}`)
+    grouped.get(section(commit.areas))!.get(type(commit.message))!.push(`- \`${commit.hash}\` ${commit.message}${attr}`)
   }
 
   const lines = [`Last release: ${ref(from)}`, `Target ref: ${to}`, ""]
@@ -209,11 +217,23 @@ function format(from: string, to: string, list: Commit[], thanks: string[]) {
   }
 
   for (const title of order) {
-    const entries = grouped.get(title)
-    if (!entries || entries.length === 0) continue
+    const groups = grouped.get(title)
+    if (!groups || [...groups.values()].every((entries) => entries.length === 0)) continue
     lines.push(`## ${title}`)
-    lines.push(...entries)
-    lines.push("")
+    const improvements = groups.get("Improvements")!
+    const bugfixes = groups.get("Bugfixes")!
+    if (bugfixes.length === 0) {
+      lines.push(...improvements)
+      lines.push("")
+      continue
+    }
+
+    for (const [subtitle, entries] of groups) {
+      if (entries.length === 0) continue
+      lines.push(`### ${subtitle}`)
+      lines.push(...entries)
+      lines.push("")
+    }
   }
 
   if (thanks.length > 0) {

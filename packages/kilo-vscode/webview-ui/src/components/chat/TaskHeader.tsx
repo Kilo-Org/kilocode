@@ -14,12 +14,13 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { collapseCostBreakdown } from "../../context/session-utils"
+import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
-import type { TodoItem, ExtensionMessage } from "../../types/messages"
+import { target as todoTarget } from "../../context/todo-revert"
+import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -32,7 +33,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const hasMessages = createMemo(() => session.messages().length > 0)
   const busy = createMemo(() => session.status() === "busy")
-  const canCompact = createMemo(() => !busy() && hasMessages() && !!session.selected())
+  const canCompact = createMemo(() => !busy() && session.visibleMessages().length > 0 && !!session.selected())
 
   const fmt = (n: number) => new Intl.NumberFormat(language.locale(), { style: "currency", currency: "USD" }).format(n)
 
@@ -65,17 +66,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return { tokens, pct }
   })
 
-  // Token breakdown from the last assistant message — only return if at least one value is > 0
-  const tokens = createMemo(() => {
-    const msgs = session.messages()
-    for (let i = msgs.length - 1; i >= 0; i--) {
-      const m = msgs[i]
-      if (m.role !== "assistant" || !m.tokens) continue
-      const tk = m.tokens
-      const has = tk.input > 0 || tk.output > 0 || (tk.cache?.write ?? 0) > 0 || (tk.cache?.read ?? 0) > 0
-      if (has) return tk
+  const tokens = createMemo(() => calcTokenUsage(session.visibleMessages()))
+
+  const hasTimeline = createMemo(() => {
+    for (const m of session.visibleMessages()) {
+      if (m.role !== "assistant") continue
+      if (session.getParts(m.id).some((p) => p.type !== "step-start")) return true
     }
-    return undefined
+    return false
   })
 
   const fmtNum = (n: number): string => {
@@ -116,6 +114,16 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   })
 
   const [todosOpen, setTodosOpen] = createSignal(false)
+
+  const donePart = (idx: number): Part | undefined =>
+    todoTarget({ messages: session.messages(), parts: session.allParts() }, idx)
+
+  const revertTodo = (part: Part | undefined) => {
+    if (session.status() !== "idle") return
+    if (part?.type !== "tool") return
+    if (!part.messageID) return
+    session.revertSession(part.messageID, part.id)
+  }
 
   return (
     <Show when={hasMessages()}>
@@ -166,7 +174,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         </div>
       </div>
       {/* Expanded graph section: timeline + context bar + token breakdown */}
-      <Show when={expanded() && session.messages().some((m) => m.role === "assistant")}>
+      <Show when={expanded() && hasTimeline()}>
         <div data-component="task-header-graph">
           <TaskTimeline />
           <div data-slot="task-header-graph-row">
@@ -188,16 +196,10 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                     {fmtNum(tk().output)}
                   </span>
                 </Show>
-                <Show when={tk().cache?.write && tk().cache!.write > 0}>
-                  <span class="task-header-tokens-value">
-                    <Icon name="arrow-up" size="small" />
-                    cache {fmtNum(tk().cache!.write)}
-                  </span>
-                </Show>
-                <Show when={tk().cache?.read && tk().cache!.read > 0}>
+                <Show when={tk().cached > 0}>
                   <span class="task-header-tokens-value">
                     <Icon name="arrow-down-to-line" size="small" />
-                    cache {fmtNum(tk().cache!.read)}
+                    cache {fmtNum(tk().cached)}
                   </span>
                 </Show>
               </div>
@@ -226,16 +228,21 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={todosOpen()}>
             <div data-slot="task-header-todos-list">
               <For each={todos()}>
-                {(todo: TodoItem) => (
-                  <Checkbox readOnly checked={todo.status === "completed"}>
-                    <span
-                      data-slot="task-header-todo-content"
-                      data-completed={todo.status === "completed" ? "" : undefined}
-                    >
-                      {todo.content}
-                    </span>
-                  </Checkbox>
-                )}
+                {(todo: TodoItem, idx) => {
+                  const part = createMemo(() => (todo.status === "completed" ? donePart(idx()) : undefined))
+                  return (
+                    <Tooltip value={part() ? language.t("settings.checkpoints.title") : undefined} placement="bottom">
+                      <Checkbox readOnly checked={todo.status === "completed"} onClick={() => revertTodo(part())}>
+                        <span
+                          data-slot="task-header-todo-content"
+                          data-completed={todo.status === "completed" ? "" : undefined}
+                        >
+                          {todo.content}
+                        </span>
+                      </Checkbox>
+                    </Tooltip>
+                  )
+                }}
               </For>
             </div>
           </Show>

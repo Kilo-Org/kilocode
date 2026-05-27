@@ -1,3 +1,8 @@
+---
+title: New Task Tool | Kilo Code Docs
+description: Learn how the new_task tool creates subtasks with specialized modes to break down complex projects into manageable pieces with parent-child relationships.
+---
+
 # new_task
 
 The `new_task` tool creates subtasks with specialized modes while maintaining a parent-child relationship. It breaks down complex projects into manageable pieces, each operating in the mode best suited for specific work.
@@ -39,6 +44,7 @@ This tool creates a new task instance with a specified starting mode and initial
 - Subtasks inherit certain workspace and extension configurations from parents
 - May require re-establishing context when switching between deeply nested tasks
 - Task completion needs explicit signaling to properly return to parent tasks
+- **Subagents cannot spawn further subagents** — The `new_task` tool is unavailable in subagent sessions. Only primary agents can create subtasks.
 
 ## How It Works
 

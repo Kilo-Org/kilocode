@@ -26,11 +26,7 @@ export namespace TodoView {
       .filter((item) => item.changed)
 
     const wide =
-      before.length === 0 ||
-      after.length === 0 ||
-      structural(before, after) ||
-      terminal(after) ||
-      diff.length === 0
+      before.length === 0 || after.length === 0 || structural(before, after) || terminal(after) || diff.length === 0
     if (wide) return full(after, diff.length)
 
     const first = Math.max(0, Math.min(...diff.map((item) => item.index)) - 1)

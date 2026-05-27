@@ -2,7 +2,7 @@
 export { Tips } from "@/kilocode/components/tips"
 // kilocode_change end
 
-import { For } from "solid-js"
+import { createMemo, For } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
 
 const themeCount = Object.keys(DEFAULT_THEMES).length
@@ -34,9 +34,14 @@ function parse(tip: string): TipPart[] {
   return parts
 }
 
-function _Tips() {
+const NO_MODELS_TIP = "Run {highlight}/connect{/highlight} to add an AI provider and start coding"
+
+// kilocode_change - renamed Tips -> _Tips so the upstream implementation stays
+// as shadowed dead code while we re-export the real Tips from @/kilocode/components/tips
+function _Tips(props: { connected?: boolean }) {
   const theme = useTheme().theme
-  const parts = parse(TIPS[Math.floor(Math.random() * TIPS.length)])
+  const randomTip = TIPS[Math.floor(Math.random() * TIPS.length)]
+  const parts = createMemo(() => parse(props.connected === false ? NO_MODELS_TIP : randomTip))
 
   return (
     <box flexDirection="row" maxWidth="100%">
@@ -44,7 +49,7 @@ function _Tips() {
         ● Tip{" "}
       </text>
       <text flexShrink={1}>
-        <For each={parts}>
+        <For each={parts()}>
           {(part) => <span style={{ fg: part.highlight ? theme.text : theme.textMuted }}>{part.text}</span>}
         </For>
       </text>
@@ -109,17 +114,17 @@ const TIPS = [
   "Add {highlight}.ts{/highlight} files to {highlight}.opencode/plugin/{/highlight} for event hooks",
   "Use plugins to send OS notifications when sessions complete",
   "Create a plugin to prevent OpenCode from reading sensitive files",
-  "Use {highlight}opencode run{/highlight} for non-interactive scripting",
-  "Use {highlight}opencode --continue{/highlight} to resume the last session",
-  "Use {highlight}opencode run -f file.ts{/highlight} to attach files via CLI",
+  "Use {highlight}kilo run{/highlight} for non-interactive scripting", // kilocode_change
+  "Use {highlight}kilo --continue{/highlight} to resume the last session", // kilocode_change
+  "Use {highlight}kilo run -f file.ts{/highlight} to attach files via CLI", // kilocode_change
   "Use {highlight}--format json{/highlight} for machine-readable output in scripts",
-  "Run {highlight}opencode serve{/highlight} for headless API access to OpenCode",
-  "Use {highlight}opencode run --attach{/highlight} to connect to a running server",
-  "Run {highlight}opencode upgrade{/highlight} to update to the latest version",
-  "Run {highlight}opencode auth list{/highlight} to see all configured providers",
-  "Run {highlight}opencode agent create{/highlight} for guided agent creation",
+  "Run {highlight}kilo serve{/highlight} for headless API access to Kilo", // kilocode_change
+  "Use {highlight}kilo run --attach{/highlight} to connect to a running server", // kilocode_change
+  "Run {highlight}kilo upgrade{/highlight} to update to the latest version", // kilocode_change
+  "Run {highlight}kilo auth list{/highlight} to see all configured providers", // kilocode_change
+  "Run {highlight}kilo agent create{/highlight} for guided agent creation", // kilocode_change
   "Use {highlight}/opencode{/highlight} in GitHub issues/PRs to trigger AI actions",
-  "Run {highlight}opencode github install{/highlight} to set up the GitHub workflow",
+  "Run {highlight}kilo github install{/highlight} to set up the GitHub workflow", // kilocode_change
   "Comment {highlight}/opencode fix this{/highlight} on issues to auto-create PRs",
   "Comment {highlight}/oc{/highlight} on PR code lines for targeted code reviews",
   'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',

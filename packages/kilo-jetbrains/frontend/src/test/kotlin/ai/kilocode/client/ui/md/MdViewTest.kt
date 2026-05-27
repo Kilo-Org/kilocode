@@ -243,6 +243,7 @@ class MdViewTest : BasePlatformTestCase() {
         view.set("```\ncode\n```")
         val sheet = view.overrideSheet()
         assertTrue(sheet.contains("#0a0b0c"))
+        assertTrue(sheet.contains("div.code-block"))
         assertTrue(sheet.contains("#d0e0f0"))
     }
 
@@ -277,6 +278,22 @@ class MdViewTest : BasePlatformTestCase() {
         view.font = Font("Arial", Font.PLAIN, 18)
         view.set("text")
         assertTrue(view.overrideSheet().contains("18pt"))
+    }
+
+    fun `test italic font override appears in override sheet`() {
+        view.font = Font("Arial", Font.ITALIC, 18)
+        view.set("text")
+        assertTrue(view.overrideSheet().contains("font-style: italic"))
+    }
+
+    fun `test font override targets markdown elements`() {
+        view.font = Font("Courier New", Font.PLAIN, 14)
+        view.set("# title\n\ntext\n\n`code`")
+        val sheet = view.overrideSheet()
+
+        assertTrue(sheet.contains("p {"))
+        assertTrue(sheet.contains("h1 {"))
+        assertTrue(sheet.contains("code {"))
     }
 
     fun `test style change re-renders and override sheet reflects change`() {
@@ -398,4 +415,5 @@ class MdViewTest : BasePlatformTestCase() {
         view.resetStyles()
         assertTrue(view.html().contains("<strong>"))
     }
+
 }

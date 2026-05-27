@@ -1,8 +1,10 @@
+import { Schema } from "effect"
 import z from "zod"
 import type { IndexingConfigInput } from "./indexing/config-manager"
 import type { EmbedderProvider } from "./indexing/interfaces/manager"
 
 const providers = [
+  "kilo",
   "openai",
   "ollama",
   "openai-compatible",
@@ -13,6 +15,7 @@ const providers = [
   "openrouter",
   "voyage",
 ] as const satisfies readonly EmbedderProvider[]
+const stores = ["lancedb", "qdrant"] as const
 
 export const IndexingConfig = z
   .object({
@@ -25,7 +28,16 @@ export const IndexingConfig = z
       .positive()
       .optional()
       .describe("Override embedding vector dimension (auto-detected from model if omitted)"),
-    vectorStore: z.enum(["lancedb", "qdrant"]).optional().describe("Vector store backend (default: qdrant)"),
+    vectorStore: z.enum(stores).optional().describe("Vector store backend (default: qdrant)"),
+    kilo: z
+      .object({
+        apiKey: z.string().optional(),
+        baseUrl: z.string().optional(),
+        organizationId: z.string().optional(),
+      })
+      .strict()
+      .optional()
+      .describe("Kilo-hosted embedding provider options"),
     openai: z
       .object({ apiKey: z.string().optional() })
       .strict()
@@ -118,6 +130,106 @@ export const IndexingConfig = z
 
 export type IndexingConfig = z.infer<typeof IndexingConfig>
 
+const Provider = Schema.Literals(providers)
+const Store = Schema.Literals(stores)
+const PositiveInt = Schema.Int.check(Schema.isGreaterThan(0))
+const Score = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThanOrEqualTo(1))
+
+export const IndexingSchema = Schema.Struct({
+  enabled: Schema.optional(Schema.Boolean).annotate({ description: "Enable codebase indexing" }),
+  provider: Schema.optional(Provider).annotate({
+    description: "Embedding provider to use for codebase indexing",
+  }),
+  model: Schema.optional(Schema.String).annotate({
+    description: "Embedding model ID (uses provider default if omitted)",
+  }),
+  dimension: Schema.optional(PositiveInt).annotate({
+    description: "Override embedding vector dimension (auto-detected from model if omitted)",
+  }),
+  vectorStore: Schema.optional(Store).annotate({ description: "Vector store backend (default: qdrant)" }),
+  kilo: Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+      baseUrl: Schema.optional(Schema.String),
+      organizationId: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Kilo-hosted embedding provider options" }),
+  openai: Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "OpenAI embedding provider options" }),
+  ollama: Schema.optional(
+    Schema.Struct({
+      baseUrl: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Ollama embedding provider options" }),
+  "openai-compatible": Schema.optional(
+    Schema.Struct({
+      baseUrl: Schema.optional(Schema.String),
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "OpenAI-compatible embedding provider options" }),
+  gemini: Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Gemini embedding provider options" }),
+  mistral: Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Mistral embedding provider options" }),
+  "vercel-ai-gateway": Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Vercel AI Gateway embedding provider options" }),
+  bedrock: Schema.optional(
+    Schema.Struct({
+      region: Schema.optional(Schema.String),
+      profile: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "AWS Bedrock embedding provider options" }),
+  openrouter: Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+      specificProvider: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "OpenRouter embedding provider options" }),
+  voyage: Schema.optional(
+    Schema.Struct({
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Voyage embedding provider options" }),
+  qdrant: Schema.optional(
+    Schema.Struct({
+      url: Schema.optional(Schema.String),
+      apiKey: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Qdrant vector store connection options" }),
+  lancedb: Schema.optional(
+    Schema.Struct({
+      directory: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "LanceDB vector store options" }),
+  searchMinScore: Schema.optional(Score).annotate({
+    description: "Minimum similarity score for search results (default: 0.4)",
+  }),
+  searchMaxResults: Schema.optional(PositiveInt).annotate({
+    description: "Maximum number of search results (default: 50)",
+  }),
+  embeddingBatchSize: Schema.optional(PositiveInt).annotate({
+    description: "Number of code segments per embedding batch (default: 60)",
+  }),
+  scannerMaxBatchRetries: Schema.optional(PositiveInt).annotate({
+    description: "Maximum retry attempts for failed embedding batches (default: 3)",
+  }),
+}).annotate({
+  identifier: "IndexingConfig",
+  description: "Codebase indexing configuration",
+})
+
 export function toIndexingConfigInput(cfg: IndexingConfig | undefined): IndexingConfigInput {
   const provider = cfg?.provider ?? "openai"
 
@@ -134,6 +246,9 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     searchMaxResults: cfg?.searchMaxResults,
     embeddingBatchSize: cfg?.embeddingBatchSize,
     scannerMaxBatchRetries: cfg?.scannerMaxBatchRetries,
+    kiloApiKey: cfg?.kilo?.apiKey,
+    kiloBaseUrl: cfg?.kilo?.baseUrl,
+    kiloOrganizationId: cfg?.kilo?.organizationId,
     openAiKey: cfg?.openai?.apiKey,
     ollamaBaseUrl: cfg?.ollama?.baseUrl,
     openAiCompatibleBaseUrl: cfg?.["openai-compatible"]?.baseUrl,

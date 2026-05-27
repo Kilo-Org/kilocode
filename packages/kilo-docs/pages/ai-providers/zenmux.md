@@ -1,9 +1,8 @@
 ---
 title: "Using ZenMux with Kilo Code | Unified AI Gateway"
 description: "Access OpenAI, Anthropic, Google, and other AI models through ZenMux in Kilo Code with automatic routing and cost optimization."
+sidebar_label: ZenMux
 ---
-
-import Codicon from "@site/src/components/Codicon";
 
 # Using ZenMux With Kilo Code
 
@@ -20,7 +19,7 @@ import Codicon from "@site/src/components/Codicon";
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1. **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
+1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2. **Select Provider:** Choose "ZenMux" from the "API Provider" dropdown.
 3. **Enter API Key:** Paste your ZenMux API key into the "ZenMux API Key" field.
 4. **Select Model:** Choose your desired model from the "Model" dropdown.
@@ -71,7 +70,7 @@ Then set your default model:
 
 ZenMux supports a wide range of models from various providers:
 
-Visi [zenmux.ai/models](https://zenmux.ai/models) to see the complete list of available models.
+Visit [zenmux.ai/models](https://zenmux.ai/models) to see the complete list of available models.
 
 ### Other Providers
 

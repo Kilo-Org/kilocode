@@ -279,6 +279,23 @@ html[data-theme="kilo-vscode"] {
   --syntax-diff-delete: var(--vscode-gitDecoration-deletedResourceForeground);
   --syntax-diff-unknown: var(--vscode-charts-red);
 
+  /* ===== Pierre diff engine (theme its CSS vars to VS Code editor colors) ===== */
+  --diffs-light-bg: var(--background-stronger);
+  --diffs-dark-bg: var(--background-stronger);
+
+  /* Pierre 1.1 mixes line and gutter tints from the diff color.
+     Only word emphasis uses a final background override. */
+  --diffs-bg-addition-emphasis-override: color-mix(
+    in lab,
+    var(--background-stronger) 60%,
+    var(--syntax-diff-add, #318430)
+  );
+  --diffs-bg-deletion-emphasis-override: color-mix(
+    in lab,
+    var(--background-stronger) 60%,
+    var(--syntax-diff-delete, #da3319)
+  );
+
   /* ===== Markdown ===== */
   --markdown-heading: var(--vscode-textLink-foreground);
   --markdown-text: var(--vscode-editor-foreground);

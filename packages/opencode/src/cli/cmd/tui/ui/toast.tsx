@@ -5,9 +5,12 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "../component/border"
 import { TextAttributes } from "@opentui/core"
 import { Schema } from "effect"
-import { type TuiEvent } from "../event"
+import { TuiEvent } from "../event"
 
+type ToastInput = Schema.Codec.Encoded<typeof TuiEvent.ToastShow.properties>
 export type ToastOptions = Schema.Schema.Type<typeof TuiEvent.ToastShow.properties>
+
+const decodeToastOptions = Schema.decodeUnknownSync(TuiEvent.ToastShow.properties)
 
 export function Toast() {
   const toast = useToast()
@@ -55,17 +58,17 @@ function init() {
   let timeoutHandle: NodeJS.Timeout | null = null
 
   const toast = {
-    show(options: ToastOptions) {
-      const { duration, ...currentToast } = options
-      setStore("currentToast", currentToast)
+    show(options: ToastInput) {
+      const toastOptions = decodeToastOptions(options)
+      setStore("currentToast", toastOptions)
       if (timeoutHandle) clearTimeout(timeoutHandle)
       // kilocode_change start
       timeoutHandle = null
-      if (duration && duration > 0) {
+      if (toastOptions.duration && toastOptions.duration > 0) {
         timeoutHandle = setTimeout(() => {
           setStore("currentToast", null)
           timeoutHandle = null
-        }, duration).unref()
+        }, toastOptions.duration).unref()
       }
     },
     dismiss() {

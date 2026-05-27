@@ -55,6 +55,15 @@ data class ModelInfo(
     val toolCall: Boolean,
     val free: Boolean,
     val status: String?,
+    val recommendedIndex: Double?,
+    val variants: List<String>,
+    val limit: ModelLimitInfo?,
+)
+
+data class ModelLimitInfo(
+    val context: Long = 0,
+    val input: Long? = null,
+    val output: Long = 0,
 )
 
 data class AgentData(

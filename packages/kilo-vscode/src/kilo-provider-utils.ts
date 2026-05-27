@@ -2,6 +2,8 @@ import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/
 import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
+import type { PartRemove } from "./shared/stream-messages"
+import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
 
@@ -221,6 +223,7 @@ export interface SessionRefreshContext {
   connectionState: "connecting" | "connected" | "disconnected" | "error"
   listSessions: ((dir: string) => Promise<Session[]>) | null
   sessionDirectories: Map<string, string>
+  worktreeDirectories?: () => string[]
   workspaceDirectory: string
   postMessage(message: unknown): void
 }
@@ -244,7 +247,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
 
   const sessions = await list(ctx.workspaceDirectory)
   const projectID = sessions[0]?.projectID
-  const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const worktreeDirs = new Set([...(ctx.worktreeDirectories?.() ?? []), ...ctx.sessionDirectories.values()])
   const failed = new Set<string>()
   const extra = await Promise.all(
     [...worktreeDirs].map((dir) =>
@@ -338,6 +341,7 @@ export function resolveNewSessionDirectory(input: {
   currentSessionID?: string
   contextSessionID?: string
   agentManagerContext?: string
+  contextDirectory?: string
   sessionDirectories: Map<string, string>
   workspaceDirectory: string
 }) {
@@ -349,6 +353,8 @@ export function resolveNewSessionDirectory(input: {
     })
   }
 
+  if (input.contextDirectory) return input.contextDirectory
+
   return resolveContextDirectory({
     currentSessionID: input.currentSessionID,
     contextSessionID: input.contextSessionID,
@@ -358,9 +364,21 @@ export function resolveNewSessionDirectory(input: {
   })
 }
 
+export function sameDirectory(a: string, b: string): boolean {
+  if (!a || !b) return false
+
+  const left = path.resolve(a)
+  const right = path.resolve(b)
+  if (path.relative(left, right) === "") return true
+
+  if (process.platform !== "win32") return false
+  return path.relative(left.toLowerCase(), right.toLowerCase()) === ""
+}
+
 export type WebviewMessage =
   | PartUpdate
   | PartBatch
+  | PartRemove
   | {
       type: "indexingStatusLoaded"
       status: IndexingStatus
@@ -410,29 +428,47 @@ export type WebviewMessage =
   | { type: "sessionError"; sessionID?: string; error?: unknown }
   | null
 
+type PartEvent = Extract<Event, { type: "message.part.updated" | "message.part.delta" | "message.part.removed" }>
+
+function mapPartEvent(event: PartEvent, sessionID: string | undefined): WebviewMessage {
+  if (!sessionID) return null
+  if (event.type === "message.part.updated") {
+    const part = event.properties.part as { messageID?: string; sessionID?: string }
+    return {
+      type: "partUpdated",
+      sessionID,
+      messageID: part.messageID || "",
+      part: event.properties.part,
+    }
+  }
+  if (event.type === "message.part.delta") {
+    const props = event.properties
+    return {
+      type: "partUpdated",
+      sessionID: props.sessionID,
+      messageID: props.messageID,
+      part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
+      delta: { type: "text-delta", textDelta: props.delta },
+    }
+  }
+  const props = event.properties
+  return {
+    type: "partRemoved",
+    sessionID: props.sessionID,
+    messageID: props.messageID,
+    partID: props.partID,
+  }
+}
+
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
+  if (
+    event.type === "message.part.updated" ||
+    event.type === "message.part.delta" ||
+    event.type === "message.part.removed"
+  ) {
+    return mapPartEvent(event, sessionID)
+  }
   switch (event.type) {
-    case "message.part.updated": {
-      const part = event.properties.part as { messageID?: string; sessionID?: string }
-      if (!sessionID) return null
-      return {
-        type: "partUpdated",
-        sessionID,
-        messageID: part.messageID || "",
-        part: event.properties.part,
-      }
-    }
-    case "message.part.delta": {
-      const props = event.properties
-      if (!sessionID) return null
-      return {
-        type: "partUpdated",
-        sessionID: props.sessionID,
-        messageID: props.messageID,
-        part: { id: props.partID, type: "text", messageID: props.messageID, text: props.delta },
-        delta: { type: "text-delta", textDelta: props.delta },
-      }
-    }
     case "message.updated": {
       const info = event.properties.info
       return {
@@ -586,31 +622,4 @@ export function isEventFromForeignProject(event: Event, expectedProjectID: strin
     return event.properties.info.projectID !== expectedProjectID
   }
   return false
-}
-
-/**
- * Merge open-tab paths with backend file search results for the @ mention dropdown.
- *
- * Ordering: active file → other open tabs → backend results (all deduplicated).
- * When a query is present, open tabs are filtered to only include matches.
- * The `active` path (if provided) is placed first when it exists in `open`.
- */
-export function mergeFileSearchResults(input: {
-  query: string
-  backend: string[]
-  open: Set<string>
-  active?: string
-}): string[] {
-  const norm = (p: string) => p.replaceAll("\\", "/")
-  const query = norm(input.query).trim().toLowerCase()
-  const open = new Set([...input.open].map(norm))
-  const active = input.active ? norm(input.active) : undefined
-  const backend = input.backend.map(norm)
-  const ok = (p: string) => !query || p.toLowerCase().includes(query)
-  const tabs =
-    active && open.has(active) && ok(active)
-      ? [active, ...[...open].filter((p) => p !== active && ok(p))]
-      : [...open].filter(ok)
-  const seen = new Set(tabs)
-  return [...tabs, ...backend.filter((p) => !seen.has(p))]
 }

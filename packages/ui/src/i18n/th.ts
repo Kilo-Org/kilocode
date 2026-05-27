@@ -97,6 +97,18 @@ export const dict = {
   "ui.textField.copied": "คัดลอกแล้ว",
 
   "ui.imagePreview.alt": "ตัวอย่างรูปภาพ",
+  // kilocode_change start
+  "ui.mermaid.rendering": "กำลังเรนเดอร์ไดอะแกรม Mermaid...",
+  "ui.mermaid.renderError": "เรนเดอร์ Mermaid ไม่สำเร็จ: {{message}}",
+  "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
+  "ui.mermaid.errorEmpty": "Mermaid เรนเดอร์ไดอะแกรมว่าง",
+  "ui.mermaid.download": "ดาวน์โหลด",
+  "ui.mermaid.copySource": "คัดลอกซอร์ส Mermaid",
+  "ui.mermaid.copySvg": "คัดลอก SVG",
+  "ui.mermaid.copyPng": "คัดลอก PNG",
+  "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
+  "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "เนื้อหาที่เลื่อนได้",
 
   "ui.tool.read": "อ่าน",
@@ -106,7 +118,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "ดึงจากเว็บ",
   "ui.tool.websearch": "ค้นหาเว็บ",
-  "ui.tool.codesearch": "ค้นหาโค้ด",
   "ui.tool.shell": "เชลล์",
   "ui.tool.patch": "แพตช์",
   "ui.tool.todos": "รายการงาน",

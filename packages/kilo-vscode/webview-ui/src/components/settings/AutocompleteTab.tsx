@@ -1,37 +1,21 @@
-import { Component, createSignal, onCleanup } from "solid-js"
+import { Component } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Card } from "@kilocode/kilo-ui/card"
-import { useVSCode } from "../../context/vscode"
+import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
-import type { ExtensionMessage } from "../../types/messages"
 import SettingsRow from "./SettingsRow"
 
-const AutocompleteTab: Component = () => {
-  const vscode = useVSCode()
+const AutocompleteTab: Component<{ onNavigateToModels?: () => void }> = (props) => {
+  const { settings, updateSetting } = useConfig()
   const language = useLanguage()
 
-  const [enableAutoTrigger, setEnableAutoTrigger] = createSignal(true)
-  const [enableSmartInlineTaskKeybinding, setEnableSmartInlineTaskKeybinding] = createSignal(false)
-  const [enableChatAutocomplete, setEnableChatAutocomplete] = createSignal(false)
+  const enabled = (key: string, fallback: boolean) => Boolean(settings()[key] ?? fallback)
 
-  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "autocompleteSettingsLoaded") {
-      return
-    }
-    setEnableAutoTrigger(message.settings.enableAutoTrigger)
-    setEnableSmartInlineTaskKeybinding(message.settings.enableSmartInlineTaskKeybinding)
-    setEnableChatAutocomplete(message.settings.enableChatAutocomplete)
-  })
-
-  onCleanup(unsubscribe)
-
-  vscode.postMessage({ type: "requestAutocompleteSettings" })
-
-  const updateSetting = (
+  const save = (
     key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete",
     value: boolean,
   ) => {
-    vscode.postMessage({ type: "updateAutocompleteSetting", key, value })
+    updateSetting(`autocomplete.${key}`, value)
   }
 
   return (
@@ -42,8 +26,8 @@ const AutocompleteTab: Component = () => {
           description={language.t("settings.autocomplete.autoTrigger.description")}
         >
           <Switch
-            checked={enableAutoTrigger()}
-            onChange={(checked) => updateSetting("enableAutoTrigger", checked)}
+            checked={enabled("autocomplete.enableAutoTrigger", true)}
+            onChange={(checked) => save("enableAutoTrigger", checked)}
             hideLabel
           >
             {language.t("settings.autocomplete.autoTrigger.title")}
@@ -55,8 +39,8 @@ const AutocompleteTab: Component = () => {
           description={language.t("settings.autocomplete.smartKeybinding.description")}
         >
           <Switch
-            checked={enableSmartInlineTaskKeybinding()}
-            onChange={(checked) => updateSetting("enableSmartInlineTaskKeybinding", checked)}
+            checked={enabled("autocomplete.enableSmartInlineTaskKeybinding", false)}
+            onChange={(checked) => save("enableSmartInlineTaskKeybinding", checked)}
             hideLabel
           >
             {language.t("settings.autocomplete.smartKeybinding.title")}
@@ -69,14 +53,38 @@ const AutocompleteTab: Component = () => {
           last
         >
           <Switch
-            checked={enableChatAutocomplete()}
-            onChange={(checked) => updateSetting("enableChatAutocomplete", checked)}
+            checked={enabled("autocomplete.enableChatAutocomplete", false)}
+            onChange={(checked) => save("enableChatAutocomplete", checked)}
             hideLabel
           >
             {language.t("settings.autocomplete.chatAutocomplete.title")}
           </Switch>
         </SettingsRow>
       </Card>
+      <p
+        data-slot="autocomplete-models-hint"
+        style={{
+          "margin-top": "20px",
+          "font-size": "var(--kilo-font-size-12)",
+          "text-align": "right",
+          color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+        }}
+      >
+        <a
+          href="#"
+          style={{
+            color: "var(--vscode-textLink-foreground)",
+            "text-decoration": "none",
+            cursor: "pointer",
+          }}
+          onClick={(e) => {
+            e.preventDefault()
+            props.onNavigateToModels?.()
+          }}
+        >
+          {language.t("settings.autocomplete.modelsHint")}
+        </a>
+      </p>
     </div>
   )
 }

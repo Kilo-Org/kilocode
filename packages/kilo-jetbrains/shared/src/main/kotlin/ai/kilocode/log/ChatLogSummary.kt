@@ -21,6 +21,7 @@ object ChatLogSummary {
         is ChatEventDto.PartRemoved -> event.sessionID
         is ChatEventDto.TurnOpen -> event.sessionID
         is ChatEventDto.TurnClose -> event.sessionID
+        is ChatEventDto.SessionCreated -> event.sessionID
         is ChatEventDto.Error -> event.sessionID
         is ChatEventDto.MessageRemoved -> event.sessionID
         is ChatEventDto.PermissionAsked -> event.sessionID
@@ -29,6 +30,7 @@ object ChatLogSummary {
         is ChatEventDto.QuestionReplied -> event.sessionID
         is ChatEventDto.QuestionRejected -> event.sessionID
         is ChatEventDto.SessionStatusChanged -> event.sessionID
+        is ChatEventDto.SessionUpdated -> event.sessionID
         is ChatEventDto.SessionIdle -> event.sessionID
         is ChatEventDto.SessionCompacted -> event.sessionID
         is ChatEventDto.SessionDiffChanged -> event.sessionID
@@ -58,6 +60,7 @@ object ChatLogSummary {
             ?.let { out += "types=${it.joinToString(",")}" }
         prompt.agent?.takeIf { it.isNotBlank() }?.let { out += "agent=$it" }
         model(prompt.providerID, prompt.modelID)?.let { out += "model=$it" }
+        prompt.variant?.takeIf { it.isNotBlank() }?.let { out += "variant=$it" }
         preview(text)?.let { out += "preview=\"$it\"" }
         return out.joinToString(" ")
     }
@@ -131,6 +134,12 @@ object ChatLogSummary {
             "reason=${event.reason}",
         )
 
+        is ChatEventDto.SessionCreated -> join(
+            sid(event.sessionID),
+            "evt=session.created",
+            "title=${event.info.title.length}",
+        )
+
         is ChatEventDto.Error -> join(
             sid(event.sessionID),
             "evt=session.error",
@@ -178,6 +187,12 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.status",
             status(event.status),
+        )
+
+        is ChatEventDto.SessionUpdated -> join(
+            sid(event.sessionID),
+            "evt=session.updated",
+            "title=${event.session.title.length}",
         )
 
         is ChatEventDto.SessionIdle -> join(

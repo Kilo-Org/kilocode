@@ -2,14 +2,15 @@ import { describe, expect, spyOn, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { Effect, Layer } from "effect"
-import { LSP } from "../../src/lsp"
-import { LSPServer } from "../../src/lsp"
+import { LSP } from "@/lsp/lsp"
+import * as LSPServer from "@/lsp/server"
 import * as launch from "../../src/lsp/launch" // kilocode_change - spy on spawn
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance, tmpdir } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import { Instance, type InstanceContext } from "../../src/project/instance"
-import { Flag } from "../../src/flag/flag" // kilocode_change
+import { type InstanceContext } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { TsCheck } from "../../src/kilocode/ts-check" // kilocode_change
 
 // kilocode_change - Typescript.spawn ignores ctx, so a cast is fine here.
@@ -135,7 +136,7 @@ describe("lsp.spawn", () => {
     const tsgoSpy = spyOn(TsCheck, "native_tsgo").mockResolvedValue("/fake/tsgo")
 
     try {
-      await Instance.provide({
+      await WithInstance.provide({
         directory: tmp.path,
         fn: async () => {
           const result = await LSPServer.Typescript.spawn(tmp.path, fakeCtx)

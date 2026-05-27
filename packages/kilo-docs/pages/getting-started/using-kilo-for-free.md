@@ -1,6 +1,6 @@
 ---
 title: "Using Kilo for Free"
-description: "How to use Kilo Code for free — Auto Model Free, finding free models, free autocomplete, and free background tasks"
+description: "How to use Kilo Code for free — Auto Free, finding free models, free autocomplete, and free background tasks"
 ---
 
 # Using Kilo for Free
@@ -19,9 +19,13 @@ Each of these consumes credits by default. **To use Kilo entirely for free, conf
 
 Kilo provides free models for coding tasks through the Kilo Gateway and partner providers.
 
-### Auto Model Free
+### Auto Free
 
-The easiest way to get started is [**Auto Model Free**](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`). This is a Kilo-provided model tier that automatically routes your requests to the best available free models — no configuration needed.
+The easiest way to get started is [**Auto Free**](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`). This is a Kilo-provided model tier that automatically routes your requests to the best available free models — no configuration needed.
+
+{% callout type="warning" title="Data handling for Auto Free" %}
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services — including NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) (trial use only, not for production or sensitive data). Do not submit personal or confidential data when using Auto Free.
+{% /callout %}
 
 ### Finding Other Free Models
 
@@ -65,7 +69,7 @@ See the [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-s
 
 ## Free Background Tasks
 
-Kilo uses a small model in the background for tasks like session titling. By default this is Kilo Auto Small, which consumes credits. If the small model is unavailable, Kilo falls back to your primary model — which may also consume credits if it's a paid model.
+Kilo uses a small model in the background for tasks like session titling. By default this is Auto Small, which consumes credits. If the small model is unavailable, Kilo falls back to your primary model — which may also consume credits if it's a paid model.
 
 To avoid credit usage for background tasks, set the small model to a free model:
 

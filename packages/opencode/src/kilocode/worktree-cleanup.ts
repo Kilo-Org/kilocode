@@ -34,15 +34,13 @@ export namespace WorktreeCleanup {
   export async function removeDirectory(target: string) {
     const cfg = opts()
     const rm = async (left: number): Promise<void> =>
-      fs
-        .rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
-        .catch(async (error) => {
-          if (!locked(error)) throw error
-          if (left <= 1) throw error
-          if (process.platform === "win32") Bun.gc(true)
-          await Bun.sleep(cfg.delay)
-          return rm(left - 1)
-        })
+      fs.rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(async (error) => {
+        if (!locked(error)) throw error
+        if (left <= 1) throw error
+        if (process.platform === "win32") Bun.gc(true)
+        await Bun.sleep(cfg.delay)
+        return rm(left - 1)
+      })
     return rm(cfg.retries)
   }
 

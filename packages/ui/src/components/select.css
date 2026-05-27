@@ -172,6 +172,7 @@
 
 [data-component="select-content"][data-trigger-style="settings"] {
   min-width: 160px;
+  max-width: min(23rem, var(--kb-popper-content-available-width)); /* kilocode_change */
   border-radius: 8px;
   padding: 0;
 

@@ -5,60 +5,70 @@ import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
+import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
-import z from "zod"
 import * as EffectZod from "@/util/effect-zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import * as Session from "./session"
 import { Agent } from "../agent/agent"
-import { Provider } from "../provider"
+import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import { SessionCompaction } from "./compaction"
 import { Bus } from "../bus"
-import { ProviderTransform } from "../provider"
+import { ProviderTransform } from "@/provider/transform"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
 import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
-import { ToolRegistry } from "../tool"
+import { ToolRegistry } from "@/tool/registry"
 import { MCP } from "../mcp"
-import { LSP } from "../lsp"
-import { Flag } from "../flag/flag"
+import { LSP } from "@/lsp/lsp"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { ulid } from "ulid"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import * as Stream from "effect/Stream"
 import { Command } from "../command"
 import { pathToFileURL, fileURLToPath } from "url"
-import { ConfigMarkdown } from "../config"
+import { Config } from "@/config/config"
+import { ConfigMarkdown } from "@/config/markdown"
 import { SessionSummary } from "./summary"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { SessionProcessor } from "./processor"
-import { Tool } from "@/tool"
+import { Tool } from "@/tool/tool"
 import { Permission } from "@/permission"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
 import { Shell } from "@/shell/shell"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { Truncate } from "@/tool"
+import { ShellID } from "@/tool/shell/id"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Truncate } from "@/tool/truncate"
 import { decodeDataUrl } from "@/util/data-url"
-import { Process } from "@/util"
-import { Cause, Effect, Exit, Layer, Option, Scope, Context, Schema } from "effect"
+import { Process } from "@/util/process"
+import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
 import { zod } from "@/util/effect-zod"
 import { withStatics } from "@/util/schema"
-import { EffectLogger } from "@/effect"
-import { InstanceState } from "@/effect"
+import * as EffectLogger from "@opencode-ai/core/effect/logger"
+import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
-import { EffectBridge } from "@/effect"
+import { EffectBridge } from "@/effect/bridge"
+import { EventV2 } from "@/v2/event"
+import { SessionEvent } from "@/v2/session-event"
+import { Modelv2 } from "@/v2/model"
+import { AgentAttachment, FileAttachment, Source } from "@/v2/session-prompt"
+import * as DateTime from "effect/DateTime"
+import { eq } from "@/storage/db"
+import * as Database from "@/storage/db"
+import { SessionTable } from "./session.sql"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -75,6 +85,10 @@ const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested struc
 
 // kilocode_change
 export const shouldAskPlanFollowup = KiloSessionPrompt.shouldAskPlanFollowup
+
+// kilocode_change start - persistent tool-output pruning when payload is already large
+const REQUEST_PRUNE_BYTES = 1_250_000
+// kilocode_change end
 
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
@@ -102,6 +116,7 @@ export const layer = Layer.effect(
     const compaction = yield* SessionCompaction.Service
     const plugin = yield* Plugin.Service
     const commands = yield* Command.Service
+    const config = yield* Config.Service
     const permission = yield* Permission.Service
     const fsys = yield* AppFileSystem.Service
     const mcp = yield* MCP.Service
@@ -120,9 +135,8 @@ export const layer = Layer.effect(
       return yield* EffectBridge.make()
     })
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
-      const run = yield* runner()
       return {
-        cancel: (sessionID: SessionID) => run.fork(cancel(sessionID)),
+        cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input),
       } satisfies TaskPromptOps
@@ -137,7 +151,7 @@ export const layer = Layer.effect(
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
       const ctx = yield* InstanceState.context
-      const parts: PromptInput["parts"] = [{ type: "text", text: template }]
+      const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }]
       const files = ConfigMarkdown.files(template)
       const seen = new Set<string>()
       yield* Effect.forEach(
@@ -262,7 +276,8 @@ export const layer = Layer.effect(
 
       const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
       if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
-        const plan = Session.plan(input.session)
+        const ctx = yield* InstanceState.context
+        const plan = Session.plan(input.session, ctx)
         if (!(yield* fsys.existsSafe(plan))) return input.messages
         const part = yield* sessions.updatePart({
           id: PartID.ascending(),
@@ -278,7 +293,8 @@ export const layer = Layer.effect(
 
       if (input.agent.name !== "plan" || assistantMessage?.info.agent === "plan") return input.messages
 
-      const plan = Session.plan(input.session)
+      const ctx = yield* InstanceState.context
+      const plan = Session.plan(input.session, ctx)
       const exists = yield* fsys.existsSafe(plan)
       if (!exists) yield* fsys.ensureDir(path.dirname(plan)).pipe(Effect.catch(Effect.die))
       const part = yield* sessions.updatePart({
@@ -474,9 +490,18 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
                 { args },
               )
-              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-              const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.promise(() =>
-                execute(args, opts),
+              const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.gen(function* () {
+                yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+                return yield* Effect.promise(() => execute(args, opts))
+              }).pipe(
+                Effect.withSpan("Tool.execute", {
+                  attributes: {
+                    "tool.name": key,
+                    "tool.call_id": opts.toolCallId,
+                    "session.id": ctx.sessionID,
+                    "message.id": input.processor.message.id,
+                  },
+                }),
               )
               yield* plugin.trigger(
                 "tool.execute.after",
@@ -757,183 +782,160 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       } satisfies MessageV2.TextPart)
     })
 
-    const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput) {
-      const ctx = yield* InstanceState.context
-      const run = yield* runner()
-      const session = yield* sessions.get(input.sessionID)
-      if (session.revert) {
-        yield* revert.cleanup(session)
-      }
-      const agent = yield* agents.get(input.agent)
-      if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
-      }
-      const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
-      const userMsg: MessageV2.User = {
-        id: input.messageID ?? MessageID.ascending(),
-        sessionID: input.sessionID,
-        time: { created: Date.now() },
-        role: "user",
-        agent: input.agent,
-        model: { providerID: model.providerID, modelID: model.modelID },
-      }
-      yield* sessions.updateMessage(userMsg)
-      const userPart: MessageV2.Part = {
-        type: "text",
-        id: PartID.ascending(),
-        messageID: userMsg.id,
-        sessionID: input.sessionID,
-        text: "The following tool was executed by the user",
-        synthetic: true,
-      }
-      yield* sessions.updatePart(userPart)
-
-      const msg: MessageV2.Assistant = {
-        id: MessageID.ascending(),
-        sessionID: input.sessionID,
-        parentID: userMsg.id,
-        mode: input.agent,
-        agent: input.agent,
-        cost: 0,
-        path: { cwd: ctx.directory, root: ctx.worktree },
-        time: { created: Date.now() },
-        role: "assistant",
-        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-        modelID: model.modelID,
-        providerID: model.providerID,
-      }
-      yield* sessions.updateMessage(msg)
-      const part: MessageV2.ToolPart = {
-        type: "tool",
-        id: PartID.ascending(),
-        messageID: msg.id,
-        sessionID: input.sessionID,
-        tool: "bash",
-        callID: ulid(),
-        state: {
-          status: "running",
-          time: { start: Date.now() },
-          input: { command: input.command },
-        },
-      }
-      yield* sessions.updatePart(part)
-
-      const sh = Shell.preferred()
-      const shellName = (
-        process.platform === "win32" ? path.win32.basename(sh, ".exe") : path.basename(sh)
-      ).toLowerCase()
-      const cwd = ctx.directory
-      const invocations: Record<string, { args: string[] }> = {
-        nu: { args: ["-c", input.command] },
-        fish: { args: ["-c", input.command] },
-        zsh: {
-          args: [
-            "-l",
-            "-c",
-            `
-              [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
-              [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
-              cd -- "$1"
-              eval ${JSON.stringify(input.command)}
-            `,
-            "opencode",
-            cwd,
-          ],
-        },
-        bash: {
-          args: [
-            "-l",
-            "-c",
-            `
-              shopt -s expand_aliases
-              [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
-              cd -- "$1"
-              eval ${JSON.stringify(input.command)}
-            `,
-            "opencode",
-            cwd,
-          ],
-        },
-        cmd: { args: ["/c", input.command] },
-        powershell: { args: ["-NoProfile", "-Command", input.command] },
-        pwsh: { args: ["-NoProfile", "-Command", input.command] },
-        "": { args: ["-c", input.command] },
-      }
-
-      const args = (invocations[shellName] ?? invocations[""]).args
-      const shellEnv = yield* plugin.trigger(
-        "shell.env",
-        { cwd, sessionID: input.sessionID, callID: part.callID },
-        { env: {} },
-      )
-
-      const cmd = ChildProcess.make(sh, args, {
-        cwd,
-        extendEnv: true,
-        env: { ...shellEnv.env, TERM: "dumb" },
-        stdin: "ignore",
-        forceKillAfter: "3 seconds",
-      })
-
-      let output = ""
-      let aborted = false
-
-      const finish = Effect.uninterruptible(
+    const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput, ready?: Latch.Latch) {
+      return yield* Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
-          if (aborted) {
-            output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
-          }
-          if (!msg.time.completed) {
-            msg.time.completed = Date.now()
+          const markReady = ready ? ready.open.pipe(Effect.asVoid) : Effect.void
+          const { msg, part, cwd } = yield* Effect.gen(function* () {
+            const ctx = yield* InstanceState.context
+            const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
+            if (session.revert) {
+              yield* revert.cleanup(session)
+            }
+            const agent = yield* agents.get(input.agent)
+            if (!agent) {
+              const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+              const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
+              yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+              throw error
+            }
+            const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
+            const userMsg: MessageV2.User = {
+              id: input.messageID ?? MessageID.ascending(),
+              sessionID: input.sessionID,
+              time: { created: Date.now() },
+              role: "user",
+              agent: input.agent,
+              model: { providerID: model.providerID, modelID: model.modelID },
+            }
+            yield* sessions.updateMessage(userMsg)
+            const userPart: MessageV2.Part = {
+              type: "text",
+              id: PartID.ascending(),
+              messageID: userMsg.id,
+              sessionID: input.sessionID,
+              text: "The following tool was executed by the user",
+              synthetic: true,
+            }
+            yield* sessions.updatePart(userPart)
+
+            const msg: MessageV2.Assistant = {
+              id: MessageID.ascending(),
+              sessionID: input.sessionID,
+              parentID: userMsg.id,
+              mode: input.agent,
+              agent: input.agent,
+              cost: 0,
+              path: { cwd: ctx.directory, root: ctx.worktree },
+              time: { created: Date.now() },
+              role: "assistant",
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: model.modelID,
+              providerID: model.providerID,
+            }
             yield* sessions.updateMessage(msg)
-          }
-          if (part.state.status === "running") {
-            part.state = {
-              status: "completed",
-              time: { ...part.state.time, end: Date.now() },
-              input: part.state.input,
-              title: "",
-              metadata: { output, description: "" },
-              output,
+            const callID = ulid()
+            const started = Date.now()
+            const part: MessageV2.ToolPart = {
+              type: "tool",
+              id: PartID.ascending(),
+              messageID: msg.id,
+              sessionID: input.sessionID,
+              tool: ShellID.ToolID,
+              callID: ulid(),
+              state: {
+                status: "running",
+                time: { start: started },
+                input: { command: input.command },
+              },
             }
             yield* sessions.updatePart(part)
+            EventV2.run(SessionEvent.Shell.Started.Sync, {
+              sessionID: input.sessionID,
+              timestamp: DateTime.makeUnsafe(started),
+              callID,
+              command: input.command,
+            })
+            return { msg, part, cwd: ctx.directory }
+          }).pipe(Effect.ensuring(markReady))
+
+          const cfg = yield* config.get()
+          const sh = Shell.preferred(cfg.shell)
+          const args = Shell.args(sh, input.command, cwd)
+          let output = ""
+          let aborted = false
+
+          const finish = Effect.uninterruptible(
+            Effect.gen(function* () {
+              if (aborted) {
+                output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
+              }
+              const completed = Date.now()
+              EventV2.run(SessionEvent.Shell.Ended.Sync, {
+                sessionID: input.sessionID,
+                timestamp: DateTime.makeUnsafe(completed),
+                callID: part.callID,
+                output,
+              })
+              if (!msg.time.completed) {
+                msg.time.completed = completed
+                yield* sessions.updateMessage(msg)
+              }
+              if (part.state.status === "running") {
+                part.state = {
+                  status: "completed",
+                  time: { ...part.state.time, end: completed },
+                  input: part.state.input,
+                  title: "",
+                  metadata: { output, description: "" },
+                  output,
+                }
+                yield* sessions.updatePart(part)
+              }
+            }),
+          )
+
+          const exit = yield* restore(
+            Effect.gen(function* () {
+              const shellEnv = yield* plugin.trigger(
+                "shell.env",
+                { cwd, sessionID: input.sessionID, callID: part.callID },
+                { env: {} },
+              )
+              const cmd = ChildProcess.make(sh, args, {
+                cwd,
+                extendEnv: true,
+                env: { ...shellEnv.env, TERM: "dumb" },
+                stdin: "ignore",
+                forceKillAfter: "3 seconds",
+              })
+              const handle = yield* spawner.spawn(cmd)
+              yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+                Effect.gen(function* () {
+                  output += chunk
+                  if (part.state.status === "running") {
+                    part.state.metadata = { output, description: "" }
+                    yield* sessions.updatePart(part)
+                  }
+                }),
+              )
+              yield* handle.exitCode
+            }).pipe(Effect.scoped, Effect.orDie),
+          ).pipe(Effect.exit)
+
+          if (Exit.isFailure(exit) && Cause.hasInterrupts(exit.cause) && !Cause.hasDies(exit.cause)) {
+            aborted = true
           }
+          yield* finish
+
+          if (Exit.isFailure(exit) && !aborted && !Cause.hasInterruptsOnly(exit.cause)) {
+            return yield* Effect.failCause(exit.cause)
+          }
+
+          return { info: msg, parts: [part] }
         }),
       )
-
-      const exit = yield* Effect.gen(function* () {
-        const handle = yield* spawner.spawn(cmd)
-        yield* Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
-          Effect.sync(() => {
-            output += chunk
-            if (part.state.status === "running") {
-              part.state.metadata = { output, description: "" }
-              void run.fork(sessions.updatePart(part))
-            }
-          }),
-        )
-        yield* handle.exitCode
-      }).pipe(
-        Effect.scoped,
-        Effect.onInterrupt(() =>
-          Effect.sync(() => {
-            aborted = true
-          }),
-        ),
-        Effect.orDie,
-        Effect.ensuring(finish),
-        Effect.exit,
-      )
-
-      if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)) {
-        return yield* Effect.failCause(exit.cause)
-      }
-
-      return { info: msg, parts: [part] }
     })
 
     const getModel = Effect.fn("SessionPrompt.getModel")(function* (
@@ -996,6 +998,36 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         system: input.system,
         format: input.format,
         editorContext: input.editorContext, // kilocode_change
+      }
+
+      const current = Database.use((db) =>
+        db
+          .select({ agent: SessionTable.agent, model: SessionTable.model })
+          .from(SessionTable)
+          .where(eq(SessionTable.id, input.sessionID))
+          .get(),
+      )
+      if (current?.agent !== info.agent) {
+        EventV2.run(SessionEvent.AgentSwitched.Sync, {
+          sessionID: input.sessionID,
+          timestamp: DateTime.makeUnsafe(info.time.created),
+          agent: info.agent,
+        })
+      }
+      if (
+        current?.model?.providerID !== info.model.providerID ||
+        current.model.id !== info.model.modelID ||
+        current.model.variant !== info.model.variant
+      ) {
+        EventV2.run(SessionEvent.ModelSwitched.Sync, {
+          sessionID: input.sessionID,
+          timestamp: DateTime.makeUnsafe(info.time.created),
+          model: {
+            id: Modelv2.ID.make(info.model.modelID),
+            providerID: Modelv2.ProviderID.make(info.model.providerID),
+            variant: Modelv2.VariantID.make(info.model.variant ?? "default"),
+          },
+        })
       }
 
       yield* Effect.addFinalizer(() => instruction.clear(info.id))
@@ -1088,7 +1120,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             case "file:": {
               log.info("file", { mime: part.mime })
               const filepath = fileURLToPath(part.url)
-              if (yield* fsys.isDir(filepath)) part.mime = "application/x-directory"
+              const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
 
               const { read } = yield* registry.named()
               const execRead = (args: Parameters<typeof read.execute>[0], extra?: Tool.Context["extra"]) => {
@@ -1107,7 +1139,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   .pipe(Effect.onInterrupt(() => Effect.sync(() => controller.abort())))
               }
 
-              if (part.mime === "text/plain") {
+              if (mime === "text/plain") {
                 let offset: number | undefined
                 let limit: number | undefined
                 const range = { start: url.searchParams.get("start"), end: url.searchParams.get("end") }
@@ -1165,7 +1197,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                       })),
                     )
                   } else {
-                    pieces.push({ ...part, messageID: info.id, sessionID: input.sessionID })
+                    pieces.push({ ...part, mime, messageID: info.id, sessionID: input.sessionID })
                   }
                 } else {
                   const error = Cause.squash(exit.cause)
@@ -1186,7 +1218,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 return pieces
               }
 
-              if (part.mime === "application/x-directory") {
+              if (mime === "application/x-directory") {
                 const args = { filePath: filepath }
                 const exit = yield* execRead(args, { includeDirectoryFiles: true }).pipe(Effect.exit) // kilocode_change inline folder files
                 if (Exit.isFailure(exit)) {
@@ -1222,7 +1254,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                     synthetic: true,
                     text: exit.value.output,
                   },
-                  { ...part, messageID: info.id, sessionID: input.sessionID },
+                  { ...part, mime, messageID: info.id, sessionID: input.sessionID },
                 ]
               }
 
@@ -1240,9 +1272,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   sessionID: input.sessionID,
                   type: "file",
                   url:
-                    `data:${part.mime};base64,` +
+                    `data:${mime};base64,` +
                     Buffer.from(yield* fsys.readFile(filepath).pipe(Effect.catch(Effect.die))).toString("base64"),
-                  mime: part.mime,
+                  mime,
                   filename: part.filename!,
                   source: part.source,
                 },
@@ -1314,15 +1346,80 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       yield* sessions.updateMessage(info)
       for (const part of parts) yield* sessions.updatePart(part)
+      const nextPrompt = parts.reduce(
+        (result, part) => {
+          if (part.type === "text") {
+            if (part.synthetic) result.synthetic.push(part.text)
+            else result.text.push(part.text)
+          }
+          if (part.type === "file") {
+            result.files.push(
+              new FileAttachment({
+                uri: part.url,
+                mime: part.mime,
+                name: part.filename,
+                source: part.source
+                  ? new Source({
+                      start: part.source.text.start,
+                      end: part.source.text.end,
+                      text: part.source.text.value,
+                    })
+                  : undefined,
+              }),
+            )
+          }
+          if (part.type === "agent") {
+            result.agents.push(
+              new AgentAttachment({
+                name: part.name,
+                source: part.source
+                  ? new Source({
+                      start: part.source.start,
+                      end: part.source.end,
+                      text: part.source.value,
+                    })
+                  : undefined,
+              }),
+            )
+          }
+          return result
+        },
+        {
+          text: [] as string[],
+          files: [] as FileAttachment[],
+          agents: [] as AgentAttachment[],
+          synthetic: [] as string[],
+        },
+      )
+      // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+      EventV2.run(SessionEvent.Prompted.Sync, {
+        sessionID: input.sessionID,
+        timestamp: DateTime.makeUnsafe(info.time.created),
+        prompt: {
+          text: nextPrompt.text.join("\n"),
+          files: nextPrompt.files,
+          agents: nextPrompt.agents,
+        },
+      })
+      for (const text of nextPrompt.synthetic) {
+        // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
+        EventV2.run(SessionEvent.Synthetic.Sync, {
+          sessionID: input.sessionID,
+          timestamp: DateTime.makeUnsafe(info.time.created),
+          text,
+        })
+      }
 
       return { info, parts }
     }, Effect.scoped)
 
     const prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput) {
-        const session = yield* sessions.get(input.sessionID)
+        const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
         // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
+        yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
+        yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
         const message = yield* createUserMessage(input)
         yield* sessions.touch(input.sessionID)
 
@@ -1355,7 +1452,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         // kilocode_change end
       },
     )
-    // kilocode_change end
 
     const lastAssistant = Effect.fnUntraced(function* (sessionID: SessionID) {
       // kilocode_change start - retry when cancel races before shellImpl writes messages
@@ -1381,9 +1477,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
         const ctx = yield* InstanceState.context
         const slog = elog.with({ sessionID })
-        let structured: unknown | undefined
+        let structured: unknown
         let step = 0
-        const session = yield* sessions.get(sessionID)
+        const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
 
         while (true) {
           yield* status.set(sessionID, { type: "busy" })
@@ -1406,12 +1502,20 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             const task = msg.parts.filter((part) => part.type === "compaction" || part.type === "subtask")
             if (task && !lastFinished) tasks.push(...task)
           }
+          // kilocode_change end
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
           )
+          // kilocode_change start - carry local review command marker into LLM telemetry
+          const telemetry =
+            KiloSessionProcessor.extractReviewTelemetry(
+              msgs.findLast((m) => m.info.role === "user" && m.info.id === lastUser.id)?.parts ?? [],
+            ) ?? KiloSessionProcessor.extractSuggestionReviewTelemetry(lastAssistantMsg?.parts ?? [])
+          // kilocode_change end
+
           // kilocode_change start - keep provider-executed tools from forcing a re-loop
           // Some providers return "stop" even when the assistant message contains tool calls.
           // Keep the loop running so tool results can be sent back to the model.
@@ -1547,6 +1651,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             assistantMessage: msg,
             sessionID,
             model,
+            telemetry, // kilocode_change
           })
 
           const outcome: "break" | "continue" = yield* Effect.gen(function* () {
@@ -1602,16 +1707,32 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
             // kilocode_change end
 
-            const [skills, env, instructions, modelMsgs] = yield* Effect.all([
+            // kilocode_change start - persistently prune stale tool outputs when payload is already large
+            const [skills, env, instructions] = yield* Effect.all([
               sys.skills(agent),
-              Effect.sync(() => sys.environment(model, lastUser.editorContext)), // kilocode_change
+              sys.environment(model, lastUser.editorContext), // kilocode_change
               instruction.system().pipe(Effect.orDie),
-              MessageV2.toModelMessagesEffect(msgs, model),
             ])
-            const system = [...env, ...(skills ? [skills] : []), ...instructions]
+            let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
+            const size = Buffer.byteLength(JSON.stringify(modelMsgs))
+            if (size > REQUEST_PRUNE_BYTES) {
+              yield* compaction.prune({ sessionID, reason: "payload-limit" })
+              msgs = yield* MessageV2.filterCompactedEffect(sessionID)
+              msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
+              msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
+              yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+              KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+              msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
+              modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
+              const nextSize = Buffer.byteLength(JSON.stringify(modelMsgs))
+              if (nextSize > REQUEST_PRUNE_BYTES) log.warn("payload still large after pruning", { size: nextSize })
+            }
+            // kilocode_change end
+            const system = [...env, ...instructions, ...(skills ? [skills] : [])]
             const format = lastUser.format ?? { type: "text" as const }
             if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT) // kilocode_change
-            const result = yield* handle.process({ // kilocode_change
+            const result = yield* handle.process({
+              // kilocode_change
               // kilocode_change start - keep Ask/Plan tool filtering hardened against session allows
               user: lastUser,
               agent,
@@ -1643,6 +1764,14 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 yield* sessions.updateMessage(handle.message)
                 return "break" as const
               }
+              // kilocode_change start
+              if (handle.message.finish === "error") {
+                KiloSessionProcessor.providerFinishError(handle.message)
+                yield* sessions.updateMessage(handle.message)
+                closeReasons.set(sessionID, "error")
+                return "break" as const
+              }
+              // kilocode_change end
             }
 
             // kilocode_change start
@@ -1683,13 +1812,28 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               return "break" as const
             }
             // kilocode_change end
+            // kilocode_change start - guard against providers that end the stream
+            // without a terminal stop_reason (e.g. an Anthropic-style message_delta
+            // with stop_reason: null followed immediately by message_stop). Without
+            // a finishReason, the loop-exit check at the top of the next iteration
+            // sees a falsy `finish` (loaded from storage via filterCompactedEffect)
+            // and keeps stepping forever. Default to "unknown" and persist so the
+            // regular break condition fires when there are no tool calls. Skipped
+            // for the compact path so guardCompactionAttempt can still fill in
+            // "error" on exhaustion. Tool-call turns already get "tool-calls" from
+            // the AI SDK; even without it, !hasToolCalls keeps the break gated.
+            if (result !== "compact" && !handle.message.finish) {
+              handle.message.finish = "unknown"
+              yield* sessions.updateMessage(handle.message)
+            }
+            // kilocode_change end
             return "continue" as const
           }).pipe(Effect.ensuring(instruction.clear(handle.message.id)))
           if (outcome === "break") break
           continue
         }
 
-        yield* compaction.prune({ sessionID }).pipe(Effect.ignore, Effect.forkIn(scope))
+        yield* compaction.prune({ sessionID, reason: "normal" }).pipe(Effect.ignore, Effect.forkIn(scope))
         return yield* lastAssistant(sessionID)
       },
     )
@@ -1698,6 +1842,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       input: LoopInput,
     ) {
       // kilocode_change start
+      yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
+      yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(input.sessionID, lastAssistant(input.sessionID), runLoop(input.sessionID)),
@@ -1717,7 +1863,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
       function* (input: ShellInput) {
-        return yield* state.startShell(input.sessionID, lastAssistant(input.sessionID), shellImpl(input))
+        const ready = yield* Latch.make()
+        return yield* state.startShell(input.sessionID, lastAssistant(input.sessionID), shellImpl(input, ready), ready)
       },
     )
 
@@ -1760,7 +1907,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       const shellMatches = ConfigMarkdown.shell(template)
       if (shellMatches.length > 0) {
-        const sh = Shell.preferred()
+        const cfg = yield* config.get()
+        const sh = Shell.preferred(cfg.shell)
         const results = yield* Effect.promise(() =>
           Promise.all(
             shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
@@ -1793,6 +1941,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       const templateParts = yield* resolvePromptParts(template)
+      KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
       const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
       const parts = isSubtask
         ? [
@@ -1861,6 +2010,7 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(ToolRegistry.defaultLayer),
     Layer.provide(Truncate.defaultLayer),
     Layer.provide(Provider.defaultLayer),
+    Layer.provide(Config.defaultLayer),
     Layer.provide(Instruction.defaultLayer),
     Layer.provide(AppFileSystem.defaultLayer),
     Layer.provide(Plugin.defaultLayer),

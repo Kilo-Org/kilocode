@@ -7,16 +7,17 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider"
+import { WithInstance } from "../../src/project/with-instance"
+import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
-import { Global } from "../../src/global"
-import { Log } from "../../src/util"
+import { Global } from "@opencode-ai/core/global"
+import * as Log from "@opencode-ai/core/util/log"
 import path from "path"
 import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
@@ -71,7 +72,7 @@ const savedKey = `${saved.providerID}/${saved.modelID}`
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
   await fs.rm(statePath, { force: true }).catch(() => {})
-  await Instance.provide({
+  await WithInstance.provide({
     directory: tmp.path,
     fn: async () => {
       await fs.rm(statePath, { force: true }).catch(() => {})
@@ -181,7 +182,7 @@ async function latestUser(sessionID: SessionID) {
 }
 
 async function sessions() {
-  return Array.fromAsync(Session.list())
+  return AppRuntime.runPromise(Session.Service.use((svc) => svc.list()))
 }
 
 async function waitQuestion(sessionID: string) {
@@ -291,6 +292,34 @@ describe("plan follow-up", () => {
         PlanFollowup.ANSWER_NEW_SESSION,
         PlanFollowup.ANSWER_CONTINUE,
       ])
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+    }))
+
+  test("ask - Continue here option carries mode: code so VS Code picker updates immediately", () =>
+    withInstance(async () => {
+      const seeded = await seed({ text: "1. Build" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      const continueOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_CONTINUE)
+      expect(continueOpt?.mode).toBe("code")
+
+      // Start new session should not carry a mode (it opens a new session — the
+      // current picker is irrelevant once the session switches).
+      const newOpt = q.options.find((o) => o.label === PlanFollowup.ANSWER_NEW_SESSION)
+      expect(newOpt?.mode).toBeUndefined()
 
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
@@ -604,7 +633,7 @@ describe("plan follow-up", () => {
       if (!newSessionID || !next) throw new Error("expected follow-up session")
       expect(next.id).toBe(newSessionID)
       expect(next.parentID).toBeUndefined()
-      const planPath = Session.plan(await Session.get(seeded.sessionID))
+      const planPath = Session.plan(await Session.get(seeded.sessionID), Instance.current)
       const messages = await Session.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       expect(user?.info.role).toBe("user")
@@ -673,12 +702,12 @@ describe("plan follow-up", () => {
 
       const dir = other.path
 
-      const seeded = await Instance.provide({
+      const seeded = await WithInstance.provide({
         directory: dir,
         fn: async () => seed({ text: "1. Add API\n2. Add tests" }),
       })
 
-      const before = await Instance.provide({
+      const before = await WithInstance.provide({
         directory: dir,
         fn: async () => sessions(),
       })
@@ -698,7 +727,7 @@ describe("plan follow-up", () => {
       })
 
       await expect(pending).resolves.toBe("break")
-      const after = await Instance.provide({
+      const after = await WithInstance.provide({
         directory: dir,
         fn: async () => sessions(),
       })
@@ -712,9 +741,9 @@ describe("plan follow-up", () => {
       expect(next?.parentID).toBeUndefined()
 
       if (next) {
-        const planPath = await Instance.provide({
+        const planPath = await WithInstance.provide({
           directory: dir,
-          fn: async () => Session.plan(await Session.get(seeded.sessionID)),
+          fn: async () => Session.plan(await Session.get(seeded.sessionID), Instance.current),
         })
         const messages = await Session.messages({ sessionID: next.id })
         const user = messages.find((item) => item.info.role === "user")

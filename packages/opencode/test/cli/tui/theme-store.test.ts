@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { Log } from "../../../src/util"
+import * as Log from "@opencode-ai/core/util/log"
 
 Log.init({ print: false })
 

@@ -7,10 +7,24 @@
  * Returns the action to take: select a session by ID, go to local, or do nothing.
  */
 
+import { isRootSession } from "../src/context/session-utils"
+
 /** Sentinel value for the local repo selection. */
 export const LOCAL = "local" as const
 
 type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
+
+type SessionLike = { id: string; parentID?: string | null; createdAt: string }
+
+export function filterUnassignedSessions<T extends SessionLike>(
+  sessions: T[],
+  worktree: Set<string>,
+  local: Set<string>,
+): T[] {
+  return [...sessions]
+    .filter((s) => isRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
 
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index

@@ -2,6 +2,8 @@
 import { $ } from "bun"
 import { join, relative, dirname, basename } from "node:path"
 import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
+import { copyTreeSitterResources, hasTreeSitterResources } from "../src/services/cli-backend/cli-resources"
+import { currentFfmpegTarget, ensureFfmpegForTarget } from "./ffmpeg-helper"
 
 const forceRebuild = process.argv.includes("--force")
 
@@ -20,6 +22,8 @@ const forceRebuild = process.argv.includes("--force")
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
+const coreDir = join(packagesDir, "core")
+const indexingDir = join(packagesDir, "kilo-indexing")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
@@ -32,8 +36,10 @@ function log(msg: string) {
 
 async function cliSourceHash(): Promise<string | null> {
   try {
-    const result = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
-    return result.text().trim() || null
+    const opencodeResult = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
+    const coreResult = await $`git log -1 --format=%H -- .`.cwd(coreDir).quiet()
+    const indexingResult = await $`git log -1 --format=%H -- .`.cwd(indexingDir).quiet()
+    return `${opencodeResult.text().trim()}-${coreResult.text().trim()}-${indexingResult.text().trim()}` || null
   } catch {
     return null
   }
@@ -41,8 +47,14 @@ async function cliSourceHash(): Promise<string | null> {
 
 async function isDirty(): Promise<boolean> {
   try {
-    const result = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
-    return result.text().trim().length > 0
+    const opencodeResult = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
+    const coreResult = await $`git status --porcelain -- .`.cwd(coreDir).quiet()
+    const indexingResult = await $`git status --porcelain -- .`.cwd(indexingDir).quiet()
+    return (
+      opencodeResult.text().trim().length > 0 ||
+      coreResult.text().trim().length > 0 ||
+      indexingResult.text().trim().length > 0
+    )
   } catch {
     return false
   }
@@ -79,6 +91,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
   const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
   try {
     statSync(preferred)
+    if (!hasTreeSitterResources(preferred)) return null
     return preferred
   } catch {
     // fall through to generic search
@@ -104,6 +117,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
         continue
       }
       if (e.isFile() && (e.name === "kilo" || e.name === "kilo.exe") && basename(dirname(p)) === "bin") {
+        if (!hasTreeSitterResources(p)) continue
         return p
       }
     }
@@ -119,8 +133,8 @@ async function ensureBuiltBinary(): Promise<string> {
     `No prebuilt binary found under ${relative(kiloVscodeDir, join(opencodeDir, "dist"))} - attempting build via bun.`,
   )
 
-  const bunFile = Bun.file(await Bun.which("bun"))
-  if (!(await bunFile.exists())) {
+  const bunPath = Bun.which("bun")
+  if (!bunPath) {
     throw new Error(
       `Bun is required to build the CLI binary, but was not found on PATH. ` +
         `Install bun, or build the CLI separately in ${opencodeDir} and re-run.`,
@@ -155,6 +169,7 @@ async function main() {
     log(
       `CLI binary already present at ${relative(kiloVscodeDir, targetBinPath)} (${Math.round(st.size / 1024 / 1024)}MB). Use --force to rebuild.`,
     )
+    await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
     return
   }
 
@@ -177,7 +192,9 @@ async function main() {
   const sourceBinPath = await ensureBuiltBinary()
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
+  await copyTreeSitterResources(sourceBinPath, targetBinPath)
   chmodSync(targetBinPath, 0o755)
+  await ensureFfmpegForTarget(currentFfmpegTarget(), targetBinDir)
 
   // Record the CLI source version so future runs detect when a rebuild is needed
   const hash = await cliSourceHash()

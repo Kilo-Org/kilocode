@@ -1,10 +1,9 @@
 /**
  * Prompt history navigation hook.
  * Arrow Up/Down at cursor boundaries cycles through previously sent prompts,
- * matching the behavior of the CLI TUI and the desktop app.
+ * matching the behavior of the CLI TUI.
  *
- * Entries persist via localStorage (same pattern as the desktop app's
- * Persist.global), surviving webview hide/show cycles.
+ * Entries persist via localStorage, surviving webview hide/show cycles.
  */
 
 import { createSignal } from "solid-js"

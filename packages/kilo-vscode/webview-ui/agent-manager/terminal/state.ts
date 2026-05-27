@@ -229,6 +229,7 @@ export interface TerminalHandlerDeps {
   /** Locate a session/pending tab by id. */
   findTab: (id: string) => { id: string } | undefined
   postMessage: (msg: unknown) => void
+  onRemove?: () => void
   /** Resolve the current sidebar selection for the new-terminal helper. */
   getSelection: () => string | null
   /** Sentinel value for the LOCAL sidebar selection. */
@@ -258,6 +259,7 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   }
 
   const closeTerminal = (terminalId: string) => {
+    deps.onRemove?.()
     const ids = deps.tabIds()
     const idx = ids.indexOf(terminalId)
     // Pick the tab to focus after closing: prefer the next tab, fall

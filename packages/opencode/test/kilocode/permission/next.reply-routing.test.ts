@@ -7,8 +7,9 @@ import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { SessionID } from "../../../src/session/schema"
 import * as Config from "../../../src/config/config"
-import { Global } from "../../../src/global"
-import * as CrossSpawnSpawner from "../../../src/effect/cross-spawn-spawner"
+import { InstanceRuntime } from "../../../src/project/instance-runtime"
+import { Global } from "@opencode-ai/core/global"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { provideInstance, provideTmpdirInstance, tmpdirScoped } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
@@ -21,7 +22,8 @@ afterAll(async () => {
   for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
     await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
   }
-  await Config.invalidate(true)
+  await Config.invalidate()
+  await InstanceRuntime.disposeAllInstances()
 })
 
 const ask = (input: Parameters<Permission.Interface["ask"]>[0]) =>

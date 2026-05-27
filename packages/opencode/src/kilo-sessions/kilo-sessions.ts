@@ -1,24 +1,25 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { Provider } from "@/provider"
-import { Session } from "@/session"
+import { Provider } from "@/provider/provider"
+import { Session } from "@/session/session"
 import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
-import { Storage } from "@/storage"
-import { Log } from "@/util"
+import { Storage } from "@/storage/storage"
+import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
+import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
 import { Schema } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
-import { Config } from "@/config"
+import { Config } from "@/config/config"
 import { Instance } from "@/project/instance"
-import { Vcs } from "@/project"
+import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
@@ -27,6 +28,11 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
 import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
+
+async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
+  const { WithInstance } = await import("@/project/with-instance")
+  return WithInstance.provide(input)
+}
 
 export namespace KiloSessions {
   export const Event = {
@@ -40,6 +46,7 @@ export namespace KiloSessions {
   }
 
   const log = Log.create({ service: "kilo-sessions" })
+  const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   const Uuid = z.uuid()
   type Uuid = z.infer<typeof Uuid>
@@ -88,7 +95,7 @@ export namespace KiloSessions {
 
   async function kilocodeToken() {
     return withInFlightCache(tokenKey, ttlMs, async () => {
-      const auth = await Auth.get("kilo")
+      const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
@@ -363,7 +370,7 @@ export namespace KiloSessions {
       const conn = RemoteWS.connect({
         url,
         getToken: kilocodeToken,
-        withContext: (fn) => Instance.provide({ directory, fn }),
+        withContext: (fn) => provide({ directory, fn }),
         getSessions,
         log,
         onOpen: () => {
@@ -375,7 +382,7 @@ export namespace KiloSessions {
         onMessage: (msg) => {
           // Must run inside Instance.provide so Bus.subscribeAll can access
           // the instance-scoped subscription map via Instance.state().
-          void Instance.provide({ directory, fn: () => sender.handle(msg) })
+          void provide({ directory, fn: () => sender.handle(msg) })
         },
         onClose: () => disableRemote(),
       })
@@ -434,7 +441,7 @@ export namespace KiloSessions {
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSessions(input: { focused: string[]; open?: string[] }) {
+  export function setViewedSessions(input: { focused: readonly string[]; open?: readonly string[] }) {
     focused.clear()
     opened.clear()
     for (const id of input.focused) {
@@ -691,7 +698,7 @@ export namespace KiloSessions {
   }
 
   async function meta(sessionId?: string) {
-    const override = sessionId ? KiloSession.getPlatformOverride(sessionId) : undefined
+    const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)
@@ -710,7 +717,7 @@ export namespace KiloSessions {
     if (isUuid(env)) return env
 
     return withInFlightCache(orgKey, ttlMs, async () => {
-      const auth = await Auth.get("kilo")
+      const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
     })

@@ -7,8 +7,13 @@ test("matches hosted package glob paths", () => {
   expect(shouldSkip("packages/console/app/package.json", ["packages/console/**"])).toBe(true)
 })
 
-test("does not match sibling package glob paths", () => {
-  expect(shouldSkip("packages/app/package.json", ["packages/web/**"])).toBe(false)
+test("matches removed app package glob paths", () => {
+  expect(shouldSkip("packages/app/package.json", ["packages/app/**"])).toBe(true)
+})
+
+test("matches removed vscode sdk glob paths", () => {
+  expect(shouldSkip("sdks/vscode/package.json", ["sdks/vscode/**"])).toBe(true)
+  expect(shouldSkip("sdks/vscode/src/extension.ts", ["sdks/vscode/**"])).toBe(true)
 })
 
 test("matches extension glob paths", () => {

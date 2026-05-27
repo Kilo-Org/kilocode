@@ -87,7 +87,7 @@
 }
 
 .marketplace-empty-message {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 }
 
 /* Contribute CTA (footer + inside empty state) */
@@ -102,7 +102,7 @@
   margin-top: 12px;
   border-top: 1px solid var(--border-base, var(--vscode-widget-border, transparent));
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
 }
 
 /* Inside the empty state, drop the border — message is already the lead-in. */
@@ -144,7 +144,7 @@
 
 .marketplace-card-name {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--kilo-font-size-14);
   color: var(--text-base);
 }
 
@@ -157,12 +157,12 @@
 }
 
 .marketplace-card-author {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
 }
 
 .marketplace-card-description {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   color: var(--text-weak);
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -179,7 +179,7 @@
 .marketplace-card-expand {
   all: unset;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-interactive-base);
 }
 
@@ -255,14 +255,14 @@
 
 .install-modal-label {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   color: var(--text-base);
 }
 
 .install-modal-prerequisites {
   margin: 0;
   padding-left: 20px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   color: var(--text-weak);
 }
 
@@ -283,14 +283,14 @@
 
 .install-modal-success {
   color: var(--text-on-success-base);
-  font-size: 14px;
+  font-size: var(--kilo-font-size-14);
   font-weight: 600;
   margin: 0 0 16px;
 }
 
 .install-modal-error-msg {
   color: var(--text-on-critical-base);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   margin: 0 0 16px;
 }
 
@@ -302,7 +302,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 }
 
 /* Link style */

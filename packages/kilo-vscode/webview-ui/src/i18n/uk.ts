@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Відкрити доступ до цієї сесії та скопіювати URL до буфера обміну",
   "command.session.unshare": "Закрити доступ до сесії",
   "command.session.unshare.description": "Закрити доступ до цієї сесії",
+  "command.session.export": "Експортувати запис сеансу",
 
   "palette.search.placeholder": "Пошук файлів, команд і сесій",
   "palette.empty": "Результатів не знайдено",
@@ -137,6 +138,16 @@ export const dict = {
   "provider.connect.apiKey.label": "API-ключ {{provider}}",
   "provider.connect.apiKey.placeholder": "API-ключ",
   "provider.connect.apiKey.required": "API-ключ обов'язковий",
+  "provider.connect.prompt.required": "{{field}} є обов'язковим",
+  "provider.connect.azure.endpointType.label": "Виберіть конфігурацію кінцевої точки Azure",
+  "provider.connect.azure.endpointType.resourceName.label": "Назва ресурсу",
+  "provider.connect.azure.endpointType.resourceName.hint": "Створіть кінцеву точку з назви ресурсу Azure",
+  "provider.connect.azure.endpointType.baseURL.label": "Повна URL-адреса кінцевої точки",
+  "provider.connect.azure.endpointType.baseURL.hint": "Використовувати спеціальну кінцеву точку Azure OpenAI",
+  "provider.connect.azure.resourceName.label": "Назва ресурсу Azure",
+  "provider.connect.azure.resourceName.placeholder": "напр. my-models",
+  "provider.connect.azure.baseURL.label": "URL-адреса кінцевої точки Azure OpenAI",
+  "provider.connect.azure.baseURL.placeholder": "напр. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen надає доступ до добірки надійних оптимізованих моделей для агентів кодування.",
   "provider.connect.opencodeZen.line2":
@@ -167,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Остання",
   "model.group.recommended": "Рекомендовані",
   "model.group.favorites": "Обране",
+  "model.group.collapse": "Згорнути {{group}}",
+  "model.group.expand": "Розгорнути {{group}}",
   "model.favorite.add": "Додати до обраного",
   "model.favorite.remove": "Видалити з обраного",
   "model.provider.anthropic": "Anthropic",
@@ -260,6 +273,7 @@ export const dict = {
   "prompt.attachment.remove": "Видалити вкладення",
   "prompt.action.send": "Надіслати",
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
+  "prompt.action.send.recording": "Транскрибувати та надіслати",
   "prompt.action.stop": "Зупинити",
   "prompt.action.enhance": "Покращити запит",
   "prompt.action.indexing": "Налаштування індексування",
@@ -271,6 +285,20 @@ export const dict = {
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
+
+  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
+  "speechToText.tooltip.stop": "Зупинити захоплення звуку",
+  "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
+  "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
+  "speechToText.error.title": "Помилка голосового введення",
+  "speechToText.error.loginRequired": "Увійдіть до Kilo, щоб використовувати голосове введення.",
+  "speechToText.error.permission": "Доступ до мікрофона заборонено.",
+  "speechToText.error.microphone": "Не вдалося запустити мікрофон.",
+  "speechToText.error.recording": "Помилка запису.",
+  "speechToText.error.emptyRecording": "Аудіо не записано.",
+  "speechToText.error.emptyTranscript": "Мовлення не виявлено.",
+  "speechToText.error.encoding": "Не вдалося закодувати запис.",
+  "speechToText.toast.transcribed": "Транскрипцію вставлено",
 
   "prompt.toast.pasteUnsupported.title": "Вставка не підтримується",
   "prompt.toast.pasteUnsupported.description": "Сюди можна вставляти лише зображення або PDF.",
@@ -460,6 +488,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Зареєструйтеся безкоштовно для продовження та доступу до 500+ моделей. Займе 2 хвилини, кредитна картка не потрібна. Або поверніться пізніше.",
   "error.promotionLimit.action": "Зареєструватися",
+  "error.providerAuth.title": "Сеанс {{provider}} завершено",
+  "error.providerAuth.description": "Підключіться до {{provider}} знову, а потім надішліть повідомлення ще раз.",
+  "error.providerAuth.chatgpt.title": "Сеанс OpenAI завершено",
+  "error.providerAuth.chatgpt.description":
+    "Увійдіть у ChatGPT знову, а потім надішліть повідомлення ще раз, щоб продовжити використання моделей Codex.",
 
   "error.chain.unknown": "Невідома помилка",
   "error.chain.causedBy": "Спричинено:",
@@ -1040,8 +1073,13 @@ export const dict = {
   "settings.indexing.title": "Індексування",
   "settings.indexing.status.title": "Статус",
   "settings.indexing.enable.title": "Увімкнути індексування",
-  "settings.indexing.enable.description":
-    "Увімкніть або вимкніть семантичне індексування кодової бази для цього робочого простору.",
+  "settings.indexing.enable.description": "Увімкніть або вимкніть семантичне індексування кодової бази.",
+  "settings.indexing.globalEnable.title": "Увімкнути глобально",
+  "settings.indexing.globalEnable.description": "Увімкнути індексування для кожного робочого простору.",
+  "settings.indexing.projectEnable.title": "Увімкнути для цього проєкту",
+  "settings.indexing.projectEnable.description":
+    "Увімкнути індексування для цього робочого простору, коли глобальне індексування вимкнено.",
+  "settings.indexing.projectEnable.disabledTooltip": "Глобальне індексування ввімкнено, тому цей проєкт уже охоплено.",
   "settings.indexing.provider.title": "Провайдер ембедингів",
   "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
   "settings.indexing.model.title": "Модель ембедингів",
@@ -1173,6 +1211,7 @@ export const dict = {
     "Використовувати розумне прив'язування клавіш для активації підказок",
   "settings.autocomplete.chatAutocomplete.title": "Увімкнути автодоповнення в полі чату",
   "settings.autocomplete.chatAutocomplete.description": "Показувати підказки автодоповнення в полі введення чату",
+  "settings.autocomplete.modelsHint": "Щоб вибрати модель для автодоповнення, див. Налаштування моделей.",
 
   "settings.notifications.agent.title": "Завершення агента",
   "settings.notifications.agent.description": "Показувати сповіщення, коли агент завершить завдання",
@@ -1209,6 +1248,17 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
+  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
+  "settings.experimental.agentManagerTool.description":
+    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
+  "settings.experimental.speechToText.title": "Мовлення в текст",
+  "settings.experimental.speechToText.description":
+    "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Модель мовлення в текст",
+  "settings.experimental.speechToTextModel.description":
+    "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
   "settings.experimental.continueOnDeny.title": "Продовжувати при відхиленні",
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
@@ -1231,6 +1281,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Виберіть агента для налаштування…",
   "settings.agentBehaviour.modelOverride.title": "Перевизначення моделі",
   "settings.agentBehaviour.modelOverride.description": "Перевизначити стандартну модель для цього агента",
+  "settings.agentBehaviour.variantOverride.title": "Перевизначення варіанту",
+  "settings.agentBehaviour.variantOverride.description": "Перевизначити варіант моделі для цього агента",
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",
@@ -1349,7 +1401,10 @@ export const dict = {
     "Створювати контрольні точки перед редагуванням файлів, щоб мати можливість відновити попередні стани",
 
   "settings.context.autoCompaction.title": "Автоматичне стиснення",
-  "settings.context.autoCompaction.description": "Автоматично стискати при заповненні контексту",
+  "settings.context.autoCompaction.description": "Автоматично стискати контекст до досягнення ліміту",
+  "settings.context.compactionLimit.title": "Ліміт автоматичного стискання",
+  "settings.context.compactionLimit.description":
+    "Стискати, коли контекст досягає цього відсотка вікна моделі. Залиште порожнім, щоб використовувати лише буфер безпеки.",
   "settings.context.prune.title": "Очищати старі виводи",
   "settings.context.prune.description": "Видаляти старі виводи інструментів під час стиснення",
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
@@ -1371,6 +1426,8 @@ export const dict = {
   "settings.display.layout.description": "Режим макету для інтерфейсу чату",
   "settings.display.layout.auto": "Автоматично",
   "settings.display.layout.stretch": "Розтягнути",
+  "settings.display.fontSize.title": "Розмір шрифту",
+  "settings.display.fontSize.description": "Налаштуйте розмір шрифту webview UI для Kilo незалежно від VS Code.",
   "settings.display.reasoningAutoCollapse.title": "Автоматично згортати міркування",
   "settings.display.reasoningAutoCollapse.description":
     "Згортає блоки міркувань після того, як агент закінчить їх писати. Залиште вимкненим, щоб міркування залишалися розгорнутими, доки ви не згорнете їх вручну.",
@@ -1384,11 +1441,15 @@ export const dict = {
   "settings.providers.smallModel.title": "Мала модель",
   "settings.providers.smallModel.description":
     "Легка модель для генерації заголовків, повідомлень комітів, покращення запитів та інших швидких завдань",
+  "settings.providers.subagentModel.title": "Модель субагента",
+  "settings.providers.subagentModel.description":
+    "Модель за замовчуванням та рівень міркування для субагентів task-tool. Залиште порожнім, щоб успадкувати модель агента, що викликає.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
   "settings.providers.disabled": "Вимкнені провайдери",
   "settings.providers.disabled.description": "Провайдери, що будуть приховані у списку провайдерів",
+  "settings.providers.disabled.enable": "Увімкнути",
   "settings.providers.enabled": "Увімкнені провайдери (список дозволених)",
   "settings.providers.enabled.description": "Якщо встановлено, доступні лише ці провайдери (власний список дозволених)",
   "settings.providers.notSet": "Не встановлено (використовувати стандартний сервера)",
@@ -1514,6 +1575,10 @@ export const dict = {
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",
   "notifications.action.tryModelGeneric": "Спробувати модель",
+  "settings.indexing.kiloModel.title": "Пресет моделі Kilo",
+  "settings.indexing.kiloModel.description": "Виберіть підтримувану модель Kilo-hosted embeddings.",
+  "settings.indexing.kiloSignIn.title": "Потрібен вхід у Kilo",
+  "settings.indexing.kiloSignIn.description": "Увійдіть у Kilo, щоб використовувати hosted embeddings.",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
   "settings.agentBehaviour.createMode": "Створити новий режим",
@@ -1553,4 +1618,29 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
+  "diffViewer.source.workspace.label": "Гілка",
+  "diffViewer.source.workspace.tooltip":
+    "Усі зміни в цій гілці порівняно з базовою. Включає незакомічені файли (staged, unstaged, невідстежувані) та локальні коміти, яких ще немає в базі.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Файли зі змінами, доданими до області підготовки git (`git add`), як вони з'являться в наступному коміті.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Файли, змінені в робочому дереві, але ще не підготовлені, плюс невідстежувані (нові) файли.",
+  "diffViewer.source.session.label": "Сесія",
+  "diffViewer.source.session.tooltip":
+    "Файли, змінені Kilo під час поточної сесії, на основі знімків по ходу. Скидається при старті нової сесії.",
+  "diffViewer.group.session": "Сесія",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Знімки вимкнено для цього репозиторію. Будь ласка, відредагуйте файли конфігурації, щоб відображати зміни сесії.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "План готовий:",
 }

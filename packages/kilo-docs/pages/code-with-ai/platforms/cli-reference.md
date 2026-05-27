@@ -154,6 +154,7 @@ Options:
       --fork        fork the session when continuing (use with --continue or --session)  [boolean]
       --cloud-fork  fetch session from cloud and continue locally (use with --session)  [boolean]
   -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
 ```
 
 ## kilo run
@@ -171,6 +172,7 @@ Options:
   -c, --continue                      continue the last session  [boolean]
   -s, --session                       session id to continue  [string]
       --fork                          fork the session before continuing (requires --continue or --session)  [boolean]
+      --cloud-fork                    fetch session from cloud and continue locally (use with --session)  [boolean]
       --share                         share the session  [boolean]
   -m, --model                         model to use in the format of provider/model  [string]
       --agent                         agent to use  [string]
@@ -179,12 +181,13 @@ Options:
       --title                         title for the session (uses truncated prompt if no value provided)  [string]
       --attach                        attach to a running opencode server (e.g., http://localhost:4096)  [string]
   -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
       --dir                           directory to run in, path on remote server if attaching  [string]
       --port                          port for the local server (defaults to random port if no value provided)  [number]
       --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
       --thinking                      show thinking blocks  [boolean] [default: false]
-      --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
       --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
+      --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -200,7 +203,9 @@ Commands:
   kilo debug scrap         list all known projects
   kilo debug skill         list all available skills
   kilo debug snapshot      snapshot debugging utilities
+  kilo debug startup       print startup timing
   kilo debug agent <name>  show agent configuration details
+  kilo debug info          show debug information
   kilo debug paths         show global paths (data, config, cache, state)
   kilo debug wait          wait indefinitely (for debugging)
 
@@ -477,6 +482,16 @@ Options:
   --version  Show version number  [boolean]
 ```
 
+### kilo debug startup
+
+```
+print startup timing
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
 ### kilo debug agent
 
 ```
@@ -490,6 +505,16 @@ Options:
   --version  Show version number  [boolean]
   --tool     Tool id to execute  [string]
   --params   Tool params as JSON or a JS object literal  [string]
+```
+
+### kilo debug info
+
+```
+show debug information
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug paths
@@ -518,7 +543,7 @@ Options:
 manage AI providers and credentials
 
 Commands:
-  kilo auth list         list providers  [aliases: ls]
+  kilo auth list         list providers and credentials  [aliases: ls]
   kilo auth login [url]  log in to a provider
   kilo auth logout       log out from a configured provider
 
@@ -530,7 +555,7 @@ Options:
 ### kilo auth list
 
 ```
-list providers
+list providers and credentials
 
 Options:
   --help     Show help  [boolean]
@@ -582,13 +607,13 @@ Options:
 create a new agent
 
 Options:
-      --help         Show help  [boolean]
-      --version      Show version number  [boolean]
-      --path         directory path to generate the agent file  [string]
-      --description  what the agent should do  [string]
-      --mode         agent mode  [string] [choices: "all", "primary", "subagent"]
-      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, glob, grep, webfetch, task, todowrite"  [string]
-  -m, --model        model to use in the format of provider/model  [string]
+      --help                  Show help  [boolean]
+      --version               Show version number  [boolean]
+      --path                  directory path to generate the agent file  [string]
+      --description           what the agent should do  [string]
+      --mode                  agent mode  [string] [choices: "all", "primary", "subagent"]
+      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, lsp, skill"  [string]
+  -m, --model                 model to use in the format of provider/model  [string]
 ```
 
 ### kilo agent list
@@ -659,6 +684,25 @@ Options:
   --refresh  refresh the models cache from models.dev  [boolean]
 ```
 
+## kilo roll-call
+
+```
+batch-test text models matching a filter for connectivity and latency
+
+Positionals:
+  filter  regex to filter models by provider/modelID (required)  [string]
+
+Options:
+  --help      Show help  [boolean]
+  --version   Show version number  [boolean]
+  --prompt    Prompt to send to each model  [string] [default: "Hello"]
+  --timeout   Timeout for each model call in milliseconds  [number] [default: 25000]
+  --parallel  Number of parallel model calls  [number] [default: 5]
+  --verbose   Show verbose output  [boolean] [default: false]
+  --quiet     Suppress progress and decoration  [boolean] [default: false]
+  --output    Output format (table, json, or md)  [string] [choices: "table", "json", "md"] [default: "table"]
+```
+
 ## kilo stats
 
 ```
@@ -686,8 +730,6 @@ Options:
   --version   Show version number  [boolean]
   --sanitize  redact sensitive transcript and file data  [boolean]
 ```
-
-Use `--sanitize` before sharing an exported session outside your team. Unsanitized exports can contain full prompts, assistant text, reasoning, tool inputs and outputs, file paths, file contents, snapshots, diffs, attachments, working directories, and other local context. Sanitized exports replace sensitive transcript and file data with stable `[redacted:...]` placeholders while preserving enough structure for debugging import/export issues.
 
 ## kilo import
 

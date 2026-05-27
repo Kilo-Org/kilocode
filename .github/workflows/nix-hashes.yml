@@ -73,7 +73,7 @@ jobs:
           echo "Computed hash for ${SYSTEM}: $HASH"
 
       - name: Upload hash
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7 # kilocode_change
         with:
           name: hash-${{ matrix.system }}
           path: hash.txt
@@ -86,7 +86,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6 # kilocode_change
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -106,7 +106,7 @@ jobs:
           git pull --rebase --autostash origin "$GITHUB_REF_NAME"
 
       - name: Download hash artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8 # kilocode_change
         with:
           path: hashes
           pattern: hash-*

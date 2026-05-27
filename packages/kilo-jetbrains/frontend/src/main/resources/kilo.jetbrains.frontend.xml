@@ -7,10 +7,27 @@
     <resource-bundle>messages.KiloBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
+        <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
+
         <toolWindow id="Kilo Code"
                     anchor="left"
                     icon="/icons/kilo.svg"
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
+
+        <applicationConfigurable
+                parentId="tools"
+                id="ai.kilocode.jetbrains.settings"
+                instance="ai.kilocode.client.settings.KiloSettingsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.kilo.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.profile"
+                instance="ai.kilocode.client.settings.profile.UserProfileConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.profile.displayName"/>
 
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
@@ -39,5 +56,58 @@
         <action id="Kilo.Settings"
                 class="ai.kilocode.client.actions.KiloSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
+
+        <action id="Kilo.NewSession"
+                class="ai.kilocode.client.actions.NewSessionAction"/>
+
+        <action id="Kilo.History"
+                class="ai.kilocode.client.actions.HistoryAction"/>
+
+        <action id="Kilo.ShowProfile"
+                class="ai.kilocode.client.actions.ShowProfileAction"/>
+
+        <!-- Declarative toolbar group for the Kilo tool window title bar -->
+        <group id="Kilo.ToolWindowToolbar">
+            <reference ref="Kilo.NewSession"/>
+            <reference ref="Kilo.History"/>
+            <reference ref="Kilo.ShowProfile"/>
+            <reference ref="Kilo.Settings"/>
+        </group>
+
+        <action id="Kilo.SendPrompt"
+                class="ai.kilocode.client.actions.SendPromptAction"
+                text="Send Prompt"
+                description="Send the current Kilo prompt">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="ENTER"/>
+        </action>
+
+        <action id="Kilo.StopSession"
+                class="ai.kilocode.client.actions.StopSessionAction"
+                text="Stop Session"
+                description="Stop the current Kilo session">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="alt S"/>
+        </action>
+
+        <action id="Kilo.Session.Open"
+                class="ai.kilocode.client.actions.OpenSessionAction">
+            <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
+        </action>
+
+        <action id="Kilo.Session.Rename"
+                class="ai.kilocode.client.actions.RenameSessionAction"
+                use-shortcut-of="RenameElement"/>
+
+        <action id="Kilo.Session.Delete"
+                class="ai.kilocode.client.actions.DeleteSessionAction"
+                use-shortcut-of="$Delete"/>
+
+        <group id="Kilo.History.ContextMenu">
+            <reference ref="Kilo.Session.Open"/>
+            <separator/>
+            <reference ref="Kilo.Session.Rename"/>
+            <reference ref="Kilo.Session.Delete"/>
+        </group>
     </actions>
 </idea-plugin>

@@ -4,7 +4,7 @@ import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
-import { NotFoundError } from "@/storage" // kilocode_change
+import { NotFoundError } from "@/storage/storage" // kilocode_change
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
 import { jsonRequest, runRequest } from "./trace" // kilocode_change

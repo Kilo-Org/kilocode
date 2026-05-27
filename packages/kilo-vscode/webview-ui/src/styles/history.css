@@ -21,7 +21,7 @@
 .cloud-session-list [data-slot="list-item-description"] {
   flex-shrink: 0;
   margin-left: 8px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak, var(--vscode-descriptionForeground));
   white-space: nowrap;
 }
@@ -92,7 +92,7 @@ body.vscode-light
   cursor: pointer;
   padding: 3px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-foreground);
   opacity: 0.6;
   transition:
@@ -169,7 +169,7 @@ body.vscode-light
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--vscode-foreground);
   opacity: 0.6;
   padding: 4px 8px;

@@ -81,9 +81,26 @@ export class ConfigState {
     this.saved = server
   }
 
+  /** Handle a confirmed save when merged config refresh is still pending. */
+  handleConfigSaved() {
+    if (!this.saving) return
+    this.saving = false
+    this.draft = {}
+    this.dirty = false
+    this.saved = this.config
+  }
+
+  /** Handle an explicit save failure from the extension. */
+  handleConfigSaveFailed(server: Config) {
+    if (!this.saving) return
+    this.saving = false
+    this.saved = server
+    this.config = resolveConfig(server, this.draft, this.dirty)
+  }
+
   /** Send the draft to the backend. */
   saveConfig() {
-    if (Object.keys(this.draft).length === 0) return
+    if (this.saving || Object.keys(this.draft).length === 0) return
     this.saving = true
   }
 

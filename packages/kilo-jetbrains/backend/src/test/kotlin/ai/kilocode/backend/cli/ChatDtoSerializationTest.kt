@@ -5,7 +5,10 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -186,6 +189,46 @@ class ChatDtoSerializationTest {
 
         val decoded = json.decodeFromString(PartDto.serializer(), encoded)
         assertEquals("call_abc", decoded.callID)
+    }
+
+    @Test
+    fun `PartDto rich tool fields are preserved in round-trip`() {
+        val part = PartDto(
+            id = "p1", sessionID = "s1", messageID = "m1",
+            type = "tool", tool = "bash", callID = "call_abc",
+            input = mapOf("command" to "git log", "description" to "Show history"),
+            metadata = mapOf("source" to "state"),
+            output = "abc123 init",
+            error = "failed",
+            time = PartTimeDto(start = 1.0, end = 2.0),
+        )
+        val encoded = json.encodeToString(PartDto.serializer(), part)
+        assertTrue(encoded.contains(""""input""""))
+        assertTrue(encoded.contains(""""output":"abc123 init""""))
+
+        val decoded = json.decodeFromString(PartDto.serializer(), encoded)
+        assertEquals("git log", decoded.input["command"])
+        assertEquals("Show history", decoded.input["description"])
+        assertEquals("state", decoded.metadata["source"])
+        assertEquals("abc123 init", decoded.output)
+        assertEquals("failed", decoded.error)
+        assertEquals(1.0, decoded.time?.start)
+        assertEquals(2.0, decoded.time?.end)
+    }
+
+    @Test
+    fun `PromptDto variant is preserved in round-trip`() {
+        val prompt = PromptDto(
+            parts = listOf(PromptPartDto("text", "hello")),
+            providerID = "kilo",
+            modelID = "gpt-5",
+            agent = "code",
+            variant = "medium",
+        )
+        val encoded = json.encodeToString(PromptDto.serializer(), prompt)
+
+        assertTrue(encoded.contains(""""variant":"medium""""))
+        assertEquals("medium", json.decodeFromString(PromptDto.serializer(), encoded).variant)
     }
 
     // ------ helpers ------

@@ -17,30 +17,30 @@ const real = await import("@kilocode/kilo-gateway")
 mock.module("@kilocode/kilo-gateway", () => ({
   ...real,
   fetchKiloModels: async () => ({
-    "free-model": {
-      id: "free-model",
-      name: "Free Model",
-      cost: { input: 0, output: 0 },
-      limit: { context: 128000, output: 4096 },
-    },
-    "paid-model": {
-      id: "paid-model",
-      name: "Paid Model",
-      cost: { input: 1.0, output: 2.0 },
-      limit: { context: 128000, output: 4096 },
+    models: {
+      "free-model": {
+        id: "free-model",
+        name: "Free Model",
+        cost: { input: 0, output: 0 },
+        limit: { context: 128000, output: 4096 },
+      },
+      "paid-model": {
+        id: "paid-model",
+        name: "Paid Model",
+        cost: { input: 1.0, output: 2.0 },
+        limit: { context: 128000, output: 4096 },
+      },
     },
   }),
 }))
 
 import { tmpdir } from "../fixture/fixture"
-import { Global } from "../../src/global"
-import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider"
+import { Global } from "@opencode-ai/core/global"
+import { WithInstance } from "../../src/project/with-instance"
+import { Provider } from "../../src/provider/provider"
 import { ProviderID } from "../../src/provider/schema"
-import { Filesystem } from "../../src/util"
+import { Filesystem } from "../../src/util/filesystem"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider"
-import { Auth } from "../../src/auth"
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   const item = providers[ProviderID.kilo]
@@ -48,109 +48,52 @@ function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
 }
 
+const authPath = path.join(Global.Path.data, "auth.json")
+
 test("kilo loader keeps paid models without auth and when config apiKey is present", async () => {
   // Reset state that may be stale from other test files sharing this process.
-  // Auth.set from other tests persists in the shared auth.json, ModelsDev.Data
-  // holds a lazy singleton whose resolved object gets mutated in-place by get(),
-  // and ModelCache keeps fetched models in a TTL map.
-  await Auth.remove("kilo")
-  ModelCache.clear("kilo")
-  ModelsDev.Data.reset()
+  // Persisted auth from other tests and ModelCache's TTL map must not affect this test.
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
 
-  await using base = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
+  try {
+    await Filesystem.write(authPath, JSON.stringify({}))
+    ModelCache.clear("kilo")
 
-  const none = await Instance.provide({
-    directory: base.path,
-    fn: async () => paid(await Provider.list()),
-  })
+    await using base = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
 
-  await using keyed = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-          provider: {
-            kilo: {
-              options: {
-                apiKey: "test-key",
+    const none = await WithInstance.provide({
+      directory: base.path,
+      fn: async () => paid(await Provider.list()),
+    })
+
+    await using keyed = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+            provider: {
+              kilo: {
+                options: {
+                  apiKey: "test-key",
+                },
               },
             },
-          },
-        }),
-      )
-    },
-  })
+          }),
+        )
+      },
+    })
 
-  const count = await Instance.provide({
-    directory: keyed.path,
-    fn: async () => paid(await Provider.list()),
-  })
-
-  expect(none).toBeGreaterThan(0)
-  expect(count).toBeGreaterThan(0)
-})
-
-test("kilo loader keeps paid models without auth and when auth exists", async () => {
-  await Auth.remove("kilo")
-  ModelCache.clear("kilo")
-  ModelsDev.Data.reset()
-
-  await using base = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
-
-  const none = await Instance.provide({
-    directory: base.path,
-    fn: async () => paid(await Provider.list()),
-  })
-
-  await using keyed = await tmpdir({
-    init: async (dir) => {
-      await Bun.write(
-        path.join(dir, "kilo.json"),
-        JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
-        }),
-      )
-    },
-  })
-
-  const authPath = path.join(Global.Path.data, "auth.json")
-  let prev: string | undefined
-
-  try {
-    prev = await Filesystem.readText(authPath)
-  } catch {}
-
-  try {
-    await Filesystem.write(
-      authPath,
-      JSON.stringify({
-        kilo: {
-          type: "api",
-          key: "test-key",
-        },
-      }),
-    )
-
-    const count = await Instance.provide({
+    const count = await WithInstance.provide({
       directory: keyed.path,
       fn: async () => paid(await Provider.list()),
     })
@@ -162,9 +105,68 @@ test("kilo loader keeps paid models without auth and when auth exists", async ()
       await Filesystem.write(authPath, prev)
     }
     if (prev === undefined) {
-      try {
-        await unlink(authPath)
-      } catch {}
+      await unlink(authPath).catch(() => undefined)
+    }
+  }
+})
+
+test("kilo loader keeps paid models without auth and when auth exists", async () => {
+  const prev = await Filesystem.readText(authPath).catch(() => undefined)
+
+  try {
+    await Filesystem.write(authPath, JSON.stringify({}))
+    ModelCache.clear("kilo")
+
+    await using base = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+
+    const none = await WithInstance.provide({
+      directory: base.path,
+      fn: async () => paid(await Provider.list()),
+    })
+
+    await using keyed = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "kilo.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+
+    await Filesystem.write(
+      authPath,
+      JSON.stringify({
+        kilo: {
+          type: "api",
+          key: "test-key",
+        },
+      }),
+    )
+
+    const count = await WithInstance.provide({
+      directory: keyed.path,
+      fn: async () => paid(await Provider.list()),
+    })
+
+    expect(none).toBeGreaterThan(0)
+    expect(count).toBeGreaterThan(0)
+  } finally {
+    if (prev !== undefined) {
+      await Filesystem.write(authPath, prev)
+    }
+    if (prev === undefined) {
+      await unlink(authPath).catch(() => undefined)
     }
   }
 })

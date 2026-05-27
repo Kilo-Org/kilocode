@@ -1,0 +1,82 @@
+package ai.kilocode.client.session.views
+
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.model.Content
+import ai.kilocode.client.session.model.Tool
+import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.ui.md.MdView
+import java.awt.BorderLayout
+
+class PlanExitView(tool: Tool, openFile: (String) -> Unit) : PartView() {
+    companion object {
+        fun canRender(tool: Tool): Boolean = tool.name == "plan_exit" && tool.state == ToolExecState.COMPLETED
+    }
+
+    override val contentId: String = tool.id
+
+    private var item = tool
+    private val md = MdView.html()
+
+    init {
+        layout = BorderLayout()
+        isOpaque = false
+        md.addLinkListener { openFile(it.href) }
+        add(md.component, BorderLayout.CENTER)
+        applyStyle(SessionEditorStyle.current())
+        sync()
+    }
+
+    override fun update(content: Content) {
+        if (content !is Tool) return
+        item = content
+        sync()
+    }
+
+    override fun applyStyle(style: SessionEditorStyle) {
+        val changed = md.font != style.transcriptFont || md.codeFont != style.editorFamily
+        if (md.font != style.transcriptFont) md.font = style.transcriptFont
+        if (md.codeFont != style.editorFamily) md.codeFont = style.editorFamily
+        if (!changed) return
+        refresh()
+    }
+
+    fun markdown(): String = md.markdown()
+
+    internal fun simulateLink(href: String) = md.simulateLink(href)
+
+    private fun sync() {
+        val plan = plan(item)
+        val text = listOf(KiloBundle.message("session.part.plan.ready"), link(plan))
+            .filterNotNull()
+            .joinToString(" ")
+        md.set(text)
+        refresh()
+    }
+
+    private fun refresh() {
+        revalidate()
+        repaint()
+    }
+
+    override fun dumpLabel() = "PlanExitView#$contentId"
+}
+
+private fun plan(tool: Tool): String {
+    tool.metadata["plan"]?.takeIf { it.isNotBlank() }?.let { return it }
+    val out = tool.output ?: return ""
+    return Regex("Plan is ready at (.+?)(?:\\. Ending planning turn\\.|$)")
+        .find(out)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.trim()
+        ?: ""
+}
+
+private fun link(plan: String): String? {
+    if (plan.isBlank()) return null
+    val text = plan.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+    val href = plan.replace(" ", "%20").replace("(", "%28").replace(")", "%29")
+    return "[$text]($href)"
+}

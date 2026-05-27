@@ -1,9 +1,9 @@
 export * as ConfigCommand from "./command"
 
-import { Log } from "../util"
+import * as Log from "@opencode-ai/core/util/log"
 import { Schema } from "effect"
-import { NamedError } from "@opencode-ai/shared/util/error"
-import { Glob } from "@opencode-ai/shared/util/glob"
+import { NamedError } from "@opencode-ai/core/util/error"
+import { Glob } from "@opencode-ai/core/util/glob"
 import { Bus } from "@/bus"
 import { zod } from "@/util/effect-zod"
 import { withStatics } from "@/util/schema"
@@ -44,7 +44,7 @@ export async function load(dir: string, warnings?: Warning[]) {
       // kilocode_change start
       if (warnings) warnings.push({ path: item, message })
       try {
-        const { Session } = await import("@/session")
+        const { Session } = await import("@/session/session")
         Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
       } catch (e) {
         log.warn("could not publish session error", { message, err: e })

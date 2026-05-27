@@ -1,6 +1,7 @@
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
+import { Select } from "@kilocode/kilo-ui/select"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -22,8 +23,11 @@ interface ViewState {
   authorization?: ProviderAuthAuthorization
   phase?: "authorizing" | "connecting"
   error?: string
+  field?: string
   failed?: string
 }
+
+type Prompt = NonNullable<ProviderAuthMethod["prompts"]>[number]
 
 function fallbackMethods(label: string): ProviderAuthMethod[] {
   return [{ type: "api", label }]
@@ -36,6 +40,14 @@ function formatError(value: unknown, fallback: string): string {
   }
   if (typeof value === "string" && value) return value
   return fallback
+}
+
+function visible(prompt: Prompt, values: Record<string, string>) {
+  const rule = prompt.when
+  if (!rule) return true
+  const value = values[rule.key] ?? ""
+  if (rule.op === "eq") return value === rule.value
+  return value !== rule.value
 }
 
 const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => {
@@ -60,6 +72,56 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     return index === undefined ? undefined : methods()[index]
   })
 
+  function promptLabel(prompt: Prompt) {
+    if (props.providerID === "azure" && prompt.key === "endpointType") {
+      return language.t("provider.connect.azure.endpointType.label")
+    }
+    if (props.providerID === "azure" && prompt.key === "resourceName") {
+      return language.t("provider.connect.azure.resourceName.label")
+    }
+    if (props.providerID === "azure" && prompt.key === "baseURL") {
+      return language.t("provider.connect.azure.baseURL.label")
+    }
+    return prompt.message
+  }
+
+  function promptPlaceholder(prompt: Prompt) {
+    if (props.providerID === "azure" && prompt.key === "resourceName") {
+      return language.t("provider.connect.azure.resourceName.placeholder")
+    }
+    if (props.providerID === "azure" && prompt.key === "baseURL") {
+      return language.t("provider.connect.azure.baseURL.placeholder")
+    }
+    if (prompt.type === "text") return prompt.placeholder
+    return undefined
+  }
+
+  function optionLabel(prompt: Prompt, option: { label: string; value: string; hint?: string }) {
+    if (props.providerID === "azure" && prompt.key === "endpointType" && option.value === "resourceName") {
+      return language.t("provider.connect.azure.endpointType.resourceName.label")
+    }
+    if (props.providerID === "azure" && prompt.key === "endpointType" && option.value === "baseURL") {
+      return language.t("provider.connect.azure.endpointType.baseURL.label")
+    }
+    return option.label
+  }
+
+  function optionHint(prompt: Prompt, option: { label: string; value: string; hint?: string }) {
+    if (props.providerID === "azure" && prompt.key === "endpointType" && option.value === "resourceName") {
+      return language.t("provider.connect.azure.endpointType.resourceName.hint")
+    }
+    if (props.providerID === "azure" && prompt.key === "endpointType" && option.value === "baseURL") {
+      return language.t("provider.connect.azure.endpointType.baseURL.hint")
+    }
+    return option.hint
+  }
+
+  function optionText(prompt: Prompt, option: { label: string; value: string; hint?: string }) {
+    const label = optionLabel(prompt, option)
+    const hint = optionHint(prompt, option)
+    return hint ? `${label} (${hint})` : label
+  }
+
   onCleanup(action.dispose)
 
   onMount(() => {
@@ -78,8 +140,17 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
       authorization: undefined,
       phase: undefined,
       error: undefined,
+      field: undefined,
       failed: undefined,
     })
+  }
+
+  function back() {
+    if (methods().length === 1) {
+      dialog.close()
+      return
+    }
+    reset()
   }
 
   function fail(message: string) {
@@ -88,6 +159,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
       ...state,
       phase: undefined,
       error: failed ? undefined : message,
+      field: undefined,
       failed: failed ? message : undefined,
     })
   }
@@ -110,6 +182,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
       authorization: undefined,
       phase: current?.type === "oauth" ? "authorizing" : undefined,
       error: undefined,
+      field: undefined,
       failed: undefined,
     })
     if (current?.type !== "oauth") return
@@ -135,11 +208,12 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
     )
   }
 
-  function connect(apiKey: string) {
+  function connect(apiKey: string, metadata?: Record<string, string>) {
     setState({
       ...state,
       phase: "connecting",
       error: undefined,
+      field: undefined,
       failed: undefined,
     })
     action.send(
@@ -147,6 +221,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
         type: "connectProvider",
         providerID: props.providerID,
         apiKey,
+        metadata,
       },
       {
         onConnected: succeed,
@@ -163,6 +238,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
       ...state,
       phase: "connecting",
       error: undefined,
+      field: undefined,
       failed: undefined,
     })
     action.send(
@@ -205,15 +281,30 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
 
   const ApiView: Component = () => {
     const [value, setValue] = createSignal("")
+    const [fields, setFields] = createStore<Record<string, string>>({})
+    const prompts = createMemo(() => method()?.prompts?.filter((prompt) => visible(prompt, fields)) ?? [])
 
     function submit(e: SubmitEvent) {
       e.preventDefault()
       const apiKey = value().trim()
       if (!apiKey) {
-        setState({ ...state, error: language.t("provider.connect.apiKey.required") })
+        setState({ ...state, error: language.t("provider.connect.apiKey.required"), field: "apiKey" })
         return
       }
-      connect(apiKey)
+      const metadata: Record<string, string> = {}
+      for (const prompt of prompts()) {
+        const field = (fields[prompt.key] ?? "").trim()
+        if (!field) {
+          setState({
+            ...state,
+            error: language.t("provider.connect.prompt.required", { field: promptLabel(prompt) }),
+            field: prompt.key,
+          })
+          return
+        }
+        metadata[prompt.key] = field
+      }
+      connect(apiKey, Object.keys(metadata).length > 0 ? metadata : undefined)
     }
 
     return (
@@ -232,11 +323,65 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           placeholder={language.t("provider.connect.apiKey.placeholder")}
           value={value()}
           onChange={setValue}
-          validationState={state.error ? "invalid" : undefined}
-          error={state.error}
+          validationState={state.field === "apiKey" ? "invalid" : undefined}
+          error={state.field === "apiKey" ? state.error : undefined}
         />
+        <For each={prompts()}>
+          {(prompt) => (
+            <Switch>
+              <Match when={prompt.type === "text"}>
+                <TextField
+                  type="text"
+                  label={promptLabel(prompt)}
+                  placeholder={promptPlaceholder(prompt)}
+                  value={fields[prompt.key] ?? ""}
+                  onChange={(next) => setFields(prompt.key, next)}
+                  validationState={state.field === prompt.key ? "invalid" : undefined}
+                  error={state.field === prompt.key ? state.error : undefined}
+                />
+              </Match>
+              <Match when={prompt.type === "select"}>
+                <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+                  <label
+                    style={{
+                      "font-size": "var(--kilo-font-size-12)",
+                      "font-weight": "500",
+                      color: "var(--text-weak-base)",
+                    }}
+                  >
+                    {promptLabel(prompt)}
+                  </label>
+                  <Select
+                    options={prompt.type === "select" ? prompt.options : []}
+                    current={
+                      prompt.type === "select"
+                        ? prompt.options.find((item) => item.value === fields[prompt.key])
+                        : undefined
+                    }
+                    value={(item) => item.value}
+                    label={(item) => optionText(prompt, item)}
+                    onSelect={(item) => setFields(prompt.key, item?.value ?? "")}
+                    variant="secondary"
+                    size="small"
+                    triggerVariant="settings"
+                  />
+                  <Show when={state.field === prompt.key && state.error}>
+                    <span style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground)" }}>
+                      {state.error}
+                    </span>
+                  </Show>
+                </div>
+              </Match>
+            </Switch>
+          )}
+        </For>
+        <Show when={state.error && !state.field}>
+          <div style={{ color: "var(--vscode-errorForeground)", "font-size": "var(--kilo-font-size-13)" }}>
+            {state.error}
+          </div>
+        </Show>
         <div class="dialog-confirm-actions">
-          <Button variant="ghost" size="large" type="button" onClick={reset}>
+          <Button variant="ghost" size="large" type="button" onClick={back}>
             {language.t("common.goBack")}
           </Button>
           <Button variant="primary" size="large" type="submit" disabled={state.phase === "connecting"}>
@@ -296,7 +441,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           error={state.error}
         />
         <div class="dialog-confirm-actions">
-          <Button variant="ghost" size="large" type="button" onClick={reset}>
+          <Button variant="ghost" size="large" type="button" onClick={back}>
             {language.t("common.goBack")}
           </Button>
           <Button variant="primary" size="large" type="submit" disabled={state.phase === "connecting"}>
@@ -377,7 +522,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           <div class="dialog-confirm-body" style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
             <div>{formatError(state.failed, language.t("common.requestFailed"))}</div>
             <div class="dialog-confirm-actions">
-              <Button variant="ghost" size="large" onClick={reset}>
+              <Button variant="ghost" size="large" onClick={back}>
                 {language.t("common.goBack")}
               </Button>
             </div>
@@ -396,7 +541,7 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
           <div class="dialog-confirm-body" style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
             <div>{formatError(state.error ?? state.failed, language.t("common.requestFailed"))}</div>
             <div class="dialog-confirm-actions">
-              <Button variant="ghost" size="large" onClick={reset}>
+              <Button variant="ghost" size="large" onClick={back}>
                 {language.t("common.goBack")}
               </Button>
             </div>

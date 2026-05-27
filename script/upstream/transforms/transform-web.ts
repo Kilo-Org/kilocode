@@ -57,11 +57,6 @@ const WEB_REPLACEMENTS: WebReplacement[] = [
 
   // Product names
   {
-    pattern: /OpenCode Desktop/g,
-    replacement: "Kilo Desktop",
-    description: "Desktop name",
-  },
-  {
     pattern: /\bOpenCode\b(?!\.json|\/| Zen)/g,
     replacement: "Kilo",
     description: "Product name",

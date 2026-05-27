@@ -4,7 +4,7 @@ import { Tips } from "./tips-view"
 
 const id = "internal:home-tips"
 
-function View(props: { show: boolean }) {
+function View(props: { show: boolean; connected: boolean }) {
   return (
     <box height={4} minHeight={0} width="100%" maxWidth={75} alignItems="center" paddingTop={3} flexShrink={1}>
       <Show when={props.show}>
@@ -35,8 +35,13 @@ const tui: TuiPlugin = async (api) => {
       home_bottom() {
         const hidden = createMemo(() => api.kv.get("tips_hidden", false))
         const first = createMemo(() => api.state.session.count() === 0)
+        const connected = createMemo(() =>
+          api.state.provider.some(
+            (item) => item.id !== "opencode" || Object.values(item.models).some((model) => model.cost?.input !== 0),
+          ),
+        )
         const show = createMemo(() => !hidden()) // kilocode_change - always show tips regardless of first-time status
-        return <View show={show()} />
+        return <View show={show()} connected={connected()} />
       },
     },
   })

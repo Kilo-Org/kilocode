@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
 
 const entry = "file:///tmp/kilo-cache/node_modules/@lancedb/lancedb/dist/index.js"
 const add = mock(async () => ({ directory: "/tmp/kilo-cache", entrypoint: entry }))
-const real = await import("../../src/npm/index")
+const real = await import("@opencode-ai/core/npm")
 
-mock.module("../../src/npm/index", () => ({
+mock.module("@opencode-ai/core/npm", () => ({
   ...real,
   Npm: {
     ...real.Npm,

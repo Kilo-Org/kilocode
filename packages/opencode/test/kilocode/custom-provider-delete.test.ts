@@ -27,6 +27,15 @@ describe("Config.Info — null sentinels for custom provider deletes", () => {
     expect(parsed.success).toBe(true)
   })
 
+  it("accepts a null provider value", () => {
+    const parsed = Config.Info.zod.safeParse({
+      provider: {
+        myprovider: null,
+      },
+    })
+    expect(parsed.success).toBe(true)
+  })
+
   it("accepts a null variant value inside a model", () => {
     const parsed = Config.Info.zod.safeParse({
       provider: {
@@ -74,6 +83,29 @@ describe("KilocodeConfig.mergeConfig — custom provider model/variant deletion"
     const models = (merged.provider as Record<string, { models: Record<string, unknown> }>).myprovider.models
     expect(models["model-keep"]).toBeDefined()
     expect("model-gone" in models).toBe(false)
+  })
+
+  it("drops a provider when the patch sets it to null", () => {
+    const existing = {
+      provider: {
+        myprovider: {
+          name: "My Provider",
+          models: { keep: { name: "Keep" } },
+        },
+        openai: {
+          name: "OpenAI",
+        },
+      },
+    } as unknown as Config.Info
+    const patch = {
+      provider: {
+        myprovider: null,
+      },
+    } as unknown as Config.Info
+
+    const merged = KilocodeConfig.mergeConfig(existing, patch)
+    expect(merged.provider?.openai).toBeDefined()
+    expect("myprovider" in (merged.provider ?? {})).toBe(false)
   })
 
   it("drops a variant from an existing model when the patch sets it to null", () => {

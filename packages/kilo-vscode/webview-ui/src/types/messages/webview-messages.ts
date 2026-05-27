@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation } from "./agent-manager"
+import type { ModelAllocation, ReviewComment } from "./agent-manager"
 import type {
   ClearLegacyDataMessage,
   FinalizeLegacyMigrationMessage,
@@ -29,6 +29,7 @@ export interface SendMessageRequest {
   variant?: string
   files?: FileAttachment[]
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 export interface AbortRequest {
@@ -40,6 +41,7 @@ export interface RevertSessionRequest {
   type: "revertSession"
   sessionID: string
   messageID: string
+  partID?: string
 }
 
 export interface UnrevertSessionRequest {
@@ -130,6 +132,12 @@ export interface OpenFileRequest {
   column?: number
 }
 
+export interface OpenContentRequest {
+  type: "openContent"
+  content: string
+  language?: string
+}
+
 export interface CancelLoginRequest {
   type: "cancelLogin"
 }
@@ -141,6 +149,11 @@ export interface SetOrganizationRequest {
 
 export interface WebviewReadyRequest {
   type: "webviewReady"
+}
+
+export interface SelectSourceRequest {
+  type: "selectSource"
+  id: string
 }
 
 export interface RequestProvidersMessage {
@@ -228,6 +241,7 @@ export interface SendCommandRequest {
   variant?: string
   files?: FileAttachment[]
   agentManagerContext?: string
+  contextDirectory?: string
 }
 
 export interface RemoveSkillMessage {
@@ -256,6 +270,11 @@ export interface ConnectMcpMessage {
 
 export interface DisconnectMcpMessage {
   type: "disconnectMcp"
+  name: string
+}
+
+export interface AuthenticateMcpMessage {
+  type: "authenticateMcp"
   name: string
 }
 
@@ -301,19 +320,35 @@ export interface RenameSessionRequest {
   title: string
 }
 
-export interface RequestAutocompleteSettingsMessage {
-  type: "requestAutocompleteSettings"
+export interface ExportSessionTranscriptRequest {
+  type: "exportSessionTranscript"
+  sessionID: string
 }
 
-export interface UpdateAutocompleteSettingMessage {
-  type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
-  value: boolean | string
+export interface RequestAutocompleteSettingsMessage {
+  type: "requestAutocompleteSettings"
 }
 
 export interface RequestChatCompletionMessage {
   type: "requestChatCompletion"
   text: string
+  requestId: string
+}
+
+export interface SpeechToTextStartMessage {
+  type: "speechToTextStart"
+  requestId: string
+  model: string
+  language?: string
+}
+
+export interface SpeechToTextStopMessage {
+  type: "speechToTextStop"
+  requestId: string
+}
+
+export interface SpeechToTextCancelMessage {
+  type: "speechToTextCancel"
   requestId: string
 }
 
@@ -351,6 +386,12 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface StreamSessionVisibleMessage {
+  type: "streamSessionVisible"
+  sessionID: string
+  visible: boolean
+}
+
 export interface RequestBrowserSettingsMessage {
   type: "requestBrowserSettings"
 }
@@ -371,6 +412,10 @@ export interface RequestIndexingStatusMessage {
   type: "requestIndexingStatus"
 }
 
+export interface RequestKiloEmbeddingModelsMessage {
+  type: "requestKiloEmbeddingModels"
+}
+
 export interface OpenSettingsTabRequest {
   type: "openSettingsTab"
   tab: string
@@ -378,7 +423,10 @@ export interface OpenSettingsTabRequest {
 
 export interface UpdateConfigMessage {
   type: "updateConfig"
+  /** Global config patch written to ~/.config/kilo/kilo.json. */
   config: Partial<Config>
+  /** Project config patch written to the workspace's .kilo/kilo.json or existing project config. */
+  projectConfig?: Partial<Config>
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -461,6 +509,7 @@ export interface OpenLocallyRequest {
 export interface AddSessionToWorktreeRequest {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
+  sessionId?: string
 }
 
 // Fork an existing session (copies conversation history)
@@ -624,10 +673,22 @@ export interface SetSessionsCollapsedRequest {
   collapsed: boolean
 }
 
+// Persist sidebar collapsed state
+export interface SetSidebarCollapsedRequest {
+  type: "agentManager.setSidebarCollapsed"
+  collapsed: boolean
+}
+
 // Persist review diff style preference
 export interface SetReviewDiffStyleRequest {
   type: "agentManager.setReviewDiffStyle"
   style: "unified" | "split"
+}
+
+// Persist Markdown render preference in diff viewers
+export interface SetReviewMarkdownRenderRequest {
+  type: "agentManager.setReviewMarkdownRender"
+  render: boolean
 }
 
 export interface RequestBranchesMessage {
@@ -727,6 +788,12 @@ export interface EnhancePromptRequest {
 // Open the standalone changes viewer tab from the sidebar
 export interface OpenChangesRequest {
   type: "openChanges"
+  /**
+   * When set, opens the viewer scoped to a single turn (identified by the
+   * user message ID). The source picker is hidden and polling is disabled
+   * for this mode.
+   */
+  turnId?: string
 }
 
 // Open diff virtual (permission diff) in the lightweight diff virtual panel
@@ -734,6 +801,54 @@ export interface OpenDiffVirtualRequest {
   type: "openDiffVirtual"
   diff: PermissionFileDiff
   initialDiffStyle: "unified" | "split"
+}
+
+export interface DiffViewerSendCommentsRequest {
+  type: "diffViewer.sendComments"
+  comments: ReviewComment[]
+  autoSend: boolean
+}
+
+export interface DiffViewerSetDiffStyleRequest {
+  type: "diffViewer.setDiffStyle"
+  style: "unified" | "split"
+}
+
+export interface DiffViewerSetMarkdownRenderRequest {
+  type: "diffViewer.setMarkdownRender"
+  render: boolean
+}
+
+export interface DiffViewerRevertFileRequest {
+  type: "diffViewer.revertFile"
+  file: string
+}
+
+export interface DiffViewerRequestFileRequest {
+  type: "diffViewer.requestFile"
+  file: string
+}
+
+export interface DiffViewerCloseRequest {
+  type: "diffViewer.close"
+}
+
+export interface DiffViewerRequestBranchesRequest {
+  type: "diffViewer.requestBranches"
+}
+
+/**
+ * Override the workspace source's base branch. Pass `branch: undefined` to
+ * clear the override and fall back to the auto-resolved base.
+ */
+export interface DiffViewerSetBaseBranchRequest {
+  type: "diffViewer.setBaseBranch"
+  branch: string | undefined
+}
+
+export interface DiffVirtualSetMarkdownRenderRequest {
+  type: "diffVirtual.setMarkdownRender"
+  render: boolean
 }
 
 export interface RetryConnectionRequest {
@@ -750,6 +865,12 @@ export interface OpenSubAgentViewerRequest {
 // Preview an image attachment in VS Code's built-in image viewer
 export interface PreviewImageRequest {
   type: "previewImage"
+  dataUrl: string
+  filename: string
+}
+
+export interface SaveImageRequest {
+  type: "saveImage"
   dataUrl: string
   filename: string
 }
@@ -792,6 +913,7 @@ export interface ConnectProviderMessage {
   requestId: string
   providerID: string
   apiKey: string
+  metadata?: Record<string, string>
 }
 
 export interface AuthorizeProviderOAuthMessage {
@@ -964,6 +1086,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
   | RequestAgentsMessage
@@ -976,6 +1099,7 @@ export type WebviewMessage =
   | RequestMcpStatusMessage
   | ConnectMcpMessage
   | DisconnectMcpMessage
+  | AuthenticateMcpMessage
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
@@ -983,20 +1107,25 @@ export type WebviewMessage =
   | SuggestionDismissRequest
   | DeleteSessionRequest
   | RenameSessionRequest
+  | ExportSessionTranscriptRequest
   | RequestAutocompleteSettingsMessage
-  | UpdateAutocompleteSettingMessage
   | RequestChatCompletionMessage
+  | SpeechToTextStartMessage
+  | SpeechToTextStopMessage
+  | SpeechToTextCancelMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage
   | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
+  | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
   | RequestNotificationSettingsMessage
@@ -1035,7 +1164,9 @@ export type WebviewMessage =
   | SetTabOrderRequest
   | SetWorktreeOrderRequest
   | SetSessionsCollapsedRequest
+  | SetSidebarCollapsedRequest
   | SetReviewDiffStyleRequest
+  | SetReviewMarkdownRenderRequest
   | PersistVariantRequest
   | RequestVariantsMessage
   | RequestCloudSessionDataMessage
@@ -1064,9 +1195,19 @@ export type WebviewMessage =
   | EnhancePromptRequest
   | OpenChangesRequest
   | OpenDiffVirtualRequest
+  | DiffViewerSendCommentsRequest
+  | DiffViewerSetDiffStyleRequest
+  | DiffViewerSetMarkdownRenderRequest
+  | DiffViewerRevertFileRequest
+  | DiffViewerRequestFileRequest
+  | DiffViewerCloseRequest
+  | DiffViewerRequestBranchesRequest
+  | DiffViewerSetBaseBranchRequest
+  | DiffVirtualSetMarkdownRenderRequest
   | RetryConnectionRequest
   | OpenSubAgentViewerRequest
   | PreviewImageRequest
+  | SaveImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
   | RequestAutoApproveStateMessage
@@ -1099,6 +1240,7 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | OpenContentRequest
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest

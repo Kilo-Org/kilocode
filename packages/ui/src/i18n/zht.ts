@@ -100,6 +100,18 @@ export const dict = {
   "ui.textField.copied": "已複製",
 
   "ui.imagePreview.alt": "圖片預覽",
+  // kilocode_change start
+  "ui.mermaid.rendering": "正在渲染 Mermaid 圖表...",
+  "ui.mermaid.renderError": "Mermaid 渲染失敗：{{message}}",
+  "ui.mermaid.errorDefault": "無法渲染 Mermaid 圖表。",
+  "ui.mermaid.errorEmpty": "Mermaid 渲染了一個空圖表。",
+  "ui.mermaid.download": "下載",
+  "ui.mermaid.copySource": "複製 Mermaid 原始碼",
+  "ui.mermaid.copySvg": "複製 SVG",
+  "ui.mermaid.copyPng": "複製 PNG",
+  "ui.mermaid.downloadSvg": "下載 SVG",
+  "ui.mermaid.downloadPng": "下載 PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "可捲動內容",
 
   "ui.tool.read": "讀取",
@@ -109,7 +121,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "網頁搜尋",
-  "ui.tool.codesearch": "程式碼搜尋",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "修補",
   "ui.tool.todos": "待辦",

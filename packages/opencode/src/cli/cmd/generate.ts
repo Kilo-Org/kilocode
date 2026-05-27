@@ -1,10 +1,28 @@
 import { Server } from "../../server/server"
 import type { CommandModule } from "yargs"
 
+type Args = {
+  httpapi: boolean
+  hono: boolean
+}
+
 export const GenerateCommand = {
   command: "generate",
-  handler: async () => {
-    const specs = await Server.openapi()
+  builder: (yargs) =>
+    yargs
+      .option("httpapi", {
+        type: "boolean",
+        default: false,
+        description:
+          "Generate OpenAPI from the Effect HttpApi contract (default; flag retained for backwards compatibility)",
+      })
+      .option("hono", {
+        type: "boolean",
+        default: false,
+        description: "Generate OpenAPI from the legacy Hono backend (parity-diff only; will be removed)",
+      }),
+  handler: async (args) => {
+    const specs = args.hono ? await Server.openapiHono() : await Server.openapi()
     // kilocode_change start
     specs.info.title = "kilo"
     specs.info.description = "kilo api"
@@ -13,7 +31,6 @@ export const GenerateCommand = {
       for (const method of ["get", "post", "put", "delete", "patch"] as const) {
         const operation = item[method]
         if (!operation?.operationId) continue
-        // @ts-expect-error
         operation["x-codeSamples"] = [
           // kilocode_change start
           {
@@ -59,4 +76,4 @@ export const GenerateCommand = {
       })
     })
   },
-} satisfies CommandModule
+} satisfies CommandModule<object, Args>

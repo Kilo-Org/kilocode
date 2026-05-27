@@ -18,28 +18,29 @@ import {
   type Tool as MCPToolDef,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js"
-import { Config } from "../config"
+import { Config } from "@/config/config"
 import { ConfigMCP } from "../config/mcp"
-import { Log } from "../util"
-import { NamedError } from "@opencode-ai/shared/util/error"
+import * as Log from "@opencode-ai/core/util/log"
+import { NamedError } from "@opencode-ai/core/util/error"
 import z from "zod/v4"
 import { Installation } from "../installation"
-import { InstallationVersion } from "../installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { withTimeout } from "@/util/timeout"
-import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
 import { McpOAuthProvider } from "./oauth-provider"
 import { McpOAuthCallback } from "./oauth-callback"
 import { McpAuth } from "./auth"
 import { BusEvent } from "../bus/bus-event"
 import { Bus } from "@/bus"
-import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { TuiEvent } from "@/cli/cmd/tui/event"
 import open from "open"
 import { Effect, Exit, Layer, Option, Context, Schema, Stream } from "effect"
-import { EffectBridge } from "@/effect"
-import { InstanceState } from "@/effect"
+import { EffectBridge } from "@/effect/bridge"
+import { InstanceState } from "@/effect/instance-state"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { zod as effectZod } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 
 const log = Log.create({ service: "mcp" })
 const DEFAULT_TIMEOUT = 30_000
@@ -58,16 +59,16 @@ export function ensureDockerRm(cmd: string, args: string[]): string[] {
 }
 // kilocode_change end
 
-export const Resource = z
-  .object({
-    name: z.string(),
-    uri: z.string(),
-    description: z.string().optional(),
-    mimeType: z.string().optional(),
-    client: z.string(),
-  })
-  .meta({ ref: "McpResource" })
-export type Resource = z.infer<typeof Resource>
+export const Resource = Schema.Struct({
+  name: Schema.String,
+  uri: Schema.String,
+  description: Schema.optional(Schema.String),
+  mimeType: Schema.optional(Schema.String),
+  client: Schema.String,
+})
+  .annotate({ identifier: "McpResource" })
+  .pipe(withStatics((s) => ({ zod: effectZod(s) })))
+export type Resource = Schema.Schema.Type<typeof Resource>
 
 export const ToolsChanged = BusEvent.define(
   "mcp.tools.changed",
@@ -93,50 +94,33 @@ export const Failed = NamedError.create(
 
 type MCPClient = Client
 
-export const Status = z
-  .discriminatedUnion("status", [
-    z
-      .object({
-        status: z.literal("connected"),
-      })
-      .meta({
-        ref: "MCPStatusConnected",
-      }),
-    z
-      .object({
-        status: z.literal("disabled"),
-      })
-      .meta({
-        ref: "MCPStatusDisabled",
-      }),
-    z
-      .object({
-        status: z.literal("failed"),
-        error: z.string(),
-      })
-      .meta({
-        ref: "MCPStatusFailed",
-      }),
-    z
-      .object({
-        status: z.literal("needs_auth"),
-      })
-      .meta({
-        ref: "MCPStatusNeedsAuth",
-      }),
-    z
-      .object({
-        status: z.literal("needs_client_registration"),
-        error: z.string(),
-      })
-      .meta({
-        ref: "MCPStatusNeedsClientRegistration",
-      }),
-  ])
-  .meta({
-    ref: "MCPStatus",
-  })
-export type Status = z.infer<typeof Status>
+const StatusConnected = Schema.Struct({ status: Schema.Literal("connected") }).annotate({
+  identifier: "MCPStatusConnected",
+})
+const StatusDisabled = Schema.Struct({ status: Schema.Literal("disabled") }).annotate({
+  identifier: "MCPStatusDisabled",
+})
+const StatusFailed = Schema.Struct({ status: Schema.Literal("failed"), error: Schema.String }).annotate({
+  identifier: "MCPStatusFailed",
+})
+const StatusNeedsAuth = Schema.Struct({ status: Schema.Literal("needs_auth") }).annotate({
+  identifier: "MCPStatusNeedsAuth",
+})
+const StatusNeedsClientRegistration = Schema.Struct({
+  status: Schema.Literal("needs_client_registration"),
+  error: Schema.String,
+}).annotate({ identifier: "MCPStatusNeedsClientRegistration" })
+
+export const Status = Schema.Union([
+  StatusConnected,
+  StatusDisabled,
+  StatusFailed,
+  StatusNeedsAuth,
+  StatusNeedsClientRegistration,
+])
+  .annotate({ identifier: "MCPStatus", discriminator: "status" })
+  .pipe(withStatics((s) => ({ zod: effectZod(s) })))
+export type Status = Schema.Schema.Type<typeof Status>
 
 // Store transports for OAuth servers to allow finishing auth
 type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
@@ -152,6 +136,11 @@ function isMcpConfigured(entry: McpEntry): entry is ConfigMCP.Info {
 }
 
 const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_")
+
+function remoteURL(key: string, value: string) {
+  if (URL.canParse(value)) return new URL(value)
+  log.warn("invalid remote mcp url", { key })
+}
 
 // Convert MCP tool definition to AI SDK Tool type
 function convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Tool {
@@ -290,7 +279,7 @@ export const layer = Layer.effect(
         (t) =>
           Effect.tryPromise({
             try: () => {
-              const client = new Client({ name: "opencode", version: InstallationVersion })
+              const client = new Client({ name: "kilo", version: InstallationVersion }) // kilocode_change
               return withTimeout(client.connect(t), timeout).then(() => client)
             },
             catch: (e) => (e instanceof Error ? e : new Error(String(e))),
@@ -306,6 +295,13 @@ export const layer = Layer.effect(
     ) {
       const oauthDisabled = mcp.oauth === false
       const oauthConfig = typeof mcp.oauth === "object" ? mcp.oauth : undefined
+      const url = remoteURL(key, mcp.url)
+      if (!url) {
+        return {
+          client: undefined as MCPClient | undefined,
+          status: { status: "failed" as const, error: `Invalid MCP URL for "${key}"` },
+        }
+      }
       let authProvider: McpOAuthProvider | undefined
 
       if (!oauthDisabled) {
@@ -330,14 +326,14 @@ export const layer = Layer.effect(
       const transports: Array<{ name: string; transport: TransportWithAuth }> = [
         {
           name: "StreamableHTTP",
-          transport: new StreamableHTTPClientTransport(new URL(mcp.url), {
+          transport: new StreamableHTTPClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
           }),
         },
         {
           name: "SSE",
-          transport: new SSEClientTransport(new URL(mcp.url), {
+          transport: new SSEClientTransport(url, {
             authProvider,
             requestInit: mcp.headers ? { headers: mcp.headers } : undefined,
           }),
@@ -377,7 +373,7 @@ export const layer = Layer.effect(
                 return bus
                   .publish(TuiEvent.ToastShow, {
                     title: "MCP Authentication Required",
-                    message: `Server "${key}" requires authentication. Run: opencode mcp auth ${key}`,
+                    message: `Server "${key}" requires authentication. Run: kilo mcp auth ${key}`, // kilocode_change
                     variant: "warning",
                     duration: 8000,
                   })
@@ -757,17 +753,24 @@ export const layer = Layer.effect(
       return mcpConfig
     })
 
-    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string) {
+    // kilocode_change start - `opts?: { callback?: boolean }` parameter is Kilo-specific
+    const startAuth = Effect.fn("MCP.startAuth")(function* (mcpName: string, opts?: { callback?: boolean }) {
+      // kilocode_change end
       const mcpConfig = yield* getMcpConfig(mcpName)
       if (!mcpConfig) throw new Error(`MCP server ${mcpName} not found or disabled`)
       if (mcpConfig.type !== "remote") throw new Error(`MCP server ${mcpName} is not a remote server`)
       if (mcpConfig.oauth === false) throw new Error(`MCP server ${mcpName} has OAuth explicitly disabled`)
+      const url = remoteURL(mcpName, mcpConfig.url)
+      if (!url) throw new Error(`Invalid MCP URL for "${mcpName}"`)
 
       // OAuth config is optional - if not provided, we'll use auto-discovery
       const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
 
-      // Start the callback server with custom redirectUri if configured
-      yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
+      // kilocode_change start - authenticate() defers binding the callback port until a redirect is needed
+      if (opts?.callback !== false) {
+        yield* Effect.promise(() => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri))
+      }
+      // kilocode_change end
 
       const oauthState = Array.from(crypto.getRandomValues(new Uint8Array(32)))
         .map((b) => b.toString(16).padStart(2, "0"))
@@ -791,11 +794,11 @@ export const layer = Layer.effect(
         auth,
       )
 
-      const transport = new StreamableHTTPClientTransport(new URL(mcpConfig.url), { authProvider })
+      const transport = new StreamableHTTPClientTransport(url, { authProvider })
 
       return yield* Effect.tryPromise({
         try: () => {
-          const client = new Client({ name: "opencode", version: InstallationVersion })
+          const client = new Client({ name: "kilo", version: InstallationVersion }) // kilocode_change
           return client
             .connect(transport)
             .then(() => ({ authorizationUrl: "", oauthState, client }) satisfies AuthResult)
@@ -813,7 +816,7 @@ export const layer = Layer.effect(
     })
 
     const authenticate = Effect.fn("MCP.authenticate")(function* (mcpName: string) {
-      const result = yield* startAuth(mcpName)
+      const result = yield* startAuth(mcpName, { callback: false }) // kilocode_change
       if (!result.authorizationUrl) {
         const client = "client" in result ? result.client : undefined
         const mcpConfig = yield* getMcpConfig(mcpName)
@@ -834,6 +837,31 @@ export const layer = Layer.effect(
       }
 
       log.info("opening browser for oauth", { mcpName, url: result.authorizationUrl, state: result.oauthState })
+
+      // kilocode_change start - bind only after redirect exists, and clean up if binding fails
+      const mcpConfig = yield* getMcpConfig(mcpName)
+      if (!mcpConfig) return { status: "failed", error: "MCP config not found after auth" } as Status
+      if (mcpConfig.type !== "remote")
+        return { status: "failed", error: `MCP server ${mcpName} is not a remote server` } as Status
+      const oauthConfig = typeof mcpConfig.oauth === "object" ? mcpConfig.oauth : undefined
+      const err = yield* Effect.tryPromise({
+        try: () => McpOAuthCallback.ensureRunning(oauthConfig?.redirectUri),
+        catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+      }).pipe(
+        Effect.match({
+          onFailure: (err) => err,
+          onSuccess: () => undefined,
+        }),
+      )
+      if (err) {
+        const transport = pendingOAuthTransports.get(mcpName)
+        pendingOAuthTransports.delete(mcpName)
+        yield* auth.clearOAuthState(mcpName)
+        yield* auth.clearCodeVerifier(mcpName)
+        yield* Effect.tryPromise(() => transport?.close() ?? Promise.resolve()).pipe(Effect.ignore)
+        return { status: "failed", error: err.message } as Status
+      }
+      // kilocode_change end
 
       const callbackPromise = McpOAuthCallback.waitForCallback(result.oauthState, mcpName)
 
@@ -953,12 +981,5 @@ export const defaultLayer = layer.pipe(
   Layer.provide(CrossSpawnSpawner.defaultLayer),
   Layer.provide(AppFileSystem.defaultLayer),
 )
-
-// kilocode_change start - legacy promise helpers for Kilo callsites
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const status = () => runPromise((svc) => svc.status())
-export const connect = (name: string) => runPromise((svc) => svc.connect(name))
-export const disconnect = (name: string) => runPromise((svc) => svc.disconnect(name))
-// kilocode_change end
 
 export * as MCP from "."

@@ -9,7 +9,7 @@ import {
   type PluginSource,
 } from "./shared"
 import { ConfigPlugin } from "@/config/plugin"
-import { InstallationVersion } from "@/installation/version"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { isIndexingPlugin } from "@kilocode/kilo-indexing/detect" // kilocode_change
 
 export namespace PluginLoader {

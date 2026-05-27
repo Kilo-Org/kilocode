@@ -3,19 +3,19 @@ import { Effect, Layer } from "effect"
 import fs from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
-import { Config } from "../../src/config"
-import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import { Global } from "../../src/global"
+import { Config } from "../../src/config/config"
+import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
+import { Global } from "@opencode-ai/core/global"
 import { Instance } from "../../src/project/instance"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
-import { Truncate } from "../../src/tool"
-import { ToolRegistry } from "../../src/tool"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { Truncate } from "../../src/tool/truncate"
+import { ToolRegistry } from "../../src/tool/registry"
+import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const state = path.join(Global.Path.state, "model.json")
@@ -23,7 +23,7 @@ const state = path.join(Global.Path.state, "model.json")
 afterEach(async () => {
   process.env.KILO_CLIENT = "cli"
   await fs.rm(state, { force: true }).catch(() => undefined)
-  await Instance.disposeAll()
+  await disposeAllInstances()
 })
 
 beforeAll(async () => {
@@ -48,6 +48,44 @@ const cfg = {
 
 const savedVariant = "fast"
 const cfgVariant = "balanced"
+const sub = {
+  providerID: ProviderID.make("sub-provider"),
+  modelID: ModelID.make("sub-model"),
+}
+const subVariant = "deep"
+
+function custom(id: string, model: string, variants: string[] = []) {
+  return {
+    name: id,
+    id,
+    env: [],
+    npm: "@ai-sdk/openai-compatible",
+    models: {
+      [model]: {
+        id: model,
+        name: model,
+        attachment: false,
+        reasoning: variants.length > 0,
+        temperature: false,
+        tool_call: true,
+        release_date: "2025-01-01",
+        limit: { context: 100_000, output: 10_000 },
+        cost: { input: 0, output: 0 },
+        options: {},
+        variants: Object.fromEntries(variants.map((variant) => [variant, {}])),
+      },
+    },
+    options: { apiKey: "test-key", baseURL: "http://localhost:1/v1" },
+  }
+}
+
+const catalog = {
+  provider: {
+    "saved-provider": custom("saved-provider", "saved-model", [savedVariant]),
+    "config-provider": custom("config-provider", "config-model", [cfgVariant]),
+    "sub-provider": custom("sub-provider", "sub-model", [subVariant]),
+  },
+}
 
 const it = testEffect(
   Layer.mergeAll(
@@ -91,7 +129,7 @@ const seed = Effect.fn("TaskToolModelTest.seed")(function* (title = "Parent") {
 
 function stubOps(opts?: { onPrompt?: (input: SessionPrompt.PromptInput) => void; text?: string }): TaskPromptOps {
   return {
-    cancel() {},
+    cancel: () => Effect.void,
     resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
     prompt: (input) =>
       Effect.sync(() => {
@@ -138,7 +176,12 @@ function writeState(input: unknown) {
   })
 }
 
-function run(input: { agent: "pinned" | "worker"; state?: unknown; client?: string }) {
+function run(input: {
+  agent: "pinned" | "worker"
+  state?: unknown
+  client?: string
+  config?: Pick<Config.Info, "subagent_model" | "subagent_variant">
+}) {
   return provideTmpdirInstance(
     () =>
       Effect.gen(function* () {
@@ -178,6 +221,8 @@ function run(input: { agent: "pinned" | "worker"; state?: unknown; client?: stri
       }),
     {
       config: {
+        ...catalog,
+        ...input.config,
         agent: {
           worker: { mode: "subagent" },
           pinned: { mode: "subagent", model: "config-provider/config-model", variant: cfgVariant },
@@ -268,6 +313,70 @@ describe("tool.task model resolution", () => {
     ),
   )
 
+  it.live("configured subagent default model and variant apply to task workers", () =>
+    run({
+      agent: "worker",
+      config: { subagent_model: "sub-provider/sub-model", subagent_variant: subVariant },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(sub)
+          expect(result.variant).toEqual(subVariant)
+          expect(result.model).toEqual(sub)
+          expect(result.metadataVariant).toEqual(subVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("per-agent task model remains above the configured subagent default", () =>
+    run({
+      agent: "pinned",
+      config: { subagent_model: "sub-provider/sub-model", subagent_variant: subVariant },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(cfg)
+          expect(result.variant).toEqual(cfgVariant)
+          expect(result.model).toEqual(cfg)
+          expect(result.metadataVariant).toEqual(cfgVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("unavailable configured subagent model falls back to the parent model", () =>
+    run({
+      agent: "worker",
+      config: { subagent_model: "missing-provider/missing-model", subagent_variant: subVariant },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toBeUndefined()
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("stale configured subagent variant is ignored without dropping its model", () =>
+    run({
+      agent: "worker",
+      config: { subagent_model: "sub-provider/sub-model", subagent_variant: "gone" },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(sub)
+          expect(result.variant).toBeUndefined()
+          expect(result.model).toEqual(sub)
+          expect(result.metadataVariant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
   it.live("no file and no agent config falls back to parent for worker", () =>
     run({
       agent: "worker",
@@ -324,6 +433,7 @@ describe("tool.task model resolution", () => {
         }),
       {
         config: {
+          ...catalog,
           agent: {
             worker: { mode: "subagent" },
             pinned: { mode: "subagent", model: "config-provider/config-model", variant: cfgVariant },
