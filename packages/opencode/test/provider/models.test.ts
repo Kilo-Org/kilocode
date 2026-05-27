@@ -124,9 +124,10 @@ const initialState: MockState = {
   calls: [],
 }
 
-// kilocode_change - skip: upstream tests assert raw-fixture passthrough but Kilo's
+// kilocode_change start - skip: upstream tests assert raw-fixture passthrough but Kilo's
 // ModelsDev.get() filters/injects providers based on effect-native config access (kilo-allowed
 // gating, apertis options, and Kilo provider injection).
+// kilocode_change end
 describe.skip("ModelsDev Service", () => {
   it.live("get() returns providers from disk when cache file exists", () =>
     Effect.gen(function* () {

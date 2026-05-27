@@ -23,11 +23,13 @@ import { testEffect } from "../lib/effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 
 const bus = Bus.layer
+// kilocode_change start
 const env = Layer.mergeAll(
   Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
   bus,
   CrossSpawnSpawner.defaultLayer,
 )
+// kilocode_change end
 const it = testEffect(env)
 
 afterEach(async () => {
