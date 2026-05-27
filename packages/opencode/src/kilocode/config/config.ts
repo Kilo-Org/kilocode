@@ -356,10 +356,16 @@ export namespace KilocodeConfig {
       .catch(() => "{}")
 
     if (target.endsWith(".jsonc")) {
-      const edits = modify(text, ["permission", "bash"], "allow", {
-        formattingOptions: { insertSpaces: true, tabSize: 2 },
-      })
-      await Bun.write(target, applyEdits(text, edits))
+      const data = parseJsonc(text) ?? {}
+      if (typeof data.permission === "string") {
+        const merged = { ...data, permission: { "*": data.permission, bash: "allow" } }
+        await Bun.write(target, JSON.stringify(merged, null, 2))
+      } else {
+        const edits = modify(text, ["permission", "bash"], "allow", {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        })
+        await Bun.write(target, applyEdits(text, edits))
+      }
       log.info("migrated bash permission to allow for existing user", { path: target })
       return
     }
