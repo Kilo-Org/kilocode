@@ -1,12 +1,16 @@
 import { $ } from "bun"
-import { afterEach, describe, expect, test } from "bun:test"
+import { afterEach, describe, expect } from "bun:test"
+import { Effect, Layer } from "effect"
+import { Bus } from "../../../src/bus"
+import { Config } from "../../../src/config/config"
 import { clearInFlightCache } from "../../../src/kilo-sessions/inflight-cache"
 import { IngestQueue } from "../../../src/kilo-sessions/ingest-queue"
 import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
 import { Session } from "../../../src/session/session"
 import { Storage } from "../../../src/storage/storage"
-import { provideTestInstance, tmpdir } from "../../fixture/fixture"
+import { TestInstance } from "../../fixture/fixture"
 import { resetDatabase } from "../../fixture/db"
+import { testEffect } from "../../lib/effect"
 
 type Payload = { data: IngestQueue.Data[] }
 
@@ -16,6 +20,8 @@ const env = {
 }
 const fetch = globalThis.fetch
 const token = "kilo-meta-test-token"
+const layer = KiloSessions.layer.pipe(Layer.provideMerge(Bus.layer), Layer.provide(Config.defaultLayer))
+const it = testEffect(layer)
 
 function restore(key: string, value: string | undefined) {
   if (value === undefined) {
@@ -46,43 +52,47 @@ afterEach(async () => {
 })
 
 describe("KiloSessions kilo_meta", () => {
-  test("includes the active git branch", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await $`git branch -M feature/meta`.cwd(tmp.path).quiet()
+  it.instance(
+    "includes the active git branch",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        yield* Effect.promise(() => $`git branch -M feature/meta`.cwd(test.directory).quiet())
 
-    const base = "https://ingest.test"
-    process.env["KILO_AUTH_CONTENT"] = JSON.stringify({ kilo: { type: "api", key: token } })
-    process.env["KILO_SESSION_INGEST_URL"] = base
-    clearInFlightCache("kilo-sessions:token")
-    clearInFlightCache(`kilo-sessions:token-valid:${token}`)
-    clearInFlightCache("kilo-sessions:client")
+        const base = "https://ingest.test"
+        process.env["KILO_AUTH_CONTENT"] = JSON.stringify({ kilo: { type: "api", key: token } })
+        process.env["KILO_SESSION_INGEST_URL"] = base
+        clearInFlightCache("kilo-sessions:token")
+        clearInFlightCache(`kilo-sessions:token-valid:${token}`)
+        clearInFlightCache("kilo-sessions:client")
 
-    const sent = Promise.withResolvers<Payload>()
-    globalThis.fetch = (async (input, init) => {
-      const url = String(input)
-      if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
-      if (url === `${base}/ingest?v=1`) {
-        if (typeof init?.body !== "string") throw new Error("expected ingest body")
-        sent.resolve(JSON.parse(init.body) as Payload)
-        return new Response(null, { status: 200 })
-      }
-      throw new Error(`unexpected request: ${url}`)
-    }) as typeof fetch
+        const sent = Promise.withResolvers<Payload>()
+        globalThis.fetch = (async (input, init) => {
+          const url = String(input)
+          if (url.endsWith("/api/user")) return new Response(null, { status: 200 })
+          if (url === `${base}/ingest?v=1`) {
+            if (typeof init?.body !== "string") throw new Error("expected ingest body")
+            sent.resolve(JSON.parse(init.body) as Payload)
+            return new Response(null, { status: 200 })
+          }
+          throw new Error(`unexpected request: ${url}`)
+        }) as typeof fetch
 
-    await provideTestInstance({
-      directory: tmp.path,
-      fn: async () => {
-        const session = await Session.create({ title: "initial" })
-        await Storage.write(["session_share", session.id], { id: session.id, ingestPath: "/ingest" })
-        await KiloSessions.init()
-        await Session.setTitle({ sessionID: session.id, title: "updated" })
+        const session = yield* Effect.promise(() => Session.create({ title: "initial" }))
+        yield* Effect.promise(() =>
+          Storage.write(["session_share", session.id], { id: session.id, ingestPath: "/ingest" }),
+        )
+        const svc = yield* KiloSessions.Service
+        const bus = yield* Bus.Service
+        yield* svc.init()
+        yield* bus.publish(Session.Event.Updated, { sessionID: session.id, info: { ...session, title: "updated" } })
 
-        const payload = await timeout(sent.promise)
+        const payload = yield* Effect.promise(() => timeout(sent.promise))
         const meta = payload.data.find((item) => item.type === "kilo_meta")
         expect(meta?.type).toBe("kilo_meta")
         if (meta?.type !== "kilo_meta") throw new Error("missing kilo_meta payload")
         expect(meta.data.gitBranch).toBe("feature/meta")
-      },
-    })
-  })
+      }),
+    { git: true },
+  )
 })

@@ -6,6 +6,7 @@ import { Project } from "../project/project"
 import { Locale } from "../util/locale"
 import { Filesystem } from "../util/filesystem"
 import { WorktreeFamily } from "../kilocode/worktree-family"
+import { Git } from "../git"
 import DESCRIPTION from "./recall.txt"
 
 const Parameters = Schema.Struct({
@@ -27,6 +28,7 @@ export const RecallTool = Tool.define(
   "kilo_local_recall",
   Effect.gen(function* () {
     const project = yield* Project.Service
+    const git = yield* Git.Service
 
     const search = Effect.fn("RecallTool.search")(function* (
       params: { query?: string; limit?: number },
@@ -48,7 +50,7 @@ export const RecallTool = Tool.define(
 
       const limit = Math.min(params.limit ?? 20, 50)
       const state = yield* InstanceState.context
-      const dirs = yield* WorktreeFamily.list(project, state)
+      const dirs = yield* WorktreeFamily.list(project, state).pipe(Effect.provideService(Git.Service, git))
       const { Session } = yield* Effect.promise(() => import("../session/session"))
 
       const results: Array<{
@@ -104,7 +106,7 @@ export const RecallTool = Tool.define(
         ),
       )
       const state = yield* InstanceState.context
-      const dirs = yield* WorktreeFamily.list(project, state)
+      const dirs = yield* WorktreeFamily.list(project, state).pipe(Effect.provideService(Git.Service, git))
       const dir = Filesystem.resolve(session.directory)
       if (!dirs.some((root) => Filesystem.contains(root, dir))) {
         throw new Error(`Session "${id}" belongs to a different workspace and cannot be read from this directory.`)
