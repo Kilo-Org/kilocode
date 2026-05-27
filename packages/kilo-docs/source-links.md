@@ -158,8 +158,6 @@
   <!-- packages/opencode/src/provider/sdk/copilot/responses/openai-responses-language-model.ts -->
 - <https://reddit.com/r/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
-- <https://supermassive-black-hole.kiloapps.io/v1/session-export/batch>
-  <!-- packages/opencode/src/kilocode/session-export/worker.ts -->
 - <https://v5.ai-sdk.dev/providers/ai-sdk-providers/amazon-bedrock>
   <!-- packages/opencode/src/provider/transform.ts -->
 - <https://v5.ai-sdk.dev/providers/ai-sdk-providers/anthropic>
