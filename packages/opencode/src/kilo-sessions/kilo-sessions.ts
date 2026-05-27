@@ -620,7 +620,10 @@ export namespace KiloSessions {
     log.info("full sync", { sessionId })
 
     const session = await Session.get(SessionID.make(sessionId))
-    const diffs = await SessionSummary.diff({ sessionID: SessionID.make(sessionId) })
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const diffs = await AppRuntime.runPromise(
+      SessionSummary.Service.use((svc) => svc.diff({ sessionID: SessionID.make(sessionId) })),
+    )
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const models = await Promise.all(
