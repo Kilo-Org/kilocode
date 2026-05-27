@@ -4,6 +4,7 @@ import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { generateCommitMessage } from "../../commit-message"
 import { Config } from "../../../config/config"
+import { AppRuntime } from "../../../effect/app-runtime"
 import { lazy } from "../../../util/lazy"
 import { errors } from "../../../server/error"
 
@@ -39,7 +40,7 @@ export const CommitMessageRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
-      const config = await Config.get()
+      const config = await AppRuntime.runPromise(Config.Service.use((svc) => svc.get()))
       const prompt = config.commit_message?.prompt || undefined
       const result = await generateCommitMessage({ ...body, prompt })
       return c.json({ message: result.message })

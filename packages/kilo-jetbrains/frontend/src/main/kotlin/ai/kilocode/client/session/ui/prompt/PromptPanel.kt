@@ -68,15 +68,19 @@ class PromptPanel(
         private val LOG = KiloLog.create(PromptPanel::class.java)
         private val SEND_ICON: Icon = IconLoader.getIcon("/icons/send.svg", PromptPanel::class.java)
         private val STOP_ICON: Icon = IconLoader.getIcon("/icons/stop.svg", PromptPanel::class.java)
+        private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
+        private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
     }
 
     val mode = ModePicker()
     val model = ModelPicker()
     val reasoning = ReasoningPicker()
     var onReset: () -> Unit = {}
+    var onAutoApproveToggle: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
     private val shell = PromptShell()
     private var bus: MessageBusConnection? = null
+    private var autoApprove = false
 
     private val editor = PromptEditorTextField(project, this).apply {
         border = JBUI.Borders.empty()
@@ -131,6 +135,11 @@ class PromptPanel(
         addActionListener { onReset() }
     }
 
+    private val auto = AutoApproveButton().apply {
+        icon = SHIELD_ICON
+        addActionListener { onAutoApproveToggle(!autoApprove) }
+    }
+
     @Volatile
     private var busy = false
     private var ready = false
@@ -168,10 +177,13 @@ class PromptPanel(
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(reset)
         bar.add(Box.createHorizontalGlue())
+        bar.add(auto)
+        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
         syncTooltip()
+        syncAutoApprove()
     }
 
     fun setReady(value: Boolean) {
@@ -182,6 +194,12 @@ class PromptPanel(
         busy = value
         button.icon = if (value) STOP_ICON else SEND_ICON
         syncTooltip()
+    }
+
+    fun setAutoApprove(value: Boolean) {
+        if (autoApprove == value) return
+        autoApprove = value
+        syncAutoApprove()
     }
 
     fun setResetVisible(value: Boolean) {
@@ -222,6 +240,7 @@ class PromptPanel(
             SessionUiStyle.View.Prompt.EDITOR_CHROME)
         editor.preferredSize = JBDimension(0, height)
         editor.minimumSize = JBDimension(0, height)
+        syncAutoApprove()
         revalidate()
         repaint()
     }
@@ -276,6 +295,22 @@ class PromptPanel(
 
     private fun syncTooltip() {
         button.toolTipText = tooltip()
+    }
+
+    private fun syncAutoApprove() {
+        auto.isSelected = autoApprove
+        auto.icon = if (autoApprove) SHIELD_FILLED_ICON else SHIELD_ICON
+        auto.toolTipText = if (autoApprove) {
+            KiloBundle.message("prompt.action.autoApprove.enabled.tooltip")
+        } else {
+            KiloBundle.message("prompt.action.autoApprove.disabled.tooltip")
+        }
+        auto.accessibleContext.accessibleName = if (autoApprove) {
+            KiloBundle.message("prompt.action.autoApprove.disable")
+        } else {
+            KiloBundle.message("prompt.action.autoApprove.enable")
+        }
+        auto.repaint()
     }
 
     private fun tooltip(): String {
@@ -349,6 +384,56 @@ class PromptPanel(
                 }
             }
             super.paintComponent(g)
+        }
+
+        private fun sync(value: Boolean) {
+            if (over == value) return
+            over = value
+            repaint()
+        }
+    }
+
+    private inner class AutoApproveButton : JButton() {
+        private var over = false
+
+        init {
+            iconButton(this)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseEntered(e: MouseEvent) {
+                    sync(true)
+                }
+
+                override fun mouseExited(e: MouseEvent) {
+                    sync(false)
+                }
+            })
+        }
+
+        override fun getPreferredSize() = JBUI.size(
+            SessionUiStyle.View.Prompt.SEND_BUTTON_SIZE,
+            SessionUiStyle.View.Prompt.SEND_BUTTON_SIZE,
+        )
+
+        override fun getMinimumSize() = preferredSize
+
+        override fun getMaximumSize() = preferredSize
+
+        override fun paintComponent(g: Graphics) {
+            if (over) paintHover(g)
+            super.paintComponent(g)
+        }
+
+        private fun paintHover(g: Graphics) {
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.color = JBUI.CurrentTheme.ActionButton.hoverBackground()
+                val arc = JBUI.scale(JBUI.getInt("Button.arc", SessionUiStyle.View.Prompt.CORNER_ARC))
+                g2.fillRoundRect(0, 0, width, height, arc, arc)
+            } finally {
+                g2.dispose()
+            }
         }
 
         private fun sync(value: Boolean) {

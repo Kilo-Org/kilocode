@@ -341,17 +341,30 @@ export namespace SessionNetwork {
         return
       }
       s.pending.delete(requestID)
-      // kilocode_change start — reconnect failed remote MCP servers after network recovery
-      void MCP.status()
-        .then((statuses) => {
-          for (const [name, s] of Object.entries(statuses)) {
-            if (s.status === "failed") {
-              MCP.connect(name).catch((err) => {
-                log.error("remote reconnect failed", { name, err })
-              })
-            }
-          }
-        })
+      // kilocode_change start - reconnect failed remote MCP servers after network recovery
+      void import("@/effect/app-runtime")
+        .then(({ AppRuntime }) =>
+          AppRuntime.runPromise(
+            Effect.gen(function* () {
+              const mcp = yield* MCP.Service
+              const statuses = yield* mcp.status()
+              yield* Effect.forEach(
+                Object.entries(statuses),
+                ([name, status]) => {
+                  if (status.status !== "failed") return Effect.void
+                  return mcp.connect(name).pipe(
+                    Effect.catchCause((err) =>
+                      Effect.sync(() => {
+                        log.error("remote reconnect failed", { name, err })
+                      }),
+                    ),
+                  )
+                },
+                { concurrency: "unbounded" },
+              )
+            }),
+          ),
+        )
         .catch((err) => {
           log.error("failed to get MCP status for reconnect", { err })
         })

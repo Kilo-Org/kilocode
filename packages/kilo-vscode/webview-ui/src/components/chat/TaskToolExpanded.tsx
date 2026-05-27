@@ -7,38 +7,19 @@
  * Call registerExpandedTaskTool() once at app startup to activate.
  */
 
-import { Component, createEffect, createMemo, For, Show } from "solid-js"
+import { Component, createEffect, createMemo, For, Show, onCleanup } from "solid-js"
 import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-part"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { useData } from "@kilocode/kilo-ui/context/data"
 import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { childID } from "../../context/session-utils"
-import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
-
-/** Collect all tool parts from all assistant messages in a given session. */
-function getSessionToolParts(store: ReturnType<typeof useData>["store"], sessionId: string): ToolPart[] {
-  const messages = (store.message?.[sessionId] as SDKMessage[] | undefined)?.filter((m) => m.role === "assistant")
-  if (!messages) return []
-  const parts: ToolPart[] = []
-  for (const m of messages) {
-    const msgParts = store.part?.[m.id]
-    if (msgParts) {
-      for (const p of msgParts) {
-        if (p && p.type === "tool") parts.push(p as ToolPart)
-      }
-    }
-  }
-  return parts
-}
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
-  const data = useData()
   const i18n = useI18n()
   const language = useLanguage()
   const session = useSession()
@@ -73,7 +54,24 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const childToolParts = createMemo(() => {
     const id = childSessionId()
     if (!id) return []
-    return getSessionToolParts(data.store, id)
+    return session.getSessionToolParts(id)
+  })
+
+  const childToolCount = createMemo(() => {
+    const id = childSessionId()
+    return id ? session.getSessionToolCount(id) : 0
+  })
+
+  createEffect((prev: string | undefined) => {
+    const id = childSessionId()
+    if (prev && prev !== id) vscode.postMessage({ type: "streamSessionVisible", sessionID: prev, visible: false })
+    if (id && id !== prev) vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible: true })
+    return id
+  })
+
+  onCleanup(() => {
+    const id = childSessionId()
+    if (id) vscode.postMessage({ type: "streamSessionVisible", sessionID: id, visible: false })
   })
 
   const autoScroll = createAutoScroll({
@@ -93,11 +91,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>
-        <Show when={description() || childToolParts().length > 0}>
+        <Show when={description() || childToolCount() > 0}>
           <span data-slot="basic-tool-tool-subtitle">
             {description()}
-            <Show when={childToolParts().length > 0}>
-              {description() ? " " : ""}({childToolParts().length})
+            <Show when={childToolCount() > 0}>
+              {description() ? " " : ""}({childToolCount()})
             </Show>
           </span>
         </Show>
@@ -127,7 +125,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       >
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
-            <Show when={running() && childToolParts().length === 0}>
+            <Show when={running() && childToolCount() === 0}>
               <div data-slot="task-tool-item" data-state="starting">
                 <span data-slot="task-tool-title">{language.t("session.messages.taskStarting")}</span>
               </div>

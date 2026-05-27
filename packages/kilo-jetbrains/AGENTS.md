@@ -130,6 +130,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - Any code path that modifies UI state or depends on EDT threading must have tests that exercise the actual implementation.
 - Extend `BasePlatformTestCase` to get a real IntelliJ Application and EDT in tests. The session package already uses `SessionControllerTestBase` which wraps this.
 - Do not mock the EDT or threading assertions — test against the real threading model.
+- Do not add production methods whose only purpose is test access. Prefer exercising the public API and inspecting the real Swing component tree in tests.
 - For state-driven updates, assert that the component state matches after flushing coroutines and draining the EDT.
 - For retained Swing components, assert that expand/collapse, update, and no-op paths work correctly without rebuilding the component tree.
 
@@ -154,6 +155,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 - The plugin spawns `kilo serve --port 0` (OS assigns random port) and reads stdout for `listening on http://...:(\d+)` to discover the port.
 - A random 32-byte hex password is passed via `KILO_SERVER_PASSWORD` env var for Basic Auth.
 - Fixed env vars set on every spawn: `KILO_CLIENT=jetbrains`, `KILO_PLATFORM=jetbrains`, `KILO_APP_NAME=kilo-code`, `KILO_ENABLE_QUESTION_TOOL=true`, `KILO_DISABLE_CLAUDE_CODE=true`, `KILOCODE_FEATURE=jetbrains-plugin`.
+- Unless already provided by the base environment, the backend sets `KILO_CONFIG_CONTENT` to make `edit` and `bash` permissions ask by default for JetBrains-launched CLI processes.
 - This is the same protocol used by the VS Code extension (`packages/kilo-vscode/src/services/cli-backend/server-manager.ts`).
 
 ### Dev Storage Isolation
@@ -364,9 +366,58 @@ For common spacing lookups, prefer `JBUI.CurrentTheme` area-specific insets (e.g
 | Side separators | `JBUI.Borders.customLineTop(...)`, `customLineBottom(...)` |
 | Composed borders | `JBUI.Borders.compound(...)`, `JBUI.Borders.merge(...)` |
 | Simple `BorderLayout` panels | `JBUI.Panels.simplePanel(...)`, `BorderLayoutPanel` |
-| Simple vertical custom Swing groups | `VerticalLayout` |
+| One-dimensional multi-component rows/columns | `ai.kilocode.client.ui.layout.Stack` — see section below |
 | Fluent platform panels | `JBPanel.withBorder(...)`, `.andTransparent()`, `.andOpaque()`, `.withBackground(...)` |
 | Single-component alignment wrapper | `ai.kilocode.client.ui.layout.Align` — see section below |
+
+### Stack — One-Dimensional Multi-Component Layout
+
+Use `Stack` (`ai.kilocode.client.ui.layout.Stack`) when multiple Swing components should be laid out as one vertical column or one horizontal row without visual chrome. It is a transparent, no-border, no-color `JPanel(null)` that lays out visible children in insertion order.
+
+**Behavior:**
+
+| Mode | Layout behavior | Size contribution |
+|---|---|---|
+| `Stack.vertical(gap)` | Children are placed top-to-bottom; each child fills the available container width; each child keeps its bounded preferred height | Width is max child width; height is summed child heights plus gaps |
+| `Stack.horizontal(gap)` | Children are placed left-to-right; each child fills the available container height; each child keeps its bounded preferred width | Width is summed child widths plus gaps; height is max child height |
+
+"Bounded preferred" means the child's preferred size on the stack axis is coerced into the effective `[min, max]` range. On the cross axis, layout tracks the container size even if that ignores an individual child's preferred/minimum/maximum size.
+
+**Factories and fluent additions:**
+
+```kotlin
+Stack.vertical()
+    .next(header)
+    .next(body)
+
+Stack.horizontal(gap = UiStyle.Gap.md())
+    .next(icon)
+    .next(label)
+
+Stack.vertical(gap = UiStyle.Gap.sm())
+    .next(summary)
+    .gap(UiStyle.Gap.lg())
+    .next(details)
+
+Stack.vertical()
+    .next(header)
+    .fill(UiStyle.Gap.pad())
+    .next(body)
+
+Stack.horizontal()
+    .next(icon)
+    .fill(UiStyle.Gap.sm())
+    .next(label)
+```
+
+**Rules:**
+
+- Prefer `Stack.vertical(...)` or `Stack.horizontal(...)` over one-off `JPanel` + `BoxLayout` or simple single-line `FlowLayout` rows/columns.
+- Use the constructor `gap` for the normal spacing between adjacent visible children.
+- Use `gap(size)` for an explicit one-off gap only when the next added child is the next visible child. It is ignored when it is trailing or when a hidden component appears before the next visible child.
+- Use `fill(size)`, `Stack.verticalFiller(size)`, or `Stack.horizontalFiller(size)` for persistent leading, trailing, or interstitial whitespace. Do not use `Box` or `gap(size)` for persistent spacing.
+- Use `Stack` for simple retained Swing rows/columns where children should track the cross-axis size. Use `Align` for positioning one child inside available space.
+- Do not use `Stack` for padding, borders, colors, wrapping rows, flexible glue, or transcript components that need width-aware HTML reflow. Use `JBUI.Borders.empty(...)`, `UiStyle.Gap`, purpose-built layouts, or `SessionLayout` for those concerns.
 
 ### Align — Single-Component Alignment Wrapper
 

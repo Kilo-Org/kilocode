@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.prompt.PromptDataKeys
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import com.intellij.icons.AllIcons
@@ -9,6 +10,8 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.EmptyIcon
+import java.awt.Container
+import javax.swing.JButton
 import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
@@ -110,6 +113,48 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.isStopEnabled)
     }
 
+    fun `test auto approve button toggles and updates tooltip`() {
+        val panel = PromptPanel(project, {}, {})
+        val button = autoApproveButton(panel)
+        var seen: Boolean? = null
+        panel.onAutoApproveToggle = { seen = it }
+
+        assertFalse(button.isSelected)
+        assertEquals(KiloBundle.message("prompt.action.autoApprove.enable"), button.accessibleContext.accessibleName)
+        assertEquals(KiloBundle.message("prompt.action.autoApprove.disabled.tooltip"), button.toolTipText)
+        val icon = button.icon
+
+        button.doClick()
+
+        assertEquals(true, seen)
+
+        panel.setAutoApprove(true)
+
+        assertTrue(button.isSelected)
+        assertNotSame(icon, button.icon)
+        assertEquals(KiloBundle.message("prompt.action.autoApprove.disable"), button.accessibleContext.accessibleName)
+        assertEquals(KiloBundle.message("prompt.action.autoApprove.enabled.tooltip"), button.toolTipText)
+
+        button.doClick()
+
+        assertEquals(false, seen)
+
+        panel.setAutoApprove(false)
+
+        assertSame(icon, button.icon)
+    }
+
+    fun `test auto approve button sits next to send button`() {
+        val panel = PromptPanel(project, {}, {})
+        val auto = autoApproveButton(panel)
+        val send = panel.buttonForTest()
+        val items = auto.parent.components.toList()
+
+        assertTrue(SwingUtilities.isDescendingFrom(auto, panel.shellForTest()))
+        assertSame(auto.parent, send.parent)
+        assertEquals(2, items.indexOf(send) - items.indexOf(auto))
+    }
+
     fun `test pickers belong to rounded shell`() {
         val panel = PromptPanel(project, {}, {})
         val shell = panel.shellForTest()
@@ -118,6 +163,25 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(SwingUtilities.isDescendingFrom(panel.model, shell))
         assertTrue(SwingUtilities.isDescendingFrom(panel.reasoning, shell))
         assertSame(shell, panel.mode.parent.parent)
+    }
+
+    private fun autoApproveButton(panel: PromptPanel): JButton {
+        val enable = KiloBundle.message("prompt.action.autoApprove.enable")
+        val disable = KiloBundle.message("prompt.action.autoApprove.disable")
+        return buttons(panel).first {
+            val name = it.accessibleContext.accessibleName
+            name == enable || name == disable
+        }
+    }
+
+    private fun buttons(root: java.awt.Component): List<JButton> {
+        val out = mutableListOf<JButton>()
+        fun visit(node: java.awt.Component) {
+            if (node is JButton) out.add(node)
+            if (node is Container) node.components.forEach(::visit)
+        }
+        visit(root)
+        return out
     }
 
     private class TestSink : DataSink {

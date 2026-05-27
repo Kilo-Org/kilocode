@@ -42,6 +42,22 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
+    fun `isolation disabled - default CLI config asks for edit and bash permissions`() {
+        val env = manager.buildEnv("pwd123", emptyMap())
+
+        assertEquals("""{"permission":{"edit":"ask","bash":"ask"}}""", env["KILO_CONFIG_CONTENT"])
+    }
+
+    @Test
+    fun `isolation disabled - base CLI config is preserved`() {
+        val cfg = """{"permission":{"edit":"allow"}}"""
+
+        val env = manager.buildEnv("pwd123", mapOf("KILO_CONFIG_CONTENT" to cfg))
+
+        assertEquals(cfg, env["KILO_CONFIG_CONTENT"])
+    }
+
+    @Test
     fun `isolation disabled - no XDG storage overrides are injected`() {
         val env = manager.buildEnv("pwd123", emptyMap())
 

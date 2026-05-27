@@ -23,6 +23,8 @@ exclude = [
   'https://console.groq.com/pages/models',
   '^https?://([A-Za-z0-9-]+\.)?glama\.ai(/|$)',
   '^https?://(api|console)\.mistral\.ai',
+  '^https?://codestral\.mistral\.ai/v1/fim/completions/?$',
+  '^https?://api\.inceptionlabs\.ai/v1/fim/completions/?$',
   '^https?://(app|console)\.requesty\.ai',
   '^https?://(cloud|console)\.google\.ai',
   # API endpoint prefixes are valid but return 4xx to plain GET link checks.

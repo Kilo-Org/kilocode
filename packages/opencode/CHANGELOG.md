@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 7.3.11
+
+### Patch Changes
+
+- [#10485](https://github.com/Kilo-Org/kilocode/pull/10485) [`7025c77`](https://github.com/Kilo-Org/kilocode/commit/7025c779f74b2c68afa05bd2f70ce1123ae9cecc) - Surface failed sub-agent tasks as tool errors so parent sessions can recover.
+
+- [#10443](https://github.com/Kilo-Org/kilocode/pull/10443) [`8e76807`](https://github.com/Kilo-Org/kilocode/commit/8e7680794da86c6d938d6626066157c9cd18adbb) - Support configuring the default task subagent model and reasoning effort while safely inheriting the calling agent model when the override is unavailable.
+
+## 7.3.10
+
+### Patch Changes
+
+- [#10302](https://github.com/Kilo-Org/kilocode/pull/10302) [`8ba138d`](https://github.com/Kilo-Org/kilocode/commit/8ba138def73897d7c19208a067f8a2b4be947fd6) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Export all messages from TUI instead of truncated store
+
 ## 7.3.9
 
 ### Minor Changes

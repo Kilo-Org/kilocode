@@ -138,6 +138,7 @@ export const OrganizationModes = Schema.Struct({
 export const FimBody = Schema.Struct({
   prefix: Schema.String,
   suffix: Schema.String,
+  provider: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
   maxTokens: Schema.optional(Schema.Finite),
   temperature: Schema.optional(Schema.Finite),

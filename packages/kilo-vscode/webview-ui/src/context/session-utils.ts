@@ -1,4 +1,4 @@
-import type { Part } from "../types/messages"
+import type { Message, Part, ToolPart } from "../types/messages"
 
 export const SNAPSHOT_PROGRESS_TEXT = "Initializing snapshot..."
 
@@ -14,12 +14,27 @@ export function snapshotProgress(part: SnapshotPart | undefined): boolean {
   return (part.text ?? "").includes("Initializing snapshot")
 }
 
+type ParentSession = { parentID?: string | null }
+
+type RecentSession = ParentSession & { updatedAt: string }
+
+export function isRootSession(session: ParentSession): boolean {
+  return session.parentID === undefined || session.parentID === null
+}
+
+export function recentSessions<T extends RecentSession>(sessions: T[]): T[] {
+  return [...sessions]
+    .filter(isRootSession)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 3)
+}
+
 /** Minimal message shape for cost breakdown helpers. */
 export type CostMessage = { id: string; role: string; cost?: number }
 
 /** Minimal tool part shape for label extraction. */
 type ToolState = {
-  input?: { description?: string; subagent_type?: string }
+  input?: Record<string, unknown>
   metadata?: { sessionId?: string }
 }
 
@@ -33,6 +48,63 @@ type TaskPart = {
 export function childID(part: TaskPart): string | undefined {
   if (part.type !== "tool" || part.tool !== "task") return undefined
   return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined
+}
+
+function withMessage(part: ToolPart, msg: { id: string; sessionID?: string }): ToolPart {
+  return {
+    ...part,
+    messageID: part.messageID ?? msg.id,
+    sessionID: part.sessionID ?? msg.sessionID,
+  }
+}
+
+export type ToolIndexMessage = Pick<Message, "id" | "sessionID" | "role" | "parts">
+
+/**
+ * Build the per-session compact tool index in assistant-message order.
+ * Text/reasoning deltas should not touch this index, keeping streaming cheap.
+ */
+export function buildSessionToolParts(
+  messages: ToolIndexMessage[],
+  lookup?: (message: ToolIndexMessage) => Part[] | undefined,
+): ToolPart[] {
+  const tools: ToolPart[] = []
+  for (const msg of messages) {
+    if (msg.role !== "assistant") continue
+    const parts = lookup?.(msg) ?? msg.parts
+    if (!parts) continue
+    for (const part of parts) {
+      if (part.type !== "tool") continue
+      tools.push(withMessage(part, msg))
+    }
+  }
+  return tools
+}
+
+export function upsertSessionToolPart(
+  current: ToolPart[],
+  part: Part,
+  msg: { id: string; sessionID?: string },
+): ToolPart[] {
+  if (part.type !== "tool") return current
+  const next = withMessage(part, msg)
+  const index = current.findIndex((item) => item.id === part.id)
+  if (index < 0) return [...current, next]
+  const tools = current.slice()
+  tools[index] = next
+  return tools
+}
+
+export function removeSessionToolPart(current: readonly ToolPart[], partID: string): ToolPart[] {
+  return current.filter((part) => part.id !== partID)
+}
+
+export function removeSessionToolPartsForMessage(current: readonly ToolPart[], messageID: string): ToolPart[] {
+  return current.filter((part) => part.messageID !== messageID)
 }
 
 /**
@@ -178,18 +250,23 @@ export function buildFamilyParents(
   messages: Record<string, CostMessage[]>,
   parts: Record<string, TaskPart[]>,
 ): Map<string, string> {
+  return buildFamilyParentsFromTools(family, (sid) => {
+    const msgs = messages[sid]
+    if (!msgs) return []
+    return msgs.flatMap((msg) => parts[msg.id] ?? [])
+  })
+}
+
+export function buildFamilyParentsFromTools(
+  family: Set<string>,
+  tools: (sessionID: string) => readonly TaskPart[],
+): Map<string, string> {
   const parents = new Map<string, string>()
   for (const sid of family) {
-    const msgs = messages[sid]
-    if (!msgs) continue
-    for (const msg of msgs) {
-      const list = parts[msg.id]
-      if (!list) continue
-      for (const p of list) {
-        const child = childID(p)
-        if (!child || !family.has(child) || parents.has(child)) continue
-        parents.set(child, sid)
-      }
+    for (const p of tools(sid)) {
+      const child = childID(p)
+      if (!child || !family.has(child) || parents.has(child)) continue
+      parents.set(child, sid)
     }
   }
   return parents
@@ -206,21 +283,27 @@ export function buildFamilyLabels(
   messages: Record<string, CostMessage[]>,
   parts: Record<string, TaskPart[]>,
 ): Map<string, string> {
+  return buildFamilyLabelsFromTools(family, (sid) => {
+    const msgs = messages[sid]
+    if (!msgs) return []
+    return msgs.flatMap((msg) => parts[msg.id] ?? [])
+  })
+}
+
+export function buildFamilyLabelsFromTools(
+  family: Set<string>,
+  tools: (sessionID: string) => readonly TaskPart[],
+): Map<string, string> {
   const labels = new Map<string, string>()
   for (const sid of family) {
-    const msgs = messages[sid]
-    if (!msgs) continue
-    for (const msg of msgs) {
-      const list = parts[msg.id]
-      if (!list) continue
-      for (const p of list) {
-        if (p.type !== "tool") continue
-        const child = childID(p)
-        if (!child || !family.has(child)) continue
-        const raw = p.state?.input?.subagent_type || p.state?.input?.description || p.tool || "task"
-        const desc = raw.length > LABEL_CAP ? raw.slice(0, LABEL_CAP - 2) + "…" : raw
-        if (!labels.has(child)) labels.set(child, desc)
-      }
+    for (const p of tools(sid)) {
+      if (p.type !== "tool") continue
+      const child = childID(p)
+      if (!child || !family.has(child)) continue
+      const raw =
+        stringField(p.state?.input?.subagent_type) ?? stringField(p.state?.input?.description) ?? p.tool ?? "task"
+      const desc = raw.length > LABEL_CAP ? raw.slice(0, LABEL_CAP - 2) + "…" : raw
+      if (!labels.has(child)) labels.set(child, desc)
     }
   }
   return labels

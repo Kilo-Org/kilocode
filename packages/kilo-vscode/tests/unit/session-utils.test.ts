@@ -6,12 +6,19 @@ import {
   calcTokenUsage,
   buildFamilyCosts,
   buildFamilyParents,
+  buildFamilyParentsFromTools,
   buildFamilyLabels,
+  buildFamilyLabelsFromTools,
   buildCostBreakdown,
+  buildSessionToolParts,
   collapseCostBreakdown,
   childID,
+  removeSessionToolPart,
+  removeSessionToolPartsForMessage,
+  upsertSessionToolPart,
+  recentSessions,
 } from "../../webview-ui/src/context/session-utils"
-import type { Part } from "../../webview-ui/src/types/messages"
+import type { Message, Part, ToolPart } from "../../webview-ui/src/types/messages"
 
 const t = (key: string) => key
 
@@ -82,6 +89,36 @@ describe("computeStatus", () => {
   it("maps synthetic snapshot progress to snapshot status", () => {
     const part: Part = { type: "text", id: "p1", text: "⠋ Initializing snapshot…", synthetic: true }
     expect(computeStatus(part, t)).toBe("Initializing snapshot...")
+  })
+})
+
+describe("recentSessions", () => {
+  const at = (day: number) => `2026-01-${String(day).padStart(2, "0")}T00:00:00.000Z`
+  const info = (id: string, day: number, parentID?: string | null) => ({
+    id,
+    updatedAt: at(day),
+    ...(parentID === undefined ? {} : { parentID }),
+  })
+
+  it("keeps the newest root sessions after removing sub-agents", () => {
+    const result = recentSessions([
+      info("old-root", 1),
+      info("child", 6, "old-root"),
+      info("new-root", 5),
+      info("blank-parent", 4, ""),
+      info("mid-root", 3, null),
+      info("fourth-root", 2),
+    ])
+
+    expect(result.map((session) => session.id)).toEqual(["new-root", "mid-root", "fourth-root"])
+  })
+
+  it("does not mutate the session list while sorting recents", () => {
+    const sessions = [info("old", 1), info("new", 3), info("mid", 2)]
+
+    recentSessions(sessions)
+
+    expect(sessions.map((session) => session.id)).toEqual(["old", "new", "mid"])
   })
 })
 
@@ -179,6 +216,7 @@ function msg(id: string, role: string, cost?: number) {
 
 function toolPart(tool: string, sessionId?: string, input?: { subagent_type?: string; description?: string }) {
   return {
+    id: `part-${tool}-${sessionId ?? "none"}`,
     type: "tool" as const,
     tool,
     state: {
@@ -186,6 +224,14 @@ function toolPart(tool: string, sessionId?: string, input?: { subagent_type?: st
       metadata: sessionId ? { sessionId } : {},
     },
   }
+}
+
+function textPart(id: string, text = "text"): Part {
+  return { id, type: "text" as const, text }
+}
+
+function indexMsg(id: string, role: "user" | "assistant", parts?: Part[]): Message {
+  return { id, role, sessionID: "s1", createdAt: id, parts }
 }
 
 describe("childID", () => {
@@ -394,6 +440,61 @@ describe("buildFamilyParents", () => {
     const messages = { root: [msg("m1", "assistant")] }
     const parts = { m1: [toolPart("task", "orphan", { subagent_type: "general" })] }
     expect(buildFamilyParents(family, messages, parts).size).toBe(0)
+  })
+})
+
+describe("session tool indexes", () => {
+  it("builds tool parts in assistant message order", () => {
+    const messages = [
+      indexMsg("u1", "user", [toolPart("read") as ToolPart]),
+      indexMsg("a1", "assistant", [toolPart("read") as ToolPart, textPart("t1")]),
+      indexMsg("a2", "assistant", [toolPart("grep") as ToolPart]),
+    ]
+    const tools = buildSessionToolParts(messages)
+    expect(tools.map((part) => part.tool)).toEqual(["read", "grep"])
+    expect(tools.map((part) => part.messageID)).toEqual(["a1", "a2"])
+  })
+
+  it("uses a lookup so stashed loaded parts can feed the index", () => {
+    const messages = [indexMsg("a1", "assistant")]
+    const parts: Record<string, Part[]> = { a1: [toolPart("websearch") as ToolPart, textPart("t1")] }
+    const tools = buildSessionToolParts(messages, (item) => parts[item.id])
+    expect(tools.map((part) => part.tool)).toEqual(["websearch"])
+  })
+
+  it("upserts tool parts without duplicating and ignores text deltas", () => {
+    const first = { ...toolPart("bash"), id: "p1", state: { status: "running", input: {}, title: "old" } }
+    const next = { ...toolPart("bash"), id: "p1", state: { status: "running", input: {}, title: "new" } }
+    const indexed = upsertSessionToolPart([], first as ToolPart, { id: "m1", sessionID: "s1" })
+    const updated = upsertSessionToolPart(indexed, next as ToolPart, { id: "m1", sessionID: "s1" })
+    const text = upsertSessionToolPart(updated, textPart("t1"), { id: "m1", sessionID: "s1" })
+    expect(text).toHaveLength(1)
+    expect((text[0]!.state as { title?: string }).title).toBe("new")
+  })
+
+  it("removes indexed tools by part or message", () => {
+    const first = upsertSessionToolPart([], { ...toolPart("read"), id: "p1" } as ToolPart, {
+      id: "m1",
+      sessionID: "s1",
+    })
+    const second = upsertSessionToolPart(first, { ...toolPart("grep"), id: "p2" } as ToolPart, {
+      id: "m2",
+      sessionID: "s1",
+    })
+    expect(removeSessionToolPart(second, "p1").map((part) => part.id)).toEqual(["p2"])
+    expect(removeSessionToolPartsForMessage(second, "m2").map((part) => part.id)).toEqual(["p1"])
+  })
+
+  it("derives parents and labels from indexed tool parts", () => {
+    const family = new Set(["root", "child"])
+    const tools = new Map([
+      ["root", [toolPart("task", "child", { subagent_type: "explore" })]],
+      ["child", []],
+    ])
+    const parents = buildFamilyParentsFromTools(family, (sid) => tools.get(sid) ?? [])
+    const labels = buildFamilyLabelsFromTools(family, (sid) => tools.get(sid) ?? [])
+    expect(parents.get("child")).toBe("root")
+    expect(labels.get("child")).toBe("explore")
   })
 })
 

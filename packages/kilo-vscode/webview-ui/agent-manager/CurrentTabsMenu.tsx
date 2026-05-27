@@ -135,7 +135,6 @@ function buildItem(
 
 function statusLabel(id: string, blocked: boolean, status: SessionStatusInfo | undefined, deps: CurrentTabItemsDeps) {
   if (blocked) return deps.t("agentManager.tabsMenu.status.waiting")
-  if (status?.type === "busy") return deps.t("agentManager.tabsMenu.status.working")
   if (status?.type === "retry") return deps.t("agentManager.tabsMenu.status.retry")
   return undefined
 }
