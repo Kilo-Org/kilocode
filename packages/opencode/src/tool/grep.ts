@@ -7,8 +7,7 @@ import { Ripgrep } from "../file/ripgrep"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./grep.txt"
 import * as Tool from "./tool"
-
-const MAX_LINE_LENGTH = 2000
+import { GrepBudget } from "@/kilocode/tool/grep" // kilocode_change
 
 export const Parameters = Schema.Struct({
   pattern: Schema.String.annotate({ description: "The regex pattern to search for in file contents" }),
@@ -25,15 +24,16 @@ export const GrepTool = Tool.define(
   Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
     const rg = yield* Ripgrep.Service
+    const budget = yield* GrepBudget.make // kilocode_change
 
     return {
-      description: DESCRIPTION,
+      description: `${DESCRIPTION}\n${GrepBudget.DESCRIPTION}`, // kilocode_change
       parameters: Parameters,
       execute: (params: { pattern: string; path?: string; include?: string }, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const empty = {
             title: params.pattern,
-            metadata: { matches: 0, truncated: false },
+            metadata: { matches: 0, truncated: false, linesTruncated: false, outputPath: undefined as string | undefined }, // kilocode_change
             output: "No files found",
           }
           if (!params.pattern) {
@@ -114,15 +114,18 @@ export const GrepTool = Tool.define(
           const output = [`Found ${total} matches${truncated ? ` (showing first ${limit})` : ""}`]
 
           let current = ""
+          let linesTruncated = false // kilocode_change
           for (const match of final) {
             if (current !== match.path) {
               if (current !== "") output.push("")
               current = match.path
               output.push(`${match.path}:`)
             }
-            const text =
-              match.text.length > MAX_LINE_LENGTH ? match.text.substring(0, MAX_LINE_LENGTH) + "..." : match.text
-            output.push(`  Line ${match.line}: ${text}`)
+            // kilocode_change start
+            const text = GrepBudget.line(match.text)
+            linesTruncated = linesTruncated || text.truncated
+            output.push(`  Line ${match.line}: ${text.text}`)
+            // kilocode_change end
           }
 
           if (truncated) {
@@ -137,13 +140,16 @@ export const GrepTool = Tool.define(
             output.push("(Some paths were inaccessible and skipped)")
           }
 
+          const capped = yield* budget(output.join("\n")) // kilocode_change
           return {
             title: params.pattern,
             metadata: {
               matches: total,
-              truncated,
+              truncated: truncated || capped.truncated, // kilocode_change
+              linesTruncated, // kilocode_change
+              ...(capped.truncated && { outputPath: capped.outputPath }), // kilocode_change
             },
-            output: output.join("\n"),
+            output: linesTruncated ? `${capped.content}\n\n${GrepBudget.notice(capped.truncated)}` : capped.content, // kilocode_change
           }
         }).pipe(Effect.orDie),
     }
