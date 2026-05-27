@@ -12,10 +12,12 @@ import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
+import { KiloLLM } from "@/kilocode/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
+import { Effect } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { lazy } from "@/util/lazy"
@@ -26,6 +28,7 @@ const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
 const questions = lazy(() => makeRuntime(Question.Service, Question.defaultLayer))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
+const llm = lazy(() => makeRuntime(LLM.Service, LLM.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
 
 export const PlanFollowupRuntime = {
@@ -53,6 +56,9 @@ export const PlanFollowupRuntime = {
     update(input: Parameters<Todo.Interface["update"]>[0]) {
       return todo().runPromise((svc) => svc.update(input))
     },
+  },
+  handover(input: LLM.StreamInput, signal: AbortSignal) {
+    return llm().runPromise((svc) => KiloLLM.text(svc.stream(input)).pipe(Effect.orDie), { signal })
   },
   async loop(sessionID: SessionID) {
     const item = await import("@/session/prompt")
@@ -123,31 +129,31 @@ export async function generateHandover(input: {
       model: input.model,
     }
 
-    const stream = await LLM.stream({
-      agent: entry ?? {
-        name: "compaction",
-        mode: "subagent",
-        permission: [],
-        options: {},
-      },
-      user: userMsg,
-      tools: {},
-      model,
-      small: true,
-      messages: [
-        ...(await MessageV2.toModelMessages(input.messages, model)),
-        {
-          role: "user" as const,
-          content: HANDOVER_PROMPT,
+    const result = await PlanFollowupRuntime.handover(
+      {
+        agent: entry ?? {
+          name: "compaction",
+          mode: "subagent",
+          permission: [],
+          options: {},
         },
-      ],
-      abort: input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
-      sessionID,
-      system: [],
-      retries: 1,
-    })
-
-    const result = await stream.text
+        user: userMsg,
+        tools: {},
+        model,
+        small: true,
+        messages: [
+          ...(await MessageV2.toModelMessages(input.messages, model)),
+          {
+            role: "user" as const,
+            content: HANDOVER_PROMPT,
+          },
+        ],
+        sessionID,
+        system: [],
+        retries: 1,
+      },
+      input.abort ? AbortSignal.any([input.abort, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
+    )
     return result.trim()
   } catch (error) {
     if (input.abort?.aborted) return ""

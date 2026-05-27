@@ -84,7 +84,6 @@ const llm = Layer.unwrap(
             const item = queue.shift() ?? Stream.empty
             return item
           },
-          raw: () => Effect.die("raw not implemented in TestLLM"),
         }),
       ),
       Layer.succeed(TestLLM, TestLLM.of({ reply })),
