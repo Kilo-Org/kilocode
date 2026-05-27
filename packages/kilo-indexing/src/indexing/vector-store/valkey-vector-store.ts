@@ -144,32 +144,26 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   private async getMetadata(): Promise<Record<string, string> | null> {
+    return this.getMetadataHash()
+  }
+
+  private async getMetadataHash(): Promise<Record<string, string> | null> {
     const client = await this.ensureConnected()
     const hashData = await client.hgetall(this.metadataKey)
-
     if (!hashData || hashData.length === 0) {
       return null
     }
-
-    const metadata: Record<string, string> = {}
+    const result: Record<string, string> = {}
     for (const entry of hashData) {
-      metadata[String(entry.field)] = String(entry.value)
+      result[String(entry.field)] = String(entry.value)
     }
-    return metadata
+    return result
   }
 
   private async getStoredProfile(): Promise<EmbeddingProfile | null> {
-    const client = await this.ensureConnected()
-    const hashData = await client.hgetall(this.metadataKey)
-
-    if (!hashData || hashData.length === 0) {
+    const metadata = await this.getMetadataHash()
+    if (!metadata) {
       return null
-    }
-
-    // GLIDE returns HGETALL as an array of {field, value} objects, not a flat map
-    const metadata: Record<string, string> = {}
-    for (const entry of hashData) {
-      metadata[String(entry.field)] = String(entry.value)
     }
 
     const provider = metadata[KEY.provider]
@@ -557,6 +551,9 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   async dispose(): Promise<void> {
+    if (this.connectingPromise) {
+      try { await this.connectingPromise } catch { /* ignore */ }
+    }
     if (this.client) {
       this.client.close()
       this.client = null
@@ -607,10 +604,8 @@ export class ValkeyVectorStore implements IVectorStore {
       { type: "TAG", name: "seg2" },
       { type: "TAG", name: "seg3" },
       { type: "TAG", name: "seg4" },
-      // Note: HASH TAG fields tokenize on comma by default. File paths containing
-      // literal commas would be split into multiple tags. This is acceptable because
-      // file paths in practice do not contain commas.
-      { type: "TAG", name: "filePath" },
+      // Use null-byte separator to prevent default comma tokenization of file paths
+      { type: "TAG", name: "filePath", separator: "\x00" },
       { type: "TAG", name: "type" },
     ]
 
