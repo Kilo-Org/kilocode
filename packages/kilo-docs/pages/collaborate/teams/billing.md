@@ -97,6 +97,10 @@ The minimum top-up amount is **$100.00**.
 
 Once saved, your initial top-up will be processed immediately to verify your payment method.
 
+## Kilo Pass for Teams
+
+Teams can purchase Kilo Pass for all their users in bulk. To set this up for your organization, contact our sales team directly at [sales@kilo.ai](mailto:sales@kilo.ai).
+
 ## Invoices
 
 Invoices for any payment on the Kilo Code platform, for seats or credits, will be available in the Invoices tab.
