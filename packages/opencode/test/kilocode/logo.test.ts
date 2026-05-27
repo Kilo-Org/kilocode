@@ -2,10 +2,11 @@ import { describe, expect, test } from "bun:test"
 import { plain, session, supports, tui } from "../../src/kilocode/cli/logo"
 
 describe("kilocode logo", () => {
-  test("allows remote terminals", () => {
-    expect(supports({ SSH_TTY: "/dev/pts/0" }, "linux")).toBe(true)
-    expect(supports({ SSH_CLIENT: "127.0.0.1 12345 22" }, "linux")).toBe(true)
-    expect(supports({ SSH_CONNECTION: "127.0.0.1 12345 127.0.0.1 22" }, "linux")).toBe(true)
+  test("falls back for remote terminals", () => {
+    expect(supports({ SSH_TTY: "/dev/pts/0" }, "linux")).toBe(false)
+    expect(supports({ SSH_CLIENT: "127.0.0.1 12345 22" }, "linux")).toBe(false)
+    expect(supports({ SSH_CONNECTION: "127.0.0.1 12345 127.0.0.1 22" }, "linux")).toBe(false)
+    expect(tui({ SSH_TTY: "/dev/pts/0" }, "linux").join("\n")).not.toContain("🬺🬏")
   })
 
   test("falls back on old Windows terminals", () => {

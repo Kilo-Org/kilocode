@@ -47,10 +47,18 @@ function windows(env: NodeJS.ProcessEnv) {
   return false
 }
 
+function remote(env: NodeJS.ProcessEnv) {
+  if (env.SSH_TTY) return true
+  if (env.SSH_CLIENT) return true
+  if (env.SSH_CONNECTION) return true
+  return false
+}
+
 export function supports(env = process.env, platform = process.platform) {
   const override = flag(env.KILO_UNICODE_LOGO)
   if (override !== undefined) return override
   if (env.TERM === "dumb") return false
+  if (remote(env)) return false
   // Old Windows Console Host cannot render the sextant glyphs used by the modern logo.
   if (platform === "win32") return windows(env)
   if (env.ConEmuPID) return false
