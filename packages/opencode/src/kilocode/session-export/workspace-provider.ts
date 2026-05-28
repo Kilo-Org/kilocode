@@ -21,6 +21,7 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
   const snapshots = new Map<string, Map<string, File>>(
     Object.entries(state.snapshots).map(([key, files]) => [key, new Map(files.map((file) => [file.path, file]))]),
   )
+  const pending = new Set<string>()
 
   const capture = async () => {
     const result = await scan(opts.root)
@@ -28,6 +29,8 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
     const id = hash(files)
     snapshots.set(id, files)
     state.snapshots[id] = [...files.values()]
+    pending.add(id)
+    setTimeout(() => pending.delete(id), 0).unref?.()
     save(opts.statePath, state)
     return { id, files, capture: metadata(result.mode, files) }
   }
@@ -38,7 +41,8 @@ export function createWorkspaceProvider(opts: { root: string; statePath?: string
     },
     remember(sessionId: string, snapshotId: string): void {
       state.sessions[sessionId] = snapshotId
-      prune(state, snapshots)
+      pending.delete(snapshotId)
+      prune(state, snapshots, pending)
       save(opts.statePath, state)
     },
     async baseline(): Promise<{ snapshotId: string; files: FileEntry[]; capture: CaptureMetadata }> {
@@ -58,8 +62,8 @@ type State = {
   snapshots: Record<string, File[]>
 }
 
-function prune(state: State, snapshots: Map<string, Map<string, File>>): void {
-  const used = new Set(Object.values(state.sessions))
+function prune(state: State, snapshots: Map<string, Map<string, File>>, pending: Set<string>): void {
+  const used = new Set([...Object.values(state.sessions), ...pending])
   for (const id of Object.keys(state.snapshots)) {
     if (used.has(id)) continue
     delete state.snapshots[id]

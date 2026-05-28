@@ -165,6 +165,25 @@ describe("workspace provider", () => {
     expect(Object.keys(persisted.snapshots)).toEqual([current.snapshotId])
   })
 
+  test("preserves captured snapshots until they are remembered", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 1\n")
+    await $`git add src.ts`.cwd(tmp.path).quiet()
+    await $`git commit -m files`.cwd(tmp.path).quiet()
+
+    const provider = createWorkspaceProvider({ root: tmp.path, statePath: state })
+    const first = await provider.baseline()
+    provider.remember("s1", first.snapshotId)
+
+    await writeFile(join(tmp.path, "src.ts"), "export const value = 2\n")
+    const pending = await provider.baseline()
+    provider.remember("s2", first.snapshotId)
+
+    const persisted = JSON.parse(await Bun.file(state).text()) as { snapshots: Record<string, unknown> }
+    expect(Object.keys(persisted.snapshots).sort()).toEqual([first.snapshotId, pending.snapshotId].sort())
+  })
+
   test("preserves a snapshot still referenced by another session", async () => {
     await using tmp = await tmpdir({ git: true })
     const state = join(await mkdtemp(join(osTmpdir(), "session-export-provider-")), "state.json")
