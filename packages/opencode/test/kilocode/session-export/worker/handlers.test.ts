@@ -7,6 +7,7 @@ import { Chunker } from "@/kilocode/session-export/worker/chunks"
 import { Scrubber } from "@/kilocode/session-export/worker/scrub"
 import { handleEvent } from "@/kilocode/session-export/worker/handlers"
 import type {
+  CompactionCaptured,
   LlmRequestCompleted,
   LlmRequestStarted,
   WorkspaceBaselineCompleted,
@@ -285,6 +286,59 @@ describe("handlers", () => {
     expect(data.snapshotHash).toBeUndefined()
     expect(data.prevSnapshotHash).toBeUndefined()
     expect(data.diff.length).toBe(1)
+  })
+
+  test("normalizes compaction payload to input and output content", async () => {
+    const env: CompactionCaptured = {
+      id: "01C",
+      schemaVersion: 1,
+      type: "compaction_captured",
+      sessionId: "s1",
+      rootSessionId: "s1",
+      seq: 0,
+      ts: 100,
+      agentVersion: "v0",
+      input: {
+        inputMessagesSnapshot: [{ role: "user", content: [{ type: "text", text: "hello" }] }],
+        selectedContext: [
+          {
+            info: {
+              id: "msg1",
+              sessionID: "s1",
+              role: "user",
+              time: { created: 1 },
+              cost: 1,
+              path: { cwd: "/tmp/work", root: "/tmp/work" },
+            },
+            parts: [],
+          } as unknown as CompactionCaptured["input"]["selectedContext"][number],
+        ],
+        previousSummary: "before",
+        prompt: "summarize",
+        tailStartId: "tail",
+      },
+      output: { summary: "after", assistantMessageId: "assistant" },
+      modelId: "free",
+      durationMs: 12,
+      usage: { inputTokens: 1, outputTokens: 2 },
+    }
+    await handleEvent(env, { storage, chunker, scrubber: new Scrubber(), inlineThresholdBytes: 64 * 1024 })
+    const rows = storage.pendingEvents({ now: 1000, limitBytes: 1_000_000 })
+    const data = JSON.parse(rows[0].dataJson) as {
+      input: { inputMessagesSnapshot?: unknown[]; selectedContext?: unknown; previousSummary?: string; prompt?: string; tailStartId?: string }
+      output: { summary?: string; assistantMessageId?: string }
+      modelId?: string
+      usage?: unknown
+    }
+    expect(data.input.inputMessagesSnapshot?.length).toBe(1)
+    expect(data.input.previousSummary).toBe("before")
+    expect(data.input.prompt).toBe("summarize")
+    expect(data.output.summary).toBe("after")
+    expect(data.input.selectedContext).toBeUndefined()
+    expect(data.input.tailStartId).toBeUndefined()
+    expect(data.output.assistantMessageId).toBeUndefined()
+    expect(data.modelId).toBeUndefined()
+    expect(data.usage).toBeUndefined()
   })
 })
 

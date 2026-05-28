@@ -52,6 +52,7 @@ async function normalizePayload(envelope: ExportEvent, ctx: HandlerCtx): Promise
   const payload = stripIdentity(stripEnvelopeFields(envelope))
   if (envelope.type === "workspace_baseline_completed") return normalizeBaseline(payload, ctx)
   if (envelope.type === "workspace_delta_captured") return normalizeDelta(payload, ctx)
+  if (envelope.type === "compaction_captured") return normalizeCompaction(payload)
   if (envelope.type !== "tool_executed") return payload
   const out = { ...(payload as Record<string, unknown>) }
   if (envelope.toolInput !== undefined) {
@@ -125,6 +126,27 @@ async function normalizeDelta(payload: unknown, ctx: HandlerCtx): Promise<unknow
     diff.push(next)
   }
   out.diff = diff
+  return out
+}
+
+function normalizeCompaction(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload
+  const out = { ...(payload as Record<string, unknown>) }
+  delete out.modelId
+  delete out.usage
+  const input = out.input
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    const next = { ...(input as Record<string, unknown>) }
+    delete next.selectedContext
+    delete next.tailStartId
+    out.input = next
+  }
+  const output = out.output
+  if (output && typeof output === "object" && !Array.isArray(output)) {
+    const next = { ...(output as Record<string, unknown>) }
+    delete next.assistantMessageId
+    out.output = next
+  }
   return out
 }
 
