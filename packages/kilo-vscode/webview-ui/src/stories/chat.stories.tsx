@@ -8,8 +8,10 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
+import type { AssistantMessage } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
+import { ErrorDisplay } from "../components/chat/ErrorDisplay"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
@@ -75,6 +77,28 @@ const reviewSuggestion: SuggestionRequest = {
   text: "Start a code review of uncommitted changes?",
   actions: [{ label: "Start review", description: "Run a local review now", prompt: "/local-review-uncommitted" }],
   tool: { messageID: "asst-msg-002", callID: "call-suggest-001" },
+}
+
+const policyMessage =
+  "No endpoints found matching your data policy (Free model training). Configure: https://openrouter.ai/settings/privacy"
+
+const policyError: NonNullable<AssistantMessage["error"]> = {
+  name: "APIError",
+  data: {
+    message: policyMessage,
+    statusCode: 400,
+    isRetryable: false,
+    responseBody: JSON.stringify(
+      {
+        error: {
+          type: "Bad Request",
+          message: "Data collection is required for this model. Please enable data collection to use this model.",
+        },
+      },
+      null,
+      2,
+    ),
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -227,6 +251,17 @@ export const SuggestBarReview: Story = {
     <StoryProviders sessionID={SESSION_ID} suggestions={[reviewSuggestion]}>
       <div style={{ width: "100%" }}>
         <SuggestBar request={reviewSuggestion} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const ErrorDisplayDataPolicy: Story = {
+  name: "ErrorDisplay — data policy",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID}>
+      <div style={{ width: "min(720px, 100%)" }}>
+        <ErrorDisplay error={policyError} />
       </div>
     </StoryProviders>
   ),

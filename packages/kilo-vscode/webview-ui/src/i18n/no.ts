@@ -109,6 +109,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Anbefalt",
   "dialog.provider.opencode.note": "Utvalgte modeller inkludert Claude, GPT, Gemini og flere",
   "dialog.provider.anthropic.note": "Koble til med Claude Pro/Max eller API-nøkkel",
+  "dialog.provider.deepseek.note": "DeepSeek-modeller for resonnering og kodeoppgaver",
   "dialog.provider.openai.note": "Koble til med ChatGPT Pro/Plus eller API-nøkkel",
   "dialog.provider.google.note": "Gemini-modeller for raske, strukturerte svar",
   "dialog.provider.openrouter.note": "Tilgang til alle støttede modeller fra én leverandør",

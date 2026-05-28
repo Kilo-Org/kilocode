@@ -106,6 +106,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Aanbevolen",
   "dialog.provider.opencode.note": "Geselecteerde modellen waaronder Claude, GPT, Gemini en meer",
   "dialog.provider.anthropic.note": "Directe toegang tot Claude-modellen, inclusief Pro en Max",
+  "dialog.provider.deepseek.note": "DeepSeek-modellen voor redeneer- en programmeertaken",
   "dialog.provider.copilot.note": "Claude-modellen voor programmeerhulp",
   "dialog.provider.openai.note": "GPT-modellen voor snelle, capabele algemene AI-taken",
   "dialog.provider.google.note": "Gemini-modellen voor snelle, gestructureerde antwoorden",
