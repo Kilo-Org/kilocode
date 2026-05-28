@@ -24,6 +24,9 @@
       "outputs": [".artifacts/unit/junit.xml"],
       "passThroughEnv": ["*"]
     },
+    "@kilocode/kilo-gateway#test:ci": {
+      "outputs": [".artifacts/unit/junit.xml"]
+    },
     "@kilocode/kilo-docs#build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**"],
@@ -37,7 +40,6 @@
       "outputs": []
     },
     "@kilocode/kilo-jetbrains#test:ci": {
-      "dependsOn": ["@kilocode/kilo-jetbrains#typecheck"],
       "outputs": [".artifacts/unit/junit.xml"]
     },
     "@opencode-ai/ui#test": {

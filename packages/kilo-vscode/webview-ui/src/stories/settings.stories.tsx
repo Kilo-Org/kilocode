@@ -7,6 +7,7 @@ import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
+import { KiloEmbeddingModelsContext } from "../context/kilo-embedding-models"
 import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import ModelsTab from "../components/settings/ModelsTab"
@@ -126,7 +127,8 @@ export const AgentBehaviourEditCustomMode: Story = {
       reviewer: {
         description: "Review code for quality and best practices",
         prompt: "You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
-        model: "anthropic/claude-sonnet-4-20250514",
+        model: "kilo/anthropic/claude-sonnet-4-6",
+        variant: "high",
         temperature: 0.3,
         permission: {
           read: "allow",
@@ -411,6 +413,8 @@ export const IndexingProviderBlurRace: Story = {
       },
       indexing: {
         provider: "openai",
+        model: "text-embedding-3-large",
+        dimension: 3072,
         openai: { apiKey: "" },
         gemini: { apiKey: "" },
       },
@@ -426,6 +430,66 @@ export const IndexingProviderBlurRace: Story = {
           </div>
         </StoryProviders>
         <pre data-testid="indexing-provider-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
+    )
+  },
+}
+
+export const IndexingKiloModelPreset: Story = {
+  name: "IndexingTab - Kilo stale custom model fallback",
+  render: () => {
+    const cfg: Config = {
+      experimental: {
+        semantic_indexing: true,
+      },
+      indexing: {
+        provider: "kilo",
+        model: "custom/model",
+        dimension: 2048,
+      },
+    }
+    const catalog = {
+      defaultModel: "provider/model",
+      models: [
+        { id: "provider/model", name: "Provider Model", dimension: 1024, scoreThreshold: 0.4 },
+        { id: "provider/compact", name: "Provider Compact", dimension: 512, scoreThreshold: 0.35 },
+      ],
+      aliases: {},
+    }
+    return (
+      <StoryProviders config={cfg}>
+        <KiloEmbeddingModelsContext.Provider value={{ catalog: () => catalog }}>
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </KiloEmbeddingModelsContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const IndexingKiloCatalogLoading: Story = {
+  name: "IndexingTab - Kilo catalog loading",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      experimental: {
+        semantic_indexing: true,
+      },
+      indexing: {},
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          kiloAuth
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-kilo-loading-save">{JSON.stringify(saved(), null, 2)}</pre>
       </>
     )
   },

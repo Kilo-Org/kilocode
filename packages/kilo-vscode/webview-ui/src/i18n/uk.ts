@@ -286,7 +286,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
 
-  "speechToText.tooltip.start": "Почати голосове введення",
+  "speechToText.tooltip.start": "Почати голосове введення з Kilo Gateway",
   "speechToText.tooltip.stop": "Зупинити захоплення звуку",
   "speechToText.tooltip.transcribing": "Транскрибування... Натисніть, щоб скасувати.",
   "speechToText.tooltip.error": "Помилка голосового введення. Натисніть, щоб очистити.",
@@ -455,6 +455,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "Не вдалося закрити доступ до сесії",
   "toast.session.unshare.failed.description": "Під час закриття доступу до сесії сталася помилка",
 
+  "toast.session.rename.invalid.title": "Некоректна назва сесії",
   "toast.session.listFailed.title": "Не вдалося завантажити сесії для {{project}}",
 
   "toast.update.title": "Доступне оновлення",
@@ -1248,14 +1249,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",
-  "settings.experimental.agentManagerTool.title": "Інструмент Agent Manager",
-  "settings.experimental.agentManagerTool.description":
-    "Дозволити агентам запускати локальні сесії Agent Manager і сесії worktree через виклик інструмента",
   "settings.experimental.speechToText.title": "Мовлення в текст",
   "settings.experimental.speechToText.description":
     "Увімкніть голосове введення в полях запитів, використовуючи ваш обліковий запис Kilo через Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Увімкніть Kilo provider і увійдіть, щоб використовувати голосове введення в полях запитів.",
+    "Увімкніть провайдер Kilo та виконайте вхід, щоб використовувати Speech to Text. Наразі Speech to Text підтримується лише з Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Модель мовлення в текст",
   "settings.experimental.speechToTextModel.description":
     "Виберіть модель транскрипції Kilo Gateway для голосового введення.",
@@ -1281,6 +1279,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Виберіть агента для налаштування…",
   "settings.agentBehaviour.modelOverride.title": "Перевизначення моделі",
   "settings.agentBehaviour.modelOverride.description": "Перевизначити стандартну модель для цього агента",
+  "settings.agentBehaviour.variantOverride.title": "Перевизначення варіанту",
+  "settings.agentBehaviour.variantOverride.description": "Перевизначити варіант моделі для цього агента",
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",

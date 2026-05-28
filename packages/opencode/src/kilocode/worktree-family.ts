@@ -1,17 +1,20 @@
 // kilocode_change - new file
-import { Instance } from "../project/instance"
+import { Effect } from "effect"
+import { InstanceState } from "../effect/instance-state"
 import { Project } from "../project/project"
 import { Filesystem } from "../util/filesystem"
 import { Git } from "../git"
 
 export namespace WorktreeFamily {
-  export async function list() {
-    if (Instance.project.vcs !== "git") {
-      return [Filesystem.resolve(Instance.directory)]
+  export const list = Effect.fn("WorktreeFamily.list")(function* () {
+    const ctx = yield* InstanceState.context
+    if (ctx.project.vcs !== "git") {
+      return [Filesystem.resolve(ctx.directory)]
     }
 
-    const listed = await Git.run(["worktree", "list", "--porcelain"], {
-      cwd: Instance.worktree,
+    const git = yield* Git.Service
+    const listed = yield* git.run(["worktree", "list", "--porcelain"], {
+      cwd: ctx.worktree,
     })
 
     if (listed.exitCode === 0) {
@@ -29,7 +32,7 @@ export namespace WorktreeFamily {
       }
     }
 
-    const dirs = [Instance.worktree, ...(await Project.sandboxes(Instance.project.id))]
+    const dirs = [ctx.worktree, ...(yield* Effect.promise(() => Project.sandboxes(ctx.project.id)))]
     return [...new Set(dirs.map((dir) => Filesystem.resolve(dir)))]
-  }
+  })
 }

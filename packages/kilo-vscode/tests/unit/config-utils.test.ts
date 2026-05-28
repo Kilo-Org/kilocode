@@ -330,6 +330,29 @@ describe("ConfigState", () => {
     })
   })
 
+  describe("clearing an agent variant override", () => {
+    it("keeps null in the draft so the backend receives a delete sentinel", () => {
+      const s = new ConfigState()
+      s.handleConfigLoaded({
+        agent: {
+          explore: {
+            model: "kilo/anthropic/claude-sonnet-4-6",
+            variant: "high",
+          },
+        },
+      })
+
+      s.updateConfig({ agent: { explore: { variant: null } } })
+
+      expect(s.config.agent?.explore?.variant).toBeUndefined()
+      expect(s.dirty).toBe(true)
+      expect(s.draft.agent?.explore?.variant).toBeNull()
+      expect(JSON.parse(JSON.stringify(s.draft))).toEqual({
+        agent: { explore: { variant: null } },
+      })
+    })
+  })
+
   describe("agent permission patches", () => {
     it("merges nested per-agent permission patches into existing rules", () => {
       const s = new ConfigState()

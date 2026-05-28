@@ -1,5 +1,8 @@
 import type { ModelMessage } from "ai"
+import { Effect } from "effect"
+import * as Stream from "effect/Stream"
 import type { Provider } from "@/provider/provider"
+import type { Event } from "@/session/llm"
 import { Token } from "@/util/token"
 
 // Token.estimate consistently under-counts by ~15-30% vs. actual provider tokenizers.
@@ -9,6 +12,19 @@ const SAFETY = 2048
 const MIN_OUTPUT = 1024
 
 export namespace KiloLLM {
+  // Preserve error and abort events while collecting text so Kilo callers can detect failed generations.
+  export function text(stream: Stream.Stream<Event, unknown>) {
+    return stream.pipe(
+      Stream.mapEffect((event) => {
+        if (event.type === "error") return Effect.fail(event.error)
+        if (event.type === "abort") return Effect.fail(new DOMException("Aborted", "AbortError"))
+        if (event.type !== "text-delta") return Effect.succeed("")
+        return Effect.succeed(event.text)
+      }),
+      Stream.mkString,
+    )
+  }
+
   /**
    * Caps `maxOutputTokens` to fit within the model's context window after
    * accounting for the actual estimated input tokens (messages + tool schemas).

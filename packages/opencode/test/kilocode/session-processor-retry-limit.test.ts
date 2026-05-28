@@ -96,7 +96,6 @@ const llm = Layer.unwrap(
             const item = queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
             return item
           },
-          raw: () => Effect.die("raw not implemented in TestLLM"),
         }),
       ),
       Layer.succeed(TestLLM, TestLLM.of({ push, calls: Effect.sync(() => calls) })),

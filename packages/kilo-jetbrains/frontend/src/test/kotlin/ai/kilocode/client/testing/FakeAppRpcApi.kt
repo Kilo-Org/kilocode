@@ -35,6 +35,10 @@ class FakeAppRpcApi : KiloAppRpcApi {
         private set
     var retries = 0
         private set
+    var restarts = 0
+        private set
+    var reinstalls = 0
+        private set
 
     override suspend fun connect() {
         assertNotEdt("connect")
@@ -58,10 +62,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
 
     override suspend fun restart() {
         assertNotEdt("restart")
+        restarts += 1
     }
 
     override suspend fun reinstall() {
         assertNotEdt("reinstall")
+        reinstalls += 1
     }
 
     override suspend fun modelState(): ModelStateDto {

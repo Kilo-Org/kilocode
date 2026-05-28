@@ -4,8 +4,16 @@ import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.question.QuestionResultView
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.awt.Color
+import java.awt.Component
+import java.awt.Container
+import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
+import javax.swing.JPanel
+import javax.swing.border.Border
 
 @Suppress("UnstableApiUsage")
 class QuestionResultViewTest : BasePlatformTestCase() {
@@ -122,6 +130,22 @@ class QuestionResultViewTest : BasePlatformTestCase() {
         assertFalse("Should be collapsed after second toggle", view.isExpanded())
     }
 
+    fun `test hover border differs from header fill`() {
+        val view = QuestionResultView(completedTool(
+            input = mapOf("questions" to """[{"question":"Q1"}]"""),
+            metadata = mapOf("answers" to """[["A1"]]"""),
+        ))
+        val root = view.node(0)
+        val header = root.node(0)
+
+        enter(header)
+
+        assertEquals(SessionUiStyle.View.hoverLine().rgb, paint(root.border).rgb)
+        assertNotSameColor(SessionUiStyle.View.headerHover(), paint(root.border))
+        exit(header)
+        assertEquals(SessionUiStyle.View.line().rgb, paint(root.border).rgb)
+    }
+
     // ------ view factory routing ------
 
     fun `test view factory uses question result view for completed parsable question tool`() {
@@ -129,7 +153,7 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = mapOf("questions" to """[{"question":"Q1"}]"""),
             metadata = mapOf("answers" to """[["A1"]]"""),
         )
-        val view = ViewFactory.create(tool)
+        val view = ViewFactory.create(tool, {}) {}
 
         assertTrue(view is QuestionResultView)
     }
@@ -139,14 +163,14 @@ class QuestionResultViewTest : BasePlatformTestCase() {
             input = emptyMap(),
             metadata = emptyMap(),
         )
-        val view = ViewFactory.create(tool)
+        val view = ViewFactory.create(tool, {}) {}
 
         assertTrue(view is ToolView)
     }
 
     fun `test view factory falls back to tool view for running question`() {
         val tool = runningTool("question")
-        val view = ViewFactory.create(tool)
+        val view = ViewFactory.create(tool, {}) {}
 
         assertTrue(view is ToolView)
     }
@@ -237,4 +261,36 @@ class QuestionResultViewTest : BasePlatformTestCase() {
 
     private fun runningTool(name: String, id: String = "tp1"): Tool =
         Tool(id, name, toolKind(name)).apply { state = ToolExecState.RUNNING }
+
+    private fun Container.node(index: Int) = components[index] as JPanel
+
+    private fun enter(component: Component) = event(component, MouseEvent.MOUSE_ENTERED)
+
+    private fun exit(component: Component) = event(component, MouseEvent.MOUSE_EXITED)
+
+    private fun event(component: Component, id: Int) {
+        component.dispatchEvent(MouseEvent(
+            component,
+            id,
+            System.currentTimeMillis(),
+            0,
+            1,
+            1,
+            0,
+            false,
+        ))
+    }
+
+    private fun paint(border: Border): Color {
+        val image = BufferedImage(3, 3, BufferedImage.TYPE_INT_ARGB)
+        val panel = JPanel()
+        val graphics = image.createGraphics()
+        border.paintBorder(panel, graphics, 0, 0, image.width, image.height)
+        graphics.dispose()
+        return Color(image.getRGB(0, 0), true)
+    }
+
+    private fun assertNotSameColor(left: Color, right: Color) {
+        assertFalse("Expected distinct colors but both were ${left.rgb}", left.rgb == right.rgb)
+    }
 }

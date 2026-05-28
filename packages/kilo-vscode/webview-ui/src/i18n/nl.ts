@@ -287,7 +287,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
 
-  "speechToText.tooltip.start": "Spraakinvoer starten",
+  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
@@ -454,6 +454,7 @@ export const dict = {
   "toast.session.unshare.success.description": "Delen van sessie succesvol gestopt!",
   "toast.session.unshare.failed.title": "Delen van sessie stoppen mislukt",
   "toast.session.unshare.failed.description": "Er is een fout opgetreden bij het stoppen van het delen van de sessie",
+  "toast.session.rename.invalid.title": "Ongeldige sessietitel",
   "toast.session.listFailed.title": "Laden van sessies voor {{project}} is mislukt",
 
   "toast.update.title": "Update beschikbaar",
@@ -1255,14 +1256,11 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
-  "settings.experimental.agentManagerTool.title": "Agent Manager-tool",
-  "settings.experimental.agentManagerTool.description":
-    "Sta agents toe om lokale Agent Manager-sessies en worktree-sessies te starten vanuit een tool call",
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
   "settings.experimental.speechToText.disabledDescription":
-    "Schakel Kilo provider in en meld u aan om spraakinvoer in promptvelden te gebruiken.",
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
   "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
   "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
@@ -1288,6 +1286,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecteer een agent om te configureren…",
   "settings.agentBehaviour.modelOverride.title": "Model Overschrijven",
   "settings.agentBehaviour.modelOverride.description": "Overschrijf het standaard model voor deze agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Overschrijven",
+  "settings.agentBehaviour.variantOverride.description": "Overschrijf de modelvariant voor deze agent",
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",

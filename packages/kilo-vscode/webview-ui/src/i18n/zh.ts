@@ -283,7 +283,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
 
-  "speechToText.tooltip.start": "开始语音输入",
+  "speechToText.tooltip.start": "使用 Kilo Gateway 开始语音输入",
   "speechToText.tooltip.stop": "停止捕获音频",
   "speechToText.tooltip.transcribing": "正在转录... 点击取消。",
   "speechToText.tooltip.error": "语音输入失败。点击清除。",
@@ -447,6 +447,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "取消分享失败",
   "toast.session.unshare.failed.description": "取消分享会话时发生错误",
 
+  "toast.session.rename.invalid.title": "无效的会话标题",
   "toast.session.listFailed.title": "无法加载 {{project}} 的会话",
 
   "toast.update.title": "有可用更新",
@@ -1220,11 +1221,10 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "代码库搜索",
   "settings.experimental.codebaseSearch.description": "启用 AI 驱动的自然语言代码库搜索",
-  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
-  "settings.experimental.agentManagerTool.description": "允许智能体通过工具调用启动 Agent Manager 本地会话和工作树会话",
   "settings.experimental.speechToText.title": "语音转文本",
   "settings.experimental.speechToText.description": "通过 Kilo Gateway 使用您的 Kilo 帐户在提示词字段中启用语音输入。",
-  "settings.experimental.speechToText.disabledDescription": "启用并登录 Kilo provider 以在提示词字段中使用语音输入。",
+  "settings.experimental.speechToText.disabledDescription":
+    "启用并登录 Kilo 提供商以使用 Speech to Text。Speech to Text 目前仅支持通过 Kilo Gateway 使用。",
   "settings.experimental.speechToTextModel.title": "语音转文本模型",
   "settings.experimental.speechToTextModel.description": "选择用于语音输入的 Kilo Gateway 转录模型。",
   "settings.experimental.continueOnDeny.title": "拒绝后继续",
@@ -1247,6 +1247,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "选择要配置的智能体…",
   "settings.agentBehaviour.modelOverride.title": "模型覆盖",
   "settings.agentBehaviour.modelOverride.description": "覆盖此智能体的默认模型",
+  "settings.agentBehaviour.variantOverride.title": "模型变体覆盖",
+  "settings.agentBehaviour.variantOverride.description": "覆盖此智能体的模型变体",
   "settings.agentBehaviour.prompt.title": "自定义提示词",
   "settings.agentBehaviour.prompt.description": "此智能体的附加系统提示词",
   "settings.agentBehaviour.temperature.title": "温度",

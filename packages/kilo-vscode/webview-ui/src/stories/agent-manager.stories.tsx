@@ -51,6 +51,18 @@ const mockDiffs: WorktreeFileDiff[] = [
   },
 ]
 
+const context = Array.from({ length: 36 }, (_, i) => `  const item${i} = values[${i}]\n`).join("")
+const foldedDiffs: WorktreeFileDiff[] = [
+  {
+    file: "src/components/chat/LongReview.ts",
+    status: "modified",
+    additions: 2,
+    deletions: 2,
+    before: `export function review(values: string[]) {\n  const title = "Draft"\n${context}  return title\n}\n`,
+    after: `export function review(values: string[]) {\n  const title = "Ready"\n${context}  return title.toUpperCase()\n}\n`,
+  },
+]
+
 // ---------------------------------------------------------------------------
 // Meta
 // ---------------------------------------------------------------------------
@@ -192,6 +204,25 @@ export const FullScreenDiffWithChanges: Story = {
       <div style={{ width: "420px", height: "700px", display: "flex" }}>
         <FullScreenDiffView
           diffs={mockDiffs}
+          loading={false}
+          diffStyle="unified"
+          onDiffStyleChange={() => {}}
+          comments={[]}
+          onCommentsChange={() => {}}
+          onClose={() => {}}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const FullScreenDiffWithCollapsedContext: Story = {
+  name: "FullScreenDiffView - collapsed unchanged context",
+  render: () => (
+    <StoryProviders>
+      <div style={{ width: "420px", height: "700px", display: "flex" }}>
+        <FullScreenDiffView
+          diffs={foldedDiffs}
           loading={false}
           diffStyle="unified"
           onDiffStyleChange={() => {}}

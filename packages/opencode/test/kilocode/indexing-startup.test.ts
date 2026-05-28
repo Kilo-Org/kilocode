@@ -64,6 +64,19 @@ const implicitOpenAi: Partial<Config.Info> = {
     },
   },
 }
+const staleKilo: Partial<Config.Info> = {
+  plugin: ["@kilocode/kilo-indexing"],
+  experimental: {
+    semantic_indexing: true,
+  },
+  indexing: {
+    enabled: true,
+    provider: "kilo",
+    model: "custom/model",
+    dimension: 2048,
+    vectorStore: "qdrant",
+  },
+}
 const configDir = process.env["KILO_CONFIG_DIR"]
 const disabled = process.env["KILO_DISABLE_CODEBASE_INDEXING"]
 const error = new Error("test indexing initialization failed")
@@ -314,6 +327,125 @@ describe("indexing startup degradation", () => {
       else process.env.KILO_API_KEY = key
       if (org === undefined) delete process.env.KILO_ORG_ID
       else process.env.KILO_ORG_ID = org
+      init.mockRestore()
+    }
+  })
+
+  test("falls back from unsupported stored Kilo models to the hosted default", async () => {
+    global.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            defaultModel: "mistralai/mistral-embed-2312",
+            models: [
+              { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+            ],
+            aliases: {},
+          }),
+        ),
+      )) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+
+    await using tmp = await tmpdir({ git: true, config: staleKilo })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            modelId: "mistralai/mistral-embed-2312",
+            modelDimension: 1024,
+            searchMinScore: 0.35,
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      init.mockRestore()
+    }
+  })
+
+  test("keeps configured dimensions for supported Kilo models", async () => {
+    global.fetch = (() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            defaultModel: "mistralai/mistral-embed-2312",
+            models: [
+              { id: "mistralai/mistral-embed-2312", name: "Mistral Embed 2312", dimension: 1024, scoreThreshold: 0.35 },
+              {
+                id: "openai/text-embedding-3-small",
+                name: "OpenAI Text Embedding 3 Small",
+                dimension: 1536,
+                scoreThreshold: 0.4,
+              },
+            ],
+            aliases: {},
+          }),
+        ),
+      )) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+    const config: Partial<Config.Info> = {
+      ...staleKilo,
+      indexing: {
+        ...staleKilo.indexing,
+        model: "openai/text-embedding-3-small",
+        dimension: 256,
+      },
+    }
+
+    await using tmp = await tmpdir({ git: true, config })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({
+            embedderProvider: "kilo",
+            modelId: "openai/text-embedding-3-small",
+            modelDimension: 256,
+          })
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
+      init.mockRestore()
+    }
+  })
+
+  test("does not execute stored Kilo models when the hosted catalog is unavailable", async () => {
+    global.fetch = (() => Promise.resolve(new Response(undefined, { status: 500 }))) as unknown as typeof global.fetch
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockResolvedValue({ requiresRestart: false })
+    const key = process.env.KILO_API_KEY
+
+    await using tmp = await tmpdir({ git: true, config: staleKilo })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    process.env.KILO_API_KEY = "kilo-token"
+
+    try {
+      await WithInstance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          await called(init)
+          expect(init.mock.calls[0]?.[0]).toMatchObject({ embedderProvider: "kilo" })
+          expect(init.mock.calls[0]?.[0].modelId).toBeUndefined()
+          expect(init.mock.calls[0]?.[0].modelDimension).toBeUndefined()
+        },
+      })
+    } finally {
+      if (key === undefined) delete process.env.KILO_API_KEY
+      else process.env.KILO_API_KEY = key
       init.mockRestore()
     }
   })

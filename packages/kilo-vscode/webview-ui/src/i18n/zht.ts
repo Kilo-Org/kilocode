@@ -282,7 +282,7 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善提示詞。試著在這裡輸入提示詞，再點選一次按鈕以了解其運作方式。",
 
-  "speechToText.tooltip.start": "開始語音輸入",
+  "speechToText.tooltip.start": "使用 Kilo Gateway 開始語音輸入",
   "speechToText.tooltip.stop": "停止擷取音訊",
   "speechToText.tooltip.transcribing": "正在轉錄... 點擊取消。",
   "speechToText.tooltip.error": "語音輸入失敗。點擊清除。",
@@ -447,6 +447,7 @@ export const dict = {
   "toast.session.unshare.failed.title": "取消分享失敗",
   "toast.session.unshare.failed.description": "取消分享工作階段時發生錯誤",
 
+  "toast.session.rename.invalid.title": "無效的工作階段標題",
   "toast.session.listFailed.title": "無法載入 {{project}} 的工作階段",
 
   "toast.update.title": "有可用更新",
@@ -1188,12 +1189,10 @@ export const dict = {
     "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
-  "settings.experimental.agentManagerTool.title": "Agent Manager 工具",
-  "settings.experimental.agentManagerTool.description":
-    "允許 Agent 透過工具呼叫啟動 Agent Manager 本機工作階段和工作樹工作階段",
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
-  "settings.experimental.speechToText.disabledDescription": "啟用並登入 Kilo provider 以在提示詞欄位中使用語音輸入。",
+  "settings.experimental.speechToText.disabledDescription":
+    "啟用並登入 Kilo 供應商以使用 Speech to Text。Speech to Text 目前僅支援透過 Kilo Gateway 使用。",
   "settings.experimental.speechToTextModel.title": "語音轉文字模型",
   "settings.experimental.speechToTextModel.description": "選擇用於語音輸入的 Kilo Gateway 轉錄模型。",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
@@ -1216,6 +1215,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "選擇要設定的 Agent…",
   "settings.agentBehaviour.modelOverride.title": "模型覆寫",
   "settings.agentBehaviour.modelOverride.description": "覆寫此 Agent 的預設模型",
+  "settings.agentBehaviour.variantOverride.title": "模型變體覆寫",
+  "settings.agentBehaviour.variantOverride.description": "覆寫此 Agent 的模型變體",
   "settings.agentBehaviour.prompt.title": "自訂提示詞",
   "settings.agentBehaviour.prompt.description": "此 Agent 的附加系統提示詞",
   "settings.agentBehaviour.temperature.title": "溫度",

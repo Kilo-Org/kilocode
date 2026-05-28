@@ -113,4 +113,13 @@ class TextViewTest : BasePlatformTestCase() {
         view.appendDelta("**")
         assertTrue(view.md.html().contains("<strong>"))
     }
+
+    fun `test link opens url callback`() {
+        val urls = mutableListOf<String>()
+        val view = TextView(Text("p1"), openUrl = { urls.add(it) })
+
+        view.md.simulateLink("https://kilocode.ai/docs")
+
+        assertEquals(listOf("https://kilocode.ai/docs"), urls)
+    }
 }
