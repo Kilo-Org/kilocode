@@ -8,7 +8,7 @@
     "test": "./gradlew test",
     "test:ci": "bun script/test-ci.ts"
   },
-  "version": "7.3.14",
+  "version": "7.3.15",
   "dependencies": {},
   "devDependencies": {},
   "peerDependencies": {}

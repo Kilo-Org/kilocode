@@ -1,5 +1,7 @@
 # @kilocode/cli
 
+## 7.3.15
+
 ## 7.3.14
 
 ### Patch Changes
