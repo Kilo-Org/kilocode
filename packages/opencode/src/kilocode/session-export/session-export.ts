@@ -1,3 +1,4 @@
+import type { Agent } from "@/agent/agent"
 import { Capture, type CaptureDeps } from "./capture"
 import { Config } from "./config"
 import { setKillSwitch } from "./eligibility"
@@ -89,6 +90,25 @@ export const afterRequest = (...args: Parameters<Capture["afterRequest"]>): void
 
 export const compaction = (args: Parameters<Capture["compaction"]>[0]): void => {
   capture?.compaction(args)
+}
+
+export const agentInfo = (info: Agent.Info): Record<string, unknown> => {
+  const out: Record<string, unknown> = {
+    name: info.name,
+    mode: info.mode,
+  }
+  if (info.displayName !== undefined) out.displayName = info.displayName
+  if (info.description !== undefined) out.description = info.description
+  if (info.deprecated !== undefined) out.deprecated = info.deprecated
+  if (info.native !== undefined) out.native = info.native
+  if (info.hidden !== undefined) out.hidden = info.hidden
+  if (info.topP !== undefined) out.topP = info.topP
+  if (info.temperature !== undefined) out.temperature = info.temperature
+  if (info.color !== undefined) out.color = info.color
+  if (info.model !== undefined) out.model = info.model
+  if (info.variant !== undefined) out.variant = info.variant
+  if (info.steps !== undefined) out.steps = info.steps
+  return out
 }
 
 export const onSessionClose = async (sessionId: string): Promise<void> => {

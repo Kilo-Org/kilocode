@@ -22,5 +22,5 @@ test("llm export does not retain raw stream parts", async () => {
 test("llm export includes Agent.Info", async () => {
   const root = join(import.meta.dir, "../../..")
   const llm = await Bun.file(join(root, "src/session/llm.ts")).text()
-  expect(llm).toContain("agentInfo: input.agent")
+  expect(llm).toContain("agentInfo: SessionExport.agentInfo(input.agent)")
 })

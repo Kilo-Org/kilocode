@@ -401,7 +401,7 @@ const live: Layer.Layer<
             userMessageId: input.user.id,
             agent: input.agent.name,
             modeId: input.agent.mode,
-            agentInfo: input.agent,
+            agentInfo: SessionExport.agentInfo(input.agent),
           },
           assembled: {
             system,
