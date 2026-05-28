@@ -1,12 +1,5 @@
 import { parse as parseYaml } from "yaml"
-import type {
-  MarketplaceItem,
-  McpMarketplaceItem,
-  ModeMarketplaceItem,
-  AgentMarketplaceItem,
-  SkillMarketplaceItem,
-  RawSkill,
-} from "./types"
+import type { MarketplaceItem, McpMarketplaceItem, AgentMarketplaceItem, SkillMarketplaceItem, RawSkill } from "./types"
 
 const BASE_URL = "https://api.kilo.ai/api/marketplace"
 const CACHE_TTL = 300_000
@@ -83,18 +76,6 @@ export class MarketplaceApiClient {
     this.cache.set(key, { data, timestamp: Date.now() })
   }
 
-  private async fetchModes(): Promise<ModeMarketplaceItem[]> {
-    const cached = this.getCached("modes")
-    if (cached) return cached as ModeMarketplaceItem[]
-
-    const text = await fetchWithRetry(`${BASE_URL}/modes`)
-    const parsed = parseResponse(text) as { items?: unknown[] }
-    const items = (parsed.items ?? []) as Array<Record<string, unknown>>
-    const result = items.map((item) => ({ ...item, type: "mode" as const }) as ModeMarketplaceItem)
-    this.setCache("modes", result)
-    return result
-  }
-
   private async fetchMcps(): Promise<McpMarketplaceItem[]> {
     const cached = this.getCached("mcps")
     if (cached) return cached as McpMarketplaceItem[]
@@ -139,10 +120,6 @@ export class MarketplaceApiClient {
         errors.push(`Failed to fetch agents: ${err instanceof Error ? err.message : String(err)}`)
         return [] as AgentMarketplaceItem[]
       }),
-      this.fetchModes().catch((err: unknown) => {
-        errors.push(`Failed to fetch modes: ${err instanceof Error ? err.message : String(err)}`)
-        return [] as ModeMarketplaceItem[]
-      }),
       this.fetchMcps().catch((err: unknown) => {
         errors.push(`Failed to fetch mcps: ${err instanceof Error ? err.message : String(err)}`)
         return [] as McpMarketplaceItem[]
@@ -154,7 +131,7 @@ export class MarketplaceApiClient {
     ])
 
     return {
-      items: [...settled[0], ...settled[1], ...settled[2], ...settled[3]],
+      items: [...settled[0], ...settled[1], ...settled[2]],
       errors,
     }
   }

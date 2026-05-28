@@ -27,8 +27,8 @@ export class MarketplaceInstaller {
     const scope = options.target ?? "project"
     if (item.type === "skill") return this.installSkill(item, scope, workspace)
     if (item.type === "mcp") return this.installMcp(item, options, scope, workspace)
-    if (item.type === "agent") return this.installAgent(item, scope, workspace)
-    return this.installMode(item, scope, workspace)
+    if (item.type === "mode") return { success: false, slug: item.id, error: "Mode install is no longer supported." }
+    return this.installAgent(item, scope, workspace)
   }
 
   // ── MCP ─────────────────────────────────────────────────────────────
@@ -81,30 +81,6 @@ export class MarketplaceInstaller {
     const replaced = Object.keys(filtered).length > 0 ? substituteParams(content, filtered) : content
     const raw = JSON.parse(replaced) as Record<string, unknown>
     return normalizeMcpEntry(raw)
-  }
-
-  // ── Mode ────────────────────────────────────────────────────────────
-
-  async installMode(
-    item: ModeMarketplaceItem,
-    scope: "project" | "global",
-    workspace?: string,
-  ): Promise<InstallResult> {
-    if (scope === "project" && !workspace) {
-      return { success: false, slug: item.id, error: "No workspace directory for project-scope install" }
-    }
-
-    const config = await this.readConfig(scope, workspace)
-    if (!config.agent) config.agent = {}
-
-    if (config.agent[item.id]) {
-      return { success: false, slug: item.id, error: "Mode already installed. Remove it first." }
-    }
-
-    config.agent[item.id] = convertModeToAgent(item.content)
-
-    await this.writeConfig(scope, workspace, config)
-    return { success: true, slug: item.id }
   }
 
   // ── Agent ───────────────────────────────────────────────────────────
