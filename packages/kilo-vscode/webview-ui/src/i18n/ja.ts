@@ -1184,7 +1184,6 @@ export const dict = {
     "テレメトリは VS Code の組み込みテレメトリ設定によって制御されます。無効にするには、設定 > テレメトリ > Telemetry Level に移動して「off」に設定してください。変更を適用するには、VS Code を再起動してください。",
   "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
 
-  "settings.agentBehaviour.subtab.modes": "モード",
   "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
   "settings.agentBehaviour.subtab.rules": "ルール",
@@ -1342,10 +1341,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "権限をJSONとしてコピー",
   "settings.agentBehaviour.permissions.hint":
     "ルールは順番に評価され、最後に一致したルールが適用されます。これはCLIバックエンドから解決されたルールセットです。",
-  "settings.agentBehaviour.removeMode.title": "モードを削除",
-  "settings.agentBehaviour.removeMode.confirm":
+  "settings.agentBehaviour.removeAgent.title": "モードを削除",
+  "settings.agentBehaviour.removeAgent.confirm":
     'モード "{{name}}" を削除しますか？設定を更新してモードを無効にします。',
-  "settings.agentBehaviour.removeMode.button": "削除",
+  "settings.agentBehaviour.removeAgent.button": "削除",
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',
   "settings.agentBehaviour.removeMcp.button": "削除",

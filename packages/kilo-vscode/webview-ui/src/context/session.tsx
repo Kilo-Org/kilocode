@@ -185,7 +185,7 @@ interface SessionContextValue {
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
   allAgents: Accessor<AgentInfo[]>
-  removeMode: (name: string) => void
+  removeAgent: (name: string) => void
   removeMcp: (name: string) => void
 
   // MCP server status (runtime connect/disconnect)
@@ -336,7 +336,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
 
-  const removeMode = (name: string) => {
+  const removeAgent = (name: string) => {
     setAgents((prev) => prev.filter((a) => a.name !== name))
 
     // Clear stale selections so selectedAgentName() falls back to the default
@@ -352,7 +352,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
 
-    vscode.postMessage({ type: "removeMode", name })
+    vscode.postMessage({ type: "removeAgent", name })
   }
 
   const removeMcp = (name: string) => {
@@ -2459,7 +2459,7 @@ export const SessionProvider: ParentComponent = (props) => {
     skills,
     refreshSkills,
     removeSkill,
-    removeMode,
+    removeAgent,
     removeMcp,
     mcpStatus,
     mcpLoading,

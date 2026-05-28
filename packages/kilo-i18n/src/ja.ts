@@ -18,7 +18,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "スキル",
   "marketplace.tab.mcpServers": "MCPサーバー",
-  "marketplace.tab.modes": "モード",
   "marketplace.category.all": "すべて",
   "marketplace.placeholder": "未実装",
   "marketplace.card.installed": "インストール済み",
@@ -59,7 +58,6 @@ export const dict = {
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
   "marketplace.remove.type.skill": "スキル",
-  "marketplace.remove.type.mode": "モード",
   "marketplace.remove.type.agent": "エージェント",
   "marketplace.remove.failed": "{{name}} の削除に失敗しました",
   "marketplace.install": "インストール",

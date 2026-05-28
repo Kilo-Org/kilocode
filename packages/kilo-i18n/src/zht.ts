@@ -17,7 +17,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "技能",
   "marketplace.tab.mcpServers": "MCP 伺服器",
-  "marketplace.tab.modes": "模式",
   "marketplace.category.all": "全部",
   "marketplace.placeholder": "待實作",
   "marketplace.card.installed": "已安裝",
@@ -58,7 +57,6 @@ export const dict = {
   "marketplace.scope.global": "全域",
   "marketplace.remove.type.mcp": "MCP 伺服器",
   "marketplace.remove.type.skill": "技能",
-  "marketplace.remove.type.mode": "模式",
   "marketplace.remove.type.agent": "智能體",
   "marketplace.remove.failed": "移除 {{name}} 失敗",
   "marketplace.install": "安裝",

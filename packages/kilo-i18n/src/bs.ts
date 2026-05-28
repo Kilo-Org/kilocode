@@ -24,7 +24,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Vještine",
   "marketplace.tab.mcpServers": "MCP Serveri",
-  "marketplace.tab.modes": "Modovi",
   "marketplace.category.all": "Sve",
   "marketplace.placeholder": "Biće implementirano",
   "marketplace.card.installed": "Instalirano",
@@ -66,7 +65,6 @@ export const dict = {
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "vještina",
-  "marketplace.remove.type.mode": "režim",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Uklanjanje {{name}} nije uspjelo",
   "marketplace.install": "Instaliraj",

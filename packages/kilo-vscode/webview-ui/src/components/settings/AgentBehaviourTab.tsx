@@ -200,9 +200,9 @@ const AgentBehaviourTab: Component = () => {
 
   const confirmRemoveMode = (agent: AgentInfo) => {
     dialog.show(() => (
-      <Dialog title={language.t("settings.agentBehaviour.removeMode.title")} fit>
+      <Dialog title={language.t("settings.agentBehaviour.removeAgent.title")} fit>
         <div class="dialog-confirm-body">
-          <span>{language.t("settings.agentBehaviour.removeMode.confirm", { name: agent.name })}</span>
+          <span>{language.t("settings.agentBehaviour.removeAgent.confirm", { name: agent.name })}</span>
           <div class="dialog-confirm-actions">
             <Button variant="ghost" size="large" onClick={() => dialog.close()}>
               {language.t("common.cancel")}
@@ -216,7 +216,7 @@ const AgentBehaviourTab: Component = () => {
                 // to prevent the reactive list re-render from firing click handlers
                 // on shifted list items while the dialog overlay is still present.
                 setTimeout(() => {
-                  session.removeMode(agent.name)
+                  session.removeAgent(agent.name)
                   // If we were editing this mode, go back to list
                   if (editingAgent() === agent.name) {
                     setAgentView("list")
@@ -225,7 +225,7 @@ const AgentBehaviourTab: Component = () => {
                 }, 150)
               }}
             >
-              {language.t("settings.agentBehaviour.removeMode.button")}
+              {language.t("settings.agentBehaviour.removeAgent.button")}
             </Button>
           </div>
         </div>

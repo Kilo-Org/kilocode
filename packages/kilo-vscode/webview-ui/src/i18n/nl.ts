@@ -1185,7 +1185,6 @@ export const dict = {
     'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
 
-  "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
@@ -1316,10 +1315,10 @@ export const dict = {
     "Ongeldig JSON-bestand. Selecteer een geldig agentdefinitiebestand.",
   "settings.agentBehaviour.importMode.tooLarge": "Bestand is te groot. Agentdefinities moeten kleiner zijn dan 1 MB.",
   "settings.agentBehaviour.exportMode": "Agentdefinitie exporteren",
-  "settings.agentBehaviour.removeMode.title": "Verwijder modus",
-  "settings.agentBehaviour.removeMode.confirm":
+  "settings.agentBehaviour.removeAgent.title": "Verwijder modus",
+  "settings.agentBehaviour.removeAgent.confirm":
     'Modus "{{name}}" verwijderen? Dit zal de modus uitschakelen door je configuratie bij te werken.',
-  "settings.agentBehaviour.removeMode.button": "Verwijderen",
+  "settings.agentBehaviour.removeAgent.button": "Verwijderen",
   "settings.agentBehaviour.skillPaths": "Skill Mappaden",
   "settings.agentBehaviour.skillUrls": "Skill URL's",
   "settings.agentBehaviour.removeSkill.title": "Verwijder skill",

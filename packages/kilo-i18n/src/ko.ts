@@ -18,7 +18,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "스킬",
   "marketplace.tab.mcpServers": "MCP 서버",
-  "marketplace.tab.modes": "모드",
   "marketplace.category.all": "전체",
   "marketplace.placeholder": "구현 예정",
   "marketplace.card.installed": "설치됨",
@@ -59,7 +58,6 @@ export const dict = {
   "marketplace.scope.global": "글로벌",
   "marketplace.remove.type.mcp": "MCP 서버",
   "marketplace.remove.type.skill": "스킬",
-  "marketplace.remove.type.mode": "모드",
   "marketplace.remove.type.agent": "에이전트",
   "marketplace.remove.failed": "{{name}} 제거 실패",
   "marketplace.install": "설치",

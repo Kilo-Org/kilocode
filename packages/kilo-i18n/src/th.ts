@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "ทักษะ",
   "marketplace.tab.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "marketplace.tab.modes": "โหมด",
   "marketplace.category.all": "ทั้งหมด",
   "marketplace.placeholder": "ยังไม่ได้ดำเนินการ",
   "marketplace.card.installed": "ติดตั้งแล้ว",
@@ -61,7 +60,6 @@ export const dict = {
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
   "marketplace.remove.type.skill": "ทักษะ",
-  "marketplace.remove.type.mode": "โหมด",
   "marketplace.remove.type.agent": "เอเจนต์",
   "marketplace.remove.failed": "ไม่สามารถลบ {{name}} ได้",
   "marketplace.install": "ติดตั้ง",

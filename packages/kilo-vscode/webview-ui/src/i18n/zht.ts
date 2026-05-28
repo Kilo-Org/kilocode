@@ -1126,7 +1126,6 @@ export const dict = {
     '遙測由 VS Code 內建的遙測設定控制。若要停用，請前往「設定」>「遙測」>「遙測層級」並將其設為 "off"。重新啟動 VS Code 以套用變更。',
   "settings.aboutKiloCode.telemetry.openSettings": "開啟遙測設定",
 
-  "settings.agentBehaviour.subtab.modes": "模式",
   "settings.agentBehaviour.subtab.agents": "代理程式",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 伺服器",
   "settings.agentBehaviour.subtab.rules": "規則",
@@ -1276,9 +1275,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "複製權限為 JSON",
   "settings.agentBehaviour.permissions.hint":
     "規則會按順序評估 — 最後符合的規則為準。這是來自 CLI 後端的已解析規則集。",
-  "settings.agentBehaviour.removeMode.title": "移除模式",
-  "settings.agentBehaviour.removeMode.confirm": '要移除模式 "{{name}}" 嗎？這將透過更新設定來停用該模式。',
-  "settings.agentBehaviour.removeMode.button": "移除",
+  "settings.agentBehaviour.removeAgent.title": "移除模式",
+  "settings.agentBehaviour.removeAgent.confirm": '要移除模式 "{{name}}" 嗎？這將透過更新設定來停用該模式。',
+  "settings.agentBehaviour.removeAgent.button": "移除",
   "settings.agentBehaviour.removeMcp.title": "移除 MCP 伺服器",
   "settings.agentBehaviour.removeMcp.confirm": '要移除 MCP 伺服器 "{{name}}" 嗎？這將從您的設定中移除它。',
   "settings.agentBehaviour.removeMcp.button": "移除",

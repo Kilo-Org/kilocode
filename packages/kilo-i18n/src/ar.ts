@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "المهارات",
   "marketplace.tab.mcpServers": "خوادم MCP",
-  "marketplace.tab.modes": "الأوضاع",
   "marketplace.category.all": "الكل",
   "marketplace.placeholder": "سيتم تنفيذه لاحقاً",
   "marketplace.card.installed": "مثبت",
@@ -61,7 +60,6 @@ export const dict = {
   "marketplace.scope.global": "عام",
   "marketplace.remove.type.mcp": "خادم MCP",
   "marketplace.remove.type.skill": "مهارة",
-  "marketplace.remove.type.mode": "وضع",
   "marketplace.remove.type.agent": "وكيل",
   "marketplace.remove.failed": "فشلت إزالة {{name}}",
   "marketplace.install": "تثبيت",

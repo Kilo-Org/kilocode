@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Навички",
   "marketplace.tab.mcpServers": "MCP-сервери",
-  "marketplace.tab.modes": "Режими",
   "marketplace.category.all": "Усі",
   "marketplace.placeholder": "Буде реалізовано",
   "marketplace.card.installed": "Встановлено",
@@ -61,7 +60,6 @@ export const dict = {
   "marketplace.scope.global": "глобально",
   "marketplace.remove.type.mcp": "MCP-сервер",
   "marketplace.remove.type.skill": "навичка",
-  "marketplace.remove.type.mode": "режим",
   "marketplace.remove.type.agent": "агент",
   "marketplace.remove.failed": "Не вдалося видалити {{name}}",
   "marketplace.install": "Встановити",

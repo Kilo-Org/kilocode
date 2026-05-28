@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Yetenekler",
   "marketplace.tab.mcpServers": "MCP Sunucuları",
-  "marketplace.tab.modes": "Modlar",
   "marketplace.category.all": "Tümü",
   "marketplace.placeholder": "Uygulanacak",
   "marketplace.card.installed": "Yüklendi",
@@ -61,7 +60,6 @@ export const dict = {
   "marketplace.scope.global": "genel",
   "marketplace.remove.type.mcp": "MCP sunucusu",
   "marketplace.remove.type.skill": "yetenek",
-  "marketplace.remove.type.mode": "mod",
   "marketplace.remove.type.agent": "ajan",
   "marketplace.remove.failed": "{{name}} kaldırılamadı",
   "marketplace.install": "Yükle",

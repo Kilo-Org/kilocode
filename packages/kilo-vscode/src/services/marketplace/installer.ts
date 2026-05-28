@@ -7,7 +7,6 @@ import type {
   MarketplaceItem,
   SkillMarketplaceItem,
   McpMarketplaceItem,
-  ModeMarketplaceItem,
   AgentMarketplaceItem,
   McpInstallationMethod,
   InstallMarketplaceItemOptions,
@@ -27,7 +26,6 @@ export class MarketplaceInstaller {
     const scope = options.target ?? "project"
     if (item.type === "skill") return this.installSkill(item, scope, workspace)
     if (item.type === "mcp") return this.installMcp(item, options, scope, workspace)
-    if (item.type === "mode") return { success: false, slug: item.id, error: "Mode install is no longer supported." }
     return this.installAgent(item, scope, workspace)
   }
 
@@ -249,8 +247,7 @@ export class MarketplaceInstaller {
   async remove(item: MarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
     if (item.type === "skill") return this.removeSkill(item, scope, workspace)
     if (item.type === "mcp") return this.removeMcp(item, scope, workspace)
-    if (item.type === "agent") return this.removeAgent(item, scope, workspace)
-    return this.removeMode(item, scope, workspace)
+    return this.removeAgent(item, scope, workspace)
   }
 
   async removeMcp(item: McpMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
@@ -260,17 +257,6 @@ export class MarketplaceInstaller {
     }
     delete config.mcp[item.id]
     if (Object.keys(config.mcp).length === 0) delete config.mcp
-    await this.writeConfig(scope, workspace, config)
-    return { success: true, slug: item.id }
-  }
-
-  async removeMode(item: ModeMarketplaceItem, scope: "project" | "global", workspace?: string): Promise<RemoveResult> {
-    const config = await this.readConfig(scope, workspace)
-    if (!config.agent?.[item.id]) {
-      return { success: true, slug: item.id }
-    }
-    delete config.agent[item.id]
-    if (Object.keys(config.agent).length === 0) delete config.agent
     await this.writeConfig(scope, workspace, config)
     return { success: true, slug: item.id }
   }
@@ -375,47 +361,6 @@ function normalizeMcpEntry(raw: Record<string, unknown>): Record<string, unknown
 function isSafeId(id: string): boolean {
   if (!id || id.includes("..") || id.includes("/") || id.includes("\\")) return false
   return /^[\w\-@.]+$/.test(id)
-}
-
-// Group name → opencode permission key mapping (mirrors ModesMigrator)
-const GROUP_PERMISSIONS: Record<string, string> = {
-  read: "read",
-  edit: "edit",
-  browser: "bash",
-  command: "bash",
-  mcp: "mcp",
-}
-const ALL_PERMISSIONS = ["read", "edit", "bash", "mcp"]
-
-function convertModeToAgent(content: string): Record<string, unknown> {
-  const mode = yaml.parse(content) as Record<string, unknown>
-  const groups = (mode.groups ?? []) as Array<string | [string, Record<string, unknown>]>
-
-  const permission: Record<string, unknown> = {}
-  const allowed = new Set<string>()
-  for (const group of groups) {
-    if (typeof group === "string") {
-      const key = GROUP_PERMISSIONS[group] ?? group
-      allowed.add(key)
-      permission[key] = "allow"
-    } else if (Array.isArray(group)) {
-      const [name, cfg] = group
-      const key = GROUP_PERMISSIONS[name] ?? name
-      allowed.add(key)
-      permission[key] = cfg?.fileRegex ? { [String(cfg.fileRegex)]: "allow", "*": "deny" } : "allow"
-    }
-  }
-  for (const perm of ALL_PERMISSIONS) {
-    if (!allowed.has(perm)) permission[perm] = "deny"
-  }
-
-  const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
-  return {
-    mode: "primary",
-    description: mode.description ?? mode.whenToUse ?? mode.name,
-    prompt,
-    permission,
-  }
 }
 
 function escapeJsonValue(raw: string): string {

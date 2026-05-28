@@ -15,7 +15,6 @@ export const RemoveDialog = (props: Props) => {
 
   const typeName = () => {
     if (props.item.type === "mcp") return t("marketplace.remove.type.mcp")
-    if (props.item.type === "mode") return t("marketplace.remove.type.mode")
     if (props.item.type === "agent") return t("marketplace.remove.type.agent")
     return t("marketplace.remove.type.skill")
   }

@@ -48,7 +48,12 @@ import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
 import { diffSummary as localDiffSummary } from "./agent-manager/local-diff"
 import { getWorkspaceRoot } from "./review-utils"
-import { MarketplaceService, type MarketplaceItem, type RemoveResult } from "./services/marketplace"
+import {
+  MarketplaceService,
+  type MarketplaceItem,
+  type AgentMarketplaceItem,
+  type RemoveResult,
+} from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
@@ -832,8 +837,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[Kilo New] removeSkill failed:", e),
           )
           break
-        case "removeMode":
-          this.handleRemoveMode(message.name).catch((e) => console.error("[Kilo New] handleRemoveMode failed:", e))
+        case "removeAgent":
+          this.handleRemoveAgent(message.name).catch((e) => console.error("[Kilo New] handleRemoveAgent failed:", e))
           break
         case "removeMcp":
           this.handleRemoveMcp(message.name).catch((e) => console.error("[Kilo New] handleRemoveMcp failed:", e))
@@ -1945,12 +1950,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return true
   }
 
-  /**
-   * Remove a custom mode via the CLI backend (deletes from disk + refreshes state).
-   * The webview optimistically removes the mode from its list before this runs.
-   * On failure, re-fetches agents so the webview reverts to the authoritative state.
-   */
-  private async handleRemoveMode(name: string): Promise<void> {
+  /** Remove an agent via the CLI backend, falling back to kilo.json removal. */
+  private async handleRemoveAgent(name: string): Promise<void> {
     if (!this.client) return
 
     // 1. Try CLI removal (handles .md files and legacy .kilocodemodes)
@@ -1966,11 +1967,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // CLI removal failed — agent may be in kilo.json instead
     }
 
-    // 2. Try removing from kilo.json (handles marketplace-installed modes)
-    const stub = { id: name, type: "mode" as const, name, description: "", content: "" }
+    // 2. Try removing from kilo.json (handles marketplace-installed agents)
+    const stub: AgentMarketplaceItem = {
+      id: name,
+      type: "agent",
+      name,
+      description: "",
+      content: { mode: "primary", description: "", prompt: "" },
+    }
     const removed = await this.removeMarketplaceItemFromAllScopes(stub)
     if (!removed) {
-      console.error("[Kilo New] KiloProvider: Failed to remove mode:", name)
+      console.error("[Kilo New] KiloProvider: Failed to remove agent:", name)
     }
   }
 

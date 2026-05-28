@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP-Server",
-  "marketplace.tab.modes": "Modi",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Noch nicht implementiert",
   "marketplace.card.installed": "Installiert",
@@ -61,7 +60,6 @@ export const dict = {
   "marketplace.scope.global": "Global",
   "marketplace.remove.type.mcp": "MCP-Server",
   "marketplace.remove.type.skill": "Skill",
-  "marketplace.remove.type.mode": "Modus",
   "marketplace.remove.type.agent": "Agent",
   "marketplace.remove.failed": "Fehler beim Entfernen von {{name}}",
   "marketplace.install": "Installieren",

@@ -1195,7 +1195,6 @@ export const dict = {
     'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
   "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
 
-  "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
   "settings.agentBehaviour.subtab.rules": "Pravila",
@@ -1354,10 +1353,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
   "settings.agentBehaviour.permissions.hint":
     "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
-  "settings.agentBehaviour.removeMode.title": "Ukloni mod",
-  "settings.agentBehaviour.removeMode.confirm":
+  "settings.agentBehaviour.removeAgent.title": "Ukloni mod",
+  "settings.agentBehaviour.removeAgent.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
-  "settings.agentBehaviour.removeMode.button": "Ukloni",
+  "settings.agentBehaviour.removeAgent.button": "Ukloni",
   "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
   "settings.agentBehaviour.removeMcp.confirm":
     'Ukloniti MCP server "{{name}}"? Ovo će ga ukloniti iz vaše konfiguracije.',

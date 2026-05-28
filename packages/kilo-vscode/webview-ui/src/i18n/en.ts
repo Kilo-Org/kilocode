@@ -1171,7 +1171,6 @@ export const dict = {
     'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
   "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
 
-  "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Rules",
@@ -1291,10 +1290,10 @@ export const dict = {
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
   "settings.agentBehaviour.availableModes": "Available Custom Modes",
   "settings.agentBehaviour.noModesFound": "No modes found.",
-  "settings.agentBehaviour.removeMode.title": "Remove mode",
-  "settings.agentBehaviour.removeMode.confirm":
+  "settings.agentBehaviour.removeAgent.title": "Remove mode",
+  "settings.agentBehaviour.removeAgent.confirm":
     'Remove mode "{{name}}"? This will disable the mode by updating your config.',
-  "settings.agentBehaviour.removeMode.button": "Remove",
+  "settings.agentBehaviour.removeAgent.button": "Remove",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",
   "settings.agentBehaviour.removeSkill.title": "Remove skill",

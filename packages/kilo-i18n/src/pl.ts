@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Serwery MCP",
-  "marketplace.tab.modes": "Tryby",
   "marketplace.category.all": "Wszystkie",
   "marketplace.placeholder": "Do zaimplementowania",
   "marketplace.card.installed": "Zainstalowano",
@@ -61,7 +60,6 @@ export const dict = {
   "marketplace.scope.global": "globalny",
   "marketplace.remove.type.mcp": "serwer MCP",
   "marketplace.remove.type.skill": "umiejętność",
-  "marketplace.remove.type.mode": "tryb",
   "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Nie udało się usunąć {{name}}",
   "marketplace.install": "Zainstaluj",
