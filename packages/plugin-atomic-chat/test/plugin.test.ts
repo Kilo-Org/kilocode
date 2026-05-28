@@ -64,6 +64,12 @@ describe('AtomicChatPlugin', () => {
     expect(hooks['chat.params']).toBeTypeOf('function')
   })
 
+  it('registers optional local-server auth (no API key required)', async () => {
+    expect(pluginHooks.auth?.provider).toBe(ATOMIC_CHAT_PROVIDER_KEY)
+    expect(pluginHooks.auth?.methods[0]?.type).toBe('api')
+    expect(pluginHooks.auth?.methods[0]?.label).toBe('Local server')
+  })
+
   it('handles invalid client', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const hooks = await AtomicChatPlugin({ client: null } as any)
