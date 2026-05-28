@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { scrubString, isHighRiskPath, Scrubber } from "@/kilocode/session-export/worker/scrub"
+import { scrubString, isHighRiskPath, Scrubber, secretlintSecrets } from "@/kilocode/session-export/worker/scrub"
 
 describe("scrubber", () => {
   test("redacts AWS access key id", () => {
@@ -89,5 +89,19 @@ describe("scrubber", () => {
     expect(out.data.input.text).not.toContain(mongo)
     expect(out.data.input.text).not.toContain("hunter2")
     expect(out.data.input.text).not.toContain("s3cret")
+  })
+
+  test("secretlint extraction ignores generic id fields", () => {
+    const out = secretlintSecrets([
+      {
+        ruleId: "rule",
+        data: {
+          ID: "session-id-1234",
+          KEY: "real-secret",
+        },
+      },
+    ])
+    expect(out.has("session-id-1234")).toBe(false)
+    expect(out.get("real-secret")).toBe("rule")
   })
 })

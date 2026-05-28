@@ -42,13 +42,18 @@ const FIELDS = new Set([
   "KEY",
   "SECRET",
   "PASSWORD",
-  "ID",
   "URL",
   "URI",
   "CONTENT",
   "VALUE",
   "CREDENTIAL",
 ])
+
+type Message = {
+  ruleId: string
+  ruleParentId?: string
+  data?: Record<string, unknown>
+}
 
 export function scrubString(input: string, patterns: Pattern[] = PATTERNS): ScrubResult {
   const redactionsByType: Record<string, number> = {}
@@ -71,16 +76,7 @@ async function scrubSecretlint(input: string): Promise<ScrubResult> {
       config: CONFIG,
     },
   })
-  const secrets = new Map<string, string>()
-  for (const msg of result.messages) {
-    const data = msg.data ?? {}
-    for (const [key, val] of Object.entries(data)) {
-      if (!FIELDS.has(key.toUpperCase())) continue
-      if (typeof val !== "string") continue
-      if (val.length < 4) continue
-      secrets.set(val, msg.ruleParentId ?? msg.ruleId)
-    }
-  }
+  const secrets = secretlintSecrets(result.messages)
   let value = input
   const redactionsByType: Record<string, number> = {}
   for (const [secret, rule] of secrets) {
@@ -91,6 +87,20 @@ async function scrubSecretlint(input: string): Promise<ScrubResult> {
     redactionsByType[name] = (redactionsByType[name] ?? 0) + count
   }
   return { value, redactionsByType }
+}
+
+export function secretlintSecrets(messages: Message[]): Map<string, string> {
+  const secrets = new Map<string, string>()
+  for (const msg of messages) {
+    const data = msg.data ?? {}
+    for (const [key, val] of Object.entries(data)) {
+      if (!FIELDS.has(key.toUpperCase())) continue
+      if (typeof val !== "string") continue
+      if (val.length < 4) continue
+      secrets.set(val, msg.ruleParentId ?? msg.ruleId)
+    }
+  }
+  return secrets
 }
 
 export function isHighRiskPath(path: string): boolean {
