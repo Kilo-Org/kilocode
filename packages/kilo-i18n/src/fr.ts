@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Serveurs MCP",
-  "marketplace.tab.modes": "Modes",
   "marketplace.category.all": "Tout",
   "marketplace.placeholder": "À implémenter",
   "marketplace.card.installed": "Installé",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuler",
   "marketplace.remove.confirm.button": "Supprimer",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agents",
   "marketplace.search": "Rechercher...",
   "marketplace.filter.all": "Tous les éléments",
   "marketplace.filter.notInstalled": "Non installé",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "serveur MCP",
   "marketplace.remove.type.skill": "compétence",
-  "marketplace.remove.type.mode": "mode",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Échec de la suppression de {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installé",
@@ -69,8 +69,10 @@ export const dict = {
   "marketplace.warning.busyMany": "Plusieurs sessions sont en cours et seront interrompues",
   "marketplace.warning.installAnyway": "Installer quand même",
   "marketplace.warning.cancel": "Annuler",
-  "marketplace.contribute.prompt": "Il manque une skill, un mode ou un serveur MCP ?",
+  "marketplace.contribute.prompt": "Il manque une compétence, un agent ou un serveur MCP ?",
   "marketplace.contribute.cta": "Contribuer sur GitHub",
+  "marketplace.migration.notice":
+    "Les modes ont été remplacés par des agents. Si vous avez précédemment installé des modes depuis le marketplace, veuillez les supprimer et les réinstaller en tant qu'agents pour migrer vers le nouveau format.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "Implémenter",

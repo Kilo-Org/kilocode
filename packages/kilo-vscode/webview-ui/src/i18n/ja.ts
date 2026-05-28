@@ -1120,6 +1120,14 @@ export const dict = {
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
   "session.status.offline": "ネットワークが切断されました — 再接続中…",
+  "session.outcome.incomplete": "{{count}} 個の To-Do を残してターンが終了しました",
+  "session.outcome.limit": "完了前に応答制限に達しました",
+  "session.outcome.unknown": "モデルの終了理由なしでターンが終了しました",
+  "session.outcome.filtered": "コンテンツフィルターにより、プロバイダーがこの応答を停止しました。",
+  "session.outcome.unexpected": "応答が予期せず終了したため、不完全である可能性があります。",
+  "session.outcome.interrupted": "ターンが中断されました",
+  "session.outcome.error": "ターンが失敗しました",
+  "session.outcome.finish": "終了理由: {{reason}}",
 
   "ui.sessionTurn.cancel": "キャンセル",
   "ui.sessionTurn.status.thinking": "考え中...",
@@ -1184,7 +1192,6 @@ export const dict = {
     "テレメトリは VS Code の組み込みテレメトリ設定によって制御されます。無効にするには、設定 > テレメトリ > Telemetry Level に移動して「off」に設定してください。変更を適用するには、VS Code を再起動してください。",
   "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
 
-  "settings.agentBehaviour.subtab.modes": "モード",
   "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
   "settings.agentBehaviour.subtab.rules": "ルール",
@@ -1297,7 +1304,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.availableModes": "利用可能なカスタムモード",
-  "settings.agentBehaviour.noModesFound": "モードが見つかりません。",
+  "settings.agentBehaviour.noAgentsFound": "エージェントが見つかりません。",
   "settings.agentBehaviour.createMode": "新しいモードを作成",
   "settings.agentBehaviour.createMode.name": "名前",
   "settings.agentBehaviour.createMode.name.placeholder": "例: reviewer",
@@ -1342,10 +1349,10 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "権限をJSONとしてコピー",
   "settings.agentBehaviour.permissions.hint":
     "ルールは順番に評価され、最後に一致したルールが適用されます。これはCLIバックエンドから解決されたルールセットです。",
-  "settings.agentBehaviour.removeMode.title": "モードを削除",
-  "settings.agentBehaviour.removeMode.confirm":
-    'モード "{{name}}" を削除しますか？設定を更新してモードを無効にします。',
-  "settings.agentBehaviour.removeMode.button": "削除",
+  "settings.agentBehaviour.removeAgent.title": "エージェントを削除",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'エージェント "{{name}}" を削除しますか？設定を更新してエージェントを無効にします。',
+  "settings.agentBehaviour.removeAgent.button": "削除",
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',
   "settings.agentBehaviour.removeMcp.button": "削除",

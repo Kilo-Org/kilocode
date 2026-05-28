@@ -1117,6 +1117,14 @@ export const dict = {
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
   "session.status.offline": "Мережу відключено — перепідключення...",
+  "session.outcome.incomplete": "Хід завершився з {{count}} невиконаними завданнями",
+  "session.outcome.limit": "Ліміт відповідей досягнуто до завершення",
+  "session.outcome.unknown": "Хід завершився без причини завершення моделі",
+  "session.outcome.filtered": "Провайдер зупинив цю відповідь через фільтр вмісту.",
+  "session.outcome.unexpected": "Відповідь завершилася несподівано і може бути неповною.",
+  "session.outcome.interrupted": "Хід перервано",
+  "session.outcome.error": "Хід не вдався",
+  "session.outcome.finish": "Причина завершення: {{reason}}",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1180,7 +1188,6 @@ export const dict = {
     'Телеметрія керується вбудованим налаштуванням телеметрії VS Code. Щоб вимкнути її, перейдіть до Налаштування > Телеметрія > Рівень телеметрії та встановіть значення "off". Перезапустіть VS Code, щоб застосувати зміну.',
   "settings.aboutKiloCode.telemetry.openSettings": "Відкрити налаштування телеметрії",
 
-  "settings.agentBehaviour.subtab.modes": "Режими",
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
   "settings.agentBehaviour.subtab.rules": "Правила",
@@ -1300,7 +1307,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навичок не виявлено. Додайте шляхи до папок навичок або URL нижче, щоб зробити їх доступними.",
   "settings.agentBehaviour.availableModes": "Доступні власні режими",
-  "settings.agentBehaviour.noModesFound": "Режимів не знайдено.",
+  "settings.agentBehaviour.noAgentsFound": "Агентів не знайдено.",
   "settings.agentBehaviour.importMode": "Імпортувати",
   "settings.agentBehaviour.importMode.invalidName":
     "Назва режиму у файлі недійсна. Назва має починатися з малої літери і містити лише малі літери, цифри та дефіси.",
@@ -1309,10 +1316,10 @@ export const dict = {
     "Недійсний файл JSON. Будь ласка, виберіть дійсний файл визначення агента.",
   "settings.agentBehaviour.importMode.tooLarge": "Файл занадто великий. Визначення агентів мають бути менше 1 МБ.",
   "settings.agentBehaviour.exportMode": "Експортувати визначення агента",
-  "settings.agentBehaviour.removeMode.title": "Видалити режим",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Видалити режим "{{name}}"? Це оновить вашу конфігурацію, щоб вимкнути режим.',
-  "settings.agentBehaviour.removeMode.button": "Видалити",
+  "settings.agentBehaviour.removeAgent.title": "Видалити агент",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Видалити агент "{{name}}"? Це вимкне агент шляхом оновлення конфігурації.',
+  "settings.agentBehaviour.removeAgent.button": "Видалити",
   "settings.agentBehaviour.skillPaths": "Шляхи до папок навичок",
   "settings.agentBehaviour.skillUrls": "URL навичок",
   "settings.agentBehaviour.removeSkill.title": "Видалити навичку",

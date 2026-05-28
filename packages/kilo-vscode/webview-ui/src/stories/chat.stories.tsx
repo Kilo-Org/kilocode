@@ -14,6 +14,7 @@ import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
 import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
@@ -439,6 +440,52 @@ export const MessageListSubagentToQueuedUserSpacing: Story = {
           <div style={{ height: "420px", display: "flex", "flex-direction": "column" }}>
             <MessageList />
           </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// TurnOutcome - abnormal terminal state cards
+// ---------------------------------------------------------------------------
+
+const outcomeMessage: Message = {
+  id: "asst-msg-outcome-001",
+  sessionID: SESSION_ID,
+  role: "assistant",
+  createdAt: new Date(subNow).toISOString(),
+  finish: "unknown",
+}
+
+export const TurnOutcomeUnknown: Story = {
+  name: "TurnOutcome - response ended without a finish reason",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "completed" }),
+      visibleMessages: () => [outcomeMessage],
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <TurnOutcome />
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TurnOutcomeFailed: Story = {
+  name: "TurnOutcome - failed turn fallback",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle", closeReason: "error" }),
+      visibleMessages: () => [{ ...outcomeMessage, id: "asst-msg-outcome-002", finish: "error" }],
+    }
+    return (
+      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <TurnOutcome />
         </SessionContext.Provider>
       </StoryProviders>
     )

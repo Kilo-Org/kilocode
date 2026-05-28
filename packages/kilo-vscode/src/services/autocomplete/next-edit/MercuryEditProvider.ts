@@ -3,13 +3,17 @@ import { nesLog, nesWarn } from "./log"
 import type { MercuryEditRequestContext, MercuryEditSuggestion } from "./types"
 
 const MERCURY_MAX_TOKENS = 512
-const PROVIDER_ID = "inception"
-const MODEL_ID = "mercury-next-edit"
+const DEFAULT_PROVIDER_ID = "inception"
+const DEFAULT_MODEL_ID = "mercury-next-edit"
 
 type EditResponseData = { content?: string; usage?: { prompt_tokens?: number; completion_tokens?: number } }
 
 export interface MercuryEditProviderOptions {
   connectionService: KiloConnectionService
+  /** Provider id to send to the gateway (e.g. `"kilo"` or `"inception"`). */
+  providerId?: string
+  /** Model id to send to the gateway (e.g. `"inception/mercury-next-edit"`). */
+  modelId?: string
   /** AbortSignal for cancellation (cursor moves, escape, etc.). */
   signal?: AbortSignal
 }
@@ -25,8 +29,10 @@ export class MercuryEditProvider {
 
   async suggest(ctx: MercuryEditRequestContext): Promise<MercuryEditSuggestion | null> {
     const start = Date.now()
+    const provider = this.options.providerId ?? DEFAULT_PROVIDER_ID
+    const model = this.options.modelId ?? DEFAULT_MODEL_ID
     nesLog(
-      `-> /kilo/edit model=${MODEL_ID} region=[${ctx.editableRegionStartLine},${ctx.editableRegionEndLine}] diffs=${ctx.editDiffHistory.length} snippets=${ctx.recentlyViewedSnippets.length}`,
+      `-> /kilo/edit provider=${provider} model=${model} region=[${ctx.editableRegionStartLine},${ctx.editableRegionEndLine}] diffs=${ctx.editDiffHistory.length} snippets=${ctx.recentlyViewedSnippets.length}`,
     )
 
     const client = await this.options.connectionService.getClientAsync()
@@ -34,8 +40,8 @@ export class MercuryEditProvider {
       // Send structured editor context; the gateway assembles the Mercury prompt.
       const { data, error, response } = await client.kilo.edit(
         {
-          provider: PROVIDER_ID,
-          model: MODEL_ID,
+          provider,
+          model,
           maxTokens: MERCURY_MAX_TOKENS,
           currentFilePath: ctx.currentFilePath,
           currentFileContent: ctx.currentFileContent,

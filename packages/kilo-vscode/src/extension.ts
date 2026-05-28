@@ -487,7 +487,7 @@ export function activate(context: vscode.ExtensionContext) {
   )
 
   // Register autocomplete provider
-  registerAutocompleteProvider(context, connectionService)
+  void registerAutocompleteProvider(context, connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)

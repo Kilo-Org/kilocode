@@ -18,7 +18,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "스킬",
   "marketplace.tab.mcpServers": "MCP 서버",
-  "marketplace.tab.modes": "모드",
   "marketplace.category.all": "전체",
   "marketplace.placeholder": "구현 예정",
   "marketplace.card.installed": "설치됨",
@@ -43,6 +42,7 @@ export const dict = {
   "marketplace.remove.cancel": "취소",
   "marketplace.remove.confirm.button": "제거",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "에이전트",
   "marketplace.search": "검색...",
   "marketplace.filter.all": "모든 항목",
   "marketplace.filter.notInstalled": "설치되지 않음",
@@ -58,7 +58,7 @@ export const dict = {
   "marketplace.scope.global": "글로벌",
   "marketplace.remove.type.mcp": "MCP 서버",
   "marketplace.remove.type.skill": "스킬",
-  "marketplace.remove.type.mode": "모드",
+  "marketplace.remove.type.agent": "에이전트",
   "marketplace.remove.failed": "{{name}} 제거 실패",
   "marketplace.install": "설치",
   "marketplace.filter.installed": "설치됨",
@@ -67,8 +67,10 @@ export const dict = {
   "marketplace.warning.busyMany": "여러 세션이 실행 중이며 중단됩니다",
   "marketplace.warning.installAnyway": "그래도 설치",
   "marketplace.warning.cancel": "취소",
-  "marketplace.contribute.prompt": "스킬, 모드 또는 MCP 서버가 없나요?",
+  "marketplace.contribute.prompt": "스킬, 에이전트 또는 MCP 서버가 없나요?",
   "marketplace.contribute.cta": "GitHub에서 기여하기",
+  "marketplace.migration.notice":
+    "모드가 에이전트로 대체되었습니다. 이전에 마켓플레이스 모드를 설치한 경우 새 형식으로 마이그레이션하려면 해당 모드를 제거하고 에이전트로 다시 설치하세요.",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "구현",

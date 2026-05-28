@@ -44,6 +44,7 @@ import type {
   KilocodeNotification,
   PermissionRequest,
   ProviderAuthState,
+  SessionCloseReason,
   QuestionRequest,
   SuggestionRequest,
 } from "../types/messages"
@@ -160,6 +161,7 @@ export function mockSessionValue(overrides?: {
   questions?: QuestionRequest[]
   suggestions?: SuggestionRequest[]
   status?: string
+  closeReason?: SessionCloseReason
 }) {
   const id = overrides?.id ?? "story-session-001"
   const permissions = overrides?.permissions ?? []
@@ -179,6 +181,7 @@ export function mockSessionValue(overrides?: {
     sessions: () => [],
     status: () => status,
     statusInfo: () => ({ type: status }),
+    closeReason: () => overrides?.closeReason,
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
     busySince: () => (status === "busy" ? Date.now() - 2000 : undefined),
     loading: () => false,
@@ -216,7 +219,7 @@ export function mockSessionValue(overrides?: {
     skills: () => [],
     refreshSkills: noop,
     removeSkill: noop,
-    removeMode: noop,
+    removeAgent: noop,
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",

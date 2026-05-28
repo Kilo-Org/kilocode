@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "ทักษะ",
   "marketplace.tab.mcpServers": "เซิร์ฟเวอร์ MCP",
-  "marketplace.tab.modes": "โหมด",
   "marketplace.category.all": "ทั้งหมด",
   "marketplace.placeholder": "ยังไม่ได้ดำเนินการ",
   "marketplace.card.installed": "ติดตั้งแล้ว",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "ยกเลิก",
   "marketplace.remove.confirm.button": "ลบ",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "เอเจนต์",
   "marketplace.search": "ค้นหา...",
   "marketplace.filter.all": "รายการทั้งหมด",
   "marketplace.filter.notInstalled": "ยังไม่ได้ติดตั้ง",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "โกลบอล",
   "marketplace.remove.type.mcp": "เซิร์ฟเวอร์ MCP",
   "marketplace.remove.type.skill": "ทักษะ",
-  "marketplace.remove.type.mode": "โหมด",
+  "marketplace.remove.type.agent": "เอเจนต์",
   "marketplace.remove.failed": "ไม่สามารถลบ {{name}} ได้",
   "marketplace.install": "ติดตั้ง",
   "marketplace.filter.installed": "ติดตั้งแล้ว",
@@ -69,8 +69,10 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
-  "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
+  "marketplace.contribute.prompt": "ขาดสกิล เอเจนต์ หรือเซิร์ฟเวอร์ MCP?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
+  "marketplace.migration.notice":
+    "โหมดถูกแทนที่ด้วยเอเจนต์แล้ว หากคุณเคยติดตั้งโหมดจาก marketplace กรุณาลบและติดตั้งใหม่เป็นเอเจนต์เพื่อย้ายไปยังรูปแบบใหม่",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "ดำเนินการ",

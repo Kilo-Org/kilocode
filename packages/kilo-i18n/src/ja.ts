@@ -18,7 +18,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "スキル",
   "marketplace.tab.mcpServers": "MCPサーバー",
-  "marketplace.tab.modes": "モード",
   "marketplace.category.all": "すべて",
   "marketplace.placeholder": "未実装",
   "marketplace.card.installed": "インストール済み",
@@ -43,6 +42,7 @@ export const dict = {
   "marketplace.remove.cancel": "キャンセル",
   "marketplace.remove.confirm.button": "削除",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "エージェント",
   "marketplace.search": "検索...",
   "marketplace.filter.all": "すべてのアイテム",
   "marketplace.filter.notInstalled": "未インストール",
@@ -58,7 +58,7 @@ export const dict = {
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
   "marketplace.remove.type.skill": "スキル",
-  "marketplace.remove.type.mode": "モード",
+  "marketplace.remove.type.agent": "エージェント",
   "marketplace.remove.failed": "{{name}} の削除に失敗しました",
   "marketplace.install": "インストール",
   "marketplace.filter.installed": "インストール済み",
@@ -67,8 +67,10 @@ export const dict = {
   "marketplace.warning.busyMany": "複数のセッションが実行中で中断されます",
   "marketplace.warning.installAnyway": "それでもインストール",
   "marketplace.warning.cancel": "キャンセル",
-  "marketplace.contribute.prompt": "スキル、モード、MCP サーバーが見つかりませんか？",
+  "marketplace.contribute.prompt": "スキル、エージェント、またはMCPサーバーが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
+  "marketplace.migration.notice":
+    "モードはエージェントに置き換えられました。以前にマーケットプレイスのモードをインストールしていた場合は、新しい形式に移行するためにそれらを削除してエージェントとして再インストールしてください。",
 
   // Plan follow-up question shown after plan_exit
   "plan.followup.header": "実装",

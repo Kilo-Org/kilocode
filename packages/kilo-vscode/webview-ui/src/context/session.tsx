@@ -20,6 +20,7 @@ import type {
   PartDelta,
   SessionStatus,
   SessionStatusInfo,
+  SessionCloseReason,
   PermissionRequest,
   QuestionRequest,
   SuggestionRequest,
@@ -108,6 +109,7 @@ interface SessionContextValue {
   // Session status
   status: Accessor<SessionStatus>
   statusInfo: Accessor<SessionStatusInfo>
+  closeReason: Accessor<SessionCloseReason | undefined>
   statusText: Accessor<string | undefined>
   busySince: Accessor<number | undefined>
   loading: Accessor<boolean>
@@ -185,7 +187,7 @@ interface SessionContextValue {
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
   allAgents: Accessor<AgentInfo[]>
-  removeMode: (name: string) => void
+  removeAgent: (name: string) => void
   removeMcp: (name: string) => void
 
   // MCP server status (runtime connect/disconnect)
@@ -284,6 +286,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
+  const [closeMap, setCloseMap] = createStore<Record<string, SessionCloseReason | undefined>>({})
   const [busySinceMap, setBusySinceMap] = createStore<Record<string, number>>({})
 
   const idle: SessionStatusInfo = { type: "idle" }
@@ -294,6 +297,16 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? (statusMap[id] ?? idle) : idle
   }
   const status = () => statusInfo().type as SessionStatus
+  const closeReason = () => {
+    const id = currentSessionID()
+    return id ? closeMap[id] : undefined
+  }
+  const clearClose = (id: string) =>
+    setCloseMap(
+      produce((map) => {
+        delete map[id]
+      }),
+    )
   const busySince = () => {
     const id = currentSessionID()
     return id ? busySinceMap[id] : undefined
@@ -336,7 +349,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // Skills loaded from the CLI backend
   const [skills, setSkills] = createSignal<SkillInfo[]>([])
 
-  const removeMode = (name: string) => {
+  const removeAgent = (name: string) => {
     setAgents((prev) => prev.filter((a) => a.name !== name))
 
     // Clear stale selections so selectedAgentName() falls back to the default
@@ -352,7 +365,7 @@ export const SessionProvider: ParentComponent = (props) => {
       }),
     )
 
-    vscode.postMessage({ type: "removeMode", name })
+    vscode.postMessage({ type: "removeAgent", name })
   }
 
   const removeMcp = (name: string) => {
@@ -837,6 +850,10 @@ export const SessionProvider: ParentComponent = (props) => {
         handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
         break
 
+      case "sessionTurnClosed":
+        setCloseMap(message.sessionID, message.reason)
+        break
+
       case "todoUpdated":
         handleTodoUpdated(message.sessionID, message.items)
         break
@@ -1316,8 +1333,9 @@ export const SessionProvider: ParentComponent = (props) => {
           ? { type: "offline", message: message ?? "" }
           : { type: newStatus }
     setStatusMap(sessionID, info)
-    // Track busy start time
+    // Track busy start time and discard the previous turn's terminal state.
     if (prev.type === "idle" && newStatus !== "idle") {
+      clearClose(sessionID)
       setBusySinceMap(sessionID, Date.now())
     }
     if (newStatus === "idle") {
@@ -1326,7 +1344,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
-      // Session is idle — any remaining pending optimistic IDs are either
+      // Session is idle - any remaining pending optimistic IDs are either
       // already confirmed (messageCreated removed them) or orphaned (queued
       // callbacks were dropped on abort). Clean up the tracking set; the
       // messages themselves will be reconciled on the next messagesLoaded.
@@ -1554,6 +1572,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const next = session.revert ?? undefined
     setStore("sessions", session.id, session)
     if (prev?.messageID === next?.messageID && prev?.partID === next?.partID) return
+    clearClose(session.id)
     resetTodos(session.id, next)
   }
 
@@ -1670,6 +1689,7 @@ export const SessionProvider: ParentComponent = (props) => {
           delete map[sessionID]
         }),
       )
+      clearClose(sessionID)
       setBusySinceMap(
         produce((map) => {
           delete map[sessionID]
@@ -1906,7 +1926,10 @@ export const SessionProvider: ParentComponent = (props) => {
     for (const q of scopedQuestions(sid)) {
       rejectQuestion(q.id)
     }
-    if (sid) addOptimistic(sid, messageID, text, files)
+    if (sid) {
+      clearClose(sid)
+      addOptimistic(sid, messageID, text, files)
+    }
 
     const scope = draftID ?? sid
     const agent = promptAgent(scope)
@@ -1969,7 +1992,10 @@ export const SessionProvider: ParentComponent = (props) => {
       rejectQuestion(q.id)
     }
 
-    if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
+    if (sid) {
+      clearClose(sid)
+      addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
+    }
 
     const scope = draftID ?? sid
     const agent = promptAgent(scope)
@@ -2306,6 +2332,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function revertSession(messageID: string, partID?: string) {
     const id = currentSessionID()
     if (!id) return
+    clearClose(id)
     // Restore the reverted user message's prompt text into the input.
     // Dispatch as a window message so PromptInput picks it up via onMessage.
     const parts = store.parts[messageID]
@@ -2423,6 +2450,7 @@ export const SessionProvider: ParentComponent = (props) => {
     sessions,
     status,
     statusInfo,
+    closeReason,
     statusText,
     busySince,
     loading,
@@ -2459,7 +2487,7 @@ export const SessionProvider: ParentComponent = (props) => {
     skills,
     refreshSkills,
     removeSkill,
-    removeMode,
+    removeAgent,
     removeMcp,
     mcpStatus,
     mcpLoading,

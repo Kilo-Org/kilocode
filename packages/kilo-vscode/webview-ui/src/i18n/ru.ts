@@ -1130,6 +1130,14 @@ export const dict = {
   "session.status.retrying": "Повторная попытка ({{ attempt }})… {{ message }}",
   "session.status.working": "Работаю…",
   "session.status.offline": "Сеть отключена — переподключение...",
+  "session.outcome.incomplete": "Раунд завершен, осталось задач: {{count}}",
+  "session.outcome.limit": "Достигнут лимит ответов до завершения",
+  "session.outcome.unknown": "Раунд завершен без указания причины моделью",
+  "session.outcome.filtered": "Провайдер остановил этот ответ из-за фильтра контента.",
+  "session.outcome.unexpected": "Ответ неожиданно завершился и может быть неполным.",
+  "session.outcome.interrupted": "Раунд прерван",
+  "session.outcome.error": "Раунд завершился с ошибкой",
+  "session.outcome.finish": "Причина завершения: {{reason}}",
 
   "ui.sessionTurn.cancel": "Отмена",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -1192,7 +1200,6 @@ export const dict = {
     'Телеметрия управляется встроенной настройкой телеметрии VS Code. Чтобы отключить её, перейдите в Настройки > Телеметрия > Уровень телеметрии и установите значение "off". Перезапустите VS Code, чтобы применить изменение.',
   "settings.aboutKiloCode.telemetry.openSettings": "Открыть настройки телеметрии",
 
-  "settings.agentBehaviour.subtab.modes": "Режимы",
   "settings.agentBehaviour.subtab.agents": "Агенты",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-серверы",
   "settings.agentBehaviour.subtab.rules": "Правила",
@@ -1306,7 +1313,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.availableModes": "Доступные пользовательские режимы",
-  "settings.agentBehaviour.noModesFound": "Режимы не найдены.",
+  "settings.agentBehaviour.noAgentsFound": "Агенты не найдены.",
   "settings.agentBehaviour.createMode": "Создать новый режим",
   "settings.agentBehaviour.createMode.name": "Название",
   "settings.agentBehaviour.createMode.name.placeholder": "например, reviewer",
@@ -1352,10 +1359,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Скопировать разрешения как JSON",
   "settings.agentBehaviour.permissions.hint":
     "Правила оцениваются по порядку — побеждает последнее совпавшее правило. Это разрешенный набор правил из бэкенда CLI.",
-  "settings.agentBehaviour.removeMode.title": "Удалить режим",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
-  "settings.agentBehaviour.removeMode.button": "Удалить",
+  "settings.agentBehaviour.removeAgent.title": "Удалить агент",
+  "settings.agentBehaviour.removeAgent.confirm": 'Удалить агент "{{name}}"? Это отключит агент, обновив конфигурацию.',
+  "settings.agentBehaviour.removeAgent.button": "Удалить",
   "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',
   "settings.agentBehaviour.removeMcp.button": "Удалить",
