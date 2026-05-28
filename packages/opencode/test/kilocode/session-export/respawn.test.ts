@@ -69,6 +69,31 @@ describe("SessionExport worker respawn", () => {
     expect(workers[1].messages.some((msg) => msg.kind === "init")).toBe(true)
   })
 
+  test("reinitializes capture with latest snapshot provider", async () => {
+    const worker = new FakeWorker(0)
+    SessionExport.init({
+      agentVersion: "v0",
+      dbPath: ":memory:",
+      subscribeAll: () => () => {},
+      createWorker: () => worker as unknown as Worker,
+    })
+    SessionExport.init({
+      agentVersion: "v0",
+      dbPath: ":memory:",
+      subscribeAll: () => () => {},
+      createWorker: () => worker as unknown as Worker,
+      snapshotProvider: {
+        baseline: async () => ({ snapshotId: "snap", files: [] }),
+        diff: async () => ({ snapshotHash: "snap", diff: [] }),
+      },
+    })
+
+    SessionExport.beforeRequest(request("s1"))
+    await waitFor(() => worker.messages.some((msg) => msg.kind === "event" && msg.envelope?.type === "workspace_baseline_completed"))
+
+    expect(worker.messages.filter((msg) => msg.kind === "init").length).toBe(1)
+  })
+
   test("sets kill switch after repeated worker postMessage failures", () => {
     const workers: FakeWorker[] = []
     SessionExport.init({
@@ -95,7 +120,7 @@ class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   terminated = false
-  messages: Array<{ kind?: string; surface?: string }> = []
+  messages: Array<{ kind?: string; surface?: string; envelope?: { type?: string } }> = []
 
   constructor(private failures: number) {}
 
@@ -131,4 +156,13 @@ function request(sessionId: string): Parameters<typeof SessionExport.beforeReque
     },
     assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
   }
+}
+
+async function waitFor(check: () => boolean): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < 1_000) {
+    if (check()) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error("timed out waiting for condition")
 }

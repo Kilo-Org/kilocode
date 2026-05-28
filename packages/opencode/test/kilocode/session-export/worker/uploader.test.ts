@@ -73,6 +73,26 @@ describe("Uploader", () => {
     expect(telemetry.some((item) => (item as { name?: string }).name === "session_export.uploaded")).toBe(true)
   })
 
+  test("flushes pending rows on startup", async () => {
+    const calls: RequestInit[] = []
+    const uploader = new Uploader({
+      storage,
+      endpoint: "https://example.test/ingest",
+      fetch: async (_input, init) => {
+        calls.push(init)
+        return new Response("", { status: 204 })
+      },
+      reportTelemetry: () => {},
+      agentVersion: "v0",
+      surface: "test",
+    })
+
+    await waitFor(() => calls.length > 0)
+    uploader.dispose()
+
+    expect(storage.pendingEvents({ now: Date.now(), limitBytes: 1_000_000 })).toEqual([])
+  })
+
   test("sends anonymous id with all export headers when auth token is absent", async () => {
     const calls: Array<{ init: RequestInit }> = []
     const uploader = new Uploader({
@@ -441,4 +461,13 @@ async function sha256(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value)
   const hash = await crypto.subtle.digest("SHA-256", bytes)
   return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("")
+}
+
+async function waitFor(check: () => boolean): Promise<void> {
+  const start = Date.now()
+  while (Date.now() - start < 1_000) {
+    if (check()) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error("timed out waiting for condition")
 }

@@ -38,7 +38,7 @@ import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
 import { RollCallCommand } from "./kilocode/cli/cmd/roll-call" // kilocode_change
 import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
-import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Identity, Telemetry } from "@kilocode/kilo-telemetry"
 import { InstanceRuntime } from "./project/instance-runtime" // kilocode_change
 import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 import { SessionExport } from "./kilocode/session-export" // kilocode_change
@@ -170,6 +170,18 @@ let cli = yargs(args) // kilocode_change
     }
 
     Telemetry.trackCliStart()
+    if (process.argv.includes("serve")) {
+      const anon = await Identity.getMachineId().catch((err) => {
+        Log.Default.warn("session export identity failed", { err })
+        return undefined
+      })
+      SessionExport.init({
+        agentVersion: InstallationVersion,
+        anonId: anon,
+        dbPath: path.join(Global.Path.data, "session-export.db"),
+        subscribeAll: () => () => {},
+      })
+    }
     // kilocode_change end
 
     const marker = path.join(Global.Path.data, "kilo.db")
@@ -308,7 +320,7 @@ try {
       importKind: e.importKind,
     })
   }
-  Log.Default.error("fatal", data)
+  Log.Default.error("fatal", data) // kilocode_change
   const formatted = FormatError(e)
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {

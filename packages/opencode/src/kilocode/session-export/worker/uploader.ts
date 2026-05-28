@@ -24,6 +24,7 @@ export class Uploader {
   constructor(private readonly deps: UploaderDeps) {
     this.periodic = setInterval(() => this.scheduleFlush("periodic"), Config.flushIntervalMs)
     this.periodic?.unref?.()
+    this.scheduleFlush("startup")
   }
 
   dispose(): void {

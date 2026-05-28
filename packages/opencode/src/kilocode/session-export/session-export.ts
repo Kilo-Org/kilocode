@@ -43,10 +43,11 @@ export const init = (opts: {
   subscribeAll: (cb: (event: unknown) => void) => () => void
   createWorker?: (url: WorkerTarget) => Worker
 }): void => {
-  if (worker) return
   const url = target()
   try {
+    const previous = sequencer
     sequencer = opts.syncSeq ? undefined : createSequencer(opts.dbPath)
+    previous?.close()
     const syncSeq = opts.syncSeq ?? ((sessionId: string) => sequencer!.next(sessionId))
     options = {
       agentVersion: opts.agentVersion,
@@ -59,8 +60,11 @@ export const init = (opts: {
       subscribeAll: opts.subscribeAll,
       createWorker: opts.createWorker ?? ((file) => new Worker(file)),
     }
+    if (worker) {
+      configure()
+      return
+    }
     spawn(url)
-    unsubscribe = opts.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
   } catch (err) {
     const current = worker as unknown as Worker | undefined
     if (current) current.terminate()
@@ -132,6 +136,12 @@ function spawn(url = target()): void {
     surface: options.surface,
     anonId: options.anonId,
   })
+  configure()
+}
+
+function configure(): void {
+  if (!worker || !options) return
+  unsubscribe?.()
   capture = new Capture({
     worker,
     agentVersion: options.agentVersion,
@@ -149,6 +159,7 @@ function spawn(url = target()): void {
     getTurnId: (sessionId) => capture?.turnId(sessionId),
     getRootSessionId: (sessionId) => capture?.rootSessionId(sessionId),
   })
+  unsubscribe = options.subscribeAll((event) => subscriber?.onSyncEvent(event as never))
   worker.onmessage = (event: MessageEvent) => {
     const msg = event.data as { kind?: string; sessionId?: string; reason?: string; name?: string }
     if (msg.kind === "pressure" && msg.sessionId) capture?.markDegraded(msg.sessionId)
