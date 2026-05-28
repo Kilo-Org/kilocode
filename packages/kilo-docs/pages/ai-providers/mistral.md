@@ -76,7 +76,7 @@ Other Mistral models do not get automatic reasoning variants, even if they appea
 
 ## Using Codestral
 
-[Codestral](https://docs.mistral.ai/capabilities/code_generation/) is a model specifically designed for code generation and interaction.
+[Codestral](https://docs.mistral.ai/models/model-cards/codestral-25-08) is a model specifically designed for code generation and interaction.
 Only for Codestral you could use different endpoints (Default: codestral.mistral.ai).
 For the La Platforme API Key change the **Codestral Base Url** to: https://api.mistral.ai
 
