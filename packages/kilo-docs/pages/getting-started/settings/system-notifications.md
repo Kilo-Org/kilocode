@@ -24,11 +24,11 @@ Kilo Code uses system notifications to inform you about:
 
 Kilo Code's system notifications work on all major operating systems with different underlying technologies:
 
-| Operating System | Technology                      | Requirements                                 |
-| ---------------- | ------------------------------- | -------------------------------------------- |
-| **macOS**        | AppleScript + terminal-notifier | Built-in support, optional enhanced features |
-| **Windows**      | PowerShell + Windows Runtime    | PowerShell execution policy configuration    |
-| **Linux**        | notify-send                     | libnotify package installation               |
+| Operating System | Technology | Requirements |
+|---|---|---|
+| **macOS** | AppleScript + terminal-notifier | Built-in support, optional enhanced features |
+| **Windows** | PowerShell + Windows Runtime | PowerShell execution policy configuration |
+| **Linux** | notify-send | libnotify package installation |
 
 ## Platform-Specific Setup
 
@@ -81,12 +81,12 @@ Windows notifications use the `Windows.UI.Notifications` API through PowerShell.
 
 #### Execution Policy Options
 
-| Policy         | Description                                | Security Level | Recommended             |
-| -------------- | ------------------------------------------ | -------------- | ----------------------- |
-| `Restricted`   | No scripts allowed (default)               | Highest        | ❌ Blocks notifications |
-| `RemoteSigned` | Local scripts run, downloaded need signing | High           | ✅ **Recommended**      |
-| `Unrestricted` | All scripts run with warnings              | Medium         | ⚠️ Use with caution     |
-| `AllSigned`    | All scripts must be signed                 | Highest        | ❌ Too restrictive      |
+| Policy | Description | Security Level | Recommended |
+|---|---|---|---|
+| `Restricted` | No scripts allowed (default) | Highest | ❌ Blocks notifications |
+| `RemoteSigned` | Local scripts run, downloaded need signing | High | ✅ **Recommended** |
+| `Unrestricted` | All scripts run with warnings | Medium | ⚠️ Use with caution |
+| `AllSigned` | All scripts must be signed | Highest | ❌ Too restrictive |
 
 ### Linux Setup
 
@@ -130,14 +130,14 @@ which notify-send
 
 System notifications work best with these desktop environments:
 
-| Desktop Environment | Support Level   | Notes                                     |
-| ------------------- | --------------- | ----------------------------------------- |
-| **GNOME**           | ✅ Full support | Native notification center                |
-| **KDE Plasma**      | ✅ Full support | Native notification system                |
-| **XFCE**            | ✅ Good support | Requires notification daemon              |
-| **Unity**           | ✅ Full support | Ubuntu's notification system              |
-| **i3/Sway**         | ⚠️ Limited      | Requires manual notification daemon setup |
-| **Headless**        | ❌ No support   | No display server available               |
+| Desktop Environment | Support Level | Notes |
+|---|---|---|
+| **GNOME** | ✅ Full support | Native notification center |
+| **KDE Plasma** | ✅ Full support | Native notification system |
+| **XFCE** | ✅ Good support | Requires notification daemon |
+| **Unity** | ✅ Full support | Ubuntu's notification system |
+| **i3/Sway** | ⚠️ Limited | Requires manual notification daemon setup |
+| **Headless** | ❌ No support | No display server available |
 
 #### Notification Daemon Setup (Advanced)
 

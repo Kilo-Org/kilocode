@@ -126,7 +126,7 @@ describe("continue-in-worktree steps", () => {
         capture: () => calls.push("capture"),
       })
       registerSession(c, session("s1"), result("/tmp/wt"), "wt1", "src-session")
-      expect(calls).toEqual(["addSession", "registerWorktreeSession", "registerSession", "notifyReady", "capture"])
+      expect(calls).toEqual(["addSession", "registerWorktreeSession", "notifyReady", "registerSession", "capture"])
     })
 
     it("works without state manager", () => {
@@ -139,7 +139,7 @@ describe("continue-in-worktree steps", () => {
         capture: () => calls.push("capture"),
       })
       registerSession(c, session("s1"), result("/tmp/wt"), "wt1", "src-session")
-      expect(calls).toEqual(["registerWorktreeSession", "registerSession", "notifyReady", "capture"])
+      expect(calls).toEqual(["registerWorktreeSession", "notifyReady", "registerSession", "capture"])
     })
   })
 })

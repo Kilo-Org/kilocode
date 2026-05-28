@@ -22,6 +22,10 @@ Major AI companies offering powerful models via API:
 - **[Anthropic](/docs/ai-providers/anthropic)** - Claude models (Claude 4, Claude 3.5 Sonnet, etc.)
 - **[OpenAI](/docs/ai-providers/openai)** - GPT-4, GPT-4o, o1, and more
 - **[Google Gemini](/docs/ai-providers/gemini)** - Gemini Pro, Gemini Ultra
+- **[Google Vertex AI](/docs/ai-providers/vertex)** - Google Cloud-hosted Gemini and partner models
+- **[AWS Bedrock](/docs/ai-providers/bedrock)** - AWS-hosted foundation models
+- **[Alibaba Cloud](/docs/ai-providers/alibaba)** - DashScope and Qwen models through Model Studio
+- **[Cloudflare](/docs/ai-providers/cloudflare)** - Workers AI and Cloudflare AI Gateway
 - **[DeepSeek](/docs/ai-providers/deepseek)** - DeepSeek V3., R1
 - **[Mistral](/docs/ai-providers/mistral)** - Mistral Large, Codestral
 
@@ -40,15 +44,16 @@ Route requests through unified APIs with additional features:
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
 - **[Glama](/docs/ai-providers/glama)** - Enterprise AI gateway
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
+- **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 
 ## Choosing a Provider
 
-| Priority        | Recommended Provider                                |
-| --------------- | --------------------------------------------------- |
-| Ease of use     | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
-| Best value      | Zhipu AI or Mistral                                 |
-| Privacy/Offline | Ollama or LM Studio                                 |
-| Enterprise      | AWS Bedrock or Google Vertex                        |
+| Priority | Recommended Provider |
+|---|---|
+| Ease of use | [Kilo Code (built-in)](/docs/ai-providers/kilocode) |
+| Best value | Zhipu AI or Mistral |
+| Privacy/Offline | Ollama or LM Studio |
+| Enterprise | AWS Bedrock or Google Vertex |
 
 ## Why Use Multiple Providers?
 
@@ -60,6 +65,28 @@ Route requests through unified APIs with additional features:
 {% callout type="note" %}
 In the **VSCode (Legacy)** version, API keys use VS Code's Secret Storage. In the current **VSCode & CLI** version, keys are set via environment variables or referenced in `kilo.json` config files. See individual provider pages for setup instructions for each platform.
 {% /callout %}
+
+## Disabling Built-in Providers
+
+You can prevent specific providers from loading using `disabled_providers` in your `kilo.json` (or `kilo.jsonc`). This is useful to hide models from built-in or detected providers that you don't intend to use.
+
+```json
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "disabled_providers": ["kilo", "openai"]
+}
+```
+
+To allow only specific providers and disable everything else, use `enabled_providers` instead:
+
+```json
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "enabled_providers": ["anthropic"]
+}
+```
+
+Both fields accept provider IDs — the lowercase identifier used in the `provider/model` format (e.g. `kilo`, `anthropic`, `openai`, `google`, `groq`).
 
 ## Next Steps
 

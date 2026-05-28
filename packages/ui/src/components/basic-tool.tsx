@@ -33,7 +33,12 @@ export interface BasicToolProps {
   defer?: boolean
   locked?: boolean
   animated?: boolean
+  allowPendingToggle?: boolean // kilocode_change
   onSubtitleClick?: () => void
+  onOpenChange?: (open: boolean) => void // kilocode_change
+  onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
+  triggerHref?: string
+  clickable?: boolean
 }
 
 const SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0 }
@@ -97,7 +102,7 @@ export function BasicTool(props: BasicToolProps) {
         if (isOpen) {
           contentRef.style.overflow = "hidden"
           heightAnim = animate(contentRef, { height: "auto" }, SPRING)
-          heightAnim.finished.then(() => {
+          void heightAnim.finished.then(() => {
             if (!contentRef || !open()) return
             contentRef.style.overflow = "visible"
             contentRef.style.height = "auto"
@@ -116,83 +121,115 @@ export function BasicTool(props: BasicToolProps) {
   })
 
   const handleOpenChange = (value: boolean) => {
-    if (pending()) return
+    if (pending() && !props.allowPendingToggle) return // kilocode_change
     if (props.hideDetails) return // kilocode_change
     if (props.locked && !value) return
     setState("open", value)
+    props.onOpenChange?.(value) // kilocode_change
   }
+
+  const trigger = () => (
+    <div
+      data-component="tool-trigger"
+      data-clickable={props.clickable ? "true" : undefined}
+      data-hide-details={props.hideDetails ? "true" : undefined}
+    >
+      <div data-slot="basic-tool-tool-trigger-content">
+        {/* kilocode_change start */}
+        <span data-slot="basic-tool-icon">
+          <Icon name={props.icon} size="small" />
+        </span>
+        {/* kilocode_change end */}
+        <div data-slot="basic-tool-tool-info">
+          <Switch>
+            <Match when={isTriggerTitle(props.trigger) && props.trigger}>
+              {(title) => (
+                <div data-slot="basic-tool-tool-info-structured">
+                  <div data-slot="basic-tool-tool-info-main">
+                    <span
+                      data-slot="basic-tool-tool-title"
+                      classList={{
+                        [title().titleClass ?? ""]: !!title().titleClass,
+                      }}
+                    >
+                      <TextShimmer text={title().title} active={pending()} />
+                    </span>
+                    <Show when={!pending()}>
+                      <Show when={title().subtitle}>
+                        <span
+                          data-slot="basic-tool-tool-subtitle"
+                          classList={{
+                            [title().subtitleClass ?? ""]: !!title().subtitleClass,
+                            clickable: !!props.onSubtitleClick,
+                          }}
+                          onClick={(e) => {
+                            if (props.onSubtitleClick) {
+                              e.stopPropagation()
+                              props.onSubtitleClick()
+                            }
+                          }}
+                        >
+                          {title().subtitle}
+                        </span>
+                      </Show>
+                      <Show when={title().args?.length}>
+                        <For each={title().args}>
+                          {(arg) => (
+                            <span
+                              data-slot="basic-tool-tool-arg"
+                              classList={{
+                                [title().argsClass ?? ""]: !!title().argsClass,
+                              }}
+                            >
+                              {arg}
+                            </span>
+                          )}
+                        </For>
+                      </Show>
+                    </Show>
+                  </div>
+                  <Show when={!pending() && title().action}>
+                    <span data-slot="basic-tool-tool-action">{title().action}</span>
+                  </Show>
+                </div>
+              )}
+            </Match>
+            <Match when={true}>{props.trigger as JSX.Element}</Match>
+          </Switch>
+        </div>
+      </div>
+      {/* kilocode_change start */}
+      <Show when={props.children && !props.hideDetails && !props.locked && (!pending() || props.allowPendingToggle)}>
+        <Collapsible.Arrow />
+      </Show>
+      {/* kilocode_change end */}
+    </div>
+  )
 
   return (
     <Collapsible open={open()} onOpenChange={handleOpenChange} class="tool-collapsible">
-      <Collapsible.Trigger>
-        <div data-component="tool-trigger">
-          <div data-slot="basic-tool-tool-trigger-content">
-            {/* kilocode_change start */}
-            <span data-slot="basic-tool-icon">
-              <Icon name={props.icon} size="small" />
-            </span>
-            {/* kilocode_change end */}
-            <div data-slot="basic-tool-tool-info">
-              <Switch>
-                <Match when={isTriggerTitle(props.trigger) && props.trigger}>
-                  {(trigger) => (
-                    <div data-slot="basic-tool-tool-info-structured">
-                      <div data-slot="basic-tool-tool-info-main">
-                        <span
-                          data-slot="basic-tool-tool-title"
-                          classList={{
-                            [trigger().titleClass ?? ""]: !!trigger().titleClass,
-                          }}
-                        >
-                          <TextShimmer text={trigger().title} active={pending()} />
-                        </span>
-                        <Show when={!pending()}>
-                          <Show when={trigger().subtitle}>
-                            <span
-                              data-slot="basic-tool-tool-subtitle"
-                              classList={{
-                                [trigger().subtitleClass ?? ""]: !!trigger().subtitleClass,
-                                clickable: !!props.onSubtitleClick,
-                              }}
-                              onClick={(e) => {
-                                if (props.onSubtitleClick) {
-                                  e.stopPropagation()
-                                  props.onSubtitleClick()
-                                }
-                              }}
-                            >
-                              {trigger().subtitle}
-                            </span>
-                          </Show>
-                          <Show when={trigger().args?.length}>
-                            <For each={trigger().args}>
-                              {(arg) => (
-                                <span
-                                  data-slot="basic-tool-tool-arg"
-                                  classList={{
-                                    [trigger().argsClass ?? ""]: !!trigger().argsClass,
-                                  }}
-                                >
-                                  {arg}
-                                </span>
-                              )}
-                            </For>
-                          </Show>
-                        </Show>
-                      </div>
-                      <Show when={!pending() && trigger().action}>{trigger().action}</Show>
-                    </div>
-                  )}
-                </Match>
-                <Match when={true}>{props.trigger as JSX.Element}</Match>
-              </Switch>
-            </div>
-          </div>
-          <Show when={props.children && !props.hideDetails && !props.locked && !pending()}>
-            <Collapsible.Arrow />
-          </Show>
-        </div>
-      </Collapsible.Trigger>
+      <Show
+        when={props.triggerHref}
+        fallback={
+          <Collapsible.Trigger
+            data-hide-details={props.hideDetails ? "true" : undefined}
+            onClick={props.onTriggerClick}
+          >
+            {trigger()}
+          </Collapsible.Trigger>
+        }
+      >
+        {(href) => (
+          <Collapsible.Trigger
+            as="a"
+            href={href()}
+            data-hide-details={props.hideDetails ? "true" : undefined}
+            onClick={props.onTriggerClick}
+          >
+            {trigger()}
+          </Collapsible.Trigger>
+        )}
+      </Show>
       <Show when={props.animated && props.children && !props.hideDetails}>
         <div
           ref={contentRef}

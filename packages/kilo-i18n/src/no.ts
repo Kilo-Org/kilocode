@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP-servere",
-  "marketplace.tab.modes": "Moduser",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Skal implementeres",
   "marketplace.card.installed": "Installert",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Avbryt",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenter",
   "marketplace.search": "Søk...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installert",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
   "marketplace.remove.type.skill": "ferdighet",
-  "marketplace.remove.type.mode": "modus",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installert",
@@ -69,4 +69,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
+  "marketplace.contribute.cta": "Bidra på GitHub",
+  "marketplace.migration.notice":
+    "Modi er erstattet av agenter. Hvis du tidligere har installert marketplace-modi, fjern dem og installer dem på nytt som agenter for å migrere til det nye formatet.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementer",
+  "plan.followup.question": "Klar til å implementere?",
+  "plan.followup.answer.newSession": "Start ny økt",
+  "plan.followup.answer.newSession.description": "Implementer i en ny økt med ren kontekst",
+  "plan.followup.answer.continue": "Fortsett her",
+  "plan.followup.answer.continue.description": "Implementer planen i denne økten",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot er tregt",
+  "snapshot.slowRepo.question":
+    "Det tar lang tid å initialisere snapshot-systemet, sannsynligvis på grunn av størrelsen på depotet.\n\nVil du deaktivere snapshots for dette depotet?",
+  "snapshot.slowRepo.answer.continue": "Fortsett med snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Vent til snapshotet er ferdig. Påfølgende runder er raske når det første snapshotet er bygget.",
+  "snapshot.slowRepo.answer.disable": "Deaktiver for dette prosjektet",
+  "snapshot.slowRepo.answer.disable.description":
+    "Slå av Kilos snapshots for dette prosjektet. Du mister angre/gjør om for Kilo-endringer, men git fortsetter å spore alt.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Åpne i diff-visning",
+  "ui.messagePart.shell.command": "Kommando",
+  "ui.messagePart.shell.output": "Utdata",
+  "ui.messagePart.openInEditor": "Åpne i editor",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dette var nyttig",
+  "ui.message.feedback.notHelpful": "Dette var ikke nyttig",
+  "ui.message.feedback.clearRating": "Fjern vurdering",
 }

@@ -7,10 +7,24 @@
  * Returns the action to take: select a session by ID, go to local, or do nothing.
  */
 
+import { isRootSession } from "../src/context/session-utils"
+
 /** Sentinel value for the local repo selection. */
 export const LOCAL = "local" as const
 
 type NavResult = { action: "select"; id: string } | { action: typeof LOCAL } | { action: "none" }
+
+type SessionLike = { id: string; parentID?: string | null; createdAt: string }
+
+export function filterUnassignedSessions<T extends SessionLike>(
+  sessions: T[],
+  worktree: Set<string>,
+  local: Set<string>,
+): T[] {
+  return [...sessions]
+    .filter((s) => isRootSession(s) && !worktree.has(s.id) && !local.has(s.id))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+}
 
 export function resolveNavigation(direction: "up" | "down", current: string | undefined, ids: string[]): NavResult {
   // Determine current position: -1 = local, 0..N-1 = session index
@@ -95,6 +109,11 @@ export function restoreLocalSessions(
   applyOrder: (items: { id: string }[], order: string[]) => { id: string }[],
 ): string[] | undefined {
   const locals = sessions.filter((s) => !s.worktreeId).map((s) => s.id)
+  // Sessions assigned to a worktree must never appear in the local tab. A race
+  // where sessionCreated (SSE) arrives before agentManager.state can incorrectly
+  // add a worktree session to localSessionIDs; evict them here on every state push.
+  const worktree = new Set(sessions.filter((s) => s.worktreeId).map((s) => s.id))
+  const evict = (ids: string[]) => (worktree.size > 0 ? ids.filter((id) => !worktree.has(id)) : ids)
   const real = current.filter((id) => !isPending(id))
 
   // First restore: current has no real sessions but disk has some
@@ -109,7 +128,9 @@ export function restoreLocalSessions(
   // Merge any disk-persisted sessions missing from current (e.g. vscode.setState
   // debounce didn't fire before close, but persistSession already wrote to disk)
   const missing = locals.filter((id) => !current.includes(id))
-  const merged = missing.length > 0 ? [...current, ...missing] : current
+  const base = missing.length > 0 ? [...current, ...missing] : current
+  const merged = evict(base)
+  const changed = missing.length > 0 || merged.length !== base.length
 
   // Apply tab order if present
   if (tabOrder && merged.length > 0) {
@@ -119,7 +140,36 @@ export function restoreLocalSessions(
     ).map((item) => item.id)
   }
 
-  return missing.length > 0 ? merged : undefined
+  return changed ? merged : undefined
+}
+
+export function reconcileLocalSessions(
+  current: string[],
+  loaded: string[],
+  managed: { id: string; worktreeId: string | null }[],
+  isPending: (id: string) => boolean,
+): { ids: string[]; forget: string[] } | undefined {
+  const seen = new Set(loaded)
+  const local = new Set(managed.filter((s) => !s.worktreeId).map((s) => s.id))
+  const worktree = new Set(managed.filter((s) => s.worktreeId).map((s) => s.id))
+  const ids: string[] = []
+  const forget: string[] = []
+
+  for (const id of current) {
+    if (isPending(id)) {
+      ids.push(id)
+      continue
+    }
+    if (worktree.has(id)) continue
+    if (seen.has(id) || local.has(id)) {
+      ids.push(id)
+      continue
+    }
+    forget.push(id)
+  }
+
+  if (ids.length === current.length && forget.length === 0) return undefined
+  return { ids, forget }
 }
 
 /**

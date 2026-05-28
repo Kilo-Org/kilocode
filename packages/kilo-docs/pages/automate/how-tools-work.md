@@ -21,24 +21,24 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 {% tabs %}
 {% tab label="VSCode" %}
 
-| Category | Purpose                                    | Tool Names                                                   |
-| :------- | :----------------------------------------- | :----------------------------------------------------------- |
-| Read     | Access file content and code structure     | `read`, `glob`, `grep`                                       |
-| Edit     | Create or modify files and code            | `edit`, `multiedit`, `write`, `apply_patch`                  |
-| Execute  | Run commands and perform system operations | `bash`                                                       |
-| Web      | Fetch and search web content               | `webfetch`, `websearch`, `codesearch`                        |
-| Workflow | Manage task flow and sub-agents            | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` |
+| Category | Purpose | Tool Names |
+|:---|:---|:---|
+| Read | Access file content and code structure | `read`, `glob`, `grep` |
+| Edit | Create or modify files and code | `edit`, `write`, `apply_patch` |
+| Execute | Run commands and perform system operations | `bash` |
+| Web | Fetch and search web content | `webfetch`, `websearch`, `codesearch` |
+| Workflow | Manage task flow and sub-agents | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-| Category | Purpose                                    | Tool Names                                                               |
-| :------- | :----------------------------------------- | :----------------------------------------------------------------------- |
-| Read     | Access file content and code structure     | `read_file`, `search_files`, `list_files`, `list_code_definition_names`  |
-| Edit     | Create or modify files and code            | `apply_diff`, `delete_file`, `write_to_file`                             |
-| Execute  | Run commands and perform system operations | `execute_command`                                                        |
-| Browser  | Interact with web content                  | `browser_action`                                                         |
-| Workflow | Manage task flow and context               | `ask_followup_question`, `attempt_completion`, `switch_mode`, `new_task` |
+| Category | Purpose | Tool Names |
+|:---|:---|:---|
+| Read | Access file content and code structure | `read_file`, `search_files`, `list_files`, `list_code_definition_names` |
+| Edit | Create or modify files and code | `apply_diff`, `delete_file`, `write_to_file` |
+| Execute | Run commands and perform system operations | `execute_command` |
+| Browser | Interact with web content | `browser_action` |
+| Workflow | Manage task flow and context | `ask_followup_question`, `attempt_completion`, `switch_mode`, `new_task` |
 
 {% /tab %}
 {% /tabs %}
@@ -101,15 +101,15 @@ Every tool use is subject to a permission check. The default action for any tool
 
 **Default permissions by tool:**
 
-| Tool(s)                                      | Default                                          |
-| :------------------------------------------- | :----------------------------------------------- |
-| `read`, `glob`, `grep`, `list`               | `ask`                                            |
-| `edit`, `write`, `multiedit`, `apply_patch`  | `ask`                                            |
-| `bash`                                       | `ask` (per-command)                              |
-| `external_directory`                         | `ask` (when accessing paths outside the project) |
-| `task`                                       | `ask`                                            |
-| `webfetch`, `websearch`, `codesearch`        | `ask`                                            |
-| `todowrite`, `todoread`, `question`, `skill` | `ask`                                            |
+| Tool(s) | Default |
+|:---|:---|
+| `read`, `glob`, `grep` | `ask` |
+| `edit`, `write`, `apply_patch` | `ask` |
+| `bash` | `ask` (per-command) |
+| `external_directory` | `ask` (when accessing paths outside the project) |
+| `task` | `ask` |
+| `webfetch`, `websearch`, `codesearch` | `ask` |
+| `todowrite`, `todoread`, `question`, `skill` | `ask` |
 
 No tools are auto-approved out of the box. You must explicitly grant `allow` in your config, or approve them at runtime.
 
@@ -154,44 +154,43 @@ This safety mechanism ensures you maintain control over which files are modified
 {% tabs %}
 {% tab label="VSCode" %}
 
-| Tool Name     | Description                                            | Category |
-| :------------ | :----------------------------------------------------- | :------- |
-| `read`        | Reads file contents with line numbers                  | Read     |
-| `glob`        | Finds files by glob pattern                            | Read     |
-| `grep`        | Searches file contents with regex                      | Read     |
-| `edit`        | Makes precise text replacements in a file              | Edit     |
-| `multiedit`   | Multiple edits in a single call                        | Edit     |
-| `write`       | Creates new files or overwrites existing ones          | Edit     |
-| `apply_patch` | Applies unified diffs (used with certain models)       | Edit     |
-| `bash`        | Runs shell commands                                    | Execute  |
-| `webfetch`    | Fetches a URL                                          | Web      |
-| `websearch`   | Searches the web (Kilo/OpenRouter users)               | Web      |
-| `codesearch`  | Semantic code search (Kilo/OpenRouter users)           | Web      |
-| `question`    | Asks you a clarifying question with selectable options | Workflow |
-| `task`        | Spawns a sub-agent session                             | Workflow |
-| `todowrite`   | Creates and updates a session TODO list                | Workflow |
-| `todoread`    | Reads the current session TODO list                    | Workflow |
-| `plan`        | Enters structured planning mode                        | Workflow |
-| `skill`       | Invokes a reusable skill (Markdown instruction module) | Workflow |
+| Tool Name | Description | Category |
+|:---|:---|:---|
+| `read` | Reads file contents with line numbers | Read |
+| `glob` | Finds files by glob pattern | Read |
+| `grep` | Searches file contents with regex | Read |
+| `edit` | Makes precise text replacements in a file | Edit |
+| `write` | Creates new files or overwrites existing ones | Edit |
+| `apply_patch` | Applies unified diffs (used with certain models) | Edit |
+| `bash` | Runs shell commands | Execute |
+| `webfetch` | Fetches a URL | Web |
+| `websearch` | Searches the web (Kilo/OpenRouter users) | Web |
+| `codesearch` | Semantic code search (Kilo/OpenRouter users) | Web |
+| `question` | Asks you a clarifying question with selectable options | Workflow |
+| `task` | Spawns a sub-agent session | Workflow |
+| `todowrite` | Creates and updates a session TODO list | Workflow |
+| `todoread` | Reads the current session TODO list | Workflow |
+| `plan` | Enters structured planning mode | Workflow |
+| `skill` | Invokes a reusable skill (Markdown instruction module) | Workflow |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-| Tool Name                    | Description                                         | Category |
-| :--------------------------- | :-------------------------------------------------- | :------- |
-| `read_file`                  | Reads the content of a file with line numbers       | Read     |
-| `search_files`               | Searches for text or regex patterns across files    | Read     |
-| `list_files`                 | Lists files and directories in a specified location | Read     |
-| `list_code_definition_names` | Lists code definitions like classes and functions   | Read     |
-| `write_to_file`              | Creates new files or overwrites existing ones       | Edit     |
-| `apply_diff`                 | Makes precise changes to specific parts of a file   | Edit     |
-| `delete_file`                | Removes files from the workspace                    | Edit     |
-| `execute_command`            | Runs commands in the VS Code terminal               | Execute  |
-| `browser_action`             | Performs actions in a headless browser              | Browser  |
-| `ask_followup_question`      | Asks you a clarifying question                      | Workflow |
-| `attempt_completion`         | Indicates the task is complete                      | Workflow |
-| `switch_mode`                | Changes to a different operational mode             | Workflow |
-| `new_task`                   | Creates a new subtask with a specific starting mode | Workflow |
+| Tool Name | Description | Category |
+|:---|:---|:---|
+| `read_file` | Reads the content of a file with line numbers | Read |
+| `search_files` | Searches for text or regex patterns across files | Read |
+| `list_files` | Lists files and directories in a specified location | Read |
+| `list_code_definition_names` | Lists code definitions like classes and functions | Read |
+| `write_to_file` | Creates new files or overwrites existing ones | Edit |
+| `apply_diff` | Makes precise changes to specific parts of a file | Edit |
+| `delete_file` | Removes files from the workspace | Edit |
+| `execute_command` | Runs commands in the VS Code terminal | Execute |
+| `browser_action` | Performs actions in a headless browser | Browser |
+| `ask_followup_question` | Asks you a clarifying question | Workflow |
+| `attempt_completion` | Indicates the task is complete | Workflow |
+| `switch_mode` | Changes to a different operational mode | Workflow |
+| `new_task` | Creates a new subtask with a specific starting mode | Workflow |
 
 {% /tab %}
 {% /tabs %}

@@ -1,4 +1,6 @@
 ---
+title: "Using MiniMax with Kilo Code"
+description: "Configure MiniMax AI models in Kilo Code. Guide to getting an API key and setup for VS Code and the CLI."
 sidebar_label: MiniMax
 ---
 

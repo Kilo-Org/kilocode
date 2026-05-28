@@ -1,4 +1,6 @@
 ---
+title: "Using LM Studio with Kilo Code | Local LLMs"
+description: "Run local LLMs in Kilo Code by connecting to LM Studio's OpenAI-compatible server. Setup guide for VS Code and the CLI."
 sidebar_label: LM Studio
 ---
 
@@ -56,7 +58,7 @@ LM Studio runs locally, so no API key is needed. Configure the base URL if LM St
     "lmstudio": {
       "options": {
         "baseURL": "http://localhost:1234/v1",
-      }
+      },
     },
   },
 }

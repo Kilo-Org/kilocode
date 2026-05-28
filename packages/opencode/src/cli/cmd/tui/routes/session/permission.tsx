@@ -9,14 +9,19 @@ import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../component/border"
 import { useSync } from "../../context/sync"
 import { useTextareaKeybindings } from "../../component/textarea-keybindings"
+import { useProject } from "../../context/project"
 import path from "path"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import { Keybind } from "@/util/keybind"
 import { Locale } from "@/util/locale"
-import { Global } from "@/global"
+import { Global } from "@opencode-ai/core/global"
+import { ShellID } from "@/tool/shell/id"
 import { useDialog } from "../../ui/dialog"
+import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../context/tui-config"
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
+import { splitDiffHunks } from "@/kilocode/tui/diff" // kilocode_change
+import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 
 type PermissionStage = "permission" | "always" | "reject"
 
@@ -63,12 +68,15 @@ function EditBody(props: { request: PermissionRequest }) {
   })
 
   const ft = createMemo(() => filetype(filepath()))
+  const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
+  const hunks = createMemo(() => splitDiffHunks(diff())) // kilocode_change
 
   return (
     <box flexDirection="column" gap={1}>
       <Show when={diff()}>
         <scrollbox
           height="100%"
+          scrollAcceleration={scrollAcceleration()}
           verticalScrollbarOptions={{
             trackOptions: {
               backgroundColor: theme.background,
@@ -76,25 +84,38 @@ function EditBody(props: { request: PermissionRequest }) {
             },
           }}
         >
-          <diff
-            diff={diff()}
-            view={view()}
-            filetype={ft()}
-            syntaxStyle={syntax()}
-            showLineNumbers={true}
-            width="100%"
-            wrapMode="word"
-            fg={theme.text}
-            addedBg={theme.diffAddedBg}
-            removedBg={theme.diffRemovedBg}
-            contextBg={theme.diffContextBg}
-            addedSignColor={theme.diffHighlightAdded}
-            removedSignColor={theme.diffHighlightRemoved}
-            lineNumberFg={theme.diffLineNumber}
-            lineNumberBg={theme.diffContextBg}
-            addedLineNumberBg={theme.diffAddedLineNumberBg}
-            removedLineNumberBg={theme.diffRemovedLineNumberBg}
-          />
+          {/* kilocode_change start */}
+          <box flexDirection="column">
+            <For each={hunks()}>
+              {(hunk, i) => (
+                <>
+                  <Show when={i() > 0}>
+                    <text fg={theme.textMuted}>...</text>
+                  </Show>
+                  <diff
+                    diff={hunk}
+                    view={view()}
+                    filetype={ft()}
+                    syntaxStyle={syntax()}
+                    showLineNumbers={true}
+                    width="100%"
+                    wrapMode="word"
+                    fg={theme.text}
+                    addedBg={theme.diffAddedBg}
+                    removedBg={theme.diffRemovedBg}
+                    contextBg={theme.diffContextBg}
+                    addedSignColor={theme.diffHighlightAdded}
+                    removedSignColor={theme.diffHighlightRemoved}
+                    lineNumberFg={theme.diffLineNumber}
+                    lineNumberBg={theme.diffContextBg}
+                    addedLineNumberBg={theme.diffAddedLineNumberBg}
+                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                  />
+                </>
+              )}
+            </For>
+          </box>
+          {/* kilocode_change end */}
         </scrollbox>
       </Show>
       <Show when={!diff()}>
@@ -129,6 +150,7 @@ function TextBody(props: { title: string; description?: string; icon?: string })
 
 export function PermissionPrompt(props: { request: PermissionRequest }) {
   const sdk = useSDK()
+  const project = useProject()
   const sync = useSync()
   const [store, setStore] = createStore({
     stage: "permission" as PermissionStage,
@@ -185,9 +207,10 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
           onSelect={(option) => {
             setStore("stage", "permission")
             if (option === "cancel") return
-            sdk.client.permission.reply({
+            void sdk.client.permission.reply({
               reply: "always",
               requestID: props.request.id,
+              workspace: project.workspace.current(),
             })
           }}
         />
@@ -195,10 +218,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
       <Match when={store.stage === "reject"}>
         <RejectPrompt
           onConfirm={(message) => {
-            sdk.client.permission.reply({
+            void sdk.client.permission.reply({
               reply: "reject",
               requestID: props.request.id,
               message: message || undefined,
+              workspace: project.workspace.current(),
             })
           }}
           onCancel={() => {
@@ -284,10 +308,21 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               }
             }
 
-            if (permission === "bash") {
-              const title =
-                typeof data.description === "string" && data.description ? data.description : "Shell command"
-              const command = typeof data.command === "string" ? data.command : ""
+            if (permission === ShellID.ToolID) {
+              // kilocode_change start
+              const meta = props.request.metadata ?? {}
+              const desc =
+                typeof data.description === "string" && data.description
+                  ? data.description
+                  : typeof meta.description === "string" && meta.description
+                    ? meta.description
+                    : undefined
+              const bg = meta.backgroundProcess === true
+              const title = bg ? `Start background process${desc ? `: ${desc}` : ""}` : (desc ?? "Shell command")
+              const command = normalizeUrls(
+                typeof data.command === "string" ? data.command : typeof meta.command === "string" ? meta.command : "",
+              )
+              // kilocode_change end
               return {
                 icon: "#",
                 title,
@@ -318,7 +353,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             }
 
             if (permission === "webfetch") {
-              const url = typeof data.url === "string" ? data.url : ""
+              const url = normalizeUrls(typeof data.url === "string" ? data.url : "") // kilocode_change
               return {
                 icon: "%",
                 title: `WebFetch ${url}`,
@@ -337,21 +372,6 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
               return {
                 icon: "◈",
                 title: `Exa Web Search "${query}"`,
-                body: (
-                  <Show when={query}>
-                    <box paddingLeft={1}>
-                      <text fg={theme.textMuted}>{"Query: " + query}</text>
-                    </box>
-                  </Show>
-                ),
-              }
-            }
-
-            if (permission === "codesearch") {
-              const query = typeof data.query === "string" ? data.query : ""
-              return {
-                icon: "◇",
-                title: `Exa Code Search "${query}"`,
                 body: (
                   <Show when={query}>
                     <box paddingLeft={1}>
@@ -461,15 +481,17 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                     setStore("stage", "reject")
                     return
                   }
-                  sdk.client.permission.reply({
+                  void sdk.client.permission.reply({
                     reply: "reject",
                     requestID: props.request.id,
+                    workspace: project.workspace.current(),
                   })
                   return
                 }
-                sdk.client.permission.reply({
+                void sdk.client.permission.reply({
                   reply: "once",
                   requestID: props.request.id,
+                  workspace: project.workspace.current(),
                 })
               }}
             />
@@ -535,7 +557,10 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
         gap={1}
       >
         <textarea
-          ref={(val: TextareaRenderable) => (input = val)}
+          ref={(val: TextareaRenderable) => {
+            input = val
+            val.traits = { status: "REJECT" }
+          }}
           focused
           textColor={theme.text}
           focusedTextColor={theme.text}
@@ -611,7 +636,7 @@ function Prompt<const T extends Record<string, string>>(props: {
   })
 
   const hint = createMemo(() => (store.expanded ? "minimize" : "fullscreen"))
-  const renderer = useRenderer()
+  useRenderer()
 
   const content = () => (
     <box

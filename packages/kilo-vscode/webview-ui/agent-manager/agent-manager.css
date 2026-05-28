@@ -3,6 +3,7 @@
 .am-layout {
   display: flex;
   height: 100vh;
+  font-size: var(--font-size-base);
   overflow: hidden;
 }
 
@@ -20,6 +21,38 @@
 
 .am-sidebar > [data-component="resize-handle"]::after {
   background: var(--surface-interactive-base);
+}
+
+/* Collapsed sidebar: width animates closed; the layout-hydrated class delays
+   the transition until after the first state push so we don't see a flash on
+   initial render when the persisted state is "collapsed". */
+.am-layout-hydrated .am-sidebar {
+  transition:
+    width 180ms ease,
+    min-width 180ms ease,
+    padding 180ms ease,
+    border-right-width 180ms ease;
+}
+
+.am-sidebar-collapsed {
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-width: 0;
+  overflow: hidden;
+  /* Pointer events, focus, and a11y tree exclusion are all handled by the
+     inert attribute on the element. No need for pointer-events: none. */
+}
+
+.am-sidebar-collapsed > [data-component="resize-handle"] {
+  display: none;
+}
+
+/* Empty tab bar — rendered when no session is selected so the sidebar
+   toggle button sits in the same pixel position regardless of state.
+   Drops the leading slot's border-right because there's nothing after it. */
+.am-tab-bar-empty .am-tab-leading {
+  border-right: none;
 }
 
 /* Fixed local repo item */
@@ -91,7 +124,7 @@
 }
 
 .am-local-branch {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   line-height: 1.2;
   overflow: hidden;
@@ -266,7 +299,7 @@ button.am-section-toggle:hover .am-section-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   line-height: 1.2;
   min-width: 0;
@@ -320,7 +353,7 @@ button.am-section-toggle:hover .am-section-label {
 /* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) */
 
 .am-shortcut-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
   color: var(--text-weaker);
   pointer-events: none;
@@ -472,7 +505,7 @@ button.am-section-toggle:hover .am-section-label {
   gap: 4px;
   flex-shrink: 0;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -508,6 +541,89 @@ button.am-section-toggle:hover .am-section-label {
   margin-left: auto;
 }
 
+.am-run-badge {
+  --am-run-accent: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--am-run-accent) 12%, transparent);
+  color: var(--am-run-accent);
+  font-size: var(--kilo-font-size-10);
+  line-height: 1;
+  margin-left: auto;
+}
+
+.am-run-badge [data-component="icon"] {
+  width: 11px;
+  height: 11px;
+  color: currentColor;
+}
+
+.am-run-badge-label {
+  color: currentColor;
+}
+
+.am-run-badge[data-run-state="running"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+  animation: am-run-pulse 1.5s ease-in-out infinite;
+}
+
+.am-run-badge[data-run-state="stopping"] {
+  --am-run-accent: #fbbf24;
+}
+
+.am-run-badge[data-run-state="success"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-run-badge[data-run-state="error"] {
+  --am-run-accent: #f87171;
+}
+
+@keyframes am-run-pulse {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Toolbar Run button group */
+.am-run-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.am-run-group-chevron {
+  padding: 0 2px !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.am-run-group-chevron [data-component="icon"] {
+  width: 12px;
+  height: 12px;
+}
+
+/* Unconfigured — muted until hover */
+.am-run-unconfigured {
+  opacity: 0.5;
+}
+.am-run-unconfigured:hover {
+  opacity: 0.85;
+}
+
+/* Green accent when running — uses VS Code's standard green token */
+.am-run-active,
+.am-run-active [data-component="icon"] {
+  color: var(--vscode-testing-iconPassed, #34d399) !important;
+}
+
 .am-stat-files {
   color: var(--text-muted);
 }
@@ -532,7 +648,7 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--pr-accent) 12%, transparent);
   color: var(--pr-accent);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   transition: background 150ms ease;
@@ -650,7 +766,7 @@ button.am-section-toggle:hover .am-section-label {
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -687,7 +803,7 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-section-group-count {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
   min-width: 14px;
   text-align: center;
@@ -703,7 +819,7 @@ button.am-section-toggle:hover .am-section-label {
   border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
   border-radius: var(--radius-sm);
   padding: 1px 4px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -789,7 +905,7 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-wt-group-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   letter-spacing: 0.2px;
   color: color-mix(in srgb, var(--border-focus, #007fd4) 80%, var(--text-weak));
@@ -909,7 +1025,7 @@ button.am-section-toggle:hover .am-section-label {
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition:
     background-color 120ms,
@@ -944,13 +1060,25 @@ button.am-section-toggle:hover .am-section-label {
   border-bottom: 1px solid var(--border-weak-base);
   background: var(--surface-base);
   height: 36px;
-  padding: 0 4px;
   flex-shrink: 0;
 }
 
+.am-tab-leading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 0 4px;
+  border-right: 1px solid var(--border-weak-base);
+}
+
 .am-tab-list {
+  --am-tab-max-width: 240px;
+  --am-tab-width: clamp(72px, calc(100% / var(--tab-count, 1)), var(--am-tab-max-width));
   display: flex;
   align-items: stretch;
+  flex: 0 1 calc(var(--tab-count, 1) * var(--am-tab-max-width));
   min-width: 0;
   overflow-x: auto;
   height: 100%;
@@ -958,6 +1086,15 @@ button.am-section-toggle:hover .am-section-label {
   /* Hide scrollbar while keeping scroll functionality */
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+.am-tab-list-wrap {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: 100%;
+  height: 100%;
 }
 
 .am-tab-list::-webkit-scrollbar {
@@ -969,10 +1106,27 @@ button.am-section-toggle:hover .am-section-label {
   position: relative;
   display: flex;
   min-width: 0;
-  flex-shrink: 1;
+  flex: 0 1 auto;
   align-items: stretch;
   height: 100%;
   overflow: hidden;
+}
+
+/* Fixed add-button area after the scrollable tab list */
+.am-tab-add-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: stretch;
+  padding-right: 4px;
+}
+
+.am-tab-add-separator {
+  width: 1px;
+  align-self: stretch;
+  margin-right: 4px;
+  background: var(--border-weak-base);
+  flex-shrink: 0;
 }
 
 /* Fade indicators for overflow */
@@ -1002,54 +1156,110 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-tab {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
+  gap: 5px;
+  padding: 0 8px;
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   white-space: nowrap;
-  border: none;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-bottom-width: 2px;
+  border-radius: 0;
   min-width: 0;
+  width: 100%;
   height: 100%;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
 }
 
-.am-tab:hover {
+.am-tab:hover,
+.am-tab:focus-visible {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
   color: var(--text-base);
 }
 
 .am-tab-active {
   color: var(--text-base);
   border-bottom-color: var(--surface-interactive-base);
+  background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
+}
+
+.am-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.am-tab-icon [data-component="icon"] {
+  color: currentColor;
 }
 
 .am-tab-label {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.am-tab-close {
+.am-tab-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+}
+
+.am-tab-tooltip[data-component="tooltip-trigger"] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+  padding-right: 27px;
+  margin-right: -27px;
+}
+
+.am-tab-close-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
-}
-
-.am-tab .am-tab-close {
   opacity: 0;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+  transition: opacity 100ms ease;
 }
 
-.am-tab:hover .am-tab-close {
-  opacity: 0.6;
-}
-
-.am-tab-active .am-tab-close {
-  opacity: 0.6;
-}
-
-.am-tab-close:hover {
+.am-tab:hover .am-tab-close-wrap,
+.am-tab-active .am-tab-close-wrap {
   opacity: 1;
+  pointer-events: auto;
+}
+
+.am-tab-close-wrap:hover {
+  opacity: 1;
+}
+
+.am-tab-close[data-component="icon-button"] {
+  width: 20px;
+  height: 20px;
+}
+
+.am-tab-close[data-component="icon-button"] [data-slot="icon-svg"] {
+  color: var(--text-base);
 }
 
 /* Drag-and-drop sortable tab wrapper */
@@ -1057,7 +1267,33 @@ button.am-section-toggle:hover .am-section-label {
 .am-tab-sortable {
   display: flex;
   height: 100%;
+  width: var(--am-tab-width);
+  min-width: var(--am-tab-width);
+  max-width: var(--am-tab-width);
+  flex: 0 0 var(--am-tab-width);
   touch-action: none;
+  transition:
+    flex-basis 140ms ease,
+    max-width 140ms ease,
+    min-width 140ms ease,
+    width 140ms ease;
+}
+
+.am-tab-list[data-tab-widths-frozen] .am-tab-sortable,
+.am-tab-dragging {
+  transition: none;
+}
+
+.am-tab-sortable > [data-component="tooltip-trigger"],
+.am-tab-sortable > [data-slot="context-menu-trigger"] > [data-component="tooltip-trigger"] {
+  height: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.am-tab-sortable > .am-tab,
+.am-tab-sortable > [data-slot="context-menu-trigger"] > .am-tab {
+  height: 100%;
 }
 
 .am-tab-dragging {
@@ -1108,11 +1344,18 @@ body.am-wt-dragging-active * {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   pointer-events: none;
   color: var(--text-base);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-small);
   white-space: nowrap;
 }
 
 .am-tab-add {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Split-button variant used in the tab bar when the experimental
+   terminal tabs feature is active — primary icon + chevron dropdown. */
+.am-tab-add-split {
   flex-shrink: 0;
   align-self: center;
 }
@@ -1122,8 +1365,171 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
+  align-self: stretch;
   margin-left: auto;
+  padding-left: 6px;
   padding-right: 4px;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.am-tabs-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-weak);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.am-tabs-menu-trigger:hover,
+[data-slot="popover-trigger"][data-expanded] .am-tabs-menu-trigger {
+  background: var(--surface-inset-base-hover);
+  color: var(--text-base);
+}
+
+.am-tabs-search-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.am-tabs-menu[data-component="popover-content"] {
+  width: 300px;
+  max-height: min(360px, calc(100vh - 64px));
+  padding: 0;
+  overflow: hidden;
+}
+
+.am-tabs-menu [data-slot="popover-body"] {
+  padding: 0;
+}
+
+.am-tabs-menu-search {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-base);
+  color: var(--text-weaker);
+}
+
+.am-tabs-menu-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-base);
+  font-family: inherit;
+  font-size: var(--kilo-font-size-12);
+  outline: none;
+  user-select: text;
+}
+
+.am-tabs-menu-search-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
+}
+
+.am-tabs-menu-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.am-tabs-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-base);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--kilo-font-size-12);
+  text-align: left;
+}
+
+.am-tabs-menu-item:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-tabs-menu-item-marked:not(.am-tabs-menu-item-active) {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-tabs-menu-item-active,
+.am-tabs-menu-item-active:hover {
+  background: var(--surface-interactive-base);
+  color: var(--text-on-interactive-base);
+}
+
+.am-tabs-menu-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.am-tabs-menu-spinner {
+  width: 14px;
+  height: 14px;
+}
+
+.am-tabs-menu-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--text-weaker);
+  font-size: var(--kilo-font-size-10);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.am-tabs-menu-status[data-tone="active"] {
+  color: var(--text-weak);
+}
+
+.am-tabs-menu-status[data-tone="busy"] {
+  color: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-tabs-menu-status[data-tone="waiting"] {
+  color: #fbbf24;
+}
+
+.am-tabs-menu-item-active .am-tabs-menu-status {
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
+}
+
+.am-tabs-menu-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-tabs-menu-empty {
+  padding: 14px 10px;
+  color: var(--text-weaker);
+  font-size: var(--kilo-font-size-12);
+  text-align: center;
 }
 
 /* Empty worktree state */
@@ -1149,7 +1555,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-empty-state-text {
-  font-size: 15px;
+  font-size: var(--kilo-font-size-15);
   font-weight: 500;
   color: var(--text-weak);
 }
@@ -1193,7 +1599,7 @@ body.am-wt-dragging-active * {
   padding: 3px 6px;
   border-radius: 5px;
   font-family: var(--font-mono, monospace);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
@@ -1244,16 +1650,38 @@ body.am-wt-dragging-active * {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   isolation: isolate;
+}
+
+.am-detail-content-hidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .am-detail-split {
   flex-direction: row;
 }
 
-.am-detail-split .am-chat-wrapper {
+.am-main-pane {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  min-height: 0;
   min-width: 0;
+  position: relative;
+  isolation: isolate;
+}
+
+.am-main-pane-terminal-active .am-chat-wrapper {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.am-detail-split .am-main-pane {
   border-right: 1px solid var(--border-weak-base);
 }
 
@@ -1288,46 +1716,6 @@ body.am-wt-dragging-active * {
   flex: 1;
   width: 100%;
   min-height: 0;
-  /* Pierre diffs needs --diffs-light-bg/--diffs-dark-bg for the color-mix()
-     calculations that produce red/green line backgrounds. Without a Shiki
-     worker pool these are never set by the theme layer, so we provide
-     fallbacks mapped to VS Code's editor background. */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  /* The unsafeCSS in @opencode-ai/ui uses 98%/92% mix ratios for line
-     backgrounds — only 2-8% tint, nearly invisible. Override via the
-     *-override custom properties that the unsafeCSS checks first.
-     These inherit across the Shadow DOM boundary. */
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
   --am-diff-count-size: 12px;
 }
 
@@ -1529,6 +1917,12 @@ body.am-wt-dragging-active * {
 .am-review-diff-content [data-slot="session-review-file-info"] {
   min-width: 0;
   flex: 1 1 auto;
+  cursor: grab;
+}
+
+.am-diff-content [data-slot="session-review-file-info"]:active,
+.am-review-diff-content [data-slot="session-review-file-info"]:active {
+  cursor: grabbing;
 }
 
 .am-diff-content [data-slot="session-review-file-name-container"],
@@ -1560,6 +1954,137 @@ body.am-wt-dragging-active * {
   gap: 8px;
 }
 
+.am-markdown-diff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  background: var(--border-weak-base);
+  border-top: 1px solid var(--border-weak-base);
+  cursor: auto;
+}
+
+.am-markdown-diff[data-split="true"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.am-markdown-pane {
+  position: relative;
+  min-width: 0;
+  padding: 16px 20px 24px;
+  background: var(--vscode-editor-background, var(--surface-base));
+  color: var(--vscode-editor-foreground, var(--text-base));
+  overflow-x: auto;
+}
+
+.am-markdown-pane[data-comments="true"] {
+  padding: 12px 20px 20px 64px;
+}
+
+.am-markdown-pane-title {
+  margin: -4px 0 12px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.am-markdown-pane[data-comments="true"] .am-markdown-pane-title {
+  margin: 0 0 12px;
+}
+
+.am-markdown-pane [data-component="markdown"] {
+  max-width: 900px;
+}
+
+.am-markdown-gutter-layer {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 56px;
+  pointer-events: none;
+}
+
+.am-markdown-target {
+  position: absolute;
+  left: 0;
+  width: 56px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-top: 2px;
+  box-sizing: border-box;
+  color: var(--text-weak);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--font-size-small);
+  user-select: none;
+  pointer-events: auto;
+}
+
+.am-markdown-comment-button,
+.am-markdown-line-number {
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 20px;
+}
+
+.am-markdown-comment-button {
+  width: 18px;
+  padding: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.am-markdown-target:hover .am-markdown-comment-button,
+.am-markdown-comment-button:focus-visible {
+  opacity: 1;
+}
+
+.am-markdown-comment-button:hover,
+.am-markdown-comment-button:focus-visible {
+  color: var(--vscode-button-foreground, var(--icon-invert-base, #fff));
+  background: var(--vscode-button-background, var(--button-primary-base, var(--icon-interactive-base)));
+}
+
+.am-markdown-line-number {
+  min-width: 24px;
+  padding: 0 4px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.am-markdown-line-number:hover,
+.am-markdown-line-number:focus-visible {
+  color: var(--text-base);
+}
+
+.am-markdown-body {
+  min-width: 0;
+}
+
+.am-markdown-inline-annotations {
+  min-width: 0;
+}
+
+.am-markdown-list-annotation {
+  list-style: none;
+  margin: 0 0 8px;
+}
+
+.am-markdown-table-annotation td {
+  padding: 0;
+  border: none;
+}
+
+@media (max-width: 840px) {
+  .am-markdown-diff[data-split="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Keep +N/-N indicators at consistent size across side/fullscreen views */
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-additions"],
 .am-diff-panel [data-component="diff-changes"] [data-slot="diff-changes-deletions"],
@@ -1581,7 +2106,7 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--vscode-editor-font-size, 13px);
+  font-size: var(--font-size-base);
 }
 
 .am-annotation-draft {
@@ -1619,6 +2144,11 @@ body.am-wt-dragging-active * {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.am-annotation-speech {
+  display: flex;
+  align-items: center;
 }
 
 .am-annotation-btn {
@@ -1703,7 +2233,7 @@ body.am-wt-dragging-active * {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   border-radius: 9px;
   background: var(--surface-interactive-strong);
@@ -1718,7 +2248,7 @@ body.am-wt-dragging-active * {
   padding: 0 6px;
   height: 18px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: color-mix(in oklab, var(--text-warning, #a15c00) 85%, var(--text-base));
   background: color-mix(in oklab, var(--surface-warning, rgba(245, 158, 11, 0.16)) 65%, transparent);
@@ -1733,7 +2263,7 @@ body.am-wt-dragging-active * {
   padding: 0 6px;
   height: 18px;
   border-radius: 9px;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--text-weak);
   background: color-mix(in oklab, var(--surface-interactive-base) 70%, transparent);
@@ -1813,7 +2343,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-setup-branch {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
   font-family: var(--font-family-mono, monospace);
 }
@@ -1928,15 +2458,36 @@ body.am-wt-dragging-active * {
 }
 
 .am-split-menu {
-  min-width: 210px;
+  min-width: 250px;
 }
 
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
 }
 
-.am-split-menu [data-slot="dropdown-menu-separator"] {
-  margin: 4px 0;
+.am-worktree-menu-gap {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.am-worktree-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.am-worktree-menu-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.am-worktree-menu-branch strong {
+  font-weight: 600;
 }
 
 /* New Versioned Session Dialog */
@@ -1980,7 +2531,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   outline: none;
   box-sizing: border-box;
 }
@@ -1990,7 +2541,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-name-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Dialog overrides for prompt-input-container — resizable from bottom edge */
@@ -2007,10 +2558,23 @@ body.am-wt-dragging-active * {
 .am-nv-dialog .am-prompt-input-wrapper {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.am-nv-dialog .am-prompt-input-container:has([class~="model-selector-popover"][data-component="popover-content"]),
+.am-nv-dialog-content:has([class~="model-selector-popover"][data-component="popover-content"]),
+[data-component="dialog"]:has(.am-nv-dialog [class~="model-selector-popover"][data-component="popover-content"])
+  [data-slot="dialog-body"] {
+  overflow: visible;
 }
 
 .am-nv-dialog .am-prompt-input-ghost-wrapper {
   height: 100%;
+}
+
+.am-nv-dialog [class~="prompt-input-hint"] {
+  flex-shrink: 0;
 }
 
 .am-nv-dialog .am-prompt-input {
@@ -2022,7 +2586,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-config-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -2057,7 +2621,7 @@ body.am-wt-dragging-active * {
   border-radius: calc(var(--radius-sm) - 1px);
   background: transparent;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
   transition: all 100ms;
@@ -2077,7 +2641,7 @@ body.am-wt-dragging-active * {
 /* Version hint text */
 
 .am-nv-version-hint {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
@@ -2099,7 +2663,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-pill-compare-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -2113,7 +2677,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-nv-compare-count {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   color: var(--text-weaker);
   margin-left: 6px;
@@ -2168,12 +2732,12 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   outline: none;
 }
 
 .am-mm-search-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 .am-mm-list {
@@ -2184,7 +2748,7 @@ body.am-wt-dragging-active * {
 
 .am-mm-group-label {
   padding: 6px 10px 2px;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -2230,7 +2794,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-mm-item-name {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-base);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2244,7 +2808,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   cursor: pointer;
   outline: none;
@@ -2274,7 +2838,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition: color 100ms;
 }
@@ -2305,7 +2869,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: var(--surface-base);
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-family: inherit;
   outline: none;
   transition: border-color 120ms;
@@ -2316,13 +2880,13 @@ body.am-wt-dragging-active * {
 }
 
 .am-advanced-input::placeholder {
-  color: var(--text-weaker);
+  color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
 /* Branch selector */
 
 .am-branch-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
@@ -2345,7 +2909,7 @@ body.am-wt-dragging-active * {
   border: none;
   background: none;
   color: var(--text-base);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   cursor: pointer;
   transition: background 80ms;
   text-align: left;
@@ -2382,7 +2946,7 @@ body.am-wt-dragging-active * {
   border-radius: 3px;
   background: var(--surface-raised-stronger-non-alpha);
   color: var(--text-weak);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-family: inherit;
   line-height: 1;
 }
@@ -2396,7 +2960,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-item-time {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   white-space: nowrap;
 }
@@ -2421,7 +2985,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-label {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2430,7 +2994,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-branch {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-weight: 600;
   color: var(--text-strong);
   line-height: 1.4;
@@ -2438,7 +3002,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-meta {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
   line-height: 1.4;
 }
@@ -2454,7 +3018,7 @@ body.am-wt-dragging-active * {
   background: var(--surface-inset-base);
   border: 1px solid var(--border-weak-base);
   font-family: var(--font-family-sans);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   line-height: 1;
   color: var(--text-weak);
@@ -2475,12 +3039,12 @@ body.am-wt-dragging-active * {
 }
 
 .am-hover-card-row-label {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
 .am-hover-card-row-value {
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   color: var(--text-base);
 }
@@ -2507,7 +3071,7 @@ body.am-wt-dragging-active * {
 
 .am-hover-card-note {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1.35;
   color: var(--text-weak);
   text-align: left;
@@ -2524,7 +3088,7 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 6px;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 .am-hover-card-hint [data-component="icon"] {
@@ -2549,7 +3113,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-shortcuts-category-title {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2599,7 +3163,7 @@ body.am-wt-dragging-active * {
   background: var(--surface-inset-base);
   border: 1px solid var(--border-weak-base);
   font-family: var(--font-family-sans);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 500;
   line-height: 1;
   color: var(--text-weak);
@@ -2626,7 +3190,7 @@ body.am-wt-dragging-active * {
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
 }
 
@@ -2720,7 +3284,7 @@ body.am-wt-dragging-active * {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-weak);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   font-weight: 500;
   cursor: pointer;
   transition: all 100ms;
@@ -2745,7 +3309,7 @@ body.am-wt-dragging-active * {
   padding: 0 16px 16px;
   min-width: 460px;
   max-height: 350px;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .am-import-section {
@@ -2919,7 +3483,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-dropdown-list {
-  max-height: 200px;
+  max-height: min(320px, var(--kb-popper-content-available-height, 320px) - 44px);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 4px;
@@ -2962,7 +3526,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-item-time {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   white-space: nowrap;
   flex-shrink: 0;
@@ -2970,7 +3534,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-branch-badge {
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 3px;
@@ -2983,7 +3547,7 @@ body.am-wt-dragging-active * {
 .am-dropdown-empty {
   padding: 16px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
 }
 
@@ -2992,7 +3556,7 @@ body.am-wt-dragging-active * {
 .am-import-empty {
   padding: 20px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weaker);
   line-height: 1.5;
 }
@@ -3039,7 +3603,7 @@ body.am-wt-dragging-active * {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   color: var(--text-weak);
   font-variant-numeric: tabular-nums;
 }
@@ -3074,7 +3638,7 @@ body.am-wt-dragging-active * {
 }
 
 .am-apply-conflicts-title {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   font-weight: 600;
   color: var(--text-base);
 }
@@ -3093,7 +3657,7 @@ body.am-wt-dragging-active * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-base);
 }
 
@@ -3104,12 +3668,12 @@ body.am-wt-dragging-active * {
   line-height: 1.3;
   white-space: normal;
   word-break: break-word;
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   color: var(--text-weaker);
 }
 
 .am-apply-alert {
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--syntax-diff-delete, #da3319);
   line-height: 1.35;
 }
@@ -3146,39 +3710,6 @@ body.am-wt-dragging-active * {
   min-height: 0;
   min-width: 0;
   --am-diff-count-size: 12px;
-  /* Inherit pierre diffs CSS vars from am-diff-panel */
-  --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
-  --diffs-bg-addition-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-addition-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-add, #318430)
-  );
-  --diffs-bg-deletion-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 82%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-number-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 72%,
-    var(--syntax-diff-delete, #da3319)
-  );
-  --diffs-bg-deletion-emphasis-override: color-mix(
-    in lab,
-    var(--vscode-editor-background, #1e1e1e) 60%,
-    var(--syntax-diff-delete, #da3319)
-  );
 }
 
 /* Review toolbar */
@@ -3337,7 +3868,7 @@ body.am-wt-dragging-active * {
 
 /* Tighter diff line height in review mode */
 .am-review-layout {
-  --diffs-line-height: 20px;
+  --diffs-line-height: var(--kilo-font-size-20);
 }
 
 /* ─── File tree (GitHub-style) ─── */
@@ -3347,7 +3878,7 @@ body.am-wt-dragging-active * {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
   font-family: var(--font-family-sans, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
@@ -3521,7 +4052,7 @@ body.am-wt-dragging-active * {
   border-radius: 8px;
   background: var(--surface-interactive-strong);
   color: var(--text-on-fill);
-  font-size: 10px;
+  font-size: var(--kilo-font-size-10);
   font-weight: 600;
   line-height: 1;
   margin-left: 6px;
@@ -3545,7 +4076,7 @@ body.am-wt-dragging-active * {
   gap: 8px;
   padding: 8px 14px;
   border-top: 1px solid var(--border-weak-base);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
   color: var(--text-weaker);
   flex-shrink: 0;
 }
@@ -3571,7 +4102,7 @@ body.am-wt-dragging-active * {
 .am-branch-hint {
   margin-left: auto;
   color: var(--text-weaker);
-  font-size: 11px;
+  font-size: var(--kilo-font-size-11);
 }
 
 /* ============================================
@@ -3814,4 +4345,98 @@ body.vscode-high-contrast-light {
   [data-slot="context-menu-separator"] {
     margin: 4px 0;
   }
+}
+
+/* Experimental terminal tabs (feature-flagged) */
+
+.am-tab-terminal {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.am-tab-terminal [data-component="icon"] {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/*
+ * Stacking layout for xterm terminal tabs.
+ *
+ * The hydration invariant (see the render helpers under `terminal/`) requires that
+ * xterm canvases never leave the paint tree. Both the layer and each
+ * terminal slot therefore use absolute-positioning + opacity for
+ * visibility — NEVER `display: none`, because that would detach the
+ * subtree and stop xterm's internal rAF render loop, causing the
+ * "press Enter to see content" bug on worktree switches.
+ *
+ * Stack:  position:relative container hosting the main pane, review,
+ *         and side panel. Sits below the tab bar inside `.am-detail`.
+ * Layer:  absolute-positioned overlay covering the main pane.
+ *         `pointer-events: none` when no terminal is active, letting
+ *         clicks fall through to the chat behind it.
+ * Slots:  absolute-positioned and stacked inside the layer; only the
+ *         active one is opaque and receives pointer events.
+ */
+
+.am-detail-stack {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.am-terminal-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  z-index: 30;
+  /* Force a dedicated compositor layer so opacity flips do not re-lay-out
+     the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-terminal-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.am-terminal-slot-visible {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.am-terminal-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 8px;
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+/* Third-party xterm classes — addressed by attribute selector so the
+   agent-manager "am-* prefix" architecture test does not flag them. */
+.am-terminal-host [class="xterm"] {
+  height: 100%;
+}
+
+.am-terminal-host [class~="xterm-viewport"] {
+  background: transparent !important;
 }

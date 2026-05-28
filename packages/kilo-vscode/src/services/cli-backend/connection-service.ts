@@ -6,9 +6,9 @@ import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
-type SSEEventListener = (event: Event) => void
+type SSEEventListener = (event: Event, directory?: string) => void
 type StateListener = (state: ConnectionState) => void
-type SSEEventFilter = (event: Event) => boolean
+type SSEEventFilter = (event: Event, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
@@ -17,7 +17,18 @@ type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: 
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
 
-// Poll /global/health at the same interval as packages/app/src/context/server.tsx.
+function isNotFound(err: unknown) {
+  if (!err || typeof err !== "object") return false
+  const obj = err as Record<string, unknown>
+  if (obj.name === "NotFoundError") return true
+  if (obj.status === 404) return true
+  if (obj.data && typeof obj.data === "object") {
+    return (obj.data as Record<string, unknown>).name === "NotFoundError"
+  }
+  return false
+}
+
+// Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
@@ -122,6 +133,20 @@ export class KiloConnectionService {
   }
 
   /**
+   * Get the shared SDK client, auto-connecting if not yet started.
+   * Accepts an optional directory to use as the workspace root; falls back
+   * to the first VS Code workspace folder. Throws if neither is available
+   * or if the connection fails.
+   */
+  async getClientAsync(dir?: string): Promise<KiloClient> {
+    if (this.client) return this.client
+    const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    if (!root) throw new Error("No workspace folder open")
+    await this.connect(root)
+    return this.client!
+  }
+
+  /**
    * Get server info (port). Returns null if not connected.
    */
   getServerInfo(): { port: number } | null {
@@ -178,11 +203,11 @@ export class KiloConnectionService {
    * Subscribe to SSE events with a filter. The filter runs for every incoming SSE event.
    */
   onEventFiltered(filter: SSEEventFilter, listener: SSEEventListener): () => void {
-    const wrapped: SSEEventListener = (event) => {
-      if (!filter(event)) {
+    const wrapped: SSEEventListener = (event, directory) => {
+      if (!filter(event, directory)) {
         return
       }
-      listener(event)
+      listener(event, directory)
     }
     return this.onEvent(wrapped)
   }
@@ -195,6 +220,17 @@ export class KiloConnectionService {
       return
     }
     this.messageSessionIdsByMessageId.set(messageId, sessionId)
+  }
+
+  /**
+   * Remove all messageID → sessionID entries for a given session.
+   * Called when a session is deleted or otherwise pruned so the map
+   * does not grow unbounded over the extension lifetime.
+   */
+  pruneSession(sessionId: string): void {
+    for (const [mid, sid] of this.messageSessionIdsByMessageId) {
+      if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
+    }
   }
 
   /**
@@ -330,10 +366,7 @@ export class KiloConnectionService {
 
   /**
    * Reject all pending permission requests and questions across every
-   * directory known to any KiloProvider **and** every project the CLI
-   * backend has ever opened. The project list covers worktree sessions
-   * whose provider was disposed (panel/sidebar closed) while the CLI
-   * backend kept running.
+   * directory known to any currently-mounted KiloProvider.
    *
    * Must be called before operations that trigger Instance.disposeAll()
    * (e.g. config save) to prevent orphaned Promises from freezing
@@ -345,21 +378,15 @@ export class KiloConnectionService {
   async drainPendingPrompts(): Promise<void> {
     if (!this.client) return
 
-    // Collect directories from all mounted providers (root + worktree dirs).
+    // Only drain directories from currently-mounted providers (root + worktree dirs).
+    // Previously this also called project.list() to include every historically-opened
+    // directory, but each permission/question list call goes through Instance.provide()
+    // which bootstraps fresh instances (including indexing) for directories without
+    // cached instances. Disposed worktree sessions can't have pending prompts anyway.
     const dirs = new Set<string>()
     for (const provider of this.directoryProviders) {
       for (const dir of provider()) {
         dirs.add(dir)
-      }
-    }
-
-    // Also include every project directory the CLI backend knows about.
-    // This covers worktree sessions whose KiloProvider was already disposed.
-    const { data: projects, error: projectsErr } = await this.client.project.list()
-    if (projectsErr) throw new Error(`Failed to list projects: ${String(projectsErr)}`)
-    if (projects) {
-      for (const p of projects) {
-        dirs.add(p.worktree)
       }
     }
 
@@ -369,7 +396,7 @@ export class KiloConnectionService {
       if (perms) {
         for (const perm of perms) {
           const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
-          if (error) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
+          if (error && !isNotFound(error)) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
         }
       }
       const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })
@@ -380,6 +407,7 @@ export class KiloConnectionService {
           if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
+      await drainSuggestions(this.client, dir)
       await drainNetworkWaits(this.client, dir)
     }
     for (const listener of this.clearPendingPromptsListeners) {
@@ -486,7 +514,6 @@ export class KiloConnectionService {
 
   /**
    * Start polling GET /global/health every 10 seconds.
-   * Ported from packages/app/src/context/server.tsx (HEALTH_POLL_INTERVAL_MS).
    * Provides a second detection channel for server death independent of the SSE heartbeat.
    * If the health check fails while we believe we are connected, the SSE client is
    * disconnected so its reconnect loop kicks in immediately.
@@ -557,7 +584,8 @@ export class KiloConnectionService {
 
     this.sseClient = new SdkSSEAdapter(this.client)
 
-    // Wait until SSE actually reaches a terminal state before resolving connect().
+    // Wait until SSE yields its first server event before resolving connect().
+    // Initial stream failures are handled by the adapter reconnect loop.
     let resolveConnected: (() => void) | null = null
     let rejectConnected: ((error: Error) => void) | null = null
     const connectedPromise = new Promise<void>((resolve, reject) => {
@@ -568,17 +596,14 @@ export class KiloConnectionService {
     let didConnect = false
 
     // Wire SSE events → broadcast to all registered listeners
-    this.sseClient.onEvent((event) => {
+    this.sseClient.onEvent((event, directory) => {
       for (const listener of this.eventListeners) {
-        listener(event)
+        listener(event, directory)
       }
     })
 
-    this.sseClient.onError((error) => {
+    this.sseClient.onError(() => {
       this.setState("error")
-      rejectConnected?.(error)
-      resolveConnected = null
-      rejectConnected = null
     })
 
     // Wire SSE state → broadcast to all registered state listeners
@@ -606,5 +631,16 @@ export class KiloConnectionService {
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+}
+
+async function drainSuggestions(client: KiloClient, directory: string): Promise<void> {
+  const { data, error: err } = await client.suggestion.list({ directory })
+  if (err) throw new Error(`Failed to list suggestions for ${directory}: ${String(err)}`)
+  if (data) {
+    for (const s of data) {
+      const { error } = await client.suggestion.dismiss({ requestID: s.id, directory })
+      if (error) throw new Error(`Failed to dismiss suggestion ${s.id}: ${String(error)}`)
+    }
   }
 }

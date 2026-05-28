@@ -1,4 +1,6 @@
 ---
+title: "Using Google Gemini with Kilo Code"
+description: "Connect Google Gemini models to Kilo Code. Guide to getting an API key from Google AI Studio and configuring Gemini in VS Code and the CLI."
 sidebar_label: Google Gemini
 ---
 

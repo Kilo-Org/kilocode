@@ -1,5 +1,7 @@
 export const dict: Record<string, string> = {
   "ui.sessionReview.title": "Session changes",
+  "ui.sessionReview.title.git": "Git changes",
+  "ui.sessionReview.title.branch": "Branch changes",
   "ui.sessionReview.title.lastTurn": "Last turn changes",
   "ui.sessionReview.diffStyle.unified": "Unified",
   "ui.sessionReview.diffStyle.split": "Split",
@@ -38,6 +40,10 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.steps.hide": "Hide steps",
   "ui.sessionTurn.summary.response": "Response",
   "ui.sessionTurn.diff.showMore": "Show more changes ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Changed",
+  "ui.sessionTurn.diffs.showAll": "Show all",
+  "ui.sessionTurn.diffs.showLess": "Show less",
+  "ui.sessionTurn.diffs.more": "+{{count}} more files",
 
   "ui.sessionTurn.retry.retrying": "retrying",
   "ui.sessionTurn.retry.inSeconds": "in {{seconds}}s",
@@ -63,6 +69,8 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps",
 
   "ui.messagePart.diagnostic.error": "Error",
+  "ui.messagePart.mcp.input": "Input",
+  "ui.messagePart.mcp.output": "Output",
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
@@ -94,6 +102,18 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Copied",
 
   "ui.imagePreview.alt": "Image preview",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Rendering Mermaid diagram...",
+  "ui.mermaid.renderError": "Mermaid render failed: {{message}}",
+  "ui.mermaid.errorDefault": "Unable to render Mermaid diagram.",
+  "ui.mermaid.errorEmpty": "Mermaid rendered an empty diagram.",
+  "ui.mermaid.download": "Download",
+  "ui.mermaid.copySource": "Copy Mermaid source",
+  "ui.mermaid.copySvg": "Copy SVG",
+  "ui.mermaid.copyPng": "Copy PNG",
+  "ui.mermaid.downloadSvg": "Download SVG",
+  "ui.mermaid.downloadPng": "Download PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollable content",
 
   "ui.tool.read": "Read",
@@ -104,7 +124,6 @@ export const dict: Record<string, string> = {
   "ui.tool.task": "Task",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "Web Search",
-  "ui.tool.codesearch": "Code Search",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "To-dos",
@@ -141,7 +160,7 @@ export const dict: Record<string, string> = {
   "ui.message.copy": "Copy",
   "ui.message.copyMessage": "Copy message",
   "ui.message.forkMessage": "Fork to new session",
-  "ui.message.revertMessage": "Revert message",
+  "ui.message.revertMessage": "Revert to here",
   "ui.message.copyResponse": "Copy response",
   "ui.message.copied": "Copied",
   "ui.message.duration.seconds": "{{count}}s",

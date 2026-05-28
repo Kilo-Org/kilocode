@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Cambios de la sesión",
+  "ui.sessionReview.title.git": "Cambios de Git",
+  "ui.sessionReview.title.branch": "Cambios de rama",
   "ui.sessionReview.title.lastTurn": "Cambios del último turno",
   "ui.sessionReview.diffStyle.unified": "Unificado",
   "ui.sessionReview.diffStyle.split": "Dividido",
@@ -37,6 +39,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Ocultar pasos",
   "ui.sessionTurn.summary.response": "Respuesta",
   "ui.sessionTurn.diff.showMore": "Mostrar más cambios ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Modificado",
+  "ui.sessionTurn.diffs.showAll": "Mostrar todo",
+  "ui.sessionTurn.diffs.showLess": "Mostrar menos",
+  "ui.sessionTurn.diffs.more": "+{{count}} archivos más",
 
   "ui.sessionTurn.retry.retrying": "reintentando",
   "ui.sessionTurn.retry.inSeconds": "en {{seconds}}s",
@@ -70,6 +76,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} listas",
   "ui.messagePart.diagnostic.error": "Error",
+  "ui.messagePart.mcp.input": "Entrada",
+  "ui.messagePart.mcp.output": "Salida",
   "ui.messagePart.title.edit": "Editar",
   "ui.messagePart.title.write": "Escribir",
   "ui.messagePart.option.typeOwnAnswer": "Escribe tu propia respuesta",
@@ -88,6 +96,18 @@ export const dict = {
   "ui.textField.copied": "Copiado",
 
   "ui.imagePreview.alt": "Vista previa de imagen",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Renderizando diagrama Mermaid...",
+  "ui.mermaid.renderError": "Error al renderizar Mermaid: {{message}}",
+  "ui.mermaid.errorDefault": "No se puede renderizar el diagrama Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid renderizó un diagrama vacío.",
+  "ui.mermaid.download": "Descargar",
+  "ui.mermaid.copySource": "Copiar código fuente Mermaid",
+  "ui.mermaid.copySvg": "Copiar SVG",
+  "ui.mermaid.copyPng": "Copiar PNG",
+  "ui.mermaid.downloadSvg": "Descargar SVG",
+  "ui.mermaid.downloadPng": "Descargar PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "contenido desplazable",
 
   "ui.tool.read": "Leer",
@@ -97,7 +117,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "Búsqueda web",
-  "ui.tool.codesearch": "Búsqueda de código",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Parche",
   "ui.tool.todos": "Tareas",

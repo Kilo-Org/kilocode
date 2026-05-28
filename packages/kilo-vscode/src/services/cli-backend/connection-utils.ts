@@ -16,6 +16,7 @@ export function resolveEventSessionId(
     case "session.updated":
       return event.properties.info.id
     case "session.status":
+    case "session.turn.close":
     case "session.idle":
     case "session.error":
     case "todo.updated":
@@ -35,11 +36,24 @@ export function resolveEventSessionId(
     }
     case "message.part.delta":
       return event.properties.sessionID
+    case "message.part.removed":
+      return event.properties.sessionID
     case "permission.asked":
     case "permission.replied":
     case "question.asked":
     case "question.replied":
     case "question.rejected":
+      return event.properties.sessionID
+    default:
+      return resolveSuggestionSessionId(event)
+  }
+}
+
+function resolveSuggestionSessionId(event: Event): string | undefined {
+  switch (event.type) {
+    case "suggestion.shown":
+    case "suggestion.accepted":
+    case "suggestion.dismissed":
       return event.properties.sessionID
     default:
       // session.network.* events are not yet in the SDK Event type union

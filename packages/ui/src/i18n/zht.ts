@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "工作階段變更",
+  "ui.sessionReview.title.git": "Git 變更",
+  "ui.sessionReview.title.branch": "分支變更",
   "ui.sessionReview.title.lastTurn": "上一輪變更",
   "ui.sessionReview.diffStyle.unified": "整合",
   "ui.sessionReview.diffStyle.split": "拆分",
@@ -41,6 +43,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "隱藏步驟",
   "ui.sessionTurn.summary.response": "回覆",
   "ui.sessionTurn.diff.showMore": "顯示更多變更 ({{count}})",
+  "ui.sessionTurn.diffs.changed": "已變更",
+  "ui.sessionTurn.diffs.showAll": "顯示全部",
+  "ui.sessionTurn.diffs.showLess": "顯示更少",
+  "ui.sessionTurn.diffs.more": "還有 +{{count}} 個檔案",
 
   "ui.sessionTurn.retry.retrying": "重試中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}} 秒後",
@@ -74,6 +80,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 個清單",
   "ui.messagePart.context.list.other": "{{count}} 個清單",
   "ui.messagePart.diagnostic.error": "錯誤",
+  "ui.messagePart.mcp.input": "輸入",
+  "ui.messagePart.mcp.output": "輸出",
   "ui.messagePart.title.edit": "編輯",
   "ui.messagePart.title.write": "寫入",
   "ui.messagePart.option.typeOwnAnswer": "輸入自己的答案",
@@ -92,6 +100,18 @@ export const dict = {
   "ui.textField.copied": "已複製",
 
   "ui.imagePreview.alt": "圖片預覽",
+  // kilocode_change start
+  "ui.mermaid.rendering": "正在渲染 Mermaid 圖表...",
+  "ui.mermaid.renderError": "Mermaid 渲染失敗：{{message}}",
+  "ui.mermaid.errorDefault": "無法渲染 Mermaid 圖表。",
+  "ui.mermaid.errorEmpty": "Mermaid 渲染了一個空圖表。",
+  "ui.mermaid.download": "下載",
+  "ui.mermaid.copySource": "複製 Mermaid 原始碼",
+  "ui.mermaid.copySvg": "複製 SVG",
+  "ui.mermaid.copyPng": "複製 PNG",
+  "ui.mermaid.downloadSvg": "下載 SVG",
+  "ui.mermaid.downloadPng": "下載 PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "可捲動內容",
 
   "ui.tool.read": "讀取",
@@ -101,7 +121,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "網頁搜尋",
-  "ui.tool.codesearch": "程式碼搜尋",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "修補",
   "ui.tool.todos": "待辦",

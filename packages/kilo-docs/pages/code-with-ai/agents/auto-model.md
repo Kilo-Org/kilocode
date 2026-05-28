@@ -7,11 +7,11 @@ description: "Smart model routing that automatically selects the optimal AI mode
 
 Auto Model is a smart model routing system that automatically selects the optimal AI model based on the Kilo Code mode you're using. It comes in multiple tiers so you can balance cost and capability to fit your needs.
 
-| Tier                 | Best For                                          | Pricing |
-| -------------------- | ------------------------------------------------- | ------- |
-| `kilo-auto/frontier` | Maximum capability with the best available models | Paid    |
-| `kilo-auto/balanced` | Strong performance at a lower cost                | Paid    |
-| `kilo-auto/free`     | The best free models available                    | Free    |
+| Tier | Best For | Pricing |
+|---|---|---|
+| `kilo-auto/frontier` | Maximum capability with the best available models | Paid |
+| `kilo-auto/balanced` | Strong performance at a lower cost | Paid |
+| `kilo-auto/free` | The best free models available | Free |
 
 ## How It Works
 
@@ -19,18 +19,25 @@ Auto Model is a smart model routing system that automatically selects the optima
 2. Start working in any mode (Code, Architect, Debug, etc.)
 3. The system automatically routes your requests to the best model for that task
 
-That's it. No configuration needed. 
+That's it. No configuration needed.
 
 You can see which underlying models are used, as well as the cost, in the expanded model picker. Model mapping information is also available on the [Gateway Model page](/docs/gateway/models-and-providers#kilo-autofrontier).
+
+{% callout type="info" title="Models can change" %}
+The underlying models behind each Auto Model tier are updated server-side as better options become available or as providers change pricing and availability. The tier you select stays the same; the model it routes to may change over time.
+{% /callout %}
 
 ## Tiers
 
 - **Frontier** — Routes to the latest and most capable paid models. Uses different models for reasoning-heavy tasks (planning, architecture, debugging) versus implementation tasks (coding, building, exploring), pairing the right capability to each type of work.
-- **Balanced** — Follows the same mode-based routing structure as Frontier but uses a more cost-effective model across all modes. A good default for most developers who want strong AI assistance without paying frontier prices.
-- **Free** — Routes to the best available free model on OpenRouter. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the model may change over time.
+- **Balanced** — Routes to a cost-effective model for all modes. The specific model is selected based on the API interface in use, but does not vary by mode. A good default for most developers who want strong AI assistance without paying frontier prices.
+- **Free** — Routes to the best available free models on OpenRouter, splitting traffic across them. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the models may change over time.
+
+{% callout type="warning" title="Data handling for Auto Free" %}
+Auto Free may route your requests to providers that log prompts and outputs and use them to improve their services. In particular, it may route to NVIDIA's free endpoints, which are provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf) — trial use only, not for production or sensitive data. Do not submit personal or confidential data when using Auto Free.
+{% /callout %}
 
 ## Benefits
-
 
 ### Cost Optimization
 

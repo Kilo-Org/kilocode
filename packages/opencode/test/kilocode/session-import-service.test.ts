@@ -1,16 +1,9 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import { Database } from "../../src/storage/db"
+import { SessionImportService } from "../../src/kilocode/session-import/service"
 
-const use = mock((fn: (db: any) => unknown) => fn(db))
-const eq = (a: unknown, b: unknown) => ({ a, b })
+let spy: ReturnType<typeof spyOn>
 
-mock.module("../../src/storage/db", () => ({
-  Database: { use, close() {} },
-  eq,
-}))
-
-const { SessionImportService } = await import("../../src/kilocode/session-import/service")
-
-const sessionTable = { id: "session.id" }
 const db = {
   select() {
     return {
@@ -85,7 +78,7 @@ function input(force?: boolean) {
 
 describe("SessionImportService.session", () => {
   beforeEach(() => {
-    use.mockClear()
+    spy = spyOn(Database, "use").mockImplementation((fn: any) => fn(db))
     deletes.length = 0
     rows.session = undefined
     rows.messages = []
@@ -93,7 +86,7 @@ describe("SessionImportService.session", () => {
   })
 
   afterEach(() => {
-    use.mockClear()
+    spy.mockRestore()
   })
 
   test("returns skipped when the session already exists and force is false", async () => {

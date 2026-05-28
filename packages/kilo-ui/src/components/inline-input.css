@@ -1,5 +1,5 @@
 /* Kilo Inline Input overrides */
 
 [data-component="inline-input"] {
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 }

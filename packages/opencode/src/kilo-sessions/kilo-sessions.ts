@@ -1,19 +1,25 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Provider } from "@/provider/provider"
-import { Session } from "@/session"
+import { Session } from "@/session/session"
+import { SessionSummary } from "@/session/summary"
+import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Storage } from "@/storage/storage"
-import { Log } from "@/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
+import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
+import { Context, Effect, Layer, Schema, Stream } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
+import { EffectBridge } from "@/effect/bridge"
+import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/project/instance"
 import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
@@ -21,19 +27,34 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Question } from "@/question"
+import { Permission } from "@/permission"
+import { withTimeout } from "@/util/timeout"
+
+async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
+  const { WithInstance } = await import("@/project/with-instance")
+  return WithInstance.provide(input)
+}
 
 export namespace KiloSessions {
   export const Event = {
     RemoteStatusChanged: BusEvent.define(
       "kilo-sessions.remote-status-changed",
-      z.object({
-        enabled: z.boolean(),
-        connected: z.boolean(),
+      Schema.Struct({
+        enabled: Schema.Boolean,
+        connected: Schema.Boolean,
       }),
     ),
   }
 
+  export interface Interface {
+    readonly init: () => Effect.Effect<void, unknown>
+  }
+
+  export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloSessions") {}
+
   const log = Log.create({ service: "kilo-sessions" })
+  const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   const Uuid = z.uuid()
   type Uuid = z.infer<typeof Uuid>
@@ -82,7 +103,7 @@ export namespace KiloSessions {
 
   async function kilocodeToken() {
     return withInFlightCache(tokenKey, ttlMs, async () => {
-      const auth = await Auth.get("kilo")
+      const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
       if (auth?.type === "oauth" && auth.access.length > 0) return auth.access
       if (auth?.type === "wellknown" && auth.token.length > 0) return auth.token
@@ -151,91 +172,155 @@ export namespace KiloSessions {
   let remoteSeq = 0
   const focused = new Set<string>()
   const opened = new Set<string>()
+  const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
+  const STATUS_TIMEOUT_MS = 3_000
 
-  export async function init() {
-    if (ingestDisabled) return
+  async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
+    const permissions = (await Permission.list()).filter((p) => p.sessionID === sessionID)
+    if (permissions.length > 0) return "permission"
 
-    Bus.subscribe(Session.Event.Created, (evt) => {
-      const sessionId = evt.properties.info.id
-      void create(sessionId).catch((error) => log.error("share init create failed", { sessionId, error }))
-    })
+    const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
+    if (questions.length > 0) return "question"
 
-    Bus.subscribe(Session.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.id, [
-        {
-          type: "kilo_meta",
-          data: await meta(evt.properties.info.id),
-        },
-        {
-          type: "session",
-          data: evt.properties.info,
-        },
-      ])
-    })
-
-    Bus.subscribe(MessageV2.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.sessionID, [
-        {
-          type: "message",
-          data: evt.properties.info,
-        },
-      ])
-
-      if (evt.properties.info.role === "user") {
-        await ingest.sync(evt.properties.info.sessionID, [
-          {
-            type: "model",
-            data: [
-              await Provider.getModel(evt.properties.info.model.providerID, evt.properties.info.model.modelID).then(
-                (m) => m,
-              ),
-            ],
-          },
-        ])
-      }
-    })
-
-    Bus.subscribe(MessageV2.Event.PartUpdated, async (evt) => {
-      await ingest.sync(evt.properties.part.sessionID, [
-        {
-          type: "part",
-          data: evt.properties.part,
-        },
-      ])
-    })
-
-    Bus.subscribe(Session.Event.Diff, async (evt) => {
-      await ingest.sync(evt.properties.sessionID, [
-        {
-          type: "session_diff",
-          data: evt.properties.diff,
-        },
-      ])
-    })
-
-    Bus.subscribe(Session.Event.TurnOpen, async (evt) => {
-      await ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }])
-    })
-
-    Bus.subscribe(Session.Event.TurnClose, async (evt) => {
-      await ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }])
-    })
-
-    const cfg = await Config.getGlobal()
-    if (remoteEnabled || cfg.remote_control)
-      enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
-    // Use wildcard subscription so the dispose handler actually fires —
-    // Bus.state dispose only notifies "*" subscribers, not event-type ones.
-    Bus.subscribeAll((evt) => {
-      if (evt.type === Bus.InstanceDisposed.type) disableRemote()
-    })
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
+    if (status.type === "offline") return "retry"
+    return status.type
   }
+
+  async function deriveAndSyncStatus(sessionID: string) {
+    const status = await withTimeout(deriveStatus(sessionID), STATUS_TIMEOUT_MS)
+    await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
+  }
+
+  export const layer = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const bus = yield* Bus.Service
+      const config = yield* Config.Service
+      const state = yield* InstanceState.make(
+        Effect.fn("KiloSessions.state")(function* () {
+          if (ingestDisabled) return
+
+          const watch = <D extends { type: string }>(
+            def: D,
+            fn: (evt: { properties: any }) => unknown | Promise<unknown>,
+          ) =>
+            bus.subscribe(def as never).pipe(
+              Stream.runForEach((evt) =>
+                EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
+                  Effect.catchCause((cause) =>
+                    Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
+                  ),
+                ),
+              ),
+              Effect.forkScoped,
+            )
+
+          yield* watch(Session.Event.Created, (evt) => {
+            const sessionID = evt.properties.info.id
+            return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
+          })
+          yield* watch(Session.Event.Updated, async (evt) => {
+            const sessionID = evt.properties.sessionID
+            const session = await Session.get(sessionID).catch(() => null)
+            if (!session) return
+            await ingest.sync(sessionID, [
+              { type: "kilo_meta", data: await meta(sessionID) },
+              { type: "session", data: session },
+            ])
+          })
+          yield* watch(MessageV2.Event.Updated, async (evt) => {
+            await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
+            if (evt.properties.info.role !== "user") return
+            const model = await Provider.getModel(
+              evt.properties.info.model.providerID,
+              evt.properties.info.model.modelID,
+            )
+            await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [model] }])
+          })
+          yield* watch(MessageV2.Event.PartUpdated, (evt) =>
+            ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
+          )
+          yield* watch(Session.Event.Diff, (evt) =>
+            ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: evt.properties.diff }]),
+          )
+          yield* watch(Session.Event.TurnOpen, (evt) =>
+            ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
+          )
+          yield* watch(Session.Event.TurnClose, (evt) =>
+            ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
+          )
+
+          const sync = (evt: { properties: { sessionID: string } }) => {
+            const sessionID = evt.properties.sessionID
+            const current = statusSyncs.get(sessionID)
+            if (current?.running) {
+              current.dirty = true
+              return
+            }
+
+            const entry = current ?? { running: false, dirty: false }
+            statusSyncs.set(sessionID, entry)
+
+            const fail = (error: unknown) => {
+              const dirty = entry.dirty
+              statusSyncs.delete(sessionID)
+              log.error("status sync failed", { sessionID, error: String(error) })
+              if (dirty) sync(evt)
+            }
+
+            const loop = async () => {
+              entry.running = true
+              entry.dirty = false
+              await deriveAndSyncStatus(sessionID)
+              if (entry.dirty) {
+                void loop().catch(fail)
+                return
+              }
+              statusSyncs.delete(sessionID)
+            }
+
+            void loop().catch(fail)
+          }
+          yield* watch(SessionStatus.Event.Status, sync)
+          yield* watch(Question.Event.Asked, sync)
+          yield* watch(Question.Event.Replied, sync)
+          yield* watch(Question.Event.Rejected, sync)
+          yield* watch(Permission.Event.Asked, sync)
+          yield* watch(Permission.Event.Replied, sync)
+
+          const cfg = yield* config.getGlobal()
+          if (remoteEnabled || cfg.remote_control) {
+            yield* Effect.sync(
+              () => void enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) })),
+            )
+          }
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              statusSyncs.clear()
+              disableRemote()
+            }),
+          )
+        }),
+      )
+
+      const init = Effect.fn("KiloSessions.init")(function* () {
+        yield* InstanceState.get(state)
+      })
+
+      return Service.of({ init })
+    }),
+  )
+
+  export const defaultLayer = layer.pipe(Layer.provide(Bus.layer), Layer.provide(Config.defaultLayer))
 
   export async function enableRemote() {
     if (remote) return
     if (ingestDisabled) return
     if (enabling) return enabling
     const seq = ++remoteSeq
+    void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: false })
     enabling = (async () => {
       const token = await kilocodeToken()
       if (!token) {
@@ -260,7 +345,9 @@ export namespace KiloSessions {
           getGitUrl().catch(() => undefined),
           Vcs.branch().catch(() => undefined),
         ])
-        const statuses = SessionStatus.list()
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
+        const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
         const ids = new Set(Object.keys(statuses))
         for (const id of focused) ids.add(id)
         for (const id of opened) ids.add(id)
@@ -289,7 +376,7 @@ export namespace KiloSessions {
       const conn = RemoteWS.connect({
         url,
         getToken: kilocodeToken,
-        withContext: (fn) => Instance.provide({ directory, fn }),
+        withContext: (fn) => provide({ directory, fn }),
         getSessions,
         log,
         onOpen: () => {
@@ -301,7 +388,7 @@ export namespace KiloSessions {
         onMessage: (msg) => {
           // Must run inside Instance.provide so Bus.subscribeAll can access
           // the instance-scoped subscription map via Instance.state().
-          void Instance.provide({ directory, fn: () => sender.handle(msg) })
+          void provide({ directory, fn: () => sender.handle(msg) })
         },
         onClose: () => disableRemote(),
       })
@@ -326,17 +413,27 @@ export namespace KiloSessions {
       log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
       void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
-    })().finally(() => {
-      if (remoteSeq === seq) enabling = undefined
-    })
+    })()
+      .catch((err) => {
+        if (remoteSeq === seq && !remote)
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+        throw err
+      })
+      .finally(() => {
+        if (remoteSeq === seq) enabling = undefined
+      })
 
     return enabling
   }
 
   export function disableRemote() {
     remoteSeq += 1
+    const pending = !!enabling
     enabling = undefined
-    if (!remote) return
+    if (!remote) {
+      if (pending) void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
+      return
+    }
     remote.sender.dispose()
     remote.conn.close()
     remote = undefined
@@ -346,11 +443,11 @@ export namespace KiloSessions {
 
   export function remoteStatus() {
     return {
-      enabled: !!remote,
+      enabled: !!remote || !!enabling,
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSessions(input: { focused: string[]; open?: string[] }) {
+  export function setViewedSessions(input: { focused: readonly string[]; open?: readonly string[] }) {
     focused.clear()
     opened.clear()
     for (const id of input.focused) {
@@ -528,7 +625,7 @@ export namespace KiloSessions {
     log.info("full sync", { sessionId })
 
     const session = await Session.get(SessionID.make(sessionId))
-    const diffs = await Session.diff(SessionID.make(sessionId))
+    const diffs = await SessionSummary.diff({ sessionID: SessionID.make(sessionId) })
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const models = await Promise.all(
@@ -559,6 +656,10 @@ export namespace KiloSessions {
       {
         type: "model",
         data: models,
+      },
+      {
+        type: "session_status",
+        data: { status: await deriveStatus(sessionId) },
       },
     ])
   }
@@ -603,7 +704,7 @@ export namespace KiloSessions {
   }
 
   async function meta(sessionId?: string) {
-    const override = sessionId ? Session.getPlatformOverride(sessionId) : undefined
+    const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)
@@ -622,7 +723,7 @@ export namespace KiloSessions {
     if (isUuid(env)) return env
 
     return withInFlightCache(orgKey, ttlMs, async () => {
-      const auth = await Auth.get("kilo")
+      const auth = await runtime.runPromise((svc) => svc.get("kilo"))
       if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
     })

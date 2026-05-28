@@ -143,7 +143,7 @@ const unsafeCSS = `
   }
 
   &[data-interactive-line-numbers] [data-column-number] {
-    cursor: default !important;
+    cursor: pointer !important;
   }
 
   &[data-interactive-lines] [data-line] {
@@ -161,7 +161,7 @@ ${lineCommentStyles}
 
 export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) {
   return {
-    theme: "Kilo", // kilocode_change
+    theme: "Kilo",
     themeType: "system",
     disableLineNumbers: false,
     overflow: "wrap",

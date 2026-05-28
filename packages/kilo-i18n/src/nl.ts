@@ -21,7 +21,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP Servers",
-  "marketplace.tab.modes": "Modi",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Nog te implementeren",
   "marketplace.card.installed": "Geïnstalleerd",
@@ -47,6 +46,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuleren",
   "marketplace.remove.confirm.button": "Verwijderen",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenten",
   "marketplace.search": "Zoeken...",
   "marketplace.filter.all": "Alle items",
   "marketplace.filter.notInstalled": "Niet geïnstalleerd",
@@ -62,7 +62,7 @@ export const dict = {
   "marketplace.scope.global": "globaal",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "skill",
-  "marketplace.remove.type.mode": "modus",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Verwijderen van {{name}} mislukt",
   "marketplace.install": "Installeren",
   "marketplace.filter.installed": "Geïnstalleerd",
@@ -71,4 +71,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Er zijn meerdere sessies actief en deze zullen worden onderbroken",
   "marketplace.warning.installAnyway": "Toch installeren",
   "marketplace.warning.cancel": "Annuleren",
+  "marketplace.contribute.prompt": "Mist u een skill, agent of MCP-server?",
+  "marketplace.contribute.cta": "Bijdragen op GitHub",
+  "marketplace.migration.notice":
+    "Modi zijn vervangen door agenten. Als u eerder marketplace-modi hebt geïnstalleerd, verwijder ze dan en installeer ze opnieuw als agenten om naar het nieuwe formaat te migreren.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementeren",
+  "plan.followup.question": "Klaar om te implementeren?",
+  "plan.followup.answer.newSession": "Nieuwe sessie starten",
+  "plan.followup.answer.newSession.description": "Implementeren in een nieuwe sessie met een lege context",
+  "plan.followup.answer.continue": "Hier doorgaan",
+  "plan.followup.answer.continue.description": "Het plan in deze sessie implementeren",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot is traag",
+  "snapshot.slowRepo.question":
+    "Het initialiseren van het snapshot-systeem duurt lang, waarschijnlijk vanwege de grootte van de repository.\n\nWil je snapshots voor deze repository uitschakelen?",
+  "snapshot.slowRepo.answer.continue": "Doorgaan met snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Wacht tot de snapshot klaar is. Volgende beurten zijn snel zodra de eerste snapshot is gemaakt.",
+  "snapshot.slowRepo.answer.disable": "Uitschakelen voor dit project",
+  "snapshot.slowRepo.answer.disable.description":
+    "Zet Kilo-snapshots uit voor dit project. Je verliest ongedaan maken/opnieuw doen van Kilo-wijzigingen, maar git blijft alles volgen.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Openen in Diff-weergave",
+  "ui.messagePart.shell.command": "Opdracht",
+  "ui.messagePart.shell.output": "Uitvoer",
+  "ui.messagePart.openInEditor": "Openen in editor",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dit was nuttig",
+  "ui.message.feedback.notHelpful": "Dit was niet nuttig",
+  "ui.message.feedback.clearRating": "Beoordeling wissen",
 }

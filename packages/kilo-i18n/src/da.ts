@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP-servere",
-  "marketplace.tab.modes": "Tilstande",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Skal implementeres",
   "marketplace.card.installed": "Installeret",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuller",
   "marketplace.remove.confirm.button": "Fjern",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenter",
   "marketplace.search": "Søg...",
   "marketplace.filter.all": "Alle elementer",
   "marketplace.filter.notInstalled": "Ikke installeret",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "MCP-server",
   "marketplace.remove.type.skill": "færdighed",
-  "marketplace.remove.type.mode": "tilstand",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Kunne ikke fjerne {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installeret",
@@ -69,4 +69,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere sessioner kører og vil blive afbrudt",
   "marketplace.warning.installAnyway": "Installer alligevel",
   "marketplace.warning.cancel": "Annuller",
+  "marketplace.contribute.prompt": "Mangler du en skill, agent eller MCP-server?",
+  "marketplace.contribute.cta": "Bidrag på GitHub",
+  "marketplace.migration.notice":
+    "Tilstande er blevet erstattet af agenter. Hvis du tidligere har installeret marketplace-tilstande, skal du fjerne dem og geninstallere dem som agenter for at migrere til det nye format.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementér",
+  "plan.followup.question": "Klar til at implementere?",
+  "plan.followup.answer.newSession": "Start ny session",
+  "plan.followup.answer.newSession.description": "Implementér i en ny session med ren kontekst",
+  "plan.followup.answer.continue": "Fortsæt her",
+  "plan.followup.answer.continue.description": "Implementér planen i denne session",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot er langsomt",
+  "snapshot.slowRepo.question":
+    "Det tager lang tid at initialisere snapshot-systemet, sandsynligvis på grund af størrelsen på repositoryet.\n\nVil du deaktivere snapshots for dette repository?",
+  "snapshot.slowRepo.answer.continue": "Fortsæt med snapshots",
+  "snapshot.slowRepo.answer.continue.description":
+    "Vent, indtil snapshot'et er færdigt. Efterfølgende ture er hurtige, når det indledende snapshot er bygget.",
+  "snapshot.slowRepo.answer.disable": "Deaktivér for dette projekt",
+  "snapshot.slowRepo.answer.disable.description":
+    "Slå Kilos snapshots fra for dette projekt. Du mister fortryd/gentag for Kilo-ændringer, men git sporer stadig alt.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Åbn i Diff-visning",
+  "ui.messagePart.shell.command": "Kommando",
+  "ui.messagePart.shell.output": "Output",
+  "ui.messagePart.openInEditor": "Åbn i editor",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Dette var nyttigt",
+  "ui.message.feedback.notHelpful": "Dette var ikke nyttigt",
+  "ui.message.feedback.clearRating": "Ryd bedømmelse",
 }

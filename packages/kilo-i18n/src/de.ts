@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "MCP-Server",
-  "marketplace.tab.modes": "Modi",
   "marketplace.category.all": "Alle",
   "marketplace.placeholder": "Noch nicht implementiert",
   "marketplace.card.installed": "Installiert",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Abbrechen",
   "marketplace.remove.confirm.button": "Entfernen",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenten",
   "marketplace.search": "Suchen...",
   "marketplace.filter.all": "Alle Elemente",
   "marketplace.filter.notInstalled": "Nicht installiert",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "Global",
   "marketplace.remove.type.mcp": "MCP-Server",
   "marketplace.remove.type.skill": "Skill",
-  "marketplace.remove.type.mode": "Modus",
+  "marketplace.remove.type.agent": "Agent",
   "marketplace.remove.failed": "Fehler beim Entfernen von {{name}}",
   "marketplace.install": "Installieren",
   "marketplace.filter.installed": "Installiert",
@@ -69,4 +69,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Mehrere Sitzungen laufen und werden unterbrochen",
   "marketplace.warning.installAnyway": "Trotzdem installieren",
   "marketplace.warning.cancel": "Abbrechen",
+  "marketplace.contribute.prompt": "Fehlt ein Skill, Agent oder MCP-Server?",
+  "marketplace.contribute.cta": "Auf GitHub beitragen",
+  "marketplace.migration.notice":
+    "Modi wurden durch Agenten ersetzt. Wenn Sie zuvor Marketplace-Modi installiert haben, entfernen Sie diese bitte und installieren Sie sie als Agenten neu, um zum neuen Format zu migrieren.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Umsetzen",
+  "plan.followup.question": "Bereit zur Umsetzung?",
+  "plan.followup.answer.newSession": "Neue Sitzung starten",
+  "plan.followup.answer.newSession.description": "In einer neuen Sitzung mit leerem Kontext umsetzen",
+  "plan.followup.answer.continue": "Hier fortfahren",
+  "plan.followup.answer.continue.description": "Den Plan in dieser Sitzung umsetzen",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot ist langsam",
+  "snapshot.slowRepo.question":
+    "Die Initialisierung des Snapshot-Systems dauert lange, wahrscheinlich aufgrund der Größe des Repositorys.\n\nMöchtest du Snapshots für dieses Repository deaktivieren?",
+  "snapshot.slowRepo.answer.continue": "Snapshots beibehalten",
+  "snapshot.slowRepo.answer.continue.description":
+    "Auf den Abschluss des Snapshots warten. Nachfolgende Runden sind schnell, sobald der initiale Snapshot erstellt ist.",
+  "snapshot.slowRepo.answer.disable": "Für dieses Projekt deaktivieren",
+  "snapshot.slowRepo.answer.disable.description":
+    "Kilo-Snapshots für dieses Projekt ausschalten. Rückgängig/Wiederherstellen für Kilo-Änderungen ist nicht mehr möglich, aber git verfolgt weiterhin alles.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Im Diff-Viewer öffnen",
+  "ui.messagePart.shell.command": "Befehl",
+  "ui.messagePart.shell.output": "Ausgabe",
+  "ui.messagePart.openInEditor": "Im Editor öffnen",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Das war hilfreich",
+  "ui.message.feedback.notHelpful": "Das war nicht hilfreich",
+  "ui.message.feedback.clearRating": "Bewertung löschen",
 }

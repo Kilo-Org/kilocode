@@ -24,7 +24,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Vještine",
   "marketplace.tab.mcpServers": "MCP Serveri",
-  "marketplace.tab.modes": "Modovi",
   "marketplace.category.all": "Sve",
   "marketplace.placeholder": "Biće implementirano",
   "marketplace.card.installed": "Instalirano",
@@ -50,6 +49,7 @@ export const dict = {
   "marketplace.remove.cancel": "Otkaži",
   "marketplace.remove.confirm.button": "Ukloni",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agenti",
   "marketplace.search": "Pretraži...",
   "marketplace.filter.all": "Sve stavke",
   "marketplace.filter.notInstalled": "Nije instalirano",
@@ -65,7 +65,7 @@ export const dict = {
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
   "marketplace.remove.type.skill": "vještina",
-  "marketplace.remove.type.mode": "režim",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Uklanjanje {{name}} nije uspjelo",
   "marketplace.install": "Instaliraj",
   "marketplace.filter.installed": "Instalirano",
@@ -74,4 +74,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "marketplace.warning.installAnyway": "Instaliraj svejedno",
   "marketplace.warning.cancel": "Otkaži",
+  "marketplace.contribute.prompt": "Nedostaje vještina, agent ili MCP server?",
+  "marketplace.contribute.cta": "Doprinesi na GitHub-u",
+  "marketplace.migration.notice":
+    "Modovi su zamijenjeni agentima. Ako ste prethodno instalirali marketplace modove, uklonite ih i ponovo instalirajte kao agente da biste prešli na novi format.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementiraj",
+  "plan.followup.question": "Spreman za implementaciju?",
+  "plan.followup.answer.newSession": "Pokreni novu sesiju",
+  "plan.followup.answer.newSession.description": "Implementiraj u novoj sesiji s čistim kontekstom",
+  "plan.followup.answer.continue": "Nastavi ovdje",
+  "plan.followup.answer.continue.description": "Implementiraj plan u ovoj sesiji",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Snapshot je spor",
+  "snapshot.slowRepo.question":
+    "Inicijalizacija sistema snapshotova traje dugo, vjerovatno zbog veličine repozitorija.\n\nŽelite li onemogućiti snapshotove za ovaj repozitorij?",
+  "snapshot.slowRepo.answer.continue": "Nastavi sa snapshotovima",
+  "snapshot.slowRepo.answer.continue.description":
+    "Sačekaj da se snapshot završi. Naredni potezi su brzi kada se početni snapshot jednom napravi.",
+  "snapshot.slowRepo.answer.disable": "Onemogući za ovaj projekat",
+  "snapshot.slowRepo.answer.disable.description":
+    "Isključi Kilo snapshotove za ovaj projekat. Izgubićete poništi/vrati za izmjene koje napravi Kilo, ali git i dalje prati sve.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Otvori u pregledniku razlika",
+  "ui.messagePart.shell.command": "Naredba",
+  "ui.messagePart.shell.output": "Izlaz",
+  "ui.messagePart.openInEditor": "Otvori u editoru",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Ovo je bilo korisno",
+  "ui.message.feedback.notHelpful": "Ovo nije bilo korisno",
+  "ui.message.feedback.clearRating": "Obriši ocjenu",
 }

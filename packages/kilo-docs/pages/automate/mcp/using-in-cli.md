@@ -15,10 +15,10 @@ MCP servers add to your context, so be careful with which ones you enable. Certa
 
 The CLI accepts several config filenames. The recommended file is `kilo.json`:
 
-| Scope       | Recommended Path                     | Also supported              |
-| ----------- | ------------------------------------ | --------------------------- |
-| **Global**  | `~/.config/kilo/kilo.json`           | `kilo.jsonc`, `config.json` |
-| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`                |
+| Scope | Recommended Path | Also supported |
+|---|---|---|
+| **Global** | `~/.config/kilo/kilo.json` | `kilo.jsonc`, `config.json` |
+| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc` |
 
 Project-level configuration takes precedence over global settings.
 
@@ -63,13 +63,13 @@ Local MCP servers run on your machine and communicate via standard input/output.
 
 #### Local Server Options
 
-| Option        | Type    | Required | Description                                                          |
-| ------------- | ------- | -------- | -------------------------------------------------------------------- |
-| `type`        | String  | Yes      | Must be `"local"`.                                                   |
-| `command`     | Array   | Yes      | Command and arguments to run the MCP server.                         |
-| `environment` | Object  | No       | Environment variables to set when running the server.                |
-| `enabled`     | Boolean | No       | Enable or disable the MCP server on startup.                         |
-| `timeout`     | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `type` | String | Yes | Must be `"local"`. |
+| `command` | Array | Yes | Command and arguments to run the MCP server. |
+| `environment` | Object | No | Environment variables to set when running the server. |
+| `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
+| `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
 
 ### Remote Servers
 
@@ -92,22 +92,22 @@ Remote MCP servers are accessed over HTTP/HTTPS. Set `type` to `"remote"`.
 
 #### Remote Server Options
 
-| Option    | Type    | Required | Description                                                          |
-| --------- | ------- | -------- | -------------------------------------------------------------------- |
-| `type`    | String  | Yes      | Must be `"remote"`.                                                  |
-| `url`     | String  | Yes      | URL of the remote MCP server.                                        |
-| `enabled` | Boolean | No       | Enable or disable the MCP server on startup.                         |
-| `headers` | Object  | No       | HTTP headers to send with requests.                                  |
-| `timeout` | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
+| Option | Type | Required | Description |
+|---|---|---|---|
+| `type` | String | Yes | Must be `"remote"`. |
+| `url` | String | Yes | URL of the remote MCP server. |
+| `enabled` | Boolean | No | Enable or disable the MCP server on startup. |
+| `headers` | Object | No | HTTP headers to send with requests. |
+| `timeout` | Number | No | Timeout in ms for fetching tools from the MCP server. Default: 5000. |
 
 ## Managing MCP Servers
 
 You can manage MCP servers from the CLI:
 
-| Command         | Description                     |
-| --------------- | ------------------------------- |
+| Command | Description |
+|---|---|
 | `kilo mcp list` | List all configured MCP servers |
-| `kilo mcp add`  | Add an MCP server               |
+| `kilo mcp add` | Add an MCP server |
 | `kilo mcp auth` | Authenticate with an MCP server |
 
 Inside the interactive TUI, use the `/mcps` slash command to toggle MCP servers on or off.

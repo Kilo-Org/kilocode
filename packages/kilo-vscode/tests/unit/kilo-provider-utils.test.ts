@@ -8,7 +8,8 @@ import {
   isEventFromForeignProject,
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
-  mergeFileSearchResults,
+  getErrorMessage,
+  getConfigErrorDetails,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -20,12 +21,16 @@ import type {
   EventMessagePartUpdated,
   EventMessageUpdated,
   EventSessionStatus,
+  EventSessionTurnClose,
   EventPermissionAsked,
   EventPermissionReplied,
   EventTodoUpdated,
   EventQuestionAsked,
   EventQuestionReplied,
   EventQuestionRejected,
+  EventSuggestionShown,
+  EventSuggestionAccepted,
+  EventSuggestionDismissed,
   EventSessionCreated,
   EventSessionUpdated,
   EventServerConnected,
@@ -305,6 +310,16 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps session.turn.close to its terminal reason", () => {
+    const event: EventSessionTurnClose = {
+      id: "evt-turn",
+      type: "session.turn.close",
+      properties: { sessionID: "sess-1", reason: "interrupted" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg).toEqual({ type: "sessionTurnClosed", sessionID: "sess-1", reason: "interrupted" })
+  })
+
   it("maps permission.asked to permissionRequest", () => {
     const event: EventPermissionAsked = {
       type: "permission.asked",
@@ -444,6 +459,43 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps suggestion.shown to suggestionRequest", () => {
+    const event: EventSuggestionShown = {
+      type: "suggestion.shown",
+      properties: {
+        id: "sug-1",
+        sessionID: "sess-1",
+        text: "Review changes?",
+        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionRequest")
+  })
+
+  it("maps suggestion.accepted to suggestionResolved", () => {
+    const event: EventSuggestionAccepted = {
+      type: "suggestion.accepted",
+      properties: {
+        sessionID: "sess-1",
+        requestID: "sug-1",
+        index: 0,
+        action: { label: "Start", prompt: "/local-review-uncommitted" },
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionResolved")
+  })
+
+  it("maps suggestion.dismissed to suggestionResolved", () => {
+    const event: EventSuggestionDismissed = {
+      type: "suggestion.dismissed",
+      properties: { sessionID: "sess-1", requestID: "sug-2" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionResolved")
+  })
+
   it("maps session.created to sessionCreated with ISO dates", () => {
     const event: EventSessionCreated = {
       type: "session.created",
@@ -564,97 +616,140 @@ describe("mapCloudSessionMessage", () => {
   })
 })
 
-describe("mergeFileSearchResults", () => {
-  it("returns backend results when no open files", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: ["src/a.ts", "src/b.ts"],
-      open: new Set(),
-    })
-    expect(result).toEqual(["src/a.ts", "src/b.ts"])
+describe("getErrorMessage", () => {
+  it("extracts message from an Error instance", () => {
+    expect(getErrorMessage(new Error("boom"))).toBe("boom")
   })
 
-  it("places open files before backend results", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: ["src/a.ts", "src/b.ts", "src/c.ts"],
-      open: new Set(["src/c.ts", "src/d.ts"]),
-    })
-    expect(result).toEqual(["src/c.ts", "src/d.ts", "src/a.ts", "src/b.ts"])
+  it("returns the string as-is", () => {
+    expect(getErrorMessage("plain text failure")).toBe("plain text failure")
   })
 
-  it("places active file first among open files", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: ["src/a.ts"],
-      open: new Set(["src/b.ts", "src/c.ts"]),
-      active: "src/c.ts",
-    })
-    expect(result).toEqual(["src/c.ts", "src/b.ts", "src/a.ts"])
+  it("reads a direct .message field", () => {
+    expect(getErrorMessage({ message: "bad input" })).toBe("bad input")
   })
 
-  it("ignores active file when it is not in open set", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: ["src/a.ts"],
-      open: new Set(["src/b.ts"]),
-      active: "src/x.ts",
-    })
-    expect(result).toEqual(["src/b.ts", "src/a.ts"])
+  it("reads a direct .error string field", () => {
+    expect(getErrorMessage({ error: "nope" })).toBe("nope")
   })
 
-  it("deduplicates open files from backend results", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: ["src/a.ts", "src/b.ts"],
-      open: new Set(["src/a.ts"]),
-    })
-    expect(result).toEqual(["src/a.ts", "src/b.ts"])
+  it("reads SDK throwOnError shape { error: { message } }", () => {
+    expect(getErrorMessage({ error: { message: "sdk said no" } })).toBe("sdk said no")
   })
 
-  it("filters open files by query", () => {
-    const result = mergeFileSearchResults({
-      query: "config",
-      backend: ["src/config.ts", "src/util.ts"],
-      open: new Set(["src/index.ts", "src/config.ts", "README.md"]),
-    })
-    expect(result).toEqual(["src/config.ts", "src/util.ts"])
+  it("reads NotFoundError shape { data: { message } }", () => {
+    expect(getErrorMessage({ name: "NotFoundError", data: { message: "not found" } })).toBe("not found")
   })
 
-  it("query filtering is case-insensitive", () => {
-    const result = mergeFileSearchResults({
-      query: "READ",
-      backend: [],
-      open: new Set(["README.md", "src/index.ts"]),
-    })
-    expect(result).toEqual(["README.md"])
+  it("reads the first Zod issue message from ConfigInvalidError", () => {
+    const err = {
+      name: "ConfigInvalidError",
+      data: {
+        path: "/Users/me/.config/kilo/kilo.json",
+        issues: [
+          { code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' },
+          { code: "invalid_type", path: ["timeout"], message: "Expected number" },
+        ],
+      },
+    }
+    expect(getErrorMessage(err)).toBe('Unrecognized key: "indexing"')
   })
 
-  it("shows all open files on empty query", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: [],
-      open: new Set(["src/a.ts", "src/b.ts"]),
-    })
-    expect(result).toEqual(["src/a.ts", "src/b.ts"])
+  it("reads Hono validator shape { data: { error: [{ message }] } }", () => {
+    const err = { data: { error: [{ message: "required" }] }, success: false }
+    expect(getErrorMessage(err)).toBe("required")
   })
 
-  it("shows all open files on whitespace-only query", () => {
-    const result = mergeFileSearchResults({
-      query: "  ",
-      backend: ["src/x.ts"],
-      open: new Set(["src/a.ts"]),
-    })
-    expect(result).toEqual(["src/a.ts", "src/x.ts"])
+  it("reads Hono validator shape with string errors", () => {
+    expect(getErrorMessage({ data: { error: ["bad field"] } })).toBe("bad field")
   })
 
-  it("handles forward-slash paths (Windows-normalized)", () => {
-    const result = mergeFileSearchResults({
-      query: "",
-      backend: ["src/utils/path.ts"],
-      open: new Set(["src/utils/path.ts", "src/index.ts"]),
-      active: "src/utils/path.ts",
-    })
-    expect(result).toEqual(["src/utils/path.ts", "src/index.ts"])
+  it("reads BadRequestError shape { errors: [{ message }] }", () => {
+    expect(getErrorMessage({ errors: [{ message: "first error" }, { message: "second" }] })).toBe("first error")
+  })
+
+  it("reads BadRequestError shape with string errors", () => {
+    expect(getErrorMessage({ errors: ["boom"] })).toBe("boom")
+  })
+
+  it("falls back to JSON for unknown object shapes", () => {
+    expect(getErrorMessage({ weird: true, code: 42 })).toBe('{"weird":true,"code":42}')
+  })
+
+  it("falls back to String() for non-serializable values", () => {
+    expect(getErrorMessage(undefined)).toBe("undefined")
+    expect(getErrorMessage(null)).toBe("null")
+    expect(getErrorMessage(42)).toBe("42")
+  })
+
+  it("skips JSON fallback for empty objects", () => {
+    expect(getErrorMessage({})).toBe("[object Object]")
+  })
+
+  it("prefers .message over nested shapes", () => {
+    const err = { message: "outer", data: { issues: [{ message: "inner" }] } }
+    expect(getErrorMessage(err)).toBe("outer")
+  })
+
+  it("falls through when the first issue has no message", () => {
+    // firstMessage only inspects index 0, so an invalid first entry causes the
+    // branch to skip and the JSON fallback kicks in.
+    const err = { data: { issues: [{ code: "bad" }] } }
+    expect(getErrorMessage(err)).toBe('{"data":{"issues":[{"code":"bad"}]}}')
+  })
+})
+
+describe("getConfigErrorDetails", () => {
+  it("returns undefined for non-object errors", () => {
+    expect(getConfigErrorDetails("oops")).toBeUndefined()
+    expect(getConfigErrorDetails(undefined)).toBeUndefined()
+    expect(getConfigErrorDetails(null)).toBeUndefined()
+    expect(getConfigErrorDetails(42)).toBeUndefined()
+  })
+
+  it("returns undefined when .data is missing", () => {
+    expect(getConfigErrorDetails({ message: "hi" })).toBeUndefined()
+  })
+
+  it("returns undefined when .data has no path or issues", () => {
+    expect(getConfigErrorDetails({ data: { unrelated: true } })).toBeUndefined()
+  })
+
+  it("formats a single-issue ConfigInvalidError", () => {
+    const err = {
+      data: {
+        path: "/home/me/.config/kilo/kilo.json",
+        issues: [{ code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' }],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe('File: /home/me/.config/kilo/kilo.json\n\n✖ Unrecognized key: "indexing"')
+  })
+
+  it("formats a multi-issue ConfigInvalidError with paths (including array indices)", () => {
+    const err = {
+      data: {
+        path: "/cfg.json",
+        issues: [
+          { path: ["timeout"], message: "Expected number" },
+          { path: ["agents", 0, "name"], message: "Required" },
+        ],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /cfg.json\n\n✖ Expected number\n  → at timeout\n✖ Required\n  → at agents[0].name",
+    )
+  })
+
+  it("omits the path line when only issues are present", () => {
+    const err = { data: { issues: [{ path: [], message: "something" }] } }
+    expect(getConfigErrorDetails(err)).toBe("✖ something")
+  })
+
+  it("omits the issues section when only the path is present", () => {
+    expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("returns undefined when issues array is empty and no path", () => {
+    expect(getConfigErrorDetails({ data: { issues: [] } })).toBeUndefined()
   })
 })

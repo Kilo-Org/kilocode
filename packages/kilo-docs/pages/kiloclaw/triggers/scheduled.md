@@ -48,7 +48,7 @@ Cron expressions use the standard five-field format:
 **Examples:**
 
 | Expression | Meaning |
-| --- | --- |
+|---|---|
 | `*/15 * * * *` | Every 15 minutes |
 | `0 9 * * 1-5` | 9:00 AM on weekdays |
 | `0 0 1 * *` | Midnight on the first of each month |
@@ -75,7 +75,7 @@ Run your scheduled task. Triggered at {{scheduledTime}}.
 **Available variables:**
 
 | Variable | Description |
-| --- | --- |
+|---|---|
 | `{{scheduledTime}}` | The time the schedule fired (ISO string) |
 | `{{timestamp}}` | Capture timestamp (ISO string) |
 

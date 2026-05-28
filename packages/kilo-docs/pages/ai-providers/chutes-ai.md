@@ -1,4 +1,6 @@
 ---
+title: "Using Chutes AI with Kilo Code"
+description: "Access open-source AI models through Chutes AI in Kilo Code. Setup guide for getting an API key and configuring models."
 sidebar_label: Chutes AI
 ---
 

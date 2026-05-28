@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Skills",
   "marketplace.tab.mcpServers": "Serveurs MCP",
-  "marketplace.tab.modes": "Modes",
   "marketplace.category.all": "Tout",
   "marketplace.placeholder": "À implémenter",
   "marketplace.card.installed": "Installé",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Annuler",
   "marketplace.remove.confirm.button": "Supprimer",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Agents",
   "marketplace.search": "Rechercher...",
   "marketplace.filter.all": "Tous les éléments",
   "marketplace.filter.notInstalled": "Non installé",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "serveur MCP",
   "marketplace.remove.type.skill": "compétence",
-  "marketplace.remove.type.mode": "mode",
+  "marketplace.remove.type.agent": "agent",
   "marketplace.remove.failed": "Échec de la suppression de {{name}}",
   "marketplace.install": "Installer",
   "marketplace.filter.installed": "Installé",
@@ -69,4 +69,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Plusieurs sessions sont en cours et seront interrompues",
   "marketplace.warning.installAnyway": "Installer quand même",
   "marketplace.warning.cancel": "Annuler",
+  "marketplace.contribute.prompt": "Il manque une compétence, un agent ou un serveur MCP ?",
+  "marketplace.contribute.cta": "Contribuer sur GitHub",
+  "marketplace.migration.notice":
+    "Les modes ont été remplacés par des agents. Si vous avez précédemment installé des modes depuis le marketplace, veuillez les supprimer et les réinstaller en tant qu'agents pour migrer vers le nouveau format.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implémenter",
+  "plan.followup.question": "Prêt à implémenter ?",
+  "plan.followup.answer.newSession": "Démarrer une nouvelle session",
+  "plan.followup.answer.newSession.description": "Implémenter dans une nouvelle session avec un contexte vierge",
+  "plan.followup.answer.continue": "Continuer ici",
+  "plan.followup.answer.continue.description": "Implémenter le plan dans cette session",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Instantané lent",
+  "snapshot.slowRepo.question":
+    "L'initialisation du système d'instantanés prend beaucoup de temps, probablement en raison de la taille du dépôt.\n\nVoulez-vous désactiver les instantanés pour ce dépôt ?",
+  "snapshot.slowRepo.answer.continue": "Continuer avec les instantanés",
+  "snapshot.slowRepo.answer.continue.description":
+    "Attendez la fin de l'instantané. Les tours suivants sont rapides une fois l'instantané initial créé.",
+  "snapshot.slowRepo.answer.disable": "Désactiver pour ce projet",
+  "snapshot.slowRepo.answer.disable.description":
+    "Désactivez les instantanés Kilo pour ce projet. Vous perdez l'annulation/restauration des modifications faites par Kilo, mais git continue de tout suivre.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Ouvrir dans le visualiseur de différences",
+  "ui.messagePart.shell.command": "Commande",
+  "ui.messagePart.shell.output": "Sortie",
+  "ui.messagePart.openInEditor": "Ouvrir dans l'éditeur",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "C'était utile",
+  "ui.message.feedback.notHelpful": "Ce n'était pas utile",
+  "ui.message.feedback.clearRating": "Effacer la notation",
 }

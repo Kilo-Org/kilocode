@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Oturum değişiklikleri",
+  "ui.sessionReview.title.git": "Git değişiklikleri",
+  "ui.sessionReview.title.branch": "Dal değişiklikleri",
   "ui.sessionReview.title.lastTurn": "Son tur değişiklikleri",
   "ui.sessionReview.diffStyle.unified": "Birleşik",
   "ui.sessionReview.diffStyle.split": "Bölünmüş",
@@ -43,6 +45,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Adımları gizle",
   "ui.sessionTurn.summary.response": "Yanıt",
   "ui.sessionTurn.diff.showMore": "Daha fazla değişiklik göster ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Değiştirildi",
+  "ui.sessionTurn.diffs.showAll": "Tümünü göster",
+  "ui.sessionTurn.diffs.showLess": "Daha az göster",
+  "ui.sessionTurn.diffs.more": "+{{count}} dosya daha",
 
   "ui.sessionTurn.retry.retrying": "yeniden deneniyor",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}sn içinde",
@@ -76,6 +82,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Hata",
+  "ui.messagePart.mcp.input": "Giriş",
+  "ui.messagePart.mcp.output": "Çıkış",
   "ui.messagePart.title.edit": "Düzenle",
   "ui.messagePart.title.write": "Yaz",
   "ui.messagePart.option.typeOwnAnswer": "Kendi cevabınızı yazın",
@@ -94,6 +102,18 @@ export const dict = {
   "ui.textField.copied": "Kopyalandı",
 
   "ui.imagePreview.alt": "Görsel önizleme",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Mermaid diyagramı işleniyor...",
+  "ui.mermaid.renderError": "Mermaid işleme başarısız: {{message}}",
+  "ui.mermaid.errorDefault": "Mermaid diyagramı işlenemiyor.",
+  "ui.mermaid.errorEmpty": "Mermaid boş bir diyagram işledi.",
+  "ui.mermaid.download": "İndir",
+  "ui.mermaid.copySource": "Mermaid kaynağını kopyala",
+  "ui.mermaid.copySvg": "SVG kopyala",
+  "ui.mermaid.copyPng": "PNG kopyala",
+  "ui.mermaid.downloadSvg": "SVG indir",
+  "ui.mermaid.downloadPng": "PNG indir",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "kaydırılabilir içerik",
 
   "ui.tool.read": "Oku",
@@ -103,7 +123,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Web getir",
   "ui.tool.websearch": "Web Araması",
-  "ui.tool.codesearch": "Kod Araması",
   "ui.tool.shell": "Kabuk",
   "ui.tool.patch": "Yama",
   "ui.tool.todos": "Görevler",

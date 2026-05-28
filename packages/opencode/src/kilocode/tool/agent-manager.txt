@@ -1,0 +1,13 @@
+Start Agent Manager sessions in the VS Code extension.
+
+Use this tool when the user explicitly asks you to fan out work into Agent Manager, create Agent Manager worktrees, or start multiple Agent Manager sessions for independent tasks.
+
+Modes:
+- `worktree`: creates a new Agent Manager git worktree for each task, like the New Worktree dialog.
+- `local`: creates Agent Manager sessions in the current workspace directory without git worktree isolation.
+
+Each task may provide a prompt, a short display name, and a branch name. Keep display names short because Agent Manager cards are narrow. Branch names are sanitized before worktree creation. The agent, model, reasoning, and base branch settings always use the normal defaults.
+
+By default, multiple tasks are started as independent Agent Manager sessions. Set `versions` to true only when all tasks are alternate versions of the same work that should be compared together. Versioned worktrees are grouped in Agent Manager and branch names may receive version suffixes.
+
+Do not use this for ordinary subagent research. Use the `task` tool for internal subagents, and use this only when the user wants visible Agent Manager sessions in the extension.

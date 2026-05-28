@@ -12,7 +12,9 @@ const LanguageTab: Component = () => {
 
   return (
     <div style={{ padding: "16px" }}>
-      <p style={{ "font-size": "13px", "margin-bottom": "12px" }}>{language.t("settings.language.description")}</p>
+      <p style={{ "font-size": "var(--kilo-font-size-13)", "margin-bottom": "12px" }}>
+        {language.t("settings.language.description")}
+      </p>
       <Select
         options={[...options]}
         current={current()}
@@ -26,7 +28,13 @@ const LanguageTab: Component = () => {
         variant="secondary"
         size="large"
       />
-      <p style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground)", "margin-top": "8px" }}>
+      <p
+        style={{
+          "font-size": "var(--kilo-font-size-12)",
+          color: "var(--vscode-descriptionForeground)",
+          "margin-top": "8px",
+        }}
+      >
         {language.t("settings.language.current")} {LOCALE_LABELS[language.locale()]}
       </p>
     </div>

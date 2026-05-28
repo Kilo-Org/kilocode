@@ -1,5 +1,7 @@
 export const dict: Record<string, string> = {
   "ui.sessionReview.title": "Sessiewijzigingen",
+  "ui.sessionReview.title.git": "Git-wijzigingen",
+  "ui.sessionReview.title.branch": "Branch-wijzigingen",
   "ui.sessionReview.title.lastTurn": "Wijzigingen laatste beurt",
   "ui.sessionReview.diffStyle.unified": "Gecombineerd",
   "ui.sessionReview.diffStyle.split": "Gesplitst",
@@ -38,6 +40,10 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.steps.hide": "Stappen verbergen",
   "ui.sessionTurn.summary.response": "Antwoord",
   "ui.sessionTurn.diff.showMore": "Toon meer wijzigingen ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Gewijzigd",
+  "ui.sessionTurn.diffs.showAll": "Alles tonen",
+  "ui.sessionTurn.diffs.showLess": "Minder tonen",
+  "ui.sessionTurn.diffs.more": "+{{count}} extra bestanden",
 
   "ui.sessionTurn.retry.retrying": "opnieuw proberen",
   "ui.sessionTurn.retry.inSeconds": "over {{seconds}}s",
@@ -63,6 +69,8 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen",
 
   "ui.messagePart.diagnostic.error": "Fout",
+  "ui.messagePart.mcp.input": "Invoer",
+  "ui.messagePart.mcp.output": "Uitvoer",
   "ui.messagePart.title.edit": "Bewerken",
   "ui.messagePart.title.write": "Schrijven",
   "ui.messagePart.option.typeOwnAnswer": "Typ je eigen antwoord",
@@ -89,6 +97,18 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Gekopieerd",
 
   "ui.imagePreview.alt": "Afbeeldingsvoorbeeld",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Mermaid-diagram renderen...",
+  "ui.mermaid.renderError": "Mermaid-rendering mislukt: {{message}}",
+  "ui.mermaid.errorDefault": "Kan Mermaid-diagram niet renderen.",
+  "ui.mermaid.errorEmpty": "Mermaid heeft een leeg diagram gerenderd.",
+  "ui.mermaid.download": "Downloaden",
+  "ui.mermaid.copySource": "Mermaid-bron kopiëren",
+  "ui.mermaid.copySvg": "SVG kopiëren",
+  "ui.mermaid.copyPng": "PNG kopiëren",
+  "ui.mermaid.downloadSvg": "SVG downloaden",
+  "ui.mermaid.downloadPng": "PNG downloaden",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollbare inhoud",
 
   "ui.fileSearch.placeholder": "Zoeken",
@@ -144,7 +164,7 @@ export const dict: Record<string, string> = {
   "ui.message.copyResponse": "Antwoord kopiëren",
   "ui.message.copied": "Gekopieerd",
   "ui.message.forkMessage": "Fork to new session",
-  "ui.message.revertMessage": "Revert message",
+  "ui.message.revertMessage": "Hiernaar terugzetten",
   "ui.message.revert": "Hiernaar terugdraaien",
   "ui.message.interrupted": "Onderbroken",
   "ui.message.queued": "In wachtrij",

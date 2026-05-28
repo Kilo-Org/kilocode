@@ -1,0 +1,3 @@
+COLOR_RED = "#ff0000"
+COLOR_GREEN = "#00ff00"
+COLOR_BLUE =

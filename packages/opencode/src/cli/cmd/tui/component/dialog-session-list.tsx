@@ -2,29 +2,40 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
-import { createMemo, createSignal, createResource, onMount } from "solid-js" // kilocode_change
+import { createMemo, createResource, createSignal, onMount, type JSX } from "solid-js"
 import { Locale } from "@/util/locale"
+import { useProject } from "@tui/context/project"
 import { useKeybind } from "../context/keybind"
 import { useTheme } from "../context/theme"
 import { useSDK } from "../context/sdk"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { DialogSessionRename } from "./dialog-session-rename"
 import { createDebouncedSignal } from "../util/signal"
+import { useToast } from "../ui/toast"
+import { openWorkspaceSelect, type WorkspaceSelection, warpWorkspaceSession } from "./dialog-workspace-create"
 import { Spinner } from "./spinner"
 import path from "path" // kilocode_change
+import { errorMessage } from "@/util/error"
+import { DialogSessionDeleteFailed } from "./dialog-session-delete-failed"
+import { WorkspaceLabel } from "./workspace-label"
 
 export function DialogSessionList() {
   const dialog = useDialog()
   const route = useRoute()
   const sync = useSync()
+  const project = useProject()
   const keybind = useKeybind()
   const { theme } = useTheme()
   const sdk = useSDK()
-
+  const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
   const [search, setSearch] = createDebouncedSignal("", 150)
   const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
 
   // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
+  // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
+  // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
+  // keeping worktree grouping. Currently the toggle has no effect here.
   const [searchResults, searchActions] = createResource(
     () => search(),
     async (query) => {
@@ -48,19 +59,118 @@ export function DialogSessionList() {
   const sessions = createMemo(() => {
     const all = searchResults() ?? []
     if (global()) return all
-    const root = sync.data.path.worktree
+    const root = project.instance.path().worktree
     if (!root || root === "/") return all
     return all.filter((s) => s.directory === root || s.directory.startsWith(root + path.sep))
   })
   // kilocode_change end
+
+  function recover(session: NonNullable<ReturnType<typeof sessions>[number]>) {
+    const workspace = project.workspace.get(session.workspaceID!)
+    const list = () => dialog.replace(() => <DialogSessionList />)
+    const warp = async (selection: WorkspaceSelection) => {
+      const workspaceID = await (async () => {
+        if (selection.type === "none") return null
+        if (selection.type === "existing") return selection.workspaceID
+        const result = await sdk.client.experimental.workspace
+          .create({ type: selection.workspaceType, branch: null })
+          .catch(() => undefined)
+        const workspace = result?.data
+        if (!workspace) {
+          toast.show({
+            message: `Failed to create workspace: ${errorMessage(result?.error ?? "no response")}`,
+            variant: "error",
+          })
+          return
+        }
+        await project.workspace.sync()
+        return workspace.id
+      })()
+      if (workspaceID === undefined) return
+      await warpWorkspaceSession({
+        dialog,
+        sdk,
+        sync,
+        project,
+        toast,
+        sourceWorkspaceID: session.workspaceID,
+        workspaceID,
+        sessionID: session.id,
+        copyChanges: false,
+        done: list,
+      })
+    }
+    dialog.replace(() => (
+      <DialogSessionDeleteFailed
+        session={session.title}
+        workspace={workspace?.name ?? session.workspaceID!}
+        onDone={list}
+        onDelete={async () => {
+          const current = currentSessionID()
+          const info = current ? sync.data.session.find((item) => item.id === current) : undefined
+          const result = await sdk.client.experimental.workspace.remove({ id: session.workspaceID! })
+          if (result.error) {
+            toast.show({
+              variant: "error",
+              title: "Failed to delete workspace",
+              message: errorMessage(result.error),
+            })
+            return false
+          }
+          await project.workspace.sync()
+          await sync.session.refresh()
+          if (search()) await searchActions.refetch() // kilocode_change - use createResource actions
+          if (info?.workspaceID === session.workspaceID) {
+            route.navigate({ type: "home" })
+          }
+          return true
+        }}
+        onRestore={() => {
+          void openWorkspaceSelect({
+            dialog,
+            sdk,
+            sync,
+            toast,
+            onSelect: (selection) => {
+              void warp(selection)
+            },
+          })
+          return false
+        }}
+      />
+    ))
+  }
 
   const options = createMemo(() => {
     const today = new Date().toDateString()
     const all = global() // kilocode_change
     return sessions()
       .filter((x) => x.parentID === undefined)
-      .toSorted((a, b) => b.time.updated - a.time.updated)
+      .toSorted((a, b) => {
+        const updatedDay = new Date(b.time.updated).setHours(0, 0, 0, 0) - new Date(a.time.updated).setHours(0, 0, 0, 0)
+        if (updatedDay !== 0) return updatedDay
+        return b.time.created - a.time.created
+      })
       .map((x) => {
+        const workspace = x.workspaceID ? project.workspace.get(x.workspaceID) : undefined
+
+        let footer: JSX.Element | string = ""
+        if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+          if (x.workspaceID) {
+            footer = workspace ? (
+              <WorkspaceLabel
+                type={workspace.type}
+                name={workspace.name}
+                status={project.workspace.status(x.workspaceID) ?? "error"}
+              />
+            ) : (
+              <WorkspaceLabel type="unknown" name={x.workspaceID} status="error" />
+            )
+          }
+        } else {
+          footer = Locale.time(x.time.updated)
+        }
+
         const date = new Date(x.time.updated)
         let category = date.toDateString()
         if (category === today) {
@@ -75,8 +185,8 @@ export function DialogSessionList() {
           bg: isDeleting ? theme.error : undefined,
           value: x.id,
           category,
-          footer: Locale.time(x.time.updated),
-          gutter: isWorking ? <Spinner /> : undefined,
+          footer,
+          gutter: isWorking ? () => <Spinner /> : undefined,
         }
       })
   })
@@ -108,13 +218,44 @@ export function DialogSessionList() {
           title: "delete",
           onTrigger: async (option) => {
             if (toDelete() === option.value) {
-              // kilocode_change start
-              await sdk.client.session.delete({
-                sessionID: option.value,
-              })
-              // kilocode_change end
-              setToDelete(undefined)
+              const session = sessions().find((item) => item.id === option.value)
+              const status = session?.workspaceID ? project.workspace.status(session.workspaceID) : undefined
+
+              try {
+                const result = await sdk.client.session.delete({
+                  sessionID: option.value,
+                })
+                if (result.error) {
+                  if (session?.workspaceID) {
+                    recover(session)
+                  } else {
+                    toast.show({
+                      variant: "error",
+                      title: "Failed to delete session",
+                      message: errorMessage(result.error),
+                    })
+                  }
+                  setToDelete(undefined)
+                  return
+                }
+              } catch (err) {
+                if (session?.workspaceID) {
+                  recover(session)
+                } else {
+                  toast.show({
+                    variant: "error",
+                    title: "Failed to delete session",
+                    message: errorMessage(err),
+                  })
+                }
+                setToDelete(undefined)
+                return
+              }
+              if (status && status !== "connected") {
+                await sync.session.refresh()
+              }
               void searchActions.refetch() // kilocode_change
+              setToDelete(undefined)
               return
             }
             setToDelete(option.value)

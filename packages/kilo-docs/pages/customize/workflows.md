@@ -8,7 +8,7 @@ platform: new
 
 Workflows (also called **slash commands** in the new extension) automate repetitive tasks by defining step-by-step instructions for Kilo Code to execute.
 
-{% image src="/docs/img/slash-commands/workflows.png" alt="Workflows tab in Kilo Code" width="600" caption="Workflows tab in Kilo Code" /%}
+{% image src="/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-workflows-chromium-linux.png" alt="Workflows tab in Kilo Code" width="420" caption="Workflows tab in Kilo Code" /%}
 
 ## Creating Workflows
 
@@ -41,12 +41,12 @@ agent: code
 You are helping submit a pull request...
 ```
 
-| Field         | Description                                   |
-| ------------- | --------------------------------------------- |
-| `description` | Shown in the command picker                   |
-| `agent`       | Which agent to use when invoking this command |
-| `model`       | Model override for this command               |
-| `subtask`     | When `true`, runs as a sub-agent session      |
+| Field | Description |
+|---|---|
+| `description` | Shown in the command picker |
+| `agent` | Which agent to use when invoking this command |
+| `model` | Model override for this command |
+| `subtask` | When `true`, runs as a sub-agent session |
 
 ### Workflow Capabilities
 

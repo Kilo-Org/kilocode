@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Modifications de la session",
+  "ui.sessionReview.title.git": "Modifications Git",
+  "ui.sessionReview.title.branch": "Modifications de branche",
   "ui.sessionReview.title.lastTurn": "Modifications du dernier tour",
   "ui.sessionReview.diffStyle.unified": "Unifié",
   "ui.sessionReview.diffStyle.split": "Divisé",
@@ -37,6 +39,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Masquer les étapes",
   "ui.sessionTurn.summary.response": "Réponse",
   "ui.sessionTurn.diff.showMore": "Afficher plus de modifications ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Modifié",
+  "ui.sessionTurn.diffs.showAll": "Tout afficher",
+  "ui.sessionTurn.diffs.showLess": "Afficher moins",
+  "ui.sessionTurn.diffs.more": "+{{count}} fichiers supplémentaires",
 
   "ui.sessionTurn.retry.retrying": "nouvelle tentative",
   "ui.sessionTurn.retry.inSeconds": "dans {{seconds}}s",
@@ -70,6 +76,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} listes",
   "ui.messagePart.diagnostic.error": "Erreur",
+  "ui.messagePart.mcp.input": "Entrée",
+  "ui.messagePart.mcp.output": "Sortie",
   "ui.messagePart.title.edit": "Modifier",
   "ui.messagePart.title.write": "Écrire",
   "ui.messagePart.option.typeOwnAnswer": "Tapez votre propre réponse",
@@ -88,6 +96,18 @@ export const dict = {
   "ui.textField.copied": "Copié",
 
   "ui.imagePreview.alt": "Aperçu de l'image",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Rendu du diagramme Mermaid...",
+  "ui.mermaid.renderError": "Échec du rendu Mermaid : {{message}}",
+  "ui.mermaid.errorDefault": "Impossible de rendre le diagramme Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid a rendu un diagramme vide.",
+  "ui.mermaid.download": "Télécharger",
+  "ui.mermaid.copySource": "Copier la source Mermaid",
+  "ui.mermaid.copySvg": "Copier le SVG",
+  "ui.mermaid.copyPng": "Copier le PNG",
+  "ui.mermaid.downloadSvg": "Télécharger le SVG",
+  "ui.mermaid.downloadPng": "Télécharger le PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "contenu défilable",
 
   "ui.tool.read": "Lire",
@@ -97,7 +117,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "Recherche Web",
-  "ui.tool.codesearch": "Recherche de code",
   "ui.tool.shell": "Shell",
   "ui.tool.patch": "Patch",
   "ui.tool.todos": "Tâches",

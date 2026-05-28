@@ -10,7 +10,13 @@ import { SplitBorder } from "../../component/border"
 import { useTextareaKeybindings } from "../../component/textarea-keybindings"
 import { useDialog } from "../../ui/dialog"
 
-export function QuestionPrompt(props: { request: QuestionRequest }) {
+// kilocode_change start
+export function QuestionPrompt(props: {
+  request: QuestionRequest
+  nonBlocking?: boolean
+  inputFocused?: () => boolean
+}) {
+  // kilocode_change end
   const sdk = useSDK()
   const { theme } = useTheme()
   const keybind = useKeybind()
@@ -45,14 +51,14 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
 
   function submit() {
     const answers = questions().map((_, i) => store.answers[i] ?? [])
-    sdk.client.question.reply({
+    void sdk.client.question.reply({
       requestID: props.request.id,
       answers,
     })
   }
 
   function reject() {
-    sdk.client.question.reject({
+    void sdk.client.question.reject({
       requestID: props.request.id,
     })
   }
@@ -67,7 +73,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
       setStore("custom", inputs)
     }
     if (single()) {
-      sdk.client.question.reply({
+      void sdk.client.question.reply({
         requestID: props.request.id,
         answers: [[answer]],
       })
@@ -125,6 +131,10 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
   useKeyboard((evt) => {
     // Skip processing if a dialog (e.g., command palette) is open
     if (dialog.stack.length > 0) return
+
+    // kilocode_change start - avoid intrusive key capture for non-blocking review suggestions
+    if (props.nonBlocking && props.inputFocused?.()) return
+    // kilocode_change end
 
     // When editing custom answer textarea
     if (store.editing && !confirm()) {
@@ -380,6 +390,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
                       <textarea
                         ref={(val: TextareaRenderable) => {
                           textarea = val
+                          val.traits = { status: "ANSWER" }
                           queueMicrotask(() => {
                             val.focus()
                             val.gotoLineEnd()
@@ -387,6 +398,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
                         }}
                         initialValue={input()}
                         placeholder="Type your own answer"
+                        placeholderColor={theme.textMuted}
                         minHeight={1}
                         maxHeight={6}
                         textColor={theme.text}

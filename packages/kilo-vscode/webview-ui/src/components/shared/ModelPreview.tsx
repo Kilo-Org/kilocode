@@ -1,11 +1,12 @@
-import { Component, Show, For, useContext } from "solid-js"
+import { Show, For, useContext, type Component } from "solid-js"
 import type { EnrichedModel } from "../../context/provider"
 import { SessionContext } from "../../context/session"
 import { Markdown } from "@kilocode/kilo-ui/markdown"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { sanitizeName } from "./model-selector-utils"
-import { fmtPrice } from "./model-preview-utils"
+import { avgPrice, fmtCachedPrice, fmtPrice } from "./model-preview-utils"
 
 interface Props {
   model: EnrichedModel | null
@@ -22,12 +23,12 @@ function fmtDate(s: string): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short" })
 }
 
-const MODALITY_LABELS: Record<string, string> = {
-  text: "Text",
-  image: "Images",
-  audio: "Audio",
-  video: "Video",
-  pdf: "PDF",
+const MODALITY_KEYS: Record<string, string> = {
+  text: "model.preview.modality.text",
+  image: "model.preview.modality.image",
+  audio: "model.preview.modality.audio",
+  video: "model.preview.modality.video",
+  pdf: "model.preview.modality.pdf",
 }
 
 export const ModelPreview: Component<Props> = (props) => {
@@ -40,6 +41,11 @@ export const ModelPreview: Component<Props> = (props) => {
       <Show when={m()}>
         {(model) => {
           const cost = () => model().cost
+          const cachedText = () => {
+            if (!cost()) return ""
+            return fmtCachedPrice(cost()!) ?? language.t("model.preview.value.notSupported")
+          }
+          const avg = () => (cost() ? avgPrice(cost()!) : undefined)
           const ctx = () => model().limit?.context ?? model().contextLength
           const caps = () => model().capabilities
           const inputs = () => caps()?.input
@@ -47,13 +53,18 @@ export const ModelPreview: Component<Props> = (props) => {
             inputs()
               ? (Object.entries(inputs()!) as [string, boolean][])
                   .filter(([, v]) => v)
-                  .map(([k]) => MODALITY_LABELS[k] ?? k)
+                  .map(([k]) => {
+                    const key = MODALITY_KEYS[k]
+                    return key ? language.t(key) : k
+                  })
               : []
 
           return (
             <>
               <Show when={model().isFree}>
-                <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">Free</span>
+                <span class="model-preview-badge model-preview-badge--free model-preview-badge--top-right">
+                  {language.t("model.tag.free")}
+                </span>
               </Show>
               {/* Header — name + provider + star */}
               <div class="model-preview-header">
@@ -88,21 +99,29 @@ export const ModelPreview: Component<Props> = (props) => {
               <div class="model-preview-grid">
                 {/* Release date */}
                 <Show when={model().releaseDate}>
-                  <span class="model-preview-label">Released</span>
+                  <span class="model-preview-label">{language.t("model.preview.label.released")}</span>
                   <span class="model-preview-value">{fmtDate(model().releaseDate!)}</span>
                 </Show>
 
                 {/* Pricing — hidden for free models */}
                 <Show when={cost() && !model().isFree}>
-                  <span class="model-preview-label">Input</span>
+                  <span class="model-preview-label">{language.t("model.preview.label.input")}</span>
                   <span class="model-preview-value">{fmtPrice(cost()!.input)}</span>
-                  <span class="model-preview-label">Output</span>
+                  <span class="model-preview-label">{language.t("model.preview.label.output")}</span>
                   <span class="model-preview-value">{fmtPrice(cost()!.output)}</span>
+                  <span class="model-preview-label">{language.t("model.preview.label.cached")}</span>
+                  <span class="model-preview-value">{cachedText()}</span>
+                  <Tooltip value={language.t("model.preview.tooltip.average")} placement="top">
+                    <span class="model-preview-label model-preview-label--hint" tabIndex={0}>
+                      {language.t("model.preview.label.average")}
+                    </span>
+                  </Tooltip>
+                  <span class="model-preview-value">{fmtPrice(avg()!)}</span>
                 </Show>
 
                 {/* Context window */}
                 <Show when={ctx()}>
-                  <span class="model-preview-label">Context</span>
+                  <span class="model-preview-label">{language.t("model.preview.label.context")}</span>
                   <span class="model-preview-value">{fmtContext(ctx()!)}</span>
                 </Show>
               </div>
@@ -111,7 +130,9 @@ export const ModelPreview: Component<Props> = (props) => {
               <Show when={caps()?.reasoning || activeModalities().length > 0}>
                 <div class="model-preview-caps">
                   <Show when={caps()?.reasoning}>
-                    <span class="model-preview-badge model-preview-badge--reasoning">Reasoning</span>
+                    <span class="model-preview-badge model-preview-badge--reasoning">
+                      {language.t("model.preview.badge.reasoning")}
+                    </span>
                   </Show>
                   <For each={activeModalities()}>{(label) => <span class="model-preview-badge">{label}</span>}</For>
                 </div>

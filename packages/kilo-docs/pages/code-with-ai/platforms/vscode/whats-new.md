@@ -62,6 +62,7 @@ Modes have been renamed to Agents in the new extension. You can set the default 
 
 Each message that caused file changes shows a **diff badge** in the chat — click it to open the Diff Viewer and review what changed.
 The Agent Manager also includes a built-in diff reviewer that shows every change file by file, in unified or split view.
+For Markdown files, use the eye/code toggle in the file header to switch between rendered Markdown and the raw diff.
 
 ### How do I do code reviews in the new extension?
 

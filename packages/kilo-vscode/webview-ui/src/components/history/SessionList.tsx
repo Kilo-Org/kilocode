@@ -11,12 +11,12 @@ import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { InlineInput } from "@kilocode/kilo-ui/inline-input"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import type { SessionInfo } from "../../types/messages"
+import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 
 const DATE_GROUP_KEYS = ["time.today", "time.yesterday", "time.thisWeek", "time.thisMonth", "time.older"] as const
 
@@ -46,7 +46,7 @@ const SessionList: Component<SessionListProps> = (props) => {
   const dialog = useDialog()
 
   const [renamingId, setRenamingId] = createSignal<string | null>(null)
-  const [renameValue, setRenameValue] = createSignal("")
+  const [pendingRenameId, setPendingRenameId] = createSignal<string | null>(null)
 
   onMount(() => {
     console.log("[Kilo New] SessionList mounted, loading sessions")
@@ -60,27 +60,18 @@ const SessionList: Component<SessionListProps> = (props) => {
 
   function startRename(s: SessionInfo) {
     setRenamingId(s.id)
-    setRenameValue(s.title || "")
   }
 
-  function saveRename() {
+  function saveRename(title: string) {
     const id = renamingId()
-    const title = renameValue().trim()
-    if (!id || !title) {
-      cancelRename()
-      return
-    }
+    if (!id) return
     const existing = session.sessions().find((s) => s.id === id)
-    if (!existing || title !== (existing.title || "")) {
-      session.renameSession(id, title)
-    }
+    if (!existing || title !== (existing.title || "")) session.renameSession(id, title)
     setRenamingId(null)
-    setRenameValue("")
   }
 
   function cancelRename() {
     setRenamingId(null)
-    setRenameValue("")
   }
 
   function confirmDelete(s: SessionInfo) {
@@ -115,9 +106,20 @@ const SessionList: Component<SessionListProps> = (props) => {
           {node}
         </ContextMenu.Trigger>
         <ContextMenu.Portal>
-          <ContextMenu.Content>
-            <ContextMenu.Item onSelect={() => startRename(item)}>
+          <ContextMenu.Content
+            class="session-list-menu"
+            onCloseAutoFocus={(event) => {
+              if (pendingRenameId() !== item.id) return
+              event.preventDefault()
+              setPendingRenameId(null)
+              startRename(item)
+            }}
+          >
+            <ContextMenu.Item onSelect={() => setPendingRenameId(item.id)}>
               <ContextMenu.ItemLabel>{language.t("common.rename")}</ContextMenu.ItemLabel>
+            </ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => session.exportSessionTranscript(item.id)}>
+              <ContextMenu.ItemLabel>{language.t("command.session.export")}</ContextMenu.ItemLabel>
             </ContextMenu.Item>
             <ContextMenu.Separator />
             <ContextMenu.Item onSelect={() => confirmDelete(item)}>
@@ -141,7 +143,7 @@ const SessionList: Component<SessionListProps> = (props) => {
             props.onSelectSession(s.id)
           }
         }}
-        search={{ placeholder: language.t("session.search.placeholder"), autofocus: false }}
+        search={{ placeholder: language.t("session.search.placeholder"), autofocus: true }}
         emptyMessage={language.t("session.empty")}
         groupBy={(s) => language.t(dateGroupKey(s.updatedAt))}
         sortGroupsBy={(a, b) => {
@@ -158,7 +160,16 @@ const SessionList: Component<SessionListProps> = (props) => {
                 <span data-slot="list-item-title">{s.title || language.t("session.untitled")}</span>
                 <span data-slot="list-item-description">{formatRelativeDate(s.updatedAt)}</span>
                 <span
-                  data-slot="session-delete-button"
+                  data-slot="session-row-action"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    startRename(s)
+                  }}
+                >
+                  <IconButton icon="edit" size="small" variant="ghost" aria-label={language.t("common.rename")} />
+                </span>
+                <span
+                  data-slot="session-row-action"
                   onClick={(e) => {
                     e.stopPropagation()
                     confirmDelete(s)
@@ -174,24 +185,7 @@ const SessionList: Component<SessionListProps> = (props) => {
               </>
             }
           >
-            <InlineInput
-              ref={(el) => requestAnimationFrame(() => el?.focus())}
-              value={renameValue()}
-              onInput={(e) => setRenameValue(e.currentTarget.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  saveRename()
-                }
-                if (e.key === "Escape") {
-                  e.preventDefault()
-                  cancelRename()
-                }
-              }}
-              onBlur={() => saveRename()}
-              style={{ width: "100%" }}
-            />
+            <SessionRenameEditor title={s.title || ""} fill stop onSave={saveRename} onCancel={cancelRename} />
           </Show>
         )}
       </List>

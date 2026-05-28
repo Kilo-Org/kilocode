@@ -5,23 +5,25 @@ import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
+import { WithInstance } from "../../src/project/with-instance"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
 import { Question } from "../../src/question"
-import { Session } from "../../src/session"
+import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
-import { Log } from "../../src/util/log"
+import * as Log from "@opencode-ai/core/util/log"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
 
 const model = {
-  providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-4"),
+  providerID: ProviderID.make("openai"),
+  modelID: ModelID.make("gpt-4"),
 }
 
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
-  await Instance.provide({ directory: tmp.path, fn })
+  await WithInstance.provide({ directory: tmp.path, fn })
 }
 
 async function seed(input: {
@@ -141,6 +143,49 @@ describe("plan_exit detection", () => {
       expect(question.questions[0].header).toBe("Implement")
       await Question.reject(question.id)
       await expect(pending).resolves.toBe("break")
+    }))
+
+  test("JetBrains client enables plan follow-up with custom answer", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      try {
+        process.env.KILO_CLIENT = "jetbrains"
+        const seeded = await seed({
+          text: "Here is the plan",
+          tools: [
+            {
+              tool: "plan_exit",
+              input: {},
+              output: "Plan is ready. Ending planning turn.",
+            },
+          ],
+        })
+
+        expect(SessionPrompt.shouldAskPlanFollowup({ messages: seeded.messages, abort: AbortSignal.any([]) })).toBe(true)
+
+        const pending = PlanFollowup.ask({
+          sessionID: seeded.sessionID,
+          messages: seeded.messages,
+          abort: AbortSignal.any([]),
+        })
+
+        const question = await waitQuestion(seeded.sessionID)
+        expect(question).toBeDefined()
+        if (!question) return
+        expect(question.questions[0].question).toBe("Ready to implement?")
+        expect(question.questions[0].header).toBe("Implement")
+        expect(question.questions[0].custom).toBe(true)
+        expect(question.questions[0].options.map((item) => item.label)).toEqual([
+          PlanFollowup.ANSWER_NEW_SESSION,
+          PlanFollowup.ANSWER_CONTINUE,
+        ])
+        expect(question.questions[0].options.find((item) => item.label === PlanFollowup.ANSWER_CONTINUE)?.mode).toBe("code")
+        await Question.reject(question.id)
+        await expect(pending).resolves.toBe("break")
+      } finally {
+        if (prev === undefined) delete process.env.KILO_CLIENT
+        else process.env.KILO_CLIENT = prev
+      }
     }))
 
   test("PlanFollowup.ask triggers and continue works with plan_exit", () =>
@@ -368,7 +413,7 @@ describe("plan_exit detection", () => {
       })
 
       const session = await Session.get(seeded.sessionID)
-      const plan = Session.plan(session)
+      const plan = Session.plan(session, Instance.current)
       await fs.mkdir(path.dirname(plan), { recursive: true })
       await Bun.write(plan, "Do implementation step 1")
 

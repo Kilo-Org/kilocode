@@ -3,7 +3,13 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import simpleGit from "simple-git"
-import { parseWorktreeList, normalizePath } from "./git-import"
+import {
+  parseWorktreeList,
+  normalizePath,
+  parseForEachRefOutput,
+  buildBranchList,
+  type BranchListItem,
+} from "./git-import"
 import type { Semaphore } from "./semaphore"
 
 interface GitOpsOptions {
@@ -36,11 +42,19 @@ interface ExecOptions {
   stdin?: string
 }
 
-interface ExecResult {
+export interface ExecResult {
   code: number
   stdout: string
   stderr: string
 }
+
+/**
+ * Fixed SSH command injected by {@link nonInteractiveEnv} when the user has
+ * not already configured their own. Exported so callers can check whether a
+ * `GIT_SSH_COMMAND` originated from Kilo (safe) or was inherited from the
+ * parent process (untrusted).
+ */
+export const KILO_NON_INTERACTIVE_SSH_COMMAND = "ssh -o BatchMode=yes"
 
 /**
  * Build environment variables that prevent git and SSH from opening interactive
@@ -57,9 +71,18 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
     GIT_TERMINAL_PROMPT: "0",
   }
   if (!process.env.GIT_SSH_COMMAND) {
-    env.GIT_SSH_COMMAND = "ssh -o BatchMode=yes"
+    env.GIT_SSH_COMMAND = KILO_NON_INTERACTIVE_SSH_COMMAND
   }
   return env
+}
+
+/**
+ * True when `env.GIT_SSH_COMMAND` is the fixed value Kilo sets, rather than
+ * an inherited one from the parent process. Use this to decide whether it's
+ * safe to pass `allowUnsafeSshCommand: true` to simple-git.
+ */
+export function isKiloOwnedSshCommand(env: NodeJS.ProcessEnv): boolean {
+  return env.GIT_SSH_COMMAND === KILO_NON_INTERACTIVE_SSH_COMMAND
 }
 
 export class GitOps {
@@ -67,6 +90,9 @@ export class GitOps {
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
   private readonly controller = new AbortController()
   private readonly semaphore: Semaphore | undefined
+  private readonly resolutionCache = new Map<string, { value: string; expires: number }>()
+  private static readonly CACHE_TTL_MS = 60000
+  private static readonly MAX_CACHE_SIZE = 100
 
   get disposed(): boolean {
     return this.controller.signal.aborted
@@ -87,6 +113,30 @@ export class GitOps {
     if (!this.controller.signal.aborted) {
       this.controller.abort()
     }
+    this.resolutionCache.clear()
+  }
+
+  private getCached(key: string): string | undefined {
+    const entry = this.resolutionCache.get(key)
+    if (entry && entry.expires > Date.now()) {
+      return entry.value
+    }
+    return undefined
+  }
+
+  private setCached(key: string, value: string): void {
+    if (this.resolutionCache.size >= GitOps.MAX_CACHE_SIZE) {
+      let oldestKey: string | undefined
+      let oldestExpiry = Infinity
+      for (const [k, v] of this.resolutionCache) {
+        if (v.expires < oldestExpiry) {
+          oldestExpiry = v.expires
+          oldestKey = k
+        }
+      }
+      if (oldestKey) this.resolutionCache.delete(oldestKey)
+    }
+    this.resolutionCache.set(key, { value, expires: Date.now() + GitOps.CACHE_TTL_MS })
   }
 
   private raw(args: string[], cwd: string): Promise<string> {
@@ -122,44 +172,99 @@ export class GitOps {
    * 3. Falls back to `origin`
    */
   async resolveRemote(cwd: string, branch?: string): Promise<string> {
+    const cacheKey = `remote:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached) return cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd).catch(
       () => "",
     )
-    if (upstream.includes("/")) return upstream.split("/")[0]
+    if (upstream.includes("/")) {
+      const result = upstream.split("/")[0]
+      this.setCached(cacheKey, result)
+      return result
+    }
 
     const name = branch || (await this.raw(["branch", "--show-current"], cwd).catch(() => ""))
     if (name) {
       const configured = await this.raw(["config", `branch.${name}.remote`], cwd).catch(() => "")
-      if (configured) return configured
+      if (configured) {
+        this.setCached(cacheKey, configured)
+        return configured
+      }
     }
 
-    return "origin"
+    const result = "origin"
+    this.setCached(cacheKey, result)
+    return result
   }
 
   /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
+    const cacheKey = `tracking:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    if (upstream) return upstream
+    if (upstream) {
+      this.setCached(cacheKey, upstream)
+      return upstream
+    }
 
     const remote = await this.resolveRemote(cwd, branch)
     const ref = `${remote}/${branch}`
     const resolved = await this.raw(["rev-parse", "--verify", ref], cwd).catch(() => "")
-    if (resolved) return ref
+    if (resolved) {
+      this.setCached(cacheKey, ref)
+      return ref
+    }
 
+    this.setCached(cacheKey, "")
     return undefined
   }
 
   /** Resolve the repo's default branch via <remote>/HEAD. */
   async resolveDefaultBranch(cwd: string, branch?: string): Promise<string | undefined> {
     const remote = await this.resolveRemote(cwd, branch)
+    const cacheKey = `default-branch:${cwd}:${remote}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
     const head = await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
-    return head || undefined
+    const result = head || undefined
+    this.setCached(cacheKey, result ?? "")
+    return result
   }
 
   async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
     return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
       .then(() => true)
       .catch(() => false)
+  }
+
+  /**
+   * List local branches and `origin/*` remotes sorted by last commit date,
+   * with the resolved default branch flagged. Mirrors WorktreeManager's
+   * `listBranches` shape but takes `cwd` per call so it works outside the
+   * worktree context (e.g. for the diff viewer's base branch picker).
+   */
+  async listBranches(cwd: string): Promise<{ branches: BranchListItem[]; defaultBranch: string }> {
+    const def = (await this.resolveDefaultBranch(cwd)) ?? ""
+    const raw = await this.raw(
+      [
+        "for-each-ref",
+        "--sort=-committerdate",
+        "--format=%(refname)\t%(committerdate:iso-strict)",
+        "refs/heads/",
+        "refs/remotes/origin/",
+      ],
+      cwd,
+    ).catch((err) => {
+      this.log("listBranches: for-each-ref failed", err instanceof Error ? err.message : String(err))
+      return ""
+    })
+    const { locals, remotes, dates } = parseForEachRefOutput(raw)
+    return { branches: buildBranchList(locals, remotes, dates, def), defaultBranch: def }
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */
@@ -414,6 +519,17 @@ export class GitOps {
     const first = lines[0]
     if (first) return [{ reason: first }]
     return [{ reason: "Patch does not apply cleanly" }]
+  }
+
+  /**
+   * Run a git command returning `{code, stdout, stderr}`. Gated by the shared
+   * semaphore and respects the dispose abort signal. Never throws — commands
+   * with non-zero exit codes resolve normally (nothrow semantics), making this
+   * suitable for callers that need to tolerate legitimate failures (e.g.
+   * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
+   */
+  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+    return this.exec(args, cwd, options)
   }
 
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {

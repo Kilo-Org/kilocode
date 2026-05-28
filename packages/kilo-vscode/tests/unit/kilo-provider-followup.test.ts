@@ -67,6 +67,7 @@ function connection() {
     onFavoritesChanged: () => () => undefined,
     registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
+    getServerConfig: () => ({ baseUrl: "http://127.0.0.1:12345", password: "test" }),
     getConnectionState: () => "connected" as const,
     resolveEventSessionId: (event: Event) => (event.type === "session.created" ? event.properties.info.id : undefined),
     recordMessageSessionId: () => undefined,
@@ -129,5 +130,38 @@ describe("KiloProvider follow-up sessions", () => {
         draftID: undefined,
       },
     ])
+  })
+
+  it("calls onFollowupAdopted listeners with session and directory", async () => {
+    const service = connection()
+    const provider = new KiloProvider({} as never, service as never)
+    const internal = provider as unknown as Internals
+    const adopted: Array<{ id: string; dir: string }> = []
+
+    internal.webview = { postMessage: async () => true }
+    internal.syncWebviewState = async () => {}
+    internal.flushPendingSessionRefresh = async () => {}
+    internal.fetchAndSendProviders = async () => {}
+    internal.fetchAndSendAgents = async () => {}
+    internal.fetchAndSendSkills = async () => {}
+    internal.fetchAndSendCommands = async () => {}
+    internal.fetchAndSendConfig = async () => {}
+    internal.fetchAndSendNotifications = async () => {}
+    internal.seedSessionStatusMap = async () => {}
+    internal.sendNotificationSettings = () => {}
+    internal.startStatsPolling = () => {}
+    internal.handleLoadMessages = async () => {}
+
+    await internal.initializeConnection()
+
+    provider.onFollowupAdopted((session, directory) => {
+      adopted.push({ id: session.id, dir: directory })
+    })
+
+    internal.pendingFollowup = { dir: "/repo/.kilo/worktrees/feat", time: Date.now() }
+    service.emit(created({ id: "ses-wt", directory: "/repo/.kilo/worktrees/feat" }))
+    await Promise.resolve()
+
+    expect(adopted).toEqual([{ id: "ses-wt", dir: "/repo/.kilo/worktrees/feat" }])
   })
 })

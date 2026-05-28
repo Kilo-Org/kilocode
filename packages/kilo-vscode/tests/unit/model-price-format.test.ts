@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { fmtPrice } from "../../webview-ui/src/components/shared/model-preview-utils"
+import { avgPrice, fmtCachedPrice, fmtPrice } from "../../webview-ui/src/components/shared/model-preview-utils"
 
 // Prices arriving at fmtPrice are already in $/M tokens (converted by parseApiPrice).
 // This test suite guards against the double-multiplication bug where fmtPrice was
@@ -32,5 +32,37 @@ describe("fmtPrice", () => {
 
   it("formats a high-cost model price ($75/1M)", () => {
     expect(fmtPrice(75)).toBe("$75.00/1M")
+  })
+})
+
+describe("fmtCachedPrice", () => {
+  it("formats supported cached prices using the same $/1M formatter", () => {
+    expect(fmtCachedPrice({ input: 3, cache: { read: 0.3 } })).toBe("$0.30/1M")
+  })
+
+  it("shows free cached pricing when input is free and cache_read is zero", () => {
+    expect(fmtCachedPrice({ input: 0, cache: { read: 0 } })).toBe("Free")
+  })
+
+  it("returns null when cache_read is zero but input is paid", () => {
+    expect(fmtCachedPrice({ input: 3, cache: { read: 0 } })).toBeNull()
+  })
+
+  it("returns null when cache_read is missing but input is paid", () => {
+    expect(fmtCachedPrice({ input: 3 })).toBeNull()
+  })
+})
+
+describe("avgPrice", () => {
+  it("uses the cache-heavy ratio when cache_read is supported", () => {
+    expect(avgPrice({ input: 3, output: 15, cache: { read: 0.3 } })).toBe(2.31)
+  })
+
+  it("uses the fallback ratio when cache_read is zero", () => {
+    expect(avgPrice({ input: 3, output: 15, cache: { read: 0 } })).toBe(4.2)
+  })
+
+  it("uses the fallback ratio when cache_read is missing", () => {
+    expect(avgPrice({ input: 3, output: 15 })).toBe(4.2)
   })
 })

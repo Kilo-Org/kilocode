@@ -86,16 +86,16 @@ Key characteristics:
 
 ### Available Browser Tools
 
-| Tool                 | Description                         | When to Use                           |
-| -------------------- | ----------------------------------- | ------------------------------------- |
-| `browser_navigate`   | Navigates to a URL                  | Opening a web page                    |
-| `browser_click`      | Clicks an element on the page       | Interacting with buttons, links, etc. |
-| `browser_type`       | Types text into an input element    | Filling forms, search boxes           |
-| `browser_screenshot` | Captures a screenshot of the page   | Inspecting visual state               |
-| `browser_scroll`     | Scrolls the page or a specific area | Viewing content above or below        |
-| `browser_hover`      | Hovers over an element              | Revealing tooltips or menus           |
-| `browser_select`     | Selects an option from a dropdown   | Choosing from select elements         |
-| `browser_drag`       | Drags an element to a target        | Drag-and-drop interactions            |
+| Tool | Description | When to Use |
+|---|---|---|
+| `browser_navigate` | Navigates to a URL | Opening a web page |
+| `browser_click` | Clicks an element on the page | Interacting with buttons, links, etc. |
+| `browser_type` | Types text into an input element | Filling forms, search boxes |
+| `browser_screenshot` | Captures a screenshot of the page | Inspecting visual state |
+| `browser_scroll` | Scrolls the page or a specific area | Viewing content above or below |
+| `browser_hover` | Hovers over an element | Revealing tooltips or menus |
+| `browser_select` | Selects an option from a dropdown | Choosing from select elements |
+| `browser_drag` | Drags an element to a target | Drag-and-drop interactions |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -111,14 +111,14 @@ Key characteristics:
 
 ### Available Browser Actions
 
-| Action        | Description                    | When to Use                           |
-| ------------- | ------------------------------ | ------------------------------------- |
-| `launch`      | Opens a browser at a URL       | Starting a new browser session        |
-| `click`       | Clicks at specific coordinates | Interacting with buttons, links, etc. |
-| `type`        | Types text into active element | Filling forms, search boxes           |
-| `scroll_down` | Scrolls down by one page       | Viewing content below the fold        |
-| `scroll_up`   | Scrolls up by one page         | Returning to previous content         |
-| `close`       | Closes the browser             | Ending a browser session              |
+| Action | Description | When to Use |
+|---|---|---|
+| `launch` | Opens a browser at a URL | Starting a new browser session |
+| `click` | Clicks at specific coordinates | Interacting with buttons, links, etc. |
+| `type` | Types text into active element | Filling forms, search boxes |
+| `scroll_down` | Scrolls down by one page | Viewing content below the fold |
+| `scroll_up` | Scrolls up by one page | Returning to previous content |
+| `close` | Closes the browser | Ending a browser session |
 
 {% /tab %}
 {% /tabs %}

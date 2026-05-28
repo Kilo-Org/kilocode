@@ -83,7 +83,8 @@ export const WorkingIndicator: Component = () => {
       .permissions()
       .filter((p) => p.sessionID === id && !(p.tool && ["todowrite", "todoread"].includes(p.toolName)))
     const questions = session.questions().filter((q) => q.sessionID === id)
-    return perms.length > 0 || questions.length > 0
+    const suggestions = session.suggestions().filter((s) => s.sessionID === id)
+    return perms.length > 0 || questions.length > 0 || suggestions.length > 0
   }
 
   const isRetrying = () => session.statusInfo().type === "retry"

@@ -1,8 +1,9 @@
-import { type Component, createMemo } from "solid-js"
+import { Show, type Component, createMemo } from "solid-js"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { normalize } from "@kilocode/kilo-ui/session-diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
 
@@ -23,10 +24,17 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     return parts.slice(0, -1).join("/")
   })
 
+  const view = createMemo(() => {
+    const fd = props.filediff
+    if (!fd.patch) return
+    return normalize(fd)
+  })
+
   const openInTab = () => {
     vscode.postMessage({
       type: "openDiffVirtual",
       diff: props.filediff,
+      initialDiffStyle: "unified",
     })
   }
 
@@ -52,7 +60,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
             </svg>
           </div>
           <div data-slot="permission-diff-filename">
-            {directory() && <span data-slot="permission-diff-directory">{directory()}/</span>}
+            {directory() && <span data-slot="permission-diff-directory">{`\u2066${directory()}/\u2069`}</span>}
             <span data-slot="permission-diff-name">{filename()}</span>
           </div>
         </div>
@@ -64,11 +72,12 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
         </div>
       </div>
       <div data-slot="permission-diff-content">
-        <Diff
-          before={{ name: props.filediff.file, contents: props.filediff.before ?? "" }}
-          after={{ name: props.filediff.file, contents: props.filediff.after ?? "" }}
-          diffStyle="unified"
-        />
+        <Show
+          when={view()}
+          fallback={<div data-slot="permission-diff-empty">Diff preview unavailable for this file.</div>}
+        >
+          {(v) => <Diff fileDiff={v().fileDiff} diffStyle="unified" hunkSeparators="simple" />}
+        </Show>
       </div>
     </div>
   )

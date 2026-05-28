@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Изменения сессии",
+  "ui.sessionReview.title.git": "Изменения Git",
+  "ui.sessionReview.title.branch": "Изменения ветки",
   "ui.sessionReview.title.lastTurn": "Изменения последнего хода",
   "ui.sessionReview.diffStyle.unified": "Объединённый",
   "ui.sessionReview.diffStyle.split": "Разделённый",
@@ -36,6 +38,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Скрыть шаги",
   "ui.sessionTurn.summary.response": "Ответ",
   "ui.sessionTurn.diff.showMore": "Показать ещё изменений ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Изменено",
+  "ui.sessionTurn.diffs.showAll": "Показать все",
+  "ui.sessionTurn.diffs.showLess": "Показать меньше",
+  "ui.sessionTurn.diffs.more": "Еще +{{count}} файлов",
 
   "ui.sessionTurn.retry.retrying": "повтор",
   "ui.sessionTurn.retry.inSeconds": "через {{seconds}}с",
@@ -69,6 +75,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} список",
   "ui.messagePart.context.list.other": "{{count}} списков",
   "ui.messagePart.diagnostic.error": "Ошибка",
+  "ui.messagePart.mcp.input": "Ввод",
+  "ui.messagePart.mcp.output": "Вывод",
   "ui.messagePart.title.edit": "Редактировать",
   "ui.messagePart.title.write": "Написать",
   "ui.messagePart.option.typeOwnAnswer": "Введите свой ответ",
@@ -87,6 +95,18 @@ export const dict = {
   "ui.textField.copied": "Скопировано",
 
   "ui.imagePreview.alt": "Предпросмотр изображения",
+  // kilocode_change start
+  "ui.mermaid.rendering": "Отрисовка диаграммы Mermaid...",
+  "ui.mermaid.renderError": "Не удалось отрисовать Mermaid: {{message}}",
+  "ui.mermaid.errorDefault": "Не удалось отрисовать диаграмму Mermaid.",
+  "ui.mermaid.errorEmpty": "Mermaid отрисовал пустую диаграмму.",
+  "ui.mermaid.download": "Скачать",
+  "ui.mermaid.copySource": "Копировать исходный код Mermaid",
+  "ui.mermaid.copySvg": "Копировать SVG",
+  "ui.mermaid.copyPng": "Копировать PNG",
+  "ui.mermaid.downloadSvg": "Скачать SVG",
+  "ui.mermaid.downloadPng": "Скачать PNG",
+  // kilocode_change end
   "ui.scrollView.ariaLabel": "прокручиваемый контент",
 
   "ui.tool.read": "Чтение",
@@ -96,7 +116,6 @@ export const dict = {
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webfetch",
   "ui.tool.websearch": "Веб-поиск",
-  "ui.tool.codesearch": "Поиск кода",
   "ui.tool.shell": "Оболочка",
   "ui.tool.patch": "Патч",
   "ui.tool.todos": "Задачи",

@@ -92,6 +92,7 @@ export const dict = {
   "command.session.share.description": "Deel deze sessie en kopieer de URL naar het klembord",
   "command.session.unshare": "Delen van sessie stoppen",
   "command.session.unshare.description": "Stop met het delen van deze sessie",
+  "command.session.export": "Sessietranscript exporteren",
 
   "palette.search.placeholder": "Zoeken naar bestanden, commando's en sessies",
   "palette.empty": "Geen resultaten gevonden",
@@ -137,6 +138,16 @@ export const dict = {
   "provider.connect.apiKey.label": "{{provider}} API-sleutel",
   "provider.connect.apiKey.placeholder": "API-sleutel",
   "provider.connect.apiKey.required": "API-sleutel is vereist",
+  "provider.connect.prompt.required": "{{field}} is verplicht",
+  "provider.connect.azure.endpointType.label": "Selecteer Azure-eindpuntconfiguratie",
+  "provider.connect.azure.endpointType.resourceName.label": "Resourcenaam",
+  "provider.connect.azure.endpointType.resourceName.hint": "Bouw het eindpunt op basis van uw Azure-resourcenaam",
+  "provider.connect.azure.endpointType.baseURL.label": "Volledige eindpunt-URL",
+  "provider.connect.azure.endpointType.baseURL.hint": "Gebruik een aangepast Azure OpenAI-eindpunt",
+  "provider.connect.azure.resourceName.label": "Azure-resourcenaam",
+  "provider.connect.azure.resourceName.placeholder": "bijv. my-models",
+  "provider.connect.azure.baseURL.label": "Azure OpenAI-eindpunt-URL",
+  "provider.connect.azure.baseURL.placeholder": "bijv. https://my-models.openai.azure.com/openai",
   "provider.connect.opencodeZen.line1":
     "OpenCode Zen geeft u toegang tot een geselecteerde set betrouwbare en geoptimaliseerde modellen voor programmeer-agents.",
   "provider.connect.opencodeZen.line2":
@@ -167,6 +178,8 @@ export const dict = {
   "model.tag.latest": "Nieuwste",
   "model.group.recommended": "Aanbevolen",
   "model.group.favorites": "Favorieten",
+  "model.group.collapse": "{{group}} inklappen",
+  "model.group.expand": "{{group}} uitklappen",
   "model.favorite.add": "Toevoegen aan favorieten",
   "model.favorite.remove": "Verwijderen uit favorieten",
   "model.provider.anthropic": "Anthropic",
@@ -183,6 +196,21 @@ export const dict = {
   "model.tooltip.reasoning.allowed": "Staat redeneren toe",
   "model.tooltip.reasoning.none": "Geen redenering",
   "model.tooltip.context": "Contextlimiet {{limit}}",
+  "model.preview.label.released": "Uitgebracht",
+  "model.preview.label.input": "Input",
+  "model.preview.label.output": "Output",
+  "model.preview.label.cached": "Gecachet",
+  "model.preview.label.average": "Gesch. gem. kosten",
+  "model.preview.label.context": "Context",
+  "model.preview.value.notSupported": "Niet ondersteund",
+  "model.preview.tooltip.average":
+    "De geschatte gemiddelde kosten zijn gebaseerd op een typische verhouding van input-, output- en cache-leestokens.",
+  "model.preview.badge.reasoning": "Redeneren",
+  "model.preview.modality.text": "Tekst",
+  "model.preview.modality.image": "Afbeeldingen",
+  "model.preview.modality.audio": "Audio",
+  "model.preview.modality.video": "Video",
+  "model.preview.modality.pdf": "PDF",
 
   "common.search.placeholder": "Zoeken",
   "common.goBack": "Terug",
@@ -245,11 +273,33 @@ export const dict = {
   "prompt.attachment.remove": "Bijlage verwijderen",
   "prompt.action.send": "Verzenden",
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
+  "prompt.action.send.recording": "Transcriberen en verzenden",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.indexing": "Indexeringsinstellingen",
+  "prompt.action.autoApprove.enable": "Automatisch goedkeuren inschakelen",
+  "prompt.action.autoApprove.disable": "Automatisch goedkeuren uitschakelen",
+  "prompt.action.autoApprove.enabled":
+    "Automatisch goedkeuren is ingeschakeld. Toestemmingsverzoeken worden automatisch goedgekeurd.",
+  "prompt.action.autoApprove.disabled":
+    "Automatisch goedkeuren is uitgeschakeld. Klik om toestemmingsverzoeken automatisch goed te keuren.",
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
+
+  "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.stop": "Audio vastleggen stoppen",
+  "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
+  "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
+  "speechToText.error.title": "Spraakinvoer mislukt",
+  "speechToText.error.loginRequired": "Meld u aan bij Kilo om spraakinvoer te gebruiken.",
+  "speechToText.error.permission": "Microfoontoegang is geweigerd.",
+  "speechToText.error.microphone": "Kon de microfoon niet starten.",
+  "speechToText.error.recording": "Opname mislukt.",
+  "speechToText.error.emptyRecording": "Er is geen audio opgenomen.",
+  "speechToText.error.emptyTranscript": "Er is geen spraak gedetecteerd.",
+  "speechToText.error.encoding": "Kon de opname niet coderen.",
+  "speechToText.toast.transcribed": "Transcriptie ingevoegd",
 
   "prompt.toast.pasteUnsupported.title": "Plakken niet ondersteund",
   "prompt.toast.pasteUnsupported.description": "Hier kunnen alleen afbeeldingen of PDF's worden geplakt.",
@@ -404,6 +454,7 @@ export const dict = {
   "toast.session.unshare.success.description": "Delen van sessie succesvol gestopt!",
   "toast.session.unshare.failed.title": "Delen van sessie stoppen mislukt",
   "toast.session.unshare.failed.description": "Er is een fout opgetreden bij het stoppen van het delen van de sessie",
+  "toast.session.rename.invalid.title": "Ongeldige sessietitel",
   "toast.session.listFailed.title": "Laden van sessies voor {{project}} is mislukt",
 
   "toast.update.title": "Update beschikbaar",
@@ -437,6 +488,11 @@ export const dict = {
   "error.promotionLimit.description":
     "Registreer je gratis om door te gaan en 500 andere modellen te ontdekken. Duurt 2 minuten, geen creditcard vereist. Of kom later terug.",
   "error.promotionLimit.action": "Registreren",
+  "error.providerAuth.title": "{{provider}} heeft je afgemeld",
+  "error.providerAuth.description": "Verbind opnieuw met {{provider}} en stuur je bericht nog een keer.",
+  "error.providerAuth.chatgpt.title": "OpenAI heeft je afgemeld",
+  "error.providerAuth.chatgpt.description":
+    "Meld je opnieuw aan bij ChatGPT en stuur je bericht nog een keer om Codex-modellen te blijven gebruiken.",
 
   "error.chain.unknown": "Onbekende fout",
   "error.chain.causedBy": "Veroorzaakt door:",
@@ -525,7 +581,39 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Main-branch ({{branch}})",
   "session.new.worktree.create": "Nieuwe worktree aanmaken",
   "session.new.lastModified": "Laatst gewijzigd",
-
+  "sidebar.session.newSession": "Nieuwe Sessie",
+  "sidebar.session.newSession.tooltip": "Start een nieuw gesprek terwijl je de huidige sessie intact houdt.",
+  "sidebar.session.newSession.disabled":
+    "Deze sessie is al nieuw. Begin met chatten of maak in plaats daarvan een worktree aan.",
+  "sidebar.session.newWorktree": "Nieuwe Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Maak een geïsoleerde git worktree aan om veilig te experimenteren, wijzigingen gescheiden te houden en parallelle sessies uit te voeren zonder je huidige branch te verstoren.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Open het Agent Manager worktree-dialoogvenster om een nieuwe worktree te configureren voordat je deze aanmaakt.",
+  "sidebar.session.newWorktree.from": "Nieuwe Worktree van",
+  "sidebar.session.currentBranch": "huidige branch",
+  "sidebar.session.moveToWorktree": "Verplaats naar Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Verplaats dit gesprek en je huidige lokale wijzigingen naar een toegewijde worktree voor geïsoleerd vervolgwerk.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Verplaats deze conversatie en 1 gewijzigd bestand naar een specifieke worktree voor geïsoleerd vervolgwerk.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Verplaats deze conversatie en {{files}} gewijzigde bestanden naar een specifieke worktree voor geïsoleerd vervolgwerk.",
+  "sidebar.session.showChanges.tooltip.empty":
+    "Open de weergave met wijzigingen om de huidige worktree te inspecteren.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 bestand gewijzigd · +{{additions}} -{{deletions}}. Open de wijzigingenweergave.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} bestanden gewijzigd · +{{additions}} -{{deletions}}. Open de wijzigingenweergave.",
+  "sidebar.session.agentManager.tooltip":
+    "Open Agent Manager voor een compleet overzicht van parallelle sessies en worktrees, zodat je langlopende taken op één plek kunt coördineren.",
+  "sidebar.session.openAgentManager": "Open Agent Manager",
+  "sidebar.session.progress.capturing": "Wijzigingen vastleggen...",
+  "sidebar.session.progress.creating": "Worktree aanmaken...",
+  "sidebar.session.progress.setup": "Setup uitvoeren...",
+  "sidebar.session.progress.transferring": "Wijzigingen overzetten...",
+  "sidebar.session.progress.forking": "Sessie starten...",
+  "sidebar.session.progress.failed": "Kan niet doorgaan in worktree",
   "session.header.search.placeholder": "Zoek in {{project}}",
   "session.header.searchFiles": "Bestanden zoeken",
   "session.header.openIn": "Open in",
@@ -728,10 +816,12 @@ export const dict = {
   "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Omgeving",
   "settings.providers.tag.config": "Config",
+  "settings.providers.tag.chatgpt": "ChatGPT",
   "settings.providers.tag.custom": "Aangepast",
   "settings.providers.tag.customProvider": "Aangepaste provider",
   "settings.providers.tag.other": "Overige",
   "settings.providers.connected.environmentDescription": "Gekoppeld via je omgevingsvariabelen",
+  "settings.providers.action.signInChatGPT": "Inloggen met ChatGPT",
   "settings.providers.custom.description": "Voeg een OpenAI-compatibele provider toe via basis-URL.",
 
   "provider.custom.title": "Aangepaste provider",
@@ -753,6 +843,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Naam",
   "provider.custom.models.name.placeholder": "Weergavenaam",
+  "provider.custom.models.reasoning.label": "Redeneren",
+  "provider.custom.models.variants.label": "Varianten",
+  "provider.custom.models.variants.add": "Variant toevoegen",
+  "provider.custom.models.variants.remove": "Variant verwijderen",
+  "provider.custom.models.variants.name.label": "Naam",
+  "provider.custom.models.variants.name.placeholder": "bijv. thinking",
+  "provider.custom.models.variants.option.unset": "(niet ingesteld)",
+  "provider.custom.models.variants.enableThinking.label": "Denken inschakelen (bijv. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Denktype (bijv. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Nadenken inschakelen via chat template args (bijv. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Redeneerinspanning",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
   "provider.custom.models.fetch": "Modellen ophalen",
@@ -785,6 +903,30 @@ export const dict = {
   "provider.custom.error.baseURL.format": "Moet beginnen met http:// of https://",
   "provider.custom.error.required": "Vereist",
   "provider.custom.error.duplicate": "Duplicaat",
+  "settings.openLocalConfig": "Lokale config",
+  "settings.openGlobalConfig": "Globale config",
+  "settings.config.scope.local": "Lokaal",
+  "settings.config.scope.global": "Globaal",
+  "settings.config.status.loaded": "geladen",
+  "settings.config.status.loadedLegacy": "verouderde configuratie geladen",
+  "settings.config.status.notLoaded": "niet geladen",
+  "settings.config.status.create": "niet gevonden - maak dit bestand",
+  "settings.config.title": "Open {{scope}} Kilo-configuratiebestand",
+  "settings.config.placeholder":
+    "Configuratiebestanden worden op volgorde samengevoegd; bestanden gemarkeerd als geladen hebben momenteel invloed op de instellingen.",
+  "settings.config.noWorkspace": "Open een werkruimtemap om het lokale Kilo-configuratiebestand te bewerken.",
+  "settings.config.openFailed": "Kan {{scope}} Kilo-configuratiebestand niet openen: {{message}}",
+  "settings.config.source.xdg": "XDG globale configuratie",
+  "settings.config.source.homeKilo": "Home .kilo-configuratie",
+  "settings.config.source.homeKilocode": "Home .kilocode-configuratie",
+  "settings.config.source.homeOpencode": "Home .opencode-configuratie",
+  "settings.config.source.envFile": "KILO_CONFIG omgevingsbestand",
+  "settings.config.source.envDir": "KILO_CONFIG_DIR",
+  "settings.config.source.envContent": "Inline omgevingsconfiguratie",
+  "settings.config.source.projectKilo": "Project .kilo-configuratie",
+  "settings.config.source.projectRoot": "Project root configuratie",
+  "settings.config.source.projectKilocode": "Verouderde .kilocode-configuratie",
+  "settings.config.source.projectOpencode": "Verouderde .opencode-configuratie",
   "settings.models.title": "Modellen",
   "settings.models.description": "Model-instellingen zullen hier configureerbaar zijn.",
   "settings.agents.title": "Agenten",
@@ -926,8 +1068,42 @@ export const dict = {
   "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",
+  "settings.autocomplete.model.title": "Autocomplete-model",
+  "settings.autocomplete.model.description": "Selecteer het model dat wordt gebruikt voor inline code-aanvullingen",
   "settings.notifications.title": "Meldingen",
   "settings.context.title": "Context",
+  "settings.indexing.title": "Indexering",
+  "settings.indexing.status.title": "Status",
+  "settings.indexing.enable.title": "Indexering inschakelen",
+  "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit.",
+  "settings.indexing.globalEnable.title": "Globaal inschakelen",
+  "settings.indexing.globalEnable.description": "Indexering inschakelen voor elke werkruimte.",
+  "settings.indexing.projectEnable.title": "Inschakelen voor dit project",
+  "settings.indexing.projectEnable.description":
+    "Indexering inschakelen voor deze werkruimte wanneer globale indexering is uitgeschakeld.",
+  "settings.indexing.projectEnable.disabledTooltip":
+    "Globale indexering is ingeschakeld, dus dit project is al opgenomen.",
+  "settings.indexing.provider.title": "Embedding-provider",
+  "settings.indexing.provider.description":
+    "Kies de provider die wordt gebruikt om embeddings te genereren voor semantisch zoeken.",
+  "settings.indexing.model.title": "Embedding-model",
+  "settings.indexing.model.description": "Overschrijf het standaard embedding-model voor de geselecteerde provider.",
+  "settings.indexing.dimension.title": "Vectordimensie",
+  "settings.indexing.dimension.description":
+    "Laat leeg om de embedding-dimensie automatisch te detecteren vanuit het model.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.providerField.description": "Provider-specifieke verbindingsinstelling.",
+  "settings.indexing.vectorStore.title": "Vectoropslag",
+  "settings.indexing.vectorStore.description": "Kies waar geïndexeerde embeddings worden opgeslagen.",
+  "settings.indexing.lancedbDirectory.title": "LanceDB-directory",
+  "settings.indexing.lancedbDirectory.description": "Optionele directory voor de lokale LanceDB-opslag.",
+  "settings.indexing.lancedbDirectory.placeholder": "Laat leeg voor standaard",
+  "settings.indexing.qdrantUrl.title": "Qdrant-URL",
+  "settings.indexing.qdrantUrl.description": "Server-URL voor de Qdrant-instantie.",
+  "settings.indexing.qdrantApiKey.title": "Qdrant API-sleutel",
+  "settings.indexing.qdrantApiKey.description": "Optionele API-sleutel voor de Qdrant-instantie.",
+  "settings.indexing.qdrantApiKey.placeholder": "Optionele API-sleutel",
+  "settings.indexing.tuning.description": "Geavanceerde parameter voor zoeken en batching.",
 
   "settings.experimental.title": "Experimenteel",
   "settings.language.title": "Taal",
@@ -937,11 +1113,21 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
   "session.messages.scrollToBottom": "Scroll naar beneden",
+  "session.messages.initializing": "Initialiseren...",
+  "session.messages.taskStarting": "Starten...",
   "session.status.writingResponse": "Antwoord schrijven...",
   "session.status.retry": "Opnieuw proberen...",
   "session.status.retrying": "Opnieuw proberen (poging {{ attempt }})... {{ message }}",
   "session.status.working": "Bezig...",
   "session.status.offline": "Netwerkverbinding verbroken — opnieuw verbinden...",
+  "session.outcome.incomplete": "Beurt beëindigd met {{count}} resterende to-do's",
+  "session.outcome.limit": "Antwoordlimiet bereikt voor voltooiing",
+  "session.outcome.unknown": "Beurt beëindigd zonder voltooiingsreden van het model",
+  "session.outcome.filtered": "De provider heeft deze reactie gestopt vanwege een contentfilter.",
+  "session.outcome.unexpected": "Reactie is onverwacht beëindigd en is mogelijk onvolledig.",
+  "session.outcome.interrupted": "Beurt onderbroken",
+  "session.outcome.error": "Beurt mislukt",
+  "session.outcome.finish": "Voltooiingsreden: {{reason}}",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -954,6 +1140,7 @@ export const dict = {
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
+  "context.usage.olderSessions": "{{count}} oudere sessies",
   "context.stats.thisSession": "Deze sessie",
 
   "time.justNow": "zojuist",
@@ -1006,7 +1193,6 @@ export const dict = {
     'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
   "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
 
-  "settings.agentBehaviour.subtab.modes": "Modi",
   "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
@@ -1039,6 +1225,8 @@ export const dict = {
   "settings.autocomplete.chatAutocomplete.title": "Chat tekstveld automatisch aanvullen inschakelen",
   "settings.autocomplete.chatAutocomplete.description":
     "Toon suggesties voor automatisch aanvullen in het chat tekstveld",
+  "settings.autocomplete.modelsHint":
+    "Om te kiezen welk model wordt gebruikt voor automatisch aanvullen, zie de Modellen-instellingen.",
 
   "settings.notifications.agent.title": "Agent Voltooiing",
   "settings.notifications.agent.description": "Toon melding wanneer agent een taak voltooit",
@@ -1069,9 +1257,19 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Vat grote geplakte inhoud niet samen",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.speechToText.title": "Spraak naar tekst",
+  "settings.experimental.speechToText.description":
+    "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
+  "settings.experimental.speechToText.disabledDescription":
+    "Schakel de Kilo-provider in en meld u aan om Speech to Text te gebruiken. Speech to Text wordt momenteel alleen ondersteund met Kilo Gateway.",
+  "settings.experimental.speechToTextModel.title": "Spraak-naar-tekst-model",
+  "settings.experimental.speechToTextModel.description": "Kies het Kilo Gateway-transcriptiemodel voor spraakinvoer.",
   "settings.experimental.continueOnDeny.title": "Doorgaan bij weigering",
   "settings.experimental.continueOnDeny.description":
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
@@ -1095,6 +1293,8 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.description": "Selecteer een agent om te configureren…",
   "settings.agentBehaviour.modelOverride.title": "Model Overschrijven",
   "settings.agentBehaviour.modelOverride.description": "Overschrijf het standaard model voor deze agent",
+  "settings.agentBehaviour.variantOverride.title": "Variant Overschrijven",
+  "settings.agentBehaviour.variantOverride.description": "Overschrijf de modelvariant voor deze agent",
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",
@@ -1114,7 +1314,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
   "settings.agentBehaviour.availableModes": "Beschikbare Aangepaste Modi",
-  "settings.agentBehaviour.noModesFound": "Geen modi gevonden.",
+  "settings.agentBehaviour.noAgentsFound": "Geen agenten gevonden.",
   "settings.agentBehaviour.importMode": "Importeren",
   "settings.agentBehaviour.importMode.invalidName":
     "Ongeldige modusnaam in bestand. De naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en streepjes bevatten.",
@@ -1123,10 +1323,10 @@ export const dict = {
     "Ongeldig JSON-bestand. Selecteer een geldig agentdefinitiebestand.",
   "settings.agentBehaviour.importMode.tooLarge": "Bestand is te groot. Agentdefinities moeten kleiner zijn dan 1 MB.",
   "settings.agentBehaviour.exportMode": "Agentdefinitie exporteren",
-  "settings.agentBehaviour.removeMode.title": "Verwijder modus",
-  "settings.agentBehaviour.removeMode.confirm":
-    'Modus "{{name}}" verwijderen? Dit zal de modus uitschakelen door je configuratie bij te werken.',
-  "settings.agentBehaviour.removeMode.button": "Verwijderen",
+  "settings.agentBehaviour.removeAgent.title": "Verwijder agent",
+  "settings.agentBehaviour.removeAgent.confirm":
+    'Agent "{{name}}" verwijderen? Dit schakelt de agent uit door uw configuratie bij te werken.',
+  "settings.agentBehaviour.removeAgent.button": "Verwijderen",
   "settings.agentBehaviour.skillPaths": "Skill Mappaden",
   "settings.agentBehaviour.skillUrls": "Skill URL's",
   "settings.agentBehaviour.removeSkill.title": "Verwijder skill",
@@ -1217,11 +1417,24 @@ export const dict = {
     "Maak checkpoints aan voor het bewerken van bestanden zodat je eerdere staten kunt herstellen",
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
-  "settings.context.autoCompaction.description": "Context automatisch compacteren wanneer deze vol is",
+  "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
+  "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
+  "settings.context.compactionLimit.description":
+    "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
   "settings.context.prune.title": "Oude Uitvoer Opschonen",
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
+  "settings.commitMessage.override.description":
+    "Overschrijf de standaard prompt voor de commit message. Indien ingeschakeld, vervangt uw aangepaste prompt de ingebouwde prompt voor conventional commits volledig.",
+  "settings.commitMessage.prompt.title": "Aangepaste prompt",
+  "settings.commitMessage.prompt.description":
+    "Systeem prompt die naar de AI wordt gestuurd bij het genereren van commit messages. Dit vervangt de standaard prompt volledig.",
+  "settings.commitMessage.prompt.placeholder":
+    "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
 
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
@@ -1229,17 +1442,30 @@ export const dict = {
   "settings.display.layout.description": "Lay-outmodus voor de chatinterface",
   "settings.display.layout.auto": "Auto",
   "settings.display.layout.stretch": "Uitrekken",
+  "settings.display.fontSize.title": "Lettergrootte",
+  "settings.display.fontSize.description": "Pas de lettergrootte van de Kilo webview UI onafhankelijk van VS Code aan.",
+  "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
+  "settings.display.reasoningAutoCollapse.description":
+    "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.terminalCommand.title": "Terminal Command Blocks",
+  "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
+  "settings.display.terminalCommand.expanded": "Expanded",
+  "settings.display.terminalCommand.collapsed": "Collapsed",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",
   "settings.providers.smallModel.title": "Klein Model",
   "settings.providers.smallModel.description":
     "Lichtgewicht model voor het genereren van titels, commit-berichten, promptverbetering en andere snelle taken",
+  "settings.providers.subagentModel.title": "Subagentmodel",
+  "settings.providers.subagentModel.description":
+    "Standaardmodel en redeneerinspanning voor task-tool subagenten. Laat leeg om het model van de aanroepende agent over te nemen.",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
   "settings.providers.disabled": "Uitgeschakelde Providers",
   "settings.providers.disabled.description": "Providers om te verbergen in de providerlijst",
+  "settings.providers.disabled.enable": "Inschakelen",
   "settings.providers.enabled": "Ingeschakelde Providers (Allowlist)",
   "settings.providers.enabled.description":
     "Indien ingesteld, zijn alleen deze providers beschikbaar (exclusieve allowlist)",
@@ -1361,10 +1587,16 @@ export const dict = {
   "settings.saveBar.warning.many": "Meerdere sessies zijn actief en worden onderbroken",
   "settings.saveBar.saveAnyway": "Toch opslaan",
   "settings.saveBar.cancel": "Annuleren",
+  "settings.saveBar.saving": "Bezig met opslaan…",
+  "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",
   "notifications.action.tryModelGeneric": "Probeer model",
+  "settings.indexing.kiloModel.title": "Kilo-model voorinstelling",
+  "settings.indexing.kiloModel.description": "Kies een ondersteund Kilo-hosted embeddings model.",
+  "settings.indexing.kiloSignIn.title": "Kilo-aanmelding vereist",
+  "settings.indexing.kiloSignIn.description": "Log in op Kilo om hosted embeddings te gebruiken.",
   // Missing translations - English fallbacks until translated
   "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
   "settings.agentBehaviour.createMode.button": "Aanmaken",
@@ -1402,4 +1634,29 @@ export const dict = {
   "settings.agentBehaviour.permissions.hint":
     "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
+  "diffViewer.source.workspace.label": "Branch",
+  "diffViewer.source.workspace.tooltip":
+    "Alle wijzigingen in deze branch vergeleken met de base branch. Inclusief niet-gecommitte bestanden (staged, unstaged, ungetrackt) en lokale commits die nog niet in de base zitten.",
+  "diffViewer.source.staged.label": "Staged",
+  "diffViewer.source.staged.tooltip":
+    "Bestanden met wijzigingen die je hebt toegevoegd aan het staging-gebied van git (`git add`), zoals ze in de volgende commit zullen verschijnen.",
+  "diffViewer.source.unstaged.label": "Unstaged",
+  "diffViewer.source.unstaged.tooltip":
+    "Bestanden gewijzigd in je werkboom maar nog niet gestaged, plus niet-gevolgde (nieuwe) bestanden.",
+  "diffViewer.source.session.label": "Sessie",
+  "diffViewer.source.session.tooltip":
+    "Bestanden die door Kilo tijdens de huidige sessie zijn gewijzigd, gebaseerd op snapshots per beurt. Wordt gereset bij het starten van een nieuwe sessie.",
+  "diffViewer.group.session": "Sessie",
+  "diffViewer.group.git": "Git",
+  "diffViewer.notice.snapshotsDisabled":
+    "Snapshots zijn uitgeschakeld voor deze repository. Bewerk je configuratiebestanden om de sessiewijzigingen weer te geven.",
+
+  "diffViewer.baseBranch.auto": "Default",
+  "diffViewer.baseBranch.default": "Default",
+  "diffViewer.baseBranch.remote": "Remote",
+  "diffViewer.baseBranch.search": "Search branches",
+  "diffViewer.baseBranch.empty": "No matching branches",
+  "diffViewer.baseBranch.loading": "Loading branches…",
+  "diffViewer.baseBranch.none": "—",
+  "plan.exit.ready": "Plan is klaar:",
 }

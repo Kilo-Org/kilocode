@@ -61,18 +61,8 @@ export class SubAgentViewerProvider implements vscode.Disposable {
         // sessionCreated to the webview.
         provider.registerSession(session)
 
-        // Fetch and send existing messages
-        const { data: messagesData } = await client.session.messages({ sessionID }, { throwOnError: true })
-        const messages = messagesData.map((m) => ({
-          ...m.info,
-          parts: m.parts,
-          createdAt: new Date(m.info.time.created).toISOString(),
-        }))
-        provider.postMessage({
-          type: "messagesLoaded",
-          sessionID,
-          messages,
-        })
+        // Fetch the newest page before navigating so the tab opens on the latest turn.
+        await provider.loadMessages(sessionID)
 
         // Navigate to the sub-agent viewer
         provider.postMessage({ type: "viewSubAgentSession", sessionID })

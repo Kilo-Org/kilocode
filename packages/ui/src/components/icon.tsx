@@ -53,6 +53,7 @@ const icons = {
   "magnifying-glass-menu": `<path d="M2.08325 10.0002H4.58325M2.08325 5.41683H5.41659M2.08325 14.5835H5.41659M16.4583 13.9585L18.7499 16.2502M17.9166 10.0002C17.9166 12.9917 15.4915 15.4168 12.4999 15.4168C9.50838 15.4168 7.08325 12.9917 7.08325 10.0002C7.08325 7.00862 9.50838 4.5835 12.4999 4.5835C15.4915 4.5835 17.9166 7.00862 17.9166 10.0002Z" stroke="currentColor" stroke-linecap="square"/>`,
   "window-cursor": `<path d="M17.9166 10.4167V3.75H2.08325V17.0833H10.4166M17.9166 13.5897L11.6666 11.6667L13.5897 17.9167L15.032 15.0321L17.9166 13.5897Z" stroke="currentColor" stroke-width="1.07143" stroke-linecap="square"/><path d="M5.00024 6.125C5.29925 6.12518 5.54126 6.36795 5.54126 6.66699C5.54108 6.96589 5.29914 7.20783 5.00024 7.20801C4.7012 7.20801 4.45843 6.966 4.45825 6.66699C4.45825 6.36784 4.70109 6.125 5.00024 6.125ZM7.91626 6.125C8.21541 6.125 8.45825 6.36784 8.45825 6.66699C8.45808 6.966 8.21531 7.20801 7.91626 7.20801C7.61736 7.20783 7.37542 6.96589 7.37524 6.66699C7.37524 6.36795 7.61726 6.12518 7.91626 6.125ZM10.8333 6.125C11.1324 6.125 11.3752 6.36784 11.3752 6.66699C11.3751 6.966 11.1323 7.20801 10.8333 7.20801C10.5342 7.20801 10.2914 6.966 10.2913 6.66699C10.2913 6.36784 10.5341 6.125 10.8333 6.125Z" fill="currentColor" stroke="currentColor" stroke-width="0.25" stroke-linecap="square"/>`,
   task: `<path d="M9.99992 2.0835V17.9168M7.08325 3.75016H2.08325V16.2502H7.08325M12.9166 16.2502H17.9166V3.75016H12.9166" stroke="currentColor" stroke-linecap="square"/>`,
+  play: `<path d="M6 4L16 10L6 16V4Z" fill="currentColor"/>`,
   stop: `<rect x="5" y="5" width="10" height="10" fill="currentColor"/>`,
   status: `<path d="M2 10V18H18V10M2 10V2H18V10M2 10H18M5 6H9M5 14H9" stroke="currentColor"/>`,
   "status-active": `<path d="M18 2H2V10H18V2Z" fill="currentColor" fill-opacity="0.1"/>
@@ -108,7 +109,8 @@ const icons = {
   providers: `<path d="M10.0001 4.37562V2.875M13 4.37793V2.87793M7.00014 4.37793V2.875M10 17.1279V15.6279M13 17.1279V15.6279M7 17.1279V15.6279M15.625 13.0029H17.125M15.625 7.00293H17.125M15.625 10.0029H17.125M2.875 10.0029H4.375M2.875 13.0029H4.375M2.875 7.00293H4.375M4.375 4.37793H15.625V15.6279H4.375V4.37793ZM12.6241 10.0022C12.6241 11.4519 11.4488 12.6272 9.99908 12.6272C8.54934 12.6272 7.37408 11.4519 7.37408 10.0022C7.37408 8.55245 8.54934 7.3772 9.99908 7.3772C11.4488 7.3772 12.6241 8.55245 12.6241 10.0022Z" stroke="currentColor" stroke-linecap="square"/>`,
   layers: `<path d="M10 2.5L2.5 6.25L10 10L17.5 6.25L10 2.5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 13.75L10 17.5L17.5 13.75" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 10L10 13.75L17.5 10" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>`,
   models: `<path fill-rule="evenodd" clip-rule="evenodd" d="M17.5 10C12.2917 10 10 12.2917 10 17.5C10 12.2917 7.70833 10 2.5 10C7.70833 10 10 7.70833 10 2.5C10 7.70833 12.2917 10 17.5 10Z" stroke="currentColor"/>`,
-  discard: `<path d="M7.5 5L4.167 8.333L7.5 11.667M4.583 8.333h6.667a4.167 4.167 0 0 1 4.167 4.167" stroke="currentColor" stroke-linecap="square"/>`,
+  discard: `<path d="M7.5 5L4.167 8.333L7.5 11.667M4.583 8.333h6.667a4.167 4.167 0 0 1 4.167 4.167" stroke="currentColor" stroke-linecap="square"/>`, // kilocode_change
+  "arrow-undo-down": `<path d="M4.08333 11.0859L1.75 8.7526L4.08333 6.41927M2.33333 8.7526L12.5417 8.7526L12.5417 3.21094L7 3.21094" stroke="currentColor" stroke-width="1" stroke-linecap="square"/>`,
 }
 
 export interface IconProps extends ComponentProps<"svg"> {
@@ -124,7 +126,7 @@ export function Icon(props: IconProps) {
       <svg
         data-slot="icon-svg"
         classList={{
-          ...(local.classList || {}),
+          ...local.classList,
           [local.class ?? ""]: !!local.class,
         }}
         fill="none"

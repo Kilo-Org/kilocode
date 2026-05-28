@@ -23,74 +23,74 @@ Packages installed via `apt` do not persist across redeploys. If you need a pack
 
 The following packages are installed via `apt` on top of the base image:
 
-| Package           | Description                               |
-| ----------------- | ----------------------------------------- |
+| Package | Description |
+|---|---|
 | `ca-certificates` | Root CA certificates for TLS verification |
-| `curl`            | HTTP client                               |
-| `gnupg`           | GPG encryption and signing                |
-| `git`             | Version control                           |
-| `unzip`           | Archive extraction                        |
-| `jq`              | JSON processor                            |
-| `ripgrep`         | Fast recursive search (`rg`)              |
-| `rsync`           | File synchronization                      |
-| `zstd`            | Zstandard compression                     |
-| `build-essential` | GCC, make, and core build tools           |
-| `python3`         | Python 3 interpreter (system default)     |
-| `ffmpeg`          | Audio/video processing                    |
-| `tmux`            | Terminal multiplexer                      |
+| `curl` | HTTP client |
+| `gnupg` | GPG encryption and signing |
+| `git` | Version control |
+| `unzip` | Archive extraction |
+| `jq` | JSON processor |
+| `ripgrep` | Fast recursive search (`rg`) |
+| `rsync` | File synchronization |
+| `zstd` | Zstandard compression |
+| `build-essential` | GCC, make, and core build tools |
+| `python3` | Python 3 interpreter (system default) |
+| `ffmpeg` | Audio/video processing |
+| `tmux` | Terminal multiplexer |
 
 ## Browser
 
-| Tool              | Description                                                                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool | Description |
+|---|---|
 | Headless Chromium | Built-in browser for web browsing, screenshots, and CDP automation. Works with OpenClaw's browser tool out of the box. Requires the "full" tool profile. |
 
 ## Languages & Runtimes
 
-| Language / Runtime | Version                            | Install Method                   |
-| ------------------ | ---------------------------------- | -------------------------------- |
-| Node.js            | 22.13.1                            | Binary tarball (primary runtime) |
-| Go                 | 1.26.0                             | Binary tarball                   |
-| Bun                | 1.2.4                              | Install script                   |
-| Python 3           | Unpinned (Debian Bookworm default) | `apt`                            |
+| Language / Runtime | Version | Install Method |
+|---|---|---|
+| Node.js | 22.13.1 | Binary tarball (primary runtime) |
+| Go | 1.26.0 | Binary tarball |
+| Bun | 1.2.4 | Install script |
+| Python 3 | Unpinned (Debian Bookworm default) | `apt` |
 
 ## Package Managers
 
 These package managers are available for installing libraries and dependencies:
 
-| Manager | Included Via         |
-| ------- | -------------------- |
-| `npm`   | Bundled with Node.js |
-| `pnpm`  | Installed via `npm`  |
-| `bun`   | Bundled with Bun     |
+| Manager | Included Via |
+|---|---|
+| `npm` | Bundled with Node.js |
+| `pnpm` | Installed via `npm` |
+| `bun` | Bundled with Bun |
 
 ## CLI Tools
 
-| Tool                 | Version / Source            |
-| -------------------- | --------------------------- |
-| GitHub CLI (`gh`)    | Unpinned (GitHub apt repo)  |
+| Tool | Version / Source |
+|---|---|
+| GitHub CLI (`gh`) | Unpinned (GitHub apt repo) |
 | 1Password CLI (`op`) | 2.32.1 (1Password apt repo) |
 
 ## npm Global Packages
 
 The following packages are installed globally via `npm`:
 
-| Package                 | Version  |
-| ----------------------- | -------- |
+| Package | Version |
+|---|---|
 | ClawHub CLI (`clawhub`) | Unpinned |
-| mcporter                | 0.7.3    |
-| `@steipete/summarize`   | 0.11.1   |
+| mcporter | 0.7.3 |
+| `@steipete/summarize` | 0.11.1 |
 
 ## OpenClaw Skills & Integrations
 
-| Tool         | Description                                                           |
-| ------------ | --------------------------------------------------------------------- |
+| Tool | Description |
+|---|---|
 | gog (gogcli) | Google Workspace CLI — Gmail, Calendar, Drive, Contacts, Sheets, Docs |
-| blogwatcher  | Monitor blogs and RSS/Atom feeds for updates                          |
-| xurl         | Authenticated requests to the X (Twitter) API                         |
-| gifgrep      | Search GIF providers, download results, extract stills                |
-| summarize    | Summarize or extract text/transcripts from URLs and files             |
-| goplaces     | Location and places lookup                                            |
+| blogwatcher | Monitor blogs and RSS/Atom feeds for updates |
+| xurl | Authenticated requests to the X (Twitter) API |
+| gifgrep | Search GIF providers, download results, extract stills |
+| summarize | Summarize or extract text/transcripts from URLs and files |
+| goplaces | Location and places lookup |
 
 ## Installing Additional Tools
 

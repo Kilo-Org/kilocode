@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "المهارات",
   "marketplace.tab.mcpServers": "خوادم MCP",
-  "marketplace.tab.modes": "الأوضاع",
   "marketplace.category.all": "الكل",
   "marketplace.placeholder": "سيتم تنفيذه لاحقاً",
   "marketplace.card.installed": "مثبت",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "إلغاء",
   "marketplace.remove.confirm.button": "إزالة",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "وكلاء",
   "marketplace.search": "بحث...",
   "marketplace.filter.all": "جميع العناصر",
   "marketplace.filter.notInstalled": "غير مثبت",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "عام",
   "marketplace.remove.type.mcp": "خادم MCP",
   "marketplace.remove.type.skill": "مهارة",
-  "marketplace.remove.type.mode": "وضع",
+  "marketplace.remove.type.agent": "وكيل",
   "marketplace.remove.failed": "فشلت إزالة {{name}}",
   "marketplace.install": "تثبيت",
   "marketplace.filter.installed": "مثبت",
@@ -69,4 +69,38 @@ export const dict = {
   "marketplace.warning.busyMany": "عدة جلسات تعمل وستتوقف",
   "marketplace.warning.installAnyway": "تثبيت على أي حال",
   "marketplace.warning.cancel": "إلغاء",
+  "marketplace.contribute.prompt": "هل تفتقد مهارة أو وكيلاً أو خادم MCP؟",
+  "marketplace.contribute.cta": "ساهم على GitHub",
+  "marketplace.migration.notice":
+    "تم استبدال الأوضاع بالوكلاء. إذا كنت قد قمت بتثبيت أوضاع السوق سابقاً، يرجى إزالتها وإعادة تثبيتها كوكلاء للانتقال إلى التنسيق الجديد.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "نفّذ",
+  "plan.followup.question": "جاهز للتنفيذ؟",
+  "plan.followup.answer.newSession": "بدء جلسة جديدة",
+  "plan.followup.answer.newSession.description": "نفّذ في جلسة جديدة بسياق نظيف",
+  "plan.followup.answer.continue": "المتابعة هنا",
+  "plan.followup.answer.continue.description": "نفّذ الخطة في هذه الجلسة",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "اللقطة بطيئة",
+  "snapshot.slowRepo.question":
+    "يستغرق تهيئة نظام اللقطات وقتًا طويلاً، غالبًا بسبب حجم المستودع.\n\nهل تريد تعطيل اللقطات لهذا المستودع؟",
+  "snapshot.slowRepo.answer.continue": "المتابعة مع اللقطات",
+  "snapshot.slowRepo.answer.continue.description":
+    "استمر في الانتظار حتى تكتمل اللقطة. تكون الدورات اللاحقة سريعة بعد إنشاء اللقطة الأولى.",
+  "snapshot.slowRepo.answer.disable": "تعطيل لهذا المشروع",
+  "snapshot.slowRepo.answer.disable.description":
+    "أوقف لقطات Kilo لهذا المشروع. ستفقد ميزة التراجع/الإعادة لتعديلات Kilo، لكن git سيستمر في تتبع كل شيء.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "فتح في عارض الفروقات",
+  "ui.messagePart.shell.command": "الأمر",
+  "ui.messagePart.shell.output": "المخرجات",
+  "ui.messagePart.openInEditor": "فتح في المحرر",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "كان هذا مفيدًا",
+  "ui.message.feedback.notHelpful": "لم يكن هذا مفيدًا",
+  "ui.message.feedback.clearRating": "مسح التقييم",
 }

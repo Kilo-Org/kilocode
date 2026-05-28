@@ -1,0 +1,27 @@
+# kilocode_change - new file
+name: Check Kilo generated artifacts
+
+on:
+  pull_request:
+    paths:
+      - ".gitignore"
+      - ".github/workflows/check-kilo-generated-artifacts.yml"
+      - ".kilo/**"
+      - ".kilocode/**"
+      - "script/check-kilo-generated-artifacts.ts"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check Kilo generated artifacts
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6 # kilocode_change
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Run check
+        run: bun run script/check-kilo-generated-artifacts.ts

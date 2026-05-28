@@ -167,6 +167,16 @@ describe("parseImport", () => {
     if (result.ok) expect(result.config.model).toBe("test-model")
   })
 
+  it("preserves task subagent model and variant settings", () => {
+    const json = JSON.stringify({ subagent_model: "anthropic/claude-sonnet-4", subagent_variant: "high" })
+    const result = parseImport(json)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.config.subagent_model).toBe("anthropic/claude-sonnet-4")
+      expect(result.config.subagent_variant).toBe("high")
+    }
+  })
+
   it("strips _meta before returning config", () => {
     const json = JSON.stringify({
       _meta: { version: 1, exportedAt: "2026-01-01", secretsStripped: true },
@@ -381,10 +391,10 @@ describe("constants", () => {
   })
 
   it("KNOWN_KEYS matches all keys in the Config interface (drift guard)", async () => {
-    // Read the Config interface from messages.ts and extract its keys.
+    // Read the Config interface from messages/config.ts and extract its keys.
     // If someone adds a new field to Config, this test fails as a reminder
     // to also add it to KNOWN_KEYS in settings-io.ts.
-    const src = await Bun.file(require("path").join(__dirname, "../../webview-ui/src/types/messages.ts")).text()
+    const src = await Bun.file(require("path").join(__dirname, "../../webview-ui/src/types/messages/config.ts")).text()
     const match = src.match(/export interface Config \{([^}]+)\}/)
     expect(match).not.toBeNull()
     const body = match![1]

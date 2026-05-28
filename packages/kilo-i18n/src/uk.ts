@@ -19,7 +19,6 @@ export const dict = {
   // Marketplace
   "marketplace.tab.skills": "Навички",
   "marketplace.tab.mcpServers": "MCP-сервери",
-  "marketplace.tab.modes": "Режими",
   "marketplace.category.all": "Усі",
   "marketplace.placeholder": "Буде реалізовано",
   "marketplace.card.installed": "Встановлено",
@@ -45,6 +44,7 @@ export const dict = {
   "marketplace.remove.cancel": "Скасувати",
   "marketplace.remove.confirm.button": "Видалити",
   "marketplace.tab.mcp": "MCP",
+  "marketplace.tab.agents": "Агенти",
   "marketplace.search": "Пошук...",
   "marketplace.filter.all": "Усі елементи",
   "marketplace.filter.notInstalled": "Не встановлено",
@@ -60,7 +60,7 @@ export const dict = {
   "marketplace.scope.global": "глобально",
   "marketplace.remove.type.mcp": "MCP-сервер",
   "marketplace.remove.type.skill": "навичка",
-  "marketplace.remove.type.mode": "режим",
+  "marketplace.remove.type.agent": "агент",
   "marketplace.remove.failed": "Не вдалося видалити {{name}}",
   "marketplace.install": "Встановити",
   "marketplace.filter.installed": "Встановлено",
@@ -69,4 +69,38 @@ export const dict = {
   "marketplace.warning.busyMany": "Виконується кілька сесій, їх буде перервано",
   "marketplace.warning.installAnyway": "Встановити все одно",
   "marketplace.warning.cancel": "Скасувати",
+  "marketplace.contribute.prompt": "Бракує навички, агента або MCP-сервера?",
+  "marketplace.contribute.cta": "Зробити внесок на GitHub",
+  "marketplace.migration.notice":
+    "Режими замінено агентами. Якщо ви раніше встановлювали режими з маркетплейсу, видаліть їх та перевстановіть як агенти для переходу на новий формат.",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Реалізувати",
+  "plan.followup.question": "Готові реалізувати?",
+  "plan.followup.answer.newSession": "Почати нову сесію",
+  "plan.followup.answer.newSession.description": "Реалізувати в новій сесії з чистим контекстом",
+  "plan.followup.answer.continue": "Продовжити тут",
+  "plan.followup.answer.continue.description": "Реалізувати план у цій сесії",
+
+  // Slow-repo snapshot prompt
+  "snapshot.slowRepo.header": "Знімок виконується повільно",
+  "snapshot.slowRepo.question":
+    "Ініціалізація системи знімків займає багато часу, ймовірно, через розмір репозиторію.\n\nВимкнути знімки для цього репозиторію?",
+  "snapshot.slowRepo.answer.continue": "Продовжити зі знімками",
+  "snapshot.slowRepo.answer.continue.description":
+    "Зачекайте, поки знімок завершиться. Наступні ходи будуть швидкими, щойно початковий знімок буде створений.",
+  "snapshot.slowRepo.answer.disable": "Вимкнути для цього проєкту",
+  "snapshot.slowRepo.answer.disable.description":
+    "Вимкніть знімки Kilo для цього проєкту. Ви втратите скасування/повторення для змін Kilo, але git продовжить відстежувати все.",
+
+  // Edit-tool header and shell-tool section labels
+  "ui.messagePart.openInDiffViewer": "Відкрити в переглядачі відмінностей",
+  "ui.messagePart.shell.command": "Команда",
+  "ui.messagePart.shell.output": "Вивід",
+  "ui.messagePart.openInEditor": "Відкрити в редакторі",
+
+  // Message feedback (thumbs up/down per assistant response)
+  "ui.message.feedback.helpful": "Це було корисно",
+  "ui.message.feedback.notHelpful": "Це не було корисно",
+  "ui.message.feedback.clearRating": "Очистити оцінку",
 }

@@ -10,6 +10,7 @@ import { $ } from "bun"
 import { info, success, warn, error, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 import { checkoutOurs, stageFiles, getConflictedFiles } from "../utils/git"
+import { matches } from "../utils/match"
 
 export interface KeepOursResult {
   file: string
@@ -27,17 +28,8 @@ export interface KeepOursOptions {
  * Check if a file matches any keep-ours patterns
  */
 export function shouldKeepOurs(filePath: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => {
-    // Exact match
-    if (filePath === pattern) return true
-    // Pattern match (simple glob)
-    if (pattern.includes("*")) {
-      const regex = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$")
-      return regex.test(filePath)
-    }
-    // Contains match
-    return filePath.includes(pattern)
-  })
+  const dirs = defaultConfig.kiloDirectories.map((dir) => `${dir}/**`)
+  return matches(filePath, [...patterns, ...dirs]) || patterns.some((pattern) => filePath.includes(pattern))
 }
 
 /**

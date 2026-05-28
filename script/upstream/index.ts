@@ -11,6 +11,9 @@ export * from "./utils/logger"
 export * from "./utils/config"
 export * from "./utils/version"
 export * from "./utils/report"
+export * from "./utils/upstream"
+export * from "./utils/markers"
+export * from "./utils/reset"
 
 // Transforms
 export { transformAll as transformPackageNames, transformFile } from "./transforms/package-names"
@@ -34,14 +37,6 @@ export {
   applyBrandingTransforms,
   matchesPattern,
 } from "./transforms/transform-take-theirs"
-
-export {
-  transformConflictedTauri,
-  transformTauriFile,
-  transformAllTauri,
-  isTauriFile,
-  applyTauriTransforms,
-} from "./transforms/transform-tauri"
 
 export {
   transformConflictedPackageJson,

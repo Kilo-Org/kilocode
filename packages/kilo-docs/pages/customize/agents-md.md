@@ -143,39 +143,39 @@ When you start a task in Kilo Code:
 
 In the new platform, AGENTS.md is loaded alongside other instruction sources. The CLI also supports `.claude/` and `.agents/` directories for compatibility with other tools.
 
-| Source                                           | Scope     | Location                                   | Priority         |
-| ------------------------------------------------ | --------- | ------------------------------------------ | ---------------- |
-| **Agent prompt**                                 | Per-agent | `agent.<name>.prompt` in config            | 1 (Highest)      |
-| **[Instructions](/docs/customize/custom-rules)** | Project   | `instructions` key in project `kilo.jsonc` | 2                |
-| **AGENTS.md**                                    | Project   | `AGENTS.md` at project root                | 3                |
-| **[Instructions](/docs/customize/custom-rules)** | Global    | `instructions` key in global `kilo.jsonc`  | 4                |
-| **[Skills](/docs/customize/skills)**             | Both      | `.kilo/skills/`, config `skills` key       | Loaded on demand |
+| Source | Scope | Location | Priority |
+|---|---|---|---|
+| **Agent prompt** | Per-agent | `agent.<name>.prompt` in config | 1 (Highest) |
+| **[Instructions](/docs/customize/custom-rules)** | Project | `instructions` key in project `kilo.jsonc` | 2 |
+| **AGENTS.md** | Project | `AGENTS.md` at project root | 3 |
+| **[Instructions](/docs/customize/custom-rules)** | Global | `instructions` key in global `kilo.jsonc` | 4 |
+| **[Skills](/docs/customize/skills)** | Both | `.kilo/skills/`, config `skills` key | Loaded on demand |
 
 {% /tab %}
 {% tab label="CLI" %}
 
 In the new platform, AGENTS.md is loaded alongside other instruction sources. The CLI also supports `.claude/` and `.agents/` directories for compatibility with other tools.
 
-| Source                                           | Scope     | Location                                   | Priority         |
-| ------------------------------------------------ | --------- | ------------------------------------------ | ---------------- |
-| **Agent prompt**                                 | Per-agent | `agent.<name>.prompt` in config            | 1 (Highest)      |
-| **[Instructions](/docs/customize/custom-rules)** | Project   | `instructions` key in project `kilo.jsonc` | 2                |
-| **AGENTS.md**                                    | Project   | `AGENTS.md` at project root                | 3                |
-| **[Instructions](/docs/customize/custom-rules)** | Global    | `instructions` key in global `kilo.jsonc`  | 4                |
-| **[Skills](/docs/customize/skills)**             | Both      | `.kilo/skills/`, config `skills` key       | Loaded on demand |
+| Source | Scope | Location | Priority |
+|---|---|---|---|
+| **Agent prompt** | Per-agent | `agent.<name>.prompt` in config | 1 (Highest) |
+| **[Instructions](/docs/customize/custom-rules)** | Project | `instructions` key in project `kilo.jsonc` | 2 |
+| **AGENTS.md** | Project | `AGENTS.md` at project root | 3 |
+| **[Instructions](/docs/customize/custom-rules)** | Global | `instructions` key in global `kilo.jsonc` | 4 |
+| **[Skills](/docs/customize/skills)** | Both | `.kilo/skills/`, config `skills` key | Loaded on demand |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 AGENTS.md works alongside Kilo Code's other configuration systems:
 
-| Feature                                                        | Scope   | Location                  | Purpose                                   | Priority    |
-| -------------------------------------------------------------- | ------- | ------------------------- | ----------------------------------------- | ----------- |
-| **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints       | 1 (Highest) |
-| **[Custom Rules](/docs/customize/custom-rules)**               | Project | `.kilocode/rules/`        | Kilo Code-specific rules and constraints  | 2           |
-| **[AGENTS.md](/docs/customize/agents-md)**                     | Project | `AGENTS.md`               | Universal standard for any AI coding tool | 3           |
-| **[Global Custom Rules](/docs/customize/custom-rules)**        | Global  | `~/.kilocode/rules/`      | Global Kilo Code rules                    | 4           |
-| **[Custom Instructions](/docs/customize/custom-instructions)** | Global  | IDE settings              | Personal preferences across all projects  | 5 (Lowest)  |
+| Feature | Scope | Location | Purpose | Priority |
+|---|---|---|---|---|
+| **[Mode-specific Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules-{mode}/` | Mode-specific rules and constraints | 1 (Highest) |
+| **[Custom Rules](/docs/customize/custom-rules)** | Project | `.kilocode/rules/` | Kilo Code-specific rules and constraints | 2 |
+| **[AGENTS.md](/docs/customize/agents-md)** | Project | `AGENTS.md` | Universal standard for any AI coding tool | 3 |
+| **[Global Custom Rules](/docs/customize/custom-rules)** | Global | `~/.kilocode/rules/` | Global Kilo Code rules | 4 |
+| **[Custom Instructions](/docs/customize/custom-instructions)** | Global | IDE settings | Personal preferences across all projects | 5 (Lowest) |
 
 {% /tab %}
 {% /tabs %}

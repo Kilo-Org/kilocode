@@ -1,0 +1,72 @@
+[data-component="markdown"] {
+  [data-component="markdown-code"][data-kind="mermaid"] {
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 6px;
+    background: var(--surface-base);
+    overflow: hidden;
+
+    > [data-slot="markdown-copy-button"] {
+      display: none;
+    }
+  }
+
+  [data-component="markdown-mermaid"] {
+    margin: 0;
+    padding: 12px;
+    border: 0;
+    background: transparent;
+    overflow: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendered"] {
+    display: block;
+  }
+
+  [data-slot="markdown-mermaid-actions"] {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-right: 32px;
+  }
+
+  [data-slot="markdown-mermaid-menu-chevron"] {
+    align-items: center;
+    color: var(--text-weak);
+    display: inline-flex;
+    flex: 0 0 12px;
+    height: 12px;
+    justify-content: center;
+    transform: rotate(0deg);
+    transition: transform 0.15s ease;
+    width: 12px;
+  }
+
+  [data-slot="markdown-mermaid-menu-chevron"] > svg {
+    display: block;
+    height: 12px;
+    width: 12px;
+  }
+
+  [data-expanded] [data-slot="markdown-mermaid-menu-chevron"] {
+    transform: rotate(180deg);
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendered"] > svg {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+  }
+
+  [data-component="markdown-mermaid"][data-state="rendering"] {
+    color: var(--text-weak);
+    font-style: italic;
+  }
+
+  [data-component="markdown-mermaid"][data-state="error"] {
+    color: var(--text-danger, var(--text-strong));
+    white-space: pre-wrap;
+  }
+}

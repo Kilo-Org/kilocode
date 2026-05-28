@@ -2,8 +2,8 @@
 
 [data-component="input"] {
   &[data-variant="normal"] [data-slot="input-label"] {
-    font-size: 12px;
-    line-height: 14px;
+    font-size: var(--kilo-font-size-12);
+    line-height: var(--kilo-font-size-14);
     font-weight: var(--font-weight-regular);
     color: var(--text-base);
   }
@@ -36,15 +36,15 @@
   }
 
   &[data-variant="normal"] [data-slot="input-input"] {
-    height: 32px;
+    min-height: 32px;
     padding: 6px 12px;
-    font-size: 13px;
-    line-height: 16px;
+    font-size: var(--kilo-font-size-13);
+    line-height: var(--kilo-font-size-16);
     font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
     color: var(--text-base);
 
     &::placeholder {
-      color: var(--icon-weak-base);
+      color: var(--vscode-input-placeholderForeground, var(--text-weaker));
     }
   }
 
@@ -55,8 +55,8 @@
   }
 
   &[data-variant="normal"] [data-slot="input-error"] {
-    font-size: 12px;
-    line-height: 14px;
+    font-size: var(--kilo-font-size-12);
+    line-height: var(--kilo-font-size-14);
     font-weight: var(--font-weight-regular);
     color: var(--text-on-critical-base);
   }

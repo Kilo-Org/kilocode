@@ -1,4 +1,6 @@
 ---
+title: "Using Synthetic with Kilo Code"
+description: "Access open-source AI models through Synthetic in Kilo Code. Setup guide for getting an API key and configuring models."
 sidebar_label: Synthetic
 ---
 

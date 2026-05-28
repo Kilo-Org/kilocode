@@ -82,6 +82,9 @@ export enum TelemetryEventName {
   FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
   CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
   GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
+
+  // Feedback
+  FEEDBACK_SUBMITTED = "Feedback Submitted",
 }
 
 /**

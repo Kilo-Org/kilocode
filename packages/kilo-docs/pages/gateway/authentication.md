@@ -78,22 +78,22 @@ BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BY
 
 ### Supported BYOK providers
 
-| Provider             | BYOK Key ID       |
-| -------------------- | ----------------- |
-| Anthropic            | `anthropic`       |
-| AWS Bedrock          | `bedrock`         |
-| Google AI Studio     | `google`          |
-| Inception            | `inception`       |
-| OpenAI               | `openai`          |
-| MiniMax              | `minimax`         |
-| Mistral              | `mistral`         |
-| xAI                  | `xai`             |
-| Z.AI                 | `zai`             |
+| Provider | BYOK Key ID |
+|---|---|
+| Anthropic | `anthropic` |
+| AWS Bedrock | `bedrock` |
+| Google AI Studio | `google` |
+| Inception | `inception` |
+| OpenAI | `openai` |
+| MiniMax | `minimax` |
+| Mistral | `mistral` |
+| xAI | `xai` |
+| Z.AI | `zai` |
 | BytePlus Coding Plan | `byteplus-coding` |
-| Codestral (FIM)      | `codestral`       |
-| Kimi Code            | `kimi-coding`     |
-| Neuralwatt           | `neuralwatt`      |
-| Z.AI Coding Plan     | `zai-coding`      |
+| Codestral (FIM) | `codestral` |
+| Kimi Code | `kimi-coding` |
+| Neuralwatt | `neuralwatt` |
+| Z.AI Coding Plan | `zai-coding` |
 
 ### How BYOK works
 
@@ -109,11 +109,11 @@ BYOK keys can be configured at the personal level or at the organization level. 
 
 The gateway accepts the following headers:
 
-| Header                      | Required                | Description                                  |
-| --------------------------- | ----------------------- | -------------------------------------------- |
-| `Authorization`             | Yes (unless free model) | `Bearer <api_key>`                           |
-| `Content-Type`              | Yes                     | `application/json`                           |
-| `X-KiloCode-OrganizationId` | No                      | Organization context for org-scoped requests |
-| `X-KiloCode-TaskId`         | No                      | Task identifier for prompt cache keying      |
-| `X-KiloCode-Version`        | No                      | Client version string                        |
-| `x-kilocode-mode`           | No                      | Mode hint for `kilo-auto` model routing      |
+| Header | Required | Description |
+|---|---|---|
+| `Authorization` | Yes (unless free model) | `Bearer <api_key>` |
+| `Content-Type` | Yes | `application/json` |
+| `X-KiloCode-OrganizationId` | No | Organization context for org-scoped requests |
+| `X-KiloCode-TaskId` | No | Task identifier for prompt cache keying |
+| `X-KiloCode-Version` | No | Client version string |
+| `x-kilocode-mode` | No | Mode hint for `kilo-auto` model routing |

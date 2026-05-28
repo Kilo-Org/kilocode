@@ -1,55 +1,53 @@
-import { Tool } from "./tool"
+import * as Tool from "./tool"
 import DESCRIPTION from "./task.txt"
-import z from "zod"
-import { Session } from "../session"
+import { Session } from "@/session/session"
 import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
-import { Identifier } from "../id/id"
 import { Agent } from "../agent/agent"
-import { SessionPrompt } from "../session/prompt"
-import { iife } from "@/util/iife"
-import { defer } from "@/util/defer"
-import { Config } from "../config/config"
-import { PermissionNext } from "@/permission/next"
+import type { SessionPrompt } from "../session/prompt"
+import { Config } from "@/config/config"
+import { KiloTask } from "../kilocode/tool/task" // kilocode_change
+import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
+import { KiloSessionProcessor } from "../kilocode/session/processor" // kilocode_change
+import { errorMessage } from "@/util/error" // kilocode_change
+import { Effect, Exit, Schema } from "effect"
+import { EffectBridge } from "@/effect/bridge"
 
-const parameters = z.object({
-  description: z.string().describe("A short (3-5 words) description of the task"),
-  prompt: z.string().describe("The task for the agent to perform"),
-  subagent_type: z.string().describe("The type of specialized agent to use for this task"),
-  task_id: z
-    .string()
-    .describe(
+export interface TaskPromptOps {
+  cancel(sessionID: SessionID): Effect.Effect<void>
+  resolvePromptParts(template: string): Effect.Effect<SessionPrompt.PromptInput["parts"]>
+  prompt(input: SessionPrompt.PromptInput): Effect.Effect<MessageV2.WithParts>
+}
+
+const id = "task"
+
+export const Parameters = Schema.Struct({
+  description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
+  prompt: Schema.String.annotate({ description: "The task for the agent to perform" }),
+  subagent_type: Schema.String.annotate({ description: "The type of specialized agent to use for this task" }),
+  task_id: Schema.optional(Schema.String).annotate({
+    description:
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
-    )
-    .optional(),
-  command: z.string().describe("The command that triggered this task").optional(),
+  }),
+  command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
 })
 
-export const TaskTool = Tool.define("task", async (ctx) => {
-  const agents = await Agent.list().then((x) => x.filter((a) => a.mode !== "primary"))
+export const TaskTool = Tool.define(
+  id,
+  Effect.gen(function* () {
+    const agent = yield* Agent.Service
+    const config = yield* Config.Service
+    const sessions = yield* Session.Service
 
-  // Filter agents by permissions if agent provided
-  const caller = ctx?.agent
-  const accessibleAgents = caller
-    ? agents.filter((a) => PermissionNext.evaluate("task", a.name, caller.permission).action !== "deny")
-    : agents
+    const run = Effect.fn("TaskTool.execute")(function* (
+      params: Schema.Schema.Type<typeof Parameters>,
+      ctx: Tool.Context,
+    ) {
+      const cfg = yield* config.get()
 
-  const description = DESCRIPTION.replace(
-    "{agents}",
-    accessibleAgents
-      .map((a) => `- ${a.name}: ${a.description ?? "This subagent should only be called manually by the user."}`)
-      .join("\n"),
-  )
-  return {
-    description,
-    parameters,
-    async execute(params: z.infer<typeof parameters>, ctx) {
-      const config = await Config.get()
-
-      // Skip permission check when user explicitly invoked via @ or command subtask
       if (!ctx.extra?.bypassAgentCheck) {
-        await ctx.ask({
-          permission: "task",
+        yield* ctx.ask({
+          permission: id,
           patterns: [params.subagent_type],
           always: ["*"],
           metadata: {
@@ -59,125 +57,174 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         })
       }
 
-      const agent = await Agent.get(params.subagent_type)
-      if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
+      const next = yield* agent.get(params.subagent_type)
+      if (!next) {
+        return yield* Effect.fail(new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`))
+      }
       // kilocode_change start — reject primary agents; only subagent/all modes allowed
-      if (agent.mode === "primary")
-        throw new Error(`Agent "${params.subagent_type}" is a primary agent and cannot be used as a subagent`)
+      KiloTask.validate(next, params.subagent_type)
       // kilocode_change end
 
-      // kilocode_change start — inherit edit and bash restrictions from the calling agent so
-      // sub-agents cannot perform actions the parent agent is not allowed to perform.
-      // We merge the static agent definition with the current session's accumulated permissions
-      // so that restrictions survive multi-hop chains (plan → general → explore).
-      // Agent.get() gives the base definition; session.permission carries restrictions that
-      // were themselves inherited from a grandparent, so both sources are needed.
-      const caller = await Agent.get(ctx.agent)
-      const callerSession = await Session.get(ctx.sessionID)
-      const callerRules = PermissionNext.merge(caller?.permission ?? [], callerSession.permission ?? [])
-      // Build the set of MCP server prefixes (e.g. "servername_") so we can
-      // include both server-wide wildcards ("servername_*") and specific MCP tool
-      // permissions ("servername_create_issue") in the inherited ruleset.
-      // Same sanitisation logic as agent.ts.
-      const mcpPrefixes = Object.keys(config.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
-      const isMcpRule = (p: string) => mcpPrefixes.some((prefix) => p.startsWith(prefix))
-      const inherited = callerRules.filter(
-        (r) => r.permission === "edit" || r.permission === "bash" || isMcpRule(r.permission),
-      )
+      const canTask = KiloTask.nestedTask() // kilocode_change - Kilo disallows subagents spawning subagents
+      const canTodo = next.permission.some((rule) => rule.permission === "todowrite")
+
+      const parent = yield* sessions.get(ctx.sessionID)
+      // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
+      const caller = yield* agent.get(ctx.agent)
+      const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
       // kilocode_change end
 
-      const session = await iife(async () => {
-        if (params.task_id) {
-          const found = await Session.get(SessionID.make(params.task_id)).catch(() => {})
-          if (found) return found
-        }
-
-        return await Session.create({
+      const taskID = params.task_id
+      const session = taskID
+        ? yield* sessions.get(SessionID.make(taskID)).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
+        : undefined
+      const nextSession =
+        session ??
+        (yield* sessions.create({
           parentID: ctx.sessionID,
-          title: params.description + ` (@${agent.name} subagent)`,
+          title: params.description + ` (@${next.name} subagent)`,
           permission: [
-            {
-              permission: "todowrite",
-              pattern: "*",
-              action: "deny",
-            },
-            {
-              permission: "todoread",
-              pattern: "*",
-              action: "deny",
-            },
-            // kilocode_change start — unconditionally deny task for all subagent sessions
-            { permission: "task", pattern: "*", action: "deny" },
-            // kilocode_change end
-            ...(config.experimental?.primary_tools?.map((t) => ({
+            ...(parent.permission ?? []).filter(
+              (rule) => rule.permission === "external_directory" || rule.action === "deny",
+            ),
+            ...(canTodo
+              ? []
+              : [
+                  {
+                    permission: "todowrite" as const,
+                    pattern: "*" as const,
+                    action: "deny" as const,
+                  },
+                ]),
+            ...(canTask
+              ? []
+              : [
+                  {
+                    permission: id,
+                    pattern: "*" as const,
+                    action: "deny" as const,
+                  },
+                ]),
+            ...(cfg.experimental?.primary_tools?.map((item) => ({
               pattern: "*",
               action: "allow" as const,
-              permission: t,
+              permission: item,
             })) ?? []),
-            ...inherited, // kilocode_change — propagate caller's edit and bash restrictions
+            // kilocode_change start — deny task + propagate caller restrictions
+            ...KiloTask.permissions(rules),
+            // kilocode_change end
           ],
-        })
-      })
-      const msg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
-      if (msg.info.role !== "assistant") throw new Error("Not an assistant message")
+        }))
 
-      const model = agent.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
+      const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
+      if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
 
-      ctx.metadata({
-        title: params.description,
-        metadata: {
-          sessionId: session.id,
-          model,
+      // kilocode_change start — prefer valid subagent overrides, safely inheriting when overrides go stale
+      const selected = yield* KiloTask.resolveModel({
+        name: next.name,
+        agent: next,
+        config: cfg,
+        parent: {
+          modelID: msg.info.modelID,
+          providerID: msg.info.providerID,
         },
       })
+      const model = selected.model
+      const variant = selected.variant
+      // kilocode_change end
+
+      yield* ctx.metadata({
+        title: params.description,
+        metadata: {
+          sessionId: nextSession.id,
+          model,
+          variant, // kilocode_change
+        },
+      })
+
+      const ops = ctx.extra?.promptOps as TaskPromptOps
+      if (!ops) return yield* Effect.fail(new Error("TaskTool requires promptOps in ctx.extra"))
+      const runCancel = yield* EffectBridge.make()
 
       const messageID = MessageID.ascending()
+      const cancel = ops.cancel(nextSession.id)
 
-      function cancel() {
-        SessionPrompt.cancel(session.id)
+      function onAbort() {
+        runCancel.fork(cancel)
       }
-      ctx.abort.addEventListener("abort", cancel)
-      using _ = defer(() => ctx.abort.removeEventListener("abort", cancel))
-      const promptParts = await SessionPrompt.resolvePromptParts(params.prompt)
 
-      const result = await SessionPrompt.prompt({
-        messageID,
-        sessionID: session.id,
-        model: {
-          modelID: model.modelID,
-          providerID: model.providerID,
-        },
-        agent: agent.name,
-        tools: {
-          todowrite: false,
-          todoread: false,
-          task: false, // kilocode_change
-          ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
-        },
-        parts: promptParts,
-      })
+      return yield* Effect.acquireUseRelease(
+        // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
+        Effect.gen(function* () {
+          ctx.abort.addEventListener("abort", onAbort)
+          return yield* KiloCostPropagation.childCost(sessions, nextSession.id)
+        }),
+        // kilocode_change end
+        () =>
+          Effect.gen(function* () {
+            const parts = yield* ops.resolvePromptParts(params.prompt)
+            KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
+            const result = yield* ops.prompt({
+              messageID,
+              sessionID: nextSession.id,
+              model: {
+                modelID: model.modelID,
+                providerID: model.providerID,
+              },
+              variant, // kilocode_change
+              agent: next.name,
+              tools: {
+                ...(canTodo ? {} : { todowrite: false }),
+                ...(canTask ? {} : { task: false }),
+                ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
+              },
+              parts,
+            })
 
-      const text = result.parts.findLast((x) => x.type === "text")?.text ?? ""
+            // kilocode_change start - expose terminal child assistant errors through the task tool boundary
+            if (result.info.role === "assistant" && result.info.error) {
+              return yield* Effect.fail(new Error(errorMessage(result.info.error)))
+            }
+            // kilocode_change end
 
-      const output = [
-        `task_id: ${session.id} (for resuming to continue this task if needed)`,
-        "",
-        "<task_result>",
-        text,
-        "</task_result>",
-      ].join("\n")
+            return {
+              title: params.description,
+              metadata: {
+                sessionId: nextSession.id,
+                model,
+                variant, // kilocode_change
+              },
+              output: [
+                `task_id: ${nextSession.id} (for resuming to continue this task if needed)`,
+                "",
+                "<task_result>",
+                result.parts.findLast((item) => item.type === "text")?.text ?? "",
+                "</task_result>",
+              ].join("\n"),
+            }
+          }),
+        // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)
+        (costBefore, exit) =>
+          Effect.gen(function* () {
+            if (Exit.hasInterrupts(exit)) yield* cancel
+          }).pipe(
+            Effect.ensuring(
+              Effect.gen(function* () {
+                ctx.abort.removeEventListener("abort", onAbort)
+                const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
+                yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
+              }),
+            ),
+          ),
+        // kilocode_change end
+      )
+    })
 
-      return {
-        title: params.description,
-        metadata: {
-          sessionId: session.id,
-          model,
-        },
-        output,
-      }
-    },
-  }
-})
+    return {
+      description: DESCRIPTION,
+      parameters: Parameters,
+      execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
+        run(params, ctx).pipe(Effect.orDie),
+    }
+  }),
+)
