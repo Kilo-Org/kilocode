@@ -13,21 +13,25 @@ jobs:
       is_fork: ${{ steps.fork-check.outputs.is_fork }}
     steps:
       - uses: actions/checkout@v6 # kilocode_change
-      - uses: Kilo-Org/paths-filter@master
+      # kilocode_change start
+      - name: Check changed files
         id: filter
-        with:
-          filters: |
-            matched:
-              - "packages/kilo-ui/**"
-              - "packages/ui/**"
-              - "packages/util/**"
-              - "packages/sdk/js/**"
-              - "packages/kilo-vscode/webview-ui/**"
-              - "packages/kilo-vscode/.storybook/**"
-              - "packages/kilo-vscode/tests/visual-regression*"
-              - "packages/kilo-vscode/tests/permission-dock-dropdown*"
-              - "packages/kilo-docs/public/img/screenshot-tests/**"
-              - ".github/workflows/visual-regression.yml"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          matched=false
+          while IFS= read -r file; do
+            case "$file" in
+              packages/kilo-ui/*|packages/ui/*|packages/util/*|packages/sdk/js/*|packages/kilo-vscode/webview-ui/*|packages/kilo-vscode/.storybook/*|packages/kilo-vscode/tests/visual-regression*|packages/kilo-vscode/tests/permission-dock-dropdown*|packages/kilo-docs/public/img/screenshot-tests/*|.github/workflows/visual-regression.yml)
+                matched=true
+                break
+                ;;
+            esac
+          done < <(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" --jq '.[].filename')
+          echo "matched=$matched" >> "$GITHUB_OUTPUT"
+          echo "matched=$matched"
+      # kilocode_change end
       - name: Check if PR is from a fork
         id: fork-check
         run: |
