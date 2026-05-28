@@ -1309,7 +1309,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Nisu pronađene vještine. Dodajte putanje mapa ili URL-ove ispod kako biste učinili vještine dostupnim.",
   "settings.agentBehaviour.availableModes": "Dostupni prilagođeni modovi",
-  "settings.agentBehaviour.noModesFound": "Nisu pronađeni modovi.",
+  "settings.agentBehaviour.noAgentsFound": "Nisu pronađeni agenti.",
   "settings.agentBehaviour.createMode": "Kreiraj novi mod",
   "settings.agentBehaviour.createMode.name": "Naziv",
   "settings.agentBehaviour.createMode.name.placeholder": "npr. reviewer",
@@ -1353,9 +1353,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
   "settings.agentBehaviour.permissions.hint":
     "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
-  "settings.agentBehaviour.removeAgent.title": "Ukloni mod",
+  "settings.agentBehaviour.removeAgent.title": "Ukloni agenta",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
+    'Ukloniti agenta "{{name}}"? Ovo će ga onemogućiti ažuriranjem konfiguracije.',
   "settings.agentBehaviour.removeAgent.button": "Ukloni",
   "settings.agentBehaviour.removeMcp.title": "Ukloni MCP server",
   "settings.agentBehaviour.removeMcp.confirm":

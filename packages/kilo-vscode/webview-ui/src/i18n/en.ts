@@ -1289,10 +1289,10 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
   "settings.agentBehaviour.availableModes": "Available Custom Modes",
-  "settings.agentBehaviour.noModesFound": "No modes found.",
-  "settings.agentBehaviour.removeAgent.title": "Remove mode",
+  "settings.agentBehaviour.noAgentsFound": "No agents found.",
+  "settings.agentBehaviour.removeAgent.title": "Remove agent",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Remove mode "{{name}}"? This will disable the mode by updating your config.',
+    'Remove agent "{{name}}"? This will disable the agent by updating your config.',
   "settings.agentBehaviour.removeAgent.button": "Remove",
   "settings.agentBehaviour.skillPaths": "Skill Folder Paths",
   "settings.agentBehaviour.skillUrls": "Skill URLs",

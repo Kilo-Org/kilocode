@@ -1305,7 +1305,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навыки не обнаружены. Добавьте пути к папкам навыков или URL-адреса ниже, чтобы сделать навыки доступными.",
   "settings.agentBehaviour.availableModes": "Доступные пользовательские режимы",
-  "settings.agentBehaviour.noModesFound": "Режимы не найдены.",
+  "settings.agentBehaviour.noAgentsFound": "Агенты не найдены.",
   "settings.agentBehaviour.createMode": "Создать новый режим",
   "settings.agentBehaviour.createMode.name": "Название",
   "settings.agentBehaviour.createMode.name.placeholder": "например, reviewer",
@@ -1351,9 +1351,8 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Скопировать разрешения как JSON",
   "settings.agentBehaviour.permissions.hint":
     "Правила оцениваются по порядку — побеждает последнее совпавшее правило. Это разрешенный набор правил из бэкенда CLI.",
-  "settings.agentBehaviour.removeAgent.title": "Удалить режим",
-  "settings.agentBehaviour.removeAgent.confirm":
-    'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
+  "settings.agentBehaviour.removeAgent.title": "Удалить агент",
+  "settings.agentBehaviour.removeAgent.confirm": 'Удалить агент "{{name}}"? Это отключит агент, обновив конфигурацию.',
   "settings.agentBehaviour.removeAgent.button": "Удалить",
   "settings.agentBehaviour.removeMcp.title": "Удалить сервер MCP",
   "settings.agentBehaviour.removeMcp.confirm": 'Удалить сервер MCP "{{name}}"? Это удалит его из вашей конфигурации.',

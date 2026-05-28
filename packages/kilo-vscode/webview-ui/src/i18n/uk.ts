@@ -1299,7 +1299,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Навичок не виявлено. Додайте шляхи до папок навичок або URL нижче, щоб зробити їх доступними.",
   "settings.agentBehaviour.availableModes": "Доступні власні режими",
-  "settings.agentBehaviour.noModesFound": "Режимів не знайдено.",
+  "settings.agentBehaviour.noAgentsFound": "Агентів не знайдено.",
   "settings.agentBehaviour.importMode": "Імпортувати",
   "settings.agentBehaviour.importMode.invalidName":
     "Назва режиму у файлі недійсна. Назва має починатися з малої літери і містити лише малі літери, цифри та дефіси.",
@@ -1308,9 +1308,9 @@ export const dict = {
     "Недійсний файл JSON. Будь ласка, виберіть дійсний файл визначення агента.",
   "settings.agentBehaviour.importMode.tooLarge": "Файл занадто великий. Визначення агентів мають бути менше 1 МБ.",
   "settings.agentBehaviour.exportMode": "Експортувати визначення агента",
-  "settings.agentBehaviour.removeAgent.title": "Видалити режим",
+  "settings.agentBehaviour.removeAgent.title": "Видалити агент",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Видалити режим "{{name}}"? Це оновить вашу конфігурацію, щоб вимкнути режим.',
+    'Видалити агент "{{name}}"? Це вимкне агент шляхом оновлення конфігурації.',
   "settings.agentBehaviour.removeAgent.button": "Видалити",
   "settings.agentBehaviour.skillPaths": "Шляхи до папок навичок",
   "settings.agentBehaviour.skillUrls": "URL навичок",

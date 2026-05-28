@@ -1290,7 +1290,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
   "settings.agentBehaviour.availableModes": "사용 가능한 사용자 정의 모드",
-  "settings.agentBehaviour.noModesFound": "모드를 찾을 수 없습니다.",
+  "settings.agentBehaviour.noAgentsFound": "에이전트를 찾을 수 없습니다.",
   "settings.agentBehaviour.createMode": "새 모드 만들기",
   "settings.agentBehaviour.createMode.name": "이름",
   "settings.agentBehaviour.createMode.name.placeholder": "예: reviewer",
@@ -1332,9 +1332,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "권한을 JSON으로 복사",
   "settings.agentBehaviour.permissions.hint":
     "규칙은 순서대로 평가되며, 마지막에 일치하는 규칙이 적용됩니다. 이것은 CLI 백엔드에서 확인된 규칙 세트입니다.",
-  "settings.agentBehaviour.removeAgent.title": "모드 제거",
+  "settings.agentBehaviour.removeAgent.title": "에이전트 제거",
   "settings.agentBehaviour.removeAgent.confirm":
-    '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
+    '에이전트 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 에이전트를 비활성화합니다.',
   "settings.agentBehaviour.removeAgent.button": "제거",
   "settings.agentBehaviour.removeMcp.title": "MCP 서버 제거",
   "settings.agentBehaviour.removeMcp.confirm": 'MCP 서버 "{{name}}"을(를) 제거하시겠습니까? 구성에서 제거됩니다.',

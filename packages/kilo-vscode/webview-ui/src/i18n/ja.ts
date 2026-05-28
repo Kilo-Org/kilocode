@@ -1296,7 +1296,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
   "settings.agentBehaviour.availableModes": "利用可能なカスタムモード",
-  "settings.agentBehaviour.noModesFound": "モードが見つかりません。",
+  "settings.agentBehaviour.noAgentsFound": "エージェントが見つかりません。",
   "settings.agentBehaviour.createMode": "新しいモードを作成",
   "settings.agentBehaviour.createMode.name": "名前",
   "settings.agentBehaviour.createMode.name.placeholder": "例: reviewer",
@@ -1341,9 +1341,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "権限をJSONとしてコピー",
   "settings.agentBehaviour.permissions.hint":
     "ルールは順番に評価され、最後に一致したルールが適用されます。これはCLIバックエンドから解決されたルールセットです。",
-  "settings.agentBehaviour.removeAgent.title": "モードを削除",
+  "settings.agentBehaviour.removeAgent.title": "エージェントを削除",
   "settings.agentBehaviour.removeAgent.confirm":
-    'モード "{{name}}" を削除しますか？設定を更新してモードを無効にします。',
+    'エージェント "{{name}}" を削除しますか？設定を更新してエージェントを無効にします。',
   "settings.agentBehaviour.removeAgent.button": "削除",
   "settings.agentBehaviour.removeMcp.title": "MCPサーバーを削除",
   "settings.agentBehaviour.removeMcp.confirm": 'MCPサーバー "{{name}}" を削除しますか？設定から削除されます。',

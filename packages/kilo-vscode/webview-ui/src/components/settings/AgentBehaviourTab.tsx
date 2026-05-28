@@ -357,7 +357,7 @@ const AgentBehaviourTab: Component = () => {
                   color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                 }}
               >
-                {language.t("settings.agentBehaviour.noModesFound")}
+                {language.t("settings.agentBehaviour.noAgentsFound")}
               </div>
             </Card>
           }

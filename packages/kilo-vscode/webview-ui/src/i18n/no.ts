@@ -1301,7 +1301,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
   "settings.agentBehaviour.availableModes": "Tilgjengelige egendefinerte moduser",
-  "settings.agentBehaviour.noModesFound": "Ingen moduser funnet.",
+  "settings.agentBehaviour.noAgentsFound": "Ingen agenter funnet.",
   "settings.agentBehaviour.createMode": "Opprett ny modus",
   "settings.agentBehaviour.createMode.name": "Navn",
   "settings.agentBehaviour.createMode.name.placeholder": "f.eks. reviewer",
@@ -1344,9 +1344,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Kopier tillatelser som JSON",
   "settings.agentBehaviour.permissions.hint":
     "Reglene evalueres i rekkefølge — siste matchende regel vinner. Dette er det gjeldende regelsettet fra CLI-backenden.",
-  "settings.agentBehaviour.removeAgent.title": "Fjern modus",
+  "settings.agentBehaviour.removeAgent.title": "Fjern agent",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
+    'Fjern agent "{{name}}"? Dette deaktiverer agenten ved å oppdatere konfigurasjonen din.',
   "settings.agentBehaviour.removeAgent.button": "Fjern",
   "settings.agentBehaviour.removeMcp.title": "Fjern MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":

@@ -1325,7 +1325,7 @@ export const dict = {
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
   "settings.agentBehaviour.availableModes": "Verfügbare benutzerdefinierte Modi",
-  "settings.agentBehaviour.noModesFound": "Keine Modi gefunden.",
+  "settings.agentBehaviour.noAgentsFound": "Keine Agenten gefunden.",
   "settings.agentBehaviour.createMode": "Neuen Modus erstellen",
   "settings.agentBehaviour.createMode.name": "Name",
   "settings.agentBehaviour.createMode.name.placeholder": "z.B. reviewer",
@@ -1370,9 +1370,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
   "settings.agentBehaviour.permissions.hint":
     "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
-  "settings.agentBehaviour.removeAgent.title": "Modus entfernen",
+  "settings.agentBehaviour.removeAgent.title": "Agent entfernen",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
+    'Agent "{{name}}" entfernen? Dies deaktiviert den Agenten durch Aktualisierung der Konfiguration.',
   "settings.agentBehaviour.removeAgent.button": "Entfernen",
   "settings.agentBehaviour.removeMcp.title": "MCP-Server entfernen",
   "settings.agentBehaviour.removeMcp.confirm":

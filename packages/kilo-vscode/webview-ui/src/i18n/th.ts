@@ -1287,7 +1287,7 @@ export const dict = {
   "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
   "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.availableModes": "โหมดกำหนดเองที่ใช้ได้",
-  "settings.agentBehaviour.noModesFound": "ไม่พบโหมด",
+  "settings.agentBehaviour.noAgentsFound": "ไม่พบเอเจนต์",
   "settings.agentBehaviour.createMode": "สร้างโหมดใหม่",
   "settings.agentBehaviour.createMode.name": "ชื่อ",
   "settings.agentBehaviour.createMode.name.placeholder": "เช่น reviewer",
@@ -1330,9 +1330,9 @@ export const dict = {
   "settings.agentBehaviour.permissions.copy": "คัดลอกสิทธิ์เป็น JSON",
   "settings.agentBehaviour.permissions.hint":
     "กฎจะถูกประเมินตามลำดับ — กฎที่ตรงกันล่าสุดจะมีผล นี่คือชุดกฎที่ประมวลผลแล้วจากแบ็กเอนด์ CLI",
-  "settings.agentBehaviour.removeAgent.title": "ลบโหมด",
+  "settings.agentBehaviour.removeAgent.title": "ลบเอเจนต์",
   "settings.agentBehaviour.removeAgent.confirm":
-    'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',
+    'ลบเอเจนต์ "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานเอเจนต์โดยการอัปเดตการตั้งค่า',
   "settings.agentBehaviour.removeAgent.button": "ลบ",
   "settings.agentBehaviour.removeMcp.title": "ลบเซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.removeMcp.confirm":
