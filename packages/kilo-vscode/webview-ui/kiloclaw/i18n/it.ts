@@ -24,7 +24,8 @@ export const dict = {
   "kiloClaw.setup.subtitle": "AI personale per la vita quotidiana",
   "kiloClaw.setup.description1":
     "KiloClaw ti offre un'AI personale che legge le email, gestisce il calendario, monitora i progetti e vive in Telegram, Slack, o dove lavori già.",
-  "kiloClaw.setup.description2": "Nessuna app da installare. Nessuna nuova interfaccia da imparare. Scrivile come a un amico.",
+  "kiloClaw.setup.description2":
+    "Nessuna app da installare. Nessuna nuova interfaccia da imparare. Scrivile come a un amico.",
   "kiloClaw.setup.learnMore": "Scopri di più",
   "kiloClaw.setup.tryKiloClaw": "Prova KiloClaw",
 
