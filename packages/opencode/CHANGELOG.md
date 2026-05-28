@@ -1,5 +1,26 @@
 # @kilocode/cli
 
+## 7.3.14
+
+### Patch Changes
+
+- [#8761](https://github.com/Kilo-Org/kilocode/pull/8761) [`74e01b1`](https://github.com/Kilo-Org/kilocode/commit/74e01b1d485ee77943d2d46f05dce1c7cd2daf82) Thanks [@brendandebeasi](https://github.com/brendandebeasi)! - Fix packaged CLI startup crashes caused by duplicate OpenTUI/Solid renderer instances.
+
+- [#10648](https://github.com/Kilo-Org/kilocode/pull/10648) [`9fbd547`](https://github.com/Kilo-Org/kilocode/commit/9fbd5479b09739b21ca636612a85501f0d0f548f) - Keep the extension responsive while semantic indexing processes large workspaces.
+
+- [#10619](https://github.com/Kilo-Org/kilocode/pull/10619) [`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f) - Use supported hosted model presets for Kilo indexing and clear obsolete model and dimension overrides.
+
+- [#10657](https://github.com/Kilo-Org/kilocode/pull/10657) [`d883ad9`](https://github.com/Kilo-Org/kilocode/commit/d883ad96ab7bd1b31a83d227065ad231a225a4c4) - Keep the extension usable on fresh startup when semantic indexing is enabled globally.
+
+- [#10618](https://github.com/Kilo-Org/kilocode/pull/10618) [`dcfadac`](https://github.com/Kilo-Org/kilocode/commit/dcfadac83ed45a109a402a2f71f4d214347804f1) - Prevent saved global indexing provider changes from temporarily reverting in active workspaces.
+
+- Updated dependencies [[`117691e`](https://github.com/Kilo-Org/kilocode/commit/117691e4d6fe48f91223bb7d7e24103c67cde73f), [`db38888`](https://github.com/Kilo-Org/kilocode/commit/db388889e867021c6bae42cbd03df6b67941b208)]:
+  - @kilocode/kilo-indexing@7.3.13
+  - @kilocode/sdk@7.3.13
+  - @kilocode/kilo-gateway@7.4.0
+  - @kilocode/plugin@7.3.13
+  - @kilocode/kilo-telemetry@7.3.13
+
 ## 7.3.11
 
 ### Patch Changes

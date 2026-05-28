@@ -3036,7 +3036,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const { section, leaf } = buildSettingPath(key)
     if (section === "autocomplete" && !validAutocompleteSetting(leaf, value)) return
     const config = vscode.workspace.getConfiguration(`kilo-code.new${section ? `.${section}` : ""}`)
-    await config.update(leaf, value, vscode.ConfigurationTarget.Global)
+    // Normalize a webview-side clear to `undefined` so VS Code removes the
+    // key from settings.json rather than persisting a literal `null`. This
+    // lets the runtime fall back to the resolved default.
+    const next = value === null ? undefined : value
+    await config.update(leaf, next, vscode.ConfigurationTarget.Global)
   }
 
   /**

@@ -493,7 +493,7 @@ export namespace KiloSessions {
 
     const result = (await response.json()) as { id: string; ingestPath: string }
 
-    await Storage.write(["session_share", sessionId], result)
+    await save(sessionId, result)
 
     log.info("session bootstrap completed", { sessionId })
 
@@ -537,7 +537,7 @@ export namespace KiloSessions {
 
     const url = `https://app.kilo.ai/s/${result.public_id}`
 
-    await Storage.write(["session_share", sessionId], {
+    await save(sessionId, {
       ...current,
       url,
     })
@@ -578,15 +578,23 @@ export namespace KiloSessions {
     }
     delete next.url
 
-    await Storage.write(["session_share", sessionId], next)
+    await save(sessionId, next)
   }
 
-  function get(sessionId: string) {
-    return Storage.read<{
-      id: string
-      url?: string
-      ingestPath: string
-    }>(["session_share", sessionId])
+  type Share = {
+    id: string
+    url?: string
+    ingestPath: string
+  }
+
+  async function save(sessionId: string, share: Share) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Storage.Service.use((svc) => svc.write(["session_share", sessionId], share)))
+  }
+
+  async function get(sessionId: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    return AppRuntime.runPromise(Storage.Service.use((svc) => svc.read<Share>(["session_share", sessionId])))
   }
 
   export async function remove(sessionId: string) {
@@ -618,14 +626,18 @@ export namespace KiloSessions {
       return
     }
 
-    await Storage.remove(["session_share", sessionId])
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    await AppRuntime.runPromise(Storage.Service.use((svc) => svc.remove(["session_share", sessionId])))
   }
 
   async function fullSync(sessionId: string) {
     log.info("full sync", { sessionId })
 
     const session = await Session.get(SessionID.make(sessionId))
-    const diffs = await SessionSummary.diff({ sessionID: SessionID.make(sessionId) })
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const diffs = await AppRuntime.runPromise(
+      SessionSummary.Service.use((svc) => svc.diff({ sessionID: SessionID.make(sessionId) })),
+    )
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const models = await Promise.all(

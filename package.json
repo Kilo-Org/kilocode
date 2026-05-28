@@ -139,13 +139,16 @@
     "fastify": ">=5.8.3",
     "diff": "8.0.4",
     "dompurify": "3.4.2",
-    "happy-dom": ">=20.8.9"
+    "happy-dom": ">=20.8.9",
+    "@opentui/core": "catalog:",
+    "@opentui/solid": "catalog:",
+    "solid-js": "catalog:"
   },
   "patchedDependencies": {
     "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.3.12",
+  "version": "7.3.14",
   "peerDependencies": {}
 }

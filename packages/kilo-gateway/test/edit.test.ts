@@ -16,6 +16,13 @@ describe("Edit target resolution", () => {
     expect(resolveEditTarget("inception", "mercury-edit-2").provider).toBe("kilo")
   })
 
+  test("routes the Kilo Gateway next-edit model to the gateway proxy", () => {
+    const target = resolveEditTarget("kilo", "inception/mercury-next-edit")
+    expect(target.provider).toBe("kilo")
+    expect(target.model).toBe("inception/mercury-edit-2")
+    expect(target.url).toMatch(/\/api\/edit\/completions$/)
+  })
+
   test("falls back to a kilo placeholder (no upstream) for non-edit models", () => {
     expect(resolveEditTarget("kilo", "mistralai/codestral-2508")).toEqual({
       provider: "kilo",

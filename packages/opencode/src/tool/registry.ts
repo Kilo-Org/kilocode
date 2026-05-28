@@ -24,10 +24,7 @@ import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 import { ProviderID, type ModelID } from "../provider/schema"
 import { WebSearchTool } from "./websearch"
-// kilocode_change start
-import { KiloToolRegistry } from "../kilocode/tool/registry"
-import { makeRuntime } from "@/effect/run-service"
-// kilocode_change end
+import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Flag } from "@opencode-ai/core/flag/flag"
 import * as Log from "@opencode-ai/core/util/log"
 import { LspTool } from "./lsp"
@@ -383,8 +380,4 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(SessionStatus.defaultLayer), // kilocode_change
   ),
 )
-// kilocode_change start
-const { runPromise } = makeRuntime(Service, defaultLayer)
-export const ids = () => runPromise((svc) => svc.ids())
-// kilocode_change end
 export * as ToolRegistry from "./registry"

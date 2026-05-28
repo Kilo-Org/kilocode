@@ -109,6 +109,10 @@ export class AutocompleteServiceManager {
     this.nextEditProvider = new NextEditInlineCompletionProvider({
       connectionService,
       suggestionManager: this.nextEditSuggestionManager,
+      getModelSelection: () => {
+        const info = getAutocompleteModel(this.settings?.provider, this.settings?.model)
+        return { providerId: info.providerID, modelId: info.modelID }
+      },
       isFileAllowed: async (fsPath) => {
         const ignore = await this.inlineCompletionProvider.ignoreController
         return ignore.validateAccess(fsPath)
