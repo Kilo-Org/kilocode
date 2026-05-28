@@ -124,7 +124,7 @@ describe("event types", () => {
 
   test("captured model payloads expose existing source types", () => {
     function completed(ev: LlmRequestCompleted) {
-      return ev.output.rawParts?.[0]?.type
+      return ev.output.toolCalls?.[0]?.type
     }
     function compacted(ev: CompactionCaptured) {
       return [ev.input.inputMessagesSnapshot[0]?.role, ev.input.selectedContext[0]?.info.sessionID]

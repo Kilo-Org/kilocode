@@ -557,7 +557,6 @@ function observeFullStream(
   const textParts: string[] = []
   const reasoningParts: string[] = []
   const toolCalls: Event[] = []
-  const rawParts: Event[] = []
   let finishReason: string | undefined
   let usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number } | undefined
   const done = (error?: unknown) => {
@@ -566,7 +565,7 @@ function observeFullStream(
       rootSessionId: meta.rootSessionId,
       parentSessionId: meta.parentSessionId,
       requestId: meta.requestId,
-      output: { textParts, reasoningParts, toolCalls, rawParts, finishReason, error, usage },
+      output: { textParts, reasoningParts, toolCalls, finishReason, error, usage },
       durationMs: Date.now() - meta.started,
       retryCount: meta.retries,
     })
@@ -574,7 +573,6 @@ function observeFullStream(
   const observed = async function* () {
     try {
       for await (const part of stream) {
-        rawParts.push(part)
         collectPart(part, {
           textParts,
           reasoningParts,

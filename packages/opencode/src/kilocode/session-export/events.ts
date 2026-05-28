@@ -40,7 +40,6 @@ export type LlmRequestCompleted = ExportEnvelope & {
     textParts: string[]
     reasoningParts?: string[]
     toolCalls?: LlmStreamPart[]
-    rawParts?: LlmStreamPart[]
     finishReason?: string
     error?: unknown
     usage?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }

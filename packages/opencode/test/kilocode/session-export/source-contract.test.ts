@@ -10,3 +10,11 @@ test("compaction export derives root session from KiloSession", async () => {
   )
   expect(block).toContain("KiloSession.resolveRoot(input.sessionID)")
 })
+
+test("llm export does not retain raw stream parts", async () => {
+  const root = join(import.meta.dir, "../../..")
+  const llm = await Bun.file(join(root, "src/session/llm.ts")).text()
+  const events = await Bun.file(join(root, "src/kilocode/session-export/events.ts")).text()
+  expect(llm).not.toContain("rawParts")
+  expect(events).not.toContain("rawParts")
+})
