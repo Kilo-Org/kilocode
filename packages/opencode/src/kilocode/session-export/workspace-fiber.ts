@@ -1,5 +1,5 @@
 import type { CaptureMetadata, DeltaEntry, ExportEvent, FileEntry, WorkspaceBaselineCompleted, WorkspaceDeltaCaptured } from "./events"
-import { ulid } from "./ulid"
+import { ulid } from "ulid"
 
 export type BaselineFiberArgs = {
   sessionId: string

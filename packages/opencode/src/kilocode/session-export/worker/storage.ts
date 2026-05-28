@@ -207,7 +207,7 @@ export class Storage {
     if (chunkIds.size === 0) return []
     const chunkVars = [...chunkIds].map(() => "?").join(",")
     const chunks = this.sqlite.query(`SELECT id, bytes, size, encoding, ref_count FROM chunk WHERE id IN (${chunkVars})`).all(...chunkIds) as ChunkRecord[]
-    return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: row.encoding === "zstd" ? "zstd" : "zstd" }))
+    return chunks.map((row) => ({ id: row.id, bytes: row.bytes, size: row.size, encoding: "zstd" }))
   }
 
   dbSize(): number {

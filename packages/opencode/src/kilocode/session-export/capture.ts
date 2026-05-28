@@ -1,9 +1,9 @@
 import type { ToWorker } from "./worker/ipc"
 import { Config } from "./config"
-import { ulid } from "./ulid"
 import { isEligible, type EligibilityInput } from "./eligibility"
 import type { Permission } from "@/permission"
 import type { ModelMessage, Tool } from "ai"
+import { ulid } from "ulid"
 import type {
   CompactionCaptured,
   DeltaEntry,

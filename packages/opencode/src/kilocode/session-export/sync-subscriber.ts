@@ -1,5 +1,5 @@
 import type { ExportEvent, FeedbackCaptured, PermissionDecided, TerminalOutcome, ToolExecuted } from "./events"
-import { ulid } from "./ulid"
+import { ulid } from "ulid"
 
 export type SyncSubscriberDeps = {
   isEligibleSession: (sessionId: string) => boolean

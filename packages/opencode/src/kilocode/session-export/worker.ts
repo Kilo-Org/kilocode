@@ -96,7 +96,11 @@ scope.onmessage = (event) => {
         await uploader?.flush("shutdown")
         uploader?.dispose()
         storage?.close()
+        clearInterval(cap)
         storage = undefined
+        chunker = undefined
+        scrubber = undefined
+        inbox = undefined
         uploader = undefined
         scope.postMessage({ kind: "shutdown_done" })
       })()
@@ -107,7 +111,7 @@ scope.onmessage = (event) => {
   }
 }
 
-setInterval(() => {
+const cap = setInterval(() => {
   if (!storage || tripped) return
   const result = checkBufferCap(storage, { capacityBytes: Config.bufferCapBytes })
   if (!result.tripped) return
@@ -115,3 +119,4 @@ setInterval(() => {
   scope.postMessage({ kind: "telemetry", name: "session_export.buffer_overflow", props: { dbSize: result.dbSize } })
   scope.postMessage({ kind: "kill_switch", reason: "buffer_cap_50gb" })
 }, 60_000)
+cap.unref?.()
