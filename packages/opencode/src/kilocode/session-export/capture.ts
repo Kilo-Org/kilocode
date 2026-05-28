@@ -12,7 +12,6 @@ import type {
   LlmRequestCompleted,
   LlmRequestStarted,
   SessionDegraded,
-  WorkspaceBaselineStarted,
   CaptureMetadata,
 } from "./events"
 import { startBaselineFiber, startDeltaFiber } from "./workspace-fiber"
@@ -104,22 +103,6 @@ export class Capture {
         this.snapshots.set(meta.sessionId, previous)
         this.startNextDelta(meta)
       } else {
-        const seq = this.deps.syncSeq(meta.sessionId)
-        const baseline: WorkspaceBaselineStarted = {
-          id: ulid(),
-          schemaVersion: 1,
-          type: "workspace_baseline_started",
-          sessionId: meta.sessionId,
-          rootSessionId: meta.rootSessionId,
-          parentSessionId: meta.parentSessionId,
-          turnId: meta.userMessageId,
-          seq,
-          eventSeq: seq,
-          ts: this.deps.nowMs(),
-          agentVersion: this.deps.agentVersion,
-          requestedAt: this.deps.nowMs(),
-        }
-        this.dispatch(baseline)
         this.startBaseline(meta)
       }
     } else {

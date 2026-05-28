@@ -73,8 +73,8 @@ describe("Capture", () => {
       requestMeta: meta("s1"),
       assembled: { system: ["sys"], messages: [], tools: {}, permissions: [], params: {} },
     })
-    expect(posted.length).toBe(2)
-    const msg = posted[1] as {
+    expect(posted.length).toBe(1)
+    const msg = posted[0] as {
       kind: string
       envelope: { type: string; seq: number; agentVersion: string; model: { providerId: string; modelId: string } }
     }
@@ -115,12 +115,12 @@ describe("Capture", () => {
         params: {},
       },
     })
-    const msg = posted[1] as { envelope: { input: { tools: { shell: { execute?: unknown; description: string } } } } }
+    const msg = posted[0] as { envelope: { input: { tools: { shell: { execute?: unknown; description: string } } } } }
     expect(msg.envelope.input.tools.shell.description).toBe("run")
     expect(msg.envelope.input.tools.shell.execute).toBeUndefined()
   })
 
-  test("first eligible request of a session emits workspace_baseline_started before llm_request_started", () => {
+  test("first eligible request of a session starts with llm_request_started", () => {
     const cap = new Capture({ worker, agentVersion: "v0", nowMs: () => 100, syncSeq: () => 7 })
     cap.beforeRequest({
       input: { model: { api: { npm: "@kilocode/kilo-gateway" }, isFree: true }, org: undefined },
@@ -128,7 +128,7 @@ describe("Capture", () => {
       assembled: { system: [], messages: [], tools: {}, permissions: [], params: {} },
     })
     const types = posted.map((item) => (item as { envelope?: { type?: string } }).envelope?.type)
-    expect(types).toEqual(["workspace_baseline_started", "llm_request_started"])
+    expect(types).toEqual(["llm_request_started"])
   })
 
   test("session in degraded set drops subsequent events except SessionDegraded", () => {
